@@ -1,0 +1,319 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@source "../**/*.{ts,tsx}";
+
+
+@theme {  
+  /* Define Inter as the default sans-serif font */
+  --font-sans: var(--font-inter), sans-serif;
+
+  /* Define Gabarito as a separate custom font family */
+  --font-firasans: var(--font-firasans), sans-serif;
+  
+  --shadow-bullet: var(--shadow-bullet);
+  --shadow-bullet-hover: 0px 0px 6px 0px rgba(84, 160, 255, 0.5);
+  --shadow-tooltip: 0px 4px 4px rgba(0, 0, 0, 0.03);
+  --shadow-dropdown: 0px 0px 20px 0px rgba(0, 0, 0, 0.07);
+  --shadow-dialog: 0px 0px 44px rgba(0, 0, 0, 0.1);
+  --shadow-sidebar: rgba(0, 0, 0, 0.024) -1px 0px 0px 0px inset;
+
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-active: var(--input-active);
+  --color-input-dialog: var(--input-dialog);
+  --color-input-dialog-active: var(--input-dialog-active);
+  --color-ring: var(--ring);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-background2: var(--background-2);
+
+
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-accent: var(--primary-accent);
+
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+
+  --color-purple: var(--purple);
+  --color-purple-accent: var(--purple-accent);
+
+  --color-orange: var(--orange);
+  --color-orange-accent: var(--orange-accent);
+
+  --color-pink: var(--pink);
+  --color-pink-accent: var(--pink-accent);
+
+  --color-red: var(--red);
+  --color-red-accent: var(--red-accent);
+
+  --color-light-green: var(--light-green);
+  --color-light-green-accent: var(--light-green-accent);
+
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+
+  --color-green: var(--green);
+  --color-yellow: var(--yellow);
+
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+
+  /* shadcn - sidebar */
+  --color-sidebar: var(--sidebar-background);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --color-c-5: var(--hover-5);
+  --color-c-7: var(--hover-7);
+  --color-c-10: var(--text-10);
+  --color-c-20: var(--text-20);
+  --color-c-30: var(--text-30);
+  --color-c-40: var(--text-40);
+  --color-c-50: var(--text-50);
+  --color-c-60: var(--text-60);
+  --color-c-70: var(--text-70);
+  --color-c-80: var(--text-80);
+  --color-c-90: var(--text-90);
+  --color-c-100: var(--text-100);
+
+  --color-hover-3: var(--hover-3);
+  --color-hover-5: var(--hover-5);
+  --color-hover-7: var(--hover-7);
+  --color-hover-10: var(--hover-10);
+  --color-hover-1_5: var(--hover-1-5);
+
+  --color-sidebar: var(--sidebar);
+
+  --radius-6: 0.375rem;
+  --radius-8: 0.5rem;
+  --radius-10: 0.625rem;
+  --radius-12: 0.75rem;
+
+  --ring-width-0_8: 0.05rem;
+
+  --border-width-0_8: 0.05rem;
+}
+
+@layer base {
+  :root {
+    --background: rgb(251 246 250);
+    --background-2: rgb(246,246,246);
+    --foreground: rgb(9 9 11);
+    --card: rgb(255 255 255);
+    --card-foreground: rgb(9 9 11);
+    --popover: rgb(255 255 255);
+    --popover-foreground: rgb(9 9 11);
+    --secondary: rgb(244 244 245);
+    --secondary-foreground: rgb(255 54 93);
+    --muted: rgb(244 244 245);
+    --muted-foreground: rgb(113 113 122);
+    --accent: rgb(244 244 245);
+    --accent-foreground: rgb(255 54 93);
+    --destructive: rgb(239, 68, 68);
+    --destructive-foreground: rgb(250 250 250);
+    --border: rgb(231, 234, 235);
+    /* --input: rgb(248 248 250); */
+    --input: rgb(247 247 247);
+    --input-active: rgb(242 242 242);
+    --input-dialog: #f2f2f2;
+    --input-dialog-active: rgb(242 242 242);
+    --ring: rgb(9 9 11);
+    --chart-1: rgb(255, 204, 51);
+    --chart-2: rgb(139, 94, 39);
+    --chart-3: rgb(51, 51, 102);
+    --chart-4: rgb(232, 196, 104);
+    --chart-5: rgb(244, 164, 98);
+    --radius: 0.5rem;
+    
+    /* colors */
+    --primary: rgb(36, 101, 75);
+    --primary-accent: rgb(26, 91, 65);
+    --primary-foreground: rgb(255 255 255);
+    --purple: rgb(151, 71, 255);
+    --purple-accent: rgb(138 66 232);
+    --pink: rgb(219 11 98);
+    --pink-accent: rgb(193 12 88);
+    --green: rgb(31 136 61);
+    --yellow: rgb(255 192 71);
+    /* --yellow-accent: rgb(255 192 71); */
+    --orange: rgb(253 150 68);
+    --orange-accent: rgb(243 140 58);
+    --red: rgb(255 67 67);
+    --red-accent: rgb(253 53 53);
+    --light-green: rgb(5 196 107);
+    --light-green-accent: rgb(5 184 101);
+
+    /* text */
+    --text-100:rgb(0 0 0);
+    --text-90: rgb(26 26 26);
+    --text-80: rgb(51 51 51);
+    --text-70: rgb(77 77 77);
+    --text-60: rgb(102 102 102);
+    --text-50: rgb(127 127 127);
+    --text-40: rgb(153 153 153);
+    --text-30: rgb(179 179 179);
+    --text-20: rgb(204 204 204);
+    --text-10: rgb(230 230 230);
+
+    /* sidebar */
+    --sidebar: rgba(249 249 249);
+    --sidebar-width: calc(15rem);
+
+    /* hover */
+    --hover-1-5: rgb(251 251 251);
+    --hover-3: rgb(247 247 247);
+    --hover-5: rgb(242 242 242);
+    --hover-7: rgb(237 237 237);
+    --hover-10: rgb(230 230 230);
+    
+    /* fontsize */
+    --font-xs: 0.625rem;  /* 10px */
+    --font-xsl: 0.688rem;  /* 11px */
+    --font-sm: 0.75rem;   /* 12px */
+    --font-sml: 0.8125rem;   /* 13px */
+    --font-md: 0.875rem;  /* 14px */
+    --font-lg: 1rem;      /* 16px */
+    --font-xl: 1.125rem;  /* 18px */
+    --font-2xl: 1.25rem;  /* 20px */
+    --font-3xl: 1.375rem; /* 22px */
+    --font-4xl: 1.5rem;   /* 24px */
+    --font-5xl: 1.625rem; /* 26px */
+    --font-6xl: 1.75rem;  /* 28px */
+    --font-7xl: 1.875rem; /* 30px */
+    --font-8xl: 2rem;     /* 32px */
+    --font-9xl: 2.125rem; /* 34px */
+
+    /* shadcn - sidebar */
+    --sidebar-background: rgb(250, 250, 250);
+    --sidebar-foreground: rgb(63, 63, 70);
+    --sidebar-primary: rgb(24, 24, 27);
+    --sidebar-primary-foreground: rgb(250, 250, 250);
+    --sidebar-accent: rgb(244, 244, 245);
+    --sidebar-accent-foreground: rgb(24, 24, 27);
+    --sidebar-border: rgb(229, 231, 235);
+    --sidebar-ring: rgb(59, 130, 246);
+
+    /* shadow-bullet */
+    --shadow-bullet: 0px 0px 4px 0px rgba(0, 0, 0, 0.1);
+  }
+  .dark {
+    /* --background: 9 9 11; */
+    --background: rgb(25 25 25);
+    --background-2: rgb(22,22,22);
+    --foreground: rgb(250 250 250);
+    --card: rgb(9 9 11);
+    --card-foreground: rgb(250 250 250);
+    --popover: rgb(42 42 42);
+    --popover-foreground: rgb(250 250 250);
+    --primary: rgb(36, 101, 75);
+    --primary-accent: rgb(26, 91, 65);
+    --primary-foreground: rgb(255 255 255);
+    --secondary: rgb(39, 39, 42);
+    --secondary-foreground: rgb(250 250 250);
+    --muted: rgb(39, 39, 42);
+    --muted-foreground: rgb(161, 161, 170);
+    --accent: rgb(39, 39, 42);
+    --accent-foreground: rgb(250 250 250);
+    --destructive: rgb(127, 29, 29);
+    --destructive-foreground: rgb(250 250 250);
+    --border: rgb(48 48 48);
+    --input: rgb(235, 232, 236);
+    --input-active: rgb(42, 42, 45);
+    --input-dialog: rgb(45 45 45);
+    --input-dialog-active: rgb(50 50 50);
+    --ring: rgb(212, 212, 216);
+    --chart-1: rgb(38, 98, 217);
+    --chart-2: rgb(46, 184, 138);
+    --chart-3: rgb(232, 140, 48);
+    --chart-4: rgb(175, 87, 219);
+    --chart-5: rgb(226, 54, 112);
+    /* text */
+    --text-100: rgb(255 255 255);
+    --text-90: rgb(255 255 255); /* rgb(229 229 229); */
+    --text-80: rgb(255 255 255); /* rgb(204 204 204); */
+    --text-70: rgb(178 178 178);
+    --text-60: rgb(153 153 153);
+    --text-50: rgb(128 128 128);
+    --text-40: rgb(102 102 102);
+    --text-30: rgb(76 76 76);
+    --text-20: rgb(51 51 51);
+    --text-10: rgb(25 25 25);
+    /* sidebar */
+    --sidebar: rgb(32 32 32);
+    /* hover */
+    --hover-sidebar: rgb(44 44 44);
+    --hover-sidebar-press: rgb(36 36 36);
+    --hover-1-5: rgb(29 29 29);
+    --hover-3: rgb(32 32 32);
+    --hover-5: rgb(37 37 37);
+    --hover-7: rgb(42 42 42);
+    --hover-10: rgb(48 48 48);
+
+    /* shadcn - sidebar */
+    --sidebar-background: rgb(24, 24, 27);
+    --sidebar-foreground: rgb(244, 244, 245);
+    --sidebar-primary: rgb(29, 78, 216);
+    --sidebar-primary-foreground: rgb(255, 255, 255);
+    --sidebar-accent: rgb(39, 39, 42);
+    --sidebar-accent-foreground: rgb(244, 244, 245);
+    --sidebar-border: rgb(39, 39, 42);
+    --sidebar-ring: rgb(59, 130, 246);
+
+    /* shadow-bullet */
+    --shadow-bullet: 0px 0px 4px 0px rgba(255, 255, 255, 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50 leading-normal;
+  }
+  /* html, body {
+    @apply h-full;
+  } */
+  body {
+    @apply bg-background text-foreground text-base leading-normal;
+  }
+  span, p, h1, h2, h3, h4, h5, h6, a, li, div, button {
+    /* line-height: normal !important; */
+    line-height: normal;
+  }
+
+  .scrollbar-transparent {
+    scrollbar-color: rgba(0, 0, 0, 0.5) transparent;
+  }
+  .dark .scrollbar-transparent {
+    scrollbar-color: rgba(254, 254, 254, 0.6) transparent;
+  }
+  .scrollbar-transparent::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
+
+/* Custom style to hide the time input icon */
+.time-input::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+
+.time-input {
+  -moz-appearance: textfield; /* Firefox */
+  appearance: textfield;      /* Standard */
+}

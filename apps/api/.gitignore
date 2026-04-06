@@ -1,0 +1,19 @@
+# Binaries
+bin/
+tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test output
+*.test
+*.out
+
+# Air build log
+build-errors.log
+
+# Environment
+.env
+.env.local

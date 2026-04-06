@@ -1,0 +1,29 @@
+@import "@repo/ui/styles/globals.css";
+
+@font-face {
+  font-family: 'Inter';
+  src: url('/fonts/Inter.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'firasans';
+  src: url('/fonts/fira-sans.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --font-firasans: 'firasans';
+  --font-inter: 'Inter';
+}
+
+@layer base {
+  body {
+    @apply m-0 bg-background text-foreground antialiased;
+    font-family: var(--font-firasans), sans-serif;
+  }
+}

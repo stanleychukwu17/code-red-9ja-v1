@@ -1,0 +1,40 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "passThroughEnv": [
+        "LOCALAPPDATA",
+        "APPDATA",
+        "HOMEDRIVE",
+        "HOMEPATH",
+        "USERPROFILE",
+        "GOCACHE",
+        "GOPATH",
+        "GOROOT",
+        "PATH",
+        "TEMP",
+        "TMP",
+        "PORT"
+      ]
+    },
+    "build": {
+      "outputs": ["bin/**"],
+      "passThroughEnv": [
+        "LOCALAPPDATA",
+        "APPDATA",
+        "HOMEDRIVE",
+        "HOMEPATH",
+        "USERPROFILE",
+        "GOCACHE",
+        "GOPATH",
+        "GOROOT",
+        "PATH",
+        "TEMP",
+        "TMP"
+      ]
+    }
+  }
+}
