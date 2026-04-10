@@ -5,6 +5,7 @@ go 1.26.1
 require (
 	github.com/go-chi/chi/v5 v5.2.5
 	github.com/joho/godotenv v1.5.1
+	github.com/lmittmann/tint v1.1.3
 	github.com/swaggo/http-swagger v1.3.4
 	github.com/swaggo/swag v1.16.6
 )
