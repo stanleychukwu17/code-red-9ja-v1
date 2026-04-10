@@ -1,0 +1,12 @@
+backend:
+  - NOTE: oga ema payment
+  - use air for fast reloading
+  - using a well organized log file
+  - having a separate log for warning
+  - open mum_record.txt
+
+list of things to do at the end of the day:
+  - update README.md
+  - update turbo.json with necessary inputs and outputs
+  - update package.json
+  - run go mod tidy
