@@ -3,6 +3,7 @@ backend:
   - use air for fast reloading
   - using a well organized log file
   - having a separate log for warning
+  - test starting the server with turbo command
   - open mum_record.txt
 
 list of things to do at the end of the day:
