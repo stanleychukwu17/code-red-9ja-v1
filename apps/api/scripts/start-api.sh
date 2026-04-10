@@ -16,4 +16,4 @@ fi
 echo "Swagger documentation generated successfully!"
 
 echo "Starting Go server..."
-go run cmd/api/main.go
+air
