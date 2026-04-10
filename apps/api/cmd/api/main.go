@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"free9ja/api/internal/logger"
 	"free9ja/api/internal/router"
 
 	"github.com/joho/godotenv"
@@ -32,19 +33,33 @@ func main() {
 	if err != nil {
 		// We don't always want to exit here, because in Production
 		// variables might be set via the system/docker instead of a file.
-		slog.Warn("\033[31m No .env files found, falling back to system environment\033[0m")
+		slog.Warn("No .env files found, falling back to system environment")
 	}
 
+	// Setup better structured logging
+	// can now do:
+	// slog.Info("hello", "key", "value")
+	// slog.Error("uh oh", "err", err)
+	// slog.Warn("careful", "msg", "something might be wrong")
+	// slog.Debug("deep details", "data", "lots of info")
+	// slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
+	logger.SetupLogger(version, commit)
+
+	// Get port from environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		slog.Error("PORT is not set")
+		os.Exit(1)
 	}
 
+	// Initialize router
 	r := router.New()
 
+	// Create server address
 	addr := fmt.Sprintf(":%s", port)
-	slog.Info("\033[32m starting server\033[0m", "addr", addr)
+	slog.Info("starting server", "addr", addr)
 
+	// Start server
 	if err := http.ListenAndServe(addr, r); err != nil {
 		slog.Error("server failed", "err", err)
 		os.Exit(1)
