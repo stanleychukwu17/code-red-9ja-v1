@@ -5,7 +5,6 @@
   "exports": {
     "./react-library": "./react-library.json",
     "./base": "./base.json",
-    "./vite": "./vite.json",
-    "./nextjs": "./nextjs.json"
+    "./vite": "./vite.json"
   }
 }
