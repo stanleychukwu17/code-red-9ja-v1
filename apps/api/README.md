@@ -6,7 +6,7 @@ The backend API for the Free9ja platform, built with Go and the [Chi](https://gi
 
 ### Prerequisites
 
-- [Go](https://golang.org/doc/install) (1.20+)
+- [Go](https://golang.org/doc/install) (1.26+)
 - [swag](https://github.com/swaggo/swag) CLI (for documentation generation)
 
 ```bash

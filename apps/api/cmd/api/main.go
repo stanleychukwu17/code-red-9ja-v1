@@ -48,8 +48,9 @@ func main() {
 	// Get port from environment variable
 	port := os.Getenv("PORT")
 	if port == "" {
-		slog.Error("PORT is not set")
-		os.Exit(1)
+		port = "4000"
+		// slog.Error("PORT is not set")
+		// os.Exit(1)
 	}
 
 	// Initialize router

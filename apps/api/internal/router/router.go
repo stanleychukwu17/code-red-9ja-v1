@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/swaggo/http-swagger"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "free9ja/api/docs"
 	"free9ja/api/internal/handler"
@@ -31,7 +31,7 @@ func New() http.Handler {
 	})
 
 	// Swagger documentation (Dev only)
-	if os.Getenv("APP_ENV") != "production" {
+	if os.Getenv("ENV") != "production" {
 		r.Get("/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 		))
