@@ -33,6 +33,22 @@ npm run dev
 
 The server will start at [http://localhost:4000](http://localhost:4000) by default.
 
+### Environment Variables
+
+The application can be configured using the following environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `4000` | The port the server will listen on (required). |
+| `ENV` | `development` | Environment mode (`development` or `production`). |
+
+## 📝 Logging
+
+The API uses structured logging with [slog](https://pkg.go.dev/log/slog).
+
+- **In Development**: Uses [tint](https://github.com/lmittmann/tint) for beautiful, colorized output to `stdout`.
+- **In Production**: Uses standard JSON output for easy parsing by log aggregators (e.g., ELK, Datadog). Version and commit information are automatically attached to all logs in production.
+
 ## 📖 Documentation
 
 The API uses Swagger for documentation. You can view the interactive API docs at:
@@ -62,6 +78,7 @@ Documentation is automatically generated when running `npm run dev`. To generate
 - **Go**: Language
 - **Chi**: HTTP Router
 - **swaggo/swag**: Swagger Documentation
+- **lmittmann/tint**: Colorized slog handler
 - **Turborepo**: Monorepo Management
 
 ## 📜 Available Scripts
@@ -70,3 +87,16 @@ Documentation is automatically generated when running `npm run dev`. To generate
 - `npm run build`: Compiles the API into a binary in `bin/api`.
 - `make build`: Alternative build command using Makefile.
 - `make test`: Runs Go tests.
+
+## 📦 Building for Production
+
+When building for production, you should pass the version and commit SHA using `ldflags`:
+
+```bash
+go build -ldflags=" \
+  -X 'main.version=${VERSION}' \
+  -X 'main.commit=${COMMIT_SHA}' \
+" -o bin/api ./cmd/api
+```
+
+This ensures that the correct version and commit are reported in the logs and via API endpoints.
