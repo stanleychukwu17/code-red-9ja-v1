@@ -1,5 +1,4 @@
 import { Button } from "@repo/ui/components/button";
-import { useForm } from "@tanstack/react-form";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({ component: App });
@@ -11,7 +10,7 @@ function App() {
         <h1>Welcome to Free9ja</h1>
         <div className="flex gap-5 w-full">
           <Link to="/auth/login" className="w-full">
-            <Button variant="" className="w-full px-10">
+            <Button variant="default" className="w-full px-10">
               Login
             </Button>
           </Link>
