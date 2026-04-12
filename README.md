@@ -1,159 +1,91 @@
-# Turborepo starter
+# free9ja Monorepo
 
-This Turborepo starter is maintained by the Turborepo core team.
+This repository is a fullstack monorepo managed by [Turborepo](https://turborepo.org/) and [pnpm](https://pnpm.io/) workspaces.
 
-## Using this example
+## Structure
 
-Run the following command:
+### Apps
 
-```sh
-npx create-turbo@latest
-```
+- `apps/web`: The main web frontend application built with **[TanStack Start](https://tanstack.com/start)**, React, Vite, and Tailwind CSS v4. It features a multi-stage `Dockerfile` and is optimized for deployment to AWS EC2 using a Nitro server engine.
+- `apps/api`: The backend API written in **Go**. It utilizes `go-chi/chi` for routing, `swaggo/swag` for API documentation, and `lmittmann/tint` coupled with `slog` for rich, optimized logger outputs (including commit and version details). It supports live reloading via `air`.
 
-## What's inside?
+### Packages
 
-This Turborepo includes the following packages/apps:
+- `@repo/ui`: A shared React component library for the frontend.
+- `@repo/typescript-config`: Shared `tsconfig.json` configurations used throughout the monorepo.
 
-### Apps and Packages
+## Tooling
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+This monorepo has some additional tools configured:
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+- [Biome](https://biomejs.dev/) for unified extremely fast linting and formatting.
+- [TypeScript](https://www.typescriptlang.org/) for static type checking across JS/TS applications.
+- [Docker](https://www.docker.com/) for production-ready containerization.
 
-### Utilities
+## Getting Started
 
-This Turborepo has some additional tools already setup for you:
+### Prerequisites
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+- Node.js >= 18
+- pnpm >= 9
+- Go >= 1.26
+- (Optional) Docker for running containerized builds locally
 
-### Build
+### Installation
 
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Install JavaScript dependencies with pnpm:
 
 ```sh
-cd my-turborepo
-turbo build
+pnpm install
 ```
 
-Without global `turbo`, use your package manager:
+The Go API manages its dependencies via `go mod` within `apps/api/`.
+
+### Development
+
+To start the development servers for all apps synchronously, run the following from the root directory:
 
 ```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+pnpm dev
+# or
+turbo run dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+- **Frontend (`web`)**: Starts Vite dev server.
+- **Backend (`api`)**: Starts Go server with `air` dev server for hot reloads.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+You can also run tasks for specific apps:
 
 ```sh
-turbo build --filter=docs
+turbo run dev --filter=web
 ```
 
-Without global `turbo`:
+### Static Checks and Linting
+
+Run Biome formatting and linting:
 
 ```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+pnpm lint
+pnpm check
+pnpm format
 ```
 
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Run TypeScript checks:
 
 ```sh
-cd my-turborepo
-turbo dev
+pnpm check-types
 ```
 
-Without global `turbo`, use your package manager:
+## Deployment
 
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
-```
+### Deploying the Web App
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+The frontend is configured with a robust Dockerfile meant for AWS EC2 deployments using standard container workflows.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
+For more information, please see `apps/web/DOCKER_GUIDE.md`.
 
 ## Useful Links
 
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- [Turborepo Documentation](https://turbo.build/repo/docs)
+- [TanStack Start](https://tanstack.com/start/latest)
+- [Go Chi Router](https://go-chi.io/)
