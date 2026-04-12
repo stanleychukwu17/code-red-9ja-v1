@@ -2,7 +2,7 @@
   "name": "api",
   "private": true,
   "scripts": {
-    "dev": "go run ./cmd/api",
+    "dev": "./scripts/start-api.sh",
     "build": "go build -o bin/api ./cmd/api"
   }
 }
