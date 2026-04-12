@@ -23,9 +23,12 @@ export default function UserDetailsScreen() {
       <FlowScreen
         title="Add your details"
         subtitle="Enter your full government name & gender."
-        icon="person-outline"
+        icon="user"
         onBackPress={() => router.back()}
-        primaryAction={{ label: "Continue", onPress: () => router.push("/nin-verification") }}
+        primaryAction={{
+          label: "Continue",
+          onPress: () => router.push("/nin-verification"),
+        }}
       >
         <FlowField
           placeholder="First name"
@@ -33,7 +36,11 @@ export default function UserDetailsScreen() {
           onChangeText={setFirstName}
           autoFocus
         />
-        <FlowField placeholder="Surname" value={surname} onChangeText={setSurname} />
+        <FlowField
+          placeholder="Surname"
+          value={surname}
+          onChangeText={setSurname}
+        />
         <FlowField
           placeholder="Other names"
           value={otherNames}
