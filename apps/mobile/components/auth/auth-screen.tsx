@@ -54,7 +54,13 @@ type PrimaryActionProps = {
 
 type FooterLinkProps = {
   label: string;
-  href: "/login" | "/signup";
+  action?: "Log in" | "Sign up";
+  href:
+    | "/login"
+    | "/signup"
+    | "/forgot-password"
+    | "/forgot-password-otp"
+    | "/set-new-password";
   accent?: boolean;
 };
 
@@ -111,10 +117,10 @@ export function AuthScreen({
               <StyledView className="mb-7">
                 <LogoIcon />
               </StyledView>
-              <StyledText className="mb-1.5 text-[22px] font-bold leading-7 tracking-snugger text-brand-deep">
+              <StyledText className="mb-1.5 text-3xl font-bold leading-7 tracking-snugger text-brand-deep">
                 {title}
               </StyledText>
-              <StyledText className="text-sm leading-5 text-muted">
+              <StyledText className="leading-5 text-muted">
                 {subtitle}
               </StyledText>
             </StyledView>
@@ -136,14 +142,25 @@ export function AuthScreen({
                     href={link.href}
                     asChild
                   >
-                    <StyledPressable hitSlop={8}>
+                    <StyledPressable
+                      hitSlop={8}
+                      className="flex flex-row gap-1"
+                    >
                       <StyledText
                         className={cn(
-                          "text-[13px] font-medium leading-[18px] text-[#6C9B85]",
+                          " font-medium leading-[18px] text-[#6C9B85]",
                           link.accent && "font-bold text-brand",
                         )}
                       >
                         {link.label}
+                      </StyledText>
+                      <StyledText
+                        className={cn(
+                          " font-bold leading-[18px] text-brand",
+                          link.accent && "font-bold ",
+                        )}
+                      >
+                        {link.action}
                       </StyledText>
                     </StyledPressable>
                   </Link>
