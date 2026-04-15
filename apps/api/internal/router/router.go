@@ -25,17 +25,17 @@ func New() http.Handler {
 	// Health check
 	r.Get("/health", handler.Health)
 
-	// API v1 routes
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/", handler.Root)
-	})
-
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {
 		r.Get("/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 		))
 	}
+
+	// API v1 routes
+	r.Route("/api/v1", func(r chi.Router) {
+		r.Get("/", handler.Root)
+	})
 
 	return r
 }
