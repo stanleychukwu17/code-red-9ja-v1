@@ -1,15 +1,16 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 
+	"free9ja/api/internal/config"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/logger"
 	"free9ja/api/internal/router"
-
-	"github.com/joho/godotenv"
 )
 
 // @title Free9ja API
@@ -27,17 +28,9 @@ import (
 // @host localhost:4000
 // @BasePath /api/v1
 func main() {
-	// Load .env and .env.local
-	// Note: .env.local is usually loaded first if you want it to take precedence
-	err := godotenv.Load(".env.local", ".env")
-	if err != nil {
-		// We don't always want to exit here, because in Production
-		// variables might be set via the system/docker instead of a file.
-		slog.Warn("No .env files found, falling back to system environment")
-	}
+	cfg := config.Load()
 
-	// Setup better structured logging
-	// can now do:
+	// Setup better structured logging, can now do:
 	// slog.Info("hello", "key", "value")
 	// slog.Error("uh oh", "err", err)
 	// slog.Warn("careful", "msg", "something might be wrong")
@@ -45,19 +38,19 @@ func main() {
 	// slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
 	logger.SetupLogger(version, commit)
 
-	// Get port from environment variable
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "4000"
-		// slog.Error("PORT is not set")
-		// os.Exit(1)
+	// Initialize database
+	pool, err := db.NewPostgresPool(context.Background(), cfg.Database.URL)
+	if err != nil {
+		slog.Error("failed to initialize database", "err", err)
+		os.Exit(1)
 	}
+	defer pool.Close()
 
 	// Initialize router
 	r := router.New()
 
 	// Create server address
-	addr := fmt.Sprintf(":%s", port)
+	addr := fmt.Sprintf(":%s", cfg.Port)
 	slog.Info("starting server", "addr", addr)
 
 	// Start server
