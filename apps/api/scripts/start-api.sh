@@ -15,5 +15,17 @@ fi
 
 echo "Swagger documentation generated successfully!"
 
+# set environment variables
+source ./scripts/set_goose_variables.sh
+# you can do: . ./scripts/set_goose_variables.sh
+
+# run migrations
+echo "Running database migrations..."
+goose.exe -dir db/migrations/ up
+
+# run sqlc
+echo "Generating SQL queries..."
+sqlc generate
+
 echo "Starting Go server..."
 air
