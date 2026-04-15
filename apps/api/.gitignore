@@ -11,6 +11,8 @@ tmp/
 *.test
 *.out
 
+scripts/set_goose_variables.sh
+
 # Air build log
 build-errors.log
 
