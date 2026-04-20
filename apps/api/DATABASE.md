@@ -16,6 +16,13 @@ Internal indexes will be created automatically for all the above columns.
 
 ---
 
+## Goose File Creation
+
+To create a new goose migration file, run the following command:
+```bash
+goose -dir db/migrations create <migration_name> sql
+```
+
 ## Goose Migrations
 
 1.  **Run Migrations:** Run the following command to create the tables in your database:
