@@ -20,9 +20,9 @@ type CreateUserNINParams struct {
 	Nin    string `json:"nin"`
 }
 
-func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error) {
+func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error) {
 	row := q.db.QueryRow(ctx, createUserNIN, arg.UserID, arg.Nin)
-	var id int64
+	var id int32
 	err := row.Scan(&id)
 	return id, err
 }
@@ -33,7 +33,7 @@ WHERE user_id = $1 LIMIT 1
 `
 
 type GetUserNINByUserIDRow struct {
-	ID  int64  `json:"id"`
+	ID  int32  `json:"id"`
 	Nin string `json:"nin"`
 }
 
@@ -42,22 +42,4 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUser
 	var i GetUserNINByUserIDRow
 	err := row.Scan(&i.ID, &i.Nin)
 	return i, err
-}
-
-const updateUserNIN = `-- name: UpdateUserNIN :one
-UPDATE users_nin SET nin = $2
-WHERE user_id = $1
-RETURNING id
-`
-
-type UpdateUserNINParams struct {
-	UserID int64  `json:"user_id"`
-	Nin    string `json:"nin"`
-}
-
-func (q *Queries) UpdateUserNIN(ctx context.Context, arg UpdateUserNINParams) (int64, error) {
-	row := q.db.QueryRow(ctx, updateUserNIN, arg.UserID, arg.Nin)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
 }
