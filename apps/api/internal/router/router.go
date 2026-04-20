@@ -7,35 +7,54 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	_ "free9ja/api/docs"
+	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
+	authhandler "free9ja/api/internal/handler/auth"
+	"free9ja/api/internal/service"
 )
 
 // New creates and returns a configured Chi router.
-func New() http.Handler {
-	r := chi.NewRouter()
+func New(pool *pgxpool.Pool) http.Handler {
+	mainRouter := chi.NewRouter()
+
+	// Initialize dependencies
+	q := queries.New(pool)
+	authService := service.NewAuthService(q)
 
 	// Core middleware
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	mainRouter.Use(middleware.RequestID)
+	mainRouter.Use(middleware.RealIP)
+	mainRouter.Use(middleware.Logger)
+	mainRouter.Use(middleware.Recoverer)
 
 	// Health check
-	r.Get("/health", handler.Health)
+	mainRouter.Get("/health", handler.Health)
 
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {
-		r.Get("/swagger/*", httpSwagger.Handler(
+		mainRouter.Get("/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 		))
 	}
 
-	// API v1 routes
-	r.Route("/api/v1", func(r chi.Router) {
+	mainRouter.Route("/api/v1", func(r chi.Router) {
+		// API v1 routes
 		r.Get("/", handler.Root)
+
+		// Auth routes group
+		r.Route("/auth", func(r chi.Router) {
+			authHandler := authhandler.NewHandler(authService)
+
+			r.Post("/register", authHandler.Register)
+		})
+
 	})
 
-	return r
+	// Add v2 auth routes later because of mobile apps users
+	// r.Route("/v2", func(r chi.Router) {})
+
+	return mainRouter
 }
