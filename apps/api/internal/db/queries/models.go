@@ -8,9 +8,54 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type CCity struct {
+	ID        int32          `json:"id"`
+	Name      string         `json:"name"`
+	StateID   int16          `json:"state_id"`
+	CountryID int16          `json:"country_id"`
+	Latitude  pgtype.Numeric `json:"latitude"`
+	Longitude pgtype.Numeric `json:"longitude"`
+}
+
+type CCountry struct {
+	ID             int16          `json:"id"`
+	Name           string         `json:"name"`
+	Iso2           string         `json:"iso2"`
+	Phonecode      string         `json:"phonecode"`
+	Currency       string         `json:"currency"`
+	CurrencySymbol string         `json:"currency_symbol"`
+	RegionID       pgtype.Int2    `json:"region_id"`
+	SubregionID    pgtype.Int2    `json:"subregion_id"`
+	Nationality    string         `json:"nationality"`
+	Latitude       pgtype.Numeric `json:"latitude"`
+	Longitude      pgtype.Numeric `json:"longitude"`
+	Emoji          string         `json:"emoji"`
+	EmojiUnicode   string         `json:"emoji_unicode"`
+}
+
+type CRegion struct {
+	ID   int16  `json:"id"`
+	Name string `json:"name"`
+}
+
+type CState struct {
+	ID          int16          `json:"id"`
+	Name        string         `json:"name"`
+	CountryID   int16          `json:"country_id"`
+	CountryCode string         `json:"country_code"`
+	Latitude    pgtype.Numeric `json:"latitude"`
+	Longitude   pgtype.Numeric `json:"longitude"`
+}
+
+type CSubregion struct {
+	ID       int16  `json:"id"`
+	Name     string `json:"name"`
+	RegionID int16  `json:"region_id"`
+}
+
 type User struct {
 	ID               int64              `json:"id"`
-	FakeID           int64              `json:"fake_id"`
+	FakeID           pgtype.Int8        `json:"fake_id"`
 	Email            string             `json:"email"`
 	Phone            string             `json:"phone"`
 	Username         pgtype.Text        `json:"username"`
@@ -20,25 +65,24 @@ type User struct {
 	OtherName        pgtype.Text        `json:"other_name"`
 	Gender           pgtype.Text        `json:"gender"`
 	DateOfBirth      pgtype.Date        `json:"date_of_birth"`
-	Citizenship      pgtype.Int2        `json:"citizenship"`
-	CurrentCountry   pgtype.Int2        `json:"current_country"`
-	CurrentState     pgtype.Int4        `json:"current_state"`
+	CurrentCountry   int16              `json:"current_country"`
+	CurrentState     int16              `json:"current_state"`
+	CurrentCity      pgtype.Int4        `json:"current_city"`
 	VerificationType pgtype.Text        `json:"verification_type"`
 	AccountStatus    pgtype.Text        `json:"account_status"`
 	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
-type UsersCountryResident struct {
-	ID             int64 `json:"id"`
-	UserID         int64 `json:"user_id"`
-	Citizenship    int16 `json:"citizenship"`
-	CurrentCountry int16 `json:"current_country"`
-	CurrentState   int32 `json:"current_state"`
-}
-
 type UsersNin struct {
-	ID     int64  `json:"id"`
+	ID     int32  `json:"id"`
 	UserID int64  `json:"user_id"`
 	Nin    string `json:"nin"`
+}
+
+type UsersPhoneNumber struct {
+	ID         int64       `json:"id"`
+	UserID     int64       `json:"user_id"`
+	Phone      string      `json:"phone"`
+	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
 }
