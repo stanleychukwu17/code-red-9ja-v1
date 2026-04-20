@@ -14,8 +14,8 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email, phone, username, password_hash, last_name,
-  first_name, other_name, gender, date_of_birth, citizenship, current_country,
-  current_state
+  first_name, other_name, gender, date_of_birth, current_country,
+  current_state, current_city
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING id
@@ -31,9 +31,9 @@ type CreateUserParams struct {
 	OtherName      pgtype.Text `json:"other_name"`
 	Gender         pgtype.Text `json:"gender"`
 	DateOfBirth    pgtype.Date `json:"date_of_birth"`
-	Citizenship    pgtype.Int2 `json:"citizenship"`
-	CurrentCountry pgtype.Int2 `json:"current_country"`
-	CurrentState   pgtype.Int4 `json:"current_state"`
+	CurrentCountry int16       `json:"current_country"`
+	CurrentState   int16       `json:"current_state"`
+	CurrentCity    pgtype.Int4 `json:"current_city"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
@@ -47,9 +47,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 		arg.OtherName,
 		arg.Gender,
 		arg.DateOfBirth,
-		arg.Citizenship,
 		arg.CurrentCountry,
 		arg.CurrentState,
+		arg.CurrentCity,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -57,7 +57,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, other_name, gender, date_of_birth, citizenship, current_country, current_state, verification_type, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, other_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -76,9 +76,9 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.OtherName,
 		&i.Gender,
 		&i.DateOfBirth,
-		&i.Citizenship,
 		&i.CurrentCountry,
 		&i.CurrentState,
+		&i.CurrentCity,
 		&i.VerificationType,
 		&i.AccountStatus,
 		&i.CreatedAt,
@@ -88,7 +88,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, other_name, gender, date_of_birth, citizenship, current_country, current_state, verification_type, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, other_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -107,9 +107,9 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.OtherName,
 		&i.Gender,
 		&i.DateOfBirth,
-		&i.Citizenship,
 		&i.CurrentCountry,
 		&i.CurrentState,
+		&i.CurrentCity,
 		&i.VerificationType,
 		&i.AccountStatus,
 		&i.CreatedAt,
