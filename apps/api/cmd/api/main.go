@@ -47,7 +47,7 @@ func main() {
 	defer pool.Close()
 
 	// Initialize router
-	r := router.New()
+	r := router.New(pool)
 
 	// Create server address
 	addr := fmt.Sprintf(":%s", cfg.Port)
