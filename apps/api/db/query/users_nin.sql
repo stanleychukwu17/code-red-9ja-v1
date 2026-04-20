@@ -7,7 +7,3 @@ RETURNING id;
 SELECT id, nin FROM users_nin
 WHERE user_id = $1 LIMIT 1;
 
--- name: UpdateUserNIN :one
-UPDATE users_nin SET nin = $2
-WHERE user_id = $1
-RETURNING id;
