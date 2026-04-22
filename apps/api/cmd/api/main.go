@@ -46,8 +46,16 @@ func main() {
 	}
 	defer pool.Close()
 
+	// Initialize Redis
+	rdb, err := db.NewRedisClient(cfg.Redis)
+	if err != nil {
+		slog.Error("failed to initialize redis", "err", err)
+		os.Exit(1)
+	}
+	defer rdb.Close()
+
 	// Initialize router
-	r := router.New(pool)
+	r := router.New(pool, rdb)
 
 	// Create server address
 	addr := fmt.Sprintf(":%s", cfg.Port)
