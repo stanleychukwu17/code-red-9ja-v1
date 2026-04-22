@@ -22,12 +22,20 @@ type DatabaseConfig struct {
 	// MaxLifetime time.Duration // Maximum lifetime of a connection (currently commented out)
 }
 
+// RedisConfig holds Redis connection parameters.
+type RedisConfig struct {
+	Addr     string // Redis server address (e.g., localhost:6379)
+	Password string // Redis password (empty if no authentication)
+	DB       int    // Redis database number (default 0)
+}
+
 // Config holds the complete application configuration.
 // It includes environment settings, server port, and database configuration.
 type Config struct {
 	Env      string         // Application environment (development, staging, production)
 	Port     string         // Server port for HTTP listener
 	Database DatabaseConfig // Database connection configuration
+	Redis    RedisConfig    // Redis connection configuration
 }
 
 var (
@@ -52,6 +60,11 @@ func Load() *Config {
 			Port: GetEnv("PORT", "4000"),
 			Database: DatabaseConfig{
 				URL: GetEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/postgres?sslmode=disable"),
+			},
+			Redis: RedisConfig{
+				Addr:     GetEnv("REDIS_ADDR", "localhost:6379"),
+				Password: GetEnv("REDIS_PASSWORD", ""),
+				DB:       getIntEnv("REDIS_DB", 0),
 			},
 		}
 
