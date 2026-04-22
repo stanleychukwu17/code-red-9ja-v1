@@ -6,8 +6,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	httpSwagger "github.com/swaggo/http-swagger"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "free9ja/api/docs"
 	"free9ja/api/internal/db/queries"
@@ -17,12 +18,13 @@ import (
 )
 
 // New creates and returns a configured Chi router.
-func New(pool *pgxpool.Pool) http.Handler {
+func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter := chi.NewRouter()
 
 	// Initialize dependencies
 	q := queries.New(pool)
 	authService := service.NewAuthService(q)
+	authHandler := authhandler.NewHandler(authService)
 
 	// Core middleware
 	mainRouter.Use(middleware.RequestID)
@@ -46,8 +48,6 @@ func New(pool *pgxpool.Pool) http.Handler {
 
 		// Auth routes group
 		r.Route("/auth", func(r chi.Router) {
-			authHandler := authhandler.NewHandler(authService)
-
 			r.Post("/register", authHandler.Register)
 		})
 
