@@ -4,13 +4,13 @@
 CREATE TABLE users (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   fake_id BIGINT UNIQUE,
-  email VARCHAR(255) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE,
   phone VARCHAR(25) UNIQUE NOT NULL,
   username VARCHAR(30) UNIQUE,
   password_hash VARCHAR(100) NOT NULL,
   last_name VARCHAR(30),
   first_name VARCHAR(30),
-  other_name VARCHAR(30),
+  middle_name VARCHAR(30),
   gender VARCHAR(10) CHECK (gender IN ('male', 'female')),
 
   date_of_birth DATE,
@@ -19,28 +19,29 @@ CREATE TABLE users (
   current_state SMALLINT NOT NULL,
   current_city INT,
 
-  verification_type VARCHAR(20)
+  verification_type VARCHAR(30)
     CHECK (verification_type IN (
       'nin',
-      'long_verification',
-      'short_verification',
-      'none'
+      'nin_verified_2',
+      'phone_verified_1',
+      'none_0'
     ))
-    DEFAULT 'none',
+    DEFAULT 'none_0',
 
-  -- where long verification includes email, phone, passport, live camera, head movement, device fingerprint, otp
-  -- and short verification includes email, phone, otp
+  -- where nin_verified_2 means nin is verified
+  -- where phone_verified_1 means phone whatsapp number is verified
+  -- where none_0 means no verification
 
-  account_status VARCHAR(20)
+  account_status VARCHAR(30)
     CHECK (account_status IN (
+      'just_registered',
       'active',
       'inactive',
       'suspended',
       'banned',
-      'deleted',
-      'pending'
+      'deleted'
     ))
-    DEFAULT 'active',
+    DEFAULT 'just_registered',
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
