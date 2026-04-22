@@ -6,6 +6,8 @@ import (
 	"free9ja/api/internal/utils"
 )
 
+var utilsInstance = utils.NewUtils(nil)
+
 // Health handles GET /health
 // @Summary Health check
 // @Description get the status of the server
@@ -14,7 +16,7 @@ import (
 // @Success 200 {object} map[string]string
 // @Router /health [get]
 func Health(w http.ResponseWriter, r *http.Request) {
-	utils.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // Root handles GET /api/v1/
@@ -25,7 +27,7 @@ func Health(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {object} map[string]string
 // @Router / [get]
 func Root(w http.ResponseWriter, r *http.Request) {
-	utils.RespondJSON(w, http.StatusOK, map[string]string{
+	utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{
 		"message": "free9ja API v1",
 	})
 }
