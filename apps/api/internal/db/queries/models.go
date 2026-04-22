@@ -62,7 +62,7 @@ type User struct {
 	PasswordHash     string             `json:"password_hash"`
 	LastName         pgtype.Text        `json:"last_name"`
 	FirstName        pgtype.Text        `json:"first_name"`
-	OtherName        pgtype.Text        `json:"other_name"`
+	MiddleName       pgtype.Text        `json:"middle_name"`
 	Gender           pgtype.Text        `json:"gender"`
 	DateOfBirth      pgtype.Date        `json:"date_of_birth"`
 	CurrentCountry   int16              `json:"current_country"`
