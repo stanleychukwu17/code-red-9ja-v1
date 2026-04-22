@@ -14,7 +14,7 @@ import (
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email, phone, username, password_hash, last_name,
-  first_name, other_name, gender, date_of_birth, current_country,
+  first_name, middle_name, gender, date_of_birth, current_country,
   current_state, current_city
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
@@ -28,7 +28,7 @@ type CreateUserParams struct {
 	PasswordHash   string      `json:"password_hash"`
 	LastName       pgtype.Text `json:"last_name"`
 	FirstName      pgtype.Text `json:"first_name"`
-	OtherName      pgtype.Text `json:"other_name"`
+	MiddleName     pgtype.Text `json:"middle_name"`
 	Gender         pgtype.Text `json:"gender"`
 	DateOfBirth    pgtype.Date `json:"date_of_birth"`
 	CurrentCountry int16       `json:"current_country"`
@@ -44,7 +44,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 		arg.PasswordHash,
 		arg.LastName,
 		arg.FirstName,
-		arg.OtherName,
+		arg.MiddleName,
 		arg.Gender,
 		arg.DateOfBirth,
 		arg.CurrentCountry,
@@ -57,7 +57,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, other_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -73,7 +73,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.PasswordHash,
 		&i.LastName,
 		&i.FirstName,
-		&i.OtherName,
+		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
 		&i.CurrentCountry,
@@ -88,7 +88,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, other_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -104,7 +104,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.PasswordHash,
 		&i.LastName,
 		&i.FirstName,
-		&i.OtherName,
+		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
 		&i.CurrentCountry,
