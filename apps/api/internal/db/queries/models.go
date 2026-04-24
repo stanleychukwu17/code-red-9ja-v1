@@ -54,24 +54,25 @@ type CSubregion struct {
 }
 
 type User struct {
-	ID               int64              `json:"id"`
-	FakeID           pgtype.Int8        `json:"fake_id"`
-	Email            string             `json:"email"`
-	Phone            string             `json:"phone"`
-	Username         pgtype.Text        `json:"username"`
-	PasswordHash     string             `json:"password_hash"`
-	LastName         pgtype.Text        `json:"last_name"`
-	FirstName        pgtype.Text        `json:"first_name"`
-	MiddleName       pgtype.Text        `json:"middle_name"`
-	Gender           pgtype.Text        `json:"gender"`
-	DateOfBirth      pgtype.Date        `json:"date_of_birth"`
-	CurrentCountry   int16              `json:"current_country"`
-	CurrentState     int16              `json:"current_state"`
-	CurrentCity      pgtype.Int4        `json:"current_city"`
-	VerificationType pgtype.Text        `json:"verification_type"`
-	AccountStatus    pgtype.Text        `json:"account_status"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	ID             int64              `json:"id"`
+	FakeID         pgtype.Int8        `json:"fake_id"`
+	Email          pgtype.Text        `json:"email"`
+	Phone          string             `json:"phone"`
+	Username       pgtype.Text        `json:"username"`
+	PasswordHash   string             `json:"password_hash"`
+	LastName       pgtype.Text        `json:"last_name"`
+	FirstName      pgtype.Text        `json:"first_name"`
+	MiddleName     pgtype.Text        `json:"middle_name"`
+	Gender         pgtype.Text        `json:"gender"`
+	DateOfBirth    pgtype.Date        `json:"date_of_birth"`
+	CurrentCountry int16              `json:"current_country"`
+	CurrentState   int16              `json:"current_state"`
+	CurrentCity    pgtype.Int4        `json:"current_city"`
+	NinVerified    pgtype.Text        `json:"nin_verified"`
+	PhoneVerified  pgtype.Text        `json:"phone_verified"`
+	AccountStatus  pgtype.Text        `json:"account_status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UsersNin struct {
