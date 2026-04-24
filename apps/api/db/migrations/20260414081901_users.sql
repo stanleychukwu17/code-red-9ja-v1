@@ -19,18 +19,8 @@ CREATE TABLE users (
   current_state SMALLINT NOT NULL,
   current_city INT,
 
-  verification_type VARCHAR(30)
-    CHECK (verification_type IN (
-      'nin',
-      'nin_verified_2',
-      'phone_verified_1',
-      'none_0'
-    ))
-    DEFAULT 'none_0',
-
-  -- where nin_verified_2 means nin is verified
-  -- where phone_verified_1 means phone whatsapp number is verified
-  -- where none_0 means no verification
+  nin_verified VARCHAR(5) CHECK (nin_verified IN ('true', 'false')) DEFAULT 'false',
+  phone_verified VARCHAR(5) CHECK (phone_verified IN ('true', 'false')) DEFAULT 'false',
 
   account_status VARCHAR(30)
     CHECK (account_status IN (
@@ -50,14 +40,15 @@ CREATE TABLE users (
 -- USERS NIN TABLE
 CREATE TABLE users_nin (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user_id BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  nin VARCHAR(15) UNIQUE NOT NULL
+  -- user_id BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id BIGINT UNIQUE NOT NULL,
+  nin VARCHAR(12) UNIQUE NOT NULL
 );
 
 -- USERS Phone number table
 CREATE TABLE users_phone_numbers (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  user_id BIGINT NOT NULL,
   phone VARCHAR(25) UNIQUE NOT NULL,
   on_whatsapp VARCHAR(25) CHECK (on_whatsapp IN ('yes','no')) DEFAULT 'no'
 );
