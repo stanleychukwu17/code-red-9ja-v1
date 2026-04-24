@@ -11,6 +11,18 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkIfPhoneNumberExists = `-- name: CheckIfPhoneNumberExists :one
+SELECT id FROM users_phone_numbers
+WHERE phone = $1 LIMIT 1
+`
+
+func (q *Queries) CheckIfPhoneNumberExists(ctx context.Context, phone string) (int64, error) {
+	row := q.db.QueryRow(ctx, checkIfPhoneNumberExists, phone)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email, phone, username, password_hash, last_name,
@@ -22,7 +34,7 @@ RETURNING id
 `
 
 type CreateUserParams struct {
-	Email          string      `json:"email"`
+	Email          pgtype.Text `json:"email"`
 	Phone          string      `json:"phone"`
 	Username       pgtype.Text `json:"username"`
 	PasswordHash   string      `json:"password_hash"`
@@ -56,39 +68,43 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 	return id, err
 }
 
+const createUserNIN = `-- name: CreateUserNIN :one
+INSERT INTO users_nin (user_id, nin)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type CreateUserNINParams struct {
+	UserID int64  `json:"user_id"`
+	Nin    string `json:"nin"`
+}
+
+func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createUserNIN, arg.UserID, arg.Nin)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
+SELECT id, fake_id FROM users
 WHERE email = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error) {
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.FakeID,
-		&i.Email,
-		&i.Phone,
-		&i.Username,
-		&i.PasswordHash,
-		&i.LastName,
-		&i.FirstName,
-		&i.MiddleName,
-		&i.Gender,
-		&i.DateOfBirth,
-		&i.CurrentCountry,
-		&i.CurrentState,
-		&i.CurrentCity,
-		&i.VerificationType,
-		&i.AccountStatus,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
+	var i GetUserByEmailRow
+	err := row.Scan(&i.ID, &i.FakeID)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, verification_type, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, nin_verified, phone_verified, account_status, created_at, updated_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -110,10 +126,95 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentCity,
-		&i.VerificationType,
+		&i.NinVerified,
+		&i.PhoneVerified,
 		&i.AccountStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const getUserByPhone = `-- name: GetUserByPhone :one
+SELECT id, fake_id FROM users
+WHERE phone = $1 LIMIT 1
+`
+
+type GetUserByPhoneRow struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error) {
+	row := q.db.QueryRow(ctx, getUserByPhone, phone)
+	var i GetUserByPhoneRow
+	err := row.Scan(&i.ID, &i.FakeID)
+	return i, err
+}
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT id, fake_id FROM users
+WHERE username = $1 LIMIT 1
+`
+
+type GetUserByUsernameRow struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error) {
+	row := q.db.QueryRow(ctx, getUserByUsername, username)
+	var i GetUserByUsernameRow
+	err := row.Scan(&i.ID, &i.FakeID)
+	return i, err
+}
+
+const getUserNINByNIN = `-- name: GetUserNINByNIN :one
+SELECT id, user_id FROM users_nin
+WHERE nin = $1 LIMIT 1
+`
+
+type GetUserNINByNINRow struct {
+	ID     int32 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error) {
+	row := q.db.QueryRow(ctx, getUserNINByNIN, nin)
+	var i GetUserNINByNINRow
+	err := row.Scan(&i.ID, &i.UserID)
+	return i, err
+}
+
+const getUserNINByUserID = `-- name: GetUserNINByUserID :one
+SELECT id, nin FROM users_nin
+WHERE user_id = $1 LIMIT 1
+`
+
+type GetUserNINByUserIDRow struct {
+	ID  int32  `json:"id"`
+	Nin string `json:"nin"`
+}
+
+func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error) {
+	row := q.db.QueryRow(ctx, getUserNINByUserID, userID)
+	var i GetUserNINByUserIDRow
+	err := row.Scan(&i.ID, &i.Nin)
+	return i, err
+}
+
+const updateUserFakeID = `-- name: UpdateUserFakeID :exec
+UPDATE users
+SET fake_id = $2
+WHERE id = $1
+`
+
+type UpdateUserFakeIDParams struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error {
+	_, err := q.db.Exec(ctx, updateUserFakeID, arg.ID, arg.FakeID)
+	return err
 }
