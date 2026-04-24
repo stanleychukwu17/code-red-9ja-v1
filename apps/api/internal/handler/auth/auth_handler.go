@@ -3,7 +3,7 @@ package authhandler
 import (
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/service"
+	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"time"
@@ -14,13 +14,13 @@ import (
 
 // Handler struct holds the dependencies for the auth handler
 type Handler struct {
-	authService *service.AuthService
+	authService *auth.AuthService
 	validate    *validator.Validate
 	utils       *utils.Utils
 }
 
 // NewHandler creates a new instance of the auth handler
-func NewHandler(authService *service.AuthService) *Handler {
+func NewHandler(authService *auth.AuthService) *Handler {
 	return &Handler{
 		authService: authService,
 		validate:    validator.New(),
@@ -31,7 +31,8 @@ func NewHandler(authService *service.AuthService) *Handler {
 type RegisterRequest struct {
 	Email          string `json:"email" validate:"omitempty,email"`
 	Phone          string `json:"phone" validate:"required,e164"`
-	Username       string `json:"username" validate:"required,min=3,max=30,alphanum"`
+	Username       string `json:"username" validate:"required,min=2,max=30,alphanum"`
+	Nin            string `json:"nin" validate:"required,numeric,len=11"`
 	Password       string `json:"password" validate:"required,min=5,max=72"`
 	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
 	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
@@ -49,13 +50,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	// Decode the incoming JSON request body into the RegisterRequest struct
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid request body"})
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "Invalid request body " + err.Error()})
 		return
 	}
 
 	// Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
 	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"error": "Invalid request body: " + err.(validator.ValidationErrors)[0].Translate(nil),
+		})
 		return
 	}
 
@@ -69,13 +72,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Map the request data to the database creation parameters
 	// Note: Password hashing is handled within the service layer
 	params := queries.CreateUserParams{
-		Email:          req.Email,
+		Email:          pgtype.Text{String: req.Email},
 		Phone:          req.Phone,
-		Username:       pgtype.Text{String: req.Username, Valid: true},
+		Username:       pgtype.Text{String: req.Username},
 		PasswordHash:   req.Password, // Hashed in the service layer
-		LastName:       pgtype.Text{String: req.LastName, Valid: true},
-		FirstName:      pgtype.Text{String: req.FirstName, Valid: true},
-		MiddleName:     pgtype.Text{String: req.MiddleName, Valid: req.MiddleName != ""},
+		LastName:       pgtype.Text{String: req.LastName},
+		FirstName:      pgtype.Text{String: req.FirstName},
+		MiddleName:     pgtype.Text{String: req.MiddleName},
 		Gender:         pgtype.Text{String: req.Gender, Valid: true},
 		DateOfBirth:    pgtype.Date{Time: dob, Valid: true},
 		CurrentCountry: req.CurrentCountry,
@@ -84,8 +87,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call the auth service to register the new user
-	id, err := h.authService.Register(r.Context(), params)
+	id, err := h.authService.Register(r.Context(), params, req.Nin)
 	if err != nil {
+		// Fallback for unexpected errors
 		h.utils.RespondJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create user: " + err.Error()})
 		return
 	}
