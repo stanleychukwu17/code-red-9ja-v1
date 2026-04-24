@@ -14,7 +14,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
 	authhandler "free9ja/api/internal/handler/auth"
-	"free9ja/api/internal/service"
+	authservice "free9ja/api/internal/service/auth"
 )
 
 // New creates and returns a configured Chi router.
@@ -23,7 +23,7 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 
 	// Initialize dependencies
 	q := queries.New(pool)
-	authService := service.NewAuthService(q)
+	authService := authservice.NewAuthService(q, rdb)
 	authHandler := authhandler.NewHandler(authService)
 
 	// Core middleware
