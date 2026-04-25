@@ -1,0 +1,1540 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>api: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">free9ja/api/cmd/api/main.go (0.0%)</option>
+				
+				<option value="file1">free9ja/api/docs/docs.go (0.0%)</option>
+				
+				<option value="file2">free9ja/api/internal/config/config.go (0.0%)</option>
+				
+				<option value="file3">free9ja/api/internal/db/postgres.go (0.0%)</option>
+				
+				<option value="file4">free9ja/api/internal/db/queries/countries.sql.go (0.0%)</option>
+				
+				<option value="file5">free9ja/api/internal/db/queries/db.go (0.0%)</option>
+				
+				<option value="file6">free9ja/api/internal/db/queries/users.sql.go (0.0%)</option>
+				
+				<option value="file7">free9ja/api/internal/db/redis.go (0.0%)</option>
+				
+				<option value="file8">free9ja/api/internal/handler/auth/auth_handler.go (0.0%)</option>
+				
+				<option value="file9">free9ja/api/internal/handler/handler.go (0.0%)</option>
+				
+				<option value="file10">free9ja/api/internal/logger/logger.go (0.0%)</option>
+				
+				<option value="file11">free9ja/api/internal/router/auth/authRouter.go (0.0%)</option>
+				
+				<option value="file12">free9ja/api/internal/router/router.go (0.0%)</option>
+				
+				<option value="file13">free9ja/api/internal/service/auth/auth_service.go (0.0%)</option>
+				
+				<option value="file14">free9ja/api/internal/utils/respond.go (0.0%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "log/slog"
+        "net/http"
+        "os"
+
+        "free9ja/api/internal/config"
+        "free9ja/api/internal/db"
+        "free9ja/api/internal/logger"
+        "free9ja/api/internal/router"
+)
+
+// @title Free9ja API
+// @version 1.0
+// @description API for the Free9ja platform.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:4000
+// @BasePath /api/v1
+func main() <span class="cov0" title="0">{
+        cfg := config.Load()
+
+        // Setup better structured logging, can now do:
+        // slog.Info("hello", "key", "value")
+        // slog.Error("uh oh", "err", err)
+        // slog.Warn("careful", "msg", "something might be wrong")
+        // slog.Debug("deep details", "data", "lots of info")
+        // slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
+        logger.SetupLogger(version, commit)
+
+        // Initialize database
+        pool, err := db.NewPostgresPool(context.Background(), cfg.Database.URL)
+        if err != nil </span><span class="cov0" title="0">{
+                slog.Error("failed to initialize database", "err", err)
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">defer pool.Close()
+
+        // Initialize Redis
+        rdb, err := db.NewRedisClient(cfg.Redis)
+        if err != nil </span><span class="cov0" title="0">{
+                slog.Error("failed to initialize redis", "err", err)
+                os.Exit(1)
+        }</span>
+        <span class="cov0" title="0">defer rdb.Close()
+
+        // Initialize router
+        r := router.New(pool, rdb)
+
+        // Create server address
+        addr := fmt.Sprintf(":%s", cfg.Port)
+        slog.Info("starting server", "addr", addr)
+
+        // Start server
+        if err := http.ListenAndServe(addr, r); err != nil </span><span class="cov0" title="0">{
+                slog.Error("server failed", "err", err)
+                os.Exit(1)
+        }</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package docs Code generated by swaggo/swag. DO NOT EDIT
+package docs
+
+import "github.com/swaggo/swag"
+
+const docTemplate = `{
+    "schemes": {{ marshal .Schemes }},
+    "swagger": "2.0",
+    "info": {
+        "description": "{{escape .Description}}",
+        "title": "{{.Title}}",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "{{.Version}}"
+    },
+    "host": "{{.Host}}",
+    "basePath": "{{.BasePath}}",
+    "paths": {
+        "/": {
+            "get": {
+                "description": "get the API root message",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "root"
+                ],
+                "summary": "API Root",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "get the status of the server",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}`
+
+// SwaggerInfo holds exported Swagger Info so clients can modify it
+var SwaggerInfo = &amp;swag.Spec{
+        Version:          "1.0",
+        Host:             "localhost:4000",
+        BasePath:         "/api/v1",
+        Schemes:          []string{},
+        Title:            "Free9ja API",
+        Description:      "API for the Free9ja platform.",
+        InfoInstanceName: "swagger",
+        SwaggerTemplate:  docTemplate,
+        LeftDelim:        "{{",
+        RightDelim:       "}}",
+}
+
+func init() <span class="cov0" title="0">{
+        swag.Register(SwaggerInfo.InstanceName(), SwaggerInfo)
+}</span>
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">// Package config provides configuration management for the API application.
+// It handles loading environment variables from .env files and system environment,
+// with support for default values and type conversion.
+package config
+
+import (
+        "log/slog"
+        "os"
+        "strconv"
+        "sync"
+
+        "github.com/joho/godotenv"
+)
+
+// DatabaseConfig holds database connection parameters.
+// These settings control the connection pool behavior and database connection details.
+type DatabaseConfig struct {
+        URL       string // Database connection URL (e.g., postgres://user:pass@host:port/db)
+        MaxConns  int    // Maximum number of open connections to the database
+        IdleConns int    // Maximum number of idle connections in the pool
+        // ConnTimeout time.Duration // Connection timeout (currently commented out)
+        // MaxLifetime time.Duration // Maximum lifetime of a connection (currently commented out)
+}
+
+// RedisConfig holds Redis connection parameters.
+type RedisConfig struct {
+        Addr     string // Redis server address (e.g., localhost:6379)
+        Password string // Redis password (empty if no authentication)
+        DB       int    // Redis database number (default 0)
+}
+
+// Config holds the complete application configuration.
+// It includes environment settings, server port, and database configuration.
+type Config struct {
+        Env      string         // Application environment (development, staging, production)
+        Port     string         // Server port for HTTP listener
+        Database DatabaseConfig // Database connection configuration
+        Redis    RedisConfig    // Redis connection configuration
+}
+
+var (
+        cfg  *Config   // Global configuration instance (singleton)
+        once sync.Once // Ensures Load() is only executed once (thread-safe)
+)
+
+// Load loads the application configuration using the singleton pattern.
+// It loads environment variables from .env files and system environment,
+// applies default values, and performs validation. This function is thread-safe
+// and will only initialize the configuration once, regardless of how many times it's called.
+func Load() *Config <span class="cov0" title="0">{
+        once.Do(func() </span><span class="cov0" title="0">{
+                // Load .env and .env.local
+                // Note: .env.local is usually loaded first if you want it to take precedence
+                if err := godotenv.Load(".env.local", ".env"); err != nil </span><span class="cov0" title="0">{
+                        slog.Warn("No .env file found, relying on system environment variables")
+                }</span>
+
+                <span class="cov0" title="0">cfg = &amp;Config{
+                        Env:  GetEnv("ENV", "development"),
+                        Port: GetEnv("PORT", "4000"),
+                        Database: DatabaseConfig{
+                                URL: GetEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/postgres?sslmode=disable"),
+                        },
+                        Redis: RedisConfig{
+                                Addr:     GetEnv("REDIS_ADDR", "localhost:6379"),
+                                Password: GetEnv("REDIS_PASSWORD", ""),
+                                DB:       getIntEnv("REDIS_DB", 0),
+                        },
+                }
+
+                // Validation: Ensure critical variables are set
+                if cfg.Database.URL == "" </span><span class="cov0" title="0">{
+                        slog.Error("DATABASE_URL is not set")
+                        panic("DATABASE_URL is not set")</span>
+                }
+        })
+
+        <span class="cov0" title="0">return cfg</span>
+}
+
+// getEnv retrieves an environment variable value with a fallback default.
+// It first checks the system environment, then returns the default value if not found.
+func GetEnv(key, defaultValue string) string <span class="cov0" title="0">{
+        if value := os.Getenv(key); value != "" </span><span class="cov0" title="0">{
+                return value
+        }</span>
+        <span class="cov0" title="0">return defaultValue</span>
+}
+
+// getIntEnv retrieves an environment variable as an integer with a fallback default.
+// It attempts to parse the environment variable as an integer, returning the default
+// value if the variable is not set or cannot be parsed as an integer.
+func getIntEnv(key string, defaultValue int) int <span class="cov0" title="0">{
+        if value := os.Getenv(key); value != "" </span><span class="cov0" title="0">{
+                if i, err := strconv.Atoi(value); err == nil </span><span class="cov0" title="0">{
+                        return i
+                }</span>
+        }
+        <span class="cov0" title="0">return defaultValue</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package db
+
+import (
+        "context"
+        "fmt"
+        "free9ja/api/internal/config"
+        "log/slog"
+        "time"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func NewPostgresPool(ctx context.Context, connString string) (*pgxpool.Pool, error) <span class="cov0" title="0">{
+        dbConfig, err := pgxpool.ParseConfig(connString)
+
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("failed to parse connection string: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">dbConfig.MaxConns = 20
+        dbConfig.MinConns = 2
+        dbConfig.MaxConnLifetime = 30 * time.Minute
+        dbConfig.MaxConnIdleTime = 15 * time.Minute
+
+        // Initialize the pool
+        pool, err := pgxpool.NewWithConfig(ctx, dbConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("unable to create connection pool: %w", err)
+        }</span>
+
+        // Verify the connection is active
+        <span class="cov0" title="0">if err := pool.Ping(ctx); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("unable to ping database: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if config.GetEnv("ENV", "development") == "development" </span><span class="cov0" title="0">{
+                slog.Info("Successfully connected to the database")
+        }</span>
+
+        <span class="cov0" title="0">return pool, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">// Code generated by sqlc. DO NOT EDIT.
+// versions:
+//   sqlc v1.30.0
+// source: countries.sql
+
+package queries
+
+import (
+        "context"
+)
+
+const getCityByID = `-- name: GetCityByID :one
+SELECT id, name FROM c_cities
+WHERE id = $1 and state_id = $2 LIMIT 1
+`
+
+type GetCityByIDParams struct {
+        ID      int32 `json:"id"`
+        StateID int16 `json:"state_id"`
+}
+
+type GetCityByIDRow struct {
+        ID   int32  `json:"id"`
+        Name string `json:"name"`
+}
+
+func (q *Queries) GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getCityByID, arg.ID, arg.StateID)
+        var i GetCityByIDRow
+        err := row.Scan(&amp;i.ID, &amp;i.Name)
+        return i, err
+}</span>
+
+const getCountryByID = `-- name: GetCountryByID :one
+SELECT id, name, iso2  FROM c_countries
+WHERE id = $1 LIMIT 1
+`
+
+type GetCountryByIDRow struct {
+        ID   int16  `json:"id"`
+        Name string `json:"name"`
+        Iso2 string `json:"iso2"`
+}
+
+func (q *Queries) GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getCountryByID, id)
+        var i GetCountryByIDRow
+        err := row.Scan(&amp;i.ID, &amp;i.Name, &amp;i.Iso2)
+        return i, err
+}</span>
+
+const getStateByID = `-- name: GetStateByID :one
+SELECT id, name FROM c_states
+WHERE id = $1 and country_id = $2 LIMIT 1
+`
+
+type GetStateByIDParams struct {
+        ID        int16 `json:"id"`
+        CountryID int16 `json:"country_id"`
+}
+
+type GetStateByIDRow struct {
+        ID   int16  `json:"id"`
+        Name string `json:"name"`
+}
+
+func (q *Queries) GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getStateByID, arg.ID, arg.CountryID)
+        var i GetStateByIDRow
+        err := row.Scan(&amp;i.ID, &amp;i.Name)
+        return i, err
+}</span>
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">// Code generated by sqlc. DO NOT EDIT.
+// versions:
+//   sqlc v1.30.0
+
+package queries
+
+import (
+        "context"
+
+        "github.com/jackc/pgx/v5"
+        "github.com/jackc/pgx/v5/pgconn"
+)
+
+type DBTX interface {
+        Exec(context.Context, string, ...interface{}) (pgconn.CommandTag, error)
+        Query(context.Context, string, ...interface{}) (pgx.Rows, error)
+        QueryRow(context.Context, string, ...interface{}) pgx.Row
+}
+
+func New(db DBTX) *Queries <span class="cov0" title="0">{
+        return &amp;Queries{db: db}
+}</span>
+
+type Queries struct {
+        db DBTX
+}
+
+func (q *Queries) WithTx(tx pgx.Tx) *Queries <span class="cov0" title="0">{
+        return &amp;Queries{
+                db: tx,
+        }
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">// Code generated by sqlc. DO NOT EDIT.
+// versions:
+//   sqlc v1.30.0
+// source: users.sql
+
+package queries
+
+import (
+        "context"
+
+        "github.com/jackc/pgx/v5/pgtype"
+)
+
+const checkIfPhoneNumberExists = `-- name: CheckIfPhoneNumberExists :one
+SELECT id FROM users_phone_numbers
+WHERE phone = $1 LIMIT 1
+`
+
+func (q *Queries) CheckIfPhoneNumberExists(ctx context.Context, phone string) (int64, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, checkIfPhoneNumberExists, phone)
+        var id int64
+        err := row.Scan(&amp;id)
+        return id, err
+}</span>
+
+const createPhoneNumber = `-- name: CreatePhoneNumber :one
+INSERT INTO users_phone_numbers (user_id, phone)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type CreatePhoneNumberParams struct {
+        UserID int64  `json:"user_id"`
+        Phone  string `json:"phone"`
+}
+
+func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, createPhoneNumber, arg.UserID, arg.Phone)
+        var id int64
+        err := row.Scan(&amp;id)
+        return id, err
+}</span>
+
+const createUser = `-- name: CreateUser :one
+INSERT INTO users (
+  email, phone, username, password_hash, last_name,
+  first_name, middle_name, gender, date_of_birth, current_country,
+  current_state, current_city
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id
+`
+
+type CreateUserParams struct {
+        Email          pgtype.Text `json:"email"`
+        Phone          string      `json:"phone"`
+        Username       pgtype.Text `json:"username"`
+        PasswordHash   string      `json:"password_hash"`
+        LastName       pgtype.Text `json:"last_name"`
+        FirstName      pgtype.Text `json:"first_name"`
+        MiddleName     pgtype.Text `json:"middle_name"`
+        Gender         pgtype.Text `json:"gender"`
+        DateOfBirth    pgtype.Date `json:"date_of_birth"`
+        CurrentCountry int16       `json:"current_country"`
+        CurrentState   int16       `json:"current_state"`
+        CurrentCity    pgtype.Int4 `json:"current_city"`
+}
+
+func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, createUser,
+                arg.Email,
+                arg.Phone,
+                arg.Username,
+                arg.PasswordHash,
+                arg.LastName,
+                arg.FirstName,
+                arg.MiddleName,
+                arg.Gender,
+                arg.DateOfBirth,
+                arg.CurrentCountry,
+                arg.CurrentState,
+                arg.CurrentCity,
+        )
+        var id int64
+        err := row.Scan(&amp;id)
+        return id, err
+}</span>
+
+const createUserNIN = `-- name: CreateUserNIN :one
+INSERT INTO users_nin (user_id, nin)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type CreateUserNINParams struct {
+        UserID int64  `json:"user_id"`
+        Nin    string `json:"nin"`
+}
+
+func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, createUserNIN, arg.UserID, arg.Nin)
+        var id int32
+        err := row.Scan(&amp;id)
+        return id, err
+}</span>
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, fake_id FROM users
+WHERE email = $1 LIMIT 1
+`
+
+type GetUserByEmailRow struct {
+        ID     int64       `json:"id"`
+        FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getUserByEmail, email)
+        var i GetUserByEmailRow
+        err := row.Scan(&amp;i.ID, &amp;i.FakeID)
+        return i, err
+}</span>
+
+const getUserByID = `-- name: GetUserByID :one
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, nin_verified, phone_verified, account_status, created_at, updated_at FROM users
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getUserByID, id)
+        var i User
+        err := row.Scan(
+                &amp;i.ID,
+                &amp;i.FakeID,
+                &amp;i.Email,
+                &amp;i.Phone,
+                &amp;i.Username,
+                &amp;i.PasswordHash,
+                &amp;i.LastName,
+                &amp;i.FirstName,
+                &amp;i.MiddleName,
+                &amp;i.Gender,
+                &amp;i.DateOfBirth,
+                &amp;i.CurrentCountry,
+                &amp;i.CurrentState,
+                &amp;i.CurrentCity,
+                &amp;i.NinVerified,
+                &amp;i.PhoneVerified,
+                &amp;i.AccountStatus,
+                &amp;i.CreatedAt,
+                &amp;i.UpdatedAt,
+        )
+        return i, err
+}</span>
+
+const getUserByPhone = `-- name: GetUserByPhone :one
+SELECT id, fake_id FROM users
+WHERE phone = $1 LIMIT 1
+`
+
+type GetUserByPhoneRow struct {
+        ID     int64       `json:"id"`
+        FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getUserByPhone, phone)
+        var i GetUserByPhoneRow
+        err := row.Scan(&amp;i.ID, &amp;i.FakeID)
+        return i, err
+}</span>
+
+const getUserByUsername = `-- name: GetUserByUsername :one
+SELECT id, fake_id FROM users
+WHERE username = $1 LIMIT 1
+`
+
+type GetUserByUsernameRow struct {
+        ID     int64       `json:"id"`
+        FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getUserByUsername, username)
+        var i GetUserByUsernameRow
+        err := row.Scan(&amp;i.ID, &amp;i.FakeID)
+        return i, err
+}</span>
+
+const getUserNINByNIN = `-- name: GetUserNINByNIN :one
+SELECT id, user_id FROM users_nin
+WHERE nin = $1 LIMIT 1
+`
+
+type GetUserNINByNINRow struct {
+        ID     int32 `json:"id"`
+        UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getUserNINByNIN, nin)
+        var i GetUserNINByNINRow
+        err := row.Scan(&amp;i.ID, &amp;i.UserID)
+        return i, err
+}</span>
+
+const getUserNINByUserID = `-- name: GetUserNINByUserID :one
+SELECT id, nin FROM users_nin
+WHERE user_id = $1 LIMIT 1
+`
+
+type GetUserNINByUserIDRow struct {
+        ID  int32  `json:"id"`
+        Nin string `json:"nin"`
+}
+
+func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error) <span class="cov0" title="0">{
+        row := q.db.QueryRow(ctx, getUserNINByUserID, userID)
+        var i GetUserNINByUserIDRow
+        err := row.Scan(&amp;i.ID, &amp;i.Nin)
+        return i, err
+}</span>
+
+const updateUserFakeID = `-- name: UpdateUserFakeID :exec
+UPDATE users
+SET fake_id = $2
+WHERE id = $1
+`
+
+type UpdateUserFakeIDParams struct {
+        ID     int64       `json:"id"`
+        FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error <span class="cov0" title="0">{
+        _, err := q.db.Exec(ctx, updateUserFakeID, arg.ID, arg.FakeID)
+        return err
+}</span>
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package db
+
+import (
+        "context"
+        "fmt"
+        "free9ja/api/internal/config"
+        "log/slog"
+
+        "github.com/redis/go-redis/v9"
+)
+
+// NewRedisClient creates a new Redis client with the provided configuration.
+// It verifies the connection by pinging the server before returning.
+func NewRedisClient(cfg config.RedisConfig) (*redis.Client, error) <span class="cov0" title="0">{
+        rdb := redis.NewClient(&amp;redis.Options{
+                Addr:     cfg.Addr,
+                Password: cfg.Password,
+                DB:       cfg.DB,
+        })
+
+        // Verify connection
+        ctx := context.Background()
+        if err := rdb.Ping(ctx).Err(); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("unable to ping redis: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">if config.GetEnv("ENV", "development") == "development" </span><span class="cov0" title="0">{
+                slog.Info("Successfully connected to Redis", "addr", cfg.Addr, "db", cfg.DB)
+        }</span>
+
+        <span class="cov0" title="0">return rdb, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package authhandler
+
+import (
+        "encoding/json"
+        "free9ja/api/internal/db/queries"
+        auth "free9ja/api/internal/service/auth"
+        "free9ja/api/internal/utils"
+        "net/http"
+        "time"
+
+        "github.com/go-playground/validator/v10"
+        "github.com/jackc/pgx/v5/pgtype"
+)
+
+// Handler struct holds the dependencies for the auth handler
+type Handler struct {
+        authService *auth.AuthService
+        validate    *validator.Validate
+        utils       *utils.Utils
+}
+
+// NewHandler creates a new instance of the auth handler
+func NewHandler(authService *auth.AuthService) *Handler <span class="cov0" title="0">{
+        return &amp;Handler{
+                authService: authService,
+                validate:    validator.New(),
+        }
+}</span>
+
+// RegisterRequest represents the structure of the incoming JSON request body for user registration
+type RegisterRequest struct {
+        Email          string `json:"email" validate:"omitempty,email"`
+        Phone          string `json:"phone" validate:"required,e164"`
+        Username       string `json:"username" validate:"required,min=2,max=30,alphanum"`
+        Nin            string `json:"nin" validate:"required,numeric,len=11"`
+        Password       string `json:"password" validate:"required,min=5,max=72"`
+        LastName       string `json:"last_name" validate:"required,min=2,max=30"`
+        FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
+        MiddleName     string `json:"middle_name" validate:"omitempty,min=2,max=30"`
+        Gender         string `json:"gender" validate:"required,oneof=male female"`
+        DateOfBirth    string `json:"date_of_birth" validate:"required"` // Expects YYYY-MM-DD
+        CurrentCountry int16  `json:"current_country" validate:"required"`
+        CurrentState   int16  `json:"current_state" validate:"required"`
+        CurrentCity    int32  `json:"current_city"`
+}
+
+// Register handles the user registration process
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        var req RegisterRequest
+
+        // Decode the incoming JSON request body into the RegisterRequest struct
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov0" title="0">{
+                h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "Invalid request body " + err.Error()})
+                return
+        }</span>
+
+        // Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
+        <span class="cov0" title="0">if err := h.validate.Struct(req); err != nil </span><span class="cov0" title="0">{
+                h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+                        "error": "Invalid request body: " + err.(validator.ValidationErrors)[0].Translate(nil),
+                })
+                return
+        }</span>
+
+        // Parse the date of birth string into a time.Time object
+        <span class="cov0" title="0">dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+        if err != nil </span><span class="cov0" title="0">{
+                h.utils.RespondJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid date format for date_of_birth. Use YYYY-MM-DD"})
+                return
+        }</span>
+
+        // Map the request data to the database creation parameters
+        // Note: Password hashing is handled within the service layer
+        <span class="cov0" title="0">params := queries.CreateUserParams{
+                Email:          pgtype.Text{String: req.Email},
+                Phone:          req.Phone,
+                Username:       pgtype.Text{String: req.Username},
+                PasswordHash:   req.Password, // Hashed in the service layer
+                LastName:       pgtype.Text{String: req.LastName},
+                FirstName:      pgtype.Text{String: req.FirstName},
+                MiddleName:     pgtype.Text{String: req.MiddleName},
+                Gender:         pgtype.Text{String: req.Gender, Valid: true},
+                DateOfBirth:    pgtype.Date{Time: dob, Valid: true},
+                CurrentCountry: req.CurrentCountry,
+                CurrentState:   req.CurrentState,
+                CurrentCity:    pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
+        }
+
+        // Call the auth service to register the new user
+        id, err := h.authService.Register(r.Context(), params, req.Nin)
+        if err != nil </span><span class="cov0" title="0">{
+                // Fallback for unexpected errors
+                h.utils.RespondJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create user: " + err.Error()})
+                return
+        }</span>
+
+        // Return a successful response with the newly created user ID
+        <span class="cov0" title="0">h.utils.RespondJSON(w, http.StatusCreated, map[string]any{
+                "id":      id,
+                "message": "User registered successfully",
+        })</span>
+}
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package handler
+
+import (
+        "net/http"
+
+        "free9ja/api/internal/utils"
+)
+
+var utilsInstance = utils.NewUtils(nil)
+
+// Health handles GET /health
+// @Summary Health check
+// @Description get the status of the server
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /health [get]
+func Health(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}</span>
+
+// Root handles GET /api/v1/
+// @Summary API Root
+// @Description get the API root message
+// @Tags root
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router / [get]
+func Root(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+        utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{
+                "message": "free9ja API v1",
+        })
+}</span>
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package logger
+
+import (
+        "io"
+        "log/slog"
+        "os"
+        "time"
+
+        "github.com/lmittmann/tint"
+)
+
+// SetupLogger initializes the default slog logger with the tint handler
+// for colorized structured logging.
+func SetupLogger(version, commit string) <span class="cov0" title="0">{
+
+        // Get environment from environment variable
+        env := os.Getenv("ENV")
+        if env == "" </span><span class="cov0" title="0">{
+                env = "development"
+        }</span>
+        // Check if environment is development
+        <span class="cov0" title="0">isDev := env == "development"
+
+        // ---- HANDLER ----
+        var handler slog.Handler
+        var output io.Writer = os.Stdout
+
+        if isDev </span><span class="cov0" title="0">{
+                // Pretty, colorful output for local development
+                handler = tint.NewHandler(output, &amp;tint.Options{
+                        Level:      slog.LevelDebug, // show everything locally
+                        AddSource:  true,            // shows file:line (very useful for errors)
+                        TimeFormat: time.Kitchen,    // gives clean time like 11:04AM, but never use it in production
+
+                        // optional: customize how things look
+                        ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr </span><span class="cov0" title="0">{
+                                return a
+                        }</span>,
+                })
+        } else<span class="cov0" title="0"> {
+                handler = slog.NewJSONHandler(output, &amp;slog.HandlerOptions{
+                        Level:     slog.LevelInfo,
+                        AddSource: false,
+                })
+        }</span>
+
+        // ---- LOGGER ----
+        <span class="cov0" title="0">logger := slog.New(handler)
+        if env == "production" </span><span class="cov0" title="0">{
+                logger = logger.With(
+                        "version", version,
+                        "commit", commit,
+                )
+        }</span>
+
+        <span class="cov0" title="0">slog.SetDefault(logger)</span>
+}
+</pre>
+		
+		<pre class="file" id="file11" style="display: none">package authrouter
+
+import (
+        "net/http"
+
+        "github.com/go-chi/chi/v5"
+)
+
+type AuthRouter struct {
+}
+
+func NewAuthRouter() *AuthRouter <span class="cov0" title="0">{
+        return &amp;AuthRouter{}
+}</span>
+
+func (a *AuthRouter) Routes() chi.Router <span class="cov0" title="0">{
+        // Register auth routes here
+        r := chi.NewRouter()
+
+        r.Post("/login", func(w http.ResponseWriter, r *http.Request) </span>{<span class="cov0" title="0">
+                // TODO: Implement login logic
+        }</span>)
+
+        <span class="cov0" title="0">r.Post("/register", func(w http.ResponseWriter, r *http.Request) </span>{<span class="cov0" title="0">
+                // TODO: Implement register logic
+        }</span>)
+
+        <span class="cov0" title="0">r.Post("/forgot_password", func(w http.ResponseWriter, r *http.Request) </span>{<span class="cov0" title="0">
+                // TODO: Implement forgot password logic
+        }</span>)
+
+        <span class="cov0" title="0">return r</span>
+}
+</pre>
+		
+		<pre class="file" id="file12" style="display: none">package router
+
+import (
+        "net/http"
+        "os"
+
+        "github.com/go-chi/chi/v5"
+        "github.com/go-chi/chi/v5/middleware"
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/redis/go-redis/v9"
+        httpSwagger "github.com/swaggo/http-swagger"
+
+        _ "free9ja/api/docs"
+        "free9ja/api/internal/db/queries"
+        "free9ja/api/internal/handler"
+        authhandler "free9ja/api/internal/handler/auth"
+        authservice "free9ja/api/internal/service/auth"
+)
+
+// New creates and returns a configured Chi router.
+func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler <span class="cov0" title="0">{
+        mainRouter := chi.NewRouter()
+
+        // Initialize dependencies
+        q := queries.New(pool)
+        authService := authservice.NewAuthService(q, rdb)
+        authHandler := authhandler.NewHandler(authService)
+
+        // Core middleware
+        mainRouter.Use(middleware.RequestID)
+        mainRouter.Use(middleware.RealIP)
+        mainRouter.Use(middleware.Logger)
+        mainRouter.Use(middleware.Recoverer)
+
+        // Health check
+        mainRouter.Get("/health", handler.Health)
+
+        // Swagger documentation (Dev only)
+        if os.Getenv("ENV") != "production" </span><span class="cov0" title="0">{
+                mainRouter.Get("/swagger/*", httpSwagger.Handler(
+                        httpSwagger.URL("/swagger/doc.json"),
+                ))
+        }</span>
+
+        <span class="cov0" title="0">mainRouter.Route("/api/v1", func(r chi.Router) </span><span class="cov0" title="0">{
+                // API v1 routes
+                r.Get("/", handler.Root)
+
+                // Auth routes group
+                r.Route("/auth", func(r chi.Router) </span><span class="cov0" title="0">{
+                        r.Post("/register", authHandler.Register)
+                }</span>)
+
+        })
+
+        // Add v2 auth routes later because of mobile apps users
+        // r.Route("/v2", func(r chi.Router) {})
+
+        <span class="cov0" title="0">return mainRouter</span>
+}
+</pre>
+		
+		<pre class="file" id="file13" style="display: none">package authservice
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "free9ja/api/internal/db/queries"
+        "math/rand"
+        "regexp"
+        "strconv"
+        "strings"
+        "time"
+
+        "free9ja/api/internal/db"
+
+        "github.com/jackc/pgx/v5"
+        "github.com/jackc/pgx/v5/pgtype"
+        phonenumbers "github.com/nyaruka/phonenumbers"
+        "github.com/redis/go-redis/v9"
+        "golang.org/x/crypto/bcrypt"
+)
+
+type AuthService struct {
+        queries *queries.Queries
+        rdb     *redis.Client
+}
+
+func NewAuthService(q *queries.Queries, rdb *redis.Client) *AuthService <span class="cov0" title="0">{
+        return &amp;AuthService{
+                queries: q,
+                rdb:     rdb,
+        }
+}</span>
+
+type RegisterResult struct {
+        UserID int64
+        FakeID int64
+}
+
+func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string) (RegisterResult, error) <span class="cov0" title="0">{
+        // Hash password
+        hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.PasswordHash), bcrypt.DefaultCost)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        <span class="cov0" title="0">params.PasswordHash = string(hashedPassword)
+
+        // cleans up the username
+        username := strings.TrimSpace(strings.ToLower(params.Username.String))
+        username, err = CleanUsername(username)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        <span class="cov0" title="0">params.Username = pgtype.Text{String: username, Valid: true}
+
+        // checks if the username already exist
+        username_exist, err := s.CheckUsername(ctx, username)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        <span class="cov0" title="0">if username_exist </span><span class="cov0" title="0">{
+                return RegisterResult{}, errors.New("username already exists")
+        }</span>
+
+        // email checks
+        <span class="cov0" title="0">email := strings.TrimSpace(strings.ToLower(params.Email.String))
+        if email != "" </span><span class="cov0" title="0">{
+                email_exist, err := s.CheckEmail(ctx, email)
+                if err != nil </span><span class="cov0" title="0">{
+                        return RegisterResult{}, err
+                }</span>
+                <span class="cov0" title="0">if email_exist </span><span class="cov0" title="0">{
+                        return RegisterResult{}, errors.New("email already exists")
+                }</span>
+        }
+
+        // phone checks
+        <span class="cov0" title="0">phone_exist, err := s.CheckPhone(ctx, params.Phone)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        <span class="cov0" title="0">if phone_exist </span><span class="cov0" title="0">{
+                return RegisterResult{}, errors.New("phone already exists")
+        }</span>
+
+        // nin check
+        <span class="cov0" title="0">nin_check, err := s.CheckNIN(ctx, nin)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        <span class="cov0" title="0">if nin_check </span><span class="cov0" title="0">{
+                return RegisterResult{}, errors.New("nin already exists")
+        }</span>
+
+        // country check
+        <span class="cov0" title="0">country_dts, err := s.CheckCountry(ctx, params.CurrentCountry)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        // state check
+        <span class="cov0" title="0">_, err = s.CheckState(ctx, params.CurrentCountry, params.CurrentState)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        // city check
+        <span class="cov0" title="0">_, err = s.CheckCity(ctx, params.CurrentState, params.CurrentCity.Int32)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // check phone country validation
+        <span class="cov0" title="0">_, err = s.ValidatePhoneForCountry(params.Phone, country_dts.Iso2)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // Check date of birth: Ensure the user is at least 18 years old
+        <span class="cov0" title="0">today := time.Now().UTC()
+        if today.Sub(params.DateOfBirth.Time) &lt; 18*365*24*time.Hour </span><span class="cov0" title="0">{
+                return RegisterResult{}, errors.New("you must be at least 18 years old")
+        }</span>
+
+        // add the use to the db
+        <span class="cov0" title="0">user_id, err := s.queries.CreateUser(ctx, params)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // generate a fake_id using the user_id and update the user fake_id
+        <span class="cov0" title="0">fake_id := GenerateFakeID(user_id)
+        err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: user_id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // save the username in redis
+        <span class="cov0" title="0">err = s.SaveUsernameInRedis(ctx, username)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // save the email in redis
+        <span class="cov0" title="0">err = s.SaveEmailInRedis(ctx, email)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // save the nin in rdb and db
+        <span class="cov0" title="0">err = s.SaveNINInRedis(ctx, nin, user_id)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // save the phone in rdb and db
+        <span class="cov0" title="0">err = s.SavePhoneInRedis(ctx, params.Phone, user_id)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        <span class="cov0" title="0">return RegisterResult{UserID: user_id, FakeID: fake_id}, nil</span>
+}
+
+// function: generates fake_id using the original id
+func GenerateFakeID(id int64) int64 <span class="cov0" title="0">{
+        front_id := rand.Intn(1000)
+        back_id := rand.Intn(1000)
+
+        fake_id := fmt.Sprintf("%d%d%d", front_id, id, back_id)
+        fake_id_int, _ := strconv.ParseInt(fake_id, 10, 64)
+        return fake_id_int
+}</span>
+
+// CleanUsername normalizes and validates a username based on:
+// 1. Alphanumeric start/end
+// 2. No consecutive dots/underscores
+// 3. Length between 2-30 chars
+// 4. Case-insensitivity (returns lowercase)
+func CleanUsername(input string) (string, error) <span class="cov0" title="0">{
+        // 1. Trim whitespace and normalize to lowercase
+        clean := strings.ToLower(strings.TrimSpace(input))
+
+        // 2. Check length (2-30 characters)
+        if len(clean) &lt; 2 || len(clean) &gt; 30 </span><span class="cov0" title="0">{
+                return "", errors.New("username must be between 2 and 30 characters")
+        }</span>
+
+        // 3. Define the Regex based on your logic:
+        // The regex pattern is designed to match a string that starts and ends with
+        // alphanumeric characters, and contains zero or more alphanumeric characters,
+        // and zero or more dots or underscores in between.
+        //
+        // The pattern is split into two parts:
+        // - The start and end of the string are checked for alphanumeric characters.
+        // - The middle part is checked for alphanumeric characters and dots or underscores.
+        <span class="cov0" title="0">validPattern := regexp.MustCompile(`^[a-z0-9][a-z0-9._]*[a-z0-9]$`)
+        if !validPattern.MatchString(clean) </span><span class="cov0" title="0">{
+                return "", errors.New("username can only contain letters, numbers, dots, and underscores")
+        }</span>
+
+        // 4. Manual check for consecutive symbols (since Go regex doesn't do lookaheads)
+        <span class="cov0" title="0">if strings.Contains(clean, "..") || strings.Contains(clean, "__") ||
+                strings.Contains(clean, "._") || strings.Contains(clean, "_.") </span><span class="cov0" title="0">{
+                return "", errors.New("username cannot contain consecutive dots or underscores")
+        }</span>
+
+        <span class="cov0" title="0">return clean, nil</span>
+}
+
+// function: check if the username already exist in redis and in the postgres db
+func (s *AuthService) CheckUsername(ctx context.Context, username string) (bool, error) <span class="cov0" title="0">{
+        // check in redis first
+        exists, err := s.rdb.SIsMember(ctx, db.RedisRegisteredUsernames, username).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+        <span class="cov0" title="0">if exists </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        // check in db
+        <span class="cov0" title="0">_, err = s.queries.GetUserByUsername(ctx, pgtype.Text{String: username, Valid: true})
+        if err != nil </span><span class="cov0" title="0">{
+                if err == pgx.ErrNoRows </span><span class="cov0" title="0">{
+                        return false, nil // no user found
+                }</span>
+                <span class="cov0" title="0">return false, err</span>
+        }
+
+        <span class="cov0" title="0">return true, nil</span>
+}
+
+// function: checks if the email already exists in redis and in the postgres db
+func (s *AuthService) CheckEmail(ctx context.Context, email string) (bool, error) <span class="cov0" title="0">{
+        // check in redis first
+        exists, err := s.rdb.SIsMember(ctx, db.RedisRegisteredEmails, email).Result()
+        if err != nil </span><span class="cov0" title="0">{
+                return false, err
+        }</span>
+        <span class="cov0" title="0">if exists </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        // check in db
+        <span class="cov0" title="0">_, err = s.queries.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true})
+        if err != nil </span><span class="cov0" title="0">{
+                if err == pgx.ErrNoRows </span><span class="cov0" title="0">{
+                        return false, nil // no user found
+                }</span>
+                <span class="cov0" title="0">return false, err</span>
+        }
+
+        <span class="cov0" title="0">return true, nil</span>
+}
+
+// function: checks if the phone already exists in redis and in the postgres db
+func (s *AuthService) CheckPhone(ctx context.Context, phone string) (bool, error) <span class="cov0" title="0">{
+        // check in redis first
+        exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredPhones, phone).Result()
+        if exists </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        // check in db
+        <span class="cov0" title="0">data, _ := s.queries.GetUserByPhone(ctx, phone)
+        if data.ID &gt; 0 </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        // check in all phone numbers table
+        <span class="cov0" title="0">id, _ := s.queries.CheckIfPhoneNumberExists(ctx, phone)
+        if id &gt; 0 </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        <span class="cov0" title="0">return false, nil</span>
+}
+
+// CheckNIN function checks if the nin already exists in the database
+func (s *AuthService) CheckNIN(ctx context.Context, nin string) (bool, error) <span class="cov0" title="0">{
+        // check in redis first
+        exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredNins, nin).Result()
+        if exists </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        // check in db
+        <span class="cov0" title="0">user_dts, _ := s.queries.GetUserNINByNIN(ctx, nin)
+        if user_dts.ID &gt; 0 </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        <span class="cov0" title="0">return false, nil</span>
+}
+
+// ValidatePhoneForCountry checks:
+// 1. valid phone number format
+// 2. matches the given ISO country code (e.g. "NG", "US")
+// 3. returns normalized E.164 format if valid
+func (s *AuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) <span class="cov0" title="0">{
+        // Parse number (second arg can be empty if phone is already in E.164)
+        num, err := phonenumbers.Parse(phone, "")
+        if err != nil </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("invalid phone format: %w", err)
+        }</span>
+
+        // Check if it's a valid number globally
+        <span class="cov0" title="0">if !phonenumbers.IsValidNumber(num) </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("invalid phone number")
+        }</span>
+
+        // Ensure it matches the expected country_code
+        <span class="cov0" title="0">if !phonenumbers.IsValidNumberForRegion(num, country_code) </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("phone number does not match country %s", country_code)
+        }</span>
+
+        // Normalize to E.164 format
+        <span class="cov0" title="0">formatted := phonenumbers.Format(num, phonenumbers.E164)
+
+        return formatted, nil</span>
+}
+
+// function: check if the user country is valid
+func (s *AuthService) CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error) <span class="cov0" title="0">{
+        country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
+        if country_dts.ID &gt; 0 </span><span class="cov0" title="0">{
+                return country_dts, nil
+        }</span>
+
+        <span class="cov0" title="0">return queries.GetCountryByIDRow{}, errors.New("invalid country ID")</span>
+}
+
+// function: check if the state is valid
+func (s *AuthService) CheckState(ctx context.Context, country_id, state_id int16) (bool, error) <span class="cov0" title="0">{
+        state_dts, _ := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
+                ID:        state_id,
+                CountryID: country_id,
+        })
+        if state_dts.ID &gt; 0 </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+        <span class="cov0" title="0">return false, fmt.Errorf("invalid state ID")</span>
+}
+
+// function: check if the city is valid
+func (s *AuthService) CheckCity(ctx context.Context, state_id int16, city_id int32) (bool, error) <span class="cov0" title="0">{
+        city_dts, _ := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
+                ID:      city_id,
+                StateID: state_id,
+        })
+        if city_dts.ID &gt; 0 </span><span class="cov0" title="0">{
+                return true, nil
+        }</span>
+
+        <span class="cov0" title="0">return false, fmt.Errorf("invalid city ID")</span>
+}
+
+// function: saves the username in redis
+func (s *AuthService) SaveUsernameInRedis(ctx context.Context, username string) error <span class="cov0" title="0">{
+        _, err := s.rdb.SAdd(ctx, db.RedisRegisteredUsernames, username).Result()
+        return err
+}</span>
+
+// function: saves the email in redis
+func (s *AuthService) SaveEmailInRedis(ctx context.Context, email string) error <span class="cov0" title="0">{
+        _, err := s.rdb.SAdd(ctx, db.RedisRegisteredEmails, email).Result()
+        return err
+}</span>
+
+// function: saves the phone in redis
+func (s *AuthService) SavePhoneInRedis(ctx context.Context, phone string, userID int64) error <span class="cov0" title="0">{
+        // save to redis
+        _, err := s.rdb.SAdd(ctx, db.RedisRegisteredPhones, phone).Result()
+
+        // save to db
+        _, err = s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
+                Phone:  phone,
+                UserID: userID,
+        })
+
+        return err
+}</span>
+
+// function: saves the nin in redis
+func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int64) error <span class="cov0" title="0">{
+        // save to redis
+        _, err := s.rdb.SAdd(ctx, db.RedisRegisteredNins, nin).Result()
+
+        // save to db
+        _, err = s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
+                Nin:    nin,
+                UserID: userID,
+        })
+
+        return err
+}</span>
+</pre>
+		
+		<pre class="file" id="file14" style="display: none">package utils
+
+import (
+        "encoding/json"
+        "net/http"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Utils struct {
+        db *pgxpool.Pool
+}
+
+func NewUtils(db *pgxpool.Pool) *Utils <span class="cov0" title="0">{
+        return &amp;Utils{
+                db: db,
+        }
+}</span>
+
+// RespondJSON writes a JSON response with the given status code and body.
+func (u *Utils) RespondJSON(w http.ResponseWriter, status int, body any) <span class="cov0" title="0">{
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(status)
+        _ = json.NewEncoder(w).Encode(body)
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
