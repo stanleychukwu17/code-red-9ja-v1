@@ -4,10 +4,13 @@
 package config
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
 	"sync"
+
+	"free9ja/api/internal/utils"
 
 	"github.com/joho/godotenv"
 )
@@ -55,16 +58,43 @@ func Load() *Config {
 			slog.Warn("No .env file found, relying on system environment variables")
 		}
 
+		db_user := GetEnv("DB_USER", "")
+		db_pass := GetEnv("DB_PASSWORD", "")
+		db_name := GetEnv("DB_NAME", "")
+		db_port := GetEnv("DB_PORT", "")
+		redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
+		redis_port := GetEnv("REDIS_PORT", "")
+		redis_password := GetEnv("REDIS_PASSWORD", "")
+		redis_db := getIntEnv("REDIS_DB", 0)
+		is_testing := GetEnv("IS_TESTING", "false")
+
+		if is_testing == "true" {
+			// testing environment, setup postgres test container
+			testDbConfig, _, err := utils.SetupPostgresTestContainer(db_user, db_pass, db_name, db_port)
+			if err != nil {
+				panic(err)
+			}
+			db_port = testDbConfig.Port
+
+			redis_addr, _, err = utils.SetupRedisTestContainer(redis_port)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		// "postgres://<username>:<password>@localhost:<port>/<database>?sslmode=disable"
+		db_url := fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", db_user, db_pass, db_port, db_name)
+
 		cfg = &Config{
 			Env:  GetEnv("ENV", "development"),
 			Port: GetEnv("PORT", "4000"),
 			Database: DatabaseConfig{
-				URL: GetEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/postgres?sslmode=disable"),
+				URL: db_url,
 			},
 			Redis: RedisConfig{
-				Addr:     GetEnv("REDIS_ADDR", "localhost:6379"),
-				Password: GetEnv("REDIS_PASSWORD", ""),
-				DB:       getIntEnv("REDIS_DB", 0),
+				Addr:     redis_addr,
+				Password: redis_password,
+				DB:       redis_db,
 			},
 		}
 
