@@ -23,6 +23,24 @@ func (q *Queries) CheckIfPhoneNumberExists(ctx context.Context, phone string) (i
 	return id, err
 }
 
+const createPhoneNumber = `-- name: CreatePhoneNumber :one
+INSERT INTO users_phone_numbers (user_id, phone)
+VALUES ($1, $2)
+RETURNING id
+`
+
+type CreatePhoneNumberParams struct {
+	UserID int64  `json:"user_id"`
+	Phone  string `json:"phone"`
+}
+
+func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createPhoneNumber, arg.UserID, arg.Phone)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email, phone, username, password_hash, last_name,

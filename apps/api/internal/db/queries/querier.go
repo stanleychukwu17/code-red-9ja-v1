@@ -12,6 +12,7 @@ import (
 
 type Querier interface {
 	CheckIfPhoneNumberExists(ctx context.Context, phone string) (int64, error)
+	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
