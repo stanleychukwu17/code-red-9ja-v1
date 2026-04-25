@@ -126,11 +126,33 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, err
 	}
 
-	// generate a fake_id using the user id
+	// generate a fake_id using the user_id and update the user fake_id
 	fake_id := GenerateFakeID(user_id)
-
-	// update the user fake_id
 	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: user_id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// save the username in redis
+	err = s.SaveUsernameInRedis(ctx, username)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// save the email in redis
+	err = s.SaveEmailInRedis(ctx, email)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// save the nin in rdb and db
+	err = s.SaveNINInRedis(ctx, nin, user_id)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// save the phone in rdb and db
+	err = s.SavePhoneInRedis(ctx, params.Phone, user_id)
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -330,4 +352,44 @@ func (s *AuthService) CheckCity(ctx context.Context, state_id int16, city_id int
 	}
 
 	return false, fmt.Errorf("invalid city ID")
+}
+
+// function: saves the username in redis
+func (s *AuthService) SaveUsernameInRedis(ctx context.Context, username string) error {
+	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredUsernames, username).Result()
+	return err
+}
+
+// function: saves the email in redis
+func (s *AuthService) SaveEmailInRedis(ctx context.Context, email string) error {
+	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredEmails, email).Result()
+	return err
+}
+
+// function: saves the phone in redis
+func (s *AuthService) SavePhoneInRedis(ctx context.Context, phone string, userID int64) error {
+	// save to redis
+	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredPhones, phone).Result()
+
+	// save to db
+	_, err = s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
+		Phone:  phone,
+		UserID: userID,
+	})
+
+	return err
+}
+
+// function: saves the nin in redis
+func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int64) error {
+	// save to redis
+	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredNins, nin).Result()
+
+	// save to db
+	_, err = s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
+		Nin:    nin,
+		UserID: userID,
+	})
+
+	return err
 }
