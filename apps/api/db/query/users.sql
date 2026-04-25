@@ -12,6 +12,11 @@ INSERT INTO users_nin (user_id, nin)
 VALUES ($1, $2)
 RETURNING id;
 
+-- name: CreatePhoneNumber :one
+INSERT INTO users_phone_numbers (user_id, phone)
+VALUES ($1, $2)
+RETURNING id;
+
 -- name: UpdateUserFakeID :exec
 UPDATE users
 SET fake_id = $2
@@ -28,7 +33,6 @@ WHERE email = $1 LIMIT 1;
 -- name: GetUserByUsername :one
 SELECT id, fake_id FROM users
 WHERE username = $1 LIMIT 1;
-
 
 -- name: GetUserNINByUserID :one
 SELECT id, nin FROM users_nin
