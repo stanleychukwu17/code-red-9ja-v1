@@ -1,6 +1,7 @@
 package authhandler
 
 import (
+	"context"
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
 	auth "free9ja/api/internal/service/auth"
@@ -12,18 +13,24 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// AuthService interface defines the methods for authentication services
+type AuthService interface {
+	Register(ctx context.Context, params queries.CreateUserParams, nin string) (auth.RegisterResult, error)
+}
+
 // Handler struct holds the dependencies for the auth handler
 type Handler struct {
-	authService *auth.AuthService
+	authService AuthService
 	validate    *validator.Validate
 	utils       *utils.Utils
 }
 
 // NewHandler creates a new instance of the auth handler
-func NewHandler(authService *auth.AuthService) *Handler {
+func NewHandler(authService AuthService, utils *utils.Utils) *Handler {
 	return &Handler{
 		authService: authService,
 		validate:    validator.New(),
+		utils:       utils,
 	}
 }
 
