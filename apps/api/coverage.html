@@ -55,7 +55,7 @@
 			<div id="nav">
 				<select id="files">
 				
-				<option value="file0">free9ja/api/cmd/api/main.go (0.0%)</option>
+				<option value="file0">free9ja/api/cmd/api/main.go (39.5%)</option>
 				
 				<option value="file1">free9ja/api/docs/docs.go (0.0%)</option>
 				
@@ -73,17 +73,19 @@
 				
 				<option value="file8">free9ja/api/internal/handler/auth/auth_handler.go (0.0%)</option>
 				
-				<option value="file9">free9ja/api/internal/handler/handler.go (0.0%)</option>
+				<option value="file9">free9ja/api/internal/handler/handler.go (100.0%)</option>
 				
 				<option value="file10">free9ja/api/internal/logger/logger.go (0.0%)</option>
 				
 				<option value="file11">free9ja/api/internal/router/auth/authRouter.go (0.0%)</option>
 				
-				<option value="file12">free9ja/api/internal/router/router.go (0.0%)</option>
+				<option value="file12">free9ja/api/internal/router/router.go (100.0%)</option>
 				
 				<option value="file13">free9ja/api/internal/service/auth/auth_service.go (0.0%)</option>
 				
-				<option value="file14">free9ja/api/internal/utils/respond.go (0.0%)</option>
+				<option value="file14">free9ja/api/internal/utils/utils.go (0.0%)</option>
+				
+				<option value="file15">free9ja/api/test/helper.go (0.0%)</option>
 				
 				</select>
 			</div>
@@ -105,11 +107,17 @@ import (
         "log/slog"
         "net/http"
         "os"
+        "os/signal"
+        "syscall"
+        "time"
 
         "free9ja/api/internal/config"
         "free9ja/api/internal/db"
         "free9ja/api/internal/logger"
         "free9ja/api/internal/router"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/redis/go-redis/v9"
 )
 
 // @title Free9ja API
@@ -126,45 +134,113 @@ import (
 
 // @host localhost:4000
 // @BasePath /api/v1
-func main() <span class="cov0" title="0">{
-        cfg := config.Load()
 
+type App struct {
+        cfg    *config.Config
+        server *http.Server
+        db     *pgxpool.Pool
+        rdb    *redis.Client
+}
+
+func newApp(ctx context.Context, cfg *config.Config) *App <span class="cov8" title="1">{
         // Setup better structured logging, can now do:
         // slog.Info("hello", "key", "value")
         // slog.Error("uh oh", "err", err)
         // slog.Warn("careful", "msg", "something might be wrong")
         // slog.Debug("deep details", "data", "lots of info")
         // slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
+        // version and commit are located in version.go, but during production,
+        // they will be added when building the app during ci/cd
         logger.SetupLogger(version, commit)
 
-        // Initialize database
-        pool, err := db.NewPostgresPool(context.Background(), cfg.Database.URL)
+        // Initialize postgres database
+        pool, err := db.NewPostgresPool(ctx, cfg.Database.URL)
         if err != nil </span><span class="cov0" title="0">{
                 slog.Error("failed to initialize database", "err", err)
                 os.Exit(1)
         }</span>
-        <span class="cov0" title="0">defer pool.Close()
 
         // Initialize Redis
-        rdb, err := db.NewRedisClient(cfg.Redis)
+        <span class="cov8" title="1">rdb, err := db.NewRedisClient(cfg.Redis)
         if err != nil </span><span class="cov0" title="0">{
                 slog.Error("failed to initialize redis", "err", err)
                 os.Exit(1)
         }</span>
-        <span class="cov0" title="0">defer rdb.Close()
 
         // Initialize router
-        r := router.New(pool, rdb)
-
-        // Create server address
+        <span class="cov8" title="1">r := router.New(pool, rdb)
         addr := fmt.Sprintf(":%s", cfg.Port)
         slog.Info("starting server", "addr", addr)
 
-        // Start server
-        if err := http.ListenAndServe(addr, r); err != nil </span><span class="cov0" title="0">{
-                slog.Error("server failed", "err", err)
-                os.Exit(1)
+        return &amp;App{
+                cfg: cfg,
+                db:  pool,
+                rdb: rdb,
+                server: &amp;http.Server{
+                        Addr:    addr,
+                        Handler: r,
+                },
         }</span>
+}
+
+func (a *App) Close() error <span class="cov8" title="1">{
+        slog.Info("closing all db connections")
+        a.db.Close()
+        a.rdb.Close()
+        return nil
+}</span>
+
+func (a *App) Run() error <span class="cov8" title="1">{
+        if err := a.server.ListenAndServe(); err != nil &amp;&amp; err != http.ErrServerClosed </span><span class="cov0" title="0">{
+                slog.Error("server failed", "err", err)
+                return fmt.Errorf("server failed, err: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func main() <span class="cov0" title="0">{
+        // loads the config
+        cfg := config.Load()
+
+        // Setup signal handling for graceful shutdown
+        ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+        defer stop()
+
+        // Initialize app
+        app := newApp(context.Background(), cfg)
+
+        // Start the server in a goroutine so that it doesn't block the main function
+        go func() </span><span class="cov0" title="0">{
+                // Start the server and exit if it fails
+                slog.Info("starting server", "addr", app.server.Addr)
+                if err := app.Run(); err != nil </span><span class="cov0" title="0">{
+                        os.Exit(1)
+                }</span>
+        }()
+
+        // Wait for interrupt signal, e.g. Ctrl+C or docker container closes
+        // When the program receives an interrupt signal,
+        // the context's Done "channel" is closed, triggering this
+        // goroutine to continue and shut down the server gracefully.
+        <span class="cov0" title="0">&lt;-ctx.Done()
+        slog.Info("shutting down gracefully...")
+
+        // 🔑 Add timeout for shutdown
+        shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer cancel()
+
+        // Proper HTTP shutdown
+        if err := app.server.Shutdown(shutdownCtx); err != nil </span><span class="cov0" title="0">{
+                slog.Error("server shutdown failed", "err", err)
+        }</span>
+
+        // Close other resources (DB, Redis, etc.)
+        <span class="cov0" title="0">if err := app.Close(); err != nil </span><span class="cov0" title="0">{
+                slog.Error("app close failed", "err", err)
+        }</span>
+
+        <span class="cov0" title="0">slog.Info("shutdown complete")</span>
 }
 </pre>
 		
@@ -268,10 +344,13 @@ func init() <span class="cov0" title="0">{
 package config
 
 import (
+        "fmt"
         "log/slog"
         "os"
         "strconv"
         "sync"
+
+        "free9ja/api/internal/utils"
 
         "github.com/joho/godotenv"
 )
@@ -313,22 +392,66 @@ var (
 // and will only initialize the configuration once, regardless of how many times it's called.
 func Load() *Config <span class="cov0" title="0">{
         once.Do(func() </span><span class="cov0" title="0">{
-                // Load .env and .env.local
-                // Note: .env.local is usually loaded first if you want it to take precedence
-                if err := godotenv.Load(".env.local", ".env"); err != nil </span><span class="cov0" title="0">{
-                        slog.Warn("No .env file found, relying on system environment variables")
+                // get the paths to the .env
+                envPath, envLocalPath := GetEnvPath()
+
+                // check if we're running in a CI/CD environment
+                isCiCd := GetEnv("IS_CI_CD", "false")
+
+                // if we're running in a CI/CD environment, skip loading .env files
+                if isCiCd == "true" </span><span class="cov0" title="0">{
+                        slog.Info("Running in CI/CD environment, skipping .env file loading")
+                }</span> else<span class="cov0" title="0"> {
+                        if err := godotenv.Load(envLocalPath, envPath); err != nil </span><span class="cov0" title="0">{
+                                slog.Warn("No .env file found, relying on system environment variables")
+                        }</span>
+                }
+
+                <span class="cov0" title="0">db_user := GetEnv("DB_USER", "")
+                db_pass := GetEnv("DB_PASSWORD", "")
+                db_name := GetEnv("DB_NAME", "")
+                db_port := GetEnv("DB_PORT", "")
+                redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
+                redis_port := GetEnv("REDIS_PORT", "")
+                redis_password := GetEnv("REDIS_PASSWORD", "")
+                redis_db := GetIntEnv("REDIS_DB", 0)
+                is_testing := GetEnv("IS_TESTING", "false")
+
+                if db_name == "" || db_user == "" || db_pass == "" || db_port == "" || redis_addr == "" || redis_port == "" </span><span class="cov0" title="0">{
+                        slog.Warn("DB_NAME, DB_USER, DB_PASSWORD, DB_PORT, REDIS_ADDR, and REDIS_PORT must be set")
+                        fmt.Fprintf(os.Stderr, "exiting the program\n")
+                        os.Exit(1)
                 }</span>
 
-                <span class="cov0" title="0">cfg = &amp;Config{
+                // if testing, setup test containers for postgres and redis
+                <span class="cov0" title="0">if is_testing == "true" </span><span class="cov0" title="0">{
+                        // setup postgres test container
+                        testDbConfig, _, err := utils.SetupPostgresTestContainer(db_user, db_pass, db_name, db_port)
+                        if err != nil </span><span class="cov0" title="0">{
+                                panic(err)</span>
+                        }
+                        <span class="cov0" title="0">db_port = testDbConfig.Port
+
+                        // setup redis test container
+                        redis_addr, _, err = utils.SetupRedisTestContainer(redis_port)
+                        if err != nil </span><span class="cov0" title="0">{
+                                panic(err)</span>
+                        }
+                }
+
+                // "postgres://&lt;username&gt;:&lt;password&gt;@localhost:&lt;port&gt;/&lt;database&gt;?sslmode=disable"
+                <span class="cov0" title="0">db_url := fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", db_user, db_pass, db_port, db_name)
+
+                cfg = &amp;Config{
                         Env:  GetEnv("ENV", "development"),
                         Port: GetEnv("PORT", "4000"),
                         Database: DatabaseConfig{
-                                URL: GetEnv("DATABASE_URL", "postgres://postgres:password@localhost:5432/postgres?sslmode=disable"),
+                                URL: db_url,
                         },
                         Redis: RedisConfig{
-                                Addr:     GetEnv("REDIS_ADDR", "localhost:6379"),
-                                Password: GetEnv("REDIS_PASSWORD", ""),
-                                DB:       getIntEnv("REDIS_DB", 0),
+                                Addr:     redis_addr,
+                                Password: redis_password,
+                                DB:       redis_db,
                         },
                 }
 
@@ -351,16 +474,33 @@ func GetEnv(key, defaultValue string) string <span class="cov0" title="0">{
         <span class="cov0" title="0">return defaultValue</span>
 }
 
-// getIntEnv retrieves an environment variable as an integer with a fallback default.
+// GetIntEnv retrieves an environment variable as an integer with a fallback default.
 // It attempts to parse the environment variable as an integer, returning the default
 // value if the variable is not set or cannot be parsed as an integer.
-func getIntEnv(key string, defaultValue int) int <span class="cov0" title="0">{
+func GetIntEnv(key string, defaultValue int) int <span class="cov0" title="0">{
         if value := os.Getenv(key); value != "" </span><span class="cov0" title="0">{
                 if i, err := strconv.Atoi(value); err == nil </span><span class="cov0" title="0">{
                         return i
                 }</span>
         }
         <span class="cov0" title="0">return defaultValue</span>
+}
+
+func GetEnvPath() (envPath string, envLocalPath string) <span class="cov0" title="0">{
+        envPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env"
+        envLocalPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env.local"
+
+        // if the user sets a .env custom path, then return the custom path
+        if GetEnv("ENV_PATH", "") != "" </span><span class="cov0" title="0">{
+                envPath = GetEnv("ENV_PATH", "")
+        }</span>
+
+        // if the user sets a .env.local custom path, then return the custom path
+        <span class="cov0" title="0">if GetEnv("ENV_LOCAL_PATH", "") != "" </span><span class="cov0" title="0">{
+                envLocalPath = GetEnv("ENV_LOCAL_PATH", "")
+        }</span>
+
+        <span class="cov0" title="0">return</span>
 }
 </pre>
 		
@@ -910,7 +1050,7 @@ var utilsInstance = utils.NewUtils(nil)
 // @Produce json
 // @Success 200 {object} map[string]string
 // @Router /health [get]
-func Health(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+func Health(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
         utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }</span>
 
@@ -921,7 +1061,7 @@ func Health(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0"
 // @Produce json
 // @Success 200 {object} map[string]string
 // @Router / [get]
-func Root(w http.ResponseWriter, r *http.Request) <span class="cov0" title="0">{
+func Root(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
         utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{
                 "message": "free9ja API v1",
         })
@@ -1042,7 +1182,7 @@ import (
 )
 
 // New creates and returns a configured Chi router.
-func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler <span class="cov0" title="0">{
+func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler <span class="cov8" title="1">{
         mainRouter := chi.NewRouter()
 
         // Initialize dependencies
@@ -1060,18 +1200,18 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler <span class="cov0" 
         mainRouter.Get("/health", handler.Health)
 
         // Swagger documentation (Dev only)
-        if os.Getenv("ENV") != "production" </span><span class="cov0" title="0">{
+        if os.Getenv("ENV") != "production" </span><span class="cov8" title="1">{
                 mainRouter.Get("/swagger/*", httpSwagger.Handler(
                         httpSwagger.URL("/swagger/doc.json"),
                 ))
         }</span>
 
-        <span class="cov0" title="0">mainRouter.Route("/api/v1", func(r chi.Router) </span><span class="cov0" title="0">{
+        <span class="cov8" title="1">mainRouter.Route("/api/v1", func(r chi.Router) </span><span class="cov8" title="1">{
                 // API v1 routes
                 r.Get("/", handler.Root)
 
                 // Auth routes group
-                r.Route("/auth", func(r chi.Router) </span><span class="cov0" title="0">{
+                r.Route("/auth", func(r chi.Router) </span><span class="cov8" title="1">{
                         r.Post("/register", authHandler.Register)
                 }</span>)
 
@@ -1080,7 +1220,7 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler <span class="cov0" 
         // Add v2 auth routes later because of mobile apps users
         // r.Route("/v2", func(r chi.Router) {})
 
-        <span class="cov0" title="0">return mainRouter</span>
+        <span class="cov8" title="1">return mainRouter</span>
 }
 </pre>
 		
@@ -1484,10 +1624,15 @@ func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int
 		<pre class="file" id="file14" style="display: none">package utils
 
 import (
+        "context"
         "encoding/json"
+        "fmt"
         "net/http"
+        "time"
 
         "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/testcontainers/testcontainers-go"
+        "github.com/testcontainers/testcontainers-go/wait"
 )
 
 type Utils struct {
@@ -1505,6 +1650,127 @@ func (u *Utils) RespondJSON(w http.ResponseWriter, status int, body any) <span c
         w.Header().Set("Content-Type", "application/json")
         w.WriteHeader(status)
         _ = json.NewEncoder(w).Encode(body)
+}</span>
+
+type PostgresTestConfig struct {
+        Host string
+        Port string
+}
+
+func SetupPostgresTestContainer(db_user, db_password, db_name, db_port string) (PostgresTestConfig, testcontainers.Container, error) <span class="cov0" title="0">{
+        ctx := context.Background()
+
+        // Create container request
+        req := testcontainers.ContainerRequest{
+                Image:        "postgres:16.3-alpine3.20",
+                ExposedPorts: []string{fmt.Sprintf("%v/tcp", db_port)},
+                Env: map[string]string{
+                        "POSTGRES_USER":     db_user,
+                        "POSTGRES_PASSWORD": db_password,
+                        "POSTGRES_DB":       db_name,
+                },
+                WaitingFor: wait.ForLog("database system is ready to accept connections").
+                        WithOccurrence(2).
+                        WithStartupTimeout(300 * time.Second),
+        }
+
+        // Create and start the container
+        container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+                ContainerRequest: req,
+                Started:          true,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return PostgresTestConfig{}, nil, fmt.Errorf("failed to start container: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">host, _ := container.Host(ctx)                   // Get container host (IP)
+        port, _ := container.MappedPort(ctx, "5432/tcp") // Get mapped port
+        // dsn := fmt.Sprintf(
+        //         "host=%s user=%v password=%v dbname=%v port=%v sslmode=disable", host, db_user, db_password, db_name, port.Port(),
+        // )
+
+        return PostgresTestConfig{host, port.Port()}, container, nil</span>
+}
+
+func SetupRedisTestContainer(redis_port string) (string, testcontainers.Container, error) <span class="cov0" title="0">{
+        ctx := context.Background()
+
+        req := testcontainers.ContainerRequest{
+                Image:        "redis:7.2.13-alpine",
+                ExposedPorts: []string{fmt.Sprintf("%s/tcp", redis_port)},
+                WaitingFor: wait.ForListeningPort(
+                        fmt.Sprintf("%s/tcp", redis_port),
+                ).WithStartupTimeout(300 * time.Second),
+        }
+
+        container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+                ContainerRequest: req,
+                Started:          true,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return "", nil, fmt.Errorf("failed to start redis container: %w", err)
+        }</span>
+
+        <span class="cov0" title="0">host, err := container.Host(ctx)
+        if err != nil </span><span class="cov0" title="0">{
+                return "", nil, err
+        }</span>
+
+        <span class="cov0" title="0">port, err := container.MappedPort(ctx, fmt.Sprintf("%s/tcp", redis_port))
+        if err != nil </span><span class="cov0" title="0">{
+                return "", nil, err
+        }</span>
+
+        <span class="cov0" title="0">addr := fmt.Sprintf("%s:%s", host, port.Port())
+        return addr, container, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file15" style="display: none">package test
+
+import (
+        "free9ja/api/internal/config"
+        "os"
+        "testing"
+
+        "sync"
+)
+
+var (
+        test_cfg *config.Config
+        once     sync.Once
+)
+
+// setupTestEnvironmentVariables prepares environment for testing with testcontainers
+func setupTestEnvironmentVariables() <span class="cov0" title="0">{
+        os.Setenv("IS_TESTING", "true")
+}</span>
+
+// cleanupTestEnvironmentVariables removes test environment variables
+func cleanupTestEnvironmentVariables() <span class="cov0" title="0">{
+        os.Unsetenv("IS_TESTING")
+}</span>
+
+// BeforeAll runs once before all tests
+func BeforeAll(t *testing.T) (*config.Config, error) <span class="cov0" title="0">{
+        once.Do(func() </span><span class="cov0" title="0">{
+                setupTestEnvironmentVariables()
+                test_cfg = config.Load()
+        }</span>)
+
+        <span class="cov0" title="0">return test_cfg, nil</span>
+}
+
+// BeforeEach prepares environment for each test with testcontainers
+func BeforeEach(t *testing.T) (*config.Config, error) <span class="cov0" title="0">{
+        cfg, _ := BeforeAll(t)
+        setupTestEnvironmentVariables()
+        return cfg, nil
+}</span>
+
+func AfterEach(t *testing.T) (*testing.T, error) <span class="cov0" title="0">{
+        cleanupTestEnvironmentVariables()
+        return t, nil
 }</span>
 </pre>
 		
