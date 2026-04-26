@@ -6,6 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db"
@@ -38,14 +41,19 @@ type App struct {
 	rdb    *redis.Client
 }
 
-func (a *App) Close() {
-	a.db.Close()
-	a.rdb.Close()
-}
-
 func newApp(ctx context.Context, cfg *config.Config) *App {
-	// Initialize database
-	pool, err := db.NewPostgresPool(context.Background(), cfg.Database.URL)
+	// Setup better structured logging, can now do:
+	// slog.Info("hello", "key", "value")
+	// slog.Error("uh oh", "err", err)
+	// slog.Warn("careful", "msg", "something might be wrong")
+	// slog.Debug("deep details", "data", "lots of info")
+	// slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
+	// version and commit are located in version.go, but during production,
+	// they will be added when building the app during ci/cd
+	logger.SetupLogger(version, commit)
+
+	// Initialize postgres database
+	pool, err := db.NewPostgresPool(ctx, cfg.Database.URL)
 	if err != nil {
 		slog.Error("failed to initialize database", "err", err)
 		os.Exit(1)
@@ -74,34 +82,62 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 	}
 }
 
-func (a *App) Run() {
+func (a *App) Close() error {
+	slog.Info("closing all db connections")
+	a.db.Close()
+	a.rdb.Close()
+	return nil
+}
+
+func (a *App) Run() error {
 	if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server failed", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("server failed, err: %w", err)
 	}
+
+	return nil
 }
 
 func main() {
+	// loads the config
 	cfg := config.Load()
 
-	// Setup better structured logging, can now do:
-	// slog.Info("hello", "key", "value")
-	// slog.Error("uh oh", "err", err)
-	// slog.Warn("careful", "msg", "something might be wrong")
-	// slog.Debug("deep details", "data", "lots of info")
-	// slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
-	logger.SetupLogger(version, commit)
+	// Setup signal handling for graceful shutdown
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
+	// Initialize app
 	app := newApp(context.Background(), cfg)
 
-	app.Run()
+	// Start the server in a goroutine so that it doesn't block the main function
+	go func() {
+		// Start the server and exit if it fails
+		slog.Info("starting server", "addr", app.server.Addr)
+		if err := app.Run(); err != nil {
+			os.Exit(1)
+		}
+	}()
 
-	// postgres: defer pool.Close(), redis: defer rdb.Close()
-	defer app.Close()
+	// Wait for interrupt signal, e.g. Ctrl+C or docker container closes
+	// When the program receives an interrupt signal,
+	// the context's Done "channel" is closed, triggering this
+	// goroutine to continue and shut down the server gracefully.
+	<-ctx.Done()
+	slog.Info("shutting down gracefully...")
 
-	// Start server
-	// if err := http.ListenAndServe(addr, r); err != nil {
-	// 	slog.Error("server failed", "err", err)
-	// 	os.Exit(1)
-	// }
+	// 🔑 Add timeout for shutdown
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Proper HTTP shutdown
+	if err := app.server.Shutdown(shutdownCtx); err != nil {
+		slog.Error("server shutdown failed", "err", err)
+	}
+
+	// Close other resources (DB, Redis, etc.)
+	if err := app.Close(); err != nil {
+		slog.Error("app close failed", "err", err)
+	}
+
+	slog.Info("shutdown complete")
 }
