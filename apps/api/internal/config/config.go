@@ -52,10 +52,19 @@ var (
 // and will only initialize the configuration once, regardless of how many times it's called.
 func Load() *Config {
 	once.Do(func() {
-		// Load .env and .env.local
-		// Note: .env.local is usually loaded first if you want it to take precedence
-		if err := godotenv.Load(".env.local", ".env"); err != nil {
-			slog.Warn("No .env file found, relying on system environment variables")
+		// get the paths to the .env
+		envPath, envLocalPath := GetEnvPath()
+
+		// check if we're running in a CI/CD environment
+		isCiCd := GetEnv("IS_CI_CD", "false")
+
+		// if we're running in a CI/CD environment, skip loading .env files
+		if isCiCd == "true" {
+			slog.Info("Running in CI/CD environment, skipping .env file loading")
+		} else {
+			if err := godotenv.Load(envLocalPath, envPath); err != nil {
+				slog.Warn("No .env file found, relying on system environment variables")
+			}
 		}
 
 		db_user := GetEnv("DB_USER", "")
@@ -65,17 +74,25 @@ func Load() *Config {
 		redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
 		redis_port := GetEnv("REDIS_PORT", "")
 		redis_password := GetEnv("REDIS_PASSWORD", "")
-		redis_db := getIntEnv("REDIS_DB", 0)
+		redis_db := GetIntEnv("REDIS_DB", 0)
 		is_testing := GetEnv("IS_TESTING", "false")
 
+		if db_name == "" || db_user == "" || db_pass == "" || db_port == "" || redis_addr == "" || redis_port == "" {
+			slog.Warn("DB_NAME, DB_USER, DB_PASSWORD, DB_PORT, REDIS_ADDR, and REDIS_PORT must be set")
+			fmt.Fprintf(os.Stderr, "exiting the program\n")
+			os.Exit(1)
+		}
+
+		// if testing, setup test containers for postgres and redis
 		if is_testing == "true" {
-			// testing environment, setup postgres test container
+			// setup postgres test container
 			testDbConfig, _, err := utils.SetupPostgresTestContainer(db_user, db_pass, db_name, db_port)
 			if err != nil {
 				panic(err)
 			}
 			db_port = testDbConfig.Port
 
+			// setup redis test container
 			redis_addr, _, err = utils.SetupRedisTestContainer(redis_port)
 			if err != nil {
 				panic(err)
@@ -117,14 +134,31 @@ func GetEnv(key, defaultValue string) string {
 	return defaultValue
 }
 
-// getIntEnv retrieves an environment variable as an integer with a fallback default.
+// GetIntEnv retrieves an environment variable as an integer with a fallback default.
 // It attempts to parse the environment variable as an integer, returning the default
 // value if the variable is not set or cannot be parsed as an integer.
-func getIntEnv(key string, defaultValue int) int {
+func GetIntEnv(key string, defaultValue int) int {
 	if value := os.Getenv(key); value != "" {
 		if i, err := strconv.Atoi(value); err == nil {
 			return i
 		}
 	}
 	return defaultValue
+}
+
+func GetEnvPath() (envPath string, envLocalPath string) {
+	envPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env"
+	envLocalPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env.local"
+
+	// if the user sets a .env custom path, then return the custom path
+	if GetEnv("ENV_PATH", "") != "" {
+		envPath = GetEnv("ENV_PATH", "")
+	}
+
+	// if the user sets a .env.local custom path, then return the custom path
+	if GetEnv("ENV_LOCAL_PATH", "") != "" {
+		envLocalPath = GetEnv("ENV_LOCAL_PATH", "")
+	}
+
+	return
 }
