@@ -34,7 +34,8 @@ func NewPostgresPool(ctx context.Context, connString string) (*pgxpool.Pool, err
 	}
 
 	if config.GetEnv("ENV", "development") == "development" {
-		slog.Info("Successfully connected to the database")
+		// slog.Info("Successfully connected to the postgres database", "db_url", connString)
+		slog.Info("Successfully connected to the postgres database")
 	}
 
 	return pool, nil
