@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"free9ja/api/internal/router"
+	"free9ja/api/internal/utils"
 
 	"github.com/stretchr/testify/require"
 )
@@ -16,7 +17,7 @@ func TestHealth(t *testing.T) {
 	r := router.New(nil, nil)
 
 	// Create a request to pass to our router.
-	req, err := http.NewRequest("GET", "/health", nil)
+	req, err := http.NewRequest("GET", utils.ApiUrls.Health, nil)
 	require.NoError(t, err, "failed to create http request")
 
 	// We create a ResponseRecorder to record the response.
@@ -43,7 +44,7 @@ func TestRoot(t *testing.T) {
 
 	// Create a request to pass to our router.
 	// Note: The root route is under /api/v1/
-	req, err := http.NewRequest("GET", "/api/v1/", nil)
+	req, err := http.NewRequest("GET", utils.ApiUrls.Root, nil)
 	require.NoError(t, err, "failed to create http request")
 
 	rr := httptest.NewRecorder()
