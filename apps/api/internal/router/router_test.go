@@ -1,14 +1,17 @@
-package router
+package router_test
 
 import (
 	"context"
 	"free9ja/api/internal/db"
+	"free9ja/api/internal/router"
 	"free9ja/api/test"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
+
+	"free9ja/api/internal/utils"
 
 	"github.com/stretchr/testify/require"
 )
@@ -33,9 +36,9 @@ func TestNewRouter(t *testing.T) {
 	defer rdb.Close()
 
 	// Initialize router
-	r := New(pool, rdb)
+	r := router.New(pool, rdb)
 
-	req := httptest.NewRequest(http.MethodGet, "/health", nil)
+	req := httptest.NewRequest(http.MethodGet, utils.ApiUrls.Health, nil)
 	rec := httptest.NewRecorder()
 
 	r.ServeHTTP(rec, req)
