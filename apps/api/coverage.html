@@ -1,0 +1,1433 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>api: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">free9ja/api/cmd/api/main.go (42.1%)</option>
+				
+				<option value="file1">free9ja/api/internal/config/config.go (88.2%)</option>
+				
+				<option value="file2">free9ja/api/internal/db/postgres.go (86.7%)</option>
+				
+				<option value="file3">free9ja/api/internal/db/redis.go (100.0%)</option>
+				
+				<option value="file4">free9ja/api/internal/handler/auth/auth_handler.go (100.0%)</option>
+				
+				<option value="file5">free9ja/api/internal/handler/handler.go (100.0%)</option>
+				
+				<option value="file6">free9ja/api/internal/logger/logger.go (100.0%)</option>
+				
+				<option value="file7">free9ja/api/internal/router/router.go (100.0%)</option>
+				
+				<option value="file8">free9ja/api/internal/service/auth/auth_service.go (94.8%)</option>
+				
+				<option value="file9">free9ja/api/internal/utils/utils.go (90.9%)</option>
+				
+				<option value="file10">free9ja/api/test/helper.go (90.2%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "context"
+        "fmt"
+        "log/slog"
+        "net/http"
+        "os"
+        "os/signal"
+        "syscall"
+        "time"
+
+        "free9ja/api/internal/config"
+        "free9ja/api/internal/db"
+        "free9ja/api/internal/logger"
+        "free9ja/api/internal/router"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/redis/go-redis/v9"
+)
+
+// @title Free9ja API
+// @version 1.0
+// @description API for the Free9ja platform.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:4000
+// @BasePath /api/v1
+
+type App struct {
+        cfg    *config.Config
+        server *http.Server
+        db     *pgxpool.Pool
+        rdb    *redis.Client
+}
+
+func newApp(ctx context.Context, cfg *config.Config) *App <span class="cov8" title="1">{
+        // Setup better structured logging, can now do:
+        // slog.Info("hello", "key", "value")
+        // slog.Error("uh oh", "err", err)
+        // slog.Warn("careful", "msg", "something might be wrong")
+        // slog.Debug("deep details", "data", "lots of info")
+        // slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
+        // version and commit are located in version.go, but during production,
+        // they will be added when building the app during ci/cd
+        logger.SetupLogger(version, commit)
+
+        // Initialize postgres database
+        pool, err := db.NewPostgresPool(ctx, cfg.Database.URL)
+        if err != nil </span><span class="cov0" title="0">{
+                slog.Error("failed to initialize database", "err", err)
+                os.Exit(1)
+        }</span>
+
+        // Initialize Redis
+        <span class="cov8" title="1">rdb, err := db.NewRedisClient(cfg.Redis)
+        if err != nil </span><span class="cov0" title="0">{
+                slog.Error("failed to initialize redis", "err", err)
+                os.Exit(1)
+        }</span>
+
+        // Initialize router
+        <span class="cov8" title="1">r := router.New(pool, rdb)
+        addr := fmt.Sprintf(":%s", cfg.Port)
+        slog.Info("starting server", "addr", addr)
+
+        return &amp;App{
+                cfg: cfg,
+                db:  pool,
+                rdb: rdb,
+                server: &amp;http.Server{
+                        Addr:    addr,
+                        Handler: r,
+                },
+        }</span>
+}
+
+func (a *App) Close() error <span class="cov8" title="1">{
+        slog.Info("closing all db connections")
+        a.db.Close()
+        a.rdb.Close()
+        return nil
+}</span>
+
+func (a *App) Run() error <span class="cov8" title="1">{
+        slog.Info("starting server", "addr", a.server.Addr)
+
+        if err := a.server.ListenAndServe(); err != nil &amp;&amp; err != http.ErrServerClosed </span><span class="cov0" title="0">{
+                slog.Error("server failed", "err", err)
+                return fmt.Errorf("server failed, err: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">return nil</span>
+}
+
+func main() <span class="cov0" title="0">{
+        // loads the config
+        cfg := config.Load()
+
+        // Setup signal handling for graceful shutdown
+        ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+        defer stop()
+
+        // Initialize app
+        app := newApp(context.Background(), cfg)
+
+        // Start the server in a goroutine so that it doesn't block the main function
+        go func() </span><span class="cov0" title="0">{
+                if err := app.Run(); err != nil </span><span class="cov0" title="0">{
+                        os.Exit(1)
+                }</span>
+        }()
+
+        // Wait for interrupt signal, e.g. Ctrl+C or docker container closes
+        // When the program receives an interrupt signal,
+        // the context's Done "channel" is closed, triggering this
+        // goroutine to continue and shut down the server gracefully.
+        <span class="cov0" title="0">&lt;-ctx.Done()
+        slog.Info("shutting down gracefully...")
+
+        // 🔑 Add timeout for shutdown
+        shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+        defer cancel()
+
+        // Proper HTTP shutdown
+        if err := app.server.Shutdown(shutdownCtx); err != nil </span><span class="cov0" title="0">{
+                slog.Error("server shutdown failed", "err", err)
+        }</span>
+
+        // Close other resources (DB, Redis, etc.)
+        <span class="cov0" title="0">if err := app.Close(); err != nil </span><span class="cov0" title="0">{
+                slog.Error("app close failed", "err", err)
+        }</span>
+
+        <span class="cov0" title="0">slog.Info("shutdown complete")</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">// Package config provides configuration management for the API application.
+// It handles loading environment variables from .env files and system environment,
+// with support for default values and type conversion.
+package config
+
+import (
+        "fmt"
+        "log/slog"
+        "os"
+        "strconv"
+        "sync"
+
+        "free9ja/api/internal/utils"
+
+        "github.com/joho/godotenv"
+)
+
+// DatabaseConfig holds database connection parameters.
+// These settings control the connection pool behavior and database connection details.
+type DatabaseConfig struct {
+        URL       string // Database connection URL (e.g., postgres://user:pass@host:port/db)
+        MaxConns  int    // Maximum number of open connections to the database
+        IdleConns int    // Maximum number of idle connections in the pool
+        // ConnTimeout time.Duration // Connection timeout (currently commented out)
+        // MaxLifetime time.Duration // Maximum lifetime of a connection (currently commented out)
+}
+
+// RedisConfig holds Redis connection parameters.
+type RedisConfig struct {
+        Addr     string // Redis server address (e.g., localhost:6379)
+        Password string // Redis password (empty if no authentication)
+        DB       int    // Redis database number (default 0)
+}
+
+// Config holds the complete application configuration.
+// It includes environment settings, server port, and database configuration.
+type Config struct {
+        Env      string         // Application environment (development, staging, production)
+        Port     string         // Server port for HTTP listener
+        Database DatabaseConfig // Database connection configuration
+        Redis    RedisConfig    // Redis connection configuration
+}
+
+var (
+        cfg  *Config   // Global configuration instance (singleton)
+        once sync.Once // Ensures Load() is only executed once (thread-safe)
+)
+
+// Load loads the application configuration using the singleton pattern.
+// It loads environment variables from .env files and system environment,
+// applies default values, and performs validation. This function is thread-safe
+// and will only initialize the configuration once, regardless of how many times it's called.
+func Load() *Config <span class="cov8" title="1">{
+        once.Do(func() </span><span class="cov8" title="1">{
+                var err error
+
+                cfg, err = LoadConfig()
+
+                if err != nil </span><span class="cov0" title="0">{
+                        slog.Error("Failed to load configuration", "error", err)
+                        os.Exit(1)
+                }</span>
+        })
+
+        <span class="cov8" title="1">return cfg</span>
+}
+
+func LoadConfig() (*Config, error) <span class="cov8" title="1">{
+        // get the paths to the .env
+        envPath, envLocalPath := GetEnvPath()
+
+        // check if we're running in a CI/CD environment
+        isCiCd := GetEnv("IS_CI_CD", "false")
+
+        // if we're running in a CI/CD environment, skip loading .env files
+        if isCiCd == "true" </span><span class="cov8" title="1">{
+                slog.Info("Running in CI/CD environment, skipping .env file loading")
+        }</span> else<span class="cov8" title="1"> {
+                if err := godotenv.Load(envLocalPath, envPath); err != nil </span><span class="cov0" title="0">{
+                        slog.Warn("No .env file found, relying on system environment variables")
+                }</span>
+        }
+
+        <span class="cov8" title="1">db_user := GetEnv("DB_USER", "")
+        db_pass := GetEnv("DB_PASSWORD", "")
+        db_name := GetEnv("DB_NAME", "")
+        db_port := GetEnv("DB_PORT", "")
+        redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
+        redis_port := GetEnv("REDIS_PORT", "")
+        redis_password := GetEnv("REDIS_PASSWORD", "")
+        redis_db := GetIntEnv("REDIS_DB", 0)
+        is_testing := GetEnv("IS_TESTING", "false")
+
+        if db_name == "" || db_user == "" || db_pass == "" || db_port == "" || redis_addr == "" || redis_port == "" </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("DB_NAME, DB_USER, DB_PASSWORD, DB_PORT, REDIS_ADDR, and REDIS_PORT must be set")
+        }</span>
+
+        // if testing, setup test containers for postgres and redis
+        <span class="cov8" title="1">if is_testing == "true" </span><span class="cov8" title="1">{
+                // setup postgres test container
+                testDbConfig, _, err := utils.SetupPostgresTestContainer(db_user, db_pass, db_name, db_port)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to setup postgres test container: %w", err)
+                }</span>
+                <span class="cov8" title="1">db_port = testDbConfig.Port
+
+                // setup redis test container
+                redis_addr, _, err = utils.SetupRedisTestContainer(redis_port)
+                if err != nil </span><span class="cov0" title="0">{
+                        return nil, fmt.Errorf("failed to setup redis test container: %w", err)
+                }</span>
+        }
+
+        // create db connection url
+        <span class="cov8" title="1">db_url := utils.FormatPostgresDSN(db_user, db_pass, "localhost", db_port, db_name)
+
+        configInstance := &amp;Config{
+                Env:  GetEnv("ENV", "development"),
+                Port: GetEnv("PORT", "4000"),
+                Database: DatabaseConfig{
+                        URL: db_url,
+                },
+                Redis: RedisConfig{
+                        Addr:     redis_addr,
+                        Password: redis_password,
+                        DB:       redis_db,
+                },
+        }
+
+        // Validation: Ensure critical variables are set
+        if configInstance.Database.URL == "" </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("DATABASE_URL is not set")
+        }</span>
+
+        <span class="cov8" title="1">return configInstance, nil</span>
+}
+
+// getEnv retrieves an environment variable value with a fallback default.
+// It first checks the system environment, then returns the default value if not found.
+func GetEnv(key, defaultValue string) string <span class="cov8" title="1">{
+        if value := os.Getenv(key); value != "" </span><span class="cov8" title="1">{
+                return value
+        }</span>
+        <span class="cov8" title="1">return defaultValue</span>
+}
+
+// GetIntEnv retrieves an environment variable as an integer with a fallback default.
+// It attempts to parse the environment variable as an integer, returning the default
+// value if the variable is not set or cannot be parsed as an integer.
+func GetIntEnv(key string, defaultValue int) int <span class="cov8" title="1">{
+        if value := os.Getenv(key); value != "" </span><span class="cov8" title="1">{
+                if i, err := strconv.Atoi(value); err == nil </span><span class="cov8" title="1">{
+                        return i
+                }</span>
+        }
+        <span class="cov8" title="1">return defaultValue</span>
+}
+
+func GetEnvPath() (envPath string, envLocalPath string) <span class="cov8" title="1">{
+        envPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env"
+        envLocalPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env.local"
+
+        // if the user sets a .env custom path, then return the custom path
+        if GetEnv("ENV_PATH", "") != "" </span><span class="cov8" title="1">{
+                envPath = GetEnv("ENV_PATH", "")
+        }</span>
+
+        // if the user sets a .env.local custom path, then return the custom path
+        <span class="cov8" title="1">if GetEnv("ENV_LOCAL_PATH", "") != "" </span><span class="cov8" title="1">{
+                envLocalPath = GetEnv("ENV_LOCAL_PATH", "")
+        }</span>
+
+        <span class="cov8" title="1">return</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package db
+
+import (
+        "context"
+        "fmt"
+        "free9ja/api/internal/config"
+        "log/slog"
+        "time"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+)
+
+func NewPostgresPool(ctx context.Context, connString string) (*pgxpool.Pool, error) <span class="cov8" title="1">{
+        dbConfig, err := pgxpool.ParseConfig(connString)
+
+        if err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("failed to parse connection string: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">dbConfig.MaxConns = 20
+        dbConfig.MinConns = 2
+        dbConfig.MaxConnLifetime = 30 * time.Minute
+        dbConfig.MaxConnIdleTime = 15 * time.Minute
+
+        // Initialize the pool
+        pool, err := pgxpool.NewWithConfig(ctx, dbConfig)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("unable to create connection pool: %w", err)
+        }</span>
+
+        // Verify the connection is active
+        <span class="cov8" title="1">if err := pool.Ping(ctx); err != nil </span><span class="cov0" title="0">{
+                return nil, fmt.Errorf("unable to ping database: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if config.GetEnv("ENV", "development") == "development" </span><span class="cov8" title="1">{
+                // slog.Info("Successfully connected to the postgres database", "db_url", connString)
+                slog.Info("Successfully connected to the postgres database")
+        }</span>
+
+        <span class="cov8" title="1">return pool, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package db
+
+import (
+        "context"
+        "fmt"
+        "free9ja/api/internal/config"
+        "log/slog"
+
+        "github.com/redis/go-redis/v9"
+)
+
+// NewRedisClient creates a new Redis client with the provided configuration.
+// It verifies the connection by pinging the server before returning.
+func NewRedisClient(cfg config.RedisConfig) (*redis.Client, error) <span class="cov8" title="1">{
+        rdb := redis.NewClient(&amp;redis.Options{
+                Addr:     cfg.Addr,
+                Password: cfg.Password,
+                DB:       cfg.DB,
+        })
+
+        // Verify connection
+        ctx := context.Background()
+        if err := rdb.Ping(ctx).Err(); err != nil </span><span class="cov8" title="1">{
+                return nil, fmt.Errorf("unable to ping redis: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">if config.GetEnv("ENV", "development") == "development" </span><span class="cov8" title="1">{
+                slog.Info("Successfully connected to Redis", "addr", cfg.Addr, "db", cfg.DB)
+        }</span>
+
+        <span class="cov8" title="1">return rdb, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package authhandler
+
+import (
+        "context"
+        "encoding/json"
+        "free9ja/api/internal/db/queries"
+        auth "free9ja/api/internal/service/auth"
+        "free9ja/api/internal/utils"
+        "net/http"
+        "time"
+
+        "github.com/go-playground/validator/v10"
+        "github.com/jackc/pgx/v5/pgtype"
+)
+
+// AuthService interface defines the methods for authentication services
+type AuthService interface {
+        Register(ctx context.Context, params queries.CreateUserParams, nin string) (auth.RegisterResult, error)
+}
+
+// Handler struct holds the dependencies for the auth handler
+type Handler struct {
+        authService AuthService
+        validate    *validator.Validate
+        utils       *utils.Utils
+}
+
+// NewHandler creates a new instance of the auth handler
+func NewHandler(authService AuthService, utils *utils.Utils) *Handler <span class="cov8" title="1">{
+        return &amp;Handler{
+                authService: authService,
+                validate:    validator.New(),
+                utils:       utils,
+        }
+}</span>
+
+// RegisterRequest represents the structure of the incoming JSON request body for user registration
+type RegisterRequest struct {
+        Email          string `json:"email" validate:"omitempty,email"`
+        Phone          string `json:"phone" validate:"required,e164"`
+        Username       string `json:"username" validate:"required,min=2,max=30,alphanum"`
+        Nin            string `json:"nin" validate:"required,numeric,len=11"`
+        Password       string `json:"password" validate:"required,min=5,max=72"`
+        LastName       string `json:"last_name" validate:"required,min=2,max=30"`
+        FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
+        MiddleName     string `json:"middle_name" validate:"omitempty,min=2,max=30"`
+        Gender         string `json:"gender" validate:"required,oneof=male female"`
+        DateOfBirth    string `json:"date_of_birth" validate:"required"` // Expects YYYY-MM-DD
+        CurrentCountry int16  `json:"current_country" validate:"required"`
+        CurrentState   int16  `json:"current_state" validate:"required"`
+        CurrentCity    int32  `json:"current_city"`
+}
+
+// Register handles the user registration process
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        var req RegisterRequest
+
+        // Decode the incoming JSON request body into the RegisterRequest struct
+        if err := json.NewDecoder(r.Body).Decode(&amp;req); err != nil </span><span class="cov8" title="1">{
+                h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "Invalid request body " + err.Error()})
+                return
+        }</span>
+
+        // Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
+        <span class="cov8" title="1">if err := h.validate.Struct(req); err != nil </span><span class="cov8" title="1">{
+                h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+                        "error": "Invalid request body: " + err.(validator.ValidationErrors)[0].Translate(nil),
+                })
+                return
+        }</span>
+
+        // Parse the date of birth string into a time.Time object
+        <span class="cov8" title="1">dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+        if err != nil </span><span class="cov8" title="1">{
+                h.utils.RespondJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid date format for date_of_birth. Use YYYY-MM-DD"})
+                return
+        }</span>
+
+        // Map the request data to the database creation parameters
+        // Note: Password hashing is handled within the service layer
+        <span class="cov8" title="1">params := queries.CreateUserParams{
+                Email:          pgtype.Text{String: req.Email},
+                Phone:          req.Phone,
+                Username:       pgtype.Text{String: req.Username},
+                PasswordHash:   req.Password, // Hashed in the service layer
+                LastName:       pgtype.Text{String: req.LastName},
+                FirstName:      pgtype.Text{String: req.FirstName},
+                MiddleName:     pgtype.Text{String: req.MiddleName},
+                Gender:         pgtype.Text{String: req.Gender, Valid: true},
+                DateOfBirth:    pgtype.Date{Time: dob, Valid: true},
+                CurrentCountry: req.CurrentCountry,
+                CurrentState:   req.CurrentState,
+                CurrentCity:    pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
+        }
+
+        // Call the auth service to register the new user
+        id, err := h.authService.Register(r.Context(), params, req.Nin)
+        if err != nil </span><span class="cov8" title="1">{
+                h.utils.RespondJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create user: " + err.Error()})
+                return
+        }</span>
+
+        // Return a successful response with the newly created user ID
+        <span class="cov8" title="1">h.utils.RespondJSON(w, http.StatusCreated, map[string]any{
+                "id":      id,
+                "message": "User registered successfully",
+        })</span>
+}
+</pre>
+		
+		<pre class="file" id="file5" style="display: none">package handler
+
+import (
+        "net/http"
+
+        "free9ja/api/internal/utils"
+)
+
+var utilsInstance = utils.NewUtils(nil)
+
+// Health handles GET /health
+// @Summary Health check
+// @Description get the status of the server
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router /health [get]
+func Health(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}</span>
+
+// Root handles GET /api/v1/
+// @Summary API Root
+// @Description get the API root message
+// @Tags root
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Router / [get]
+func Root(w http.ResponseWriter, r *http.Request) <span class="cov8" title="1">{
+        utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{
+                "message": "free9ja API v1",
+        })
+}</span>
+</pre>
+		
+		<pre class="file" id="file6" style="display: none">package logger
+
+import (
+        "io"
+        "log/slog"
+        "os"
+        "time"
+
+        "github.com/lmittmann/tint"
+)
+
+// SetupLogger initializes the default slog logger with the tint handler
+// for colorized structured logging.
+func SetupLogger(version, commit string) <span class="cov8" title="1">{
+
+        // Get environment from environment variable
+        env := os.Getenv("ENV")
+        if env == "" </span><span class="cov8" title="1">{
+                env = "development"
+        }</span>
+        // Check if environment is development
+        <span class="cov8" title="1">isDev := env == "development"
+
+        // ---- HANDLER ----
+        var handler slog.Handler
+        var output io.Writer = os.Stdout
+
+        if isDev </span><span class="cov8" title="1">{
+                // Pretty, colorful output for local development
+                handler = tint.NewHandler(output, &amp;tint.Options{
+                        Level:      slog.LevelDebug, // show everything locally
+                        AddSource:  true,            // shows file:line (very useful for errors)
+                        TimeFormat: time.Kitchen,    // gives clean time like 11:04AM, but never use it in production
+
+                        // optional: customize how things look
+                        ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr </span><span class="cov8" title="1">{
+                                return a
+                        }</span>,
+                })
+        } else<span class="cov8" title="1"> {
+                handler = slog.NewJSONHandler(output, &amp;slog.HandlerOptions{
+                        Level:     slog.LevelInfo,
+                        AddSource: false,
+                })
+        }</span>
+
+        // ---- LOGGER ----
+        <span class="cov8" title="1">logger := slog.New(handler)
+        if env == "production" </span><span class="cov8" title="1">{
+                logger = logger.With(
+                        "version", version,
+                        "commit", commit,
+                )
+        }</span>
+
+        <span class="cov8" title="1">slog.SetDefault(logger)</span>
+}
+</pre>
+		
+		<pre class="file" id="file7" style="display: none">package router
+
+import (
+        "net/http"
+        "os"
+
+        "github.com/go-chi/chi/v5"
+        "github.com/go-chi/chi/v5/middleware"
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/redis/go-redis/v9"
+        httpSwagger "github.com/swaggo/http-swagger"
+
+        _ "free9ja/api/docs"
+        "free9ja/api/internal/db/queries"
+        "free9ja/api/internal/handler"
+        authhandler "free9ja/api/internal/handler/auth"
+        authservice "free9ja/api/internal/service/auth"
+        "free9ja/api/internal/utils"
+)
+
+// New creates and returns a configured Chi router.
+func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler <span class="cov8" title="1">{
+        mainRouter := chi.NewRouter()
+
+        // Initialize dependencies
+        q := queries.New(pool)
+        authService := authservice.NewAuthService(q, rdb)
+        utilsInstance := utils.NewUtils(pool)
+        authHandler := authhandler.NewHandler(authService, utilsInstance)
+
+        // Core middleware
+        mainRouter.Use(middleware.RequestID)
+        mainRouter.Use(middleware.RealIP)
+        mainRouter.Use(middleware.Logger)
+        mainRouter.Use(middleware.Recoverer)
+
+        // Health check
+        mainRouter.Get(utils.ApiUrls.Health, handler.Health)
+
+        // Swagger documentation (Dev only)
+        if os.Getenv("ENV") != "production" </span><span class="cov8" title="1">{
+                mainRouter.Get("/swagger/*", httpSwagger.Handler(
+                        httpSwagger.URL("/swagger/doc.json"),
+                ))
+        }</span>
+
+        // API v1 routes
+        <span class="cov8" title="1">mainRouter.Get(utils.ApiUrls.Root, handler.Root)
+        mainRouter.Post(utils.ApiUrls.Register, authHandler.Register)
+
+        return mainRouter</span>
+}
+</pre>
+		
+		<pre class="file" id="file8" style="display: none">package authservice
+
+import (
+        "context"
+        "errors"
+        "fmt"
+        "free9ja/api/internal/db/queries"
+        "math/rand"
+        "regexp"
+        "strconv"
+        "strings"
+        "time"
+
+        "free9ja/api/internal/db"
+
+        "github.com/jackc/pgx/v5/pgtype"
+        phonenumbers "github.com/nyaruka/phonenumbers"
+        "github.com/redis/go-redis/v9"
+        "golang.org/x/crypto/bcrypt"
+)
+
+type AuthService struct {
+        queries *queries.Queries
+        rdb     *redis.Client
+}
+
+func NewAuthService(q *queries.Queries, rdb *redis.Client) *AuthService <span class="cov8" title="1">{
+        return &amp;AuthService{
+                queries: q,
+                rdb:     rdb,
+        }
+}</span>
+
+type RegisterResult struct {
+        UserID int64
+        FakeID int64
+}
+
+func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string) (RegisterResult, error) <span class="cov8" title="1">{
+        // Hash password
+        hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.PasswordHash), bcrypt.DefaultCost)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        <span class="cov8" title="1">params.PasswordHash = string(hashedPassword)
+
+        // cleans up the username
+        username := strings.TrimSpace(strings.ToLower(params.Username.String))
+        username, err = CleanUsername(username)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+        <span class="cov8" title="1">params.Username = pgtype.Text{String: username, Valid: true}
+
+        // checks if the username already exist
+        username_exist := s.CheckUsername(ctx, username)
+        if username_exist </span><span class="cov8" title="1">{
+                return RegisterResult{}, errors.New("username already exists")
+        }</span>
+
+        // email checks
+        <span class="cov8" title="1">email := strings.TrimSpace(strings.ToLower(params.Email.String))
+        email_exist := s.CheckEmail(ctx, email)
+        if email_exist </span><span class="cov8" title="1">{
+                return RegisterResult{}, errors.New("email already exists")
+        }</span>
+
+        // phone checks
+        <span class="cov8" title="1">phone_exist := s.CheckPhone(ctx, params.Phone)
+        if phone_exist </span><span class="cov8" title="1">{
+                return RegisterResult{}, errors.New("phone already exists")
+        }</span>
+
+        // nin check
+        <span class="cov8" title="1">nin_check := s.CheckNIN(ctx, nin)
+        if nin_check </span><span class="cov8" title="1">{
+                return RegisterResult{}, errors.New("nin already exists")
+        }</span>
+
+        // country check
+        <span class="cov8" title="1">country_dts, err := s.CheckCountry(ctx, params.CurrentCountry)
+        if err != nil </span><span class="cov8" title="1">{
+                return RegisterResult{}, err
+        }</span>
+        // state check
+        <span class="cov8" title="1">_, err = s.CheckState(ctx, params.CurrentCountry, params.CurrentState)
+        if err != nil </span><span class="cov8" title="1">{
+                return RegisterResult{}, err
+        }</span>
+        // city check
+        <span class="cov8" title="1">_, err = s.CheckCity(ctx, params.CurrentState, params.CurrentCity.Int32)
+        if err != nil </span><span class="cov8" title="1">{
+                return RegisterResult{}, err
+        }</span>
+
+        // check phone country validation
+        <span class="cov8" title="1">_, err = s.ValidatePhoneForCountry(params.Phone, country_dts.Iso2)
+        if err != nil </span><span class="cov8" title="1">{
+                return RegisterResult{}, err
+        }</span>
+
+        // Check date of birth: Ensure the user is at least 18 years old
+        <span class="cov8" title="1">today := time.Now().UTC()
+        if today.Sub(params.DateOfBirth.Time) &lt; 18*365*24*time.Hour </span><span class="cov8" title="1">{
+                return RegisterResult{}, errors.New("you must be at least 18 years old")
+        }</span>
+
+        // add the use to the db
+        <span class="cov8" title="1">user_id, err := s.queries.CreateUser(ctx, params)
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // generate a fake_id using the user_id and update the user fake_id
+        <span class="cov8" title="1">fake_id := GenerateFakeID(user_id)
+        err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: user_id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
+        if err != nil </span><span class="cov0" title="0">{
+                return RegisterResult{}, err
+        }</span>
+
+        // save details in redis
+        <span class="cov8" title="1">s.SaveUsernameInRedis(ctx, username)
+        s.SaveEmailInRedis(ctx, email)
+        s.SaveNINInRedis(ctx, nin, user_id)
+        s.SavePhoneInRedis(ctx, params.Phone, user_id)
+
+        return RegisterResult{UserID: user_id, FakeID: fake_id}, nil</span>
+}
+
+// function: generates fake_id using the original id
+func GenerateFakeID(id int64) int64 <span class="cov8" title="1">{
+        front_id := rand.Intn(1000)
+        back_id := rand.Intn(1000)
+
+        fake_id := fmt.Sprintf("%d%d%d", front_id, id, back_id)
+        fake_id_int, _ := strconv.ParseInt(fake_id, 10, 64)
+        return fake_id_int
+}</span>
+
+// CleanUsername normalizes and validates a username based on:
+// 1. Alphanumeric start/end
+// 2. No consecutive dots/underscores
+// 3. Length between 2-30 chars
+// 4. Case-insensitivity (returns lowercase)
+func CleanUsername(input string) (string, error) <span class="cov8" title="1">{
+        // 1. Trim whitespace and normalize to lowercase
+        clean := strings.ToLower(strings.TrimSpace(input))
+
+        // 2. Check length (2-30 characters)
+        if len(clean) &lt; 2 || len(clean) &gt; 30 </span><span class="cov8" title="1">{
+                return "", errors.New("username must be between 2 and 30 characters")
+        }</span>
+
+        // 3. Define the Regex based on your logic:
+        // The regex pattern is designed to match a string that starts and ends with
+        // alphanumeric characters, and contains zero or more alphanumeric characters,
+        // and zero or more dots or underscores in between.
+        //
+        // The pattern is split into two parts:
+        // - The start and end of the string are checked for alphanumeric characters.
+        // - The middle part is checked for alphanumeric characters and dots or underscores.
+        <span class="cov8" title="1">validPattern := regexp.MustCompile(`^[a-z0-9][a-z0-9._]*[a-z0-9]$`)
+        if !validPattern.MatchString(clean) </span><span class="cov8" title="1">{
+                return "", errors.New("username can only contain letters, numbers, dots, and underscores")
+        }</span>
+
+        // 4. Manual check for consecutive symbols (since Go regex doesn't do lookaheads)
+        <span class="cov8" title="1">if strings.Contains(clean, "..") || strings.Contains(clean, "__") ||
+                strings.Contains(clean, "._") || strings.Contains(clean, "_.") </span><span class="cov8" title="1">{
+                return "", errors.New("username cannot contain consecutive dots or underscores")
+        }</span>
+
+        <span class="cov8" title="1">return clean, nil</span>
+}
+
+// function: check if the username already exist in redis and in the postgres db
+func (s *AuthService) CheckUsername(ctx context.Context, username string) bool <span class="cov8" title="1">{
+        // check in redis first
+        exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredUsernames, username).Result()
+        if exists </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        // check in db
+        <span class="cov8" title="1">userDts, _ := s.queries.GetUserByUsername(ctx, pgtype.Text{String: username, Valid: true})
+        if userDts.ID &gt; 0 </span><span class="cov0" title="0">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">return false</span>
+}
+
+// function: checks if the email already exists in redis and in the postgres db
+func (s *AuthService) CheckEmail(ctx context.Context, email string) bool <span class="cov8" title="1">{
+        // check in redis first
+        exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredEmails, email).Result()
+        if exists </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        // check in db
+        <span class="cov8" title="1">userDts, _ := s.queries.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true})
+        return userDts.ID &gt; 0</span>
+}
+
+// function: checks if the phone already exists in redis and in the postgres db
+func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool <span class="cov8" title="1">{
+        // check in redis first
+        exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredPhones, phone).Result()
+        if exists </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        // check in all phone numbers table
+        <span class="cov8" title="1">id, _ := s.queries.CheckIfPhoneNumberExists(ctx, phone)
+        if id &gt; 0 </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        <span class="cov8" title="1">return false</span>
+}
+
+// CheckNIN function checks if the nin already exists in the database
+func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool <span class="cov8" title="1">{
+        // check in redis first
+        exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredNins, nin).Result()
+        if exists </span><span class="cov8" title="1">{
+                return true
+        }</span>
+
+        // check in db
+        <span class="cov8" title="1">user_dts, _ := s.queries.GetUserNINByNIN(ctx, nin)
+        return user_dts.ID &gt; 0</span>
+}
+
+// ValidatePhoneForCountry checks:
+// 1. valid phone number format
+// 2. matches the given ISO country code (e.g. "NG", "US")
+// 3. returns normalized E.164 format if valid
+func (s *AuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) <span class="cov8" title="1">{
+        // Parse number (second arg can be empty if phone is already in E.164)
+        num, err := phonenumbers.Parse(phone, "")
+        if err != nil </span><span class="cov8" title="1">{
+                return "", fmt.Errorf("invalid phone format: %w", err)
+        }</span>
+
+        // Check if it's a valid number globally
+        <span class="cov8" title="1">if !phonenumbers.IsValidNumber(num) </span><span class="cov0" title="0">{
+                return "", fmt.Errorf("invalid phone number")
+        }</span>
+
+        // Ensure it matches the expected country_code
+        <span class="cov8" title="1">if !phonenumbers.IsValidNumberForRegion(num, country_code) </span><span class="cov8" title="1">{
+                return "", fmt.Errorf("phone number does not match country %s", country_code)
+        }</span>
+
+        // Normalize to E.164 format
+        <span class="cov8" title="1">formatted := phonenumbers.Format(num, phonenumbers.E164)
+
+        return formatted, nil</span>
+}
+
+// function: check if the user country is valid
+func (s *AuthService) CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error) <span class="cov8" title="1">{
+        country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
+        if country_dts.ID &gt; 0 </span><span class="cov8" title="1">{
+                return country_dts, nil
+        }</span>
+
+        <span class="cov8" title="1">return queries.GetCountryByIDRow{}, errors.New("invalid country ID")</span>
+}
+
+// function: check if the state is valid
+func (s *AuthService) CheckState(ctx context.Context, country_id, state_id int16) (bool, error) <span class="cov8" title="1">{
+        state_dts, _ := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
+                ID:        state_id,
+                CountryID: country_id,
+        })
+        if state_dts.ID &gt; 0 </span><span class="cov8" title="1">{
+                return true, nil
+        }</span>
+        <span class="cov8" title="1">return false, fmt.Errorf("invalid state ID")</span>
+}
+
+// function: check if the city is valid
+func (s *AuthService) CheckCity(ctx context.Context, state_id int16, city_id int32) (bool, error) <span class="cov8" title="1">{
+        city_dts, _ := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
+                ID:      city_id,
+                StateID: state_id,
+        })
+        if city_dts.ID &gt; 0 </span><span class="cov8" title="1">{
+                return true, nil
+        }</span>
+
+        <span class="cov8" title="1">return false, fmt.Errorf("invalid city ID")</span>
+}
+
+// function: saves the username in redis
+func (s *AuthService) SaveUsernameInRedis(ctx context.Context, username string) <span class="cov8" title="1">{
+        s.rdb.SAdd(ctx, db.RedisRegisteredUsernames, username).Result()
+}</span>
+
+// function: saves the email in redis
+func (s *AuthService) SaveEmailInRedis(ctx context.Context, email string) <span class="cov8" title="1">{
+        s.rdb.SAdd(ctx, db.RedisRegisteredEmails, email).Result()
+}</span>
+
+// function: saves the phone in redis
+func (s *AuthService) SavePhoneInRedis(ctx context.Context, phone string, userID int64) <span class="cov8" title="1">{
+        // save to redis
+        s.rdb.SAdd(ctx, db.RedisRegisteredPhones, phone).Result()
+
+        // save to db
+        s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
+                Phone:  phone,
+                UserID: userID,
+        })
+}</span>
+
+// function: saves the nin in redis
+func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int64) <span class="cov8" title="1">{
+        // save to redis
+        s.rdb.SAdd(ctx, db.RedisRegisteredNins, nin).Result()
+
+        // save to db
+        s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
+                Nin:    nin,
+                UserID: userID,
+        })
+}</span>
+</pre>
+		
+		<pre class="file" id="file9" style="display: none">package utils
+
+import (
+        "context"
+        "encoding/json"
+        "fmt"
+        "net/http"
+        "time"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+        "github.com/testcontainers/testcontainers-go"
+        "github.com/testcontainers/testcontainers-go/wait"
+)
+
+type Utils struct {
+        db *pgxpool.Pool
+}
+
+func NewUtils(db *pgxpool.Pool) *Utils <span class="cov8" title="1">{
+        return &amp;Utils{
+                db: db,
+        }
+}</span>
+
+// RespondJSON writes a JSON response with the given status code and body.
+func (u *Utils) RespondJSON(w http.ResponseWriter, status int, body any) <span class="cov8" title="1">{
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(status)
+        _ = json.NewEncoder(w).Encode(body)
+}</span>
+
+type PostgresTestConfig struct {
+        Host string
+        Port string
+}
+
+func FormatPostgresDSN(db_user, db_password, db_host, db_port, db_name string) string <span class="cov8" title="1">{
+        // "postgres://&lt;username&gt;:&lt;password&gt;@localhost:&lt;port&gt;/&lt;database&gt;?sslmode=disable"
+        return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", db_user, db_password, db_host, db_port, db_name)
+}</span>
+
+func SetupPostgresTestContainer(db_user, db_password, db_name, db_port string) (PostgresTestConfig, testcontainers.Container, error) <span class="cov8" title="1">{
+        ctx := context.Background()
+
+        // Create container request
+        req := testcontainers.ContainerRequest{
+                Image:        "postgres:16.3-alpine3.20",
+                ExposedPorts: []string{fmt.Sprintf("%v/tcp", db_port)},
+                Env: map[string]string{
+                        "POSTGRES_USER":     db_user,
+                        "POSTGRES_PASSWORD": db_password,
+                        "POSTGRES_DB":       db_name,
+                },
+                WaitingFor: wait.ForLog("database system is ready to accept connections").
+                        WithOccurrence(2).
+                        WithStartupTimeout(300 * time.Second),
+        }
+
+        // Create and start the container
+        container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+                ContainerRequest: req,
+                Started:          true,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return PostgresTestConfig{}, nil, fmt.Errorf("failed to start container: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">host, _ := container.Host(ctx)                   // Get container host (IP)
+        port, _ := container.MappedPort(ctx, "5432/tcp") // Get mapped port
+        // dsn := fmt.Sprintf(
+        //         "host=%s user=%v password=%v dbname=%v port=%v sslmode=disable", host, db_user, db_password, db_name, port.Port(),
+        // )
+
+        return PostgresTestConfig{host, port.Port()}, container, nil</span>
+}
+
+func SetupRedisTestContainer(redis_port string) (string, testcontainers.Container, error) <span class="cov8" title="1">{
+        ctx := context.Background()
+
+        req := testcontainers.ContainerRequest{
+                Image:        "redis:7.2.13-alpine",
+                ExposedPorts: []string{fmt.Sprintf("%s/tcp", redis_port)},
+                WaitingFor: wait.ForListeningPort(
+                        fmt.Sprintf("%s/tcp", redis_port),
+                ).WithStartupTimeout(300 * time.Second),
+        }
+
+        container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+                ContainerRequest: req,
+                Started:          true,
+        })
+        if err != nil </span><span class="cov0" title="0">{
+                return "", nil, fmt.Errorf("failed to start redis container: %w", err)
+        }</span>
+
+        <span class="cov8" title="1">host, _ := container.Host(ctx)
+        port, _ := container.MappedPort(ctx, fmt.Sprintf("%s/tcp", redis_port))
+
+        addr := fmt.Sprintf("%s:%s", host, port.Port())
+        return addr, container, nil</span>
+}
+</pre>
+		
+		<pre class="file" id="file10" style="display: none">package test
+
+import (
+        "bytes"
+        "context"
+        "database/sql"
+        "encoding/json"
+        "fmt"
+        "free9ja/api/internal/config"
+        "free9ja/api/internal/db"
+        "free9ja/api/internal/router"
+        "free9ja/api/internal/utils"
+        "io"
+        "net"
+        "net/http"
+        "os"
+        "path/filepath"
+        "runtime"
+        "sync"
+        "testing"
+        "time"
+
+        "github.com/jackc/pgx/v5/pgxpool"
+        _ "github.com/jackc/pgx/v5/stdlib"
+        "github.com/pressly/goose/v3"
+        "github.com/redis/go-redis/v9"
+)
+
+var (
+        test_cfg *config.Config
+        once     sync.Once
+)
+
+// setupTestEnvironmentVariables: prepares environment for testing with testcontainers
+func setupTestEnvironmentVariables() <span class="cov8" title="1">{
+        os.Setenv("IS_TESTING", "true")
+}</span>
+
+// cleanupTestEnvironmentVariables: removes test environment variables
+func cleanupTestEnvironmentVariables() <span class="cov8" title="1">{
+        os.Unsetenv("IS_TESTING")
+}</span>
+
+// BeforeAll: runs once before all tests
+func BeforeAll(t *testing.T) (*config.Config, error) <span class="cov8" title="1">{
+        once.Do(func() </span><span class="cov8" title="1">{
+                setupTestEnvironmentVariables()
+                test_cfg = config.Load()
+        }</span>)
+
+        <span class="cov8" title="1">return test_cfg, nil</span>
+}
+
+// BeforeEach: prepares environment for each test with testcontainers
+func BeforeEach(t *testing.T) (*config.Config, error) <span class="cov8" title="1">{
+        cfg, _ := BeforeAll(t)
+        setupTestEnvironmentVariables()
+        return cfg, nil
+}</span>
+
+// AfterEach: cleans up environment after each test with testcontainers
+func AfterEach(t *testing.T) (*testing.T, error) <span class="cov8" title="1">{
+        cleanupTestEnvironmentVariables()
+        return t, nil
+}</span>
+
+// TestNewApp: creates a connection to the testing database,
+// use chi to listen to request to the url and also start the server
+type TestApp struct {
+        Cfg    *config.Config
+        DB     *pgxpool.Pool
+        RDB    *redis.Client
+        Server *http.Server
+        addr   *net.TCPAddr
+}
+
+// this function is a mock function that sets up a new application for testing
+// it mocks the main.newApp() function, using testcontainers to spin up a new postgres and redis instances
+// and then runs db migrations to the postgres instance to create the necessary tables and data.
+func TestNewApp(t *testing.T, ctx context.Context, cfg *config.Config) *TestApp <span class="cov8" title="1">{
+        // Initialize postgres database
+        pool, _ := db.NewPostgresPool(ctx, cfg.Database.URL)
+        // if err != nil {
+        //         t.Fatalf("failed to initialize database: %v", err)
+        // }
+
+        // Run Goose migrations
+        runMigrations(cfg.Database.URL)
+        // if err := runMigrations(cfg.Database.URL); err != nil {
+        //         t.Fatalf("failed to run migrations: %v", err)
+        // }
+
+        // Initialize Redis
+        rdb, _ := db.NewRedisClient(cfg.Redis)
+        // if err != nil {
+        //         t.Fatalf("failed to initialize redis: %v", err)
+        // }
+
+        // Initialize router
+        r := router.New(pool, rdb)
+
+        // use random free port
+        listener, _ := net.Listen("tcp", ":0")
+        // if err != nil {
+        //         t.Fatalf("failed to get free port: %v", err)
+        // }
+        addr := listener.Addr().(*net.TCPAddr) // convert listener to TCPAddr to get port
+        port := addr.Port                      // get the port from the TCPAddr
+        t.Logf("starting server addr: %d", port)
+
+        // update port in config to the random port returned by the operating system
+        cfg.Port = fmt.Sprintf("%d", port)
+
+        // run server in background, if you do not use a goroutine for starting the server,
+        // then server will block the execution of the test, and the test will not be able to run
+        // server.ListenAndServe() is a blocking call
+        server := &amp;http.Server{Handler: r}
+        go func() </span><span class="cov8" title="1">{
+                if err := server.Serve(listener); err != nil &amp;&amp; err != http.ErrServerClosed </span><span class="cov0" title="0">{
+                        t.Logf("server error: %v", err)
+                }</span>
+        }()
+
+        // wait until server is ready (this is better than doing sleep: time.Sleep(500 * time.Millisecond) // .5s)
+        <span class="cov8" title="1">waitForServer("http://" + addr.String())
+
+        return &amp;TestApp{
+                Cfg:    cfg,
+                DB:     pool,
+                RDB:    rdb,
+                Server: server,
+                addr:   addr,
+        }</span>
+}
+
+func waitForServer(baseURL string) <span class="cov8" title="1">{
+        client := &amp;http.Client{Timeout: 1 * time.Second}
+        maxRetries := 10
+
+        for i := 0; i &lt; maxRetries; i++ </span><span class="cov8" title="1">{
+                time.Sleep(10 * time.Millisecond)
+
+                resp, err := client.Get(baseURL + utils.ApiUrls.Health)
+                if err == nil &amp;&amp; resp.StatusCode == http.StatusOK </span><span class="cov8" title="1">{
+                        return
+                }</span>
+        }
+}
+
+// runMigrations: executes Goose migrations on the test database
+func runMigrations(connString string) error <span class="cov8" title="1">{
+        db, err := sql.Open("pgx", connString)
+        if err != nil </span><span class="cov0" title="0">{
+                return fmt.Errorf("failed to open database for migrations: %w", err)
+        }</span>
+        <span class="cov8" title="1">defer db.Close()
+
+        // Get the absolute path to the migrations directory
+        _, filename, _, _ := runtime.Caller(0) // read about runtime at the end of this function
+        migrationDir := filepath.Join(filepath.Dir(filename), "..", "db", "migrations")
+
+        goose.SetDialect("postgres")
+        // if err := goose.SetDialect("postgres"); err != nil {
+        //         return fmt.Errorf("failed to set goose dialect: %w", err)
+        // }
+
+        goose.Up(db, migrationDir)
+        // if err := goose.Up(db, migrationDir); err != nil {
+        //         return fmt.Errorf("failed to run migrations: %w", err)
+        // }
+
+        return nil</span>
+
+        // runtime is a standard library package in Go (no external dependency). It provides low-level information about the Go
+        // program while it’s running—things like the call stack, goroutines, etc.
+        //
+        // runtime.Caller(skip int) returns information about a function call in the call stack.
+        // The 0 means: “give me information about the current function”.
+        // It returns 4 values: pc, file, line, ok
+        //
+        // pc (pointer to code)
+        // file (file name) - filename = the full absolute path of the current .go file at runtime, e.g: /home/user/project/api/test/helper.go
+        // line (line number)
+        // ok (boolean indicating success)
+        //
+}
+
+// SendRequest sends an HTTP request to the test server and returns the response and body.
+func SendRequest(t *testing.T, method, url string, body any) (*http.Response, []byte) <span class="cov8" title="1">{
+        var bodyBuffer io.Reader
+        if body != nil </span><span class="cov8" title="1">{
+                jsonBody, err := json.Marshal(body)
+                if err != nil </span><span class="cov0" title="0">{
+                        t.Fatalf("failed to marshal request body: %v", err)
+                }</span>
+                <span class="cov8" title="1">bodyBuffer = bytes.NewBuffer(jsonBody)</span>
+        }
+
+        <span class="cov8" title="1">req, err := http.NewRequest(method, url, bodyBuffer)
+        if err != nil </span><span class="cov0" title="0">{
+                t.Fatalf("failed to create request: %v", err)
+        }</span>
+        <span class="cov8" title="1">req.Header.Set("Content-Type", "application/json")
+
+        client := &amp;http.Client{Timeout: 10 * time.Second}
+        response, err := client.Do(req)
+        if err != nil </span><span class="cov0" title="0">{
+                t.Fatalf("failed to send request: %v", err)
+        }</span>
+        <span class="cov8" title="1">defer response.Body.Close()
+
+        respBody, err := io.ReadAll(response.Body)
+        if err != nil </span><span class="cov0" title="0">{
+                t.Fatalf("failed to read response body: %v", err)
+        }</span>
+
+        <span class="cov8" title="1">return response, respBody</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

@@ -1,0 +1,42 @@
+version: '3.8'
+name: free9ja_redis_postgres
+
+services:
+  redis_free9ja:
+    image: redis:7.2.13-alpine
+    container_name: redis_free9ja
+    hostname: redis_free9ja
+    env_file:
+      - .env
+      - .env.local
+    ports:
+      - "6379:6379"
+    volumes:
+      - D:/.redisdata:/data
+    restart: unless-stopped
+    networks:
+      - free9ja_network
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+
+  postgres_free9ja:
+    container_name: postgres_free9ja
+    hostname: postgres_free9ja
+    image: postgres:16.3-alpine3.20
+    restart: unless-stopped
+    env_file:
+      - .env
+      - .env.local
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: test_db
+    volumes:
+      - D:/.pgdata:/var/lib/postgresql/data
+    networks:
+      - free9ja_network
+
+networks:
+  free9ja_network:
+    driver: bridge
