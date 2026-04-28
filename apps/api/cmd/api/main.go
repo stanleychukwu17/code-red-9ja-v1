@@ -90,6 +90,8 @@ func (a *App) Close() error {
 }
 
 func (a *App) Run() error {
+	slog.Info("starting server", "addr", a.server.Addr)
+
 	if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server failed", "err", err)
 		return fmt.Errorf("server failed, err: %w", err)
@@ -111,8 +113,6 @@ func main() {
 
 	// Start the server in a goroutine so that it doesn't block the main function
 	go func() {
-		// Start the server and exit if it fails
-		slog.Info("starting server", "addr", app.server.Addr)
 		if err := app.Run(); err != nil {
 			os.Exit(1)
 		}
