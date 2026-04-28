@@ -6,8 +6,10 @@ The backend API for the Free9ja platform, built with Go and the [Chi](https://gi
 
 ### Prerequisites
 
-- [Go](https://golang.org/doc/install) (1.26+)
+- [Go](https://golang.org/doc/install) (1.23+)
 - [PostgreSQL](https://www.postgresql.org/) (15+)
+- [Redis](https://redis.io/) (7+)
+- [Docker](https://www.docker.com/) (Required for running integration tests via testcontainers)
 - [swag](https://github.com/swaggo/swag) CLI (for documentation generation)
 - [air](https://github.com/air-verse/air) (for live reloading)
 - [goose](https://github.com/pressly/goose) (for database migrations)
@@ -44,13 +46,36 @@ The server will start at [http://localhost:4000](http://localhost:4000) by defau
 
 ### Environment Variables
 
-The application can be configured using the following environment variables:
+The application can be configured using the following environment variables (typically in a `.env` or `.env.local` file):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `4000` | The port the server will listen on (required). |
+| `PORT` | `4000` | The port the server will listen on. |
 | `ENV` | `development` | Environment mode (`development` or `production`). |
-| `DATABASE_URL` | - | PostgreSQL connection string (e.g., `postgres://user:pass@localhost:5432/dbname`). |
+| `DB_USER` | - | PostgreSQL database username. |
+| `DB_PASSWORD` | - | PostgreSQL database password. |
+| `DB_NAME` | - | PostgreSQL database name. |
+| `DB_PORT` | - | PostgreSQL database port (e.g., `5432`). |
+| `REDIS_ADDR` | - | Redis address (e.g., `localhost`). |
+| `REDIS_PORT` | - | Redis port (e.g., `6379`). |
+| `REDIS_PASSWORD` | - | Redis password. |
+| `REDIS_DB` | `0` | Redis database integer. |
+| `IS_CI_CD` | `false` | If `true`, skips loading `.env` files (useful for CI pipelines). |
+| `IS_TESTING`| `false` | If `true`, sets up temporary testcontainers for DB and Redis instead of connecting to local instances. |
+
+## 🧪 Testing
+
+The test suite includes both unit tests and integration tests. The integration tests use `testcontainers-go` to spin up isolated PostgreSQL and Redis instances, requiring a running Docker daemon.
+
+To run tests with coverage output:
+```bash
+./scripts/run_test_with_coverage_output.sh
+```
+
+To run only short unit tests (skipping Docker-based integration tests):
+```bash
+go test -short ./...
+```
 
 ## 📝 Logging
 
@@ -73,25 +98,34 @@ Documentation is automatically generated when running `npm run dev`. To generate
 ./scripts/generate-swagger.sh
 ```
 
+## 🏗 Architecture & Project Structure
+
 - `cmd/api/`: Entry point of the application (`main.go`).
 - `db/`: Database related files.
   - `migrations/`: SQL migration files (Goose).
   - `query/`: SQL query definitions (Sqlc).
 - `internal/`: Internal application logic.
-  - `config/`: Configuration management.
-  - `db/`: Database connection and pooling.
-  - `handler/`: HTTP handlers.
+  - `config/`: Configuration management and environment variable parsing.
+  - `db/`: Database and Redis connection setup and pooling.
+  - `handler/`: HTTP handlers and request parsing.
   - `logger/`: Structured logging setup.
-  - `router/`: Chi router configuration.
+  - `router/`: Chi router configuration and route mapping.
+  - `service/`: Core business logic (e.g., `auth_service`).
+  - `utils/`: Shared utilities.
+- `test/`: Integration testing helpers and lifecycle management (`BeforeAll`, `BeforeEach`).
 - `docs/`: Generated Swagger documentation.
 - `scripts/`: Helper scripts for development.
 - `bin/`: Compiled binaries.
 
+## 🛠 Technologies
+
 - **Go**: Language
 - **Chi**: HTTP Router
 - **pgx**: PostgreSQL Driver & Toolkit
+- **go-redis/v9**: Redis Client
 - **Goose**: Database Migrations
 - **Sqlc**: Type-Safe SQL Generator
+- **testcontainers-go**: Integration Testing via Docker
 - **swaggo/swag**: Swagger Documentation
 - **lmittmann/tint**: Colorized slog handler
 - **Turborepo**: Monorepo Management
@@ -113,7 +147,7 @@ The project uses **Goose** for migrations and **Sqlc** for generating type-safe 
 - **Rollback Migration**: `goose -dir db/migrations down`
 - **Generate SQL Code**: `sqlc generate`
 
-For more detailed information on database setup and PostgreSQL-specific notes, see [DATABASE.md](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/api/DATABASE.md).
+For more detailed information on database setup and PostgreSQL-specific notes, see [DATABASE.md](./DATABASE.md).
 
 ## 📦 Building for Production
 
