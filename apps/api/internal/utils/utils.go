@@ -34,6 +34,11 @@ type PostgresTestConfig struct {
 	Port string
 }
 
+func FormatPostgresDSN(db_user, db_password, db_host, db_port, db_name string) string {
+	// "postgres://<username>:<password>@localhost:<port>/<database>?sslmode=disable"
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", db_user, db_password, db_host, db_port, db_name)
+}
+
 func SetupPostgresTestContainer(db_user, db_password, db_name, db_port string) (PostgresTestConfig, testcontainers.Container, error) {
 	ctx := context.Background()
 
@@ -88,15 +93,8 @@ func SetupRedisTestContainer(redis_port string) (string, testcontainers.Containe
 		return "", nil, fmt.Errorf("failed to start redis container: %w", err)
 	}
 
-	host, err := container.Host(ctx)
-	if err != nil {
-		return "", nil, err
-	}
-
-	port, err := container.MappedPort(ctx, fmt.Sprintf("%s/tcp", redis_port))
-	if err != nil {
-		return "", nil, err
-	}
+	host, _ := container.Host(ctx)
+	port, _ := container.MappedPort(ctx, fmt.Sprintf("%s/tcp", redis_port))
 
 	addr := fmt.Sprintf("%s:%s", host, port.Port())
 	return addr, container, nil
