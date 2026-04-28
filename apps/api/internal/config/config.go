@@ -52,77 +52,87 @@ var (
 // and will only initialize the configuration once, regardless of how many times it's called.
 func Load() *Config {
 	once.Do(func() {
-		// get the paths to the .env
-		envPath, envLocalPath := GetEnvPath()
+		var err error
 
-		// check if we're running in a CI/CD environment
-		isCiCd := GetEnv("IS_CI_CD", "false")
+		cfg, err = LoadConfig()
 
-		// if we're running in a CI/CD environment, skip loading .env files
-		if isCiCd == "true" {
-			slog.Info("Running in CI/CD environment, skipping .env file loading")
-		} else {
-			if err := godotenv.Load(envLocalPath, envPath); err != nil {
-				slog.Warn("No .env file found, relying on system environment variables")
-			}
-		}
-
-		db_user := GetEnv("DB_USER", "")
-		db_pass := GetEnv("DB_PASSWORD", "")
-		db_name := GetEnv("DB_NAME", "")
-		db_port := GetEnv("DB_PORT", "")
-		redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
-		redis_port := GetEnv("REDIS_PORT", "")
-		redis_password := GetEnv("REDIS_PASSWORD", "")
-		redis_db := GetIntEnv("REDIS_DB", 0)
-		is_testing := GetEnv("IS_TESTING", "false")
-
-		if db_name == "" || db_user == "" || db_pass == "" || db_port == "" || redis_addr == "" || redis_port == "" {
-			slog.Warn("DB_NAME, DB_USER, DB_PASSWORD, DB_PORT, REDIS_ADDR, and REDIS_PORT must be set")
-			fmt.Fprintf(os.Stderr, "exiting the program\n")
+		if err != nil {
+			slog.Error("Failed to load configuration", "error", err)
 			os.Exit(1)
-		}
-
-		// if testing, setup test containers for postgres and redis
-		if is_testing == "true" {
-			// setup postgres test container
-			testDbConfig, _, err := utils.SetupPostgresTestContainer(db_user, db_pass, db_name, db_port)
-			if err != nil {
-				panic(err)
-			}
-			db_port = testDbConfig.Port
-
-			// setup redis test container
-			redis_addr, _, err = utils.SetupRedisTestContainer(redis_port)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		// "postgres://<username>:<password>@localhost:<port>/<database>?sslmode=disable"
-		db_url := fmt.Sprintf("postgres://%s:%s@localhost:%s/%s?sslmode=disable", db_user, db_pass, db_port, db_name)
-
-		cfg = &Config{
-			Env:  GetEnv("ENV", "development"),
-			Port: GetEnv("PORT", "4000"),
-			Database: DatabaseConfig{
-				URL: db_url,
-			},
-			Redis: RedisConfig{
-				Addr:     redis_addr,
-				Password: redis_password,
-				DB:       redis_db,
-			},
-		}
-
-		// Validation: Ensure critical variables are set
-		if cfg.Database.URL == "" {
-			slog.Error("DATABASE_URL is not set")
-			panic("DATABASE_URL is not set")
 		}
 	})
 
 	return cfg
+}
+
+func LoadConfig() (*Config, error) {
+	// get the paths to the .env
+	envPath, envLocalPath := GetEnvPath()
+
+	// check if we're running in a CI/CD environment
+	isCiCd := GetEnv("IS_CI_CD", "false")
+
+	// if we're running in a CI/CD environment, skip loading .env files
+	if isCiCd == "true" {
+		slog.Info("Running in CI/CD environment, skipping .env file loading")
+	} else {
+		if err := godotenv.Load(envLocalPath, envPath); err != nil {
+			slog.Warn("No .env file found, relying on system environment variables")
+		}
+	}
+
+	db_user := GetEnv("DB_USER", "")
+	db_pass := GetEnv("DB_PASSWORD", "")
+	db_name := GetEnv("DB_NAME", "")
+	db_port := GetEnv("DB_PORT", "")
+	redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
+	redis_port := GetEnv("REDIS_PORT", "")
+	redis_password := GetEnv("REDIS_PASSWORD", "")
+	redis_db := GetIntEnv("REDIS_DB", 0)
+	is_testing := GetEnv("IS_TESTING", "false")
+
+	if db_name == "" || db_user == "" || db_pass == "" || db_port == "" || redis_addr == "" || redis_port == "" {
+		return nil, fmt.Errorf("DB_NAME, DB_USER, DB_PASSWORD, DB_PORT, REDIS_ADDR, and REDIS_PORT must be set")
+	}
+
+	// if testing, setup test containers for postgres and redis
+	if is_testing == "true" {
+		// setup postgres test container
+		testDbConfig, _, err := utils.SetupPostgresTestContainer(db_user, db_pass, db_name, db_port)
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup postgres test container: %w", err)
+		}
+		db_port = testDbConfig.Port
+
+		// setup redis test container
+		redis_addr, _, err = utils.SetupRedisTestContainer(redis_port)
+		if err != nil {
+			return nil, fmt.Errorf("failed to setup redis test container: %w", err)
+		}
+	}
+
+	// create db connection url
+	db_url := utils.FormatPostgresDSN(db_user, db_pass, "localhost", db_port, db_name)
+
+	configInstance := &Config{
+		Env:  GetEnv("ENV", "development"),
+		Port: GetEnv("PORT", "4000"),
+		Database: DatabaseConfig{
+			URL: db_url,
+		},
+		Redis: RedisConfig{
+			Addr:     redis_addr,
+			Password: redis_password,
+			DB:       redis_db,
+		},
+	}
+
+	// Validation: Ensure critical variables are set
+	if configInstance.Database.URL == "" {
+		return nil, fmt.Errorf("DATABASE_URL is not set")
+	}
+
+	return configInstance, nil
 }
 
 // getEnv retrieves an environment variable value with a fallback default.
