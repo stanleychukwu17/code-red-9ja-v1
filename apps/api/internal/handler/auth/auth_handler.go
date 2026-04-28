@@ -96,7 +96,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Call the auth service to register the new user
 	id, err := h.authService.Register(r.Context(), params, req.Nin)
 	if err != nil {
-		// Fallback for unexpected errors
 		h.utils.RespondJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create user: " + err.Error()})
 		return
 	}
