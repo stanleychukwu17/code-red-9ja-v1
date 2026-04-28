@@ -1,0 +1,3 @@
+# files to ignore in go test coverage
+docs/
+internal/db/queries/
