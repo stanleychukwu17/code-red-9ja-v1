@@ -13,7 +13,6 @@ import (
 
 	"free9ja/api/internal/db"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	phonenumbers "github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
@@ -54,40 +53,26 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	params.Username = pgtype.Text{String: username, Valid: true}
 
 	// checks if the username already exist
-	username_exist, err := s.CheckUsername(ctx, username)
-	if err != nil {
-		return RegisterResult{}, err
-	}
+	username_exist := s.CheckUsername(ctx, username)
 	if username_exist {
 		return RegisterResult{}, errors.New("username already exists")
 	}
 
 	// email checks
 	email := strings.TrimSpace(strings.ToLower(params.Email.String))
-	if email != "" {
-		email_exist, err := s.CheckEmail(ctx, email)
-		if err != nil {
-			return RegisterResult{}, err
-		}
-		if email_exist {
-			return RegisterResult{}, errors.New("email already exists")
-		}
+	email_exist := s.CheckEmail(ctx, email)
+	if email_exist {
+		return RegisterResult{}, errors.New("email already exists")
 	}
 
 	// phone checks
-	phone_exist, err := s.CheckPhone(ctx, params.Phone)
-	if err != nil {
-		return RegisterResult{}, err
-	}
+	phone_exist := s.CheckPhone(ctx, params.Phone)
 	if phone_exist {
 		return RegisterResult{}, errors.New("phone already exists")
 	}
 
 	// nin check
-	nin_check, err := s.CheckNIN(ctx, nin)
-	if err != nil {
-		return RegisterResult{}, err
-	}
+	nin_check := s.CheckNIN(ctx, nin)
 	if nin_check {
 		return RegisterResult{}, errors.New("nin already exists")
 	}
@@ -133,29 +118,11 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, err
 	}
 
-	// save the username in redis
-	err = s.SaveUsernameInRedis(ctx, username)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// save the email in redis
-	err = s.SaveEmailInRedis(ctx, email)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// save the nin in rdb and db
-	err = s.SaveNINInRedis(ctx, nin, user_id)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// save the phone in rdb and db
-	err = s.SavePhoneInRedis(ctx, params.Phone, user_id)
-	if err != nil {
-		return RegisterResult{}, err
-	}
+	// save details in redis
+	s.SaveUsernameInRedis(ctx, username)
+	s.SaveEmailInRedis(ctx, email)
+	s.SaveNINInRedis(ctx, nin, user_id)
+	s.SavePhoneInRedis(ctx, params.Phone, user_id)
 
 	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
 }
@@ -207,89 +174,63 @@ func CleanUsername(input string) (string, error) {
 }
 
 // function: check if the username already exist in redis and in the postgres db
-func (s *AuthService) CheckUsername(ctx context.Context, username string) (bool, error) {
+func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
 	// check in redis first
-	exists, err := s.rdb.SIsMember(ctx, db.RedisRegisteredUsernames, username).Result()
-	if err != nil {
-		return false, err
-	}
+	exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredUsernames, username).Result()
 	if exists {
-		return true, nil
+		return true
 	}
 
 	// check in db
-	_, err = s.queries.GetUserByUsername(ctx, pgtype.Text{String: username, Valid: true})
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return false, nil // no user found
-		}
-		return false, err
+	userDts, _ := s.queries.GetUserByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	if userDts.ID > 0 {
+		return true
 	}
 
-	return true, nil
+	return false
 }
 
 // function: checks if the email already exists in redis and in the postgres db
-func (s *AuthService) CheckEmail(ctx context.Context, email string) (bool, error) {
+func (s *AuthService) CheckEmail(ctx context.Context, email string) bool {
 	// check in redis first
-	exists, err := s.rdb.SIsMember(ctx, db.RedisRegisteredEmails, email).Result()
-	if err != nil {
-		return false, err
-	}
+	exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredEmails, email).Result()
 	if exists {
-		return true, nil
+		return true
 	}
 
 	// check in db
-	_, err = s.queries.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true})
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			return false, nil // no user found
-		}
-		return false, err
-	}
-
-	return true, nil
+	userDts, _ := s.queries.GetUserByEmail(ctx, pgtype.Text{String: email, Valid: true})
+	return userDts.ID > 0
 }
 
 // function: checks if the phone already exists in redis and in the postgres db
-func (s *AuthService) CheckPhone(ctx context.Context, phone string) (bool, error) {
+func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool {
 	// check in redis first
 	exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredPhones, phone).Result()
 	if exists {
-		return true, nil
-	}
-
-	// check in db
-	data, _ := s.queries.GetUserByPhone(ctx, phone)
-	if data.ID > 0 {
-		return true, nil
+		return true
 	}
 
 	// check in all phone numbers table
 	id, _ := s.queries.CheckIfPhoneNumberExists(ctx, phone)
 	if id > 0 {
-		return true, nil
+		return true
 	}
 
-	return false, nil
+	return false
 }
 
 // CheckNIN function checks if the nin already exists in the database
-func (s *AuthService) CheckNIN(ctx context.Context, nin string) (bool, error) {
+func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 	// check in redis first
 	exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredNins, nin).Result()
 	if exists {
-		return true, nil
+		return true
 	}
 
 	// check in db
 	user_dts, _ := s.queries.GetUserNINByNIN(ctx, nin)
-	if user_dts.ID > 0 {
-		return true, nil
-	}
-
-	return false, nil
+	return user_dts.ID > 0
 }
 
 // ValidatePhoneForCountry checks:
@@ -355,41 +296,35 @@ func (s *AuthService) CheckCity(ctx context.Context, state_id int16, city_id int
 }
 
 // function: saves the username in redis
-func (s *AuthService) SaveUsernameInRedis(ctx context.Context, username string) error {
-	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredUsernames, username).Result()
-	return err
+func (s *AuthService) SaveUsernameInRedis(ctx context.Context, username string) {
+	s.rdb.SAdd(ctx, db.RedisRegisteredUsernames, username).Result()
 }
 
 // function: saves the email in redis
-func (s *AuthService) SaveEmailInRedis(ctx context.Context, email string) error {
-	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredEmails, email).Result()
-	return err
+func (s *AuthService) SaveEmailInRedis(ctx context.Context, email string) {
+	s.rdb.SAdd(ctx, db.RedisRegisteredEmails, email).Result()
 }
 
 // function: saves the phone in redis
-func (s *AuthService) SavePhoneInRedis(ctx context.Context, phone string, userID int64) error {
+func (s *AuthService) SavePhoneInRedis(ctx context.Context, phone string, userID int64) {
 	// save to redis
-	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredPhones, phone).Result()
+	s.rdb.SAdd(ctx, db.RedisRegisteredPhones, phone).Result()
 
 	// save to db
-	_, err = s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
+	s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
 		Phone:  phone,
 		UserID: userID,
 	})
-
-	return err
 }
 
 // function: saves the nin in redis
-func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int64) error {
+func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int64) {
 	// save to redis
-	_, err := s.rdb.SAdd(ctx, db.RedisRegisteredNins, nin).Result()
+	s.rdb.SAdd(ctx, db.RedisRegisteredNins, nin).Result()
 
 	// save to db
-	_, err = s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
+	s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
 		Nin:    nin,
 		UserID: userID,
 	})
-
-	return err
 }
