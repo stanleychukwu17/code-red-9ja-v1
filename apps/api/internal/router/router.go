@@ -35,7 +35,7 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter.Use(middleware.Recoverer)
 
 	// Health check
-	mainRouter.Get("/health", handler.Health)
+	mainRouter.Get(utils.ApiUrls.Health, handler.Health)
 
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {
@@ -44,19 +44,9 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 		))
 	}
 
-	mainRouter.Route("/api/v1", func(r chi.Router) {
-		// API v1 routes
-		r.Get("/", handler.Root)
-
-		// Auth routes group
-		r.Route("/auth", func(r chi.Router) {
-			r.Post("/register", authHandler.Register)
-		})
-
-	})
-
-	// Add v2 auth routes later because of mobile apps users
-	// r.Route("/v2", func(r chi.Router) {})
+	// API v1 routes
+	mainRouter.Get(utils.ApiUrls.Root, handler.Root)
+	mainRouter.Post(utils.ApiUrls.Register, authHandler.Register)
 
 	return mainRouter
 }
