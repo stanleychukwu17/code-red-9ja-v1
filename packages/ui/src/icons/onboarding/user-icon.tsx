@@ -1,6 +1,6 @@
 import { SVGProps } from "react";
 
-const OTPIcon = (props: SVGProps<SVGSVGElement>) => {
+const UserIcon = (props: SVGProps<SVGSVGElement>) => {
   return (
     <svg
       width="28"
@@ -26,4 +26,4 @@ const OTPIcon = (props: SVGProps<SVGSVGElement>) => {
   );
 };
 
-export default OTPIcon;
+export default UserIcon;

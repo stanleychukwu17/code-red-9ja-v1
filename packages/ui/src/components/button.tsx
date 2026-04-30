@@ -13,7 +13,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary-accent",
-        secondary: "bg-secondary text-c-80 hover:bg-secondary/80",
+        secondary: "bg-secondary text-foreground hover:bg-secondary/80",
         green: "bg-light-green text-white hover:bg-light-green/95",
         tertiary:
           "bg-[#F6F8FA] dark:bg-[#1c1d1f] dark:hover:bg-[#292c33] text-c-90 font-medium border-0.8 border-border hover:bg-[#F1F3F5]",
@@ -28,7 +28,7 @@ const buttonVariants = cva(
         "light green": "bg-light-green text-white hover:bg-light-green-accent",
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-red-500",
-        ghost: "text-c-80 hover:bg-accent hover:text-c-80",
+        ghost: "text-c-80 hover:bg-c-5 hover:text-c-80",
         ghostDestructive:
           "text-c-80 bg-background md:bg-transparent hover:bg-red/10 hover:text-c-80 [&_svg]:text-red dark:[&_svg]:text-red px-4 w-fit border-0.8 border-border md:border-0",
         link: "text-black/60 hover:text-black/80 [&_svg]:text-black/60 [&_svg]:hover:text-black/80",
@@ -57,6 +57,9 @@ const buttonVariants = cva(
           "size-9 hover:text-c-80 flex items-center justify-center hover:[&_svg]:text-c-80",
         "icon-xl":
           "size-10 hover:text-c-80 flex items-center justify-center hover:[&_svg]:text-c-80",
+        icon: "size-8",
+        "icon-xs":
+          "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
       },
     },
     defaultVariants: {
