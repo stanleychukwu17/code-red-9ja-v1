@@ -1,6 +1,6 @@
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { useForm } from "@tanstack/react-form";
 
@@ -9,6 +9,8 @@ export const Route = createFileRoute("/auth/signup")({
 });
 
 function RouteComponent() {
+  const navigate = useNavigate();
+
   const form = useForm({
     defaultValues: {
       identifier: "",
@@ -17,6 +19,10 @@ function RouteComponent() {
     },
     onSubmit: async ({ value }) => {
       console.log(value);
+      navigate({
+        to: "/auth/verify-otp",
+        search: { flow: "signup" },
+      });
     },
   });
 
@@ -114,7 +120,7 @@ function RouteComponent() {
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
           children={([canSubmit, isSubmitting]) => (
-            <Button type="submit" disabled={!canSubmit} loading={isSubmitting}>
+            <Button type="submit" variant="secondary" disabled={!canSubmit} loading={isSubmitting}>
               Create account
             </Button>
           )}
