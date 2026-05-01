@@ -12,7 +12,19 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthVerifyOtpRouteImport } from './routes/auth/verify-otp'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as authenticatedStatesIndexRouteImport } from './routes/(authenticated)/states/index'
+import { Route as authenticatedSearchIndexRouteImport } from './routes/(authenticated)/search/index'
+import { Route as authenticatedProfileIndexRouteImport } from './routes/(authenticated)/profile/index'
+import { Route as authenticatedNotificationsIndexRouteImport } from './routes/(authenticated)/notifications/index'
+import { Route as authenticatedFeedIndexRouteImport } from './routes/(authenticated)/feed/index'
+import { Route as authenticatedDashboardIndexRouteImport } from './routes/(authenticated)/dashboard/index'
+import { Route as authenticatedCandidatesIndexRouteImport } from './routes/(authenticated)/candidates/index'
+import { Route as authenticatedAppUsersIndexRouteImport } from './routes/(authenticated)/app-users/index'
+import { Route as authenticatedPollingUnitPollingUnitIdRouteImport } from './routes/(authenticated)/polling-unit/$pollingUnitId'
+import { Route as authenticatedStatesStateIdIndexRouteImport } from './routes/(authenticated)/states/$stateId/index'
+import { Route as authenticatedFeedPostIdIndexRouteImport } from './routes/(authenticated)/feed/$postId/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -29,44 +41,211 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
+  id: '/auth/onboarding',
+  path: '/auth/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const authenticatedStatesIndexRoute =
+  authenticatedStatesIndexRouteImport.update({
+    id: '/(authenticated)/states/',
+    path: '/states/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedSearchIndexRoute =
+  authenticatedSearchIndexRouteImport.update({
+    id: '/(authenticated)/search/',
+    path: '/search/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedProfileIndexRoute =
+  authenticatedProfileIndexRouteImport.update({
+    id: '/(authenticated)/profile/',
+    path: '/profile/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedNotificationsIndexRoute =
+  authenticatedNotificationsIndexRouteImport.update({
+    id: '/(authenticated)/notifications/',
+    path: '/notifications/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedFeedIndexRoute = authenticatedFeedIndexRouteImport.update({
+  id: '/(authenticated)/feed/',
+  path: '/feed/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const authenticatedDashboardIndexRoute =
+  authenticatedDashboardIndexRouteImport.update({
+    id: '/(authenticated)/dashboard/',
+    path: '/dashboard/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedCandidatesIndexRoute =
+  authenticatedCandidatesIndexRouteImport.update({
+    id: '/(authenticated)/candidates/',
+    path: '/candidates/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedAppUsersIndexRoute =
+  authenticatedAppUsersIndexRouteImport.update({
+    id: '/(authenticated)/app-users/',
+    path: '/app-users/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedPollingUnitPollingUnitIdRoute =
+  authenticatedPollingUnitPollingUnitIdRouteImport.update({
+    id: '/(authenticated)/polling-unit/$pollingUnitId',
+    path: '/polling-unit/$pollingUnitId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedStatesStateIdIndexRoute =
+  authenticatedStatesStateIdIndexRouteImport.update({
+    id: '/(authenticated)/states/$stateId/',
+    path: '/states/$stateId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const authenticatedFeedPostIdIndexRoute =
+  authenticatedFeedPostIdIndexRouteImport.update({
+    id: '/(authenticated)/feed/$postId/',
+    path: '/feed/$postId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/verify-otp': typeof AuthVerifyOtpRoute
+  '/polling-unit/$pollingUnitId': typeof authenticatedPollingUnitPollingUnitIdRoute
+  '/app-users/': typeof authenticatedAppUsersIndexRoute
+  '/candidates/': typeof authenticatedCandidatesIndexRoute
+  '/dashboard/': typeof authenticatedDashboardIndexRoute
+  '/feed/': typeof authenticatedFeedIndexRoute
+  '/notifications/': typeof authenticatedNotificationsIndexRoute
+  '/profile/': typeof authenticatedProfileIndexRoute
+  '/search/': typeof authenticatedSearchIndexRoute
+  '/states/': typeof authenticatedStatesIndexRoute
+  '/feed/$postId/': typeof authenticatedFeedPostIdIndexRoute
+  '/states/$stateId/': typeof authenticatedStatesStateIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/verify-otp': typeof AuthVerifyOtpRoute
+  '/polling-unit/$pollingUnitId': typeof authenticatedPollingUnitPollingUnitIdRoute
+  '/app-users': typeof authenticatedAppUsersIndexRoute
+  '/candidates': typeof authenticatedCandidatesIndexRoute
+  '/dashboard': typeof authenticatedDashboardIndexRoute
+  '/feed': typeof authenticatedFeedIndexRoute
+  '/notifications': typeof authenticatedNotificationsIndexRoute
+  '/profile': typeof authenticatedProfileIndexRoute
+  '/search': typeof authenticatedSearchIndexRoute
+  '/states': typeof authenticatedStatesIndexRoute
+  '/feed/$postId': typeof authenticatedFeedPostIdIndexRoute
+  '/states/$stateId': typeof authenticatedStatesStateIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/signup': typeof AuthSignupRoute
   '/auth/verify-otp': typeof AuthVerifyOtpRoute
+  '/(authenticated)/polling-unit/$pollingUnitId': typeof authenticatedPollingUnitPollingUnitIdRoute
+  '/(authenticated)/app-users/': typeof authenticatedAppUsersIndexRoute
+  '/(authenticated)/candidates/': typeof authenticatedCandidatesIndexRoute
+  '/(authenticated)/dashboard/': typeof authenticatedDashboardIndexRoute
+  '/(authenticated)/feed/': typeof authenticatedFeedIndexRoute
+  '/(authenticated)/notifications/': typeof authenticatedNotificationsIndexRoute
+  '/(authenticated)/profile/': typeof authenticatedProfileIndexRoute
+  '/(authenticated)/search/': typeof authenticatedSearchIndexRoute
+  '/(authenticated)/states/': typeof authenticatedStatesIndexRoute
+  '/(authenticated)/feed/$postId/': typeof authenticatedFeedPostIdIndexRoute
+  '/(authenticated)/states/$stateId/': typeof authenticatedStatesStateIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/login' | '/auth/signup' | '/auth/verify-otp'
+  fullPaths:
+    | '/'
+    | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/signup'
+    | '/auth/verify-otp'
+    | '/polling-unit/$pollingUnitId'
+    | '/app-users/'
+    | '/candidates/'
+    | '/dashboard/'
+    | '/feed/'
+    | '/notifications/'
+    | '/profile/'
+    | '/search/'
+    | '/states/'
+    | '/feed/$postId/'
+    | '/states/$stateId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/login' | '/auth/signup' | '/auth/verify-otp'
-  id: '__root__' | '/' | '/auth/login' | '/auth/signup' | '/auth/verify-otp'
+  to:
+    | '/'
+    | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/signup'
+    | '/auth/verify-otp'
+    | '/polling-unit/$pollingUnitId'
+    | '/app-users'
+    | '/candidates'
+    | '/dashboard'
+    | '/feed'
+    | '/notifications'
+    | '/profile'
+    | '/search'
+    | '/states'
+    | '/feed/$postId'
+    | '/states/$stateId'
+  id:
+    | '__root__'
+    | '/'
+    | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/signup'
+    | '/auth/verify-otp'
+    | '/(authenticated)/polling-unit/$pollingUnitId'
+    | '/(authenticated)/app-users/'
+    | '/(authenticated)/candidates/'
+    | '/(authenticated)/dashboard/'
+    | '/(authenticated)/feed/'
+    | '/(authenticated)/notifications/'
+    | '/(authenticated)/profile/'
+    | '/(authenticated)/search/'
+    | '/(authenticated)/states/'
+    | '/(authenticated)/feed/$postId/'
+    | '/(authenticated)/states/$stateId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthOnboardingRoute: typeof AuthOnboardingRoute
   AuthSignupRoute: typeof AuthSignupRoute
   AuthVerifyOtpRoute: typeof AuthVerifyOtpRoute
+  authenticatedPollingUnitPollingUnitIdRoute: typeof authenticatedPollingUnitPollingUnitIdRoute
+  authenticatedAppUsersIndexRoute: typeof authenticatedAppUsersIndexRoute
+  authenticatedCandidatesIndexRoute: typeof authenticatedCandidatesIndexRoute
+  authenticatedDashboardIndexRoute: typeof authenticatedDashboardIndexRoute
+  authenticatedFeedIndexRoute: typeof authenticatedFeedIndexRoute
+  authenticatedNotificationsIndexRoute: typeof authenticatedNotificationsIndexRoute
+  authenticatedProfileIndexRoute: typeof authenticatedProfileIndexRoute
+  authenticatedSearchIndexRoute: typeof authenticatedSearchIndexRoute
+  authenticatedStatesIndexRoute: typeof authenticatedStatesIndexRoute
+  authenticatedFeedPostIdIndexRoute: typeof authenticatedFeedPostIdIndexRoute
+  authenticatedStatesStateIdIndexRoute: typeof authenticatedStatesStateIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -92,11 +271,95 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/onboarding': {
+      id: '/auth/onboarding'
+      path: '/auth/onboarding'
+      fullPath: '/auth/onboarding'
+      preLoaderRoute: typeof AuthOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/states/': {
+      id: '/(authenticated)/states/'
+      path: '/states'
+      fullPath: '/states/'
+      preLoaderRoute: typeof authenticatedStatesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/search/': {
+      id: '/(authenticated)/search/'
+      path: '/search'
+      fullPath: '/search/'
+      preLoaderRoute: typeof authenticatedSearchIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/profile/': {
+      id: '/(authenticated)/profile/'
+      path: '/profile'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof authenticatedProfileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/notifications/': {
+      id: '/(authenticated)/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof authenticatedNotificationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/feed/': {
+      id: '/(authenticated)/feed/'
+      path: '/feed'
+      fullPath: '/feed/'
+      preLoaderRoute: typeof authenticatedFeedIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/dashboard/': {
+      id: '/(authenticated)/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof authenticatedDashboardIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/candidates/': {
+      id: '/(authenticated)/candidates/'
+      path: '/candidates'
+      fullPath: '/candidates/'
+      preLoaderRoute: typeof authenticatedCandidatesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/app-users/': {
+      id: '/(authenticated)/app-users/'
+      path: '/app-users'
+      fullPath: '/app-users/'
+      preLoaderRoute: typeof authenticatedAppUsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/polling-unit/$pollingUnitId': {
+      id: '/(authenticated)/polling-unit/$pollingUnitId'
+      path: '/polling-unit/$pollingUnitId'
+      fullPath: '/polling-unit/$pollingUnitId'
+      preLoaderRoute: typeof authenticatedPollingUnitPollingUnitIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/states/$stateId/': {
+      id: '/(authenticated)/states/$stateId/'
+      path: '/states/$stateId'
+      fullPath: '/states/$stateId/'
+      preLoaderRoute: typeof authenticatedStatesStateIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/(authenticated)/feed/$postId/': {
+      id: '/(authenticated)/feed/$postId/'
+      path: '/feed/$postId'
+      fullPath: '/feed/$postId/'
+      preLoaderRoute: typeof authenticatedFeedPostIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -105,8 +368,21 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthOnboardingRoute: AuthOnboardingRoute,
   AuthSignupRoute: AuthSignupRoute,
   AuthVerifyOtpRoute: AuthVerifyOtpRoute,
+  authenticatedPollingUnitPollingUnitIdRoute:
+    authenticatedPollingUnitPollingUnitIdRoute,
+  authenticatedAppUsersIndexRoute: authenticatedAppUsersIndexRoute,
+  authenticatedCandidatesIndexRoute: authenticatedCandidatesIndexRoute,
+  authenticatedDashboardIndexRoute: authenticatedDashboardIndexRoute,
+  authenticatedFeedIndexRoute: authenticatedFeedIndexRoute,
+  authenticatedNotificationsIndexRoute: authenticatedNotificationsIndexRoute,
+  authenticatedProfileIndexRoute: authenticatedProfileIndexRoute,
+  authenticatedSearchIndexRoute: authenticatedSearchIndexRoute,
+  authenticatedStatesIndexRoute: authenticatedStatesIndexRoute,
+  authenticatedFeedPostIdIndexRoute: authenticatedFeedPostIdIndexRoute,
+  authenticatedStatesStateIdIndexRoute: authenticatedStatesStateIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
