@@ -7,6 +7,7 @@
   },
   "scripts": {
     "dev": "vite dev --port 3001",
+    "dev:live": "vite dev --port 3001 --host",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
@@ -15,6 +16,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
+    "@reduxjs/toolkit": "2.11.2",
     "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "4.1.18",
     "@tanstack/react-devtools": "0.10.2",
@@ -24,9 +26,11 @@
     "@tanstack/react-router-ssr-query": "1.166.10",
     "@tanstack/react-start": "1.167.16",
     "@tanstack/router-plugin": "1.132.0",
+    "framer-motion": "^12.38.0",
     "lucide-react": "0.545.0",
     "react": "19.2.2",
     "react-dom": "19.2.2",
+    "react-redux": "^9.2.0",
     "tailwindcss": "4.1.18"
   },
   "devDependencies": {
