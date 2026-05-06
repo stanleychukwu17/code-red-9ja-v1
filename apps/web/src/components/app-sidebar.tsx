@@ -38,36 +38,36 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "home",
     label: "Home",
-    icon: <HomeIcon className="!size-6" />,
-    selectedIcon: <HomeSolidIcon className="!size-6 text-primary" />,
+    icon: <HomeIcon className="size-6!" />,
+    selectedIcon: <HomeSolidIcon className="size-6! text-primary" />,
     href: "/dashboard",
   },
   {
     id: "feed",
     label: "Feed",
-    icon: <FeedIcon className="!size-6" />,
-    selectedIcon: <FeedSolidIcon className="!size-6 text-primary" />,
+    icon: <FeedIcon className="size-6!" />,
+    selectedIcon: <FeedSolidIcon className="size-6! text-primary" />,
     href: "/feed",
   },
   {
     id: "search",
     label: "Search",
-    icon: <SearchIcon className="!size-6" />,
-    selectedIcon: <SearchSolidIcon className="!size-6 text-primary" />,
+    icon: <SearchIcon className="size-6!" />,
+    selectedIcon: <SearchSolidIcon className="size-6! text-primary" />,
     href: "/search",
   },
   {
     id: "notifications",
     label: "Notifications",
-    icon: <NotificationIcon className="!size-6" />,
-    selectedIcon: <NotificationSolidIcon className="!size-6 text-primary" />,
+    icon: <NotificationIcon className="size-6!" />,
+    selectedIcon: <NotificationSolidIcon className="size-6! text-primary" />,
     href: "/notifications",
   },
   {
     id: "profile",
     label: "Profile",
-    icon: <ProfileIcon className="!size-6" />,
-    selectedIcon: <ProfileSolidIcon className="!size-6 text-primary" />,
+    icon: <ProfileIcon className="size-6!" />,
+    selectedIcon: <ProfileSolidIcon className="size-6! text-primary" />,
     href: "/profile",
   },
 ];
@@ -112,7 +112,7 @@ export function AppSidebar({ activeItem = "home" }: { activeItem?: string }) {
   return (
     <Sidebar
       collapsible="offcanvas"
-      className="bg-sidebar md:data-[side=left]:left-0"
+      className="bg-sidebar md:data-[side=left]:left-0 hidden md:hidden"
     >
       <div className="flex h-full flex-col px-4 py-7">
         <div className="mb-9 flex items-center gap-3 px-2 text-[#234f3e]">
