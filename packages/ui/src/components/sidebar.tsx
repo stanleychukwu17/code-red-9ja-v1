@@ -244,11 +244,10 @@ function Sidebar({
   );
 }
 
-function SidebarTrigger({
-  className,
-  onClick,
-  ...props
-}: React.ComponentProps<typeof Button>) {
+interface SidebarTriggerProps extends React.ComponentProps<typeof Button> {
+  img?: string; // Add your new prop here
+}
+function SidebarTrigger({img, className, onClick, ...props}: SidebarTriggerProps) {
   const { toggleSidebar } = useSidebar();
 
   return (
@@ -256,15 +255,22 @@ function SidebarTrigger({
       data-sidebar="trigger"
       data-slot="sidebar-trigger"
       variant="ghost"
-      size="icon-sm"
-      className={cn(className)}
+      size="icon"
+      className={cn("hover:bg-brown", className)}
       onClick={(event) => {
         onClick?.(event);
         toggleSidebar();
       }}
       {...props}
     >
-      <PanelLeftIcon className="cn-rtl-flip" />
+
+    {/* If an image is provided, render it; */}
+      {img ? (
+        <div className="relative size-full rounded-full overflow-hidden">
+          <img src={img} alt="Trigger Icon" className="size-full" />
+        </div>
+      ) : <PanelLeftIcon className="cn-rtl-flip" />}
+
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
   );
