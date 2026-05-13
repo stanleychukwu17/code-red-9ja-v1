@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Heart, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { AppPageHeader } from "../../../../components/app-page-header";
-import { AppSidebarShell } from "../../../../components/app-sidebar";
 import { FEED_POSTS, POST_COMMENTS } from "../../../../data/dashboard";
 
 export const Route = createFileRoute("/(authenticated)/feed/$postId/")({
@@ -18,7 +17,6 @@ function RouteComponent() {
   const post = FEED_POSTS.find((item) => item.id === id) ?? fallbackPost;
 
   return (
-    <AppSidebarShell activeItem="feed">
       <div className="flex-1 px-4 pb-8 pt-6 md:px-12 md:pt-7">
         <div className="mx-auto flex w-full max-w-[620px] flex-col gap-8">
           <AppPageHeader title="Post" />
@@ -117,7 +115,6 @@ function RouteComponent() {
           </section>
         </div>
       </div>
-    </AppSidebarShell>
   );
 }
 

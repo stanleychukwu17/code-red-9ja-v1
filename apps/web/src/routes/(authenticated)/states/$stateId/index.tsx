@@ -6,7 +6,6 @@ import {
 import { Flag } from "lucide-react";
 import { useState } from "react";
 import { AppPageHeader } from "../../../../components/app-page-header";
-import { AppSidebarShell } from "../../../../components/app-sidebar";
 import { CANDIDATES, STATE_POLLING_UNITS } from "../../../../data/dashboard";
 
 type StateTab = "Candidates" | "Polling units";
@@ -22,7 +21,6 @@ function RouteComponent() {
   const leader = CANDIDATES[0];
 
   return (
-    <AppSidebarShell activeItem="home">
       <div className="flex-1 px-4 pb-8 pt-6 md:px-12 md:pt-7">
         <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-7">
           <AppPageHeader
@@ -153,7 +151,6 @@ function RouteComponent() {
           </section>
         </div>
       </div>
-    </AppSidebarShell>
   );
 }
 

@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AppSidebarShell } from "../../../components/app-sidebar";
 import {
   NOTIFICATIONS,
   type NotificationItem,
@@ -106,45 +105,43 @@ function RouteComponent() {
   }, []);
 
   return (
-    <AppSidebarShell activeItem="notifications">
-      <div className="flex-1 px-4 pb-8 pt-6 md:px-12 md:pt-7">
-        <div className="mx-auto flex w-full max-w-[620px] flex-col gap-6">
-          <h1 className="text-[34px] font-bold tracking-[-0.04em] text-[#232124]">
-            Notifications
-          </h1>
+    <div className="flex-1 px-4 pb-8 pt-6 md:px-12 md:pt-7">
+      <div className="mx-auto flex w-full max-w-[620px] flex-col gap-6">
+        <h1 className="text-[34px] font-bold tracking-[-0.04em] text-[#232124]">
+          Notifications
+        </h1>
 
-          <div className="space-y-7">
-            {(["Today", "Yesterday"] as const).map((label) => {
-              const items = sections[label];
-              if (!items.length) return null;
+        <div className="space-y-7">
+          {(["Today", "Yesterday"] as const).map((label) => {
+            const items = sections[label];
+            if (!items.length) return null;
 
-              return (
-                <section key={label} className="space-y-4">
-                  <h2 className="px-1 text-[12px] font-bold text-[#1f1f1f]">
-                    {label}
-                  </h2>
-                  <div className="space-y-3">
-                    {items.map((item) => {
-                      const isHighlighting = highlightingIds.has(item.id);
-                      const isRead = readIds.has(item.id) || !item.unread;
+            return (
+              <section key={label} className="space-y-4">
+                <h2 className="px-1 text-[12px] font-bold text-[#1f1f1f]">
+                  {label}
+                </h2>
+                <div className="space-y-3">
+                  {items.map((item) => {
+                    const isHighlighting = highlightingIds.has(item.id);
+                    const isRead = readIds.has(item.id) || !item.unread;
 
-                      return (
-                        <NotificationRow
-                          key={item.id}
-                          item={item}
-                          isHighlighting={isHighlighting}
-                          showUnreadDot={!isRead}
-                        />
-                      );
-                    })}
-                  </div>
-                </section>
-              );
-            })}
-          </div>
+                    return (
+                      <NotificationRow
+                        key={item.id}
+                        item={item}
+                        isHighlighting={isHighlighting}
+                        showUnreadDot={!isRead}
+                      />
+                    );
+                  })}
+                </div>
+              </section>
+            );
+          })}
         </div>
       </div>
-    </AppSidebarShell>
+    </div>
   );
 }
 

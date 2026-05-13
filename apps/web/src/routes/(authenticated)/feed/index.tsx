@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Heart, Image as ImageIcon, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
-import { AppSidebarShell } from "../../../components/app-sidebar";
 import { FEED_POSTS } from "../../../data/dashboard";
 
 export const Route = createFileRoute("/(authenticated)/feed/")({
@@ -12,7 +11,6 @@ function RouteComponent() {
   const navigate = useNavigate();
 
   return (
-    <AppSidebarShell activeItem="feed">
       <div className="flex-1 px-4 pb-8 pt-6 md:px-12 md:pt-7">
         <div className="mx-auto flex w-full max-w-[620px] flex-col gap-6">
           <h1 className="text-[34px] font-bold tracking-[-0.04em] text-[#232124]">
@@ -90,7 +88,6 @@ function RouteComponent() {
           </section>
         </div>
       </div>
-    </AppSidebarShell>
   );
 }
 
