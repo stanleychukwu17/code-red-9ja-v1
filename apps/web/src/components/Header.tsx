@@ -1,4 +1,7 @@
-// import { Button } from "@repo/ui/components/button";
+// This Sidebar component was copied from the shadcn repo.
+// More info about the shadcn UI can be found at https://shadcn.com/ui/
+// the shadcn sidebar component can be found at: https://ui.shadcn.com/docs/components/radix/sidebar
+// the shadcn blocks can be found at: https://ui.shadcn.com/blocks
 
 import {
   Sidebar,
@@ -13,12 +16,7 @@ import {
   useSidebar,
 } from "@repo/ui/components/sidebar";
 
-import {
-  Ellipsis, PanelRightClose, PanelLeftClose
-} from "lucide-react";
-
 import { TooltipProvider } from "@repo/ui/components/tooltip";
-
 import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
 
 import {
@@ -42,10 +40,17 @@ import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
 
 import { cn } from "node_modules/@repo/ui/src/lib/utils";
-import { Link, useLocation } from "@tanstack/react-router";
-import { type CSSProperties, type ReactNode } from "react";
 
-// import { useIsMobile } from "@repo/ui/hooks/useMobile";
+import {
+  Ellipsis, PanelRightClose, PanelLeftClose
+} from "lucide-react";
+import { Link, useLocation } from "@tanstack/react-router";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
+
+import { useAppDispatch } from "@/redux/hooks";
+import { setSidebarState } from "@/redux/slice/siteSlice";
+import { useIsMobile } from "@repo/ui/hooks/useMobile";
+
 
 type AppSidebarItem = {
   id: string;
@@ -93,21 +98,12 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   },
 ];
 
-function getActiveItemFromPath(pathname: string): string {
-  for (const item of APP_SIDEBAR_ITEMS) {
-    if (item.href && pathname.startsWith(item.href)) {
-      return item.id;
-    }
-  }
-  return "";
-}
-
-
-
+// the main SideBar wrapper
 export function AppSidebarShell() {
   return (
     <div className="fixed">
       <SidebarProvider
+        id="sidebar-wrapper"
         defaultOpen
         className="min-h-dvh text-[#181818] bg-transparent"
         style={
@@ -136,6 +132,11 @@ export function AppSidebarShell() {
 
 export function AppSidebar() {
   const { state: sideBarState } = useSidebar();
+  const dispatch = useAppDispatch();
+
+  useEffect(() => {
+    dispatch(setSidebarState(sideBarState));
+  }, [sideBarState, dispatch]);
 
   return (
     <Sidebar collapsible="icon" className="bg-sidebar md:data-[side=left]:left-0" >
@@ -168,10 +169,19 @@ export function AppSidebar() {
 }
 
 
-// Returns the active item's ID based on the current URL pathname.
+// Returns the active tab based on the current URL
 function useActiveItem(): string {
   const location = useLocation();
-  return getActiveItemFromPath(location.pathname);
+  let activeItem: string = "";
+
+  for (const item of APP_SIDEBAR_ITEMS) {
+    if (item.href && location.pathname.startsWith(item.href)) {
+      activeItem = item.id;
+      break;
+    }
+  }
+
+  return activeItem;
 }
 
 function EachLinkComponent({ item }: { item: AppSidebarItem }) {
@@ -205,8 +215,19 @@ function EachLinkComponent({ item }: { item: AppSidebarItem }) {
 
 function LogoComponent () {
   const { state: sideBarState, toggleSidebar } = useSidebar();
+  const isMobile = useIsMobile()
 
   const flexDir = sideBarState === "collapsed" ? "flex-col" : "flex-row";
+
+  useEffect(() => {
+    if (isMobile) { return; }
+
+    const savedSiteState = localStorage.getItem("site") || null;
+    const preloadedSiteState = savedSiteState ? JSON.parse(savedSiteState) : undefined;
+    if (preloadedSiteState.sideBarState != sideBarState) {
+      toggleSidebar()
+    }
+  }, [])
 
   return (
     <div
