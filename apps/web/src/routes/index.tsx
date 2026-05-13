@@ -1,7 +1,15 @@
 import { Button } from "@repo/ui/components/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { APP_NAME } from "@/lib/config";
 
-export const Route = createFileRoute("/")({ component: App });
+export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      {title: `${APP_NAME} - Home`},
+    ],
+  }),
+  component: App
+});
 
 function App() {
   return (
