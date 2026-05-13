@@ -5,7 +5,7 @@ import { APP_NAME } from "@/lib/config";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      {title: `${APP_NAME} - Home`},
+      {title: `Home - ${APP_NAME}`},
     ],
   }),
   component: App
