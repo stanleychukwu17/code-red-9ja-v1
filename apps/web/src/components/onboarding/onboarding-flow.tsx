@@ -65,7 +65,7 @@ export function OnboardingFlow({
     gender: "",
     dateOfBirth: undefined,
     nin: "",
-    country: "Nigeria",
+    country: "",
     state: "",
     role: "citizen",
   });
