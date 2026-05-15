@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Go up from scripts/ to the api/ root where go.mod lives
+# Go up from scripts/ to the api/ root where go.mod & go.sum lives
 cd "$(dirname "$0")/.."
 
 # docker: start postgres & redis databases
@@ -17,14 +17,13 @@ if ! swag init \
     exit 1
 fi
 
-echo "Swagger documentation generated successfully!"
-
 # goose: runs the script that sets environment variables for goose
+echo "Setting environment variables for goose..."
 source ./scripts/set_goose_variables.sh
 # you can do: . ./scripts/set_goose_variables.sh
 
 # goose: run migrations
-echo "Running database migrations..."
+echo "Running goose database migrations..."
 goose.exe -dir db/migrations/ up
 
 # sqlc: run sqlc
