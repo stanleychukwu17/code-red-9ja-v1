@@ -1,21 +1,39 @@
+import {useEffect} from "react";
+import { useAppDispatch } from "@/redux/hooks";
+import { setOnboardingData } from "@/redux/slice/authSlice";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AuthWrapper } from "./_components/-auth-wrapper";
+import { SignupError } from "./_components/signup-error";
 import { useForm } from "@tanstack/react-form";
 
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
-import { APP_NAME } from "@/lib/config";
+import { APP_URL } from "@/lib/config";
+import { getPageHeader } from "@/lib/shared/meta";
+import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
+import { getAllCountries } from "@/lib/server/countries";
+
+import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
 export const Route = createFileRoute("/auth/signup")({
-  head: () => ({
-    meta: [{ title: `Sign up: Join the movement - ${APP_NAME}` }],
+  head: () => getPageHeader({
+    title: "Sign up: Join the movement ",
   }),
+  loader: async () => {
+    const countries = await getAllCountries();
+    // console.log(countries)
+    if (countries.status !== 'success') throw new Error(countries.error);
+    return { countries: countries.countries };
+  },
   component: RouteComponent,
+  errorComponent: SignupError,
 });
 
 function RouteComponent() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const countries = Route.useLoaderData().countries as {id: number; name: string; iso2: string; phonecode: string }[];
 
   const form = useForm({
     defaultValues: {
@@ -26,26 +44,57 @@ function RouteComponent() {
       confirmPassword: "",
     },
     onSubmit: async ({ value }) => {
-      console.log(value);
+      const matchedCountry = countries.find(
+        (c) => c.name.toLowerCase() === value.country.toLowerCase()
+      );
+
+      const payload = {
+        ...value,
+        countryId: matchedCountry?.id,
+        phoneNumber: value.phoneNumber.startsWith("0")
+          ? (matchedCountry?.phonecode || "") + value.phoneNumber.slice(1)
+          : (matchedCountry?.phonecode || "") + value.phoneNumber,
+      };
+
+      console.log(payload);
+      dispatch(setOnboardingData(payload));
       navigate({
-        to: "/auth/verify-otp",
+        to: APP_URL.auth.verifyOtp,
         search: { flow: "signup" },
       });
     },
   });
 
-  const countries = [
-    { name: "Nigeria", iso2: "NG" },
-    { name: "United States", iso2: "US" },
-    { name: "United Kingdom", iso2: "GB" },
-    { name: "Canada", iso2: "CA" },
-    { name: "Ghana", iso2: "GH" },
-    { name: "Kenya", iso2: "KE" },
-    { name: "South Africa", iso2: "ZA" },
-    { name: "India", iso2: "IN" },
-    { name: "Germany", iso2: "DE" },
-    { name: "France", iso2: "FR" },
-  ];
+  // on page load, auto-select the country where the user is browsing from
+  useEffect(() => {
+    const fetchUserIpCountry = async () => {
+      const visitorDetails = await fetchCountryDetailsFromUserIP() // get country from IP
+      const country = visitorDetails?.country_name?.toLowerCase() || ""; // get country name
+
+      // if the request fails, return
+      if (visitorDetails?.status !== "success") return;
+
+      // find the matched country
+      const matchedCountry = countries.find(
+        (c) => c.name.toLowerCase() === country
+      );
+
+      // if no matched country, return
+      if (!matchedCountry) return;
+      
+      // set the country value in the form
+      form.setFieldValue("country", matchedCountry.name.toLowerCase());
+
+      // find the select element for countries and set the value to the matched country
+      const selectEl = document.querySelector("div.selectElement select");
+      if (selectEl && country) {
+        (selectEl as HTMLSelectElement).value = country;
+        selectEl.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+
+    fetchUserIpCountry()
+  }, []);
 
   return (
     <AuthWrapper type="signup">
@@ -96,26 +145,37 @@ function RouteComponent() {
           validators={{
             onChange: ({ value }) => {
               if (!value) return "Phone number is required";
-              const phoneRegex = /^\+?[\d\s-]{10,}$/;
-              if (!phoneRegex.test(value)) {
-                return "Enter a valid phone number";
-              }
+
+              const phoneRegex = /^[\d\s-]{10,}$/;
+              if (!phoneRegex.test(value)) return "Enter a valid phone number";
+
               return undefined;
             },
           }}
           children={(field) => (
             <div className="">
-              <div className="text-sm text-grey-500 mb-1.5">
-                We'll send you a code to verify your phone number.
-              </div>
-              <div className="amde">
-                <div className="">+234</div>
-                <div className="">
+              <div className="flex items-center gap-2">
+                {/* 
+                  Subscribe to the `country` field state. anytime the `countryValue` changes, we display it's phone-code
+                  close to the phoneNumber input
+                */}
+                <form.Subscribe selector={(state) => state.values.country}>
+                  {(countryValue) => {
+                    const country = countries.find((c) => c.name.toLowerCase() === countryValue);
+                    return (
+                      <div className="font-semibold tracking-[1px] text-lg">
+                        {country ? `+${country.phonecode}` : "+"}
+                      </div>
+                    );
+                  }}
+                </form.Subscribe>
+                <div className="w-full">
                   <FormInput
-                    placeholder="Phone number"
+                    placeholder="Phone number (whatsapp)"
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    maxLength={12}
                     errorMsg={
                       field.state.meta.isTouched && field.state.meta.errors.length
                         ? (field.state.meta.errors[0] as string)
@@ -123,6 +183,10 @@ function RouteComponent() {
                     }
                   />
                 </div>
+              </div>
+              <div className="flex items-center gap-x-2 text-xs text-grey-500 ml-10 mt-2.5">
+                <PiWhatsappLogoDuotone className="size-6 text-green-600" />
+                We'll send you a code to verify your phone number.
               </div>
             </div>
           )}
@@ -162,8 +226,8 @@ function RouteComponent() {
             onChange: ({ value }) =>
               !value
                 ? "Password is required"
-                : value.length < 8
-                  ? "Password must be at least 8 characters"
+                : value.length < 5
+                  ? "Password must be at least 5 characters"
                   : undefined,
           }}
           children={(field) => (
@@ -186,9 +250,7 @@ function RouteComponent() {
           validators={{
             onChange: ({ value, fieldApi }) => {
               if (!value) return "Please confirm your password";
-              if (value !== fieldApi.form.getFieldValue("password")) {
-                return "Passwords do not match";
-              }
+              if (value !== fieldApi.form.getFieldValue("password")) return "Passwords do not match";
               return undefined;
             },
           }}
