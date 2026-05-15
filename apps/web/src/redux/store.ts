@@ -1,5 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import siteReducer from "@/redux/slice/siteSlice";
+import authReducer from "@/redux/slice/authSlice";
 
 // const isBrowser = typeof window !== "undefined";
 // const savedSiteState = isBrowser ? localStorage.getItem("site") : null;
@@ -8,6 +9,7 @@ import siteReducer from "@/redux/slice/siteSlice";
 export const store = configureStore({
   reducer: {
     site: siteReducer,
+    auth: authReducer,
   },
 });
 
