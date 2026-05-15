@@ -1,17 +1,22 @@
 import { Button } from "@repo/ui/components/button";
 import { FormInput } from "@repo/ui/components/input";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { OnboardingHeader, OnboardingWrapper } from "./_components/onboarding";
 import OTPIcon from "@repo/ui/icons/onboarding/otp-icon";
+import { APP_URL } from "@/lib/config";
+import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/verify-otp")({
+  head: () => getPageHeader({
+    title: "Verify otp sent to you",
+    robotsAllowed: "no"
+  }),
   validateSearch: (search) => {
-    const flow = typeof search.flow === "string" ? search.flow : "login";
+    const flow = search.flow
 
     return {
-      flow: flow === "signup" ? "signup" : "login",
+      flow: typeof flow === "string" && flow === "signup" ? "signup" : "login",
     };
   },
   component: RouteComponent,
@@ -51,7 +56,7 @@ function RouteComponent() {
           disabled={otp.length < 6}
           onClick={() =>
             navigate({
-              to: flow === "signup" ? "/auth/onboarding" : "/dashboard",
+              to: flow === "signup" ? APP_URL.auth.onboarding : APP_URL.dashboard,
               search: flow === "signup" ? { step: "details" } : undefined,
             })
           }
