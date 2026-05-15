@@ -51,7 +51,7 @@ func TestRegister(t *testing.T) {
 	}
 
 	// create a dynamic url using the config.Port, then attach the registration path
-	url := fmt.Sprintf("http://localhost:%s%s", cfg.Port, utils.ApiUrls.Register)
+	url := fmt.Sprintf("http://localhost:%s%s", cfg.Port, utils.ApiUrls.Auth.Register)
 
 	t.Run("successful registration", func(t *testing.T) {
 		response, respBody := test.SendRequest(t, "POST", url, requestBody)
