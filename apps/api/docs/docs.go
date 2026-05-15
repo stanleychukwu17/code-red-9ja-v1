@@ -47,6 +47,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/countries": {
+            "get": {
+                "description": "Fetches a list of all countries with their ISO2 codes, phone codes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "summary": "Get all countries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/countrieshandler.GetCountriesResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "get the status of the server",
@@ -66,6 +95,37 @@ const docTemplate = `{
                                 "type": "string"
                             }
                         }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "countrieshandler.CountryResponse": {
+            "description": "for GetCountries",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "countrieshandler.GetCountriesResponse": {
+            "type": "object",
+            "properties": {
+                "countries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/countrieshandler.CountryResponse"
                     }
                 }
             }

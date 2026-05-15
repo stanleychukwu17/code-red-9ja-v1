@@ -1,4 +1,24 @@
 basePath: /api/v1
+definitions:
+  countrieshandler.CountryResponse:
+    description: for GetCountries
+    properties:
+      id:
+        type: integer
+      iso2:
+        type: string
+      name:
+        type: string
+      phone_code:
+        type: string
+    type: object
+  countrieshandler.GetCountriesResponse:
+    properties:
+      countries:
+        items:
+          $ref: '#/definitions/countrieshandler.CountryResponse'
+        type: array
+    type: object
 host: localhost:4000
 info:
   contact:
@@ -28,6 +48,25 @@ paths:
       summary: API Root
       tags:
       - root
+  /countries:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a list of all countries with their ISO2 codes, phone codes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/countrieshandler.GetCountriesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get all countries
+      tags:
+      - Countries
   /health:
     get:
       description: get the status of the server
