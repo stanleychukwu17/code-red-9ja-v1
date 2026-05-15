@@ -24,6 +24,7 @@ type Querier interface {
 	GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error)
 	GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error)
+	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 }
 
