@@ -14,7 +14,9 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
 	authhandler "free9ja/api/internal/handler/auth"
+	countrieshandler "free9ja/api/internal/handler/countries"
 	authservice "free9ja/api/internal/service/auth"
+	countriesservice "free9ja/api/internal/service/countries"
 	"free9ja/api/internal/utils"
 )
 
@@ -25,8 +27,10 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	// Initialize dependencies
 	q := queries.New(pool)
 	authService := authservice.NewAuthService(q, rdb)
+	countryService := countriesservice.NewCountryService(q, rdb)
 	utilsInstance := utils.NewUtils(pool)
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
+	countriesHandler := countrieshandler.NewHandler(countryService, utilsInstance)
 
 	// Core middleware
 	mainRouter.Use(middleware.RequestID)
@@ -34,19 +38,19 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter.Use(middleware.Logger)
 	mainRouter.Use(middleware.Recoverer)
 
-	// Health check
-	mainRouter.Get(utils.ApiUrls.Health, handler.Health)
-
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {
-		mainRouter.Get("/swagger/*", httpSwagger.Handler(
+		mainRouter.Get("/api/v1/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 		))
 	}
 
+	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
+
 	// API v1 routes
-	mainRouter.Get(utils.ApiUrls.Root, handler.Root)
-	mainRouter.Post(utils.ApiUrls.Register, authHandler.Register)
+	mainRouter.Get(utils.ApiUrls.Root, handler.Root)                              // Root endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)            // Register endpoint
+	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries) // Get all countries
 
 	return mainRouter
 }
