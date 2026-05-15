@@ -48,7 +48,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body className="font-sans antialiased block relative overflow-hidden selection:bg-[rgba(79,184,178,0.24)]">
+      <body className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]">
         <Provider store={store}>
             <Toaster />
             <Header />
