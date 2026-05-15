@@ -1,5 +1,3 @@
-"use client";
-
 import { ChevronDown, Search } from "lucide-react";
 import * as React from "react";
 import { useMediaQuery } from "usehooks-ts";
