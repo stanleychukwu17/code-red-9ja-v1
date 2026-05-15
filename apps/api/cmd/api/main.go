@@ -69,7 +69,6 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 	// Initialize router
 	r := router.New(pool, rdb)
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	slog.Info("starting server", "addr", addr)
 
 	return &App{
 		cfg: cfg,
