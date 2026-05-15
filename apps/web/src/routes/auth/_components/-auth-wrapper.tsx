@@ -9,7 +9,7 @@ export const AuthWrapper = ({
   type: "login" | "signup";
 }) => {
   return (
-    <main className="page-wrap px-4 pb-8 py-24 flex items-center justify-center">
+    <main className="page-wrap px-4 pb-8 py-24 flex justify-center min-h-screen">
       <div className="max-w-[400px] w-full space-y-6">
         <LogoIcon />
         <div className="space-y-1">
