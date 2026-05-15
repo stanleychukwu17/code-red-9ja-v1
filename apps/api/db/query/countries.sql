@@ -9,3 +9,7 @@ WHERE id = $1 and country_id = $2 LIMIT 1;
 -- name: GetCityByID :one
 SELECT id, name FROM c_cities
 WHERE id = $1 and state_id = $2 LIMIT 1;
+
+-- name: ListCountries :many
+SELECT id, name, iso2, phonecode FROM c_countries
+ORDER BY name ASC;
