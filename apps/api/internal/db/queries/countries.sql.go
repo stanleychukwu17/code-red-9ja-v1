@@ -70,3 +70,40 @@ func (q *Queries) GetStateByID(ctx context.Context, arg GetStateByIDParams) (Get
 	err := row.Scan(&i.ID, &i.Name)
 	return i, err
 }
+
+const listCountries = `-- name: ListCountries :many
+SELECT id, name, iso2, phonecode FROM c_countries
+ORDER BY name ASC
+`
+
+type ListCountriesRow struct {
+	ID        int16  `json:"id"`
+	Name      string `json:"name"`
+	Iso2      string `json:"iso2"`
+	Phonecode string `json:"phonecode"`
+}
+
+func (q *Queries) ListCountries(ctx context.Context) ([]ListCountriesRow, error) {
+	rows, err := q.db.Query(ctx, listCountries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListCountriesRow
+	for rows.Next() {
+		var i ListCountriesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Iso2,
+			&i.Phonecode,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
