@@ -59,7 +59,7 @@ func TestRegister(t *testing.T) {
 		// Marshal the RegisterRequest into JSON
 		body, _ := json.Marshal(reqBody)
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
 
@@ -121,7 +121,7 @@ func TestRegister(t *testing.T) {
 		body, _ := json.Marshal(reqBody)
 
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
@@ -159,7 +159,7 @@ func TestRegister(t *testing.T) {
 		// Marshal the RegisterRequest into JSON
 		body, _ := json.Marshal(reqBody)
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
 
@@ -197,7 +197,7 @@ func TestRegister(t *testing.T) {
 		// Marshal the RegisterRequest into JSON
 		body, _ := json.Marshal(reqBody)
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
 
