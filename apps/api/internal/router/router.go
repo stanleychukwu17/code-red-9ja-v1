@@ -1,6 +1,7 @@
 package router
 
 import (
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -17,6 +18,7 @@ import (
 	countrieshandler "free9ja/api/internal/handler/countries"
 	authservice "free9ja/api/internal/service/auth"
 	countriesservice "free9ja/api/internal/service/countries"
+	messagingservice "free9ja/api/internal/service/messaging"
 	"free9ja/api/internal/utils"
 )
 
@@ -26,7 +28,11 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 
 	// Initialize dependencies
 	q := queries.New(pool)
-	authService := authservice.NewAuthService(q, rdb)
+	messagingService, err := messagingservice.NewMessagingService()
+	if err != nil {
+		slog.Error("failed to initialize messaging service", "err", err)
+	}
+	authService := authservice.NewAuthService(q, rdb, messagingService)
 	countryService := countriesservice.NewCountryService(q, rdb)
 	utilsInstance := utils.NewUtils(pool)
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
@@ -48,9 +54,12 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
 
 	// API v1 routes
-	mainRouter.Get(utils.ApiUrls.Root, handler.Root)                              // Root endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)            // Register endpoint
-	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries) // Get all countries
+	mainRouter.Get(utils.ApiUrls.Root, handler.Root)                                         // Root endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp) // Register endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.ResendOtp, authHandler.ResendOtp)                     // Resend OTP endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.VerifyOtp, authHandler.VerifyOtp)                     // Verify OTP endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                       // Register endpoint
+	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries)            // Get all countries
 
 	return mainRouter
 }
