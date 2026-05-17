@@ -5,13 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db/queries"
-	"math/rand"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
 	"free9ja/api/internal/db"
+	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	phonenumbers "github.com/nyaruka/phonenumbers"
@@ -19,15 +18,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type AuthService struct {
-	queries *queries.Queries
-	rdb     *redis.Client
+type MessagingService interface {
+	SendWhatsAppOTP(phone, otp string) error
 }
 
-func NewAuthService(q *queries.Queries, rdb *redis.Client) *AuthService {
+type AuthService struct {
+	queries          *queries.Queries
+	rdb              *redis.Client
+	messagingService MessagingService
+}
+
+func NewAuthService(q *queries.Queries, rdb *redis.Client, messagingService MessagingService) *AuthService {
 	return &AuthService{
-		queries: q,
-		rdb:     rdb,
+		queries:          q,
+		rdb:              rdb,
+		messagingService: messagingService,
 	}
 }
 
@@ -112,7 +117,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// generate a fake_id using the user_id and update the user fake_id
-	fake_id := GenerateFakeID(user_id)
+	fake_id := utils.GenerateFakeID(user_id)
 	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: user_id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
 	if err != nil {
 		return RegisterResult{}, err
@@ -127,14 +132,132 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
 }
 
-// function: generates fake_id using the original id
-func GenerateFakeID(id int64) int64 {
-	front_id := rand.Intn(1000)
-	back_id := rand.Intn(1000)
+// RegisterPhaseSignUpResult represents the structure for the response from the initial sign-up phase
+type RegisterPhaseSignUpResult struct {
+	ID              int64     `json:"id"`
+	FakeID          int64     `json:"fakeId"`
+	DateTimeOtpSent time.Time `json:"dateTimeOtpSent"`
+}
 
-	fake_id := fmt.Sprintf("%d%d%d", front_id, id, back_id)
-	fake_id_int, _ := strconv.ParseInt(fake_id, 10, 64)
-	return fake_id_int
+func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (RegisterPhaseSignUpResult, error) {
+	// email checks
+	if email != "" {
+		email = strings.TrimSpace(strings.ToLower(email))
+		email_exist := s.CheckEmail(ctx, email)
+		if email_exist {
+			return RegisterPhaseSignUpResult{}, errors.New("email already exists")
+		}
+	}
+
+	// phone checks
+	phone_exist := s.CheckPhone(ctx, phone)
+	if phone_exist {
+		return RegisterPhaseSignUpResult{}, errors.New("phone already exists")
+	}
+
+	// country check
+	country_dts, err := s.CheckCountry(ctx, countryID)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// check phone country validation
+	_, err = s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// check if onboarding already exists for this phone
+	onboarding, err := s.queries.GetOnboardingByPhone(ctx, phone)
+	if err == nil {
+		// if completed is yes, return error
+		if onboarding.Completed.String == "yes" {
+			return RegisterPhaseSignUpResult{}, errors.New("phone number already exists")
+		}
+
+		// update the email address in-case the email address has changed
+		if email != "" && email != onboarding.Email.String {
+			s.queries.UpdateOnboardingEmail(ctx, queries.UpdateOnboardingEmailParams{
+				ID:    onboarding.ID,
+				Email: pgtype.Text{String: email, Valid: true},
+			})
+		}
+
+		// check if 10 mins have passed
+		if time.Since(onboarding.DateTimeOtpSent.Time) < 10*time.Minute {
+			return RegisterPhaseSignUpResult{
+				ID:              onboarding.ID,
+				FakeID:          onboarding.FakeID.Int64,
+				DateTimeOtpSent: onboarding.DateTimeOtpSent.Time,
+			}, nil
+		}
+
+		// generate new OTP
+		otp, hashedOTP, err := utils.GenerateOTP()
+		if err != nil {
+			return RegisterPhaseSignUpResult{}, err
+		}
+
+		// send OTP via WhatsApp
+		err = s.messagingService.SendWhatsAppOTP(phone, otp)
+		if err != nil {
+			return RegisterPhaseSignUpResult{}, err
+		}
+
+		// update the onboarding record
+		updatedAt, err := s.queries.UpdateOnboardingOTP(ctx, queries.UpdateOnboardingOTPParams{
+			ID:              onboarding.ID,
+			Otp:             pgtype.Text{String: hashedOTP, Valid: true},
+			DateTimeOtpSent: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		})
+		if err != nil {
+			return RegisterPhaseSignUpResult{}, err
+		}
+
+		return RegisterPhaseSignUpResult{
+			ID:              onboarding.ID,
+			FakeID:          onboarding.FakeID.Int64,
+			DateTimeOtpSent: updatedAt.Time,
+		}, nil
+	}
+
+	// Generate 6-digit OTP
+	otp, hashedOTP, err := utils.GenerateOTP()
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// send OTP via WhatsApp
+	err = s.messagingService.SendWhatsAppOTP(phone, otp)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// save to onboarding_details
+	otpSentAt := time.Now()
+	id, err := s.queries.CreateOnboardingDetails(ctx, queries.CreateOnboardingDetailsParams{
+		Otp:             pgtype.Text{String: hashedOTP, Valid: true},
+		DateTimeOtpSent: pgtype.Timestamptz{Time: otpSentAt, Valid: true},
+		CountryID:       countryID,
+		Email:           pgtype.Text{String: email, Valid: email != ""},
+		Phone:           phone,
+	})
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// generate a fake_id using the id and update the onboarding fake_id
+	fake_id := utils.GenerateFakeID(id)
+	err = s.queries.UpdateOnboardingFakeID(ctx, queries.UpdateOnboardingFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	return RegisterPhaseSignUpResult{
+		ID:              id,
+		FakeID:          fake_id,
+		DateTimeOtpSent: otpSentAt,
+	}, nil
 }
 
 // CleanUsername normalizes and validates a username based on:
@@ -327,4 +450,88 @@ func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int
 		Nin:    nin,
 		UserID: userID,
 	})
+}
+
+// ResendOtp resend's the OTP if 10 minutes have passed since the last one
+func (s *AuthService) ResendOtp(ctx context.Context, phone string, fakeId int64) (RegisterPhaseSignUpResult, error) {
+	onboarding, err := s.queries.GetOnboardingByPhone(ctx, phone)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, errors.New("onboarding record not found")
+	}
+
+	if onboarding.FakeID.Int64 != fakeId {
+		return RegisterPhaseSignUpResult{}, errors.New("invalid record reference")
+	}
+
+	if onboarding.Completed.String == "yes" {
+		return RegisterPhaseSignUpResult{}, errors.New("registration already completed")
+	}
+
+	// check if 10 mins have passed as requested by user
+	timePassed := time.Since(onboarding.DateTimeOtpSent.Time)
+	if timePassed < 10*time.Minute {
+		timeLeft := 10*time.Minute - timePassed
+		return RegisterPhaseSignUpResult{}, fmt.Errorf("please wait another %d seconds before resending", int(timeLeft.Seconds()))
+	}
+
+	// generate new OTP
+	otp, hashedOTP, err := utils.GenerateOTP()
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// send OTP via WhatsApp
+	err = s.messagingService.SendWhatsAppOTP(phone, otp)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// update the onboarding record
+	sentAt, err := s.queries.UpdateOnboardingOTP(ctx, queries.UpdateOnboardingOTPParams{
+		ID:              onboarding.ID,
+		Otp:             pgtype.Text{String: hashedOTP, Valid: true},
+		DateTimeOtpSent: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+	})
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	return RegisterPhaseSignUpResult{
+		ID:              onboarding.ID,
+		FakeID:          onboarding.FakeID.Int64,
+		DateTimeOtpSent: sentAt.Time,
+	}, nil
+}
+
+// VerifyOtp verifies the OTP sent to the user
+func (s *AuthService) VerifyOtp(ctx context.Context, phone, otp string) error {
+	onboarding, err := s.queries.GetOnboardingByPhone(ctx, phone)
+	if err != nil {
+		return errors.New("onboarding record not found")
+	}
+
+	if onboarding.Completed.String == "yes" {
+		return errors.New("registration already completed")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(onboarding.Otp.String), []byte(otp))
+	if err != nil {
+		return errors.New("invalid OTP")
+	}
+
+	// Check if 10 mins have passed
+	if time.Since(onboarding.DateTimeOtpSent.Time) > 10*time.Minute {
+		return errors.New("OTP has expired")
+	}
+
+	// Mark as verified
+	err = s.queries.UpdateOnboardingOTPVerified(ctx, queries.UpdateOnboardingOTPVerifiedParams{
+		ID:          onboarding.ID,
+		OtpVerified: pgtype.Text{String: "yes", Valid: true},
+	})
+	if err != nil {
+		return errors.New("failed to mark otp as verified")
+	}
+
+	return nil
 }

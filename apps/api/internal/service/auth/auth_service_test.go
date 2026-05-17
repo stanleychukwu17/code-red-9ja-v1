@@ -26,6 +26,12 @@ var (
 	authService *authservice.AuthService
 )
 
+type mockMessagingService struct{}
+
+func (m *mockMessagingService) SendWhatsAppOTP(phone, otp string) error {
+	return nil
+}
+
 func TestRegister(t *testing.T) {
 	cfg, _ := test.BeforeEach(t)
 	defer test.AfterEach(t)
@@ -246,7 +252,7 @@ func TestCheckPhone(t *testing.T) {
 	defer app.Server.Shutdown(ctx)
 
 	q := queries.New(app.DB)
-	s := authservice.NewAuthService(q, app.RDB)
+	s := authservice.NewAuthService(q, app.RDB, &mockMessagingService{})
 
 	phone := "+2348011111111"
 
