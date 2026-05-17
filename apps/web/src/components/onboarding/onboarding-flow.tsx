@@ -1,7 +1,7 @@
 import {
   OnboardingHeader,
   OnboardingWrapper,
-} from "#/routes/auth/_components/onboarding";
+} from "#/routes/auth/_components/-onboarding";
 import { Button } from "@repo/ui/components/button";
 import { CountryCombobox } from "@repo/ui/components/combobox/country-combobox";
 import { GenderCombobox } from "@repo/ui/components/combobox/gender-combobox";
