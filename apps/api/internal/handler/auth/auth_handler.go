@@ -16,6 +16,9 @@ import (
 // AuthService interface defines the methods for authentication services
 type AuthService interface {
 	Register(ctx context.Context, params queries.CreateUserParams, nin string) (auth.RegisterResult, error)
+	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
+	VerifyOtp(ctx context.Context, phone, otp string) error
+	ResendOtp(ctx context.Context, phone string, fakeId int64) (auth.RegisterPhaseSignUpResult, error)
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -104,5 +107,116 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondJSON(w, http.StatusCreated, map[string]any{
 		"id":      id,
 		"message": "User registered successfully",
+	})
+}
+
+// RegisterPhaseSignUpRequest represents the structure for the initial sign-up phase
+type RegisterPhaseSignUpRequest struct {
+	Country         string `json:"country" validate:"required"`
+	CountryID       int16  `json:"countryId" validate:"required"`
+	PhoneNumber     string `json:"phoneNumber" validate:"required"`
+	Email           string `json:"email" validate:"omitempty,email"`
+	Password        string `json:"password" validate:"required,min=5,max=72"`
+	ConfirmPassword string `json:"confirmPassword" validate:"required,eqfield=Password"`
+}
+
+// RegisterPhaseSignUp handles the initial registration phase
+func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
+	var req RegisterPhaseSignUpRequest
+
+	// Decode the incoming JSON request body into the RegisterPhaseSignUpRequest struct
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"message": "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	// Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"message": "Validation failed: " + err.Error(),
+		})
+		return
+	}
+
+	result, err := h.authService.RegisterPhaseSignUp(r.Context(), req.Email, req.PhoneNumber, req.CountryID)
+	if err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
+			"message": err.Error(),
+		})
+		return
+	}
+
+	h.utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":          "success",
+		"message":         "Initial sign-up data is valid",
+		"id":              result.ID,
+		"fakeId":          result.FakeID,
+		"dateTimeOtpSent": result.DateTimeOtpSent,
+	})
+}
+
+// VerifyOtpRequest represents the structure for OTP verification
+type VerifyOtpRequest struct {
+	Phone string `json:"phoneNumber" validate:"required"`
+	Otp   string `json:"otp" validate:"required,len=6"`
+}
+
+// VerifyOtp handles the OTP verification process
+func (h *Handler) VerifyOtp(w http.ResponseWriter, r *http.Request) {
+	var req VerifyOtpRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Validation failed: " + err.Error()})
+		return
+	}
+
+	if err := h.authService.VerifyOtp(r.Context(), req.Phone, req.Otp); err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+		return
+	}
+
+	h.utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":  "success",
+		"message": "OTP verified successfully",
+	})
+}
+
+// ResendOtpRequest represents the structure for resending OTP
+type ResendOtpRequest struct {
+	Phone  string `json:"phoneNumber" validate:"required"`
+	FakeId int64  `json:"fakeId" validate:"required"`
+}
+
+// ResendOtp handles the request to resend OTP
+func (h *Handler) ResendOtp(w http.ResponseWriter, r *http.Request) {
+	var req ResendOtpRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Invalid request body: " + err.Error()})
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Validation failed: " + err.Error()})
+		return
+	}
+
+	result, err := h.authService.ResendOtp(r.Context(), req.Phone, req.FakeId)
+	if err != nil {
+		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+		return
+	}
+
+	h.utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"status":          "success",
+		"message":         "OTP resent successfully",
+		"id":              result.ID,
+		"fakeId":          result.FakeID,
+		"dateTimeOtpSent": result.DateTimeOtpSent,
 	})
 }

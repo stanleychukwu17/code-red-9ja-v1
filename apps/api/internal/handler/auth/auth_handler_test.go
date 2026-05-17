@@ -28,6 +28,11 @@ func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUse
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
+func (m *MockAuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (authservice.RegisterPhaseSignUpResult, error) {
+	args := m.Called(ctx, email, phone, countryID)
+	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
+}
+
 // TestRegister tests the Register method of the AuthHandler
 func TestRegister(t *testing.T) {
 	// Create a new instance of the utils package
