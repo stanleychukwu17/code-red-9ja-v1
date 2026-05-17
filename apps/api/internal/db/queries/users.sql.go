@@ -23,6 +23,39 @@ func (q *Queries) CheckIfPhoneNumberExists(ctx context.Context, phone string) (i
 	return id, err
 }
 
+const createOnboardingDetails = `-- name: CreateOnboardingDetails :one
+INSERT INTO users_onboarding (
+    otp, date_time_otp_sent, country_id, state_id, city_id, email, phone
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id
+`
+
+type CreateOnboardingDetailsParams struct {
+	Otp             pgtype.Text        `json:"otp"`
+	DateTimeOtpSent pgtype.Timestamptz `json:"date_time_otp_sent"`
+	CountryID       int16              `json:"country_id"`
+	StateID         pgtype.Int2        `json:"state_id"`
+	CityID          pgtype.Int4        `json:"city_id"`
+	Email           pgtype.Text        `json:"email"`
+	Phone           string             `json:"phone"`
+}
+
+func (q *Queries) CreateOnboardingDetails(ctx context.Context, arg CreateOnboardingDetailsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createOnboardingDetails,
+		arg.Otp,
+		arg.DateTimeOtpSent,
+		arg.CountryID,
+		arg.StateID,
+		arg.CityID,
+		arg.Email,
+		arg.Phone,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createPhoneNumber = `-- name: CreatePhoneNumber :one
 INSERT INTO users_phone_numbers (user_id, phone)
 VALUES ($1, $2)
@@ -102,6 +135,36 @@ func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (i
 	var id int32
 	err := row.Scan(&id)
 	return id, err
+}
+
+const getOnboardingByPhone = `-- name: GetOnboardingByPhone :one
+SELECT id, fake_id, otp, date_time_otp_sent, otp_verified, completed, email FROM users_onboarding
+WHERE phone = $1 LIMIT 1
+`
+
+type GetOnboardingByPhoneRow struct {
+	ID              int64              `json:"id"`
+	FakeID          pgtype.Int8        `json:"fake_id"`
+	Otp             pgtype.Text        `json:"otp"`
+	DateTimeOtpSent pgtype.Timestamptz `json:"date_time_otp_sent"`
+	OtpVerified     pgtype.Text        `json:"otp_verified"`
+	Completed       pgtype.Text        `json:"completed"`
+	Email           pgtype.Text        `json:"email"`
+}
+
+func (q *Queries) GetOnboardingByPhone(ctx context.Context, phone string) (GetOnboardingByPhoneRow, error) {
+	row := q.db.QueryRow(ctx, getOnboardingByPhone, phone)
+	var i GetOnboardingByPhoneRow
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Otp,
+		&i.DateTimeOtpSent,
+		&i.OtpVerified,
+		&i.Completed,
+		&i.Email,
+	)
+	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
@@ -219,6 +282,74 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUser
 	var i GetUserNINByUserIDRow
 	err := row.Scan(&i.ID, &i.Nin)
 	return i, err
+}
+
+const updateOnboardingEmail = `-- name: UpdateOnboardingEmail :exec
+UPDATE users_onboarding
+SET email = $2
+WHERE id = $1
+`
+
+type UpdateOnboardingEmailParams struct {
+	ID    int64       `json:"id"`
+	Email pgtype.Text `json:"email"`
+}
+
+func (q *Queries) UpdateOnboardingEmail(ctx context.Context, arg UpdateOnboardingEmailParams) error {
+	_, err := q.db.Exec(ctx, updateOnboardingEmail, arg.ID, arg.Email)
+	return err
+}
+
+const updateOnboardingFakeID = `-- name: UpdateOnboardingFakeID :exec
+UPDATE users_onboarding
+SET fake_id = $2
+WHERE id = $1
+`
+
+type UpdateOnboardingFakeIDParams struct {
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
+}
+
+func (q *Queries) UpdateOnboardingFakeID(ctx context.Context, arg UpdateOnboardingFakeIDParams) error {
+	_, err := q.db.Exec(ctx, updateOnboardingFakeID, arg.ID, arg.FakeID)
+	return err
+}
+
+const updateOnboardingOTP = `-- name: UpdateOnboardingOTP :one
+UPDATE users_onboarding
+SET otp = $2, date_time_otp_sent = $3, otp_verified = 'no'
+WHERE id = $1
+RETURNING date_time_otp_sent
+`
+
+type UpdateOnboardingOTPParams struct {
+	ID              int64              `json:"id"`
+	Otp             pgtype.Text        `json:"otp"`
+	DateTimeOtpSent pgtype.Timestamptz `json:"date_time_otp_sent"`
+}
+
+func (q *Queries) UpdateOnboardingOTP(ctx context.Context, arg UpdateOnboardingOTPParams) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, updateOnboardingOTP, arg.ID, arg.Otp, arg.DateTimeOtpSent)
+	var date_time_otp_sent pgtype.Timestamptz
+	err := row.Scan(&date_time_otp_sent)
+	return date_time_otp_sent, err
+}
+
+const updateOnboardingOTPVerified = `-- name: UpdateOnboardingOTPVerified :exec
+UPDATE users_onboarding
+SET otp_verified = $2
+WHERE id = $1
+`
+
+type UpdateOnboardingOTPVerifiedParams struct {
+	ID          int64       `json:"id"`
+	OtpVerified pgtype.Text `json:"otp_verified"`
+}
+
+func (q *Queries) UpdateOnboardingOTPVerified(ctx context.Context, arg UpdateOnboardingOTPVerifiedParams) error {
+	_, err := q.db.Exec(ctx, updateOnboardingOTPVerified, arg.ID, arg.OtpVerified)
+	return err
 }
 
 const updateUserFakeID = `-- name: UpdateUserFakeID :exec
