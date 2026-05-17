@@ -3,10 +3,13 @@ package utils
 // URLMap defines the structure for all API endpoints to avoid hardcoding strings.
 
 type AuthURLMap struct {
-	Register       string
-	Login          string
-	Logout         string
-	ForgotPassword string
+	RegisterPhaseSignUp string
+	ResendOtp           string
+	VerifyOtp           string
+	Register            string
+	Login               string
+	Logout              string
+	ForgotPassword      string
 }
 
 type CountriesURLMap struct {
@@ -26,10 +29,13 @@ var ApiUrls = URLMap{
 	Health: "/health",
 	Root:   "/api/v1",
 	Auth: AuthURLMap{
-		Register:       "/api/v1/auth/register",
-		Login:          "/api/v1/auth/login",
-		Logout:         "/api/v1/auth/logout",
-		ForgotPassword: "/api/v1/auth/forgot_password",
+		RegisterPhaseSignUp: "/api/v1/auth/register_phase_signup",
+		ResendOtp:           "/api/v1/auth/resend_otp",
+		VerifyOtp:           "/api/v1/auth/verify_otp",
+		Register:            "/api/v1/auth/register",
+		Login:               "/api/v1/auth/login",
+		Logout:              "/api/v1/auth/logout",
+		ForgotPassword:      "/api/v1/auth/forgot_password",
 	},
 	Countries: CountriesURLMap{
 		GetAll: "/api/v1/countries",
