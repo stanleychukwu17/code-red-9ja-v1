@@ -217,7 +217,12 @@ function LogoComponent () {
   const { state: sideBarState, toggleSidebar } = useSidebar();
   const isMobile = useIsMobile()
 
-  const flexDir = sideBarState === "collapsed" ? "flex-col" : "flex-row";
+  let flexDir = "flex-row";
+  try {
+    flexDir = sideBarState === "collapsed" ? "flex-col" : "flex-row";
+  } catch (error) {
+    console.error(error);
+  }
 
   useEffect(() => {
     if (isMobile) { return; }
