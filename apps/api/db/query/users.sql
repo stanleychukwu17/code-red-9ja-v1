@@ -49,3 +49,35 @@ WHERE phone = $1 LIMIT 1;
 -- name: CheckIfPhoneNumberExists :one
 SELECT id FROM users_phone_numbers
 WHERE phone = $1 LIMIT 1;
+
+-- name: CreateOnboardingDetails :one
+INSERT INTO users_onboarding (
+    otp, date_time_otp_sent, country_id, state_id, city_id, email, phone
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id;
+
+-- name: UpdateOnboardingFakeID :exec
+UPDATE users_onboarding
+SET fake_id = $2
+WHERE id = $1;
+
+-- name: GetOnboardingByPhone :one
+SELECT id, fake_id, otp, date_time_otp_sent, otp_verified, completed, email FROM users_onboarding
+WHERE phone = $1 LIMIT 1;
+
+-- name: UpdateOnboardingOTPVerified :exec
+UPDATE users_onboarding
+SET otp_verified = $2
+WHERE id = $1;
+
+-- name: UpdateOnboardingOTP :one
+UPDATE users_onboarding
+SET otp = $2, date_time_otp_sent = $3, otp_verified = 'no'
+WHERE id = $1
+RETURNING date_time_otp_sent;
+
+-- name: UpdateOnboardingEmail :exec
+UPDATE users_onboarding
+SET email = $2
+WHERE id = $1;
