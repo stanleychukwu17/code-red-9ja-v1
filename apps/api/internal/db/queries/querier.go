@@ -12,11 +12,13 @@ import (
 
 type Querier interface {
 	CheckIfPhoneNumberExists(ctx context.Context, phone string) (int64, error)
+	CreateOnboardingDetails(ctx context.Context, arg CreateOnboardingDetailsParams) (int64, error)
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
+	GetOnboardingByPhone(ctx context.Context, phone string) (GetOnboardingByPhoneRow, error)
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
@@ -25,6 +27,10 @@ type Querier interface {
 	GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
+	UpdateOnboardingEmail(ctx context.Context, arg UpdateOnboardingEmailParams) error
+	UpdateOnboardingFakeID(ctx context.Context, arg UpdateOnboardingFakeIDParams) error
+	UpdateOnboardingOTP(ctx context.Context, arg UpdateOnboardingOTPParams) (pgtype.Timestamptz, error)
+	UpdateOnboardingOTPVerified(ctx context.Context, arg UpdateOnboardingOTPVerifiedParams) error
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 }
 
