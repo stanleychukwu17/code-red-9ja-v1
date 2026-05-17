@@ -81,6 +81,21 @@ type UsersNin struct {
 	Nin    string `json:"nin"`
 }
 
+type UsersOnboarding struct {
+	ID              int64              `json:"id"`
+	FakeID          pgtype.Int8        `json:"fake_id"`
+	Otp             pgtype.Text        `json:"otp"`
+	DateTimeOtpSent pgtype.Timestamptz `json:"date_time_otp_sent"`
+	OtpVerified     pgtype.Text        `json:"otp_verified"`
+	CountryID       int16              `json:"country_id"`
+	StateID         pgtype.Int2        `json:"state_id"`
+	CityID          pgtype.Int4        `json:"city_id"`
+	Email           pgtype.Text        `json:"email"`
+	Phone           string             `json:"phone"`
+	Completed       pgtype.Text        `json:"completed"`
+	DateCreated     pgtype.Timestamptz `json:"date_created"`
+}
+
 type UsersPhoneNumber struct {
 	ID         int64       `json:"id"`
 	UserID     int64       `json:"user_id"`
