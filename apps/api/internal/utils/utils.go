@@ -2,14 +2,19 @@ package utils
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	mathRand "math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Utils struct {
@@ -98,4 +103,30 @@ func SetupRedisTestContainer(redis_port string) (string, testcontainers.Containe
 
 	addr := fmt.Sprintf("%s:%s", host, port.Port())
 	return addr, container, nil
+}
+
+func GenerateOTP() (string, string, error) {
+	n, err := cryptoRand.Int(cryptoRand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", "", err
+	}
+
+	otp := fmt.Sprintf("%06d", n.Int64())
+
+	hashedOTP, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", err
+	}
+
+	return otp, string(hashedOTP), nil
+}
+
+// function: generates fake_id using the original id
+func GenerateFakeID(id int64) int64 {
+	front_id := mathRand.Intn(1000)
+	back_id := mathRand.Intn(1000)
+
+	fake_id := fmt.Sprintf("%d%d%d", front_id, id, back_id)
+	fake_id_int, _ := strconv.ParseInt(fake_id, 10, 64)
+	return fake_id_int
 }
