@@ -7,13 +7,16 @@ type AuthURLMap struct {
 	ResendOtp           string
 	VerifyOtp           string
 	Register            string
+	CheckNin            string
 	Login               string
 	Logout              string
 	ForgotPassword      string
 }
 
 type CountriesURLMap struct {
-	GetAll string
+	GetAll    string
+	GetStates string
+	GetCities string
 }
 
 type URLMap struct {
@@ -33,11 +36,14 @@ var ApiUrls = URLMap{
 		ResendOtp:           "/api/v1/auth/resend_otp",
 		VerifyOtp:           "/api/v1/auth/verify_otp",
 		Register:            "/api/v1/auth/register",
+		CheckNin:            "/api/v1/auth/check_nin",
 		Login:               "/api/v1/auth/login",
 		Logout:              "/api/v1/auth/logout",
 		ForgotPassword:      "/api/v1/auth/forgot_password",
 	},
 	Countries: CountriesURLMap{
-		GetAll: "/api/v1/countries",
+		GetAll:    "/api/v1/countries",
+		GetStates: "/api/v1/countries/{countryID}/states",
+		GetCities: "/api/v1/states/{stateID}/cities",
 	},
 }

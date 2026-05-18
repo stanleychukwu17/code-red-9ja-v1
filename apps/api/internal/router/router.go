@@ -58,8 +58,11 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp) // Register endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.ResendOtp, authHandler.ResendOtp)                     // Resend OTP endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.VerifyOtp, authHandler.VerifyOtp)                     // Verify OTP endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                       // Check NIN endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                       // Register endpoint
 	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries)            // Get all countries
+	mainRouter.Get(utils.ApiUrls.Countries.GetStates, countriesHandler.GetStates)            // Get states of a country
+	mainRouter.Get(utils.ApiUrls.Countries.GetCities, countriesHandler.GetCities)            // Get cities of a state
 
 	return mainRouter
 }
