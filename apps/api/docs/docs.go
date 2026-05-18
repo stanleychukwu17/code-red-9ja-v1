@@ -76,6 +76,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/countries/{countryID}/states": {
+            "get": {
+                "description": "Fetches all states for a specific country by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "summary": "Get states by country ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Country ID",
+                        "name": "countryID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/countrieshandler.GetStatesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "get the status of the server",
@@ -98,9 +142,64 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/states/{stateID}/cities": {
+            "get": {
+                "description": "Fetches all cities for a specific state by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "summary": "Get cities by state ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "stateID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/countrieshandler.GetCitiesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "countrieshandler.CityResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "countrieshandler.CountryResponse": {
             "description": "for GetCountries",
             "type": "object",
@@ -119,6 +218,17 @@ const docTemplate = `{
                 }
             }
         },
+        "countrieshandler.GetCitiesResponse": {
+            "type": "object",
+            "properties": {
+                "cities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/countrieshandler.CityResponse"
+                    }
+                }
+            }
+        },
         "countrieshandler.GetCountriesResponse": {
             "type": "object",
             "properties": {
@@ -127,6 +237,28 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/countrieshandler.CountryResponse"
                     }
+                }
+            }
+        },
+        "countrieshandler.GetStatesResponse": {
+            "type": "object",
+            "properties": {
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/countrieshandler.StateResponse"
+                    }
+                }
+            }
+        },
+        "countrieshandler.StateResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         }
