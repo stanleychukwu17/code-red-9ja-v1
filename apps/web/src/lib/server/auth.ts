@@ -55,3 +55,21 @@ export const verifyOtp = createServerFn({ method: "POST" })
     }
   });
 
+export const checkNin = createServerFn({ method: "POST" })
+  .inputValidator((data: { nin: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const response = await fetch(API_URL.auth.checkNin, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Check NIN error:", error);
+      return { status: "error", message: "An unexpected error occurred during NIN check" };
+    }
+  });
+
