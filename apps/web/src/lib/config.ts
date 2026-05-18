@@ -18,6 +18,9 @@ export const API_URL = {
     "registerPhaseSignUp": `${api}/auth/register_phase_signup`,
     "verifyOtp": `${api}/auth/verify_otp`,
     "resendOtp": `${api}/auth/resend_otp`,
+    "checkNin": `${api}/auth/check_nin`,
   },
   "getAllCountries": `${api}/countries`,
+  "getStates": (countryId: number) => `${api}/countries/${countryId}/states`,
+  "getCities": (stateId: number) => `${api}/states/${stateId}/cities`,
 }
