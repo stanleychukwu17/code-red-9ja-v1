@@ -132,134 +132,6 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
 }
 
-// RegisterPhaseSignUpResult represents the structure for the response from the initial sign-up phase
-type RegisterPhaseSignUpResult struct {
-	ID              int64     `json:"id"`
-	FakeID          int64     `json:"fakeId"`
-	DateTimeOtpSent time.Time `json:"dateTimeOtpSent"`
-}
-
-func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (RegisterPhaseSignUpResult, error) {
-	// email checks
-	if email != "" {
-		email = strings.TrimSpace(strings.ToLower(email))
-		email_exist := s.CheckEmail(ctx, email)
-		if email_exist {
-			return RegisterPhaseSignUpResult{}, errors.New("email already exists")
-		}
-	}
-
-	// phone checks
-	phone_exist := s.CheckPhone(ctx, phone)
-	if phone_exist {
-		return RegisterPhaseSignUpResult{}, errors.New("phone already exists")
-	}
-
-	// country check
-	country_dts, err := s.CheckCountry(ctx, countryID)
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	// check phone country validation
-	_, err = s.ValidatePhoneForCountry(phone, country_dts.Iso2)
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	// check if onboarding already exists for this phone
-	onboarding, err := s.queries.GetOnboardingByPhone(ctx, phone)
-	if err == nil {
-		// if completed is yes, return error
-		if onboarding.Completed.String == "yes" {
-			return RegisterPhaseSignUpResult{}, errors.New("phone number already exists")
-		}
-
-		// update the email address in-case the email address has changed
-		if email != "" && email != onboarding.Email.String {
-			s.queries.UpdateOnboardingEmail(ctx, queries.UpdateOnboardingEmailParams{
-				ID:    onboarding.ID,
-				Email: pgtype.Text{String: email, Valid: true},
-			})
-		}
-
-		// check if 10 mins have passed
-		if time.Since(onboarding.DateTimeOtpSent.Time) < 10*time.Minute {
-			return RegisterPhaseSignUpResult{
-				ID:              onboarding.ID,
-				FakeID:          onboarding.FakeID.Int64,
-				DateTimeOtpSent: onboarding.DateTimeOtpSent.Time,
-			}, nil
-		}
-
-		// generate new OTP
-		otp, hashedOTP, err := utils.GenerateOTP()
-		if err != nil {
-			return RegisterPhaseSignUpResult{}, err
-		}
-
-		// send OTP via WhatsApp
-		err = s.messagingService.SendWhatsAppOTP(phone, otp)
-		if err != nil {
-			return RegisterPhaseSignUpResult{}, err
-		}
-
-		// update the onboarding record
-		updatedAt, err := s.queries.UpdateOnboardingOTP(ctx, queries.UpdateOnboardingOTPParams{
-			ID:              onboarding.ID,
-			Otp:             pgtype.Text{String: hashedOTP, Valid: true},
-			DateTimeOtpSent: pgtype.Timestamptz{Time: time.Now(), Valid: true},
-		})
-		if err != nil {
-			return RegisterPhaseSignUpResult{}, err
-		}
-
-		return RegisterPhaseSignUpResult{
-			ID:              onboarding.ID,
-			FakeID:          onboarding.FakeID.Int64,
-			DateTimeOtpSent: updatedAt.Time,
-		}, nil
-	}
-
-	// Generate 6-digit OTP
-	otp, hashedOTP, err := utils.GenerateOTP()
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	// send OTP via WhatsApp
-	err = s.messagingService.SendWhatsAppOTP(phone, otp)
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	// save to onboarding_details
-	otpSentAt := time.Now()
-	id, err := s.queries.CreateOnboardingDetails(ctx, queries.CreateOnboardingDetailsParams{
-		Otp:             pgtype.Text{String: hashedOTP, Valid: true},
-		DateTimeOtpSent: pgtype.Timestamptz{Time: otpSentAt, Valid: true},
-		CountryID:       countryID,
-		Email:           pgtype.Text{String: email, Valid: email != ""},
-		Phone:           phone,
-	})
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	// generate a fake_id using the id and update the onboarding fake_id
-	fake_id := utils.GenerateFakeID(id)
-	err = s.queries.UpdateOnboardingFakeID(ctx, queries.UpdateOnboardingFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	return RegisterPhaseSignUpResult{
-		ID:              id,
-		FakeID:          fake_id,
-		DateTimeOtpSent: otpSentAt,
-	}, nil
-}
-
 // CleanUsername normalizes and validates a username based on:
 // 1. Alphanumeric start/end
 // 2. No consecutive dots/underscores
@@ -326,7 +198,7 @@ func (s *AuthService) CheckEmail(ctx context.Context, email string) bool {
 	return userDts.ID > 0
 }
 
-// function: checks if the phone already exists in redis and in the postgres db
+// function: checks if the phone exists in redis and in the postgres db
 func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool {
 	// check in redis first
 	exists, _ := s.rdb.SIsMember(ctx, db.RedisRegisteredPhones, phone).Result()
@@ -450,6 +322,138 @@ func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int
 		Nin:    nin,
 		UserID: userID,
 	})
+}
+
+// RegisterPhaseSignUpResult represents the structure for the response from the initial sign-up phase
+type RegisterPhaseSignUpResult struct {
+	ID              int64     `json:"id"`
+	FakeID          int64     `json:"fakeId"`
+	DateTimeOtpSent time.Time `json:"dateTimeOtpSent"`
+	OtpVerified     string    `json:"otpVerified"`
+}
+
+func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (RegisterPhaseSignUpResult, error) {
+	// email checks
+	if email != "" {
+		email = strings.TrimSpace(strings.ToLower(email))
+		email_exist := s.CheckEmail(ctx, email)
+		if email_exist {
+			return RegisterPhaseSignUpResult{}, errors.New("email already exists")
+		}
+	}
+
+	// phone checks
+	phone_exist := s.CheckPhone(ctx, phone)
+	if phone_exist {
+		return RegisterPhaseSignUpResult{}, errors.New("phone already exists")
+	}
+
+	// country check
+	country_dts, err := s.CheckCountry(ctx, countryID)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// check phone country validation
+	_, err = s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// check if onboarding already exists for this phone
+	onboarding, err := s.queries.GetOnboardingByPhone(ctx, phone)
+	if err == nil && onboarding.ID > 0 {
+		// if completed is yes, return error
+		if onboarding.Completed.String == "yes" {
+			return RegisterPhaseSignUpResult{}, errors.New("phone number already exists, user is already registered")
+		}
+
+		// update the email address in-case the email address has changed
+		if email != "" && email != onboarding.Email.String {
+			s.queries.UpdateOnboardingEmail(ctx, queries.UpdateOnboardingEmailParams{
+				ID:    onboarding.ID,
+				Email: pgtype.Text{String: email, Valid: true},
+			})
+		}
+
+		// check if DateTimeOtpSent is less than 10 mins, if yes: return the onboarding details
+		if time.Since(onboarding.DateTimeOtpSent.Time) < 10*time.Minute {
+			return RegisterPhaseSignUpResult{
+				ID:              onboarding.ID,
+				FakeID:          onboarding.FakeID.Int64,
+				DateTimeOtpSent: onboarding.DateTimeOtpSent.Time,
+				OtpVerified:     onboarding.OtpVerified.String,
+			}, nil
+		}
+
+		// generate new OTP
+		otp, hashedOTP, err := utils.GenerateOTP()
+		if err != nil {
+			return RegisterPhaseSignUpResult{}, err
+		}
+
+		// send OTP via WhatsApp
+		err = s.messagingService.SendWhatsAppOTP(phone, otp)
+		if err != nil {
+			return RegisterPhaseSignUpResult{}, err
+		}
+
+		// update the onboarding record with the new otp
+		updatedAt, err := s.queries.UpdateOnboardingOTP(ctx, queries.UpdateOnboardingOTPParams{
+			ID:              onboarding.ID,
+			Otp:             pgtype.Text{String: hashedOTP, Valid: true},
+			DateTimeOtpSent: pgtype.Timestamptz{Time: time.Now(), Valid: true},
+		})
+		if err != nil {
+			return RegisterPhaseSignUpResult{}, err
+		}
+
+		return RegisterPhaseSignUpResult{
+			ID:              onboarding.ID,
+			FakeID:          onboarding.FakeID.Int64,
+			DateTimeOtpSent: updatedAt.Time,
+			OtpVerified:     onboarding.OtpVerified.String,
+		}, nil
+	}
+
+	// generate a new OTP
+	otp, hashedOTP, err := utils.GenerateOTP()
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// send OTP via WhatsApp
+	err = s.messagingService.SendWhatsAppOTP(phone, otp)
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// save to onboarding_details
+	otpSentAt := time.Now()
+	id, err := s.queries.CreateOnboardingDetails(ctx, queries.CreateOnboardingDetailsParams{
+		Otp:             pgtype.Text{String: hashedOTP, Valid: true},
+		DateTimeOtpSent: pgtype.Timestamptz{Time: otpSentAt, Valid: true},
+		CountryID:       countryID,
+		Email:           pgtype.Text{String: email, Valid: email != ""},
+		Phone:           phone,
+	})
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	// generate a fake_id using the id and update the onboarding fake_id
+	fake_id := utils.GenerateFakeID(id)
+	err = s.queries.UpdateOnboardingFakeID(ctx, queries.UpdateOnboardingFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
+	if err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+
+	return RegisterPhaseSignUpResult{
+		ID:              id,
+		FakeID:          fake_id,
+		DateTimeOtpSent: otpSentAt,
+		OtpVerified:     "no",
+	}, nil
 }
 
 // ResendOtp resend's the OTP if 10 minutes have passed since the last one
