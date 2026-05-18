@@ -33,6 +33,21 @@ func (m *MockAuthService) RegisterPhaseSignUp(ctx context.Context, email, phone 
 	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
 }
 
+func (m *MockAuthService) VerifyOtp(ctx context.Context, phone, otp string) error {
+	args := m.Called(ctx, phone, otp)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) ResendOtp(ctx context.Context, phone string, fakeId int64) (authservice.RegisterPhaseSignUpResult, error) {
+	args := m.Called(ctx, phone, fakeId)
+	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
+}
+
+func (m *MockAuthService) CheckNIN(ctx context.Context, nin string) bool {
+	args := m.Called(ctx, nin)
+	return args.Bool(0)
+}
+
 // TestRegister tests the Register method of the AuthHandler
 func TestRegister(t *testing.T) {
 	// Create a new instance of the utils package
