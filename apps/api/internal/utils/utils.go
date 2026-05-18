@@ -5,6 +5,7 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"math/big"
 	mathRand "math/rand"
 	"net/http"
@@ -32,6 +33,41 @@ func (u *Utils) RespondJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+// FormatResponse creates a standardized response map with a status and message.
+func (u *Utils) FormatResponse(status string, message string) map[string]interface{} {
+	return map[string]interface{}{
+		"status":  status,
+		"message": message,
+	}
+}
+
+// FormatResponseData creates a standardized response map and includes additional data.
+func (u *Utils) FormatResponseData(status string, message string, data map[string]interface{}) map[string]interface{} {
+	res := map[string]interface{}{
+		"status":  status,
+		"message": message,
+	}
+
+	// copy all the fields from the data map to the response map
+	maps.Copy(res, data)
+
+	return res
+}
+
+// RespondError writes a JSON response with a standard error format.
+func (u *Utils) RespondError(w http.ResponseWriter, statusCode int, message string) {
+	u.RespondJSON(w, statusCode, u.FormatResponse("error", message))
+}
+
+// RespondSuccess writes a JSON response with a standard success format.
+func (u *Utils) RespondSuccess(w http.ResponseWriter, statusCode int, message string, data map[string]interface{}) {
+	if data == nil {
+		u.RespondJSON(w, statusCode, u.FormatResponse("success", message))
+	} else {
+		u.RespondJSON(w, statusCode, u.FormatResponseData("success", message, data))
+	}
 }
 
 type PostgresTestConfig struct {
