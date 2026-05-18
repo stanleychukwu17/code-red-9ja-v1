@@ -1,9 +1,10 @@
-import {useEffect} from "react";
+import { useEffect, useState } from "react";
 import { useAppDispatch } from "@/redux/hooks";
-import { setOnboardingData } from "@/redux/slice/authSlice";
+import { setOnboardingData, updateOnboardingData } from "@/redux/slice/authSlice";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AuthWrapper } from "./_components/-auth-wrapper";
-import { SignupError } from "./_components/signup-error";
+import { SignupError } from "./_components/-signup-error";
+import { FormError } from "./_components/-form-error";
 import { useForm } from "@tanstack/react-form";
 
 import { Button } from "@repo/ui/components/button";
@@ -13,6 +14,7 @@ import { APP_URL } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
+import { registerUser } from "@/lib/server/auth";
 
 import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
@@ -22,7 +24,6 @@ export const Route = createFileRoute("/auth/signup")({
   }),
   loader: async () => {
     const countries = await getAllCountries();
-    // console.log(countries)
     if (countries.status !== 'success') throw new Error(countries.error);
     return { countries: countries.countries };
   },
@@ -34,6 +35,7 @@ function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const countries = Route.useLoaderData().countries as {id: number; name: string; iso2: string; phonecode: string }[];
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -44,24 +46,49 @@ function RouteComponent() {
       confirmPassword: "",
     },
     onSubmit: async ({ value }) => {
+      // clear any previous errors
+      setServerError(null);
+
+      // find the matched country and add it to the payload
       const matchedCountry = countries.find(
         (c) => c.name.toLowerCase() === value.country.toLowerCase()
       );
 
+      // create the payload for the server
       const payload = {
         ...value,
         countryId: matchedCountry?.id,
+        iso2: matchedCountry?.iso2,
         phoneNumber: value.phoneNumber.startsWith("0")
-          ? (matchedCountry?.phonecode || "") + value.phoneNumber.slice(1)
-          : (matchedCountry?.phonecode || "") + value.phoneNumber,
+          ? `+${matchedCountry?.phonecode}${value.phoneNumber.slice(1)}`
+          : `+${matchedCountry?.phonecode}${value.phoneNumber}`,
       };
 
-      console.log(payload);
+      // update the onboarding data
       dispatch(setOnboardingData(payload));
-      navigate({
-        to: APP_URL.auth.verifyOtp,
-        search: { flow: "signup" },
-      });
+
+      // send the data to the server
+      const result = await registerUser({ data: payload });
+
+      // if the request was successful
+      if (result.status === "success") {
+        // update the onboarding data with the result returned from the register request
+        dispatch(updateOnboardingData({
+          id: result.id, 
+          fakeId: result.fakeId, 
+          dateTimeOtpSent: result.dateTimeOtpSent,
+          otpVerified: result.otpVerified,
+        }));
+
+        // navigate to the verify otp page
+        navigate({
+          to: result.otpVerified == "yes" ? APP_URL.auth.onboarding : APP_URL.auth.verifyOtp,
+          search: { flow: "signup" },
+        });
+      } else {
+        // set error
+        setServerError(result.error || result.message || "An error occurred during registration");
+      }
     },
   });
 
@@ -69,10 +96,7 @@ function RouteComponent() {
   useEffect(() => {
     const fetchUserIpCountry = async () => {
       const visitorDetails = await fetchCountryDetailsFromUserIP() // get country from IP
-      const country = visitorDetails?.country_name?.toLowerCase() || ""; // get country name
-
-      // if the request fails, return
-      if (visitorDetails?.status !== "success") return;
+      const country = visitorDetails?.country_name?.toLowerCase() || "nigeria"; // get country name
 
       // find the matched country
       const matchedCountry = countries.find(
@@ -81,7 +105,7 @@ function RouteComponent() {
 
       // if no matched country, return
       if (!matchedCountry) return;
-      
+
       // set the country value in the form
       form.setFieldValue("country", matchedCountry.name.toLowerCase());
 
@@ -98,6 +122,7 @@ function RouteComponent() {
 
   return (
     <AuthWrapper type="signup">
+      <FormError message={serverError} />
       <form
         className="flex flex-col gap-4"
         onSubmit={(e) => {
@@ -113,7 +138,12 @@ function RouteComponent() {
           }}
           children={(field) => (
             <div className="selectElement flex flex-col gap-1">
-              <Select onValueChange={field.handleChange} defaultValue={field.state.value}>
+              <Select 
+                onValueChange={(val) => {
+                  field.handleChange(val);
+                }} 
+                defaultValue={field.state.value}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select Country" />
                 </SelectTrigger>
