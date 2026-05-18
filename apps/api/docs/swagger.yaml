@@ -1,5 +1,12 @@
 basePath: /api/v1
 definitions:
+  countrieshandler.CityResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
   countrieshandler.CountryResponse:
     description: for GetCountries
     properties:
@@ -12,12 +19,33 @@ definitions:
       phone_code:
         type: string
     type: object
+  countrieshandler.GetCitiesResponse:
+    properties:
+      cities:
+        items:
+          $ref: '#/definitions/countrieshandler.CityResponse'
+        type: array
+    type: object
   countrieshandler.GetCountriesResponse:
     properties:
       countries:
         items:
           $ref: '#/definitions/countrieshandler.CountryResponse'
         type: array
+    type: object
+  countrieshandler.GetStatesResponse:
+    properties:
+      states:
+        items:
+          $ref: '#/definitions/countrieshandler.StateResponse'
+        type: array
+    type: object
+  countrieshandler.StateResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
     type: object
 host: localhost:4000
 info:
@@ -67,6 +95,35 @@ paths:
       summary: Get all countries
       tags:
       - Countries
+  /countries/{countryID}/states:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all states for a specific country by its ID
+      parameters:
+      - description: Country ID
+        in: path
+        name: countryID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/countrieshandler.GetStatesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get states by country ID
+      tags:
+      - Countries
   /health:
     get:
       description: get the status of the server
@@ -82,4 +139,33 @@ paths:
       summary: Health check
       tags:
       - health
+  /states/{stateID}/cities:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all cities for a specific state by its ID
+      parameters:
+      - description: State ID
+        in: path
+        name: stateID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/countrieshandler.GetCitiesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get cities by state ID
+      tags:
+      - Countries
 swagger: "2.0"
