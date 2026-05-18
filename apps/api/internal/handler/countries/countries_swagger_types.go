@@ -11,3 +11,23 @@ type CountryResponse struct {
 type GetCountriesResponse struct {
 	Countries []CountryResponse `json:"countries"`
 }
+
+type StateResponse struct {
+	ID   int16  `json:"id"`
+	Name string `json:"name"`
+}
+
+type GetStatesResponse struct {
+	States []StateResponse `json:"states"`
+}
+
+type CityResponse struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
+}
+
+type GetCitiesResponse struct {
+	Cities []CityResponse `json:"cities"`
+}
+
+
