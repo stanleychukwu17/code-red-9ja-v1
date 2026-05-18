@@ -1,8 +1,6 @@
-"use client";
-
-import * as React from "react";
+import {useMemo} from "react";
 import { ResponsiveSelect } from "./responsive-select";
-import { COUNTRY_OPTIONS } from "./data";
+import { type SelectOption } from "./data";
 
 const COUNTRY_FLAG: Record<string, string> = {
   Nigeria: "NG",
@@ -13,31 +11,21 @@ const COUNTRY_FLAG: Record<string, string> = {
 
 type CountryComboboxProps = {
   value?: string;
+  iso2?: string;
   onChange: (value: string) => void;
   placeholder?: string;
   disabled?: boolean;
   className?: string;
 };
 
-export function CountryCombobox({
-  value,
-  onChange,
-  placeholder = "Country of residence",
-  disabled = false,
-  className,
-}: CountryComboboxProps) {
-  const options = React.useMemo(
-    () =>
-      COUNTRY_OPTIONS.map((option) => ({
-        ...option,
-        leading: (
-          <span className="inline-flex min-w-9 items-center justify-center rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-primary">
-            {COUNTRY_FLAG[option.value] ?? option.value.slice(0, 2).toUpperCase()}
-          </span>
-        ),
-      })),
-    [],
-  );
+export function CountryCombobox({ value, iso2, onChange, placeholder = "Country of residence", disabled = false, className}: CountryComboboxProps) {
+  const options = [{
+    value: value as string, label: value as string,
+    leading: (
+      <span className="country"><img src={`https://flagcdn.com/w40/${iso2?.toLowerCase()}.png`} width="23" /></span>
+    ),
+    searchText: value,
+  }] as SelectOption[]
 
   return (
     <ResponsiveSelect
