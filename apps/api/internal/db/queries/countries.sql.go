@@ -9,6 +9,37 @@ import (
 	"context"
 )
 
+const getCitiesByStateID = `-- name: GetCitiesByStateID :many
+SELECT id, name FROM c_cities
+WHERE state_id = $1
+ORDER BY name ASC
+`
+
+type GetCitiesByStateIDRow struct {
+	ID   int32  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (q *Queries) GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error) {
+	rows, err := q.db.Query(ctx, getCitiesByStateID, stateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetCitiesByStateIDRow
+	for rows.Next() {
+		var i GetCitiesByStateIDRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getCityByID = `-- name: GetCityByID :one
 SELECT id, name FROM c_cities
 WHERE id = $1 and state_id = $2 LIMIT 1
@@ -69,6 +100,37 @@ func (q *Queries) GetStateByID(ctx context.Context, arg GetStateByIDParams) (Get
 	var i GetStateByIDRow
 	err := row.Scan(&i.ID, &i.Name)
 	return i, err
+}
+
+const getStatesByCountryID = `-- name: GetStatesByCountryID :many
+SELECT id, name FROM c_states
+WHERE country_id = $1
+ORDER BY name ASC
+`
+
+type GetStatesByCountryIDRow struct {
+	ID   int16  `json:"id"`
+	Name string `json:"name"`
+}
+
+func (q *Queries) GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error) {
+	rows, err := q.db.Query(ctx, getStatesByCountryID, countryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetStatesByCountryIDRow
+	for rows.Next() {
+		var i GetStatesByCountryIDRow
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCountries = `-- name: ListCountries :many
