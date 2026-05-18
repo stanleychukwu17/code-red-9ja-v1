@@ -26,6 +26,8 @@ export const Route = createRootRoute({
   }),
   component: RootLayout,
   shellComponent: RootDocument,
+  notFoundComponent: NotFound,
+  errorComponent: ErrorComponent,
 });
 
 function RootLayout() {
@@ -62,4 +64,23 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </body>
     </html>
   );
+}
+
+function NotFound() {
+  return (
+    <div className="p-8">
+      <h1>404</h1>
+      <p>Page not found</p>
+    </div>
+  )
+}
+
+function ErrorComponent({ error }: { error: any }) {
+  return (
+    <div className="p-8">
+      <p>Something went wrong</p>
+      <p>{error?.message}</p>
+      <pre>{error?.stack}</pre>
+    </div>
+  )
 }
