@@ -19,6 +19,7 @@ type AuthService interface {
 	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
 	VerifyOtp(ctx context.Context, phone, otp string) error
 	ResendOtp(ctx context.Context, phone string, fakeId int64) (auth.RegisterPhaseSignUpResult, error)
+	CheckNIN(ctx context.Context, nin string) bool
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -60,22 +61,20 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 	// Decode the incoming JSON request body into the RegisterRequest struct
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"error": "Invalid request body " + err.Error()})
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
 	// Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
 	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"error": "Invalid request body: " + err.(validator.ValidationErrors)[0].Translate(nil),
-		})
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.(validator.ValidationErrors)[0].Translate(nil))
 		return
 	}
 
 	// Parse the date of birth string into a time.Time object
 	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
 	if err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]string{"error": "Invalid date format for date_of_birth. Use YYYY-MM-DD"})
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date format for date_of_birth. Use YYYY-MM-DD")
 		return
 	}
 
@@ -99,14 +98,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Call the auth service to register the new user
 	id, err := h.authService.Register(r.Context(), params, req.Nin)
 	if err != nil {
-		h.utils.RespondJSON(w, http.StatusInternalServerError, map[string]string{"error": "Failed to create user: " + err.Error()})
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create user: "+err.Error())
 		return
 	}
 
 	// Return a successful response with the newly created user ID
-	h.utils.RespondJSON(w, http.StatusCreated, map[string]any{
-		"id":      id,
-		"message": "User registered successfully",
+	h.utils.RespondSuccess(w, http.StatusCreated, "User registered successfully", map[string]interface{}{
+		"id": id,
 	})
 }
 
@@ -126,34 +124,27 @@ func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 
 	// Decode the incoming JSON request body into the RegisterPhaseSignUpRequest struct
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"message": "Invalid request body: " + err.Error(),
-		})
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
 	// Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
 	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"message": "Validation failed: " + err.Error(),
-		})
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
 	result, err := h.authService.RegisterPhaseSignUp(r.Context(), req.Email, req.PhoneNumber, req.CountryID)
 	if err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{
-			"message": err.Error(),
-		})
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"status":          "success",
-		"message":         "Initial sign-up data is valid",
+	h.utils.RespondSuccess(w, http.StatusOK, "Initial sign-up data is valid", map[string]interface{}{
 		"id":              result.ID,
 		"fakeId":          result.FakeID,
 		"dateTimeOtpSent": result.DateTimeOtpSent,
+		"otpVerified":     result.OtpVerified,
 	})
 }
 
@@ -167,24 +158,21 @@ type VerifyOtpRequest struct {
 func (h *Handler) VerifyOtp(w http.ResponseWriter, r *http.Request) {
 	var req VerifyOtpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Invalid request body: " + err.Error()})
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
 	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Validation failed: " + err.Error()})
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
 	if err := h.authService.VerifyOtp(r.Context(), req.Phone, req.Otp); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"status":  "success",
-		"message": "OTP verified successfully",
-	})
+	h.utils.RespondSuccess(w, http.StatusOK, "OTP verified successfully", nil)
 }
 
 // ResendOtpRequest represents the structure for resending OTP
@@ -197,26 +185,49 @@ type ResendOtpRequest struct {
 func (h *Handler) ResendOtp(w http.ResponseWriter, r *http.Request) {
 	var req ResendOtpRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Invalid request body: " + err.Error()})
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
 	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": "Validation failed: " + err.Error()})
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
 	result, err := h.authService.ResendOtp(r.Context(), req.Phone, req.FakeId)
 	if err != nil {
-		h.utils.RespondJSON(w, http.StatusBadRequest, map[string]interface{}{"message": err.Error()})
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	h.utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
-		"status":          "success",
-		"message":         "OTP resent successfully",
+	h.utils.RespondSuccess(w, http.StatusOK, "OTP resent successfully", map[string]interface{}{
 		"id":              result.ID,
 		"fakeId":          result.FakeID,
 		"dateTimeOtpSent": result.DateTimeOtpSent,
+	})
+}
+
+// CheckNINRequest represents the structure for checking if a NIN exists
+type CheckNINRequest struct {
+	Nin string `json:"nin" validate:"required,numeric,len=11"`
+}
+
+// CheckNin checks if the National Identification Number (NIN) already exists
+func (h *Handler) CheckNin(w http.ResponseWriter, r *http.Request) {
+	var req CheckNINRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	exists := h.authService.CheckNIN(r.Context(), req.Nin)
+
+	h.utils.RespondSuccess(w, http.StatusOK, "NIN check completed", map[string]interface{}{
+		"exists": exists,
 	})
 }
