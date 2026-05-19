@@ -19,6 +19,8 @@ export const API_URL = {
     "verifyOtp": `${api}/auth/verify_otp`,
     "resendOtp": `${api}/auth/resend_otp`,
     "checkNin": `${api}/auth/check_nin`,
+    "checkUsername": `${api}/auth/check_username`,
+    "register": `${api}/auth/register`,
   },
   "getAllCountries": `${api}/countries`,
   "getStates": (countryId: number) => `${api}/countries/${countryId}/states`,
