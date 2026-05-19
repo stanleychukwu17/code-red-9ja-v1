@@ -15,6 +15,7 @@ type CCity struct {
 	CountryID int16          `json:"country_id"`
 	Latitude  pgtype.Numeric `json:"latitude"`
 	Longitude pgtype.Numeric `json:"longitude"`
+	CityRank  pgtype.Int2    `json:"city_rank"`
 }
 
 type CCountry struct {

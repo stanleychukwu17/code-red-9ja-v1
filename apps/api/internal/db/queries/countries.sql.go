@@ -12,7 +12,7 @@ import (
 const getCitiesByStateID = `-- name: GetCitiesByStateID :many
 SELECT id, name FROM c_cities
 WHERE state_id = $1
-ORDER BY name ASC
+ORDER BY city_rank DESC, name ASC
 `
 
 type GetCitiesByStateIDRow struct {
