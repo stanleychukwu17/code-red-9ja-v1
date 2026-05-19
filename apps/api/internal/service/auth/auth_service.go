@@ -41,7 +41,7 @@ type RegisterResult struct {
 	FakeID int64
 }
 
-func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string) (RegisterResult, error) {
+func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID int64) (RegisterResult, error) {
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(params.PasswordHash), bcrypt.DefaultCost)
 	if err != nil {
@@ -56,6 +56,18 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, err
 	}
 	params.Username = pgtype.Text{String: username, Valid: true}
+
+	// check if onboarding details exist
+	onboardingDts, err := s.queries.GetOnboardingByPhone(ctx, params.Phone)
+	if err != nil {
+		return RegisterResult{}, errors.New("onboarding details not found")
+	}
+	if onboardingDts.ID != onboardingID {
+		return RegisterResult{}, errors.New("invalid onboarding details")
+	}
+	if onboardingDts.Completed.String == "yes" {
+		return RegisterResult{}, errors.New("user has already been onboarded")
+	}
 
 	// checks if the username already exist
 	username_exist := s.CheckUsername(ctx, username)
@@ -129,6 +141,12 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	s.SaveNINInRedis(ctx, nin, user_id)
 	s.SavePhoneInRedis(ctx, params.Phone, user_id)
 
+	// update onboarding state to completed
+	err = s.queries.UpdateOnboardingCompleted(ctx, onboardingID)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
 	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
 }
 
@@ -154,15 +172,15 @@ func CleanUsername(input string) (string, error) {
 	// The pattern is split into two parts:
 	// - The start and end of the string are checked for alphanumeric characters.
 	// - The middle part is checked for alphanumeric characters and dots or underscores.
-	validPattern := regexp.MustCompile(`^[a-z0-9][a-z0-9._]*[a-z0-9]$`)
+	validPattern := regexp.MustCompile(`^[a-z0-9][a-z0-9_]*[a-z0-9]$`)
 	if !validPattern.MatchString(clean) {
-		return "", errors.New("username can only contain letters, numbers, dots, and underscores")
+		return "", errors.New("username can only contain letters, numbers, and underscores")
 	}
 
-	// 4. Manual check for consecutive symbols (since Go regex doesn't do lookaheads)
+	// 4. Manual check for consecutive symbols (since Go regex doesn't do lookahead)
 	if strings.Contains(clean, "..") || strings.Contains(clean, "__") ||
 		strings.Contains(clean, "._") || strings.Contains(clean, "_.") {
-		return "", errors.New("username cannot contain consecutive dots or underscores")
+		return "", errors.New("username cannot contain consecutive underscores")
 	}
 
 	return clean, nil
@@ -178,11 +196,7 @@ func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
 
 	// check in db
 	userDts, _ := s.queries.GetUserByUsername(ctx, pgtype.Text{String: username, Valid: true})
-	if userDts.ID > 0 {
-		return true
-	}
-
-	return false
+	return userDts.ID > 0
 }
 
 // function: checks if the email already exists in redis and in the postgres db
@@ -365,7 +379,7 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 	if err == nil && onboarding.ID > 0 {
 		// if completed is yes, return error
 		if onboarding.Completed.String == "yes" {
-			return RegisterPhaseSignUpResult{}, errors.New("phone number already exists, user is already registered")
+			return RegisterPhaseSignUpResult{}, errors.New("User is already registered")
 		}
 
 		// update the email address in-case the email address has changed
@@ -376,8 +390,9 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 			})
 		}
 
-		// check if DateTimeOtpSent is less than 10 mins, if yes: return the onboarding details
-		if time.Since(onboarding.DateTimeOtpSent.Time) < 10*time.Minute {
+		// check if DateTimeOtpSent is less than 10 mins, if yes: return the onboarding details,
+		// or if the otpSent to user has been verified, if yes: return the onboarding details
+		if time.Since(onboarding.DateTimeOtpSent.Time) < 10*time.Minute || onboarding.OtpVerified.String == "yes" {
 			return RegisterPhaseSignUpResult{
 				ID:              onboarding.ID,
 				FakeID:          onboarding.FakeID.Int64,
@@ -386,14 +401,8 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 			}, nil
 		}
 
-		// generate new OTP
-		otp, hashedOTP, err := utils.GenerateOTP()
-		if err != nil {
-			return RegisterPhaseSignUpResult{}, err
-		}
-
-		// send OTP via WhatsApp
-		err = s.messagingService.SendWhatsAppOTP(phone, otp)
+		// generate and sends a whatsapp otp
+		hashedOTP, err := s.generateAndSendWhatsappOTP(phone)
 		if err != nil {
 			return RegisterPhaseSignUpResult{}, err
 		}
@@ -416,14 +425,7 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 		}, nil
 	}
 
-	// generate a new OTP
-	otp, hashedOTP, err := utils.GenerateOTP()
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	// send OTP via WhatsApp
-	err = s.messagingService.SendWhatsAppOTP(phone, otp)
+	hashedOTP, err := s.generateAndSendWhatsappOTP(phone)
 	if err != nil {
 		return RegisterPhaseSignUpResult{}, err
 	}
@@ -478,14 +480,7 @@ func (s *AuthService) ResendOtp(ctx context.Context, phone string, fakeId int64)
 		return RegisterPhaseSignUpResult{}, fmt.Errorf("please wait another %d seconds before resending", int(timeLeft.Seconds()))
 	}
 
-	// generate new OTP
-	otp, hashedOTP, err := utils.GenerateOTP()
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
-	// send OTP via WhatsApp
-	err = s.messagingService.SendWhatsAppOTP(phone, otp)
+	hashedOTP, err := s.generateAndSendWhatsappOTP(phone)
 	if err != nil {
 		return RegisterPhaseSignUpResult{}, err
 	}
@@ -523,9 +518,9 @@ func (s *AuthService) VerifyOtp(ctx context.Context, phone, otp string) error {
 		return errors.New("invalid OTP")
 	}
 
-	// Check if 10 mins have passed
-	if time.Since(onboarding.DateTimeOtpSent.Time) > 10*time.Minute {
-		return errors.New("OTP has expired")
+	// Check if 12 mins have passed
+	if time.Since(onboarding.DateTimeOtpSent.Time) > 12*time.Minute {
+		return errors.New("OTP has expired, please request for a new otp")
 	}
 
 	// Mark as verified
@@ -538,4 +533,19 @@ func (s *AuthService) VerifyOtp(ctx context.Context, phone, otp string) error {
 	}
 
 	return nil
+}
+
+// generateAndSendWhatsappOTP abstracts the generation and sending of a new OTP
+func (s *AuthService) generateAndSendWhatsappOTP(phone string) (string, error) {
+	otp, hashedOTP, err := utils.GenerateOTP()
+	if err != nil {
+		return "", err
+	}
+
+	err = s.messagingService.SendWhatsAppOTP(phone, otp)
+	if err != nil {
+		return "", err
+	}
+
+	return hashedOTP, nil
 }
