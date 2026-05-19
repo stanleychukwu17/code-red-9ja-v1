@@ -23,8 +23,8 @@ type MockAuthService struct {
 	mock.Mock
 }
 
-func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string) (authservice.RegisterResult, error) {
-	args := m.Called(ctx, params, nin)
+func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID int64) (authservice.RegisterResult, error) {
+	args := m.Called(ctx, params, nin, onboardingID)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
@@ -45,6 +45,11 @@ func (m *MockAuthService) ResendOtp(ctx context.Context, phone string, fakeId in
 
 func (m *MockAuthService) CheckNIN(ctx context.Context, nin string) bool {
 	args := m.Called(ctx, nin)
+	return args.Bool(0)
+}
+
+func (m *MockAuthService) CheckUsername(ctx context.Context, username string) bool {
+	args := m.Called(ctx, username)
 	return args.Bool(0)
 }
 
@@ -84,7 +89,7 @@ func TestRegister(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		// Set up the mock service to return a RegisterResult with UserID and FakeID
-		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin).Return(authservice.RegisterResult{UserID: 1, FakeID: 12345}, nil)
+		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID).Return(authservice.RegisterResult{UserID: 1, FakeID: 12345}, nil)
 
 		// Call the Register method of the AuthHandler with the request and response recorder
 		handler.Register(rr, req)
@@ -222,7 +227,7 @@ func TestRegister(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		// Set up the mock service to return an error
-		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin).Return(authservice.RegisterResult{}, errors.New("registration failed"))
+		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID).Return(authservice.RegisterResult{}, errors.New("registration failed"))
 
 		// Call the Register method of the AuthHandler with the request and response recorder
 		handler.Register(rr, req)
