@@ -15,11 +15,12 @@ import (
 
 // AuthService interface defines the methods for authentication services
 type AuthService interface {
-	Register(ctx context.Context, params queries.CreateUserParams, nin string) (auth.RegisterResult, error)
+	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID int64) (auth.RegisterResult, error)
 	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
 	VerifyOtp(ctx context.Context, phone, otp string) error
 	ResendOtp(ctx context.Context, phone string, fakeId int64) (auth.RegisterPhaseSignUpResult, error)
 	CheckNIN(ctx context.Context, nin string) bool
+	CheckUsername(ctx context.Context, username string) bool
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -42,7 +43,8 @@ func NewHandler(authService AuthService, utils *utils.Utils) *Handler {
 type RegisterRequest struct {
 	Email          string `json:"email" validate:"omitempty,email"`
 	Phone          string `json:"phone" validate:"required,e164"`
-	Username       string `json:"username" validate:"required,min=2,max=30,alphanum"`
+	OnboardingID   int64  `json:"onboarding_id" validate:"required"`
+	Username       string `json:"username" validate:"required,min=2,max=30"`
 	Nin            string `json:"nin" validate:"required,numeric,len=11"`
 	Password       string `json:"password" validate:"required,min=5,max=72"`
 	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
@@ -96,7 +98,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call the auth service to register the new user
-	id, err := h.authService.Register(r.Context(), params, req.Nin)
+	id, err := h.authService.Register(r.Context(), params, req.Nin, req.OnboardingID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create user: "+err.Error())
 		return
@@ -228,6 +230,39 @@ func (h *Handler) CheckNin(w http.ResponseWriter, r *http.Request) {
 	exists := h.authService.CheckNIN(r.Context(), req.Nin)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "NIN check completed", map[string]interface{}{
+		"exists": exists,
+	})
+}
+
+// CheckUsernameRequest represents the structure for checking if a username exists
+type CheckUsernameRequest struct {
+	Username string `json:"username" validate:"required,min=2,max=30"`
+}
+
+// CheckUsername checks if the username already exists
+func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
+	var req CheckUsernameRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	// checks if the username is cleaned
+	_, err := auth.CleanUsername(req.Username)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// checks if the username exist
+	exists := h.authService.CheckUsername(r.Context(), req.Username)
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Username check completed", map[string]interface{}{
 		"exists": exists,
 	})
 }
