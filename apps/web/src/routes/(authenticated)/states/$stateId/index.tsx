@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-router";
 import { Flag } from "lucide-react";
 import { useState } from "react";
-import { AppPageHeader } from "../../../../components/app-page-header";
 import { CANDIDATES, STATE_POLLING_UNITS } from "../../../../data/dashboard";
 
 type StateTab = "Candidates" | "Polling units";

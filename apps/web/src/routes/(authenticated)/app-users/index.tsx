@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Globe2 } from "lucide-react";
 import { useState } from "react";
-import { AppPageHeader } from "../../../components/app-page-header";
 import {
   APP_USERS_DIASPORA_ROWS,
   APP_USERS_HOME_ROWS,

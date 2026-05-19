@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import ReportIcon from "@repo/ui/icons/report-icon";
-import { AppPageHeader } from "../../../components/app-page-header";
 import {
   POLLING_UNIT_ACTIVITIES,
   POLLING_UNIT_FEED_POSTS,

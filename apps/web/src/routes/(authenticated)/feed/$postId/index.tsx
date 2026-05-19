@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Heart, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
-import { AppPageHeader } from "../../../../components/app-page-header";
 import { FEED_POSTS, POST_COMMENTS } from "../../../../data/dashboard";
 
 export const Route = createFileRoute("/(authenticated)/feed/$postId/")({
