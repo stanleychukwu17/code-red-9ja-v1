@@ -22,5 +22,6 @@ ORDER BY name ASC;
 -- name: GetCitiesByStateID :many
 SELECT id, name FROM c_cities
 WHERE state_id = $1
-ORDER BY name ASC;
+ORDER BY city_rank DESC, name ASC;
+
 
