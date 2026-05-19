@@ -13,32 +13,17 @@ import { CalendarPopover } from "@repo/ui/components/popover/calendar-popover";
 import MapPinIcon from "@repo/ui/icons/onboarding/map-pin-icon";
 import NINIcon from "@repo/ui/icons/onboarding/nin-icon ";
 import UserIcon from "@repo/ui/icons/onboarding/user-icon";
-import { useCallback, useState, useEffect, type ReactNode } from "react";
+import { useCallback, useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { APP_URL } from "#/lib/config";
-import { checkNin } from "#/lib/server/auth";
+import { checkNin, checkUsername, completeRegistration } from "#/lib/server/auth";
 import { getCities, getStates } from "#/lib/server/countries";
 import { FormError } from "./-form-error";
 import { useAppSelector } from "#/redux/hooks";
 
-const ROLE_OPTIONS = [
-  {
-    id: "citizen",
-    title: "A Nigerian Citizen",
-    description: "Track results, your polling unit, and election updates.",
-    avatar: "NC",
-  },
-  {
-    id: "agent",
-    title: "Polling Unit Agent",
-    description: "Upload results and report incidents from your polling unit.",
-    avatar: "PU",
-  },
-] as const;
 
-const ONBOARDING_STEPS = ["details", "nin", "location", "role"] as const;
+const ONBOARDING_STEPS = ["details", "nin", "location"] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
-type UserRole = (typeof ROLE_OPTIONS)[number]["id"];
 
 type OnboardingState = {
   firstName: string;
@@ -46,22 +31,20 @@ type OnboardingState = {
   otherNames: string;
   gender: string;
   dateOfBirth?: Date;
+  username: string;
   nin: string;
   country: string;
   state: string;
   city: string;
-  role: UserRole;
 };
 
 type OnboardingFlowProps = {
   step: OnboardingStep;
-  onFinish: () => void;
 };
 
-export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
-  const { country: userCountry, iso2, countryId } = useAppSelector((state) => state.auth.onboardingData) ?? {};
-
-  console.log(userCountry, iso2, countryId, "from onboarding flow")
+export function OnboardingFlow({ step }: OnboardingFlowProps) {
+  const onboardingData = useAppSelector((state) => state.auth.onboardingData);
+  const { country: userCountry, iso2, countryId } = onboardingData ?? {};
 
   const [data, setData] = useState<OnboardingState>({
     firstName: "",
@@ -69,16 +52,49 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
     otherNames: "",
     gender: "",
     dateOfBirth: undefined,
+    username: "",
     nin: "",
     country: userCountry || "",
     state: "",
     city: "",
-    role: "citizen",
   });
-  console.log(data)
   const navigate = useNavigate();
+
+  // get current step index, using the step name from the url
+  const currentStepIndex = Math.max(0, ONBOARDING_STEPS.indexOf(step));
+
+  // Random suffix, FULL_YEAR is used for username suggestions
+  const randomSuffixRef = useRef(Math.floor(100 + Math.random() * 900));
+  const FULL_YEAR = useRef(new Date().getFullYear()).current;
+
+  const usernameSuggestions = useMemo(() => {
+    const first = data.firstName.trim();
+    const last = data.surname.trim();
+
+    if (!first || !last) return [];
+
+    const f = first.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const l = last.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const suggestions = [
+      `${f}_${l}`,
+      `${f}${l}`,
+      `${f}_${l}${randomSuffixRef.current}`,
+      `${f}_${l}_${FULL_YEAR}`,
+      `${f}${l}${randomSuffixRef.current}`,
+      `${f}${l}${FULL_YEAR}`,
+    ];
+
+    return Array.from(new Set(suggestions));
+  }, [data.firstName, data.surname, data.otherNames]);
+
   const [isCheckingNIN, setIsCheckingNIN] = useState(false);
   const [ninError, setNinError] = useState<string | null>(null);
+  const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [states, setStates] = useState<{ id: number; value: string; label: string }[]>([]);
   const [isLoadingStates, setIsLoadingStates] = useState(false);
@@ -88,13 +104,115 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
   const [isLoadingCities, setIsLoadingCities] = useState(false);
   const [citiesError, setCitiesError] = useState<string | null>(null);
 
-  const selectedStateObj = states.find((s) => s.value === data.state);
-  const stateId = selectedStateObj?.id;
+  // Cache for cities data: Map<stateId, citiesArray>
+  const citiesCache = useRef<Map<number, { id: number; value: string; label: string }[]>>(new Map());
 
-  // Fetch cities from backend when stateId changes
+  // gets the stateId from the selected state, will update when user changes their state of residence,
+  // state id is used to fetch the cities of the selected state
+  const stateId = useMemo(() => {
+    const selectedState = states.find((s) => s.value === data.state)
+    return selectedState?.id
+  }, [states, data.state]);
+
+  // Function to handle the final submission of onboarding data
+  const onFinish = useCallback(async () => {
+    const { firstName, surname, otherNames, gender, dateOfBirth, username, nin } = data;
+    const { email, phoneNumber, password, countryId: onboardingCountryId, id: onboardingId } = onboardingData ?? {};
+
+    // Get city id
+    const selectedCity = cities.find((c) => c.value === data.city);
+    const cityId = selectedCity?.id;
+
+    if (firstName.length < 2 || surname.length < 2 || !gender || !dateOfBirth || username.length < 2 || nin.length < 11 || !onboardingCountryId || !stateId || !onboardingId) {
+      setSubmitError("Missing required parameters for registration.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    const payload = {
+      email,
+      phone: phoneNumber,
+      onboarding_id: onboardingId,
+      username,
+      nin,
+      password,
+      last_name: surname.trim(),
+      first_name: firstName.trim(),
+      middle_name: otherNames || "",
+      gender: gender.toLowerCase(),
+      date_of_birth: `${dateOfBirth.getFullYear()}-${String(dateOfBirth.getMonth() + 1).padStart(2, '0')}-${String(dateOfBirth.getDate()).padStart(2, '0')}`,
+      current_country: onboardingCountryId,
+      current_state: stateId,
+      current_city: cityId ?? 0,
+    };
+
+    console.log("Submitting onboarding data:", payload);
+
+    try {
+      const result = await completeRegistration({ data: payload });
+      console.log("Registration response:", result);
+
+      if (result.status === "success" || result.id) {
+        // Registration successful
+        navigate({
+          to: APP_URL.auth.login,
+          replace: true,
+        });
+      } else {
+        setSubmitError(result.message || "Registration failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("An error occurred during final registration", error);
+      setSubmitError("An unexpected error occurred during final registration.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [data, onboardingData, stateId, cities, navigate]);
+
+  // handle step change
+  const onStepChange = useCallback((nextStep: OnboardingStep) => {
+    navigate({
+      to: APP_URL.auth.onboarding,
+      search: { step: nextStep },
+      replace: true,
+    })
+  }, [navigate])
+
+  // used to navigate to the next step
+  const goNext = useCallback(() => {
+    const nextStep = ONBOARDING_STEPS[currentStepIndex + 1];
+
+    if (!nextStep) {
+      onFinish();
+      return;
+    }
+
+    onStepChange(nextStep);
+  }, [currentStepIndex, onFinish, onStepChange]);
+
+  // used to navigate to the previous step
+  const goBack = useCallback(() => {
+    const previousStep = ONBOARDING_STEPS[currentStepIndex - 1];
+
+    if (previousStep) {
+      onStepChange(previousStep);
+      return;
+    }
+  }, [currentStepIndex, onStepChange]);
+
+  // Fetch cities from backend when stateId changes, with caching
   useEffect(() => {
     if (!stateId) {
       setCities([]);
+      return;
+    }
+
+    // Check cache first
+    const cachedCities = citiesCache.current.get(stateId);
+    if (cachedCities) {
+      setCities(cachedCities);
       return;
     }
 
@@ -109,6 +227,11 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
             value: c.name,
             label: c.name,
           }));
+
+          // Store in cache
+          citiesCache.current.set(stateId, mappedCities);
+
+          // Set cities
           setCities(mappedCities);
         } else {
           setCitiesError(res.error || res.message || "Failed to fetch cities");
@@ -124,7 +247,7 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
     fetchCities();
   }, [stateId]);
 
-  // Fetch states from backend when countryId changes
+  // Fetch states from backend on component mount or when countryId changes
   useEffect(() => {
     if (!countryId) return;
 
@@ -159,12 +282,49 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
     if (userCountry && !data.country) {
       setData((current) => ({ ...current, country: userCountry }));
     }
-  }, [userCountry, data.country]);
+  }, [userCountry]);
 
-  // get current step index, using the step name from the url
-  const currentStepIndex = Math.max(0, ONBOARDING_STEPS.indexOf(step));
+  // handle username submission for checks if the username already exist
+  const handleUsernameSubmit = async () => {
+    const username = data.username.trim();
+    if (!username) return;
 
-  // handle nin submission
+    // Check username validation (regex matching the backend validation: ^[a-zA-Z0-9_]+$)
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    if (!usernameRegex.test(username)) {
+      setUsernameError("Username can only contain letters, numbers, and underscores");
+      return;
+    }
+
+    if (username.length < 2 || username.length > 30) {
+      setUsernameError("Username must be between 2 and 30 characters");
+      return;
+    }
+
+    setIsCheckingUsername(true);
+    setUsernameError(null);
+
+    try {
+      const res = await checkUsername({ data: { username } });
+      if (res.status === "success") {
+        if (res.exists) {
+          setUsernameError("This username is already taken");
+        } else {
+          // Username does not exist, proceed to next step
+          goNext();
+        }
+      } else {
+        setUsernameError(res.message || "Failed to verify username. Please try again.");
+      }
+    } catch (err) {
+      console.error("Username check failed:", err);
+      setUsernameError("An unexpected error occurred while checking username.");
+    } finally {
+      setIsCheckingUsername(false);
+    }
+  };
+
+  // handle nin submission for checks if the nin already exist
   const handleNINSubmit = async () => {
     if (data.nin.length !== 11) return;
 
@@ -191,45 +351,12 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
     }
   };
 
-  // handle step change
-  const onStepChange = useCallback((nextStep: OnboardingStep) => {
-    navigate({
-      to: APP_URL.auth.onboarding,
-      search: { step: nextStep },
-      replace: true,
-    })
-  }, [navigate])
-
+  // if canContinue is true, the user can proceed to the next step
   const canContinue =
     step === "details"
-      ? Boolean(data.firstName && data.surname && data.gender && data.dateOfBirth)
+      ? Boolean(data.firstName && data.surname && data.gender && data.dateOfBirth && data.username)
       : step === "nin" ? data.nin.length === 11
-        : step === "location" ? Boolean(data.country && data.state && data.city)
-          : Boolean(data.role);
-
-  const goNext = () => {
-    console.log(data)
-    const nextStep = ONBOARDING_STEPS[currentStepIndex + 1];
-
-    if (!nextStep) {
-      onFinish();
-      return;
-    }
-
-    onStepChange(nextStep);
-  };
-
-  const goBack = () => {
-    console.log(data)
-    setIsCheckingNIN(false);
-    const previousStep = ONBOARDING_STEPS[currentStepIndex - 1];
-
-    if (previousStep) {
-      onStepChange(previousStep);
-      return;
-    }
-
-  };
+        : Boolean(data.country && data.state && data.city);
 
   return (
     <OnboardingWrapper>
@@ -240,9 +367,11 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
           subtitle="Enter your full government name & gender."
           onBack={goBack}
           actionLabel="Continue"
-          actionDisabled={!canContinue}
-          onAction={goNext}
+          actionDisabled={!canContinue || isCheckingUsername}
+          actionLoading={isCheckingUsername}
+          onAction={handleUsernameSubmit}
         >
+          <FormError message={usernameError} />
           <FormInput
             placeholder="First name"
             value={data.firstName}
@@ -264,7 +393,7 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
             }
           />
           <FormInput
-            placeholder="Other names"
+            placeholder="Middle name"
             value={data.otherNames}
             onChange={(event) =>
               setData((current) => ({
@@ -288,6 +417,47 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
               setData((current) => ({ ...current, dateOfBirth: value }))
             }
           />
+          <FormInput
+            placeholder="Username"
+            value={data.username}
+            maxLength={30}
+            onChange={(event) => {
+              setUsernameError(null);
+              setData((current) => ({
+                ...current,
+                username: event.target.value,
+              }));
+            }}
+          />
+          {usernameSuggestions.length > 0 && (
+            <div className="space-y-2 px-1">
+              <p className="text-xs font-medium text-c-60">Suggestions:</p>
+              <div className="flex flex-wrap gap-2">
+                {usernameSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onClick={() => {
+                      setUsernameError(null);
+                      setData((current) => ({
+                        ...current,
+                        username: suggestion,
+                      }));
+                    }}
+                    className={[
+                      "rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 border",
+                      // if the current username is the same as the suggestion, show emerald background
+                      data.username === suggestion
+                        ? "bg-emerald-100 text-emerald-800 scale-95"
+                        : "bg-black/5 hover:bg-black/10 text-c-80 active:scale-95",
+                    ].join(" ")}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </FlowScreen>
       ) : null}
 
@@ -324,11 +494,12 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
           title="Add your location"
           subtitle="Enter where you are currently located right now."
           onBack={goBack}
-          actionLabel="Continue"
-          actionDisabled={!canContinue || isLoadingStates || isLoadingCities}
-          onAction={goNext}
+          actionLabel="Finish"
+          actionDisabled={!canContinue || isLoadingStates || isLoadingCities || isSubmitting}
+          actionLoading={isSubmitting}
+          onAction={onFinish}
         >
-          <FormError message={statesError || citiesError} />
+          <FormError message={submitError || statesError || citiesError} />
           <CountryCombobox
             value={data.country}
             iso2={iso2}
@@ -369,49 +540,6 @@ export function OnboardingFlow({ step, onFinish }: OnboardingFlowProps) {
         </FlowScreen>
       ) : null}
 
-      {step === "role" ? (
-        <FlowScreen
-          icon={<UserIcon />}
-          title="Which best describes you?"
-          subtitle="Tell us how you plan to use this app. This will determine your experience going forward."
-          onBack={goBack}
-          actionLabel="Continue"
-          actionDisabled={!canContinue}
-          onAction={onFinish}
-        >
-          <div className="space-y-4">
-            {ROLE_OPTIONS.map((role) => {
-              const isSelected = data.role === role.id;
-
-              return (
-                <button
-                  key={role.id}
-                  type="button"
-                  onClick={() =>
-                    setData((current) => ({ ...current, role: role.id }))
-                  }
-                  className={[
-                    "flex w-full items-center gap-3 rounded-[20px] px-5 py-4 text-left transition-all md:min-h-[98px]",
-                    isSelected
-                      ? "bg-emerald-100 ring-1 ring-emerald-200"
-                      : "bg-black/4 hover:bg-black/6",
-                  ].join(" ")}
-                >
-                  <div className="flex-1">
-                    <p className="text-xl font-medium text-c-90">
-                      {role.title}
-                    </p>
-                    <p className="mt-1 text-sm text-c-60">{role.description}</p>
-                  </div>
-                  <div className="flex size-14 items-center justify-center rounded-full bg-white/70 text-lg font-semibold text-primary">
-                    {role.avatar}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </FlowScreen>
-      ) : null}
     </OnboardingWrapper>
   );
 }
