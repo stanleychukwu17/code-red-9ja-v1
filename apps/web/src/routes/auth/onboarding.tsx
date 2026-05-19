@@ -5,13 +5,12 @@ import { useAppSelector } from "#/redux/hooks";
 import { APP_URL } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
 
-const STEPS = ["details", "nin", "location", "role"] as const;
+const STEPS : readonly OnboardingStep[] = ["details", "nin", "location"] as const;
 
 const STEP_TITLES: Record<OnboardingStep, string> = {
   details: "Onboarding: Add your details",
   nin: "Onboarding: Add your NIN",
   location: "Onboarding: Add your location",
-  role: "Onboarding: Which best describes you?",
 };
 
 export const Route = createFileRoute("/auth/onboarding")({
@@ -47,9 +46,6 @@ function RouteComponent() {
   }, [otpVerified, navigate]);
 
   return (
-    <OnboardingFlow
-      step={step}
-      onFinish={() => navigate({ to: "/dashboard" })}
-    />
+    <OnboardingFlow step={step} />
   );
 }
