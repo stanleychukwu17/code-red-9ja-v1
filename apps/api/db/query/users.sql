@@ -81,3 +81,8 @@ RETURNING date_time_otp_sent;
 UPDATE users_onboarding
 SET email = $2
 WHERE id = $1;
+
+-- name: UpdateOnboardingCompleted :exec
+UPDATE users_onboarding
+SET completed = 'yes'
+WHERE id = $1;
