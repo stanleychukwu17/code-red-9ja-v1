@@ -284,6 +284,17 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUser
 	return i, err
 }
 
+const updateOnboardingCompleted = `-- name: UpdateOnboardingCompleted :exec
+UPDATE users_onboarding
+SET completed = 'yes'
+WHERE id = $1
+`
+
+func (q *Queries) UpdateOnboardingCompleted(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, updateOnboardingCompleted, id)
+	return err
+}
+
 const updateOnboardingEmail = `-- name: UpdateOnboardingEmail :exec
 UPDATE users_onboarding
 SET email = $2

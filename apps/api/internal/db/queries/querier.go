@@ -29,6 +29,7 @@ type Querier interface {
 	GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
+	UpdateOnboardingCompleted(ctx context.Context, id int64) error
 	UpdateOnboardingEmail(ctx context.Context, arg UpdateOnboardingEmailParams) error
 	UpdateOnboardingFakeID(ctx context.Context, arg UpdateOnboardingFakeIDParams) error
 	UpdateOnboardingOTP(ctx context.Context, arg UpdateOnboardingOTPParams) (pgtype.Timestamptz, error)
