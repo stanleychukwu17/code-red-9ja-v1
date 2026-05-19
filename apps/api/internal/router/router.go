@@ -54,15 +54,20 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
 
 	// API v1 routes
-	mainRouter.Get(utils.ApiUrls.Root, handler.Root)                                         // Root endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp) // Register endpoint
+	mainRouter.Get(utils.ApiUrls.Root, handler.Root) // Root endpoint
+
+	// for auths
+	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp) // Register first phase
 	mainRouter.Post(utils.ApiUrls.Auth.ResendOtp, authHandler.ResendOtp)                     // Resend OTP endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.VerifyOtp, authHandler.VerifyOtp)                     // Verify OTP endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                       // Check NIN endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)             // Check Username endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                       // Register endpoint
-	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries)            // Get all countries
-	mainRouter.Get(utils.ApiUrls.Countries.GetStates, countriesHandler.GetStates)            // Get states of a country
-	mainRouter.Get(utils.ApiUrls.Countries.GetCities, countriesHandler.GetCities)            // Get cities of a state
+
+	// countries, states, cities
+	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries) // Get all countries
+	mainRouter.Get(utils.ApiUrls.Countries.GetStates, countriesHandler.GetStates) // Get states of a country
+	mainRouter.Get(utils.ApiUrls.Countries.GetCities, countriesHandler.GetCities) // Get cities of a state
 
 	return mainRouter
 }

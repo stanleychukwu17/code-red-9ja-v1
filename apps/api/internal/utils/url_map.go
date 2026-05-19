@@ -8,6 +8,7 @@ type AuthURLMap struct {
 	VerifyOtp           string
 	Register            string
 	CheckNin            string
+	CheckUsername       string
 	Login               string
 	Logout              string
 	ForgotPassword      string
@@ -35,8 +36,9 @@ var ApiUrls = URLMap{
 		RegisterPhaseSignUp: "/api/v1/auth/register_phase_signup",
 		ResendOtp:           "/api/v1/auth/resend_otp",
 		VerifyOtp:           "/api/v1/auth/verify_otp",
-		Register:            "/api/v1/auth/register",
 		CheckNin:            "/api/v1/auth/check_nin",
+		CheckUsername:       "/api/v1/auth/check_username",
+		Register:            "/api/v1/auth/register",
 		Login:               "/api/v1/auth/login",
 		Logout:              "/api/v1/auth/logout",
 		ForgotPassword:      "/api/v1/auth/forgot_password",
