@@ -138,13 +138,12 @@ func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (i
 }
 
 const getOnboardingByPhone = `-- name: GetOnboardingByPhone :one
-SELECT id, fake_id, otp, date_time_otp_sent, otp_verified, completed, email FROM users_onboarding
+SELECT id, otp, date_time_otp_sent, otp_verified, completed, email FROM users_onboarding
 WHERE phone = $1 LIMIT 1
 `
 
 type GetOnboardingByPhoneRow struct {
 	ID              int64              `json:"id"`
-	FakeID          pgtype.Int8        `json:"fake_id"`
 	Otp             pgtype.Text        `json:"otp"`
 	DateTimeOtpSent pgtype.Timestamptz `json:"date_time_otp_sent"`
 	OtpVerified     pgtype.Text        `json:"otp_verified"`
@@ -157,7 +156,6 @@ func (q *Queries) GetOnboardingByPhone(ctx context.Context, phone string) (GetOn
 	var i GetOnboardingByPhoneRow
 	err := row.Scan(
 		&i.ID,
-		&i.FakeID,
 		&i.Otp,
 		&i.DateTimeOtpSent,
 		&i.OtpVerified,
@@ -181,6 +179,38 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUse
 	row := q.db.QueryRow(ctx, getUserByEmail, email)
 	var i GetUserByEmailRow
 	err := row.Scan(&i.ID, &i.FakeID)
+	return i, err
+}
+
+const getUserByFakeID = `-- name: GetUserByFakeID :one
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, nin_verified, phone_verified, account_status, created_at, updated_at FROM users
+WHERE fake_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByFakeID, fakeID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Email,
+		&i.Phone,
+		&i.Username,
+		&i.PasswordHash,
+		&i.LastName,
+		&i.FirstName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.CurrentCountry,
+		&i.CurrentState,
+		&i.CurrentCity,
+		&i.NinVerified,
+		&i.PhoneVerified,
+		&i.AccountStatus,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
 	return i, err
 }
 
@@ -212,6 +242,37 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.AccountStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserByLoginIdentifier = `-- name: GetUserByLoginIdentifier :one
+SELECT id, fake_id, email, phone, username, password_hash, account_status FROM users
+WHERE email = $1 OR username = $1 OR phone = $1
+LIMIT 1
+`
+
+type GetUserByLoginIdentifierRow struct {
+	ID            int64       `json:"id"`
+	FakeID        pgtype.Int8 `json:"fake_id"`
+	Email         pgtype.Text `json:"email"`
+	Phone         string      `json:"phone"`
+	Username      pgtype.Text `json:"username"`
+	PasswordHash  string      `json:"password_hash"`
+	AccountStatus pgtype.Text `json:"account_status"`
+}
+
+func (q *Queries) GetUserByLoginIdentifier(ctx context.Context, email pgtype.Text) (GetUserByLoginIdentifierRow, error) {
+	row := q.db.QueryRow(ctx, getUserByLoginIdentifier, email)
+	var i GetUserByLoginIdentifierRow
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Email,
+		&i.Phone,
+		&i.Username,
+		&i.PasswordHash,
+		&i.AccountStatus,
 	)
 	return i, err
 }
@@ -308,22 +369,6 @@ type UpdateOnboardingEmailParams struct {
 
 func (q *Queries) UpdateOnboardingEmail(ctx context.Context, arg UpdateOnboardingEmailParams) error {
 	_, err := q.db.Exec(ctx, updateOnboardingEmail, arg.ID, arg.Email)
-	return err
-}
-
-const updateOnboardingFakeID = `-- name: UpdateOnboardingFakeID :exec
-UPDATE users_onboarding
-SET fake_id = $2
-WHERE id = $1
-`
-
-type UpdateOnboardingFakeIDParams struct {
-	ID     int64       `json:"id"`
-	FakeID pgtype.Int8 `json:"fake_id"`
-}
-
-func (q *Queries) UpdateOnboardingFakeID(ctx context.Context, arg UpdateOnboardingFakeIDParams) error {
-	_, err := q.db.Exec(ctx, updateOnboardingFakeID, arg.ID, arg.FakeID)
 	return err
 }
 

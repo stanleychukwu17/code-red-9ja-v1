@@ -23,7 +23,9 @@ type Querier interface {
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error)
+	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
+	GetUserByLoginIdentifier(ctx context.Context, email pgtype.Text) (GetUserByLoginIdentifierRow, error)
 	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
 	GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error)
 	GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error)
@@ -31,7 +33,6 @@ type Querier interface {
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	UpdateOnboardingCompleted(ctx context.Context, id int64) error
 	UpdateOnboardingEmail(ctx context.Context, arg UpdateOnboardingEmailParams) error
-	UpdateOnboardingFakeID(ctx context.Context, arg UpdateOnboardingFakeIDParams) error
 	UpdateOnboardingOTP(ctx context.Context, arg UpdateOnboardingOTPParams) (pgtype.Timestamptz, error)
 	UpdateOnboardingOTPVerified(ctx context.Context, arg UpdateOnboardingOTPVerifiedParams) error
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
