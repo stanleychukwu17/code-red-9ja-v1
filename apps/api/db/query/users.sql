@@ -34,6 +34,15 @@ WHERE email = $1 LIMIT 1;
 SELECT id, fake_id FROM users
 WHERE username = $1 LIMIT 1;
 
+-- name: GetUserByLoginIdentifier :one
+SELECT id, fake_id, email, phone, username, password_hash, account_status FROM users
+WHERE email = $1 OR username = $1 OR phone = $1
+LIMIT 1;
+
+-- name: GetUserByFakeID :one
+SELECT * FROM users
+WHERE fake_id = $1 LIMIT 1;
+
 -- name: GetUserNINByUserID :one
 SELECT id, nin FROM users_nin
 WHERE user_id = $1 LIMIT 1;
@@ -57,13 +66,8 @@ INSERT INTO users_onboarding (
 VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING id;
 
--- name: UpdateOnboardingFakeID :exec
-UPDATE users_onboarding
-SET fake_id = $2
-WHERE id = $1;
-
 -- name: GetOnboardingByPhone :one
-SELECT id, fake_id, otp, date_time_otp_sent, otp_verified, completed, email FROM users_onboarding
+SELECT id, otp, date_time_otp_sent, otp_verified, completed, email FROM users_onboarding
 WHERE phone = $1 LIMIT 1;
 
 -- name: UpdateOnboardingOTPVerified :exec
