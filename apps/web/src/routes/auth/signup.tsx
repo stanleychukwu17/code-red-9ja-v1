@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useForm } from "@tanstack/react-form";
 import { useAppDispatch } from "@/redux/hooks";
 import { setOnboardingData, updateOnboardingData } from "@/redux/slice/authSlice";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { SignupError } from "./_components/-signup-error";
 import { FormError } from "./_components/-form-error";
-import { useForm } from "@tanstack/react-form";
 
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/auth/signup")({
 function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries as {id: number; name: string; iso2: string; phonecode: string }[];
+  const countries = Route.useLoaderData().countries as { id: number; name: string; iso2: string; phonecode: string }[];
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm({
@@ -74,8 +74,7 @@ function RouteComponent() {
       if (result.status === "success") {
         // update the onboarding data with the result returned from the register request
         dispatch(updateOnboardingData({
-          id: result.id, 
-          fakeId: result.fakeId, 
+          id: result.id,
           dateTimeOtpSent: result.dateTimeOtpSent,
           otpVerified: result.otpVerified,
         }));
@@ -138,10 +137,10 @@ function RouteComponent() {
           }}
           children={(field) => (
             <div className="selectElement flex flex-col gap-1">
-              <Select 
+              <Select
                 onValueChange={(val) => {
                   field.handleChange(val);
-                }} 
+                }}
                 defaultValue={field.state.value}
               >
                 <SelectTrigger className="w-full">

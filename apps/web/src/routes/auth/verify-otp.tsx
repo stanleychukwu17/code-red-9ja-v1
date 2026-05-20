@@ -27,7 +27,7 @@ function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { flow } = Route.useSearch();
-  const {dateTimeOtpSent, phoneNumber, fakeId, otpVerified} = useAppSelector((state) => state.auth.onboardingData) ?? {};
+  const {dateTimeOtpSent, phoneNumber, id, otpVerified} = useAppSelector((state) => state.auth.onboardingData) ?? {};
   const [otp, setOtp] = useState("");
   const [isResending, setIsResending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -36,7 +36,7 @@ function RouteComponent() {
   // checks if the user is allowed to see this page
   useEffect(() => {
     // redirect back to signup page if onboarding data is not available
-    if (!fakeId || `${fakeId}`.length < 6) {
+    if (!id || typeof id !== "number") {
       navigate({ to: APP_URL.auth.signup });
       return;
     }
@@ -46,7 +46,7 @@ function RouteComponent() {
       navigate({ to: APP_URL.auth.onboarding });
       return;
     }
-  }, [fakeId, otpVerified, navigate])
+  }, [id, otpVerified, navigate])
 
   // calculate time left for otp expiry
   const calculateTimeLeft = useCallback(() => {
@@ -82,12 +82,12 @@ function RouteComponent() {
 
   // handle resend otp, makes the request for a new otp
   const handleResend = async () => {
-    if (!phoneNumber || !fakeId || timeLeft > 0) return;
+    if (!phoneNumber || !id || timeLeft > 0) return;
 
     setIsResending(true);
     setServerError(null);
     const result = await resendOtp({
-      data: { phoneNumber, fakeId }
+      data: { phoneNumber, id }
     });
     setIsResending(false);
 
