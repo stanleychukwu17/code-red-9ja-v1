@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"free9ja/api/internal/db/queries"
 	authhandler "free9ja/api/internal/handler/auth"
@@ -38,8 +39,8 @@ func (m *MockAuthService) VerifyOtp(ctx context.Context, phone, otp string) erro
 	return args.Error(0)
 }
 
-func (m *MockAuthService) ResendOtp(ctx context.Context, phone string, fakeId int64) (authservice.RegisterPhaseSignUpResult, error) {
-	args := m.Called(ctx, phone, fakeId)
+func (m *MockAuthService) ResendOtp(ctx context.Context, phone string, id int64) (authservice.RegisterPhaseSignUpResult, error) {
+	args := m.Called(ctx, phone, id)
 	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
 }
 
@@ -51,6 +52,21 @@ func (m *MockAuthService) CheckNIN(ctx context.Context, nin string) bool {
 func (m *MockAuthService) CheckUsername(ctx context.Context, username string) bool {
 	args := m.Called(ctx, username)
 	return args.Bool(0)
+}
+
+func (m *MockAuthService) Login(ctx context.Context, identifier, password string) (authservice.LoginResult, error) {
+	args := m.Called(ctx, identifier, password)
+	return args.Get(0).(authservice.LoginResult), args.Error(1)
+}
+
+func (m *MockAuthService) Refresh(ctx context.Context, refreshToken string) (authservice.RefreshResult, error) {
+	args := m.Called(ctx, refreshToken)
+	return args.Get(0).(authservice.RefreshResult), args.Error(1)
+}
+
+func (m *MockAuthService) GetRefreshExpiration() time.Duration {
+	args := m.Called()
+	return args.Get(0).(time.Duration)
 }
 
 // TestRegister tests the Register method of the AuthHandler
@@ -69,7 +85,7 @@ func TestRegister(t *testing.T) {
 		reqBody := authhandler.RegisterRequest{
 			Email:          "test@example.com",
 			Phone:          "+2348012345678",
-			Username:       "testuser",
+			Username:       "test_user",
 			Nin:            "12345678901",
 			Password:       "password123",
 			LastName:       "Doe",
@@ -170,7 +186,7 @@ func TestRegister(t *testing.T) {
 		reqBody := authhandler.RegisterRequest{
 			Email:          "test@example.com",
 			Phone:          "+2348012345678",
-			Username:       "testuser",
+			Username:       "test_user",
 			Nin:            "12345678901",
 			Password:       "password123",
 			LastName:       "Doe",
@@ -207,7 +223,7 @@ func TestRegister(t *testing.T) {
 		reqBody := authhandler.RegisterRequest{
 			Email:          "test@example.com",
 			Phone:          "+2348012345678",
-			Username:       "testuser",
+			Username:       "test_user",
 			Nin:            "12345678901",
 			Password:       "password123",
 			LastName:       "Doe",
