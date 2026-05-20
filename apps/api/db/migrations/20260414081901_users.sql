@@ -57,7 +57,6 @@ CREATE INDEX idx_users_phone_numbers_phone ON users_phone_numbers(phone);
 -- USERS onboarding table
 CREATE TABLE users_onboarding (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    fake_id BIGINT,
     otp VARCHAR(100),
     date_time_otp_sent TIMESTAMPTZ,
     otp_verified VARCHAR(3) CHECK (otp_verified IN ('yes', 'no')) DEFAULT 'no',
