@@ -12,6 +12,7 @@ type AuthURLMap struct {
 	Login               string
 	Logout              string
 	ForgotPassword      string
+	Refresh             string
 }
 
 type CountriesURLMap struct {
@@ -42,6 +43,7 @@ var ApiUrls = URLMap{
 		Login:               "/api/v1/auth/login",
 		Logout:              "/api/v1/auth/logout",
 		ForgotPassword:      "/api/v1/auth/forgot_password",
+		Refresh:             "/api/v1/auth/refresh",
 	},
 	Countries: CountriesURLMap{
 		GetAll:    "/api/v1/countries",
