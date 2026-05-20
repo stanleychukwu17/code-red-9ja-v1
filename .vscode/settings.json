@@ -1,8 +1,12 @@
 {
   "cSpell.words": [
+    "authhandler",
     "countrieshandler",
     "godoc",
     "godotenv",
-    "sqlc"
+    "jackc",
+    "pgxpool",
+    "sqlc",
+    "stretchr"
   ]
 }
