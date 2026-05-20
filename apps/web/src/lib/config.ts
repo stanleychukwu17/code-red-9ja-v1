@@ -21,6 +21,8 @@ export const API_URL = {
     "checkNin": `${api}/auth/check_nin`,
     "checkUsername": `${api}/auth/check_username`,
     "register": `${api}/auth/register`,
+    "login": `${api}/auth/login`,
+    "refresh": `${api}/auth/refresh`,
   },
   "getAllCountries": `${api}/countries`,
   "getStates": (countryId: number) => `${api}/countries/${countryId}/states`,
