@@ -84,7 +84,6 @@ type UsersNin struct {
 
 type UsersOnboarding struct {
 	ID              int64              `json:"id"`
-	FakeID          pgtype.Int8        `json:"fake_id"`
 	Otp             pgtype.Text        `json:"otp"`
 	DateTimeOtpSent pgtype.Timestamptz `json:"date_time_otp_sent"`
 	OtpVerified     pgtype.Text        `json:"otp_verified"`
