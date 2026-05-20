@@ -7,6 +7,7 @@ import (
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -18,9 +19,12 @@ type AuthService interface {
 	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID int64) (auth.RegisterResult, error)
 	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
 	VerifyOtp(ctx context.Context, phone, otp string) error
-	ResendOtp(ctx context.Context, phone string, fakeId int64) (auth.RegisterPhaseSignUpResult, error)
+	ResendOtp(ctx context.Context, phone string, id int64) (auth.RegisterPhaseSignUpResult, error)
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
+	Login(ctx context.Context, identifier, password string) (auth.LoginResult, error)
+	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
+	GetRefreshExpiration() time.Duration
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -144,7 +148,6 @@ func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Initial sign-up data is valid", map[string]interface{}{
 		"id":              result.ID,
-		"fakeId":          result.FakeID,
 		"dateTimeOtpSent": result.DateTimeOtpSent,
 		"otpVerified":     result.OtpVerified,
 	})
@@ -179,8 +182,8 @@ func (h *Handler) VerifyOtp(w http.ResponseWriter, r *http.Request) {
 
 // ResendOtpRequest represents the structure for resending OTP
 type ResendOtpRequest struct {
-	Phone  string `json:"phoneNumber" validate:"required"`
-	FakeId int64  `json:"fakeId" validate:"required"`
+	Phone string `json:"phoneNumber" validate:"required"`
+	ID    int64  `json:"id" validate:"required"`
 }
 
 // ResendOtp handles the request to resend OTP
@@ -196,7 +199,7 @@ func (h *Handler) ResendOtp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.ResendOtp(r.Context(), req.Phone, req.FakeId)
+	result, err := h.authService.ResendOtp(r.Context(), req.Phone, req.ID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -204,7 +207,6 @@ func (h *Handler) ResendOtp(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "OTP resent successfully", map[string]interface{}{
 		"id":              result.ID,
-		"fakeId":          result.FakeID,
 		"dateTimeOtpSent": result.DateTimeOtpSent,
 	})
 }
@@ -264,5 +266,108 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Username check completed", map[string]interface{}{
 		"exists": exists,
+	})
+}
+
+// LoginRequest represents the parameters for logging in
+type LoginRequest struct {
+	Identifier string `json:"identifier" validate:"required,min=2,max=50"` // accepts email, username or phone
+	Password   string `json:"password" validate:"required,min=4"`
+}
+
+// Login handles the user login and token generation
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var req LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	result, err := h.authService.Login(r.Context(), req.Identifier, req.Password)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	// Set refresh token in HttpOnly cookie
+	secure := false
+	if os.Getenv("ENV") == "production" {
+		secure = true
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    result.RefreshToken,
+		Path:     "/",
+		Expires:  time.Now().Add(h.authService.GetRefreshExpiration()),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Login successful", map[string]interface{}{
+		"accessToken":  result.AccessToken,
+		"refreshToken": result.RefreshToken,
+		"user":         result.User,
+	})
+}
+
+// RefreshRequest represents the refresh token parameters
+type RefreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}
+
+// Refresh handles token rotation using a valid refresh token
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var req RefreshRequest
+
+	// 1. Try reading the refresh token from cookie first
+	cookie, err := r.Cookie("refresh_token")
+	if err == nil && cookie.Value != "" {
+		req.RefreshToken = cookie.Value
+	} else {
+		// 2. Fallback to reading from JSON body
+		if r.Body != nil && r.ContentLength > 0 {
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+				return
+			}
+		}
+	}
+
+	if req.RefreshToken == "" {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Refresh token is missing")
+		return
+	}
+
+	result, err := h.authService.Refresh(r.Context(), req.RefreshToken)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	// Set rotated refresh token in HttpOnly cookie
+	secure := false
+	if os.Getenv("ENV") == "production" {
+		secure = true
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    result.RefreshToken,
+		Path:     "/",
+		Expires:  time.Now().Add(h.authService.GetRefreshExpiration()),
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+	})
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Token refreshed successfully", map[string]interface{}{
+		"accessToken":  result.AccessToken,
+		"refreshToken": result.RefreshToken,
+		"user":         result.User,
 	})
 }
