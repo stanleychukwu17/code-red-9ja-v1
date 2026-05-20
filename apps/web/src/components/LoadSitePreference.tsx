@@ -6,7 +6,7 @@ import {
   setAllowOutletToBeResponsive,
 } from "@/redux/slice/siteSlice";
 
-export default function LoadSitePrefrence() {
+export default function LoadSitePreference() {
   const dispatch = useDispatch();
 
   useEffect(() => {
