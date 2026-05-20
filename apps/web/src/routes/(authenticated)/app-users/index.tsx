@@ -19,7 +19,6 @@ function RouteComponent() {
   return (
     <div className="flex-1 px-4 pb-8 pt-6 md:px-12 md:pt-7">
       <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-8">
-        <AppPageHeader title="App Users" />
 
         <section className="grid gap-5 xl:grid-cols-3">
           {APP_USERS_SUMMARY.map((item) => (
