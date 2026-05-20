@@ -18,7 +18,8 @@ import { APP_URL } from "#/lib/config";
 import { checkNin, checkUsername, completeRegistration } from "#/lib/server/auth";
 import { getCities, getStates } from "#/lib/server/countries";
 import { FormError } from "./-form-error";
-import { useAppSelector } from "#/redux/hooks";
+import { useAppSelector, useAppDispatch } from "#/redux/hooks";
+import { clearOnboardingData } from "#/redux/slice/authSlice";
 
 
 const ONBOARDING_STEPS = ["details", "nin", "location"] as const;
@@ -43,6 +44,7 @@ type OnboardingFlowProps = {
 };
 
 export function OnboardingFlow({ step }: OnboardingFlowProps) {
+  const dispatch = useAppDispatch();
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
   const { country: userCountry, iso2, countryId } = onboardingData ?? {};
 
@@ -155,7 +157,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       console.log("Registration response:", result);
 
       if (result.status === "success" || result.id) {
-        // Registration successful
+        // Registration successful - clear authSlice
+        dispatch(clearOnboardingData());
         navigate({
           to: APP_URL.auth.login,
           replace: true,
