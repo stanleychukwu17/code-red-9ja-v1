@@ -20,10 +20,11 @@ import (
 	countriesservice "free9ja/api/internal/service/countries"
 	messagingservice "free9ja/api/internal/service/messaging"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/config"
 )
 
 // New creates and returns a configured Chi router.
-func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
+func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter := chi.NewRouter()
 
 	// Initialize dependencies
@@ -32,13 +33,14 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	if err != nil {
 		slog.Error("failed to initialize messaging service", "err", err)
 	}
-	authService := authservice.NewAuthService(q, rdb, messagingService)
+	authService := authservice.NewAuthService(q, rdb, messagingService, cfg.JWTSecret, cfg.JWTAccessExpiration, cfg.JWTRefreshExpiration)
 	countryService := countriesservice.NewCountryService(q, rdb)
 	utilsInstance := utils.NewUtils(pool)
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
 	countriesHandler := countrieshandler.NewHandler(countryService, utilsInstance)
 
 	// Core middleware
+	mainRouter.Use(corsMiddleware)
 	mainRouter.Use(middleware.RequestID)
 	mainRouter.Use(middleware.RealIP)
 	mainRouter.Use(middleware.Logger)
@@ -63,6 +65,8 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                       // Check NIN endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)             // Check Username endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                       // Register endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                             // Login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                         // Refresh token endpoint
 
 	// countries, states, cities
 	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries) // Get all countries
@@ -70,4 +74,26 @@ func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
 	mainRouter.Get(utils.ApiUrls.Countries.GetCities, countriesHandler.GetCities) // Get cities of a state
 
 	return mainRouter
+}
+
+// corsMiddleware handles Cross-Origin Resource Sharing with credentials support
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+		if origin != "" {
+			w.Header().Set("Access-Control-Allow-Origin", origin)
+		} else {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Cookie")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
 }
