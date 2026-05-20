@@ -26,14 +26,124 @@ type AuthService struct {
 	queries          *queries.Queries
 	rdb              *redis.Client
 	messagingService MessagingService
+	jwtSecret        string
+	jwtAccessExp     time.Duration
+	jwtRefreshExp    time.Duration
 }
 
-func NewAuthService(q *queries.Queries, rdb *redis.Client, messagingService MessagingService) *AuthService {
+func NewAuthService(q *queries.Queries, rdb *redis.Client, messagingService MessagingService, jwtSecret string, jwtAccessExp time.Duration, jwtRefreshExp time.Duration) *AuthService {
 	return &AuthService{
 		queries:          q,
 		rdb:              rdb,
 		messagingService: messagingService,
+		jwtSecret:        jwtSecret,
+		jwtAccessExp:     jwtAccessExp,
+		jwtRefreshExp:    jwtRefreshExp,
 	}
+}
+
+type LoginResult struct {
+	AccessToken  string
+	RefreshToken string
+	User         queries.GetUserByLoginIdentifierRow
+}
+
+type RefreshResult struct {
+	AccessToken  string
+	RefreshToken string
+	User         queries.User
+}
+
+// Login verifies login credentials and returns JWT access and refresh tokens
+func (s *AuthService) Login(ctx context.Context, identifier, password string) (LoginResult, error) {
+	// 1. Get user by email, username, or phone
+	user, err := s.queries.GetUserByLoginIdentifier(ctx, pgtype.Text{String: identifier, Valid: true})
+	if err != nil {
+		return LoginResult{}, errors.New("invalid email, username, phone or password")
+	}
+
+	// 2. Check if password matches
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	if err != nil {
+		return LoginResult{}, errors.New("invalid email, username, phone or password")
+	}
+
+	// 3. Verify account status
+	status := user.AccountStatus.String
+	if status == "suspended" || status == "banned" || status == "deleted" || status == "inactive" {
+		return LoginResult{}, fmt.Errorf("your account is %s", status)
+	}
+
+	// 4. Extract fake ID
+	var fakeID int64
+	if user.FakeID.Valid {
+		fakeID = user.FakeID.Int64
+	}
+
+	// 5. Generate Access Token and Refresh Token
+	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtAccessExp)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	refreshToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtRefreshExp)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	return LoginResult{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+		User:         user,
+	}, nil
+}
+
+// GetRefreshExpiration returns the refresh token expiration duration
+func (s *AuthService) GetRefreshExpiration() time.Duration {
+	return s.jwtRefreshExp
+}
+
+// Refresh validates the refresh token and returns a new set of tokens
+func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (RefreshResult, error) {
+	// 1. Verify the Refresh Token
+	claims, err := utils.VerifyToken(refreshToken, s.jwtSecret)
+	if err != nil {
+		return RefreshResult{}, errors.New("invalid or expired refresh token")
+	}
+
+	// 2. Retrieve the user by fake_id
+	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: claims.FakeID, Valid: true})
+	if err != nil {
+		return RefreshResult{}, errors.New("user not found")
+	}
+
+	// 3. Verify account status
+	status := user.AccountStatus.String
+	if status == "suspended" || status == "banned" || status == "deleted" || status == "inactive" {
+		return RefreshResult{}, fmt.Errorf("your account is %s", status)
+	}
+
+	// 4. Generate a new Access Token and Refresh Token
+	var fakeID int64
+	if user.FakeID.Valid {
+		fakeID = user.FakeID.Int64
+	}
+
+	newAccessToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtAccessExp)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	newRefreshToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtRefreshExp)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	return RefreshResult{
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
+		User:         user,
+	}, nil
 }
 
 type RegisterResult struct {
@@ -341,7 +451,6 @@ func (s *AuthService) SaveNINInRedis(ctx context.Context, nin string, userID int
 // RegisterPhaseSignUpResult represents the structure for the response from the initial sign-up phase
 type RegisterPhaseSignUpResult struct {
 	ID              int64     `json:"id"`
-	FakeID          int64     `json:"fakeId"`
 	DateTimeOtpSent time.Time `json:"dateTimeOtpSent"`
 	OtpVerified     string    `json:"otpVerified"`
 }
@@ -395,7 +504,6 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 		if time.Since(onboarding.DateTimeOtpSent.Time) < 10*time.Minute || onboarding.OtpVerified.String == "yes" {
 			return RegisterPhaseSignUpResult{
 				ID:              onboarding.ID,
-				FakeID:          onboarding.FakeID.Int64,
 				DateTimeOtpSent: onboarding.DateTimeOtpSent.Time,
 				OtpVerified:     onboarding.OtpVerified.String,
 			}, nil
@@ -419,7 +527,6 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 
 		return RegisterPhaseSignUpResult{
 			ID:              onboarding.ID,
-			FakeID:          onboarding.FakeID.Int64,
 			DateTimeOtpSent: updatedAt.Time,
 			OtpVerified:     onboarding.OtpVerified.String,
 		}, nil
@@ -443,29 +550,21 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 		return RegisterPhaseSignUpResult{}, err
 	}
 
-	// generate a fake_id using the id and update the onboarding fake_id
-	fake_id := utils.GenerateFakeID(id)
-	err = s.queries.UpdateOnboardingFakeID(ctx, queries.UpdateOnboardingFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
-	if err != nil {
-		return RegisterPhaseSignUpResult{}, err
-	}
-
 	return RegisterPhaseSignUpResult{
 		ID:              id,
-		FakeID:          fake_id,
 		DateTimeOtpSent: otpSentAt,
 		OtpVerified:     "no",
 	}, nil
 }
 
 // ResendOtp resend's the OTP if 10 minutes have passed since the last one
-func (s *AuthService) ResendOtp(ctx context.Context, phone string, fakeId int64) (RegisterPhaseSignUpResult, error) {
+func (s *AuthService) ResendOtp(ctx context.Context, phone string, id int64) (RegisterPhaseSignUpResult, error) {
 	onboarding, err := s.queries.GetOnboardingByPhone(ctx, phone)
 	if err != nil {
 		return RegisterPhaseSignUpResult{}, errors.New("onboarding record not found")
 	}
 
-	if onboarding.FakeID.Int64 != fakeId {
+	if onboarding.ID != id {
 		return RegisterPhaseSignUpResult{}, errors.New("invalid record reference")
 	}
 
@@ -497,7 +596,6 @@ func (s *AuthService) ResendOtp(ctx context.Context, phone string, fakeId int64)
 
 	return RegisterPhaseSignUpResult{
 		ID:              onboarding.ID,
-		FakeID:          onboarding.FakeID.Int64,
 		DateTimeOtpSent: sentAt.Time,
 	}, nil
 }
