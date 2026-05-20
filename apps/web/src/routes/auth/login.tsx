@@ -1,27 +1,59 @@
+import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { AuthWrapper } from "./_components/-auth-wrapper";
-import { useForm } from "@tanstack/react-form";
+import { useAppDispatch } from "#/redux/hooks";
+import { setAuthData } from "#/redux/slice/authSlice";
+import { loginUser } from "#/lib/server/auth";
+import { FormError } from "./_components/-form-error";
+import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/login")({
+  head: () => getPageHeader({
+    title: "Log in to your account",
+    description: "Log in to your Free9ja account to access your dashboard and manage your profile",
+  }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: {
-      email: "",
+      identifier: "",
       password: "",
     },
     onSubmit: async ({ value }) => {
-      console.log(value);
-      navigate({
-        to: "/auth/verify-otp",
-        search: { flow: "login" },
-      });
+      setErrorMsg(null);
+
+      try {
+        const response = await loginUser({ data: value });
+        console.log(response)
+
+        if (response.status === "success") {
+          // dispatch(
+          //   setAuthData({
+          //     user: response.user,
+          //     accessToken: response.accessToken,
+          //   })
+          // );
+
+          // login successful, redirect user to dashboard
+          // navigate({ to: "/dashboard" });
+        } else {
+          // login failed, show error message
+          setErrorMsg(response.message || "Login failed. Please check your credentials.");
+        }
+      } catch (error) {
+        console.error("Login submission error:", error);
+        setErrorMsg("An unexpected error occurred during login.");
+      }
     },
   });
 
@@ -35,20 +67,16 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
+        <FormError message={errorMsg} />
         <form.Field
-          name="email"
+          name="identifier"
           validators={{
-            onChange: ({ value }) => {
-              if (!value) return "Email is required";
-              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
-                return "Invalid email address";
-              return undefined;
-            },
+            onChange: ({ value }) => (!value ? "Identifier is required" : undefined),
           }}
           children={(field) => (
             <FormInput
-              type="email"
-              placeholder="Email"
+              type="text"
+              placeholder="Email or Username or Phone number"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
@@ -67,8 +95,8 @@ function RouteComponent() {
             onChange: ({ value }) =>
               !value
                 ? "Password is required"
-                : value.length < 8
-                  ? "Password must be at least 8 characters"
+                : value.length < 5
+                  ? "Password must be at least 5 characters"
                   : undefined,
           }}
           children={(field) => (
