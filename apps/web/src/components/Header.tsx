@@ -50,6 +50,7 @@ import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { useAppDispatch } from "@/redux/hooks";
 import { setSidebarState } from "@/redux/slice/siteSlice";
 import { useIsMobile } from "@repo/ui/hooks/useMobile";
+import { APP_URL } from "#/lib/config";
 
 
 type AppSidebarItem = {
@@ -100,6 +101,13 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
 
 // the main SideBar wrapper
 export function AppSidebarShell() {
+  const location = useLocation();
+  const isAuthPage = location.pathname.startsWith("/auth");
+
+  if (isAuthPage) {
+    return null;
+  }
+
   return (
     <div className="fixed">
       <SidebarProvider
@@ -213,9 +221,10 @@ function EachLinkComponent({ item }: { item: AppSidebarItem }) {
   );
 }
 
-function LogoComponent () {
+function LogoComponent() {
   const { state: sideBarState, toggleSidebar } = useSidebar();
   const isMobile = useIsMobile()
+
 
   let flexDir = "flex-row";
   try {
@@ -227,9 +236,10 @@ function LogoComponent () {
   useEffect(() => {
     if (isMobile) { return; }
 
+    // Check if the sidebar state in localStorage is different from the current state
     const savedSiteState = localStorage.getItem("site") || null;
     const preloadedSiteState = savedSiteState ? JSON.parse(savedSiteState) : undefined;
-    if (preloadedSiteState.sideBarState != sideBarState) {
+    if (preloadedSiteState && preloadedSiteState?.sideBarState != sideBarState) {
       toggleSidebar()
     }
   }, [])
@@ -250,7 +260,7 @@ function LogoComponent () {
         className="size-10 flex justify-center items-center rounded-full cursor-pointer hover:bg-[#f0f0ef]"
         onClick={toggleSidebar}
       >
-        {sideBarState === "expanded" ?  <PanelLeftClose /> : <PanelRightClose />}
+        {sideBarState === "expanded" ? <PanelLeftClose /> : <PanelRightClose />}
       </div>
     </div>
   )
@@ -266,7 +276,7 @@ function SidebarPollButton({ children }: { children: ReactNode }) {
   );
 }
 
-function ProfilePicture () {
+function ProfilePicture() {
   const { state: sideBarState } = useSidebar();
 
   if (sideBarState === "collapsed") {
@@ -287,15 +297,15 @@ function ProfilePicture () {
   return (
     <Popover>
       <PopoverTrigger>
-        <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{width: "260px"}}>
+        <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{ width: "260px" }}>
           <div className="flex-none">
             <Avatar className="size-12">
-              <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn"/>
+              <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
             </Avatar>
           </div>
           <div className="flex-1">
-            <p className="text-[16px] font-semibold text-[#171416] py-px truncate overflow-hidden" style={{maxWidth: "160px"}}>Chukwu Daniel</p>
-            <p className="mt-1 text-[14px] text-[#8b8589] truncate overflow-hidden" style={{maxWidth: "160px"}}>@chukwudaniel</p>
+            <p className="text-[16px] font-semibold text-[#171416] py-px truncate overflow-hidden" style={{ maxWidth: "160px" }}>Chukwu Daniel</p>
+            <p className="mt-1 text-[14px] text-[#8b8589] truncate overflow-hidden" style={{ maxWidth: "160px" }}>@chukwudaniel</p>
           </div>
           <div className="flex-none mt-3 ">
             <Ellipsis />
@@ -314,7 +324,8 @@ function ProfilePicturePopover() {
     <>
       <PopoverHeader className="px-3">Chukwu Daniel</PopoverHeader>
       <PopoverDescription>
-        <Link to="/auth/login"
+        <Link
+          to={APP_URL.auth.logout}
           className="
           block py-2 px-3 text-[14px] text-[#8b8589] truncate overflow-hidden
           hover:bg-[#f0f0ef] hover:text-[#171416]
