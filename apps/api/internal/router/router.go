@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -12,6 +13,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "free9ja/api/docs"
+	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
 	authhandler "free9ja/api/internal/handler/auth"
@@ -20,7 +22,6 @@ import (
 	countriesservice "free9ja/api/internal/service/countries"
 	messagingservice "free9ja/api/internal/service/messaging"
 	"free9ja/api/internal/utils"
-	"free9ja/api/internal/config"
 )
 
 // New creates and returns a configured Chi router.
@@ -53,10 +54,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 		))
 	}
 
-	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
-
 	// API v1 routes
-	mainRouter.Get(utils.ApiUrls.Root, handler.Root) // Root endpoint
+	mainRouter.Get(utils.ApiUrls.Root, handler.Root)     // Root endpoint
+	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
 
 	// for auths
 	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp) // Register first phase
@@ -79,21 +79,45 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 // corsMiddleware handles Cross-Origin Resource Sharing with credentials support
 func corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Configure allowed origins (add more as needed)
+		// allowedOrigins := map[string]bool{
+		// 	"https://free9ja.com":       true,
+		// 	"https://www.free9ja.com":   true,
+		// 	"https://admin.free9ja.com": true,
+		// 	"http://localhost:3001":     true,
+		// }
+
+		// Set dynamic allowed origin based on request origin
 		origin := r.Header.Get("Origin")
 		if origin != "" {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 		} else {
 			w.Header().Set("Access-Control-Allow-Origin", "*")
 		}
+
+		// Always include Vary: Origin header when using a dynamic origin
+		// This prevents caching and ensures the correct origin is used
+		w.Header().Set("Vary", "Origin")
+
+		// set access control allow credentials
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+
+		// Set allowed methods
+		w.Header().Set(
+			"Access-Control-Allow-Methods",
+			strings.Join([]string{http.MethodOptions, http.MethodPost, http.MethodGet, http.MethodPut, http.MethodDelete}, ", "),
+		)
+
+		// Set allowed headers
 		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Cookie")
 
-		if r.Method == "OPTIONS" {
+		// Handle preflight requests
+		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 
+		// Call the next handler in the chain
 		next.ServeHTTP(w, r)
 	})
 }
