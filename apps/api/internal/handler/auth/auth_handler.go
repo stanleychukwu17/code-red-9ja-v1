@@ -7,7 +7,6 @@ import (
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -24,7 +23,6 @@ type AuthService interface {
 	CheckUsername(ctx context.Context, username string) bool
 	Login(ctx context.Context, identifier, password string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
-	GetRefreshExpiration() time.Duration
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -294,21 +292,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set refresh token in HttpOnly cookie
-	secure := false
-	if os.Getenv("ENV") == "production" {
-		secure = true
-	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    result.RefreshToken,
-		Path:     "/",
-		Expires:  time.Now().Add(h.authService.GetRefreshExpiration()),
-		HttpOnly: true,
-		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
-	})
-
 	h.utils.RespondSuccess(w, http.StatusOK, "Login successful", map[string]interface{}{
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
@@ -325,17 +308,10 @@ type RefreshRequest struct {
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req RefreshRequest
 
-	// 1. Try reading the refresh token from cookie first
-	cookie, err := r.Cookie("refresh_token")
-	if err == nil && cookie.Value != "" {
-		req.RefreshToken = cookie.Value
-	} else {
-		// 2. Fallback to reading from JSON body
-		if r.Body != nil && r.ContentLength > 0 {
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-				return
-			}
+	if r.Body != nil && r.ContentLength > 0 {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
 		}
 	}
 
@@ -350,21 +326,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set rotated refresh token in HttpOnly cookie
-	secure := false
-	if os.Getenv("ENV") == "production" {
-		secure = true
-	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    result.RefreshToken,
-		Path:     "/",
-		Expires:  time.Now().Add(h.authService.GetRefreshExpiration()),
-		HttpOnly: true,
-		Secure:   secure,
-		SameSite: http.SameSiteLaxMode,
-	})
-
+	// return the new accessToken and refreshToken
 	h.utils.RespondSuccess(w, http.StatusOK, "Token refreshed successfully", map[string]interface{}{
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
