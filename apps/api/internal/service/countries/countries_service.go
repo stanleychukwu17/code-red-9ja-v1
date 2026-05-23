@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 
 	"github.com/redis/go-redis/v9"
@@ -28,7 +29,7 @@ func (s *CountryService) GetAllCountries(ctx context.Context) ([]queries.ListCou
 	}
 
 	//check if in redis
-	countries, err := s.rdb.Get(ctx, "countries:all").Result()
+	countries, err := s.rdb.Get(ctx, db.CountriesAll).Result()
 
 	//not in redis, get from db
 	switch err {
@@ -45,7 +46,7 @@ func (s *CountryService) GetAllCountries(ctx context.Context) ([]queries.ListCou
 		jsonData, _ := json.Marshal(payload)
 
 		//set in redis
-		s.rdb.Set(ctx, "countries:all", jsonData, 0)
+		s.rdb.Set(ctx, db.CountriesAll, jsonData, 0)
 
 		return dbCountries, nil
 	case nil:
@@ -64,7 +65,7 @@ func (s *CountryService) GetStatesByCountryID(ctx context.Context, countryID int
 		States []queries.GetStatesByCountryIDRow `json:"states"`
 	}
 
-	redisKey := fmt.Sprintf("states:country:%d", countryID)
+	redisKey := fmt.Sprintf("%s%d", db.StatesByCountry, countryID)
 
 	//check if in redis
 	statesData, err := s.rdb.Get(ctx, redisKey).Result()
@@ -106,7 +107,7 @@ func (s *CountryService) GetCitiesByStateID(ctx context.Context, stateID int16) 
 		Cities []queries.GetCitiesByStateIDRow `json:"cities"`
 	}
 
-	redisKey := fmt.Sprintf("cities:state:%d", stateID)
+	redisKey := fmt.Sprintf("%s%d", db.CitiesByState, stateID)
 
 	//check if in redis
 	citiesData, err := s.rdb.Get(ctx, redisKey).Result()
