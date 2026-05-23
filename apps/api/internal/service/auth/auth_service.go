@@ -2,6 +2,7 @@ package authservice
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db/queries"
@@ -12,6 +13,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/utils"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	phonenumbers "github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
@@ -42,16 +44,19 @@ func NewAuthService(q *queries.Queries, rdb *redis.Client, messagingService Mess
 	}
 }
 
+// Phone         string      `json:"phone"`
+// Username      pgtype.Text `json:"username"`
+// PasswordHash  string      `json:"password_hash"`
+// AccountStatus pgtype.Text `json:"account_status"`
+type LoginUser struct {
+	FakeID        int64  `json:"fake_id"`
+	Username      string `json:"username"`
+	AccountStatus string `json:"account_status"`
+}
 type LoginResult struct {
 	AccessToken  string
 	RefreshToken string
-	User         queries.GetUserByLoginIdentifierRow
-}
-
-type RefreshResult struct {
-	AccessToken  string
-	RefreshToken string
-	User         queries.User
+	User         LoginUser
 }
 
 // Login verifies login credentials and returns JWT access and refresh tokens
@@ -75,75 +80,139 @@ func (s *AuthService) Login(ctx context.Context, identifier, password string) (L
 	}
 
 	// 4. Extract fake ID
-	var fakeID int64
-	if user.FakeID.Valid {
-		fakeID = user.FakeID.Int64
+	var fakeID int64 = user.FakeID.Int64
+
+	// 5. create session
+	sessionID := uuid.NewString()
+	sessionData := map[string]any{
+		"Status":        "active",
+		"SessionID":     sessionID,
+		"FakeID":        user.FakeID.Int64,
+		"Username":      user.Username.String,
+		"AccountStatus": user.AccountStatus.String,
 	}
 
-	// 5. Generate Access Token and Refresh Token
+	jsonData, _ := json.Marshal(sessionData)
+
+	// 6. Generate Access Token and Refresh Token
 	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtAccessExp)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	refreshToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtRefreshExp)
+	// 7. generate refresh token (opaque)
+	result, err := utils.GenerateRandomString()
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
+	// 8. Store the payload in redis using the hashed refresh token as the key
+	redisKey := fmt.Sprintf("%s%s", db.JwtRefreshToken, result.HashedToken)
+	s.rdb.Set(ctx, redisKey, jsonData, s.jwtRefreshExp)
+
+	// 9. session index
+	s.rdb.SAdd(ctx, fmt.Sprintf("%s%s", db.LoginSessions, sessionID), result.HashedToken)
+	s.rdb.SAdd(ctx, fmt.Sprintf("%s%d", db.UserLoginSessions, fakeID), sessionID)
+
 	return LoginResult{
 		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-		User:         user,
+		RefreshToken: result.RandomString,
+		User: LoginUser{
+			FakeID:        fakeID,
+			Username:      user.Username.String,
+			AccountStatus: user.AccountStatus.String,
+		},
 	}, nil
 }
 
-// GetRefreshExpiration returns the refresh token expiration duration
-func (s *AuthService) GetRefreshExpiration() time.Duration {
-	return s.jwtRefreshExp
+type RefreshResult struct {
+	AccessToken  string    `json:"accessToken"`
+	RefreshToken string    `json:"refreshToken"`
+	User         LoginUser `json:"user"`
 }
 
 // Refresh validates the refresh token and returns a new set of tokens
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (RefreshResult, error) {
-	// 1. Verify the Refresh Token
-	claims, err := utils.VerifyToken(refreshToken, s.jwtSecret)
+	// hash the refresh token
+	hashed := utils.HashToken(refreshToken)
+
+	// use token to fetch jwt session details from redis
+	tokenRedisKey := fmt.Sprintf("%s%s", db.JwtRefreshToken, hashed)
+	sessionDts, err := s.rdb.Get(ctx, tokenRedisKey).Result()
 	if err != nil {
 		return RefreshResult{}, errors.New("invalid or expired refresh token")
 	}
 
-	// 2. Retrieve the user by fake_id
-	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: claims.FakeID, Valid: true})
+	// unmarshal the session details
+	var sessionData map[string]any
+	err = json.Unmarshal([]byte(sessionDts), &sessionData)
 	if err != nil {
-		return RefreshResult{}, errors.New("user not found")
+		return RefreshResult{}, errors.New("invalid or expired refresh token")
 	}
 
-	// 3. Verify account status
-	status := user.AccountStatus.String
+	// get some info from the session details
+	userFid := int64(sessionData["FakeID"].(float64))
+	sessionID := sessionData["SessionID"].(string)
+	username := sessionData["Username"].(string)
+	accountStatus := sessionData["AccountStatus"].(string)
+	redisSessionKey := fmt.Sprintf("%s%s", db.LoginSessions, sessionID)
+
+	// delete old token (rotation)
+	s.rdb.Del(ctx, tokenRedisKey)
+	s.rdb.SRem(ctx, redisSessionKey, hashed)
+
+	// Retrieve the user by fake_id, this returns all the details of the user
+	// user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: userFid, Valid: true})
+	// if err != nil {
+	// 	return RefreshResult{}, errors.New("user not found")
+	// }
+
+	payload := map[string]any{
+		"Status":        "active",
+		"SessionID":     sessionID,
+		"FakeID":        userFid,
+		"Username":      username,
+		"AccountStatus": accountStatus,
+	}
+	//convert to json
+	jsonData, _ := json.Marshal(payload)
+
+	// Verify account status
+	status := accountStatus
 	if status == "suspended" || status == "banned" || status == "deleted" || status == "inactive" {
 		return RefreshResult{}, fmt.Errorf("your account is %s", status)
 	}
 
-	// 4. Generate a new Access Token and Refresh Token
-	var fakeID int64
-	if user.FakeID.Valid {
-		fakeID = user.FakeID.Int64
-	}
-
-	newAccessToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtAccessExp)
+	// Generate a new Access Token
+	newAccessToken, err := utils.GenerateToken(userFid, username, s.jwtSecret, s.jwtAccessExp)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	newRefreshToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtRefreshExp)
+	// generate refresh token (opaque)
+	result, err := utils.GenerateRandomString()
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	return RefreshResult{
+	// Store the new
+	newRedisTokenKey := fmt.Sprintf("%s%s", db.JwtRefreshToken, result.HashedToken)
+	s.rdb.Set(ctx, newRedisTokenKey, jsonData, s.jwtRefreshExp)
+
+	// add the new refresh token to the session SET
+	s.rdb.SAdd(ctx, redisSessionKey, result.HashedToken)
+
+	response := RefreshResult{
 		AccessToken:  newAccessToken,
-		RefreshToken: newRefreshToken,
-		User:         user,
-	}, nil
+		RefreshToken: result.RandomString,
+		User: LoginUser{
+			FakeID:        userFid,
+			Username:      username,
+			AccountStatus: accountStatus,
+		},
+	}
+
+	return response, nil
 }
 
 type RegisterResult struct {
