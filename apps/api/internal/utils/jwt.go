@@ -1,6 +1,10 @@
 package utils
 
 import (
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"errors"
 	"time"
 
@@ -49,4 +53,32 @@ func VerifyToken(tokenStr string, secret string) (*JWTClaims, error) {
 	}
 
 	return claims, nil
+}
+
+type RandomStringResult struct {
+	RandomString string
+	HashedToken  string
+}
+
+// GenerateRandomString generates a random string of the given length
+func GenerateRandomString() (RandomStringResult, error) {
+	b := make([]byte, 32)
+
+	_, err := rand.Read(b)
+	if err != nil {
+		return RandomStringResult{}, err
+	}
+
+	randString := base64.RawURLEncoding.EncodeToString(b)
+	hashedToken := HashToken(randString)
+
+	return RandomStringResult{
+		RandomString: randString,
+		HashedToken:  hashedToken,
+	}, nil
+}
+
+func HashToken(token string) string {
+	hash := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(hash[:])
 }
