@@ -1,14 +1,17 @@
-import { useAppSelector } from '@/redux/hooks';
-import { useIsMobile } from '@repo/ui/hooks/useMobile';
 import React from 'react';
+import { useLocation } from '@tanstack/react-router';
+import { useIsMobile } from '@repo/ui/hooks/useMobile';
+import { useAppSelector } from '@/redux/hooks';
 
 export default function Footer() {
+  const location = useLocation();
+  const isAuthPage = location.pathname.startsWith('/auth');
   const year = new Date().getFullYear()
   const { currentSideBarWidth, allowOutletToBeResponsive } = useAppSelector((state) => state.site);
   const isMobile = useIsMobile();
 
   const getFooterStyle = (): React.CSSProperties => {
-    if (isMobile || !allowOutletToBeResponsive) {
+    if (isMobile || !allowOutletToBeResponsive || isAuthPage) {
       return {
         width: '100vw',
         marginLeft: '0',
