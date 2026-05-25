@@ -35,7 +35,7 @@ SELECT id, fake_id FROM users
 WHERE username = $1 LIMIT 1;
 
 -- name: GetUserByLoginIdentifier :one
-SELECT id, fake_id, email, phone, username, password_hash, account_status FROM users
+SELECT * FROM users
 WHERE email = $1 OR username = $1 OR phone = $1
 LIMIT 1;
 
