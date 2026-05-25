@@ -15,25 +15,24 @@ export interface AuthProps {
 }
 
 export interface UserProps {
-  id: number;
   fake_id?: number;
-  email?: string;
-  phone: string;
   username?: string;
+  account_status?: string;
   first_name?: string;
   last_name?: string;
+  avatar_url?: string;
 }
 
 export interface AuthState {
   onboardingData: AuthProps | null;
   user: UserProps | null;
-  accessToken: string | null;
+  userHydrated: boolean;
 }
 
 const initialState: AuthState = {
   onboardingData: null,
   user: null,
-  accessToken: null,
+  userHydrated: false,
 };
 
 export const authSlice = createSlice({
@@ -53,17 +52,10 @@ export const authSlice = createSlice({
     clearOnboardingData: (state) => {
       state.onboardingData = null;
     },
-    setAuthData: (
-      state,
-      action: PayloadAction<{ user: UserProps; accessToken: string }>
-    ) => {
-      state.user = action.payload.user;
-      state.accessToken = action.payload.accessToken;
+    updateAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
+      Object.assign(state, action.payload);
     },
-    clearAuthData: (state) => {
-      state.user = null;
-      state.accessToken = null;
-    },
+
   },
 });
 
@@ -71,8 +63,7 @@ export const {
   setOnboardingData,
   updateOnboardingData,
   clearOnboardingData,
-  setAuthData,
-  clearAuthData,
+  updateAuthState,
 } = authSlice.actions;
 
 export default authSlice.reducer;
