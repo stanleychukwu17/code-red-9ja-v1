@@ -39,6 +39,8 @@ import ProfileSolidIcon from "@repo/ui/icons/navbar/profile-solid-icon";
 import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
 
+import { Skeleton } from "@repo/ui/components/skeleton"
+
 import { cn } from "node_modules/@repo/ui/src/lib/utils";
 
 import {
@@ -47,7 +49,7 @@ import {
 import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { setSidebarState } from "@/redux/slice/siteSlice";
 import { useIsMobile } from "@repo/ui/hooks/useMobile";
 import { APP_URL } from "#/lib/config";
@@ -238,6 +240,7 @@ function LogoComponent() {
 
     // Check if the sidebar state in localStorage is different from the current state
     const savedSiteState = localStorage.getItem("site") || null;
+    console.log(savedSiteState)
     const preloadedSiteState = savedSiteState ? JSON.parse(savedSiteState) : undefined;
     if (preloadedSiteState && preloadedSiteState?.sideBarState != sideBarState) {
       toggleSidebar()
@@ -278,6 +281,22 @@ function SidebarPollButton({ children }: { children: ReactNode }) {
 
 function ProfilePicture() {
   const { state: sideBarState } = useSidebar();
+  const { user, userHydrated } = useAppSelector((state) => state.auth);
+  // console.log("user hydrated",{userHydrated, user})
+
+  if (userHydrated === false || user === null) {
+    return <>
+      <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{ width: "260px" }}>
+        <div className="flex-none">
+          <Skeleton className="size-12 bg-light-green/25 rounded-full" />
+        </div>
+        <div className="flex-1">
+          <Skeleton className="w-full mt-1 py-2 bg-light-green/25 rounded-xl" />
+          <Skeleton className="w-3/4 mt-2 py-2 bg-light-green/25 rounded-xl" />
+        </div>
+      </div>
+    </>
+  }
 
   if (sideBarState === "collapsed") {
     return (
@@ -305,7 +324,7 @@ function ProfilePicture() {
           </div>
           <div className="flex-1">
             <p className="text-[16px] font-semibold text-[#171416] py-px truncate overflow-hidden" style={{ maxWidth: "160px" }}>Chukwu Daniel</p>
-            <p className="mt-1 text-[14px] text-[#8b8589] truncate overflow-hidden" style={{ maxWidth: "160px" }}>@chukwudaniel</p>
+            <p className="mt-1 text-[14px] text-[#8b8589] truncate overflow-hidden" style={{ maxWidth: "160px" }}>@{user?.username}</p>
           </div>
           <div className="flex-none mt-3 ">
             <Ellipsis />
@@ -320,6 +339,8 @@ function ProfilePicture() {
   );
 }
 function ProfilePicturePopover() {
+
+
   return (
     <>
       <PopoverHeader className="px-3">Chukwu Daniel</PopoverHeader>
