@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"regexp"
 	"strings"
@@ -51,7 +52,10 @@ func NewAuthService(q *queries.Queries, rdb *redis.Client, messagingService Mess
 type LoginUser struct {
 	FakeID        int64  `json:"fake_id"`
 	Username      string `json:"username"`
+	FirstName     string `json:"first_name"`
+	LastName      string `json:"last_name"`
 	AccountStatus string `json:"account_status"`
+	AvatarURL     string `json:"avatar_url"`
 }
 type LoginResult struct {
 	AccessToken  string
@@ -61,6 +65,8 @@ type LoginResult struct {
 
 // Login verifies login credentials and returns JWT access and refresh tokens
 func (s *AuthService) Login(ctx context.Context, identifier, password string) (LoginResult, error) {
+	// check if identifier is in redis emails, usernames or phone_numbers
+
 	// 1. Get user by email, username, or phone
 	user, err := s.queries.GetUserByLoginIdentifier(ctx, pgtype.Text{String: identifier, Valid: true})
 	if err != nil {
@@ -82,14 +88,21 @@ func (s *AuthService) Login(ctx context.Context, identifier, password string) (L
 	// 4. Extract fake ID
 	var fakeID int64 = user.FakeID.Int64
 
+	// Save user info into redis
+	userInfoJSON, err := json.Marshal(user)
+	if err == nil {
+		userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+		s.rdb.Set(ctx, userInfoKey, userInfoJSON, 0)
+	}
+
 	// 5. create session
 	sessionID := uuid.NewString()
+	loc, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
+	now := time.Now().In(loc)
 	sessionData := map[string]any{
-		"Status":        "active",
-		"SessionID":     sessionID,
-		"FakeID":        user.FakeID.Int64,
-		"Username":      user.Username.String,
-		"AccountStatus": user.AccountStatus.String,
+		"SessionID": sessionID,
+		"FakeID":    user.FakeID.Int64,
+		"TimeAdded": now.Format(time.RFC3339),
 	}
 
 	jsonData, _ := json.Marshal(sessionData)
@@ -107,12 +120,12 @@ func (s *AuthService) Login(ctx context.Context, identifier, password string) (L
 	}
 
 	// 8. Store the payload in redis using the hashed refresh token as the key
-	redisKey := fmt.Sprintf("%s%s", db.JwtRefreshToken, result.HashedToken)
+	redisKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, result.HashedToken)
 	s.rdb.Set(ctx, redisKey, jsonData, s.jwtRefreshExp)
 
 	// 9. session index
-	s.rdb.SAdd(ctx, fmt.Sprintf("%s%s", db.LoginSessions, sessionID), result.HashedToken)
-	s.rdb.SAdd(ctx, fmt.Sprintf("%s%d", db.UserLoginSessions, fakeID), sessionID)
+	s.rdb.SAdd(ctx, fmt.Sprintf("%s%s", db.RedisLoginSessions, sessionID), result.HashedToken)
+	s.rdb.SAdd(ctx, fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID), sessionID)
 
 	return LoginResult{
 		AccessToken:  accessToken,
@@ -120,6 +133,9 @@ func (s *AuthService) Login(ctx context.Context, identifier, password string) (L
 		User: LoginUser{
 			FakeID:        fakeID,
 			Username:      user.Username.String,
+			FirstName:     user.FirstName.String,
+			LastName:      user.LastName.String,
+			AvatarURL:     "",
 			AccountStatus: user.AccountStatus.String,
 		},
 	}, nil
@@ -137,8 +153,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	hashed := utils.HashToken(refreshToken)
 
 	// use token to fetch jwt session details from redis
-	tokenRedisKey := fmt.Sprintf("%s%s", db.JwtRefreshToken, hashed)
-	sessionDts, err := s.rdb.Get(ctx, tokenRedisKey).Result()
+	RedisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, hashed)
+	sessionDts, err := s.rdb.Get(ctx, RedisTokenKey).Result()
 	if err != nil {
 		return RefreshResult{}, errors.New("invalid or expired refresh token")
 	}
@@ -147,19 +163,50 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	var sessionData map[string]any
 	err = json.Unmarshal([]byte(sessionDts), &sessionData)
 	if err != nil {
-		return RefreshResult{}, errors.New("invalid or expired refresh token")
+		return RefreshResult{}, errors.New("having issues with unpacking token details")
 	}
 
 	// get some info from the session details
 	userFid := int64(sessionData["FakeID"].(float64))
 	sessionID := sessionData["SessionID"].(string)
-	username := sessionData["Username"].(string)
-	accountStatus := sessionData["AccountStatus"].(string)
-	redisSessionKey := fmt.Sprintf("%s%s", db.LoginSessions, sessionID)
+	timeAdded := sessionData["TimeAdded"].(string)
+	redisSessionKey := fmt.Sprintf("%s%s", db.RedisLoginSessions, sessionID)
+
+	// get the user details using the userFid
+	user, err := s.GetUserDetailsByFakeID(ctx, userFid)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("user not found: %v", err)
+	}
+
+	// destructure some of the user info
+	accountStatus := user.AccountStatus.String
+	username := user.Username.String
+	userDetails := LoginUser{
+		FakeID:        userFid,
+		Username:      username,
+		FirstName:     user.FirstName.String,
+		LastName:      user.LastName.String,
+		AvatarURL:     "",
+		AccountStatus: accountStatus,
+	}
+
+	// Parse the RFC3339 string back into a time.Time
+	parsedTime, err := time.Parse(time.RFC3339, timeAdded)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("error parsing time: %v", err)
+	}
+
+	// Compare with current time
+	if time.Since(parsedTime) < 12*time.Minute {
+		// fmt.Println("TimeAdded is less than 12 minutes ago", parsedTime)
+		return RefreshResult{
+			User: userDetails,
+		}, nil
+	}
 
 	// delete old token (rotation)
-	s.rdb.Del(ctx, tokenRedisKey)
-	s.rdb.SRem(ctx, redisSessionKey, hashed)
+	s.rdb.Del(ctx, RedisTokenKey)            // deletes the token
+	s.rdb.SRem(ctx, redisSessionKey, hashed) // deletes the token from the list of session tokens
 
 	// Retrieve the user by fake_id, this returns all the details of the user
 	// user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: userFid, Valid: true})
@@ -167,21 +214,18 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	// 	return RefreshResult{}, errors.New("user not found")
 	// }
 
-	payload := map[string]any{
-		"Status":        "active",
-		"SessionID":     sessionID,
-		"FakeID":        userFid,
-		"Username":      username,
-		"AccountStatus": accountStatus,
-	}
-	//convert to json
-	jsonData, _ := json.Marshal(payload)
-
 	// Verify account status
-	status := accountStatus
-	if status == "suspended" || status == "banned" || status == "deleted" || status == "inactive" {
-		return RefreshResult{}, fmt.Errorf("your account is %s", status)
+	if accountStatus == "suspended" || accountStatus == "banned" || accountStatus == "deleted" || accountStatus == "inactive" {
+		return RefreshResult{}, fmt.Errorf("your account is %s", accountStatus)
 	}
+
+	// update the time of this new accessToken generated
+	loc, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
+	now := time.Now().In(loc)
+	sessionData["TimeAdded"] = now.Format(time.RFC3339)
+
+	//convert to json
+	jsonData, _ := json.Marshal(sessionData)
 
 	// Generate a new Access Token
 	newAccessToken, err := utils.GenerateToken(userFid, username, s.jwtSecret, s.jwtAccessExp)
@@ -189,30 +233,61 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
-	// generate refresh token (opaque)
-	result, err := utils.GenerateRandomString()
+	// Generate a new refresh token
+	refresh, err := utils.GenerateRandomString()
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
-	// Store the new
-	newRedisTokenKey := fmt.Sprintf("%s%s", db.JwtRefreshToken, result.HashedToken)
+	// Store the new refresh token, but we use the hashed string as the key
+	newRedisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, refresh.HashedToken)
 	s.rdb.Set(ctx, newRedisTokenKey, jsonData, s.jwtRefreshExp)
 
 	// add the new refresh token to the session SET
-	s.rdb.SAdd(ctx, redisSessionKey, result.HashedToken)
+	s.rdb.SAdd(ctx, redisSessionKey, refresh.HashedToken)
 
 	response := RefreshResult{
 		AccessToken:  newAccessToken,
-		RefreshToken: result.RandomString,
-		User: LoginUser{
-			FakeID:        userFid,
-			Username:      username,
-			AccountStatus: accountStatus,
-		},
+		RefreshToken: refresh.RandomString,
+		User:         userDetails,
 	}
 
 	return response, nil
+}
+
+// Logout invalidates the refresh token by removing the session from Redis
+func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+	// hash the refresh token
+	hashed := utils.HashToken(refreshToken)
+
+	// use token to fetch jwt session details from redis
+	tokenRedisKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, hashed)
+	sessionDts, err := s.rdb.Get(ctx, tokenRedisKey).Result()
+	if err != nil {
+		return errors.New("invalid or expired refresh token")
+	}
+
+	// unmarshal the session details
+	var sessionData map[string]any
+	err = json.Unmarshal([]byte(sessionDts), &sessionData)
+	if err != nil {
+		return errors.New("invalid or expired refresh token")
+	}
+
+	// get the sessionID from the session details
+	sessionID := sessionData["SessionID"].(string)
+	userFid := int64(sessionData["FakeID"].(float64))
+
+	// delete the token from redis
+	s.rdb.Del(ctx, tokenRedisKey)
+	// remove the token from the list of session tokens
+	redisSessionKey := fmt.Sprintf("%s%s", db.RedisLoginSessions, sessionID)
+	s.rdb.SRem(ctx, redisSessionKey, hashed)
+	// remove the session from the user sessions set
+	userRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, userFid)
+	s.rdb.SRem(ctx, userRedisKey, sessionID)
+
+	return nil
 }
 
 type RegisterResult struct {
@@ -319,6 +394,9 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	s.SaveEmailInRedis(ctx, email)
 	s.SaveNINInRedis(ctx, nin, user_id)
 	s.SavePhoneInRedis(ctx, params.Phone, user_id)
+
+	// fetch user details using the user fake_id
+	_, _ = s.GetUserDetailsByFakeID(ctx, fake_id)
 
 	// update onboarding state to completed
 	err = s.queries.UpdateOnboardingCompleted(ctx, onboardingID)
@@ -715,4 +793,32 @@ func (s *AuthService) generateAndSendWhatsappOTP(phone string) (string, error) {
 	}
 
 	return hashedOTP, nil
+}
+
+// GetUserDetailsByFakeID fetches all user details using the user fake_id.
+// It checks Redis first, if not found, it fetches from the DB and caches it in Redis.
+func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
+	// 1. Check Redis
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+	userInfoJSON, err := s.rdb.Get(ctx, userInfoKey).Result()
+	if err == nil {
+		var user queries.User
+		if err := json.Unmarshal([]byte(userInfoJSON), &user); err == nil {
+			return user, nil
+		}
+	}
+
+	// 2. Fetch from DB if not in Redis
+	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		return queries.User{}, fmt.Errorf("user not found: %w", err)
+	}
+
+	// 3. Cache it in Redis
+	userJSON, err := json.Marshal(user)
+	if err == nil {
+		s.rdb.Set(ctx, userInfoKey, userJSON, 0)
+	}
+
+	return user, nil
 }
