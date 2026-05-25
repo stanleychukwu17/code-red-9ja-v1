@@ -6,14 +6,16 @@ export const APP_URL = {
   "auth": {
     "signup": "/auth/signup",
     "login": "/auth/login",
+    "logout": "/auth/logout",
     "verifyOtp": "/auth/verify-otp",
-    "onboarding": "/auth/onboarding"
+    "onboarding": "/auth/onboarding",
   },
-  "dashboard": "/dashboard",
+  "homePage": "/dashboard",
 }
 
 const api = `${API_BASE}/api/v1`
 export const API_URL = {
+  "health": `${API_BASE}/health`,
   "auth": {
     "registerPhaseSignUp": `${api}/auth/register_phase_signup`,
     "verifyOtp": `${api}/auth/verify_otp`,
@@ -23,6 +25,7 @@ export const API_URL = {
     "register": `${api}/auth/register`,
     "login": `${api}/auth/login`,
     "refresh": `${api}/auth/refresh`,
+    "logout": `${api}/auth/logout`,
   },
   "getAllCountries": `${api}/countries`,
   "getStates": (countryId: number) => `${api}/countries/${countryId}/states`,
