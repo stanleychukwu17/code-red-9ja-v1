@@ -1,38 +1,37 @@
 import { useEffect } from "react";
-import { useAppDispatch } from "@/redux/hooks";
-import { setAuthData, clearAuthData } from "@/redux/slice/authSlice";
-import { refreshUserToken } from "@/lib/server/auth";
+import { useAppDispatch } from "#/redux/hooks";
+import { refreshUserToken } from "#/lib/server/auth";
+import { updateAuthState } from "#/redux/slice/authSlice";
 
+// This component is used to restore the auth session on page refresh,
+// It will automatically refresh the access token every 14 minutes
+// and clear the auth data if the refresh token is invalid or missing
 export default function LoadAuthSession() {
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    const restoreSession = async () => {
+    const refreshSession = async () => {
       try {
-        const response = await refreshUserToken({});
+        const response = await refreshUserToken();
+        dispatch(updateAuthState({ userHydrated: true }))
+
         if (response.status === "success") {
-          dispatch(
-            setAuthData({
-              user: response.user,
-              accessToken: response.accessToken,
-            })
-          );
-        } else {
-          // If refresh token validation fails or is missing, ensure state is cleared
-          dispatch(clearAuthData());
+          const user = response.user;
+          if (user) dispatch(updateAuthState({ user }));
         }
       } catch (error) {
-        console.error("Failed to restore auth session:", error);
-        dispatch(clearAuthData());
-      }
+        dispatch(updateAuthState({ user: null }));
+        console.error(`Error refreshing user token: `, error);
+      } 
     };
 
-    // Restore session immediately on mount / page refresh
-    restoreSession();
-
+    // Initial refresh on mount
+    refreshSession();
+    
     // Periodically refresh the token every 14 minutes (since access token expires in 15 minutes)
-    const interval = setInterval(restoreSession, 14 * 60 * 1000);
-
+    // const interval = setInterval(() => refreshSession(), 14 * 60 * 1000);
+    const interval = setInterval(() => refreshSession(), 14 * 60 * 1000); // refresh every 14 minutes until done
+  
     return () => clearInterval(interval);
   }, [dispatch]);
 
