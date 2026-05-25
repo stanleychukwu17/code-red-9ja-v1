@@ -25,7 +25,7 @@ type Querier interface {
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
-	GetUserByLoginIdentifier(ctx context.Context, email pgtype.Text) (GetUserByLoginIdentifierRow, error)
+	GetUserByLoginIdentifier(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
 	GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error)
 	GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error)

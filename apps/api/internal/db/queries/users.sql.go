@@ -247,24 +247,14 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserByLoginIdentifier = `-- name: GetUserByLoginIdentifier :one
-SELECT id, fake_id, email, phone, username, password_hash, account_status FROM users
+SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, nin_verified, phone_verified, account_status, created_at, updated_at FROM users
 WHERE email = $1 OR username = $1 OR phone = $1
 LIMIT 1
 `
 
-type GetUserByLoginIdentifierRow struct {
-	ID            int64       `json:"id"`
-	FakeID        pgtype.Int8 `json:"fake_id"`
-	Email         pgtype.Text `json:"email"`
-	Phone         string      `json:"phone"`
-	Username      pgtype.Text `json:"username"`
-	PasswordHash  string      `json:"password_hash"`
-	AccountStatus pgtype.Text `json:"account_status"`
-}
-
-func (q *Queries) GetUserByLoginIdentifier(ctx context.Context, email pgtype.Text) (GetUserByLoginIdentifierRow, error) {
+func (q *Queries) GetUserByLoginIdentifier(ctx context.Context, email pgtype.Text) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByLoginIdentifier, email)
-	var i GetUserByLoginIdentifierRow
+	var i User
 	err := row.Scan(
 		&i.ID,
 		&i.FakeID,
@@ -272,7 +262,19 @@ func (q *Queries) GetUserByLoginIdentifier(ctx context.Context, email pgtype.Tex
 		&i.Phone,
 		&i.Username,
 		&i.PasswordHash,
+		&i.LastName,
+		&i.FirstName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.CurrentCountry,
+		&i.CurrentState,
+		&i.CurrentCity,
+		&i.NinVerified,
+		&i.PhoneVerified,
 		&i.AccountStatus,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
