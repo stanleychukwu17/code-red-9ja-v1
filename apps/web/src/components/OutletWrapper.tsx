@@ -2,12 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/redux/hooks';
 import { setCurrentSideBarWidth } from '@/redux/slice/siteSlice';
 import { useIsMobile } from '@repo/ui/hooks/useMobile';
+import { useLocation } from '@tanstack/react-router';
 
 interface OutletWrapperProps {
   children: React.ReactNode;
 }
 
 export function OutletWrapper({ children }: OutletWrapperProps) {
+  const location = useLocation();
+  const isLoginPage = location.pathname === '/auth/login';
   const { sideBarState, allowOutletToBeResponsive } = useAppSelector((state) => state.site);
   const isMobile = useIsMobile();
   const dispatch = useAppDispatch();
@@ -22,7 +25,7 @@ export function OutletWrapper({ children }: OutletWrapperProps) {
         const expandedWidth = computedStyle.getPropertyValue('--sidebar-width');
         const collapsedWidth = computedStyle.getPropertyValue('--sidebar-width-icon');
         const width = sideBarState === 'expanded' ? expandedWidth : collapsedWidth;
-        // console.log("Sidebar width:", width);
+        // console.log("Sidebar width:", width
         const trimmedWidth = width.trim();
         setSidebarWidth(trimmedWidth);
         dispatch(setCurrentSideBarWidth(trimmedWidth));
@@ -30,11 +33,11 @@ export function OutletWrapper({ children }: OutletWrapperProps) {
     };
 
     updateSidebarWidth();
-  },[sideBarState, dispatch])
-  
+  }, [sideBarState, dispatch])
+
   // Calculate width based on sidebar width from DOM
   const getMainContentStyle = (): React.CSSProperties => {
-    if (isMobile || !allowOutletToBeResponsive) {
+    if (isMobile || !allowOutletToBeResponsive || isLoginPage) {
       return {
         width: '100vw',
         marginLeft: '0',
