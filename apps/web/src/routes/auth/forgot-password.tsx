@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
@@ -14,16 +14,33 @@ import { FormError } from "./_components/-form-error";
 import { getAllCountries } from "@/lib/server/countries";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
-
+import { checkIfRefreshTokenInCookie } from "@/lib/server/auth";
+import { APP_URL } from "@/lib/config";
 
 export const Route = createFileRoute('/auth/forgot-password')({
+  // Check if user is already authenticated, if so redirect to home page
+  beforeLoad: async () => {
+    const response = await checkIfRefreshTokenInCookie({});
+    const isAuthed = (response.status === "success") ? true : false
+    if (isAuthed) {
+      throw redirect({ to: APP_URL.homePage });
+    }
+  },
+
+  // Page metadata
   head: () => getPageHeader({ title: "Forgot your password", robotsAllowed: "no" }),
+
+  // Load countries data
   loader: async () => {
     const countries = await getAllCountries();
     if (countries.status !== 'success') throw new Error(countries.error);
     return { countries: countries.countries };
   },
+
+  // Component to render
   component: RouteComponent,
+
+  // Error component
   // errorComponent: SignupError,
 
 })

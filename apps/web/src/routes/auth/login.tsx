@@ -1,21 +1,35 @@
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { useAppDispatch } from "#/redux/hooks";
-import { setAuthData } from "#/redux/slice/authSlice";
-import { loginUser } from "#/lib/server/auth";
+import { updateAuthState } from "#/redux/slice/authSlice";
+import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth";
 import { FormError } from "./_components/-form-error";
 import { getPageHeader } from "@/lib/shared/meta";
+import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/auth/login")({
+  // Check if user is already authenticated, if so redirect to home page
+  beforeLoad: async () => {
+    const response = await checkIfRefreshTokenInCookie({});
+    const isAuthed = (response.status === "success") ? true : false
+
+    // if the user is authenticated and the server is up and running, redirect to home page
+    if (isAuthed) {
+      // throw redirect({ to: APP_URL.homePage });
+    }
+  },
+
+  // Set page meta
   head: () => getPageHeader({
     title: "Log in to your account",
     description: "Log in to your Free9ja account to access your dashboard and manage your profile",
   }),
+
   component: RouteComponent,
 });
 
@@ -34,25 +48,20 @@ function RouteComponent() {
 
       try {
         const response = await loginUser({ data: value });
-        console.log(response)
 
         if (response.status === "success") {
-          // dispatch(
-          //   setAuthData({
-          //     user: response.user,
-          //     accessToken: response.accessToken,
-          //   })
-          // );
+          dispatch(
+            updateAuthState({user: response.user})
+          );
 
           // login successful, redirect user to dashboard
-          // navigate({ to: "/dashboard" });
+          // navigate({ to: APP_URL.homePage });
         } else {
           // login failed, show error message
           setErrorMsg(response.message || "Login failed. Please check your credentials.");
         }
       } catch (error) {
-        console.error("Login submission error:", error);
-        setErrorMsg("An unexpected error occurred during login.");
+        setErrorMsg(`Connection error: ${error}`);
       }
     },
   });

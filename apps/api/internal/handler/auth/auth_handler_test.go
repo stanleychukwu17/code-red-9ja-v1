@@ -69,6 +69,11 @@ func (m *MockAuthService) GetRefreshExpiration() time.Duration {
 	return args.Get(0).(time.Duration)
 }
 
+func (m *MockAuthService) Logout(ctx context.Context, refreshToken string) error {
+	args := m.Called(ctx, refreshToken)
+	return args.Error(0)
+}
+
 // TestRegister tests the Register method of the AuthHandler
 func TestRegister(t *testing.T) {
 	// Create a new instance of the utils package

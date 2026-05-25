@@ -46,6 +46,7 @@ type OnboardingFlowProps = {
 export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const dispatch = useAppDispatch();
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
+  const otpVerified = onboardingData?.otpVerified
   const { country: userCountry, iso2, countryId } = onboardingData ?? {};
 
   const [data, setData] = useState<OnboardingState>({
@@ -125,6 +126,11 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     const selectedCity = cities.find((c) => c.value === data.city);
     const cityId = selectedCity?.id;
 
+    if (otpVerified !== "yes") {
+      setSubmitError("OTP verification required.");
+      return;
+    }
+
     if (firstName.length < 2 || surname.length < 2 || !gender || !dateOfBirth || username.length < 2 || nin.length < 11 || !onboardingCountryId || !stateId || !onboardingId) {
       setSubmitError("Missing required parameters for registration.");
       return;
@@ -149,8 +155,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       current_state: stateId,
       current_city: cityId ?? 0,
     };
-
-    console.log("Submitting onboarding data:", payload);
 
     try {
       const result = await completeRegistration({ data: payload });

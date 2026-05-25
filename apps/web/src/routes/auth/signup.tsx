@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { useAppDispatch } from "@/redux/hooks";
 import { setOnboardingData, updateOnboardingData } from "@/redux/slice/authSlice";
@@ -14,20 +14,37 @@ import { APP_URL } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
-import { registerUser } from "@/lib/server/auth";
+import { checkIfRefreshTokenInCookie, registerUser } from "@/lib/server/auth";
 
 import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
 export const Route = createFileRoute("/auth/signup")({
+  // Check if user is already authenticated, if so redirect to home page
+  beforeLoad: async () => {
+    const response = await checkIfRefreshTokenInCookie({});
+    const isAuthed = (response.status === "success") ? true : false
+    if (isAuthed) {
+      throw redirect({ to: APP_URL.homePage });
+    }
+  },
+
+  // Page metadata
   head: () => getPageHeader({
     title: "Sign up: Join the movement ",
+    description: "Create your account to start enjoying premium content on Free9ja",
   }),
+
+  // Load countries data
   loader: async () => {
     const countries = await getAllCountries();
     if (countries.status !== 'success') throw new Error(countries.error);
     return { countries: countries.countries };
   },
+
+  // Component to render
   component: RouteComponent,
+
+  // Error component
   errorComponent: SignupError,
 });
 

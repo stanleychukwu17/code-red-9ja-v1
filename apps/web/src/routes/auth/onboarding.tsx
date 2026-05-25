@@ -1,9 +1,8 @@
-import { useEffect } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { OnboardingFlow, type OnboardingStep } from "./_components/-onboarding-flow";
-import { useAppSelector } from "#/redux/hooks";
 import { APP_URL } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
+import { checkIfRefreshTokenInCookie } from "#/lib/server/auth";
 
 const STEPS : readonly OnboardingStep[] = ["details", "nin", "location"] as const;
 
@@ -14,6 +13,16 @@ const STEP_TITLES: Record<OnboardingStep, string> = {
 };
 
 export const Route = createFileRoute("/auth/onboarding")({
+  // Check if user is already authenticated, if so redirect to home page
+  beforeLoad: async () => {
+    const response = await checkIfRefreshTokenInCookie({});
+    const isAuthed = (response.status === "success") ? true : false
+    if (isAuthed) {
+      throw redirect({ to: APP_URL.homePage });
+    }
+  },
+
+  // Validate search params
   validateSearch: (search) => {
     const step = typeof search.step === "string" ? search.step : "details";
 
@@ -21,29 +30,26 @@ export const Route = createFileRoute("/auth/onboarding")({
       step: STEPS.includes(step as OnboardingStep) ? (step as OnboardingStep) : "details",
     };
   },
+
+  // Loader deps
   loaderDeps: ({ search: { step } }) => ({ step }),
+
+  // Loader
   loader: ({ deps: { step } }) => ({ step }),
+
+  // Set page meta
   head: ({ loaderData }) => {
     const step = loaderData?.step;
     const title = (step && STEP_TITLES[step]) || "Onboarding";
     return getPageHeader({ title, robotsAllowed: "no" });
   },
+
+  // Component
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const {otpVerified} = useAppSelector((state) => state.auth.onboardingData) ?? {};
-  const navigate = useNavigate();
   const { step } = Route.useSearch();
-
-  useEffect(() => {
-    if (otpVerified !== "yes") {
-      navigate({
-        to: APP_URL.auth.signup,
-        replace: true,
-      });
-    }
-  }, [otpVerified, navigate]);
 
   return (
     <OnboardingFlow step={step} />
