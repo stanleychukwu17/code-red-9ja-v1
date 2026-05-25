@@ -23,6 +23,7 @@ type AuthService interface {
 	CheckUsername(ctx context.Context, username string) bool
 	Login(ctx context.Context, identifier, password string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
+	Logout(ctx context.Context, refreshToken string) error
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -85,13 +86,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Map the request data to the database creation parameters
 	// Note: Password hashing is handled within the service layer
 	params := queries.CreateUserParams{
-		Email:          pgtype.Text{String: req.Email},
+		Email:          pgtype.Text{String: req.Email, Valid: req.Email != ""},
 		Phone:          req.Phone,
-		Username:       pgtype.Text{String: req.Username},
+		Username:       pgtype.Text{String: req.Username, Valid: true},
 		PasswordHash:   req.Password, // Hashed in the service layer
-		LastName:       pgtype.Text{String: req.LastName},
-		FirstName:      pgtype.Text{String: req.FirstName},
-		MiddleName:     pgtype.Text{String: req.MiddleName},
+		LastName:       pgtype.Text{String: req.LastName, Valid: true},
+		FirstName:      pgtype.Text{String: req.FirstName, Valid: true},
+		MiddleName:     pgtype.Text{String: req.MiddleName, Valid: req.MiddleName != ""},
 		Gender:         pgtype.Text{String: req.Gender, Valid: true},
 		DateOfBirth:    pgtype.Date{Time: dob, Valid: true},
 		CurrentCountry: req.CurrentCountry,
@@ -332,4 +333,34 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		"refreshToken": result.RefreshToken,
 		"user":         result.User,
 	})
+}
+
+// LogoutRequest represents the parameters for logging out
+type LogoutRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}
+
+// Logout handles the user logout by removing the session
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	var req LogoutRequest
+
+	if r.Body != nil && r.ContentLength > 0 {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+			return
+		}
+	}
+
+	if req.RefreshToken == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "Refresh token is missing")
+		return
+	}
+
+	err := h.authService.Logout(r.Context(), req.RefreshToken)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Logout successful", nil)
 }
