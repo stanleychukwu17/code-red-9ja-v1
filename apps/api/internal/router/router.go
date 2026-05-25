@@ -66,6 +66,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)             // Check Username endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                       // Register endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                             // Login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                           // Logout endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                         // Refresh token endpoint
 
 	// countries, states, cities
