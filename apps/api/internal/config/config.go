@@ -120,7 +120,7 @@ func LoadConfig() (*Config, error) {
 
 	// jwt secret and expirations
 	jwtSecret := GetEnv("JWT_SECRET", "free9ja_jwt_secret_key_for_dev_only")
-	jwtAccessExpStr := GetEnv("JWT_ACCESS_EXPIRATION", "1m")
+	jwtAccessExpStr := GetEnv("JWT_ACCESS_EXPIRATION", "15m")
 	jwtRefreshExpStr := GetEnv("JWT_REFRESH_EXPIRATION", "720h") // 30 days in hours
 
 	jwtAccessExp, err := time.ParseDuration(jwtAccessExpStr)
