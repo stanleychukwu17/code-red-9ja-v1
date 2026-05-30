@@ -11,30 +11,18 @@ import (
 )
 
 type Querier interface {
-	CheckIfPhoneNumberExists(ctx context.Context, phone string) (int64, error)
-	CreateOnboardingDetails(ctx context.Context, arg CreateOnboardingDetailsParams) (int64, error)
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error)
+	CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
-	GetOnboardingByPhone(ctx context.Context, phone string) (GetOnboardingByPhoneRow, error)
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
-	GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
-	GetUserByID(ctx context.Context, id int64) (User, error)
-	GetUserByLoginIdentifier(ctx context.Context, email pgtype.Text) (User, error)
-	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
-	GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error)
-	GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
-	UpdateOnboardingCompleted(ctx context.Context, id int64) error
-	UpdateOnboardingEmail(ctx context.Context, arg UpdateOnboardingEmailParams) error
-	UpdateOnboardingOTP(ctx context.Context, arg UpdateOnboardingOTPParams) (pgtype.Timestamptz, error)
-	UpdateOnboardingOTPVerified(ctx context.Context, arg UpdateOnboardingOTPVerifiedParams) error
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 }
 

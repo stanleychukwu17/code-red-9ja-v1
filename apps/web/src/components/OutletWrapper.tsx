@@ -8,9 +8,11 @@ interface OutletWrapperProps {
   children: React.ReactNode;
 }
 
+const listToHide = ['/auth/*', '/auth'];
+
 export function OutletWrapper({ children }: OutletWrapperProps) {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/auth/login';
+  const hideSideBar = listToHide.some(path => location.pathname.startsWith(path));
   const { sideBarState, allowOutletToBeResponsive } = useAppSelector((state) => state.site);
   const isMobile = useIsMobile();
   const dispatch = useAppDispatch();
@@ -37,7 +39,7 @@ export function OutletWrapper({ children }: OutletWrapperProps) {
 
   // Calculate width based on sidebar width from DOM
   const getMainContentStyle = (): React.CSSProperties => {
-    if (isMobile || !allowOutletToBeResponsive || isLoginPage) {
+    if (isMobile || !allowOutletToBeResponsive || hideSideBar) {
       return {
         width: '100vw',
         marginLeft: '0',

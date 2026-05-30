@@ -24,8 +24,8 @@ type MockAuthService struct {
 	mock.Mock
 }
 
-func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID int64) (authservice.RegisterResult, error) {
-	args := m.Called(ctx, params, nin, onboardingID)
+func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (authservice.RegisterResult, error) {
+	args := m.Called(ctx, params, nin, onboardingID, question1, answer1, question2, answer2)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
@@ -39,7 +39,7 @@ func (m *MockAuthService) VerifyOtp(ctx context.Context, phone, otp string) erro
 	return args.Error(0)
 }
 
-func (m *MockAuthService) ResendOtp(ctx context.Context, phone string, id int64) (authservice.RegisterPhaseSignUpResult, error) {
+func (m *MockAuthService) ResendOtp(ctx context.Context, phone string, id string) (authservice.RegisterPhaseSignUpResult, error) {
 	args := m.Called(ctx, phone, id)
 	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
 }
@@ -54,8 +54,8 @@ func (m *MockAuthService) CheckUsername(ctx context.Context, username string) bo
 	return args.Bool(0)
 }
 
-func (m *MockAuthService) Login(ctx context.Context, identifier, password string) (authservice.LoginResult, error) {
-	args := m.Called(ctx, identifier, password)
+func (m *MockAuthService) Login(ctx context.Context, identifierType string, identifier, password string, iso2 string) (authservice.LoginResult, error) {
+	args := m.Called(ctx, identifierType, identifier, password, iso2)
 	return args.Get(0).(authservice.LoginResult), args.Error(1)
 }
 
@@ -92,6 +92,10 @@ func TestRegister(t *testing.T) {
 			Phone:          "+2348012345678",
 			Username:       "test_user",
 			Nin:            "12345678901",
+			Question1:      1,
+			Answer1:        "dog",
+			Question2:      2,
+			Answer2:        "cat",
 			Password:       "password123",
 			LastName:       "Doe",
 			FirstName:      "John",
@@ -100,6 +104,7 @@ func TestRegister(t *testing.T) {
 			CurrentCountry: 1,
 			CurrentState:   1,
 			CurrentCity:    1,
+			OnboardingID:   "test-uuid",
 		}
 
 		// Marshal the RegisterRequest into JSON
@@ -110,7 +115,7 @@ func TestRegister(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		// Set up the mock service to return a RegisterResult with UserID and FakeID
-		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID).Return(authservice.RegisterResult{UserID: 1, FakeID: 12345}, nil)
+		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID, reqBody.Question1, reqBody.Answer1, reqBody.Question2, reqBody.Answer2).Return(authservice.RegisterResult{UserID: 1, FakeID: 12345}, nil)
 
 		// Call the Register method of the AuthHandler with the request and response recorder
 		handler.Register(rr, req)
@@ -200,6 +205,7 @@ func TestRegister(t *testing.T) {
 			DateOfBirth:    "01-01-2000", // Wrong format
 			CurrentCountry: 1,
 			CurrentState:   1,
+			OnboardingID:   "test-uuid",
 		}
 
 		// Marshal the RegisterRequest into JSON
@@ -230,6 +236,10 @@ func TestRegister(t *testing.T) {
 			Phone:          "+2348012345678",
 			Username:       "test_user",
 			Nin:            "12345678901",
+			Question1:      1,
+			Answer1:        "dog",
+			Question2:      2,
+			Answer2:        "cat",
 			Password:       "password123",
 			LastName:       "Doe",
 			FirstName:      "John",
@@ -238,6 +248,7 @@ func TestRegister(t *testing.T) {
 			CurrentCountry: 1,
 			CurrentState:   1,
 			CurrentCity:    1,
+			OnboardingID:   "test-uuid",
 		}
 
 		// Marshal the RegisterRequest into JSON
@@ -248,7 +259,7 @@ func TestRegister(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		// Set up the mock service to return an error
-		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID).Return(authservice.RegisterResult{}, errors.New("registration failed"))
+		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID, reqBody.Question1, reqBody.Answer1, reqBody.Question2, reqBody.Answer2).Return(authservice.RegisterResult{}, errors.New("registration failed"))
 
 		// Call the Register method of the AuthHandler with the request and response recorder
 		handler.Register(rr, req)

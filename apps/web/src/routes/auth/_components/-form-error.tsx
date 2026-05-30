@@ -17,7 +17,7 @@ export const FormError = ({ message }: FormErrorProps) => {
           className="overflow-hidden"
         >
           <div className="flex items-center gap-3 p-4 mb-4 bg-destructive/10 border border-destructive/20 rounded-xl backdrop-blur-sm">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <PiWarningCircleDuotone className="size-5 text-destructive" />
             </div>
             <p className="text-sm font-medium text-destructive leading-tight">

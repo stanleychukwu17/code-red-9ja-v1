@@ -46,6 +46,10 @@ func TestRegister(t *testing.T) {
 		Phone:          "+2348012345678",
 		Username:       "johnDoe",
 		Nin:            "12345678901",
+		Question1:      1,
+		Answer1:        "dog",
+		Question2:      2,
+		Answer2:        "cat",
 		Password:       "password123",
 		LastName:       "Doe",
 		FirstName:      "John",
@@ -261,30 +265,8 @@ func TestCheckPhone(t *testing.T) {
 	require.False(t, exists)
 
 	// 2. Insert into redis
-	app.RDB.SAdd(ctx, db.RedisRegisteredPhones, phone)
+	app.RDB.Set(ctx, db.RedisPhoneFakeID+phone, "123456", 0)
 	exists = s.CheckPhone(ctx, phone)
-	require.True(t, exists)
-
-	// 3. Not in redis, but in users_phone_numbers table
-	phone2 := "+2348022222222"
-
-	// We need a user to associate the phone number with.
-	// Using a simple insert to avoid filling all fields of queries.CreateUserParams
-	var userID int64
-	err := app.DB.QueryRow(ctx, "INSERT INTO users (email, phone, username, password_hash, current_country, current_state, current_city) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id",
-		"phone2@example.com", "+2348022222223", "phone2user", "hash", 161, 293, 153369).Scan(&userID)
-	require.NoError(t, err)
-
-	_, err = q.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
-		UserID: userID,
-		Phone:  phone2,
-	})
-	require.NoError(t, err)
-
-	// Ensure it's not in Redis
-	app.RDB.SRem(ctx, db.RedisRegisteredPhones, phone2)
-
-	exists = s.CheckPhone(ctx, phone2)
 	require.True(t, exists)
 
 	fmt.Println("success")

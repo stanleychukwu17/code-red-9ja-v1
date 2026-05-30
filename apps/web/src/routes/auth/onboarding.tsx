@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { OnboardingFlow, type OnboardingStep } from "./_components/-onboarding-flow";
 import { APP_URL } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
-import { checkIfRefreshTokenInCookie } from "#/lib/server/auth";
+import { checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 
 const STEPS : readonly OnboardingStep[] = ["details", "nin", "location"] as const;
 

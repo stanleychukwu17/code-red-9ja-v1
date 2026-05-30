@@ -108,10 +108,10 @@ function DesktopSelect({
     normalizedQuery.length === 0
       ? options
       : options.filter((option) =>
-          `${option.label} ${option.searchText ?? ""}`
-            .toLowerCase()
-            .includes(normalizedQuery),
-        );
+        `${option.label} ${option.searchText ?? ""}`
+          .toLowerCase()
+          .includes(normalizedQuery),
+      );
 
   return (
     <Combobox<SelectOption>
@@ -213,10 +213,10 @@ function MobileSelect({
     normalizedQuery.length === 0
       ? options
       : options.filter((option) =>
-          `${option.label} ${option.searchText ?? ""}`
-            .toLowerCase()
-            .includes(normalizedQuery),
-        );
+        `${option.label} ${option.searchText ?? ""}`
+          .toLowerCase()
+          .includes(normalizedQuery),
+      );
 
   React.useEffect(() => {
     if (!open) {

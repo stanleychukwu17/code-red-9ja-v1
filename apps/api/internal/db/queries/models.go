@@ -76,24 +76,20 @@ type User struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type UserSecurityQuestion struct {
+	ID        int64  `json:"id"`
+	UserFid   int64  `json:"user_fid"`
+	Nin       string `json:"nin"`
+	Question1 int16  `json:"question1"`
+	Answer1   string `json:"answer1"`
+	Question2 int16  `json:"question2"`
+	Answer2   string `json:"answer2"`
+}
+
 type UsersNin struct {
 	ID     int32  `json:"id"`
 	UserID int64  `json:"user_id"`
 	Nin    string `json:"nin"`
-}
-
-type UsersOnboarding struct {
-	ID              int64              `json:"id"`
-	Otp             pgtype.Text        `json:"otp"`
-	DateTimeOtpSent pgtype.Timestamptz `json:"date_time_otp_sent"`
-	OtpVerified     pgtype.Text        `json:"otp_verified"`
-	CountryID       int16              `json:"country_id"`
-	StateID         pgtype.Int2        `json:"state_id"`
-	CityID          pgtype.Int4        `json:"city_id"`
-	Email           pgtype.Text        `json:"email"`
-	Phone           string             `json:"phone"`
-	Completed       pgtype.Text        `json:"completed"`
-	DateCreated     pgtype.Timestamptz `json:"date_created"`
 }
 
 type UsersPhoneNumber struct {

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppDispatch } from "#/redux/hooks";
-import { refreshUserToken } from "#/lib/server/auth";
+import { refreshUserToken } from "#/lib/server/auth/auth";
 import { updateAuthState } from "#/redux/slice/authSlice";
 
 // This component is used to restore the auth session on page refresh,

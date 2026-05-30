@@ -15,13 +15,11 @@ import (
 
 // AuthService interface defines the methods for authentication services
 type AuthService interface {
-	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID int64) (auth.RegisterResult, error)
+	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (auth.RegisterResult, error)
 	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
-	VerifyOtp(ctx context.Context, phone, otp string) error
-	ResendOtp(ctx context.Context, phone string, id int64) (auth.RegisterPhaseSignUpResult, error)
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
-	Login(ctx context.Context, identifier, password string) (auth.LoginResult, error)
+	Login(ctx context.Context, identifierType, identifier, password, iso2 string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
 }
@@ -46,9 +44,13 @@ func NewHandler(authService AuthService, utils *utils.Utils) *Handler {
 type RegisterRequest struct {
 	Email          string `json:"email" validate:"omitempty,email"`
 	Phone          string `json:"phone" validate:"required,e164"`
-	OnboardingID   int64  `json:"onboarding_id" validate:"required"`
+	OnboardingID   string `json:"onboarding_id" validate:"required"`
 	Username       string `json:"username" validate:"required,min=2,max=30"`
 	Nin            string `json:"nin" validate:"required,numeric,len=11"`
+	Question1      int16  `json:"question1" validate:"required"`
+	Answer1        string `json:"answer1" validate:"required,min=2,max=30"`
+	Question2      int16  `json:"question2" validate:"required"`
+	Answer2        string `json:"answer2" validate:"required,min=2,max=30"`
 	Password       string `json:"password" validate:"required,min=5,max=72"`
 	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
 	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
@@ -73,6 +75,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.(validator.ValidationErrors)[0].Translate(nil))
+		return
+	}
+
+	if req.Question1 == req.Question2 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Security questions must be different")
 		return
 	}
 
@@ -101,7 +108,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call the auth service to register the new user
-	id, err := h.authService.Register(r.Context(), params, req.Nin, req.OnboardingID)
+	id, err := h.authService.Register(r.Context(), params, req.Nin, req.OnboardingID, req.Question1, req.Answer1, req.Question2, req.Answer2)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create user: "+err.Error())
 		return
@@ -146,67 +153,7 @@ func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Initial sign-up data is valid", map[string]interface{}{
-		"id":              result.ID,
-		"dateTimeOtpSent": result.DateTimeOtpSent,
-		"otpVerified":     result.OtpVerified,
-	})
-}
-
-// VerifyOtpRequest represents the structure for OTP verification
-type VerifyOtpRequest struct {
-	Phone string `json:"phoneNumber" validate:"required"`
-	Otp   string `json:"otp" validate:"required,len=6"`
-}
-
-// VerifyOtp handles the OTP verification process
-func (h *Handler) VerifyOtp(w http.ResponseWriter, r *http.Request) {
-	var req VerifyOtpRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	if err := h.authService.VerifyOtp(r.Context(), req.Phone, req.Otp); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "OTP verified successfully", nil)
-}
-
-// ResendOtpRequest represents the structure for resending OTP
-type ResendOtpRequest struct {
-	Phone string `json:"phoneNumber" validate:"required"`
-	ID    int64  `json:"id" validate:"required"`
-}
-
-// ResendOtp handles the request to resend OTP
-func (h *Handler) ResendOtp(w http.ResponseWriter, r *http.Request) {
-	var req ResendOtpRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	result, err := h.authService.ResendOtp(r.Context(), req.Phone, req.ID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "OTP resent successfully", map[string]interface{}{
-		"id":              result.ID,
-		"dateTimeOtpSent": result.DateTimeOtpSent,
+		"id": result.ID,
 	})
 }
 
@@ -240,7 +187,7 @@ type CheckUsernameRequest struct {
 	Username string `json:"username" validate:"required,min=2,max=30"`
 }
 
-// CheckUsername checks if the username already exists
+// CheckUsername checks if the username already exists, used during registration
 func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	var req CheckUsernameRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -270,13 +217,17 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 
 // LoginRequest represents the parameters for logging in
 type LoginRequest struct {
-	Identifier string `json:"identifier" validate:"required,min=2,max=50"` // accepts email, username or phone
-	Password   string `json:"password" validate:"required,min=4"`
+	Country        string `json:"country" validate:"required"`
+	Identifier     string `json:"identifier" validate:"required,min=2,max=50"` // accepts email, username or phone
+	Password       string `json:"password" validate:"required,min=4"`
+	IdentifierType string `json:"identifierType" validate:"required,oneof=email username phone"`
+	Iso2           string `json:"iso2" validate:"omitempty"`
 }
 
 // Login handles the user login and token generation
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
@@ -287,7 +238,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.Login(r.Context(), req.Identifier, req.Password)
+	if !(req.IdentifierType == "email" || req.IdentifierType == "username" || req.IdentifierType == "phone") {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid identifier type")
+		return
+	}
+
+	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return

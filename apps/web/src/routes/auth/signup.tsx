@@ -14,16 +14,15 @@ import { APP_URL } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
-import { checkIfRefreshTokenInCookie, registerUser } from "@/lib/server/auth";
+import { checkIfRefreshTokenInCookie, startUserRegistration } from "@/lib/server/auth/auth";
 
 import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
 export const Route = createFileRoute("/auth/signup")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
-    const response = await checkIfRefreshTokenInCookie({});
-    const isAuthed = (response.status === "success") ? true : false
-    if (isAuthed) {
+    const isLoggedIn = await checkIfRefreshTokenInCookie({});
+    if (isLoggedIn.status === "success") {
       throw redirect({ to: APP_URL.homePage });
     }
   },
@@ -85,20 +84,16 @@ function RouteComponent() {
       dispatch(setOnboardingData(payload));
 
       // send the data to the server
-      const result = await registerUser({ data: payload });
+      const result = await startUserRegistration({ data: payload });
 
       // if the request was successful
       if (result.status === "success") {
         // update the onboarding data with the result returned from the register request
-        dispatch(updateOnboardingData({
-          id: result.id,
-          dateTimeOtpSent: result.dateTimeOtpSent,
-          otpVerified: result.otpVerified,
-        }));
+        dispatch(updateOnboardingData({id: result.id}));
 
         // navigate to the verify otp page
         navigate({
-          to: result.otpVerified == "yes" ? APP_URL.auth.onboarding : APP_URL.auth.verifyOtp,
+          to: APP_URL.auth.securityQuestions,
           search: { flow: "signup" },
         });
       } else {
@@ -107,6 +102,8 @@ function RouteComponent() {
       }
     },
   });
+
+
 
   // on page load, auto-select the country where the user is browsing from
   useEffect(() => {

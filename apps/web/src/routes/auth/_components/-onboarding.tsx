@@ -43,7 +43,7 @@ export function OnboardingHeader({title, subtitle, icon, onBack}: OnboardingHead
         <h1 className="text-[24px] font-bold leading-none tracking-[-0.04em] text-primary">
           {title}
         </h1>
-        <p className="max-w-[22rem] text-base leading-6 text-c-50">
+        <p className="max-w-88 text-base leading-6 text-c-50">
           {subtitle}
         </p>
       </div>

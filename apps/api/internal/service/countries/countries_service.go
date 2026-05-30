@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -29,7 +30,7 @@ func (s *CountryService) GetAllCountries(ctx context.Context) ([]queries.ListCou
 	}
 
 	//check if in redis
-	countries, err := s.rdb.Get(ctx, db.CountriesAll).Result()
+	countries, err := s.rdb.Get(ctx, db.RedisCountriesAll).Result()
 
 	//not in redis, get from db
 	switch err {
@@ -46,7 +47,7 @@ func (s *CountryService) GetAllCountries(ctx context.Context) ([]queries.ListCou
 		jsonData, _ := json.Marshal(payload)
 
 		//set in redis
-		s.rdb.Set(ctx, db.CountriesAll, jsonData, 0)
+		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, 5*365*24*time.Hour) // expires in 5years
 
 		return dbCountries, nil
 	case nil:
@@ -65,7 +66,7 @@ func (s *CountryService) GetStatesByCountryID(ctx context.Context, countryID int
 		States []queries.GetStatesByCountryIDRow `json:"states"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d", db.StatesByCountry, countryID)
+	redisKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, countryID)
 
 	//check if in redis
 	statesData, err := s.rdb.Get(ctx, redisKey).Result()
@@ -88,7 +89,7 @@ func (s *CountryService) GetStatesByCountryID(ctx context.Context, countryID int
 		jsonData, _ := json.Marshal(payload)
 
 		//set in redis
-		s.rdb.Set(ctx, redisKey, jsonData, 0)
+		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // expires in 5years
 
 		return dbStates, nil
 	case nil:
@@ -107,7 +108,7 @@ func (s *CountryService) GetCitiesByStateID(ctx context.Context, stateID int16) 
 		Cities []queries.GetCitiesByStateIDRow `json:"cities"`
 	}
 
-	redisKey := fmt.Sprintf("%s%d", db.CitiesByState, stateID)
+	redisKey := fmt.Sprintf("%s%d", db.RedisCitiesByState, stateID)
 
 	//check if in redis
 	citiesData, err := s.rdb.Get(ctx, redisKey).Result()
@@ -130,7 +131,7 @@ func (s *CountryService) GetCitiesByStateID(ctx context.Context, stateID int16) 
 		jsonData, _ := json.Marshal(payload)
 
 		//set in redis
-		s.rdb.Set(ctx, redisKey, jsonData, 0)
+		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // expires in 5years
 
 		return dbCities, nil
 	case nil:

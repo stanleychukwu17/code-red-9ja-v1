@@ -1,5 +1,6 @@
 import LogoIcon from "@repo/ui/icons/logo-icon";
 import { Link } from "@tanstack/react-router";
+import { APP_URL } from "#/lib/config";
 
 export const AuthWrapper = ({
   children,
@@ -26,22 +27,27 @@ export const AuthWrapper = ({
         <div className="flex items-center justify-between text-sm text-primary">
           {type === "login" ? (
             <p className="text-center">
-              Don't have an account?{" "}
-              <Link to="/auth/signup" className="text-primary font-medium">
+              Don't have an account? &nbsp;
+              <Link to={APP_URL.auth.signup} className="text-primary font-medium">
                 Sign up
               </Link>
             </p>
           ) : (
             <p className="text-center">
-              Already have an account?{" "}
-              <Link to="/auth/login" className="text-primary font-medium">
+              Already have an account? &nbsp;
+              <Link to={APP_URL.auth.login} className="text-primary font-medium">
                 Log in
               </Link>
             </p>
           )}
 
           <p className="text-c-70 hover:text-c-90 cursor-pointer transition-colors duration-200">
-            Forgot password
+              <Link 
+                to={APP_URL.auth.securityQuestions}
+                search={{flow: type}}
+              >
+                Forgot password
+              </Link>
           </p>
         </div>
       </div>

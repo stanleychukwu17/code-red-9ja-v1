@@ -14,7 +14,7 @@ import { FormError } from "./_components/-form-error";
 import { getAllCountries } from "@/lib/server/countries";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
-import { checkIfRefreshTokenInCookie } from "@/lib/server/auth";
+import { checkIfRefreshTokenInCookie } from "@/lib/server/auth/auth";
 import { APP_URL } from "@/lib/config";
 
 export const Route = createFileRoute('/auth/forgot-password')({

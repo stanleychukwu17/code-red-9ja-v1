@@ -11,8 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthVerifyOtpRouteImport } from './routes/auth/verify-otp'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as AuthSecurityQuestionsRouteImport } from './routes/auth/security-questions'
 import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
@@ -39,14 +39,14 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthVerifyOtpRoute = AuthVerifyOtpRouteImport.update({
-  id: '/auth/verify-otp',
-  path: '/auth/verify-otp',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/auth/signup',
   path: '/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSecurityQuestionsRoute = AuthSecurityQuestionsRouteImport.update({
+  id: '/auth/security-questions',
+  path: '/auth/security-questions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
@@ -147,8 +147,8 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/auth/verify-otp': typeof AuthVerifyOtpRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/candidates/': typeof AuthenticatedCandidatesIndexRoute
@@ -168,8 +168,8 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/auth/verify-otp': typeof AuthVerifyOtpRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/app-users': typeof AuthenticatedAppUsersIndexRoute
   '/candidates': typeof AuthenticatedCandidatesIndexRoute
@@ -191,8 +191,8 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/logout': typeof AuthLogoutRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/auth/verify-otp': typeof AuthVerifyOtpRoute
   '/_authenticated/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/_authenticated/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
@@ -214,8 +214,8 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/logout'
     | '/auth/onboarding'
+    | '/auth/security-questions'
     | '/auth/signup'
-    | '/auth/verify-otp'
     | '/polling-unit/$pollingUnitId'
     | '/app-users/'
     | '/candidates/'
@@ -235,8 +235,8 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/logout'
     | '/auth/onboarding'
+    | '/auth/security-questions'
     | '/auth/signup'
-    | '/auth/verify-otp'
     | '/polling-unit/$pollingUnitId'
     | '/app-users'
     | '/candidates'
@@ -257,8 +257,8 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/logout'
     | '/auth/onboarding'
+    | '/auth/security-questions'
     | '/auth/signup'
-    | '/auth/verify-otp'
     | '/_authenticated/polling-unit/$pollingUnitId'
     | '/_authenticated/app-users/'
     | '/_authenticated/candidates/'
@@ -280,8 +280,8 @@ export interface RootRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthLogoutRoute: typeof AuthLogoutRoute
   AuthOnboardingRoute: typeof AuthOnboardingRoute
+  AuthSecurityQuestionsRoute: typeof AuthSecurityQuestionsRoute
   AuthSignupRoute: typeof AuthSignupRoute
-  AuthVerifyOtpRoute: typeof AuthVerifyOtpRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -300,18 +300,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/verify-otp': {
-      id: '/auth/verify-otp'
-      path: '/auth/verify-otp'
-      fullPath: '/auth/verify-otp'
-      preLoaderRoute: typeof AuthVerifyOtpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth/signup': {
       id: '/auth/signup'
       path: '/auth/signup'
       fullPath: '/auth/signup'
       preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/security-questions': {
+      id: '/auth/security-questions'
+      path: '/auth/security-questions'
+      fullPath: '/auth/security-questions'
+      preLoaderRoute: typeof AuthSecurityQuestionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/onboarding': {
@@ -470,8 +470,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthLoginRoute: AuthLoginRoute,
   AuthLogoutRoute: AuthLogoutRoute,
   AuthOnboardingRoute: AuthOnboardingRoute,
+  AuthSecurityQuestionsRoute: AuthSecurityQuestionsRoute,
   AuthSignupRoute: AuthSignupRoute,
-  AuthVerifyOtpRoute: AuthVerifyOtpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

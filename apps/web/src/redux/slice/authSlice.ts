@@ -9,9 +9,13 @@ export interface AuthProps {
   email?: string;
   password?: string;
   confirmPassword?: string;
-  id?: number;
-  dateTimeOtpSent?: string;
-  otpVerified?: "yes" | "no";
+  id?: string;
+  question1?: number;
+  answer1?: string;
+  question2?: number;
+  answer2?: string;
+  registrationCompleted?: boolean;
+  registrationCompletedAt?: string;
 }
 
 export interface UserProps {

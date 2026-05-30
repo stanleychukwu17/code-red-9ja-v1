@@ -15,11 +15,11 @@ import NINIcon from "@repo/ui/icons/onboarding/nin-icon ";
 import UserIcon from "@repo/ui/icons/onboarding/user-icon";
 import { useCallback, useState, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { APP_URL } from "#/lib/config";
-import { checkNin, checkUsername, completeRegistration } from "#/lib/server/auth";
+import { checkNin, checkUsername, completeRegistration } from "#/lib/server/auth/auth";
 import { getCities, getStates } from "#/lib/server/countries";
 import { FormError } from "./-form-error";
 import { useAppSelector, useAppDispatch } from "#/redux/hooks";
-import { clearOnboardingData } from "#/redux/slice/authSlice";
+import { clearOnboardingData, updateOnboardingData } from "#/redux/slice/authSlice";
 
 
 const ONBOARDING_STEPS = ["details", "nin", "location"] as const;
@@ -46,7 +46,6 @@ type OnboardingFlowProps = {
 export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const dispatch = useAppDispatch();
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
-  const otpVerified = onboardingData?.otpVerified
   const { country: userCountry, iso2, countryId } = onboardingData ?? {};
 
   const [data, setData] = useState<OnboardingState>({
@@ -62,6 +61,14 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     city: "",
   });
   const navigate = useNavigate();
+
+  // if there is no onboardingId, redirect back to signup page
+  useEffect(() => {
+    if (!onboardingData?.id || !onboardingData?.countryId) {
+      navigate({ to: APP_URL.auth.signup });
+      return
+    }
+  }, [navigate, onboardingData?.id, onboardingData?.countryId]);
 
   // get current step index, using the step name from the url
   const currentStepIndex = Math.max(0, ONBOARDING_STEPS.indexOf(step));
@@ -120,14 +127,14 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   // Function to handle the final submission of onboarding data
   const onFinish = useCallback(async () => {
     const { firstName, surname, otherNames, gender, dateOfBirth, username, nin } = data;
-    const { email, phoneNumber, password, countryId: onboardingCountryId, id: onboardingId } = onboardingData ?? {};
+    const { email, phoneNumber, password, countryId: onboardingCountryId, id: onboardingId, question1, answer1, question2, answer2 } = onboardingData ?? {};
 
     // Get city id
     const selectedCity = cities.find((c) => c.value === data.city);
     const cityId = selectedCity?.id;
 
-    if (otpVerified !== "yes") {
-      setSubmitError("OTP verification required.");
+    if (!onboardingId || onboardingId.length === 0) {
+      setSubmitError("You need to go back to the signup page");
       return;
     }
 
@@ -146,6 +153,10 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       username,
       nin,
       password,
+      question1,
+      answer1,
+      question2,
+      answer2,
       last_name: surname.trim(),
       first_name: firstName.trim(),
       middle_name: otherNames || "",
@@ -158,15 +169,16 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
     try {
       const result = await completeRegistration({ data: payload });
-      console.log("Registration response:", result);
-
       if (result.status === "success" || result.id) {
-        // Registration successful - clear authSlice
-        dispatch(clearOnboardingData());
-        navigate({
-          to: APP_URL.auth.login,
-          replace: true,
-        });
+        // Navigate to login page
+        navigate({ to: APP_URL.auth.login, replace: true });
+
+        // Set registration completion status in authSlice
+        dispatch(updateOnboardingData({
+          registrationCompleted: true,
+          registrationCompletedAt: new Date().toISOString(),
+        }))
+
       } else {
         setSubmitError(result.message || "Registration failed. Please try again.");
       }
@@ -296,15 +308,10 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     const username = data.username.trim();
     if (!username) return;
 
-    // Check username validation (regex matching the backend validation: ^[a-zA-Z0-9_]+$)
-    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    // Check username validation (regex matching the backend validation: ^[a-zA-Z][a-zA-Z0-9_]{2,30}$)
+    const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/; // username must start with a letter
     if (!usernameRegex.test(username)) {
-      setUsernameError("Username can only contain letters, numbers, and underscores");
-      return;
-    }
-
-    if (username.length < 2 || username.length > 30) {
-      setUsernameError("Username must be between 2 and 30 characters");
+      setUsernameError("Username must start with a letter and be between 3 and 30 characters, underscores not allowed at the end");
       return;
     }
 

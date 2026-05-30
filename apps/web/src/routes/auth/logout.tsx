@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { logoutUser } from '#/lib/server/auth'
+import { logoutUser } from '#/lib/server/auth/auth'
 import { store } from '#/redux/store'
 import { updateAuthState } from '#/redux/slice/authSlice'
 import { APP_URL } from '#/lib/config'
@@ -15,7 +15,7 @@ export const Route = createFileRoute('/auth/logout')({
     // Clear Redux state on client
     store.dispatch(updateAuthState({ user: null }));
 
-    // Redirect to login page
+    // Redirect to home page
     throw redirect({to: APP_URL.homePage});
   },
   component: RouteComponent,
