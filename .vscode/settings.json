@@ -2,11 +2,20 @@
   "cSpell.words": [
     "authhandler",
     "countrieshandler",
+    "countriesservice",
+    "eqfield",
     "godoc",
     "godotenv",
     "jackc",
+    "messagingservice",
+    "Nins",
+    "nyaruka",
+    "pgtype",
     "pgxpool",
+    "phonecode",
+    "phonenumbers",
     "sqlc",
-    "stretchr"
+    "stretchr",
+    "swaggo"
   ]
 }
