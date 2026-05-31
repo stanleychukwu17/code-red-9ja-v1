@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAppSelector, useAppDispatch } from '@/redux/hooks';
-import { setCurrentSideBarWidth } from '@/redux/slice/siteSlice';
+import { updateSiteState } from '@/redux/slice/siteSlice';
 import { useIsMobile } from '@repo/ui/hooks/useMobile';
 import { useLocation } from '@tanstack/react-router';
 
@@ -28,9 +28,10 @@ export function OutletWrapper({ children }: OutletWrapperProps) {
         const collapsedWidth = computedStyle.getPropertyValue('--sidebar-width-icon');
         const width = sideBarState === 'expanded' ? expandedWidth : collapsedWidth;
         // console.log("Sidebar width:", width
+
         const trimmedWidth = width.trim();
         setSidebarWidth(trimmedWidth);
-        dispatch(setCurrentSideBarWidth(trimmedWidth));
+        dispatch(updateSiteState({ currentSideBarWidth: trimmedWidth }));
       }
     };
 
