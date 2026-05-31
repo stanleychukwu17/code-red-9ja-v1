@@ -50,7 +50,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {
 		mainRouter.Get("/api/v1/swagger/*", httpSwagger.Handler(
-			httpSwagger.URL("/swagger/doc.json"),
+			httpSwagger.URL("/api/v1/swagger/doc.json"),
 		))
 	}
 
