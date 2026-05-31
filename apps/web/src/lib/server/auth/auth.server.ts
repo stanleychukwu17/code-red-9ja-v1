@@ -3,7 +3,7 @@ import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { API_URL } from "../../config";
 
 // Helper function to set user details cookie
-const setUserDetailsCookie = (userDetails: any) => {
+export const setUserDetailsCookie = (userDetails: any) => {
   const stringifiedDetails = JSON.stringify(userDetails);
   setCookie("user_details", stringifiedDetails, {
     secure: process.env.NODE_ENV === "production",
@@ -60,7 +60,7 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
     });
 
     const result = await response.json();
-    console.log(result)
+    // console.log(result)
     if (result.status === "success" && result.refreshToken) {
       setAuthCookies({ refreshToken: result.refreshToken, accessToken: result.accessToken });
       delete result.refreshToken;
@@ -68,8 +68,7 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
     }
     return result;
   } catch (error) {
-    console.error("Login error:", error);
-    return { status: "error", message: "Connection error. Please try again later." };
+    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message };
   }
 })
 
@@ -107,7 +106,13 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
     }
   } else {
     // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
-    if (result?.message === "invalid or expired refresh token1") {
+    const logOutConditions = [
+      "invalid or expired refresh token",
+      "user not found",
+      "your account is not active"
+    ]
+
+    if (logOutConditions.includes(result?.message)) {
       console.log("cleared cookies because of this result", result)
       clearAuthCookies();
     } else {
@@ -124,6 +129,16 @@ export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {
   return { status: refreshToken ? "success" : "error" };
 })
 
+export const getUserDetailsCookieImpl = createServerOnlyFn(async () => {
+  const userDetailsCookie = getCookie("user_details");
+  if (!userDetailsCookie) return null;
+  try {
+    return JSON.parse(userDetailsCookie);
+  } catch {
+    return null;
+  }
+});
+
 // Logs out the user by sending a POST request to the server with the user's refresh token,
 // Clears the cookies after the request is made.
 export const logoutUserImpl = createServerOnlyFn(async () => {
@@ -139,7 +154,6 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
       body: JSON.stringify({ refreshToken }),
     });
     const result = await response.json();
-    console.log("log out result", result)
     return result;
   } catch (error) {
     return { status: "error", message: error };
