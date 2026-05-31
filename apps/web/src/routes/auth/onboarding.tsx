@@ -15,9 +15,8 @@ const STEP_TITLES: Record<OnboardingStep, string> = {
 export const Route = createFileRoute("/auth/onboarding")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
-    const response = await checkIfRefreshTokenInCookie({});
-    const isAuthed = (response.status === "success") ? true : false
-    if (isAuthed) {
+    const isAuthed = await checkIfRefreshTokenInCookie({});
+    if (isAuthed.status === "success") {
       throw redirect({ to: APP_URL.homePage });
     }
   },
