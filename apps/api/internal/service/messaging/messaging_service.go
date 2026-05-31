@@ -43,7 +43,6 @@ func (s *MessagingService) SendWhatsAppOTP(phone, otp string) error {
 	message := fmt.Sprintf("Your Free9ja OTP is: %s", otp)
 	to := fmt.Sprintf("whatsapp:%s", phone)
 
-	fmt.Println(message)
 	params := &openapi.CreateMessageParams{}
 	params.SetTo(to)
 	params.SetFrom(s.whatsappFrom)
