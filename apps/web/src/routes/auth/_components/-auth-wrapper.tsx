@@ -9,6 +9,8 @@ export const AuthWrapper = ({
   children: React.ReactNode;
   type: "login" | "signup";
 }) => {
+  const flow = type === "login" ? "login" : "forgot-password";
+
   return (
     <main className="page-wrap px-4 pb-8 py-24 flex justify-center min-h-screen">
       <div className="max-w-[400px] w-full space-y-6">
@@ -18,7 +20,7 @@ export const AuthWrapper = ({
             {type === "login" ? "Log in" : "Create an account"}
           </p>
           <p className="text-c-50">
-            {type === "login" ? "Make your vote count" : "Join the movement"}
+            {type === "login" ? "Making Nigeria great" : "Join the movement"}
           </p>
         </div>
 
@@ -44,7 +46,7 @@ export const AuthWrapper = ({
           <p className="text-c-70 hover:text-c-90 cursor-pointer transition-colors duration-200">
               <Link 
                 to={APP_URL.auth.securityQuestions}
-                search={{flow: type}}
+                search={{flow}}
               >
                 Forgot password
               </Link>
