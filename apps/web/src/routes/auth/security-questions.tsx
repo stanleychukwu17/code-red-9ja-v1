@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@repo/ui/components/button";
 import { FormInput } from "@repo/ui/components/input";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { Shield } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateOnboardingData } from "@/redux/slice/authSlice";
-// import { verifyOtp } from "@/lib/server/auth/auth";
+import { checkIfRefreshTokenInCookie } from "@/lib/server/auth/auth";
 import { OnboardingHeader, OnboardingWrapper } from "./_components/-onboarding";
 import { FormError } from "./_components/-form-error";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
@@ -14,6 +14,13 @@ import { APP_URL } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute('/auth/security-questions')({
+  // Check if user is already authenticated, if so redirect to home page
+  beforeLoad: async () => {
+    const isAuthed = await checkIfRefreshTokenInCookie({});
+    if (isAuthed.status === "success") {
+      throw redirect({ to: APP_URL.homePage });
+    }
+  },
   head: () => getPageHeader({ title: "Answer security questions", robotsAllowed: "no" }),
   validateSearch: (search) => {
     const flow = search.flow
