@@ -1,0 +1,13 @@
+version: "2"
+sql:
+  - schema: "db/migrations"  # sqlc reads your .sql migrations to know the table types
+    queries: "db/query"      # where your query files live
+    engine: "postgresql"
+    gen:
+      go:
+        package: "queries"   # name of the generated package
+        out: "internal/db/queries"
+        sql_package: "pgx/v5" # essential for using pgxpool
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: true # makes it easier to mock for tests

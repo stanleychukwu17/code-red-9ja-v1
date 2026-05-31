@@ -1,0 +1,51 @@
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Docker files
+.dockerignore
+docker-compose*.yml
+
+# Environment and secrets
+.env
+.env.local
+*.pem
+*.key
+*.crt
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build artifacts and binaries
+bin/
+tmp/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.log
+*.prof
+*.tmp
+
+# Node / frontend
+node_modules/
+package-lock.json
+turbo.json
+
+# Documentation (optional, if not needed in image)
+README.md
+DATABASE.md
+docs/
+tree.txt
+
+# scripts
+scripts/set_goose_variables.sh
