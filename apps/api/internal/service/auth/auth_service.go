@@ -189,7 +189,7 @@ type RefreshResult struct {
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (RefreshResult, error) {
 	// hash the refresh token
 	hashed := utils.HashToken(refreshToken)
-	pipe := s.rdb.Pipeline()
+	pipe := s.rdb.TxPipeline()
 
 	// use token to fetch jwt session details from redis
 	RedisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, hashed)
@@ -214,7 +214,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	// get the user details using the userFid
 	user, err := s.GetUserDetailsByFakeID(ctx, userFid)
 	if err != nil {
-		return RefreshResult{}, fmt.Errorf("user not found: %v", err)
+		return RefreshResult{}, errors.New("user not found")
 	}
 
 	// destructure some of the user info
@@ -225,7 +225,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Username:      username,
 		FirstName:     user.FirstName.String,
 		LastName:      user.LastName.String,
-		AvatarURL:     "",
+		AvatarURL:     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
 		AccountStatus: accountStatus,
 	}
 
@@ -266,12 +266,12 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	defer s.rdb.Del(ctx, lockKey)
 
 	// delete old token (rotation)
-	pipe.Del(ctx, RedisTokenKey)            // deletes the token
-	pipe.SRem(ctx, redisSessionKey, hashed) // deletes the token from the list of session tokens
+	s.rdb.Del(ctx, RedisTokenKey)            // deletes the token
+	s.rdb.SRem(ctx, redisSessionKey, hashed) // deletes the token from the list of session tokens
 
 	// Verify account status
 	if accountStatus == "suspended" || accountStatus == "banned" || accountStatus == "deleted" || accountStatus == "inactive" {
-		return RefreshResult{}, fmt.Errorf("your account is %s", accountStatus)
+		return RefreshResult{}, errors.New("your account is not active")
 	}
 
 	// update the time of this new accessToken generated
@@ -300,6 +300,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 
 	// add the new refresh token to the session SET
 	pipe.SAdd(ctx, redisSessionKey, refresh.HashedToken)
+	pipe.Expire(ctx, redisSessionKey, s.jwtRefreshExp)
 
 	// execute the pipeline
 	_, err = pipe.Exec(ctx)
@@ -320,6 +321,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	// hash the refresh token
 	hashed := utils.HashToken(refreshToken)
+	// return errors.New("testing error")
 
 	// use token to fetch jwt session details from redis
 	tokenRedisKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, hashed)
@@ -365,7 +367,21 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 
 	// remove the session from the user sessions set
 	userRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, userFid)
-	pipe.SRem(ctx, userRedisKey, sessionID)
+	pipe.SRem(ctx, userRedisKey, sessionID) // delete the current session
+
+	// fetches all the session in the user session set, and check if they are still valid, if-not-valid, we delete the session
+	members, err := s.rdb.SMembers(ctx, userRedisKey).Result()
+	if err == nil {
+		for _, sessionUID := range members {
+			// check if the session is still valid
+			redisSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionUID)
+			_, err := s.rdb.Get(ctx, redisSessionKey).Result()
+			if errors.Is(err, redis.Nil) {
+				// session is not valid, delete it
+				pipe.SRem(ctx, userRedisKey, sessionUID)
+			}
+		}
+	}
 
 	// send the pipeline to redis and check for errors
 	_, err = pipe.Exec(ctx)
@@ -599,7 +615,6 @@ func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 // 2. matches the given ISO country code (e.g. "NG", "US")
 // 3. returns normalized E.164 format if valid
 func (s *AuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) {
-	fmt.Printf("Phone: %s, Country Code: %s\n", phone, country_code)
 	// Parse number (second arg can be empty if phone is already in E.164)
 	num, err := phonenumbers.Parse(phone, "")
 	if err != nil {
