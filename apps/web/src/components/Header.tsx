@@ -4,27 +4,14 @@
 // the shadcn blocks can be found at: https://ui.shadcn.com/blocks
 
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  SidebarTrigger,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar,
 } from "@repo/ui/components/sidebar";
 
 import { TooltipProvider } from "@repo/ui/components/tooltip";
 import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
 
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  PopoverHeader,
-  PopoverDescription
+  Popover, PopoverContent, PopoverTrigger, PopoverHeader, PopoverDescription
 } from "@repo/ui/components/popover";
 
 import LogoIcon from "@repo/ui/icons/logo-icon";
@@ -40,20 +27,18 @@ import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
 
 import { Skeleton } from "@repo/ui/components/skeleton"
+import { cn } from "@repo/ui/lib/utils";
 
-import { cn } from "node_modules/@repo/ui/src/lib/utils";
-
-import {
-  Ellipsis, PanelRightClose, PanelLeftClose
-} from "lucide-react";
-import { Link, useLocation } from "@tanstack/react-router";
+import { Ellipsis, PanelRightClose, PanelLeftClose } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { setSidebarState } from "@/redux/slice/siteSlice";
+import { updateSiteState } from "@/redux/slice/siteSlice";
+import { updateAuthState } from "@/redux/slice/authSlice";
+import { logoutUser } from "#/lib/server/auth/auth";
 import { useIsMobile } from "@repo/ui/hooks/useMobile";
 import { APP_URL } from "#/lib/config";
-
 
 type AppSidebarItem = {
   id: string;
@@ -102,7 +87,7 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
 ];
 
 // the main SideBar wrapper
-export function AppSidebarShell() {
+export function AppSidebarShell({ userDetails }: { userDetails?: any }) {
   const location = useLocation();
   const isAuthPage = location.pathname.startsWith("/auth");
 
@@ -125,7 +110,7 @@ export function AppSidebarShell() {
       >
         {/* This TooltipProvider is needed for the SidebarMenuButton with tooltips */}
         <TooltipProvider>
-          <AppSidebar />
+          <AppSidebar userDetails={userDetails} />
         </TooltipProvider>
 
         {/* Collapsing of the sidebar */}
@@ -140,12 +125,12 @@ export function AppSidebarShell() {
   );
 }
 
-export function AppSidebar() {
+export function AppSidebar({ userDetails }: { userDetails?: any }) {
   const { state: sideBarState } = useSidebar();
   const dispatch = useAppDispatch();
 
   useEffect(() => {
-    dispatch(setSidebarState(sideBarState));
+    dispatch(updateSiteState({ sideBarState }));
   }, [sideBarState, dispatch]);
 
   return (
@@ -171,7 +156,7 @@ export function AppSidebar() {
         </SidebarContent>
 
         <SidebarFooter className="py-4 px-0">
-          <ProfilePicture />
+          <ProfilePicture userDetails={userDetails} />
         </SidebarFooter>
       </div>
     </Sidebar>
@@ -227,7 +212,6 @@ function LogoComponent() {
   const { state: sideBarState, toggleSidebar } = useSidebar();
   const isMobile = useIsMobile()
 
-
   let flexDir = "flex-row";
   try {
     flexDir = sideBarState === "collapsed" ? "flex-col" : "flex-row";
@@ -240,7 +224,6 @@ function LogoComponent() {
 
     // Check if the sidebar state in localStorage is different from the current state
     const savedSiteState = localStorage.getItem("site") || null;
-    console.log(savedSiteState)
     const preloadedSiteState = savedSiteState ? JSON.parse(savedSiteState) : undefined;
     if (preloadedSiteState && preloadedSiteState?.sideBarState != sideBarState) {
       toggleSidebar()
@@ -279,12 +262,18 @@ function SidebarPollButton({ children }: { children: ReactNode }) {
   );
 }
 
-function ProfilePicture() {
+function ProfilePicture({ userDetails }: { userDetails?: any }) {
   const { state: sideBarState } = useSidebar();
-  const { user, userHydrated } = useAppSelector((state) => state.auth);
-  // console.log("user hydrated",{userHydrated, user})
+  const { user: authUser, userHydrated } = useAppSelector((state) => state.auth);
 
-  if (userHydrated === false || user === null) {
+  const user = authUser || userDetails;
+
+  if (user === null) {
+    // If user is null and userHydrated is true, it means the user is not logged in
+    if (userHydrated) {
+      return null;
+    }
+
     return <>
       <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{ width: "260px" }}>
         <div className="flex-none">
@@ -303,11 +292,11 @@ function ProfilePicture() {
       <Popover>
         <PopoverTrigger>
           <Avatar className="size-10">
-            <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+            <AvatarImage src={user?.avatar_url}alt="@shadcn" />
           </Avatar>
         </PopoverTrigger>
         <PopoverContent>
-          <ProfilePicturePopover />
+          <ProfilePicturePopover userDetails={user} />
         </PopoverContent>
       </Popover>
     )
@@ -333,27 +322,39 @@ function ProfilePicture() {
       </PopoverTrigger>
 
       <PopoverContent className="w-[260px]">
-        <ProfilePicturePopover />
+        <ProfilePicturePopover userDetails={userDetails} />
       </PopoverContent>
     </Popover>
   );
 }
-function ProfilePicturePopover() {
+function ProfilePicturePopover({ userDetails }: { userDetails: any }) {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
 
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Failed to call logoutUser on server:", error);
+    }
+
+    dispatch(updateAuthState({ user: null }));
+    navigate({ to: APP_URL.homePage });
+  };
 
   return (
     <>
-      <PopoverHeader className="px-3">Chukwu Daniel</PopoverHeader>
+      <PopoverHeader className="px-3 capitalize">{userDetails?.last_name} {userDetails?.first_name}</PopoverHeader>
       <PopoverDescription>
-        <Link
-          to={APP_URL.auth.logout}
+        <span
+          onClick={handleLogout}
           className="
-          block py-2 px-3 text-[14px] text-[#8b8589] truncate overflow-hidden
+          block py-2 px-3 text-[14px] text-[#8b8589] truncate overflow-hidden cursor-pointer
           hover:bg-[#f0f0ef] hover:text-[#171416]
           "
         >
-          Logout @chukwudaniel
-        </Link>
+          Logout @{userDetails?.username}
+        </span>
       </PopoverDescription>
     </>
   );
