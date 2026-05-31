@@ -18,12 +18,9 @@ import { APP_URL } from "#/lib/config";
 export const Route = createFileRoute("/auth/login")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
-    const response = await checkIfRefreshTokenInCookie({});
-    const isAuthed = (response.status === "success") ? true : false
-
-    // if the user is authenticated and the server is up and running, redirect to home page
-    if (isAuthed) {
-      // throw redirect({ to: APP_URL.homePage });
+    const isAuthed = await checkIfRefreshTokenInCookie({});
+    if (isAuthed.status === "success") {
+      throw redirect({ to: APP_URL.homePage });
     }
   },
 
