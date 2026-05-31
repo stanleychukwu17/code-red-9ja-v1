@@ -14,7 +14,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
 import { Route as AuthSecurityQuestionsRouteImport } from './routes/auth/security-questions'
 import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
-import { Route as AuthLogoutRouteImport } from './routes/auth/logout'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthChangePasswordRouteImport } from './routes/auth/change-password'
@@ -52,11 +51,6 @@ const AuthSecurityQuestionsRoute = AuthSecurityQuestionsRouteImport.update({
 const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
   id: '/auth/onboarding',
   path: '/auth/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthLogoutRoute = AuthLogoutRouteImport.update({
-  id: '/auth/logout',
-  path: '/auth/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -145,7 +139,6 @@ export interface FileRoutesByFullPath {
   '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
-  '/auth/logout': typeof AuthLogoutRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -166,7 +159,6 @@ export interface FileRoutesByTo {
   '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
-  '/auth/logout': typeof AuthLogoutRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -189,7 +181,6 @@ export interface FileRoutesById {
   '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
-  '/auth/logout': typeof AuthLogoutRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
   '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
@@ -212,7 +203,6 @@ export interface FileRouteTypes {
     | '/auth/change-password'
     | '/auth/forgot-password'
     | '/auth/login'
-    | '/auth/logout'
     | '/auth/onboarding'
     | '/auth/security-questions'
     | '/auth/signup'
@@ -233,7 +223,6 @@ export interface FileRouteTypes {
     | '/auth/change-password'
     | '/auth/forgot-password'
     | '/auth/login'
-    | '/auth/logout'
     | '/auth/onboarding'
     | '/auth/security-questions'
     | '/auth/signup'
@@ -255,7 +244,6 @@ export interface FileRouteTypes {
     | '/auth/change-password'
     | '/auth/forgot-password'
     | '/auth/login'
-    | '/auth/logout'
     | '/auth/onboarding'
     | '/auth/security-questions'
     | '/auth/signup'
@@ -278,7 +266,6 @@ export interface RootRouteChildren {
   AuthChangePasswordRoute: typeof AuthChangePasswordRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
-  AuthLogoutRoute: typeof AuthLogoutRoute
   AuthOnboardingRoute: typeof AuthOnboardingRoute
   AuthSecurityQuestionsRoute: typeof AuthSecurityQuestionsRoute
   AuthSignupRoute: typeof AuthSignupRoute
@@ -319,13 +306,6 @@ declare module '@tanstack/react-router' {
       path: '/auth/onboarding'
       fullPath: '/auth/onboarding'
       preLoaderRoute: typeof AuthOnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/logout': {
-      id: '/auth/logout'
-      path: '/auth/logout'
-      fullPath: '/auth/logout'
-      preLoaderRoute: typeof AuthLogoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
@@ -468,7 +448,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthChangePasswordRoute: AuthChangePasswordRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
-  AuthLogoutRoute: AuthLogoutRoute,
   AuthOnboardingRoute: AuthOnboardingRoute,
   AuthSecurityQuestionsRoute: AuthSecurityQuestionsRoute,
   AuthSignupRoute: AuthSignupRoute,
