@@ -65,7 +65,6 @@ func TestRegister(t *testing.T) {
 
 	t.Run("successful registration", func(t *testing.T) {
 		response, respBody := test.SendRequest(t, "POST", url, requestBody)
-		// fmt.Printf("Status: %s, Response: %s\n", response.Status, string(respBody))
 
 		require.Equal(t, response.StatusCode, http.StatusCreated, "expected status code %d, got %d", http.StatusCreated, response.StatusCode)
 		require.Contains(t, string(respBody), "User registered successfully")
@@ -74,7 +73,6 @@ func TestRegister(t *testing.T) {
 
 	t.Run("duplicate username", func(t *testing.T) {
 		response, respBody := test.SendRequest(t, "POST", url, requestBody)
-		// fmt.Printf("Status: %s, Response: %s\n", response.Status, string(respBody))
 
 		require.Equal(t, response.StatusCode, http.StatusInternalServerError, "expected status code %d, got %d", http.StatusInternalServerError, response.StatusCode)
 		require.Contains(t, string(respBody), "username already exists")
@@ -268,6 +266,4 @@ func TestCheckPhone(t *testing.T) {
 	app.RDB.Set(ctx, db.RedisPhoneFakeID+phone, "123456", 0)
 	exists = s.CheckPhone(ctx, phone)
 	require.True(t, exists)
-
-	fmt.Println("success")
 }
