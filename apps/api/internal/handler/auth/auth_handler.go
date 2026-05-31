@@ -62,6 +62,16 @@ type RegisterRequest struct {
 	CurrentCity    int32  `json:"current_city"`
 }
 
+// @Summary Register a new user
+// @Description Creates a new user account with full details
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterRequest true "Registration details"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/register [post]
 // Register handles the user registration process
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
@@ -224,6 +234,16 @@ type LoginRequest struct {
 	Iso2           string `json:"iso2" validate:"omitempty"`
 }
 
+// @Summary Login user
+// @Description Authenticates a user and returns access and refresh tokens
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body LoginRequest true "Login credentials"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/login [post]
 // Login handles the user login and token generation
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
