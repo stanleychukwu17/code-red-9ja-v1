@@ -1,5 +1,104 @@
 basePath: /api/v1
 definitions:
+  authhandler.LoginRequest:
+    properties:
+      country:
+        type: string
+      identifier:
+        description: accepts email, username or phone
+        maxLength: 50
+        minLength: 2
+        type: string
+      identifierType:
+        enum:
+        - email
+        - username
+        - phone
+        type: string
+      iso2:
+        type: string
+      password:
+        minLength: 4
+        type: string
+    required:
+    - country
+    - identifier
+    - identifierType
+    - password
+    type: object
+  authhandler.RegisterRequest:
+    properties:
+      answer1:
+        maxLength: 30
+        minLength: 2
+        type: string
+      answer2:
+        maxLength: 30
+        minLength: 2
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        description: Expects YYYY-MM-DD
+        type: string
+      email:
+        type: string
+      first_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      last_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      middle_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      nin:
+        type: string
+      onboarding_id:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      phone:
+        type: string
+      question1:
+        type: integer
+      question2:
+        type: integer
+      username:
+        maxLength: 30
+        minLength: 2
+        type: string
+    required:
+    - answer1
+    - answer2
+    - current_country
+    - current_state
+    - date_of_birth
+    - first_name
+    - gender
+    - last_name
+    - nin
+    - onboarding_id
+    - password
+    - phone
+    - question1
+    - question2
+    - username
+    type: object
   countrieshandler.CityResponse:
     properties:
       id:
@@ -76,6 +175,72 @@ paths:
       summary: API Root
       tags:
       - root
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns access and refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login user
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account with full details
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Auth
   /countries:
     get:
       consumes:

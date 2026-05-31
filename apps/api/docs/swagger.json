@@ -41,6 +41,104 @@
                 }
             }
         },
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates a user and returns access and refresh tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Creates a new user account with full details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "Registration details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/countries": {
             "get": {
                 "description": "Fetches a list of all countries with their ISO2 codes, phone codes",
@@ -183,6 +281,136 @@
         }
     },
     "definitions": {
+        "authhandler.LoginRequest": {
+            "type": "object",
+            "required": [
+                "country",
+                "identifier",
+                "identifierType",
+                "password"
+            ],
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "description": "accepts email, username or phone",
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2
+                },
+                "identifierType": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "username",
+                        "phone"
+                    ]
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                }
+            }
+        },
+        "authhandler.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "answer1",
+                "answer2",
+                "current_country",
+                "current_state",
+                "date_of_birth",
+                "first_name",
+                "gender",
+                "last_name",
+                "nin",
+                "onboarding_id",
+                "password",
+                "phone",
+                "question1",
+                "question2",
+                "username"
+            ],
+            "properties": {
+                "answer1": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "answer2": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "description": "Expects YYYY-MM-DD",
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "middle_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "nin": {
+                    "type": "string"
+                },
+                "onboarding_id": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "question1": {
+                    "type": "integer"
+                },
+                "question2": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                }
+            }
+        },
         "countrieshandler.CityResponse": {
             "type": "object",
             "properties": {
