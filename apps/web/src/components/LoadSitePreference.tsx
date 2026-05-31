@@ -1,10 +1,6 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import {
-  setCurrentSideBarWidth,
-  setSidebarState,
-  setAllowOutletToBeResponsive,
-} from "@/redux/slice/siteSlice";
+import { updateSiteState } from "@/redux/slice/siteSlice";
 
 export default function LoadSitePreference() {
   const dispatch = useDispatch();
@@ -17,9 +13,7 @@ export default function LoadSitePreference() {
     const parsed = JSON.parse(siteSettings);
 
     // Dispatch the actions to update the Redux store with the values from the local storage
-    dispatch(setSidebarState(parsed.sideBarState));
-    dispatch(setCurrentSideBarWidth(parsed.currentSideBarWidth));
-    dispatch(setAllowOutletToBeResponsive(parsed.allowOutletToBeResponsive));
+    dispatch(updateSiteState(parsed));
   }, []);
 
   return null;
