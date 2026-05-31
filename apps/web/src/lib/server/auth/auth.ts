@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
-import { checkIfRefreshTokenInCookieImpl, loginUserImpl, logoutUserImpl, refreshUserTokenImpl } from "#/lib/server/auth/auth.server"
+import { checkIfRefreshTokenInCookieImpl, getUserDetailsCookieImpl, loginUserImpl, logoutUserImpl, refreshUserTokenImpl } from "#/lib/server/auth/auth.server"
 
 
 // Starts the registration process for a new user
@@ -92,6 +92,7 @@ export const loginUser = createServerFn({method: "POST"})
 export const refreshUserToken = createServerFn({ method: "POST" })
   .handler(async () => {
     const result = await refreshUserTokenImpl() // Refreshes the user's access token
+    // console.log("refreshUserToken result", result)
     return result
   });
 
@@ -99,6 +100,13 @@ export const refreshUserToken = createServerFn({ method: "POST" })
 export const checkIfRefreshTokenInCookie = createServerFn({ method: "GET" })
   .handler(async () => {
     const result = await checkIfRefreshTokenInCookieImpl() // Checks if there is a refresh token in the client's cookie
+    return result;
+  });
+
+// Gets the user details from the client's cookie
+export const getUserDetailsCookie = createServerFn({ method: "GET" })
+  .handler(async () => {
+    const result = await getUserDetailsCookieImpl() // Gets the user details from the client's cookie
     return result;
   });
 
