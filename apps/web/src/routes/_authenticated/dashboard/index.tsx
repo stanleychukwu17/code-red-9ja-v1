@@ -2,7 +2,7 @@ import { Button } from "@repo/ui/components/button";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Bell, Edit3, Upload } from "lucide-react";
+import { Bell, Edit3, Upload, User } from "lucide-react";
 import { CANDIDATES, DASHBOARD_STATE_RANKINGS } from "../../../data/dashboard";
 import { useAppSelector } from "#/redux/hooks";
 
@@ -14,6 +14,18 @@ function RouteComponent() {
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
   // console.log({user})
+  
+  // useEffect(() => {
+  //   const body = document.querySelector("body");
+  //   const userDetails = body?.getAttribute("data-user-details");
+  //   if (userDetails) {
+  //     const { name, email, phone } = JSON.parse(userDetails);
+  //     user.name = name;
+  //     user.email = email;
+  //     user.phone = phone;
+  //   }
+  // }, []);
+
 
   return (
     <div className="flex-1 px-4 pb-6 pt-6 md:px-12 md:pb-10 md:pt-7 xl:px-12">
@@ -26,12 +38,12 @@ function RouteComponent() {
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
               <img
-                src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
+                src={user?.avatar_url}
                 alt="Lotta Free 9ja"
                 className="size-[46px] rounded-full object-cover"
               />
               <p className="text-[18px] font-semibold text-[#181818] md:text-[20px]">
-                Hi Lotta, Free 9ja
+                Hi {user?.first_name}, Free9ja
               </p>
             </div>
 
