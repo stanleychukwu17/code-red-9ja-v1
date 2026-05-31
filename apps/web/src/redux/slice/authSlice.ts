@@ -36,7 +36,7 @@ export interface AuthState {
 const initialState: AuthState = {
   onboardingData: null,
   user: null,
-  userHydrated: false,
+  userHydrated: false
 };
 
 export const authSlice = createSlice({
