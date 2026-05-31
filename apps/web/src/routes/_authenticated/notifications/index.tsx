@@ -16,9 +16,7 @@ const STORAGE_KEY = "free9ja.notifications.seenAt.v1";
 const HIGHLIGHT_MS = 5000;
 
 function RouteComponent() {
-  const [highlightingIds, setHighlightingIds] = useState<Set<string>>(
-    () => new Set(),
-  );
+  const [highlightingIds, setHighlightingIds] = useState<Set<string>>(() => new Set());
   const [readIds, setReadIds] = useState<Set<string>>(() => new Set());
   const timersRef = useRef<Map<string, number>>(new Map());
 
