@@ -23,18 +23,19 @@ export const siteSlice = createSlice({
   name: "site",
   initialState,
   reducers: {
-    setSidebarState: (state, action: PayloadAction<SiteState["sideBarState"]>) => {
-      state.sideBarState = action.payload;
-    },
-    setCurrentSideBarWidth: (state, action: PayloadAction<string>) => {
-      state.currentSideBarWidth = action.payload;
-    },
-    setAllowOutletToBeResponsive: (state, action: PayloadAction<boolean>) => {
-      state.allowOutletToBeResponsive = action.payload;
+    updateSiteState: (state, action: PayloadAction<Partial<SiteState>>) => {
+      const { sideBarState, currentSideBarWidth, allowOutletToBeResponsive } = action.payload;
+      if (sideBarState) state.sideBarState = sideBarState;
+      if (currentSideBarWidth) state.currentSideBarWidth = currentSideBarWidth;
+      if (allowOutletToBeResponsive !== undefined) state.allowOutletToBeResponsive = allowOutletToBeResponsive;
+
+      // store in local storage
+      localStorage.setItem("site", JSON.stringify(state));
+      return state
     },
   },
 });
 
-export const { setSidebarState, setCurrentSideBarWidth, setAllowOutletToBeResponsive } = siteSlice.actions;
+export const { updateSiteState } = siteSlice.actions;
 
 export default siteSlice.reducer;
