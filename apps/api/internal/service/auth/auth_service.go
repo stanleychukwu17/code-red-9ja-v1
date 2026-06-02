@@ -236,8 +236,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	}
 
 	// Compare with current time
-	if time.Since(parsedTime) < 12*time.Minute {
-		// fmt.Println("TimeAdded is less than 12 minutes ago", parsedTime)
+	if time.Since(parsedTime) < 10*time.Minute {
+		// fmt.Println("TimeAdded is less than 10 minutes ago", parsedTime)
 		return RefreshResult{
 			User: userDetails,
 		}, nil
@@ -855,4 +855,143 @@ func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) 
 	}
 
 	return user, nil
+}
+
+type VerifySecurityQuestionsResult struct {
+	ChangePasswordID string `json:"change_password_id"`
+	UserFID          int64  `json:"user_fid"`
+}
+
+func (s *AuthService) VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (VerifySecurityQuestionsResult, error) {
+	// Check if the user exists in Redis using the nin
+	userFidStr := s.rdb.Get(ctx, db.RedisNINFakeID+nin).Val()
+	if userFidStr == "" {
+		return VerifySecurityQuestionsResult{}, errors.New("invalid nin or security questions not found")
+	}
+
+	// check if there is already an existing request from db.RedisChangePassword
+	if s.rdb.Exists(ctx, db.RedisChangePassword+userFidStr).Val() > 0 {
+		return VerifySecurityQuestionsResult{}, errors.New("you already have an existing request for password change, please wait for 10mins and try again")
+	}
+
+	secQ, err := s.queries.GetUserSecurityQuestionsByNIN(ctx, nin)
+	if err != nil {
+		return VerifySecurityQuestionsResult{}, errors.New("invalid nin or security questions not found")
+	}
+
+	// Verify answers
+	if secQ.Question1 != q1 || secQ.Question2 != q2 {
+		return VerifySecurityQuestionsResult{}, errors.New("incorrect security questions")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(secQ.Answer1), []byte(a1))
+	if err != nil {
+		return VerifySecurityQuestionsResult{}, errors.New("incorrect answer for question 1")
+	}
+
+	err = bcrypt.CompareHashAndPassword([]byte(secQ.Answer2), []byte(a2))
+	if err != nil {
+		return VerifySecurityQuestionsResult{}, errors.New("incorrect answer for question 2")
+	}
+
+	// Generate a unique ID
+	changePasswordID := uuid.NewString()
+
+	// Save user_fid in Redis with an expiry of 5 minutes
+	redisKey := db.RedisChangePassword + userFidStr
+	err = s.rdb.Set(ctx, redisKey, changePasswordID, 5*time.Minute).Err()
+	if err != nil {
+		return VerifySecurityQuestionsResult{}, fmt.Errorf("failed to save state in redis: %w", err)
+	}
+
+	return VerifySecurityQuestionsResult{
+		ChangePasswordID: changePasswordID,
+		UserFID:          secQ.UserFid,
+	}, nil
+}
+
+func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error {
+	redisKey := fmt.Sprintf("%s%d", db.RedisChangePassword, userFid)
+
+	// Check if token exists in Redis
+	storedID, err := s.rdb.Get(ctx, redisKey).Result()
+	if err != nil || storedID != changePasswordID {
+		return errors.New("invalid or expired reset token")
+	}
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// Update the user's password
+	err = s.queries.UpdateUserPasswordByFid(ctx, queries.UpdateUserPasswordByFidParams{
+		FakeID:       pgtype.Int8{Int64: userFid, Valid: true},
+		PasswordHash: string(hashedPassword),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	// Delete the redis key upon success
+	s.rdb.Del(ctx, redisKey)
+
+	// Invalidate all active user sessions and refresh tokens
+	// Get all user sessions
+	userRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, userFid)
+	sessions, err := s.rdb.SMembers(ctx, userRedisKey).Result()
+	if err == nil && len(sessions) > 0 {
+		// Create a pipeline to execute all delete operations atomically
+		pipe := s.rdb.TxPipeline()
+
+		// Iterate over each session
+		for _, sessionID := range sessions {
+			// Get all tokens for the session
+			redisSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+			tokens, _ := s.rdb.SMembers(ctx, redisSessionKey).Result()
+
+			// Delete each token
+			for _, token := range tokens {
+				redisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, token)
+				pipe.Del(ctx, redisTokenKey)
+			}
+
+			// Delete the session set itself
+			pipe.Del(ctx, redisSessionKey)
+		}
+
+		// Delete the user sessions set
+		pipe.Del(ctx, userRedisKey)
+
+		// Execute the pipeline
+		_, _ = pipe.Exec(ctx)
+	}
+
+	// Update cached user info
+	_ = s.UpdateCachedUserInfo(ctx, userFid)
+
+	return nil
+}
+
+// UpdateCachedUserInfo refreshes the cached user information in Redis.
+// This function should be called anytime a user's details change.
+func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) error {
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+
+	// Fetch fresh data from DB
+	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		// If the user can't be fetched, remove the cache anyway to avoid stale data
+		s.rdb.Del(ctx, userInfoKey)
+		return fmt.Errorf("user not found for cache update: %w", err)
+	}
+
+	// Marshal and update Redis
+	userJSON, err := json.Marshal(user)
+	if err == nil {
+		s.rdb.Set(ctx, userInfoKey, userJSON, 0) // 0 means no expiration, or however GetUserDetailsByFakeID caches it
+	}
+
+	return err
 }
