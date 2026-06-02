@@ -10,12 +10,16 @@ export interface AuthProps {
   password?: string;
   confirmPassword?: string;
   id?: string;
+  changePasswordId?: string;
+  changeUserFid?: number;
   question1?: number;
   answer1?: string;
   question2?: number;
   answer2?: string;
   registrationCompleted?: boolean;
   registrationCompletedAt?: string;
+  passwordChangeCompleted?: boolean;
+  passwordChangeCompletedAt?: string;
 }
 
 export interface UserProps {
@@ -36,7 +40,7 @@ export interface AuthState {
 const initialState: AuthState = {
   onboardingData: null,
   user: null,
-  userHydrated: false
+  userHydrated: false 
 };
 
 export const authSlice = createSlice({
@@ -57,7 +61,7 @@ export const authSlice = createSlice({
       state.onboardingData = null;
     },
     updateAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
-      Object.assign(state, action.payload);
+      Object.assign(state, action.payload); // merges the current state with the received action.payload
     },
 
   },
