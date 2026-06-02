@@ -6,7 +6,7 @@ import { useForm } from "@tanstack/react-form";
 import { Shield } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateOnboardingData } from "@/redux/slice/authSlice";
-import { checkIfRefreshTokenInCookie } from "@/lib/server/auth/auth";
+import { checkIfRefreshTokenInCookie, verifySecurityQuestions } from "@/lib/server/auth/auth";
 import { OnboardingHeader, OnboardingWrapper } from "./_components/-onboarding";
 import { FormError } from "./_components/-form-error";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
@@ -82,7 +82,27 @@ function RouteComponent() {
         navigate({ to: APP_URL.auth.onboarding });
         return;
       } else if (flow === "login" || flow === "forgot-password") {
-        // send the data to the backend
+        try {
+          const res = await verifySecurityQuestions({
+            data: {
+              nin: value.nin,
+              question1: Number(value.securityQuestion1),
+              answer1: value.securityAnswer1,
+              question2: Number(value.securityQuestion2),
+              answer2: value.securityAnswer2,
+            }
+          });
+
+          if (res.status != "success") {
+            setServerError(res.message || "Failed to verify security questions");
+            return;
+          }
+
+          dispatch(updateOnboardingData({ changePasswordId: res.change_password_id, changeUserFid: res.user_fid }));
+          navigate({ to: APP_URL.auth.forgotPassword });
+        } catch (error) {
+          setServerError((error as Error).message);
+        }
       }
 
     },
