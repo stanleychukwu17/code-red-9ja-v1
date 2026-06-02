@@ -1,5 +1,38 @@
 basePath: /api/v1
 definitions:
+  authhandler.CheckNINRequest:
+    properties:
+      nin:
+        type: string
+    required:
+    - nin
+    type: object
+  authhandler.CheckUsernameRequest:
+    properties:
+      username:
+        maxLength: 30
+        minLength: 2
+        type: string
+    required:
+    - username
+    type: object
+  authhandler.ForgotPasswordRequest:
+    properties:
+      change_password_id:
+        type: string
+      confirmPassword:
+        type: string
+      password:
+        minLength: 5
+        type: string
+      user_fid:
+        type: integer
+    required:
+    - change_password_id
+    - confirmPassword
+    - password
+    - user_fid
+    type: object
   authhandler.LoginRequest:
     properties:
       country:
@@ -25,6 +58,39 @@ definitions:
     - identifier
     - identifierType
     - password
+    type: object
+  authhandler.LogoutRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  authhandler.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  authhandler.RegisterPhaseSignUpRequest:
+    properties:
+      confirmPassword:
+        type: string
+      country:
+        type: string
+      countryId:
+        type: integer
+      email:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      phoneNumber:
+        type: string
+    required:
+    - confirmPassword
+    - country
+    - countryId
+    - password
+    - phoneNumber
     type: object
   authhandler.RegisterRequest:
     properties:
@@ -98,6 +164,25 @@ definitions:
     - question1
     - question2
     - username
+    type: object
+  authhandler.VerifySecurityQuestionsRequest:
+    properties:
+      answer1:
+        type: string
+      answer2:
+        type: string
+      nin:
+        type: string
+      question1:
+        type: integer
+      question2:
+        type: integer
+    required:
+    - answer1
+    - answer2
+    - nin
+    - question1
+    - question2
     type: object
   countrieshandler.CityResponse:
     properties:
@@ -175,6 +260,95 @@ paths:
       summary: API Root
       tags:
       - root
+  /auth/check_nin:
+    post:
+      consumes:
+      - application/json
+      description: Checks if the National Identification Number (NIN) already exists
+      parameters:
+      - description: NIN to check
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.CheckNINRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check NIN
+      tags:
+      - Auth
+  /auth/check_username:
+    post:
+      consumes:
+      - application/json
+      description: Checks if the username already exists
+      parameters:
+      - description: Username to check
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.CheckUsernameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check Username
+      tags:
+      - Auth
+  /auth/forgot_password:
+    post:
+      consumes:
+      - application/json
+      description: Handles resetting the user's password
+      parameters:
+      - description: New password details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Forgot password
+      tags:
+      - Auth
   /auth/login:
     post:
       consumes:
@@ -208,6 +382,67 @@ paths:
       summary: Login user
       tags:
       - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Handles the user logout by removing the session
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Logout user
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Handles token rotation using a valid refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh Token
+      tags:
+      - Auth
   /auth/register:
     post:
       consumes:
@@ -239,6 +474,69 @@ paths:
             additionalProperties: true
             type: object
       summary: Register a new user
+      tags:
+      - Auth
+  /auth/register_phase_signup:
+    post:
+      consumes:
+      - application/json
+      description: Handles the first phase of user registration (country, phone, email,
+        password)
+      parameters:
+      - description: Initial sign-up details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RegisterPhaseSignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Initial sign-up phase
+      tags:
+      - Auth
+  /auth/verify_security_questions:
+    post:
+      consumes:
+      - application/json
+      description: Checks the answers to security questions and returns a unique ID
+        if successful
+      parameters:
+      - description: Security questions and answers
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.VerifySecurityQuestionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Verify security questions
       tags:
       - Auth
   /countries:
@@ -333,4 +631,15 @@ paths:
       summary: Get cities by state ID
       tags:
       - Countries
+securityDefinitions:
+  AccessToken:
+    description: Type "Bearer " followed by your access token.
+    in: header
+    name: Authorization
+    type: apiKey
+  RefreshToken:
+    description: Type your refresh token.
+    in: header
+    name: RefreshToken
+    type: apiKey
 swagger: "2.0"
