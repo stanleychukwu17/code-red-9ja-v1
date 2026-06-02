@@ -10,6 +10,7 @@ import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState, clearOnboardingData } from "#/redux/slice/authSlice";
 import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { FormError } from "./_components/-form-error";
+import { SuccessMessage } from "./_components/-success-message";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
@@ -38,7 +39,7 @@ export const Route = createFileRoute("/auth/login")({
   },
 
   component: RouteComponent,
-  
+
   errorComponent: ({ error }) => <div>{`${error?.message}, Also check if the backend server is up and running`}</div>,
 });
 
@@ -48,6 +49,7 @@ function RouteComponent() {
   const countries = Route.useLoaderData().countries as { id: number; name: string; iso2: string; phonecode: string }[];
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [showRegistrationSuccess, setShowRegistrationSuccess] = useState<boolean>(false);
+  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] = useState<boolean>(false);
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
 
   const form = useForm({
@@ -59,7 +61,7 @@ function RouteComponent() {
     onSubmit: async ({ value }) => {
       setErrorMsg(null);
 
-      const payload: { 
+      const payload: {
         country: string;
         identifier: string;
         password: string;
@@ -158,6 +160,22 @@ function RouteComponent() {
     }
   }, [onboardingData, dispatch]);
 
+  // check if password was just changed (within 5 minutes)
+  useEffect(() => {
+    if (onboardingData?.passwordChangeCompleted && onboardingData?.passwordChangeCompletedAt) {
+      const completionTime = new Date(onboardingData.passwordChangeCompletedAt);
+      const currentTime = new Date();
+      const timeDiff = currentTime.getTime() - completionTime.getTime();
+      const fiveMinutesInMs = 5 * 60 * 1000;
+
+      if (timeDiff < fiveMinutesInMs) {
+        setShowPasswordChangeSuccess(true);
+        // clear the onboarding data after showing the message
+        dispatch(clearOnboardingData());
+      }
+    }
+  }, [onboardingData, dispatch]);
+
   return (
     <AuthWrapper type="login">
       <form
@@ -169,10 +187,16 @@ function RouteComponent() {
         }}
       >
         {showRegistrationSuccess && (
-          <div className="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-md">
-            <p className="font-medium">Registration completed successfully!</p>
-            <p className="text-sm">You can now log in with your credentials.</p>
-          </div>
+          <SuccessMessage
+            title="Registration completed successfully!"
+            description="You can now log in with your credentials."
+          />
+        )}
+        {showPasswordChangeSuccess && (
+          <SuccessMessage
+            title="Password changed successfully!"
+            description="You can now log in with your new password."
+          />
         )}
         <FormError message={errorMsg} />
         <form.Field
