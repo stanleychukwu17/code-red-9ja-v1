@@ -47,6 +47,139 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/check_nin": {
+            "post": {
+                "description": "Checks if the National Identification Number (NIN) already exists",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Check NIN",
+                "parameters": [
+                    {
+                        "description": "NIN to check",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.CheckNINRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/check_username": {
+            "post": {
+                "description": "Checks if the username already exists",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Check Username",
+                "parameters": [
+                    {
+                        "description": "Username to check",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.CheckUsernameRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot_password": {
+            "post": {
+                "description": "Handles resetting the user's password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Forgot password",
+                "parameters": [
+                    {
+                        "description": "New password details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Authenticates a user and returns access and refresh tokens",
@@ -68,6 +201,97 @@ const docTemplate = `{
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/authhandler.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "Handles the user logout by removing the session",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout user",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.LogoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Handles token rotation using a valid refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Refresh Token",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.RefreshRequest"
                         }
                     }
                 ],
@@ -137,6 +361,97 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register_phase_signup": {
+            "post": {
+                "description": "Handles the first phase of user registration (country, phone, email, password)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Initial sign-up phase",
+                "parameters": [
+                    {
+                        "description": "Initial sign-up details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.RegisterPhaseSignUpRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify_security_questions": {
+            "post": {
+                "description": "Checks the answers to security questions and returns a unique ID if successful",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify security questions",
+                "parameters": [
+                    {
+                        "description": "Security questions and answers",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.VerifySecurityQuestionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -287,6 +602,54 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "authhandler.CheckNINRequest": {
+            "type": "object",
+            "required": [
+                "nin"
+            ],
+            "properties": {
+                "nin": {
+                    "type": "string"
+                }
+            }
+        },
+        "authhandler.CheckUsernameRequest": {
+            "type": "object",
+            "required": [
+                "username"
+            ],
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                }
+            }
+        },
+        "authhandler.ForgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "change_password_id",
+                "confirmPassword",
+                "password",
+                "user_fid"
+            ],
+            "properties": {
+                "change_password_id": {
+                    "type": "string"
+                },
+                "confirmPassword": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 5
+                },
+                "user_fid": {
+                    "type": "integer"
+                }
+            }
+        },
         "authhandler.LoginRequest": {
             "type": "object",
             "required": [
@@ -319,6 +682,54 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "minLength": 4
+                }
+            }
+        },
+        "authhandler.LogoutRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "authhandler.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "authhandler.RegisterPhaseSignUpRequest": {
+            "type": "object",
+            "required": [
+                "confirmPassword",
+                "country",
+                "countryId",
+                "password",
+                "phoneNumber"
+            ],
+            "properties": {
+                "confirmPassword": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "countryId": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
+                },
+                "phoneNumber": {
+                    "type": "string"
                 }
             }
         },
@@ -417,6 +828,33 @@ const docTemplate = `{
                 }
             }
         },
+        "authhandler.VerifySecurityQuestionsRequest": {
+            "type": "object",
+            "required": [
+                "answer1",
+                "answer2",
+                "nin",
+                "question1",
+                "question2"
+            ],
+            "properties": {
+                "answer1": {
+                    "type": "string"
+                },
+                "answer2": {
+                    "type": "string"
+                },
+                "nin": {
+                    "type": "string"
+                },
+                "question1": {
+                    "type": "integer"
+                },
+                "question2": {
+                    "type": "integer"
+                }
+            }
+        },
         "countrieshandler.CityResponse": {
             "type": "object",
             "properties": {
@@ -489,6 +927,20 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "AccessToken": {
+            "description": "Type \"Bearer \" followed by your access token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "RefreshToken": {
+            "description": "Type your refresh token.",
+            "type": "apiKey",
+            "name": "RefreshToken",
+            "in": "header"
         }
     }
 }`
