@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
-import { checkIfRefreshTokenInCookieImpl, getUserDetailsCookieImpl, loginUserImpl, logoutUserImpl, refreshUserTokenImpl } from "#/lib/server/auth/auth.server"
+import { checkIfRefreshTokenInCookieImpl, getUserDetailsCookieImpl, loginUserImpl, logoutUserImpl, refreshUserTokenImpl, verifySecurityQuestionsImpl, resetPasswordImpl } from "#/lib/server/auth/auth.server"
 
 
 // Starts the registration process for a new user
@@ -114,5 +114,21 @@ export const getUserDetailsCookie = createServerFn({ method: "GET" })
 export const logoutUser = createServerFn({ method: "POST" })
   .handler(async () => {
     const result = await logoutUserImpl() // Logs out the user
+    return result
+  });
+
+// Verifies security questions for a user
+export const verifySecurityQuestions = createServerFn({ method: "POST" })
+  .inputValidator((data: { nin: string; question1: number; answer1: string; question2: number; answer2: string }) => data)
+  .handler(async ({ data }) => {
+    const result = await verifySecurityQuestionsImpl({ data })
+    return result
+  });
+
+// Resets user password
+export const resetPassword = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async ({ data }) => {
+    const result = await resetPasswordImpl({ data })
     return result
   });

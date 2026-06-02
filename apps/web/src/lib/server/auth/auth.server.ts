@@ -161,3 +161,35 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
     clearAuthCookies();
   }
 });
+
+// Verifies security questions for a user
+export const verifySecurityQuestionsImpl = createServerOnlyFn(async ({ data }) => {
+  try {
+    const response = await fetch(API_URL.auth.verifySecurityQuestions, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    return { ...result, ok: response.ok };
+  } catch (error) {
+    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
+  }
+});
+
+// Resets user's password
+export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
+  try {
+    const response = await fetch(API_URL.auth.forgotPassword, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    return result
+  } catch (error) {
+    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
+  }
+});
