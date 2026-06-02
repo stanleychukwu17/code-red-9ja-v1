@@ -7,7 +7,7 @@ export const AuthWrapper = ({
   type,
 }: {
   children: React.ReactNode;
-  type: "login" | "signup";
+  type: "login" | "signup" | "forgot-password";
 }) => {
   const flow = type === "login" ? "login" : "forgot-password";
 
@@ -16,11 +16,13 @@ export const AuthWrapper = ({
       <div className="max-w-[400px] w-full space-y-6">
         <LogoIcon />
         <div className="space-y-1">
-          <p className="text-2xl font-bold text-primary">
-            {type === "login" ? "Log in" : "Create an account"}
-          </p>
+          {type === "login" || type === "forgot-password" ? (
+            <p className="text-2xl font-bold text-primary">
+              {type === "login" ? "Log in" : type === "forgot-password" ? "Recover password" : "Create an account"}
+            </p>
+          ) : null}
           <p className="text-c-50">
-            {type === "login" ? "Making Nigeria great" : "Join the movement"}
+            {type === "login" ? "Making Nigeria great" : type === "forgot-password" ? "Reset your password" : "Join the movement"}
           </p>
         </div>
 
