@@ -22,6 +22,8 @@ type AuthService interface {
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
+	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
+	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -140,6 +142,16 @@ type RegisterPhaseSignUpRequest struct {
 	ConfirmPassword string `json:"confirmPassword" validate:"required,eqfield=Password"`
 }
 
+// RegisterPhaseSignUp godoc
+// @Summary Initial sign-up phase
+// @Description Handles the first phase of user registration (country, phone, email, password)
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterPhaseSignUpRequest true "Initial sign-up details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/register_phase_signup [post]
 // RegisterPhaseSignUp handles the initial registration phase
 func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 	var req RegisterPhaseSignUpRequest
@@ -172,6 +184,16 @@ type CheckNINRequest struct {
 	Nin string `json:"nin" validate:"required,numeric,len=11"`
 }
 
+// CheckNin godoc
+// @Summary Check NIN
+// @Description Checks if the National Identification Number (NIN) already exists
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body CheckNINRequest true "NIN to check"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/check_nin [post]
 // CheckNin checks if the National Identification Number (NIN) already exists
 func (h *Handler) CheckNin(w http.ResponseWriter, r *http.Request) {
 	var req CheckNINRequest
@@ -197,6 +219,16 @@ type CheckUsernameRequest struct {
 	Username string `json:"username" validate:"required,min=2,max=30"`
 }
 
+// CheckUsername godoc
+// @Summary Check Username
+// @Description Checks if the username already exists
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body CheckUsernameRequest true "Username to check"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/check_username [post]
 // CheckUsername checks if the username already exists, used during registration
 func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	var req CheckUsernameRequest
@@ -281,6 +313,17 @@ type RefreshRequest struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
+// Refresh godoc
+// @Summary Refresh Token
+// @Description Handles token rotation using a valid refresh token
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RefreshRequest true "Refresh token"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/refresh [post]
 // Refresh handles token rotation using a valid refresh token
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req RefreshRequest
@@ -316,6 +359,16 @@ type LogoutRequest struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
+// Logout godoc
+// @Summary Logout user
+// @Description Handles the user logout by removing the session
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body LogoutRequest true "Refresh token"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/logout [post]
 // Logout handles the user logout by removing the session
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var req LogoutRequest
@@ -339,4 +392,92 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Logout successful", nil)
+}
+
+// VerifySecurityQuestionsRequest represents the structure for verifying security questions
+type VerifySecurityQuestionsRequest struct {
+	Nin       string `json:"nin" validate:"required,numeric,len=11"`
+	Question1 int16  `json:"question1" validate:"required"`
+	Answer1   string `json:"answer1" validate:"required"`
+	Question2 int16  `json:"question2" validate:"required"`
+	Answer2   string `json:"answer2" validate:"required"`
+}
+
+// VerifySecurityQuestions godoc
+// @Summary Verify security questions
+// @Description Checks the answers to security questions and returns a unique ID if successful
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body VerifySecurityQuestionsRequest true "Security questions and answers"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/verify_security_questions [post]
+// VerifySecurityQuestions checks the answers and returns a unique ID if successful
+func (h *Handler) VerifySecurityQuestions(w http.ResponseWriter, r *http.Request) {
+	var req VerifySecurityQuestionsRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	result, err := h.authService.VerifySecurityQuestions(r.Context(), req.Nin, req.Question1, req.Answer1, req.Question2, req.Answer2)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Security questions verified successfully", map[string]interface{}{
+		"change_password_id": result.ChangePasswordID,
+		"user_fid":           result.UserFID,
+	})
+}
+
+// ForgotPasswordRequest represents the structure for resetting password
+type ForgotPasswordRequest struct {
+	Password         string `json:"password" validate:"required,min=5"`
+	ConfirmPassword  string `json:"confirmPassword" validate:"required,eqfield=Password"`
+	ChangePasswordID string `json:"change_password_id" validate:"required"`
+	UserFid          int64  `json:"user_fid" validate:"required"`
+}
+
+// ForgotPassword godoc
+// @Summary Forgot password
+// @Description Handles resetting the user's password
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body ForgotPasswordRequest true "New password details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/forgot_password [post]
+// ForgotPassword handles resetting the user's password
+func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var req ForgotPasswordRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	err := h.authService.ForgotPassword(r.Context(), req.ChangePasswordID, req.UserFid, req.Password)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Password reset successfully", nil)
 }
