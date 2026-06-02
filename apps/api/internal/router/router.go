@@ -59,13 +59,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
 
 	// for auths
-	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp) // Register first phase
-	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                       // Check NIN endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)             // Check Username endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                       // Register endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                             // Login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                           // Logout endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                         // Refresh token endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp)         // Register first phase
+	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                               // Check NIN endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                     // Check Username endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                               // Register endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                     // Login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                   // Logout endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                 // Refresh token endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.VerifySecurityQuestions, authHandler.VerifySecurityQuestions) // Verify security questions endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.ForgotPassword, authHandler.ForgotPassword)                   // Forgot password endpoint
 
 	// countries, states, cities
 	mainRouter.Get(utils.ApiUrls.Countries.GetAll, countriesHandler.GetCountries) // Get all countries
