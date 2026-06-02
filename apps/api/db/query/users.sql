@@ -22,6 +22,11 @@ UPDATE users
 SET fake_id = $2
 WHERE id = $1;
 
+-- name: UpdateUserPasswordByFid :exec
+UPDATE users
+SET password_hash = $2
+WHERE fake_id = $1;
+
 -- name: GetUserByFakeID :one
 SELECT * FROM users
 WHERE fake_id = $1 LIMIT 1;
@@ -34,3 +39,7 @@ WHERE user_id = $1 LIMIT 1;
 INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
+
+-- name: GetUserSecurityQuestionsByNIN :one
+SELECT * FROM user_security_questions
+WHERE nin = $1 LIMIT 1;
