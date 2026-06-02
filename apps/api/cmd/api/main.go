@@ -34,6 +34,16 @@ import (
 // @host localhost:4000
 // @BasePath /api/v1
 
+// @securityDefinitions.apikey AccessToken
+// @in header
+// @name Authorization
+// @description Type "Bearer " followed by your access token.
+
+// @securityDefinitions.apikey RefreshToken
+// @in header
+// @name RefreshToken
+// @description Type your refresh token.
+
 type App struct {
 	cfg    *config.Config
 	server *http.Server
