@@ -74,6 +74,16 @@ func (m *MockAuthService) Logout(ctx context.Context, refreshToken string) error
 	return args.Error(0)
 }
 
+func (m *MockAuthService) VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (authservice.VerifySecurityQuestionsResult, error) {
+	args := m.Called(ctx, nin, q1, a1, q2, a2)
+	return args.Get(0).(authservice.VerifySecurityQuestionsResult), args.Error(1)
+}
+
+func (m *MockAuthService) ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error {
+	args := m.Called(ctx, changePasswordID, userFid, password)
+	return args.Error(0)
+}
+
 // TestRegister tests the Register method of the AuthHandler
 func TestRegister(t *testing.T) {
 	// Create a new instance of the utils package
