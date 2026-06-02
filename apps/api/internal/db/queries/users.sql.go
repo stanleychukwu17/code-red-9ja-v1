@@ -170,6 +170,26 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUser
 	return i, err
 }
 
+const getUserSecurityQuestionsByNIN = `-- name: GetUserSecurityQuestionsByNIN :one
+SELECT id, user_fid, nin, question1, answer1, question2, answer2 FROM user_security_questions
+WHERE nin = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error) {
+	row := q.db.QueryRow(ctx, getUserSecurityQuestionsByNIN, nin)
+	var i UserSecurityQuestion
+	err := row.Scan(
+		&i.ID,
+		&i.UserFid,
+		&i.Nin,
+		&i.Question1,
+		&i.Answer1,
+		&i.Question2,
+		&i.Answer2,
+	)
+	return i, err
+}
+
 const updateUserFakeID = `-- name: UpdateUserFakeID :exec
 UPDATE users
 SET fake_id = $2
@@ -183,5 +203,21 @@ type UpdateUserFakeIDParams struct {
 
 func (q *Queries) UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error {
 	_, err := q.db.Exec(ctx, updateUserFakeID, arg.ID, arg.FakeID)
+	return err
+}
+
+const updateUserPasswordByFid = `-- name: UpdateUserPasswordByFid :exec
+UPDATE users
+SET password_hash = $2
+WHERE fake_id = $1
+`
+
+type UpdateUserPasswordByFidParams struct {
+	FakeID       pgtype.Int8 `json:"fake_id"`
+	PasswordHash string      `json:"password_hash"`
+}
+
+func (q *Queries) UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error {
+	_, err := q.db.Exec(ctx, updateUserPasswordByFid, arg.FakeID, arg.PasswordHash)
 	return err
 }
