@@ -22,6 +22,7 @@ const (
 	RedisEmailFakeID    = "register:email_user_fake_id:"
 	RedisPhoneFakeID    = "register:phone_user_fake_id:"
 	RedisNINFakeID      = "register:nin_user_fake_id:"
+	RedisChangePassword = "register:user_change_password:"
 	//--END--
 
 	//--START-- for login, refreshing jwt token, logout,
