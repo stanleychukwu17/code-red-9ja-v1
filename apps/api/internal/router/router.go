@@ -6,36 +6,47 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "free9ja/api/docs"
+	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
+	authhandler "free9ja/api/internal/handler/auth"
+	authservice "free9ja/api/internal/service/auth"
+	"free9ja/api/internal/utils"
 )
 
 // New creates and returns a configured Chi router.
-func New() http.Handler {
-	r := chi.NewRouter()
+func New(pool *pgxpool.Pool, rdb *redis.Client) http.Handler {
+	mainRouter := chi.NewRouter()
+
+	// Initialize dependencies
+	q := queries.New(pool)
+	authService := authservice.NewAuthService(q, rdb)
+	utilsInstance := utils.NewUtils(pool)
+	authHandler := authhandler.NewHandler(authService, utilsInstance)
 
 	// Core middleware
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
+	mainRouter.Use(middleware.RequestID)
+	mainRouter.Use(middleware.RealIP)
+	mainRouter.Use(middleware.Logger)
+	mainRouter.Use(middleware.Recoverer)
 
 	// Health check
-	r.Get("/health", handler.Health)
-
-	// API v1 routes
-	r.Route("/api/v1", func(r chi.Router) {
-		r.Get("/", handler.Root)
-	})
+	mainRouter.Get(utils.ApiUrls.Health, handler.Health)
 
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {
-		r.Get("/swagger/*", httpSwagger.Handler(
+		mainRouter.Get("/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL("/swagger/doc.json"),
 		))
 	}
 
-	return r
+	// API v1 routes
+	mainRouter.Get(utils.ApiUrls.Root, handler.Root)
+	mainRouter.Post(utils.ApiUrls.Register, authHandler.Register)
+
+	return mainRouter
 }
