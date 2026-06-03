@@ -54,8 +54,19 @@ CREATE TABLE users_phone_numbers (
 CREATE INDEX idx_users_phone_numbers_user_id ON users_phone_numbers(user_id);
 CREATE INDEX idx_users_phone_numbers_phone ON users_phone_numbers(phone);
 
+-- USERS security questions table
+CREATE TABLE user_security_questions (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_fid BIGINT UNIQUE NOT NULL,
+  nin CHAR(11) UNIQUE NOT NULL,
+  question1 SMALLINT NOT NULL,
+  answer1 VARCHAR(255) NOT NULL,
+  question2 SMALLINT NOT NULL,
+  answer2 VARCHAR(255) NOT NULL
+);
 
 -- +goose Down
+DROP TABLE IF EXISTS user_security_questions;
 DROP TABLE IF EXISTS users_phone_numbers;
 DROP TABLE IF EXISTS users_nin;
 DROP TABLE IF EXISTS users;

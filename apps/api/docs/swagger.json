@@ -41,6 +41,492 @@
                 }
             }
         },
+        "/auth/check_nin": {
+            "post": {
+                "description": "Checks if the National Identification Number (NIN) already exists",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Check NIN",
+                "parameters": [
+                    {
+                        "description": "NIN to check",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.CheckNINRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/check_username": {
+            "post": {
+                "description": "Checks if the username already exists",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Check Username",
+                "parameters": [
+                    {
+                        "description": "Username to check",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.CheckUsernameRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/forgot_password": {
+            "post": {
+                "description": "Handles resetting the user's password",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Forgot password",
+                "parameters": [
+                    {
+                        "description": "New password details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.ForgotPasswordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates a user and returns access and refresh tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login user",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "description": "Handles the user logout by removing the session",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Logout user",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.LogoutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Handles token rotation using a valid refresh token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Refresh Token",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "description": "Creates a new user account with full details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Register a new user",
+                "parameters": [
+                    {
+                        "description": "Registration details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register_phase_signup": {
+            "post": {
+                "description": "Handles the first phase of user registration (country, phone, email, password)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Initial sign-up phase",
+                "parameters": [
+                    {
+                        "description": "Initial sign-up details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.RegisterPhaseSignUpRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/verify_security_questions": {
+            "post": {
+                "description": "Checks the answers to security questions and returns a unique ID if successful",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Verify security questions",
+                "parameters": [
+                    {
+                        "description": "Security questions and answers",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.VerifySecurityQuestionsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/countries": {
+            "get": {
+                "description": "Fetches a list of all countries with their ISO2 codes, phone codes",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "summary": "Get all countries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/countrieshandler.GetCountriesResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/countries/{countryID}/states": {
+            "get": {
+                "description": "Fetches all states for a specific country by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "summary": "Get states by country ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Country ID",
+                        "name": "countryID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/countrieshandler.GetStatesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/health": {
             "get": {
                 "description": "get the status of the server",
@@ -63,6 +549,392 @@
                     }
                 }
             }
+        },
+        "/states/{stateID}/cities": {
+            "get": {
+                "description": "Fetches all cities for a specific state by its ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Countries"
+                ],
+                "summary": "Get cities by state ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "stateID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/countrieshandler.GetCitiesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "authhandler.CheckNINRequest": {
+            "type": "object",
+            "required": [
+                "nin"
+            ],
+            "properties": {
+                "nin": {
+                    "type": "string"
+                }
+            }
+        },
+        "authhandler.CheckUsernameRequest": {
+            "type": "object",
+            "required": [
+                "username"
+            ],
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                }
+            }
+        },
+        "authhandler.ForgotPasswordRequest": {
+            "type": "object",
+            "required": [
+                "change_password_id",
+                "confirmPassword",
+                "password",
+                "user_fid"
+            ],
+            "properties": {
+                "change_password_id": {
+                    "type": "string"
+                },
+                "confirmPassword": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 5
+                },
+                "user_fid": {
+                    "type": "integer"
+                }
+            }
+        },
+        "authhandler.LoginRequest": {
+            "type": "object",
+            "required": [
+                "country",
+                "identifier",
+                "identifierType",
+                "password"
+            ],
+            "properties": {
+                "country": {
+                    "type": "string"
+                },
+                "identifier": {
+                    "description": "accepts email, username or phone",
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2
+                },
+                "identifierType": {
+                    "type": "string",
+                    "enum": [
+                        "email",
+                        "username",
+                        "phone"
+                    ]
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                }
+            }
+        },
+        "authhandler.LogoutRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "authhandler.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "authhandler.RegisterPhaseSignUpRequest": {
+            "type": "object",
+            "required": [
+                "confirmPassword",
+                "country",
+                "countryId",
+                "password",
+                "phoneNumber"
+            ],
+            "properties": {
+                "confirmPassword": {
+                    "type": "string"
+                },
+                "country": {
+                    "type": "string"
+                },
+                "countryId": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
+                },
+                "phoneNumber": {
+                    "type": "string"
+                }
+            }
+        },
+        "authhandler.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "answer1",
+                "answer2",
+                "current_country",
+                "current_state",
+                "date_of_birth",
+                "first_name",
+                "gender",
+                "last_name",
+                "nin",
+                "onboarding_id",
+                "password",
+                "phone",
+                "question1",
+                "question2",
+                "username"
+            ],
+            "properties": {
+                "answer1": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "answer2": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "description": "Expects YYYY-MM-DD",
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "gender": {
+                    "type": "string",
+                    "enum": [
+                        "male",
+                        "female"
+                    ]
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "middle_name": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                },
+                "nin": {
+                    "type": "string"
+                },
+                "onboarding_id": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "question1": {
+                    "type": "integer"
+                },
+                "question2": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 2
+                }
+            }
+        },
+        "authhandler.VerifySecurityQuestionsRequest": {
+            "type": "object",
+            "required": [
+                "answer1",
+                "answer2",
+                "nin",
+                "question1",
+                "question2"
+            ],
+            "properties": {
+                "answer1": {
+                    "type": "string"
+                },
+                "answer2": {
+                    "type": "string"
+                },
+                "nin": {
+                    "type": "string"
+                },
+                "question1": {
+                    "type": "integer"
+                },
+                "question2": {
+                    "type": "integer"
+                }
+            }
+        },
+        "countrieshandler.CityResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "countrieshandler.CountryResponse": {
+            "description": "for GetCountries",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "iso2": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "phone_code": {
+                    "type": "string"
+                }
+            }
+        },
+        "countrieshandler.GetCitiesResponse": {
+            "type": "object",
+            "properties": {
+                "cities": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/countrieshandler.CityResponse"
+                    }
+                }
+            }
+        },
+        "countrieshandler.GetCountriesResponse": {
+            "type": "object",
+            "properties": {
+                "countries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/countrieshandler.CountryResponse"
+                    }
+                }
+            }
+        },
+        "countrieshandler.GetStatesResponse": {
+            "type": "object",
+            "properties": {
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/countrieshandler.StateResponse"
+                    }
+                }
+            }
+        },
+        "countrieshandler.StateResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "AccessToken": {
+            "description": "Type \"Bearer \" followed by your access token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "RefreshToken": {
+            "description": "Type your refresh token.",
+            "type": "apiKey",
+            "name": "RefreshToken",
+            "in": "header"
         }
     }
 }

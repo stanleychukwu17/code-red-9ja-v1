@@ -15,6 +15,7 @@ type CCity struct {
 	CountryID int16          `json:"country_id"`
 	Latitude  pgtype.Numeric `json:"latitude"`
 	Longitude pgtype.Numeric `json:"longitude"`
+	CityRank  pgtype.Int2    `json:"city_rank"`
 }
 
 type CCountry struct {
@@ -73,6 +74,16 @@ type User struct {
 	AccountStatus  pgtype.Text        `json:"account_status"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserSecurityQuestion struct {
+	ID        int64  `json:"id"`
+	UserFid   int64  `json:"user_fid"`
+	Nin       string `json:"nin"`
+	Question1 int16  `json:"question1"`
+	Answer1   string `json:"answer1"`
+	Question2 int16  `json:"question2"`
+	Answer2   string `json:"answer2"`
 }
 
 type UsersNin struct {

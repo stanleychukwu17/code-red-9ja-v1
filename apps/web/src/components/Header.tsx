@@ -1,78 +1,361 @@
-import { Link } from '@tanstack/react-router'
-import ThemeToggle from './ThemeToggle'
+// This Sidebar component was copied from the shadcn repo.
+// More info about the shadcn UI can be found at https://shadcn.com/ui/
+// the shadcn sidebar component can be found at: https://ui.shadcn.com/docs/components/radix/sidebar
+// the shadcn blocks can be found at: https://ui.shadcn.com/blocks
 
-export default function Header() {
+import {
+  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar,
+} from "@repo/ui/components/sidebar";
+
+import { TooltipProvider } from "@repo/ui/components/tooltip";
+import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
+
+import {
+  Popover, PopoverContent, PopoverTrigger, PopoverHeader, PopoverDescription
+} from "@repo/ui/components/popover";
+
+import LogoIcon from "@repo/ui/icons/logo-icon";
+import FeedIcon from "@repo/ui/icons/navbar/feed-icon";
+import FeedSolidIcon from "@repo/ui/icons/navbar/feed-solid-icon";
+import HomeIcon from "@repo/ui/icons/navbar/home-icon";
+import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
+import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
+import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
+import ProfileIcon from "@repo/ui/icons/navbar/profile-icon";
+import ProfileSolidIcon from "@repo/ui/icons/navbar/profile-solid-icon";
+import SearchIcon from "@repo/ui/icons/navbar/search-icon";
+import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
+
+import { Skeleton } from "@repo/ui/components/skeleton"
+import { cn } from "@repo/ui/lib/utils";
+
+import { Ellipsis, PanelRightClose, PanelLeftClose } from "lucide-react";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
+
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { updateSiteState } from "@/redux/slice/siteSlice";
+import { updateAuthState } from "@/redux/slice/authSlice";
+import { logoutUser } from "#/lib/server/auth/auth";
+import { useIsMobile } from "@repo/ui/hooks/useMobile";
+import { APP_URL } from "#/lib/config";
+
+type AppSidebarItem = {
+  id: string;
+  label: string;
+  icon: ReactNode;
+  selectedIcon: ReactNode;
+  href?: string;
+};
+
+const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
+  {
+    id: "home",
+    label: "Home",
+    icon: <HomeIcon className="size-6!" />,
+    selectedIcon: <HomeSolidIcon className="size-6! text-primary" />,
+    href: "/dashboard",
+  },
+  {
+    id: "feed",
+    label: "Feed",
+    icon: <FeedIcon className="size-6!" />,
+    selectedIcon: <FeedSolidIcon className="size-6! text-primary" />,
+    href: "/feed",
+  },
+  {
+    id: "search",
+    label: "Search",
+    icon: <SearchIcon className="size-6!" />,
+    selectedIcon: <SearchSolidIcon className="size-6! text-primary" />,
+    href: "/search",
+  },
+  {
+    id: "notifications",
+    label: "Notifications",
+    icon: <NotificationIcon className="size-6!" />,
+    selectedIcon: <NotificationSolidIcon className="size-6! text-primary" />,
+    href: "/notifications",
+  },
+  {
+    id: "profile",
+    label: "Profile",
+    icon: <ProfileIcon className="size-6!" />,
+    selectedIcon: <ProfileSolidIcon className="size-6! text-primary" />,
+    href: "/profile",
+  },
+];
+
+// the main SideBar wrapper
+export function AppSidebarShell({ userDetails }: { userDetails?: any }) {
+  const location = useLocation();
+  const isAuthPage = location.pathname.startsWith("/auth");
+
+  if (isAuthPage) {
+    return null;
+  }
+
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--line)] bg-[var(--header-bg)] px-4 backdrop-blur-lg">
-      <nav className="page-wrap flex flex-wrap items-center gap-x-3 gap-y-2 py-3 sm:py-4">
-        <h2 className="m-0 flex-shrink-0 text-base font-semibold tracking-tight">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm text-[var(--sea-ink)] no-underline shadow-[0_8px_24px_rgba(30,90,72,0.08)] sm:px-4 sm:py-2"
-          >
-            <span className="h-2 w-2 rounded-full bg-[linear-gradient(90deg,#56c6be,#7ed3bf)]" />
-            TanStack Start
-          </Link>
-        </h2>
+    <div className="fixed">
+      <SidebarProvider
+        id="sidebar-wrapper"
+        defaultOpen
+        className="min-h-dvh text-[#181818] bg-transparent"
+        style={
+          {
+            "--sidebar-width": "290px",
+            "--sidebar-width-icon": "70px",
+          } as CSSProperties
+        }
+      >
+        {/* This TooltipProvider is needed for the SidebarMenuButton with tooltips */}
+        <TooltipProvider>
+          <AppSidebar userDetails={userDetails} />
+        </TooltipProvider>
 
-        <div className="ml-auto flex items-center gap-1.5 sm:ml-0 sm:gap-2">
-          <a
-            href="https://x.com/tan_stack"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] sm:block"
-          >
-            <span className="sr-only">Follow TanStack on X</span>
-            <svg viewBox="0 0 16 16" aria-hidden="true" width="24" height="24">
-              <path
-                fill="currentColor"
-                d="M12.6 1h2.2L10 6.48 15.64 15h-4.41L7.78 9.82 3.23 15H1l5.14-5.84L.72 1h4.52l3.12 4.73L12.6 1zm-.77 12.67h1.22L4.57 2.26H3.26l8.57 11.41z"
-              />
-            </svg>
-          </a>
-          <a
-            href="https://github.com/TanStack"
-            target="_blank"
-            rel="noreferrer"
-            className="hidden rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)] sm:block"
-          >
-            <span className="sr-only">Go to TanStack GitHub</span>
-            <svg viewBox="0 0 16 16" aria-hidden="true" width="24" height="24">
-              <path
-                fill="currentColor"
-                d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8z"
-              />
-            </svg>
-          </a>
+        {/* Collapsing of the sidebar */}
+        <main className="flex min-h-dvh flex-1 flex-col md:hidden">
+          <div className="flex items-center justify-between px-4 pt-4">
+            {/* Sidebar trigger button with an optional image, The image is only visible on mobile devices */}
+            <SidebarTrigger className="bg-white hover:bg-white opacity-100" img="https://github.com/shadcn.png" />
+          </div>
+        </main>
+      </SidebarProvider>
+    </div>
+  );
+}
 
-          <ThemeToggle />
-        </div>
+export function AppSidebar({ userDetails }: { userDetails?: any }) {
+  const { state: sideBarState } = useSidebar();
+  const dispatch = useAppDispatch();
 
-        <div className="order-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 pb-1 text-sm font-semibold sm:order-2 sm:w-auto sm:flex-nowrap sm:pb-0">
-          <Link
-            to="/"
-            className="nav-link"
-            activeProps={{ className: 'nav-link is-active' }}
-          >
-            Home
-          </Link>
-          <Link
-            to="/dashboard"
-            className="nav-link"
-            activeProps={{ className: 'nav-link is-active' }}
-          >
-            Dashboard
-          </Link>
-          <a
-            href="https://tanstack.com/start/latest/docs/framework/react/overview"
-            className="nav-link"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Docs
-          </a>
-        </div>
-      </nav>
-    </header>
+  useEffect(() => {
+    dispatch(updateSiteState({ sideBarState }));
+  }, [sideBarState, dispatch]);
+
+  return (
+    <Sidebar collapsible="icon" className="bg-sidebar md:data-[side=left]:left-0" >
+      <div className="flex h-full flex-col px-4 py-7">
+        {/* This component is responsible for rendering the logo of the application */}
+        <LogoComponent />
+
+        <SidebarContent className="gap-0 overflow-visible">
+          <SidebarGroup className="p-0">
+            <SidebarMenu>
+              {APP_SIDEBAR_ITEMS.map((item) => (
+                <EachLinkComponent key={item.id} item={item} />
+              ))}
+            </SidebarMenu>
+          </SidebarGroup>
+
+          {sideBarState === "expanded" && (
+            <div className="mt-4 flex flex-col gap-3 px-1">
+              <SidebarPollButton>Will you be voting?</SidebarPollButton>
+            </div>
+          )}
+        </SidebarContent>
+
+        <SidebarFooter className="py-4 px-0">
+          <ProfilePicture userDetails={userDetails} />
+        </SidebarFooter>
+      </div>
+    </Sidebar>
+  );
+}
+
+
+// Returns the active tab based on the current URL
+function useActiveItem(): string {
+  const location = useLocation();
+  let activeItem: string = "";
+
+  for (const item of APP_SIDEBAR_ITEMS) {
+    if (item.href && location.pathname.startsWith(item.href)) {
+      activeItem = item.id;
+      break;
+    }
+  }
+
+  return activeItem;
+}
+
+function EachLinkComponent({ item }: { item: AppSidebarItem }) {
+  const activeItemFromUrl = useActiveItem();
+  const { state: sideBarState } = useSidebar();
+  const isActive = item.id === activeItemFromUrl;
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        asChild
+        isActive={isActive}
+        tooltip={item.label}
+        className={cn(
+          "h-14 rounded-[16px] px-5 text-[18px] hover:bg-c-5 transition-all duration-300",
+          sideBarState === "collapsed" && "justify-center my-3"
+        )}
+      >
+        <Link to={item.href} className="p-0" style={{ padding: "0px !important" }}>
+          <div className="relative -right-1 size-8 py-2 flex shrink-0 items-center justify-center">
+            {isActive ? item.selectedIcon : item.icon}
+          </div>
+          <span className={cn("whitespace-nowrap", isActive ? "text-primary" : "")}>
+            {item.label}
+          </span>
+        </Link>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
+}
+
+function LogoComponent() {
+  const { state: sideBarState, toggleSidebar } = useSidebar();
+  const isMobile = useIsMobile()
+
+  let flexDir = "flex-row";
+  try {
+    flexDir = sideBarState === "collapsed" ? "flex-col" : "flex-row";
+  } catch (error) {
+    console.error(error);
+  }
+
+  useEffect(() => {
+    if (isMobile) { return; }
+
+    // Check if the sidebar state in localStorage is different from the current state
+    const savedSiteState = localStorage.getItem("site") || null;
+    const preloadedSiteState = savedSiteState ? JSON.parse(savedSiteState) : undefined;
+    if (preloadedSiteState && preloadedSiteState?.sideBarState != sideBarState) {
+      toggleSidebar()
+    }
+  }, [])
+
+  return (
+    <div
+      className={cn(`mb-7 flex ${flexDir} justify-between items-center gap-3 px-2 text-[#234f3e]`, sideBarState === "collapsed" && "px-0")}
+    >
+      <div className="flex items-center gap-2">
+        <LogoIcon className="size-8 shrink-0" />
+        {sideBarState === "expanded" && (
+          <div className="text-[20px] font-semibold tracking-[-0.04em]">
+            Free <span className="font-normal">9ja</span>
+          </div>
+        )}
+      </div>
+      <div
+        className="size-10 flex justify-center items-center rounded-full cursor-pointer hover:bg-[#f0f0ef]"
+        onClick={toggleSidebar}
+      >
+        {sideBarState === "expanded" ? <PanelLeftClose /> : <PanelRightClose />}
+      </div>
+    </div>
   )
+}
+
+function SidebarPollButton({ children }: { children: ReactNode }) {
+  return (
+    <button
+      className="flex h-[62px] items-center justify-center rounded-full border border-[#e6dfdf] bg-white text-center text-[18px] font-semibold text-[#1d2c27] transition hover:bg-[#faf8f8]"
+    >
+      {children}
+    </button>
+  );
+}
+
+function ProfilePicture({ userDetails }: { userDetails?: any }) {
+  const { state: sideBarState } = useSidebar();
+  const { user: authUser, userHydrated } = useAppSelector((state) => state.auth);
+
+  const user = authUser || userDetails;
+
+  if (user === null) {
+    // If user is null and userHydrated is true, it means the user is not logged in
+    if (userHydrated) {
+      return null;
+    }
+
+    return <>
+      <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{ width: "260px" }}>
+        <div className="flex-none">
+          <Skeleton className="size-12 bg-light-green/25 rounded-full" />
+        </div>
+        <div className="flex-1">
+          <Skeleton className="w-full mt-1 py-2 bg-light-green/25 rounded-xl" />
+          <Skeleton className="w-3/4 mt-2 py-2 bg-light-green/25 rounded-xl" />
+        </div>
+      </div>
+    </>
+  }
+
+  if (sideBarState === "collapsed") {
+    return (
+      <Popover>
+        <PopoverTrigger>
+          <Avatar className="size-10">
+            <AvatarImage src={user?.avatar_url}alt="@shadcn" />
+          </Avatar>
+        </PopoverTrigger>
+        <PopoverContent>
+          <ProfilePicturePopover userDetails={user} />
+        </PopoverContent>
+      </Popover>
+    )
+  }
+
+  return (
+    <Popover>
+      <PopoverTrigger>
+        <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{ width: "260px" }}>
+          <div className="flex-none">
+            <Avatar className="size-12">
+              <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
+            </Avatar>
+          </div>
+          <div className="flex-1">
+            <p className="text-[16px] font-semibold text-[#171416] py-px truncate overflow-hidden" style={{ maxWidth: "160px" }}>Chukwu Daniel</p>
+            <p className="mt-1 text-[14px] text-[#8b8589] truncate overflow-hidden" style={{ maxWidth: "160px" }}>@{user?.username}</p>
+          </div>
+          <div className="flex-none mt-3 ">
+            <Ellipsis />
+          </div>
+        </div>
+      </PopoverTrigger>
+
+      <PopoverContent className="w-[260px]">
+        <ProfilePicturePopover userDetails={userDetails} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+function ProfilePicturePopover({ userDetails }: { userDetails: any }) {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error("Failed to call logoutUser on server:", error);
+    }
+
+    dispatch(updateAuthState({ user: null }));
+    navigate({ to: APP_URL.homePage });
+  };
+
+  return (
+    <>
+      <PopoverHeader className="px-3 capitalize">{userDetails?.last_name} {userDetails?.first_name}</PopoverHeader>
+      <PopoverDescription>
+        <span
+          onClick={handleLogout}
+          className="
+          block py-2 px-3 text-[14px] text-[#8b8589] truncate overflow-hidden cursor-pointer
+          hover:bg-[#f0f0ef] hover:text-[#171416]
+          "
+        >
+          Logout @{userDetails?.username}
+        </span>
+      </PopoverDescription>
+    </>
+  );
 }

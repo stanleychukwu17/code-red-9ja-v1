@@ -2,14 +2,20 @@ package utils
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"maps"
+	"math/big"
+	mathRand "math/rand"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Utils struct {
@@ -27,6 +33,41 @@ func (u *Utils) RespondJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+// FormatResponse creates a standardized response map with a status and message.
+func (u *Utils) FormatResponse(status string, message string) map[string]interface{} {
+	return map[string]interface{}{
+		"status":  status,
+		"message": message,
+	}
+}
+
+// FormatResponseData creates a standardized response map and includes additional data.
+func (u *Utils) FormatResponseData(status string, message string, data map[string]interface{}) map[string]interface{} {
+	res := map[string]interface{}{
+		"status":  status,
+		"message": message,
+	}
+
+	// copy all the fields from the data map to the response map
+	maps.Copy(res, data)
+
+	return res
+}
+
+// RespondError writes a JSON response with a standard error format.
+func (u *Utils) RespondError(w http.ResponseWriter, statusCode int, message string) {
+	u.RespondJSON(w, statusCode, u.FormatResponse("error", message))
+}
+
+// RespondSuccess writes a JSON response with a standard success format.
+func (u *Utils) RespondSuccess(w http.ResponseWriter, statusCode int, message string, data map[string]interface{}) {
+	if data == nil {
+		u.RespondJSON(w, statusCode, u.FormatResponse("success", message))
+	} else {
+		u.RespondJSON(w, statusCode, u.FormatResponseData("success", message, data))
+	}
 }
 
 type PostgresTestConfig struct {
@@ -98,4 +139,30 @@ func SetupRedisTestContainer(redis_port string) (string, testcontainers.Containe
 
 	addr := fmt.Sprintf("%s:%s", host, port.Port())
 	return addr, container, nil
+}
+
+func GenerateOTP() (string, string, error) {
+	n, err := cryptoRand.Int(cryptoRand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", "", err
+	}
+
+	otp := fmt.Sprintf("%06d", n.Int64())
+
+	hashedOTP, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", err
+	}
+
+	return otp, string(hashedOTP), nil
+}
+
+// function: generates fake_id using the original id
+func GenerateFakeID(id int64) int64 {
+	front_id := mathRand.Intn(1000)
+	back_id := mathRand.Intn(1000)
+
+	fake_id := fmt.Sprintf("%d%d%d", front_id, id, back_id)
+	fake_id_int, _ := strconv.ParseInt(fake_id, 10, 64)
+	return fake_id_int
 }

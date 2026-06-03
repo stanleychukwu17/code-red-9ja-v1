@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
 	"free9ja/api/internal/utils"
 
@@ -35,10 +36,13 @@ type RedisConfig struct {
 // Config holds the complete application configuration.
 // It includes environment settings, server port, and database configuration.
 type Config struct {
-	Env      string         // Application environment (development, staging, production)
-	Port     string         // Server port for HTTP listener
-	Database DatabaseConfig // Database connection configuration
-	Redis    RedisConfig    // Redis connection configuration
+	Env                  string         // Application environment (development, staging, production)
+	Port                 string         // Server port for HTTP listener
+	Database             DatabaseConfig // Database connection configuration
+	Redis                RedisConfig    // Redis connection configuration
+	JWTSecret            string
+	JWTAccessExpiration  time.Duration
+	JWTRefreshExpiration time.Duration
 }
 
 var (
@@ -114,6 +118,21 @@ func LoadConfig() (*Config, error) {
 	// create db connection url
 	db_url := utils.FormatPostgresDSN(db_user, db_pass, "localhost", db_port, db_name)
 
+	// jwt secret and expirations
+	jwtSecret := GetEnv("JWT_SECRET", "free9ja_jwt_secret_key_for_dev_only")
+	jwtAccessExpStr := GetEnv("JWT_ACCESS_EXPIRATION", "15m")
+	jwtRefreshExpStr := GetEnv("JWT_REFRESH_EXPIRATION", "720h") // 30 days in hours
+
+	jwtAccessExp, err := time.ParseDuration(jwtAccessExpStr)
+	if err != nil {
+		jwtAccessExp = 15 * time.Minute
+	}
+
+	jwtRefreshExp, err := time.ParseDuration(jwtRefreshExpStr)
+	if err != nil {
+		jwtRefreshExp = 30 * 24 * time.Hour
+	}
+
 	configInstance := &Config{
 		Env:  GetEnv("ENV", "development"),
 		Port: GetEnv("PORT", "4000"),
@@ -125,6 +144,9 @@ func LoadConfig() (*Config, error) {
 			Password: redis_password,
 			DB:       redis_db,
 		},
+		JWTSecret:            jwtSecret,
+		JWTAccessExpiration:  jwtAccessExp,
+		JWTRefreshExpiration: jwtRefreshExp,
 	}
 
 	// Validation: Ensure critical variables are set

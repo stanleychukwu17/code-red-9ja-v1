@@ -1,4 +1,236 @@
 basePath: /api/v1
+definitions:
+  authhandler.CheckNINRequest:
+    properties:
+      nin:
+        type: string
+    required:
+    - nin
+    type: object
+  authhandler.CheckUsernameRequest:
+    properties:
+      username:
+        maxLength: 30
+        minLength: 2
+        type: string
+    required:
+    - username
+    type: object
+  authhandler.ForgotPasswordRequest:
+    properties:
+      change_password_id:
+        type: string
+      confirmPassword:
+        type: string
+      password:
+        minLength: 5
+        type: string
+      user_fid:
+        type: integer
+    required:
+    - change_password_id
+    - confirmPassword
+    - password
+    - user_fid
+    type: object
+  authhandler.LoginRequest:
+    properties:
+      country:
+        type: string
+      identifier:
+        description: accepts email, username or phone
+        maxLength: 50
+        minLength: 2
+        type: string
+      identifierType:
+        enum:
+        - email
+        - username
+        - phone
+        type: string
+      iso2:
+        type: string
+      password:
+        minLength: 4
+        type: string
+    required:
+    - country
+    - identifier
+    - identifierType
+    - password
+    type: object
+  authhandler.LogoutRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  authhandler.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  authhandler.RegisterPhaseSignUpRequest:
+    properties:
+      confirmPassword:
+        type: string
+      country:
+        type: string
+      countryId:
+        type: integer
+      email:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      phoneNumber:
+        type: string
+    required:
+    - confirmPassword
+    - country
+    - countryId
+    - password
+    - phoneNumber
+    type: object
+  authhandler.RegisterRequest:
+    properties:
+      answer1:
+        maxLength: 30
+        minLength: 2
+        type: string
+      answer2:
+        maxLength: 30
+        minLength: 2
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        description: Expects YYYY-MM-DD
+        type: string
+      email:
+        type: string
+      first_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      last_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      middle_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      nin:
+        type: string
+      onboarding_id:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      phone:
+        type: string
+      question1:
+        type: integer
+      question2:
+        type: integer
+      username:
+        maxLength: 30
+        minLength: 2
+        type: string
+    required:
+    - answer1
+    - answer2
+    - current_country
+    - current_state
+    - date_of_birth
+    - first_name
+    - gender
+    - last_name
+    - nin
+    - onboarding_id
+    - password
+    - phone
+    - question1
+    - question2
+    - username
+    type: object
+  authhandler.VerifySecurityQuestionsRequest:
+    properties:
+      answer1:
+        type: string
+      answer2:
+        type: string
+      nin:
+        type: string
+      question1:
+        type: integer
+      question2:
+        type: integer
+    required:
+    - answer1
+    - answer2
+    - nin
+    - question1
+    - question2
+    type: object
+  countrieshandler.CityResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  countrieshandler.CountryResponse:
+    description: for GetCountries
+    properties:
+      id:
+        type: integer
+      iso2:
+        type: string
+      name:
+        type: string
+      phone_code:
+        type: string
+    type: object
+  countrieshandler.GetCitiesResponse:
+    properties:
+      cities:
+        items:
+          $ref: '#/definitions/countrieshandler.CityResponse'
+        type: array
+    type: object
+  countrieshandler.GetCountriesResponse:
+    properties:
+      countries:
+        items:
+          $ref: '#/definitions/countrieshandler.CountryResponse'
+        type: array
+    type: object
+  countrieshandler.GetStatesResponse:
+    properties:
+      states:
+        items:
+          $ref: '#/definitions/countrieshandler.StateResponse'
+        type: array
+    type: object
+  countrieshandler.StateResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
 host: localhost:4000
 info:
   contact:
@@ -28,6 +260,333 @@ paths:
       summary: API Root
       tags:
       - root
+  /auth/check_nin:
+    post:
+      consumes:
+      - application/json
+      description: Checks if the National Identification Number (NIN) already exists
+      parameters:
+      - description: NIN to check
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.CheckNINRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check NIN
+      tags:
+      - Auth
+  /auth/check_username:
+    post:
+      consumes:
+      - application/json
+      description: Checks if the username already exists
+      parameters:
+      - description: Username to check
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.CheckUsernameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check Username
+      tags:
+      - Auth
+  /auth/forgot_password:
+    post:
+      consumes:
+      - application/json
+      description: Handles resetting the user's password
+      parameters:
+      - description: New password details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Forgot password
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns access and refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login user
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Handles the user logout by removing the session
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Logout user
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Handles token rotation using a valid refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh Token
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account with full details
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Auth
+  /auth/register_phase_signup:
+    post:
+      consumes:
+      - application/json
+      description: Handles the first phase of user registration (country, phone, email,
+        password)
+      parameters:
+      - description: Initial sign-up details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RegisterPhaseSignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Initial sign-up phase
+      tags:
+      - Auth
+  /auth/verify_security_questions:
+    post:
+      consumes:
+      - application/json
+      description: Checks the answers to security questions and returns a unique ID
+        if successful
+      parameters:
+      - description: Security questions and answers
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.VerifySecurityQuestionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Verify security questions
+      tags:
+      - Auth
+  /countries:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a list of all countries with their ISO2 codes, phone codes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/countrieshandler.GetCountriesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get all countries
+      tags:
+      - Countries
+  /countries/{countryID}/states:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all states for a specific country by its ID
+      parameters:
+      - description: Country ID
+        in: path
+        name: countryID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/countrieshandler.GetStatesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get states by country ID
+      tags:
+      - Countries
   /health:
     get:
       description: get the status of the server
@@ -43,4 +602,44 @@ paths:
       summary: Health check
       tags:
       - health
+  /states/{stateID}/cities:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all cities for a specific state by its ID
+      parameters:
+      - description: State ID
+        in: path
+        name: stateID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/countrieshandler.GetCitiesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get cities by state ID
+      tags:
+      - Countries
+securityDefinitions:
+  AccessToken:
+    description: Type "Bearer " followed by your access token.
+    in: header
+    name: Authorization
+    type: apiKey
+  RefreshToken:
+    description: Type your refresh token.
+    in: header
+    name: RefreshToken
+    type: apiKey
 swagger: "2.0"

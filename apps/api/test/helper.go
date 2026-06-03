@@ -97,7 +97,7 @@ func TestNewApp(t *testing.T, ctx context.Context, cfg *config.Config) *TestApp 
 	// }
 
 	// Initialize router
-	r := router.New(pool, rdb)
+	r := router.New(cfg, pool, rdb)
 
 	// use random free port
 	listener, _ := net.Listen("tcp", ":0")

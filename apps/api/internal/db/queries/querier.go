@@ -11,20 +11,21 @@ import (
 )
 
 type Querier interface {
-	CheckIfPhoneNumberExists(ctx context.Context, phone string) (int64, error)
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error)
+	CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error)
+	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
-	GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error)
-	GetUserByID(ctx context.Context, id int64) (User, error)
-	GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error)
-	GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error)
-	GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error)
+	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
+	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error)
+	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
+	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
+	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
 }
 
 var _ Querier = (*Queries)(nil)

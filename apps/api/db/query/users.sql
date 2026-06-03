@@ -22,30 +22,24 @@ UPDATE users
 SET fake_id = $2
 WHERE id = $1;
 
--- name: GetUserByID :one
+-- name: UpdateUserPasswordByFid :exec
+UPDATE users
+SET password_hash = $2
+WHERE fake_id = $1;
+
+-- name: GetUserByFakeID :one
 SELECT * FROM users
-WHERE id = $1 LIMIT 1;
-
--- name: GetUserByEmail :one
-SELECT id, fake_id FROM users
-WHERE email = $1 LIMIT 1;
-
--- name: GetUserByUsername :one
-SELECT id, fake_id FROM users
-WHERE username = $1 LIMIT 1;
+WHERE fake_id = $1 LIMIT 1;
 
 -- name: GetUserNINByUserID :one
 SELECT id, nin FROM users_nin
 WHERE user_id = $1 LIMIT 1;
 
--- name: GetUserNINByNIN :one
-SELECT id, user_id FROM users_nin
+-- name: CreateUserSecurityQuestions :one
+INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id;
+
+-- name: GetUserSecurityQuestionsByNIN :one
+SELECT * FROM user_security_questions
 WHERE nin = $1 LIMIT 1;
-
--- name: GetUserByPhone :one
-SELECT id, fake_id FROM users
-WHERE phone = $1 LIMIT 1;
-
--- name: CheckIfPhoneNumberExists :one
-SELECT id FROM users_phone_numbers
-WHERE phone = $1 LIMIT 1;

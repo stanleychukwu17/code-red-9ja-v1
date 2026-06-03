@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"free9ja/api/internal/db/queries"
 	authhandler "free9ja/api/internal/handler/auth"
@@ -23,9 +24,64 @@ type MockAuthService struct {
 	mock.Mock
 }
 
-func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string) (authservice.RegisterResult, error) {
-	args := m.Called(ctx, params, nin)
+func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (authservice.RegisterResult, error) {
+	args := m.Called(ctx, params, nin, onboardingID, question1, answer1, question2, answer2)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
+}
+
+func (m *MockAuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (authservice.RegisterPhaseSignUpResult, error) {
+	args := m.Called(ctx, email, phone, countryID)
+	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
+}
+
+func (m *MockAuthService) VerifyOtp(ctx context.Context, phone, otp string) error {
+	args := m.Called(ctx, phone, otp)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) ResendOtp(ctx context.Context, phone string, id string) (authservice.RegisterPhaseSignUpResult, error) {
+	args := m.Called(ctx, phone, id)
+	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
+}
+
+func (m *MockAuthService) CheckNIN(ctx context.Context, nin string) bool {
+	args := m.Called(ctx, nin)
+	return args.Bool(0)
+}
+
+func (m *MockAuthService) CheckUsername(ctx context.Context, username string) bool {
+	args := m.Called(ctx, username)
+	return args.Bool(0)
+}
+
+func (m *MockAuthService) Login(ctx context.Context, identifierType string, identifier, password string, iso2 string) (authservice.LoginResult, error) {
+	args := m.Called(ctx, identifierType, identifier, password, iso2)
+	return args.Get(0).(authservice.LoginResult), args.Error(1)
+}
+
+func (m *MockAuthService) Refresh(ctx context.Context, refreshToken string) (authservice.RefreshResult, error) {
+	args := m.Called(ctx, refreshToken)
+	return args.Get(0).(authservice.RefreshResult), args.Error(1)
+}
+
+func (m *MockAuthService) GetRefreshExpiration() time.Duration {
+	args := m.Called()
+	return args.Get(0).(time.Duration)
+}
+
+func (m *MockAuthService) Logout(ctx context.Context, refreshToken string) error {
+	args := m.Called(ctx, refreshToken)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (authservice.VerifySecurityQuestionsResult, error) {
+	args := m.Called(ctx, nin, q1, a1, q2, a2)
+	return args.Get(0).(authservice.VerifySecurityQuestionsResult), args.Error(1)
+}
+
+func (m *MockAuthService) ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error {
+	args := m.Called(ctx, changePasswordID, userFid, password)
+	return args.Error(0)
 }
 
 // TestRegister tests the Register method of the AuthHandler
@@ -44,8 +100,12 @@ func TestRegister(t *testing.T) {
 		reqBody := authhandler.RegisterRequest{
 			Email:          "test@example.com",
 			Phone:          "+2348012345678",
-			Username:       "testuser",
+			Username:       "test_user",
 			Nin:            "12345678901",
+			Question1:      1,
+			Answer1:        "dog",
+			Question2:      2,
+			Answer2:        "cat",
 			Password:       "password123",
 			LastName:       "Doe",
 			FirstName:      "John",
@@ -54,17 +114,18 @@ func TestRegister(t *testing.T) {
 			CurrentCountry: 1,
 			CurrentState:   1,
 			CurrentCity:    1,
+			OnboardingID:   "test-uuid",
 		}
 
 		// Marshal the RegisterRequest into JSON
 		body, _ := json.Marshal(reqBody)
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
 
 		// Set up the mock service to return a RegisterResult with UserID and FakeID
-		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin).Return(authservice.RegisterResult{UserID: 1, FakeID: 12345}, nil)
+		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID, reqBody.Question1, reqBody.Answer1, reqBody.Question2, reqBody.Answer2).Return(authservice.RegisterResult{UserID: 1, FakeID: 12345}, nil)
 
 		// Call the Register method of the AuthHandler with the request and response recorder
 		handler.Register(rr, req)
@@ -121,7 +182,7 @@ func TestRegister(t *testing.T) {
 		body, _ := json.Marshal(reqBody)
 
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
@@ -145,7 +206,7 @@ func TestRegister(t *testing.T) {
 		reqBody := authhandler.RegisterRequest{
 			Email:          "test@example.com",
 			Phone:          "+2348012345678",
-			Username:       "testuser",
+			Username:       "test_user",
 			Nin:            "12345678901",
 			Password:       "password123",
 			LastName:       "Doe",
@@ -154,12 +215,13 @@ func TestRegister(t *testing.T) {
 			DateOfBirth:    "01-01-2000", // Wrong format
 			CurrentCountry: 1,
 			CurrentState:   1,
+			OnboardingID:   "test-uuid",
 		}
 
 		// Marshal the RegisterRequest into JSON
 		body, _ := json.Marshal(reqBody)
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
 
@@ -182,8 +244,12 @@ func TestRegister(t *testing.T) {
 		reqBody := authhandler.RegisterRequest{
 			Email:          "test@example.com",
 			Phone:          "+2348012345678",
-			Username:       "testuser",
+			Username:       "test_user",
 			Nin:            "12345678901",
+			Question1:      1,
+			Answer1:        "dog",
+			Question2:      2,
+			Answer2:        "cat",
 			Password:       "password123",
 			LastName:       "Doe",
 			FirstName:      "John",
@@ -192,17 +258,18 @@ func TestRegister(t *testing.T) {
 			CurrentCountry: 1,
 			CurrentState:   1,
 			CurrentCity:    1,
+			OnboardingID:   "test-uuid",
 		}
 
 		// Marshal the RegisterRequest into JSON
 		body, _ := json.Marshal(reqBody)
 		// Create a new HTTP request with the JSON body
-		req, _ := http.NewRequest("POST", utils.ApiUrls.Register, bytes.NewBuffer(body))
+		req, _ := http.NewRequest("POST", utils.ApiUrls.Auth.Register, bytes.NewBuffer(body))
 		// Create a new HTTP response recorder
 		rr := httptest.NewRecorder()
 
 		// Set up the mock service to return an error
-		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin).Return(authservice.RegisterResult{}, errors.New("registration failed"))
+		mockService.On("Register", mock.Anything, mock.Anything, reqBody.Nin, reqBody.OnboardingID, reqBody.Question1, reqBody.Answer1, reqBody.Question2, reqBody.Answer2).Return(authservice.RegisterResult{}, errors.New("registration failed"))
 
 		// Call the Register method of the AuthHandler with the request and response recorder
 		handler.Register(rr, req)

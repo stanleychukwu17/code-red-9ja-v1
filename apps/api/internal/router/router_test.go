@@ -36,7 +36,7 @@ func TestNewRouter(t *testing.T) {
 	defer rdb.Close()
 
 	// Initialize router
-	r := router.New(pool, rdb)
+	r := router.New(cfg, pool, rdb)
 
 	req := httptest.NewRequest(http.MethodGet, utils.ApiUrls.Health, nil)
 	rec := httptest.NewRecorder()

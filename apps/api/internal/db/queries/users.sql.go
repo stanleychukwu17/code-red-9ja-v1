@@ -11,18 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const checkIfPhoneNumberExists = `-- name: CheckIfPhoneNumberExists :one
-SELECT id FROM users_phone_numbers
-WHERE phone = $1 LIMIT 1
-`
-
-func (q *Queries) CheckIfPhoneNumberExists(ctx context.Context, phone string) (int64, error) {
-	row := q.db.QueryRow(ctx, checkIfPhoneNumberExists, phone)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const createPhoneNumber = `-- name: CreatePhoneNumber :one
 INSERT INTO users_phone_numbers (user_id, phone)
 VALUES ($1, $2)
@@ -104,30 +92,42 @@ func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (i
 	return id, err
 }
 
-const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id FROM users
-WHERE email = $1 LIMIT 1
+const createUserSecurityQuestions = `-- name: CreateUserSecurityQuestions :one
+INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id
 `
 
-type GetUserByEmailRow struct {
-	ID     int64       `json:"id"`
-	FakeID pgtype.Int8 `json:"fake_id"`
+type CreateUserSecurityQuestionsParams struct {
+	UserFid   int64  `json:"user_fid"`
+	Nin       string `json:"nin"`
+	Question1 int16  `json:"question1"`
+	Answer1   string `json:"answer1"`
+	Question2 int16  `json:"question2"`
+	Answer2   string `json:"answer2"`
 }
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (GetUserByEmailRow, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i GetUserByEmailRow
-	err := row.Scan(&i.ID, &i.FakeID)
-	return i, err
+func (q *Queries) CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createUserSecurityQuestions,
+		arg.UserFid,
+		arg.Nin,
+		arg.Question1,
+		arg.Answer1,
+		arg.Question2,
+		arg.Answer2,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }
 
-const getUserByID = `-- name: GetUserByID :one
+const getUserByFakeID = `-- name: GetUserByFakeID :one
 SELECT id, fake_id, email, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_city, nin_verified, phone_verified, account_status, created_at, updated_at FROM users
-WHERE id = $1 LIMIT 1
+WHERE fake_id = $1 LIMIT 1
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByID, id)
+func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByFakeID, fakeID)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -153,57 +153,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
-const getUserByPhone = `-- name: GetUserByPhone :one
-SELECT id, fake_id FROM users
-WHERE phone = $1 LIMIT 1
-`
-
-type GetUserByPhoneRow struct {
-	ID     int64       `json:"id"`
-	FakeID pgtype.Int8 `json:"fake_id"`
-}
-
-func (q *Queries) GetUserByPhone(ctx context.Context, phone string) (GetUserByPhoneRow, error) {
-	row := q.db.QueryRow(ctx, getUserByPhone, phone)
-	var i GetUserByPhoneRow
-	err := row.Scan(&i.ID, &i.FakeID)
-	return i, err
-}
-
-const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT id, fake_id FROM users
-WHERE username = $1 LIMIT 1
-`
-
-type GetUserByUsernameRow struct {
-	ID     int64       `json:"id"`
-	FakeID pgtype.Int8 `json:"fake_id"`
-}
-
-func (q *Queries) GetUserByUsername(ctx context.Context, username pgtype.Text) (GetUserByUsernameRow, error) {
-	row := q.db.QueryRow(ctx, getUserByUsername, username)
-	var i GetUserByUsernameRow
-	err := row.Scan(&i.ID, &i.FakeID)
-	return i, err
-}
-
-const getUserNINByNIN = `-- name: GetUserNINByNIN :one
-SELECT id, user_id FROM users_nin
-WHERE nin = $1 LIMIT 1
-`
-
-type GetUserNINByNINRow struct {
-	ID     int32 `json:"id"`
-	UserID int64 `json:"user_id"`
-}
-
-func (q *Queries) GetUserNINByNIN(ctx context.Context, nin string) (GetUserNINByNINRow, error) {
-	row := q.db.QueryRow(ctx, getUserNINByNIN, nin)
-	var i GetUserNINByNINRow
-	err := row.Scan(&i.ID, &i.UserID)
-	return i, err
-}
-
 const getUserNINByUserID = `-- name: GetUserNINByUserID :one
 SELECT id, nin FROM users_nin
 WHERE user_id = $1 LIMIT 1
@@ -221,6 +170,26 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUser
 	return i, err
 }
 
+const getUserSecurityQuestionsByNIN = `-- name: GetUserSecurityQuestionsByNIN :one
+SELECT id, user_fid, nin, question1, answer1, question2, answer2 FROM user_security_questions
+WHERE nin = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error) {
+	row := q.db.QueryRow(ctx, getUserSecurityQuestionsByNIN, nin)
+	var i UserSecurityQuestion
+	err := row.Scan(
+		&i.ID,
+		&i.UserFid,
+		&i.Nin,
+		&i.Question1,
+		&i.Answer1,
+		&i.Question2,
+		&i.Answer2,
+	)
+	return i, err
+}
+
 const updateUserFakeID = `-- name: UpdateUserFakeID :exec
 UPDATE users
 SET fake_id = $2
@@ -234,5 +203,21 @@ type UpdateUserFakeIDParams struct {
 
 func (q *Queries) UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error {
 	_, err := q.db.Exec(ctx, updateUserFakeID, arg.ID, arg.FakeID)
+	return err
+}
+
+const updateUserPasswordByFid = `-- name: UpdateUserPasswordByFid :exec
+UPDATE users
+SET password_hash = $2
+WHERE fake_id = $1
+`
+
+type UpdateUserPasswordByFidParams struct {
+	FakeID       pgtype.Int8 `json:"fake_id"`
+	PasswordHash string      `json:"password_hash"`
+}
+
+func (q *Queries) UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error {
+	_, err := q.db.Exec(ctx, updateUserPasswordByFid, arg.FakeID, arg.PasswordHash)
 	return err
 }
