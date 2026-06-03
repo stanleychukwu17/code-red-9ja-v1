@@ -1,0 +1,45 @@
+-- 1. Create the Federal Constituencies Table
+CREATE TABLE IF NOT EXISTS federal_constituencies (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    state_id INTEGER NOT NULL
+);
+
+INSERT INTO federal_constituencies (id, name, state_id) VALUES
+-- Abia (ID: 303)
+-- Adamawa (ID: 320)
+-- Akwa Ibom (ID: 304)
+-- Anambra (ID: 315)
+-- Bauchi (ID: 312)
+-- Bayelsa (ID: 305)
+-- Benue (ID: 291)
+-- Borno (ID: 307)
+-- Cross River (ID: 314)
+-- Delta (ID: 316)
+-- Ebonyi (ID: 311)
+-- Edo (ID: 318)
+-- Ekiti (ID: 309)
+-- Enugu (ID: 289)
+-- Abuja FCT (ID: 293)
+-- Gombe (ID: 310)
+-- Imo (ID: 308)
+-- Jigawa (ID: 288)
+-- Kaduna (ID: 294)
+-- Kano (ID: 300)
+-- Katsina (ID: 313)
+-- Kebbi (ID: 290)
+-- Kogi (ID: 298)
+-- Kwara (ID: 295)
+-- Lagos (ID: 306)
+-- Nasarawa (ID: 301)
+-- Niger (ID: 317)
+-- Ogun (ID: 323)
+-- Ondo (ID: 321)
+-- Osun (ID: 322)
+-- Oyo (ID: 296)
+-- Plateau (ID: 302)
+-- Rivers (ID: 4926)
+-- Sokoto (ID: 292)
+-- Taraba (ID: 319)
+-- Yobe (ID: 297)
+-- Zamfara (ID: 299)
