@@ -1,4 +1,5 @@
 #!/bin/sh
+# the entrypoint for production, i.e in the docker app
 set -e
 
 # Run database migrations if requested
