@@ -85,6 +85,7 @@ func LoadConfig() (*Config, error) {
 		}
 	}
 
+	db_host := GetEnv("DB_HOST", "localhost")
 	db_user := GetEnv("DB_USER", "")
 	db_pass := GetEnv("DB_PASSWORD", "")
 	db_name := GetEnv("DB_NAME", "")
@@ -116,7 +117,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// create db connection url
-	db_url := utils.FormatPostgresDSN(db_user, db_pass, "localhost", db_port, db_name)
+	db_url := utils.FormatPostgresDSN(db_user, db_pass, db_host, db_port, db_name)
 
 	// jwt secret and expirations
 	jwtSecret := GetEnv("JWT_SECRET", "free9ja_jwt_secret_key_for_dev_only")
@@ -179,8 +180,20 @@ func GetIntEnv(key string, defaultValue int) int {
 }
 
 func GetEnvPath() (envPath string, envLocalPath string) {
-	envPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env"
-	envLocalPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env.local"
+	// Try local relative path first
+	envPath = ".env"
+	envLocalPath = ".env.local"
+
+	// If relative path doesn't exist, check apps/api/ relative to root, else fallback to hardcoded Windows path
+	if _, err := os.Stat(envPath); os.IsNotExist(err) {
+		if _, err := os.Stat("apps/api/.env"); err == nil {
+			envPath = "apps/api/.env"
+			envLocalPath = "apps/api/.env.local"
+		} else {
+			envPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env"
+			envLocalPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env.local"
+		}
+	}
 
 	// if the user sets a .env custom path, then return the custom path
 	if GetEnv("ENV_PATH", "") != "" {
