@@ -11,14 +11,15 @@ import Footer from "#/components/Footer";
 import LoadSitePreference from "#/components/LoadSitePreference";
 import LoadAuthSession from "#/components/LoadAuthSession";
 import { getUserDetailsCookie } from "@/lib/server/auth/auth";
-
+import { getSitePreference } from "@/lib/server/sitePreference";
 
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
 
 export const Route = createRootRoute({
   beforeLoad: async () => {
     const userDetails = await getUserDetailsCookie();
-    return { userDetails };
+    const sitePreference = await getSitePreference();
+    return { userDetails, sitePreference };
   },
   head: () => ({
     meta: [
@@ -37,8 +38,9 @@ export const Route = createRootRoute({
 });
 
 function RootLayout() {
+  const { sitePreference } = Route.useRouteContext();
   return (
-    <OutletWrapper>
+    <OutletWrapper sitePreference={sitePreference}>
       {/*
         I use the OutletWrapper to calculate the width of the div that wraps the <Outlet /> component.
         It gets the width of the sidebar from the DOM and adjusts the width of the <Outlet /> accordingly.
@@ -50,9 +52,11 @@ function RootLayout() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { userDetails } = Route.useRouteContext();
+  const { userDetails, sitePreference } = Route.useRouteContext();
+
+  // Check if userDetails is not undefined, null or empty object
   let userDetailsString = "{}";
-  if (userDetails) {
+  if (userDetails && Object.keys(userDetails).length > 0) {
     userDetailsString = JSON.stringify(userDetails);
   }
 
@@ -65,13 +69,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body data-user-details={userDetailsString} className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]">
         <Provider store={store}>
           <Toaster />
-          <Header userDetails={userDetails} />
+          <Header userDetails={userDetails} sitePreference={sitePreference} />
           <ClientOnly>
-            <LoadSitePreference />
+            <LoadSitePreference sitePreference={sitePreference} />
             <LoadAuthSession />
           </ClientOnly>
           {children}
-          <Footer />
+          <Footer sitePreference={sitePreference} />
         </Provider>
         <Scripts />
       </body>
