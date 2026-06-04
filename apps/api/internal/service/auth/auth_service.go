@@ -173,7 +173,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			Username:      user.Username.String,
 			FirstName:     user.FirstName.String,
 			LastName:      user.LastName.String,
-			AvatarURL:     "",
+			AvatarURL:     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
 			AccountStatus: user.AccountStatus.String,
 		},
 	}, nil
