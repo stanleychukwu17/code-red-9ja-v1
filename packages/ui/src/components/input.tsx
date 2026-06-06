@@ -10,7 +10,7 @@ import { cn } from "../lib/utils";
 import { Button } from "./button";
 
 const inputClassName =
-  "group flex items-center gap-2 h-14 w-full rounded-[16px] bg-black/5 px-4 py-1 text-lg transition-colors duration-200 file:border-0 file:bg-transparent file: file:font-medium ring-inset file:text-foreground placeholder:text-c-60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "group flex items-center gap-2 h-11 w-full rounded-[12px] bg-black/5 px-4 py-1 text-lg transition-colors duration-200 file:border-0 file:bg-transparent file: file:font-medium ring-inset file:text-foreground placeholder:text-c-60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
 
 const fancyInputClassName =
   "bg-transparent hover:bg-transparent! text-2xl md:text-xl text-c-80 font-semibold px-0 hover:ring-0 hover:bg-background focus-visible:ring-0";
@@ -66,12 +66,12 @@ const IconInput = ({
     <div
       className={cn(
         inputClassName,
-        "focus-within:ring-primary focus-within:ring-1 focus-within:hover:ring-primary",
+        "focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80",
         className,
       )}
     >
       <div className="mb-px">
-        {icon ?? <SearchIcon className={"text-c-50"} />}
+        {icon ?? <SearchIcon className={"text-c-50 size-6"} />}
       </div>
       <input
         type={type}

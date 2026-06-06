@@ -4,14 +4,27 @@
 // the shadcn blocks can be found at: https://ui.shadcn.com/blocks
 
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
 } from "@repo/ui/components/sidebar";
 
 import { TooltipProvider } from "@repo/ui/components/tooltip";
 import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
 
 import {
-  Popover, PopoverContent, PopoverTrigger, PopoverHeader, PopoverDescription
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverHeader,
+  PopoverDescription,
 } from "@repo/ui/components/popover";
 
 import LogoIcon from "@repo/ui/icons/logo-icon";
@@ -26,7 +39,7 @@ import ProfileSolidIcon from "@repo/ui/icons/navbar/profile-solid-icon";
 import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
 
-import { Skeleton } from "@repo/ui/components/skeleton"
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "@repo/ui/lib/utils";
 
 import { Ellipsis, PanelRightClose, PanelLeftClose } from "lucide-react";
@@ -117,7 +130,10 @@ export function AppSidebarShell({ userDetails }: { userDetails?: any }) {
         <main className="flex min-h-dvh flex-1 flex-col md:hidden">
           <div className="flex items-center justify-between px-4 pt-4">
             {/* Sidebar trigger button with an optional image, The image is only visible on mobile devices */}
-            <SidebarTrigger className="bg-white hover:bg-white opacity-100" img="https://github.com/shadcn.png" />
+            <SidebarTrigger
+              className="bg-white hover:bg-white opacity-100"
+              img="https://github.com/shadcn.png"
+            />
           </div>
         </main>
       </SidebarProvider>
@@ -134,7 +150,10 @@ export function AppSidebar({ userDetails }: { userDetails?: any }) {
   }, [sideBarState, dispatch]);
 
   return (
-    <Sidebar collapsible="icon" className="bg-sidebar md:data-[side=left]:left-0" >
+    <Sidebar
+      collapsible="icon"
+      className="bg-sidebar md:data-[side=left]:left-0"
+    >
       <div className="flex h-full flex-col px-4 py-7">
         {/* This component is responsible for rendering the logo of the application */}
         <LogoComponent />
@@ -162,7 +181,6 @@ export function AppSidebar({ userDetails }: { userDetails?: any }) {
     </Sidebar>
   );
 }
-
 
 // Returns the active tab based on the current URL
 function useActiveItem(): string {
@@ -192,14 +210,20 @@ function EachLinkComponent({ item }: { item: AppSidebarItem }) {
         tooltip={item.label}
         className={cn(
           "h-14 rounded-[16px] px-5 text-[18px] hover:bg-c-5 transition-all duration-300",
-          sideBarState === "collapsed" && "justify-center my-3"
+          sideBarState === "collapsed" && "justify-center my-3",
         )}
       >
-        <Link to={item.href} className="p-0" style={{ padding: "0px !important" }}>
+        <Link
+          to={item.href}
+          className="p-0"
+          style={{ padding: "0px !important" }}
+        >
           <div className="relative -right-1 size-8 py-2 flex shrink-0 items-center justify-center">
             {isActive ? item.selectedIcon : item.icon}
           </div>
-          <span className={cn("whitespace-nowrap", isActive ? "text-primary" : "")}>
+          <span
+            className={cn("whitespace-nowrap", isActive ? "text-primary" : "")}
+          >
             {item.label}
           </span>
         </Link>
@@ -210,7 +234,7 @@ function EachLinkComponent({ item }: { item: AppSidebarItem }) {
 
 function LogoComponent() {
   const { state: sideBarState, toggleSidebar } = useSidebar();
-  const isMobile = useIsMobile()
+  const isMobile = useIsMobile();
 
   let flexDir = "flex-row";
   try {
@@ -220,25 +244,35 @@ function LogoComponent() {
   }
 
   useEffect(() => {
-    if (isMobile) { return; }
+    if (isMobile) {
+      return;
+    }
 
     // Check if the sidebar state in localStorage is different from the current state
     const savedSiteState = localStorage.getItem("site") || null;
-    const preloadedSiteState = savedSiteState ? JSON.parse(savedSiteState) : undefined;
-    if (preloadedSiteState && preloadedSiteState?.sideBarState != sideBarState) {
-      toggleSidebar()
+    const preloadedSiteState = savedSiteState
+      ? JSON.parse(savedSiteState)
+      : undefined;
+    if (
+      preloadedSiteState &&
+      preloadedSiteState?.sideBarState != sideBarState
+    ) {
+      toggleSidebar();
     }
-  }, [])
+  }, []);
 
   return (
     <div
-      className={cn(`mb-7 flex ${flexDir} justify-between items-center gap-3 px-2 text-[#234f3e]`, sideBarState === "collapsed" && "px-0")}
+      className={cn(
+        `mb-7 flex ${flexDir} justify-between items-center gap-3 px-2 text-[#234f3e]`,
+        sideBarState === "collapsed" && "px-0",
+      )}
     >
       <div className="flex items-center gap-2">
         <LogoIcon className="size-8 shrink-0" />
         {sideBarState === "expanded" && (
-          <div className="text-[20px] font-semibold tracking-[-0.04em]">
-            Free <span className="font-normal">9ja</span>
+          <div className="text-[24px] font-semibold tracking-[-0.04em]">
+            Free9ja
           </div>
         )}
       </div>
@@ -249,14 +283,12 @@ function LogoComponent() {
         {sideBarState === "expanded" ? <PanelLeftClose /> : <PanelRightClose />}
       </div>
     </div>
-  )
+  );
 }
 
 function SidebarPollButton({ children }: { children: ReactNode }) {
   return (
-    <button
-      className="flex h-[62px] items-center justify-center rounded-full border border-[#e6dfdf] bg-white text-center text-[18px] font-semibold text-[#1d2c27] transition hover:bg-[#faf8f8]"
-    >
+    <button className="flex h-[62px] items-center justify-center rounded-full border border-[#e6dfdf] bg-white text-center text-[18px] font-semibold text-[#1d2c27] transition hover:bg-[#faf8f8]">
       {children}
     </button>
   );
@@ -264,7 +296,9 @@ function SidebarPollButton({ children }: { children: ReactNode }) {
 
 function ProfilePicture({ userDetails }: { userDetails?: any }) {
   const { state: sideBarState } = useSidebar();
-  const { user: authUser, userHydrated } = useAppSelector((state) => state.auth);
+  const { user: authUser, userHydrated } = useAppSelector(
+    (state) => state.auth,
+  );
 
   const user = authUser || userDetails;
 
@@ -274,17 +308,22 @@ function ProfilePicture({ userDetails }: { userDetails?: any }) {
       return null;
     }
 
-    return <>
-      <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{ width: "260px" }}>
-        <div className="flex-none">
-          <Skeleton className="size-12 bg-light-green/25 rounded-full" />
+    return (
+      <>
+        <div
+          className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer"
+          style={{ width: "260px" }}
+        >
+          <div className="flex-none">
+            <Skeleton className="size-12 bg-light-green/25 rounded-full" />
+          </div>
+          <div className="flex-1">
+            <Skeleton className="w-full mt-1 py-2 bg-light-green/25 rounded-xl" />
+            <Skeleton className="w-3/4 mt-2 py-2 bg-light-green/25 rounded-xl" />
+          </div>
         </div>
-        <div className="flex-1">
-          <Skeleton className="w-full mt-1 py-2 bg-light-green/25 rounded-xl" />
-          <Skeleton className="w-3/4 mt-2 py-2 bg-light-green/25 rounded-xl" />
-        </div>
-      </div>
-    </>
+      </>
+    );
   }
 
   if (sideBarState === "collapsed") {
@@ -292,28 +331,41 @@ function ProfilePicture({ userDetails }: { userDetails?: any }) {
       <Popover>
         <PopoverTrigger>
           <Avatar className="size-10">
-            <AvatarImage src={user?.avatar_url}alt="@shadcn" />
+            <AvatarImage src={user?.avatar_url} alt="@shadcn" />
           </Avatar>
         </PopoverTrigger>
         <PopoverContent>
           <ProfilePicturePopover userDetails={user} />
         </PopoverContent>
       </Popover>
-    )
+    );
   }
 
   return (
     <Popover>
       <PopoverTrigger>
-        <div className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer" style={{ width: "260px" }}>
+        <div
+          className="flex gap-4 p-4 hover:bg-[#f0f0ef] active:bg-[#e9e8e7] rounded-full cursor-pointer"
+          style={{ width: "260px" }}
+        >
           <div className="flex-none">
             <Avatar className="size-12">
               <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
             </Avatar>
           </div>
           <div className="flex-1">
-            <p className="text-[16px] font-semibold text-[#171416] py-px truncate overflow-hidden" style={{ maxWidth: "160px" }}>Chukwu Daniel</p>
-            <p className="mt-1 text-[14px] text-[#8b8589] truncate overflow-hidden" style={{ maxWidth: "160px" }}>@{user?.username}</p>
+            <p
+              className="text-[16px] font-semibold text-[#171416] py-px truncate overflow-hidden"
+              style={{ maxWidth: "160px" }}
+            >
+              Chukwu Daniel
+            </p>
+            <p
+              className="mt-1 text-[14px] text-[#8b8589] truncate overflow-hidden"
+              style={{ maxWidth: "160px" }}
+            >
+              @{user?.username}
+            </p>
           </div>
           <div className="flex-none mt-3 ">
             <Ellipsis />
@@ -344,7 +396,9 @@ function ProfilePicturePopover({ userDetails }: { userDetails: any }) {
 
   return (
     <>
-      <PopoverHeader className="px-3 capitalize">{userDetails?.last_name} {userDetails?.first_name}</PopoverHeader>
+      <PopoverHeader className="px-3 capitalize">
+        {userDetails?.last_name} {userDetails?.first_name}
+      </PopoverHeader>
       <PopoverDescription>
         <span
           onClick={handleLogout}

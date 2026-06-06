@@ -1,4 +1,10 @@
-import { ClientOnly, HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import {
+  ClientOnly,
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router";
 import { Provider } from "react-redux";
 import appCss from "../styles.css?url";
 
@@ -11,7 +17,6 @@ import Footer from "#/components/Footer";
 import LoadSitePreference from "#/components/LoadSitePreference";
 import LoadAuthSession from "#/components/LoadAuthSession";
 import { getUserDetailsCookie } from "@/lib/server/auth/auth";
-
 
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
 
@@ -26,9 +31,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Free9ja" },
     ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-    ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   component: RootLayout,
   shellComponent: RootDocument,
@@ -62,7 +65,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body data-user-details={userDetailsString} className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]">
+      <body
+        data-user-details={userDetailsString}
+        className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
+      >
         <Provider store={store}>
           <Toaster />
           <Header userDetails={userDetails} />
@@ -85,7 +91,7 @@ function NotFound() {
       <h1>404</h1>
       <p>Page not found</p>
     </div>
-  )
+  );
 }
 
 function ErrorComponent({ error }: { error: any }) {
@@ -95,5 +101,5 @@ function ErrorComponent({ error }: { error: any }) {
       <p>{error?.message}</p>
       <pre>{error?.stack}</pre>
     </div>
-  )
+  );
 }
