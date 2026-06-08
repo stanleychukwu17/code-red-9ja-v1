@@ -37,7 +37,7 @@ COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 ENV PORT=4000
-ENV ENV=production
+# ENV ENV=production
 EXPOSE 4000
 
 ENTRYPOINT ["/app/entrypoint.sh"]
