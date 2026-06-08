@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"io"
 	"log/slog"
 	"os"
 	"time"
@@ -11,42 +10,42 @@ import (
 
 // SetupLogger initializes the default slog logger with the tint handler
 // for colorized structured logging.
-func SetupLogger(version, commit string) {
-
-	// Get environment from environment variable
-	env := os.Getenv("ENV")
+func SetupLogger(version, commit string) *slog.Logger {
+	env := os.Getenv("ENV") // Get environment from environment variable
 	if env == "" {
 		env = "development"
 	}
-	// Check if environment is development
-	isDev := env == "development"
 
 	// ---- HANDLER ----
 	var handler slog.Handler
-	var output io.Writer = os.Stdout
 
-	if isDev {
-		// Pretty, colorful output for local development
-		handler = tint.NewHandler(output, &tint.Options{
-			Level:      slog.LevelDebug, // show everything locally
-			AddSource:  true,            // shows file:line (very useful for errors)
-			TimeFormat: time.Kitchen,    // gives clean time like 11:04AM, but never use it in production
+	// If in production or staging, use JSON handler for structured logging
+	// Otherwise, use tint for pretty, colorful output for local development
+
+	switch env {
+	case "development":
+		handler = tint.NewHandler(os.Stdout, &tint.Options{
+			Level: slog.LevelDebug,
+			// AddSource: false,
+			AddSource:  true,
+			TimeFormat: time.Kitchen,
 
 			// optional: customize how things look
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 				return a
 			},
 		})
-	} else {
-		handler = slog.NewJSONHandler(output, &slog.HandlerOptions{
-			Level:     slog.LevelInfo,
-			AddSource: false,
+
+	default: // staging, production
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: slog.LevelInfo,
 		})
 	}
 
 	// ---- LOGGER ----
-	logger := slog.New(handler)
-	if env == "production" {
+	logger := slog.New(handler).With("env", env)
+
+	if env == "production" || env == "staging" {
 		logger = logger.With(
 			"version", version,
 			"commit", commit,
@@ -54,4 +53,5 @@ func SetupLogger(version, commit string) {
 	}
 
 	slog.SetDefault(logger)
+	return logger
 }
