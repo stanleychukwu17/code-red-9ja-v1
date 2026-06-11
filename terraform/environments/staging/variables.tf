@@ -21,6 +21,11 @@ variable "aws_region" {
   description = "AWS Region to deploy resources"
 }
 
+variable "github_repo" {
+  type        = string
+  description = "The GitHub repository in format 'owner/repo' (e.g. stanleychukwu17/code-red-9ja-v1)"
+}
+
 variable "cloudflare_api_token" {
   type        = string
   description = "Cloudflare API token with Zone.DNS and Account.Pages permissions"
@@ -51,6 +56,11 @@ variable "backend_subdomain" {
 variable "frontend_subdomain" {
   type        = string
   description = "The frontend subdomain (e.g., staging)"
+}
+
+variable "rds_engine_version" {
+  type        = string
+  description = "The database engine version"
 }
 
 variable "rds_allocated_storage" {
@@ -129,7 +139,27 @@ variable "ecs_memory" {
   description = "The memory in MB to allocate to the task (512)"
 }
 
+variable "enable_bastion" {
+  type        = bool
+  description = "Whether to create the bastion host and related resources"
+}
+
 variable "ecs_desired_count" {
   type        = number
   description = "The desired number of tasks to run"
+}
+
+variable "bastion_ec2_instance_type" {
+  type        = string
+  description = "The instance type for the Bastion host"
+}
+
+variable "bastion_ssh_public_key_path" {
+  type        = string
+  description = "Path to the local SSH public key file"
+}
+
+variable "bastion_allowed_cidr" {
+  type        = string
+  description = "The CIDR block allowed to connect to the Bastion host"
 }

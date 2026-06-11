@@ -36,6 +36,7 @@ provider "cloudflare" {
 # aws_subnet_route_table_association, aws_db_subnet_group, aws_elasticache_subnet_group
 module "vpc" {
   source      = "../../modules/vpc"
+  website     = var.website
   environment = var.environment
 }
 
@@ -43,13 +44,16 @@ module "vpc" {
 # creates 4 security groups for: alb, ecs, rds & redis
 module "security_groups" {
   source      = "../../modules/security_groups"
+  website     = var.website
   environment = var.environment
   vpc_id      = module.vpc.vpc_id
+  app_port    = var.app_port
 }
 
 # --- ACM Module ---
 module "acm" {
   source             = "../../modules/acm"
+  website            = var.website
   environment        = var.environment
   domain_name        = "${var.backend_subdomain}.${var.domain_name}"
   cloudflare_zone_id = var.cloudflare_zone_id
@@ -58,6 +62,7 @@ module "acm" {
 # --- ALB Module ---
 module "alb" {
   source            = "../../modules/alb"
+  website           = var.website
   environment       = var.environment
   vpc_id            = module.vpc.vpc_id
   public_subnet_ids = module.vpc.public_subnet_ids
@@ -68,6 +73,7 @@ module "alb" {
 # --- Cloudflare CDN & DNS Module ---
 module "cloudflare" {
   source                = "../../modules/cloudflare"
+  website               = var.website
   environment           = var.environment
   cloudflare_account_id = var.cloudflare_account_id
   cloudflare_zone_id    = var.cloudflare_zone_id
@@ -85,6 +91,7 @@ module "rds" {
   environment           = var.environment
   allocated_storage     = var.rds_allocated_storage
   instance_class        = var.rds_instance_class
+  engine_version        = var.rds_engine_version
   db_name               = var.rds_db_name
   db_user               = var.rds_db_user
   db_password           = var.rds_db_password
@@ -109,6 +116,7 @@ module "ecs" {
   website            = var.website
   environment        = var.environment
   service_name       = var.service_name
+  aws_region         = var.aws_region
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
   security_group_id  = module.security_groups.ecs_security_group_id
@@ -135,14 +143,29 @@ module "ecs" {
   ecs_cpu           = var.ecs_cpu
   ecs_memory        = var.ecs_memory
   ecs_desired_count = var.ecs_desired_count
-  aws_region        = var.aws_region
 }
 
-# # --- AWS OIDC GitHub Actions Role Module ---
-# module "oidc" {
-#   source               = "../../modules/oidc"
-#   environment          = var.environment
-#   create_oidc_provider = true # Create the OIDC provider once in this workspace
-#   ecr_repository_arn   = module.ecs.ecr_repository_arn
-#   ecs_service_arn      = module.ecs.ecs_service_arn
-# }
+# --- AWS OIDC GitHub Actions Role Module ---
+module "oidc" {
+  source             = "../../modules/oidc"
+  website            = var.website
+  environment        = var.environment
+  ecr_repository_arn = module.ecs.ecr_repository_arn
+  ecs_service_arn    = module.ecs.ecs_service_arn
+  github_repo        = var.github_repo
+}
+
+# --- Bastion Module ---
+module "bastion" {
+  source                  = "../../modules/bastion"
+  enable_bastion          = var.enable_bastion
+  website                 = var.website
+  environment             = var.environment
+  instance_type           = var.bastion_ec2_instance_type
+  vpc_id                  = module.vpc.vpc_id
+  subnet_id               = module.vpc.public_subnet_ids[0]
+  rds_security_group_id   = module.security_groups.rds_security_group_id
+  redis_security_group_id = module.security_groups.redis_security_group_id
+  allowed_cidr            = var.bastion_allowed_cidr
+  ssh_public_key          = file(pathexpand(var.bastion_ssh_public_key_path))
+}
