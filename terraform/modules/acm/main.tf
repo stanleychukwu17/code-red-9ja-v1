@@ -33,7 +33,7 @@ resource "aws_acm_certificate" "cert" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-cert"
+    Name        = "${var.website}-${var.environment}-cert"
     Environment = var.environment
   }
 }
