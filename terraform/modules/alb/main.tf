@@ -1,5 +1,5 @@
 resource "aws_lb" "main" {
-  name               = "free9ja-${var.environment}-alb"
+  name               = "${var.website}-${var.environment}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [var.security_group_id]
@@ -8,13 +8,13 @@ resource "aws_lb" "main" {
   enable_deletion_protection = false
 
   tags = {
-    Name        = "free9ja-${var.environment}-alb"
+    Name        = "${var.website}-${var.environment}-alb"
     Environment = var.environment
   }
 }
 
 resource "aws_lb_target_group" "api" {
-  name        = "free9ja-${var.environment}-api-tg"
+  name        = "${var.website}-${var.environment}-api-tg"
   port        = var.app_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -33,7 +33,7 @@ resource "aws_lb_target_group" "api" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-api-tg"
+    Name        = "${var.website}-${var.environment}-api-tg"
     Environment = var.environment
   }
 }

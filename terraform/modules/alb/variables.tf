@@ -1,3 +1,8 @@
+variable "website" {
+  description = "The website name"
+  type        = string
+}
+
 variable "environment" {
   type        = string
   description = "Environment name (e.g., staging, production)"
