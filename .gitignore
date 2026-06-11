@@ -37,5 +37,12 @@ yarn-error.log*
 .DS_Store
 *.pem
 
-# DevOps
+# DevOps, Terraform
 *.tfvars
+.terraform/
+*.tfstate
+*.tfstate.*
+.tfstate.d/
+crash.log
+terraform.tfvars
+terraform.tfvars.json
