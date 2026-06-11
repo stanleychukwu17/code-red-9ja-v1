@@ -106,9 +106,9 @@ module "cloudflare" {
 
 # --- AWS OIDC GitHub Actions Role Module ---
 module "oidc" {
-  source               = "../../modules/oidc"
-  environment          = "production"
-  create_oidc_provider = false # References the OIDC provider created in staging
-  ecr_repository_arn   = module.ecs.ecr_repository_arn
-  ecs_service_arn      = module.ecs.ecs_service_arn
+  source             = "../../modules/oidc"
+  website            = "free9ja"
+  environment        = "production"
+  ecr_repository_arn = module.ecs.ecr_repository_arn
+  ecs_service_arn    = module.ecs.ecs_service_arn
 }

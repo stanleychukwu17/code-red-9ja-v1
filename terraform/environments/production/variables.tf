@@ -43,3 +43,9 @@ variable "jwt_secret" {
   description = "The secret key used to sign JWTs"
   sensitive   = true
 }
+
+variable "website" {
+  description = "The website name"
+  type        = string
+  default     = "free9ja"
+}
