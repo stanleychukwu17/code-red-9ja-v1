@@ -10,7 +10,7 @@ terraform {
 # --- Cloudflare Pages Project (Direct Upload) ---
 resource "cloudflare_pages_project" "frontend" {
   account_id        = var.cloudflare_account_id
-  name              = "free9ja-${var.environment}-web"
+  name              = "${var.website}-${var.environment}-web"
   production_branch = var.production_branch
 
   # Uses Wrangler in GitHub Actions for direct uploads, no source block needed
@@ -46,7 +46,10 @@ resource "cloudflare_dns_record" "backend_cname" {
   ttl     = 1 # ttl is ignored by Cloudflare when proxied = true
 }
 
-# Cloudflare SSL settings: Since the Cloudflare API token is scoped to DNS and Pages only, we will comment out the cloudflare_zone_setting.ssl_strict resource in Terraform. We recommend that you manually set the SSL/TLS Encryption mode to Full (Strict) directly via the Cloudflare Dashboard: Dashboard → SSL/TLS → Overview → Full (Strict).
+# Cloudflare SSL settings: Since the Cloudflare API token is scoped to DNS and Pages only, we will comment out the
+# cloudflare_zone_setting.ssl_strict resource in Terraform. We recommend that you manually set the
+# SSL/TLS Encryption mode to Full (Strict) directly via the Cloudflare Dashboard:
+# Domain-name Dashboard → SSL/TLS → Overview → {click configure button} → Full (Strict). (i did automatic SSL/TLS)
 # resource "cloudflare_zone_setting" "ssl_strict" {
 #   zone_id    = var.cloudflare_zone_id
 #   setting_id = "ssl"
