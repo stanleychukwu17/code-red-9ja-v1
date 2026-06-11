@@ -1,6 +1,6 @@
 # ALB Security Group
 resource "aws_security_group" "alb" {
-  name        = "free9ja-${var.environment}-alb-sg"
+  name        = "${var.website}-${var.environment}-alb-sg"
   description = "Controls access to the ALB"
   vpc_id      = var.vpc_id
 
@@ -29,14 +29,14 @@ resource "aws_security_group" "alb" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-alb-sg"
+    Name        = "${var.website}-${var.environment}-alb-sg"
     Environment = var.environment
   }
 }
 
 # ECS(Amazon Elastic Container Service) Tasks Security Group
 resource "aws_security_group" "ecs" {
-  name        = "free9ja-${var.environment}-ecs-sg"
+  name        = "${var.website}-${var.environment}-ecs-sg"
   description = "Allows traffic from the ALB to the ECS tasks"
   vpc_id      = var.vpc_id
 
@@ -55,14 +55,14 @@ resource "aws_security_group" "ecs" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-ecs-sg"
+    Name        = "${var.website}-${var.environment}-ecs-sg"
     Environment = var.environment
   }
 }
 
 # RDS PostgreSQL Security Group
 resource "aws_security_group" "rds" {
-  name        = "free9ja-${var.environment}-rds-sg"
+  name        = "${var.website}-${var.environment}-rds-sg"
   description = "Allows ECS tasks to connect to the database"
   vpc_id      = var.vpc_id
 
@@ -81,14 +81,14 @@ resource "aws_security_group" "rds" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-rds-sg"
+    Name        = "${var.website}-${var.environment}-rds-sg"
     Environment = var.environment
   }
 }
 
 # ElastiCache Redis Security Group
 resource "aws_security_group" "redis" {
-  name        = "free9ja-${var.environment}-redis-sg"
+  name        = "${var.website}-${var.environment}-redis-sg"
   description = "Allows ECS tasks to connect to Redis"
   vpc_id      = var.vpc_id
 
@@ -107,7 +107,7 @@ resource "aws_security_group" "redis" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-redis-sg"
+    Name        = "${var.website}-${var.environment}-redis-sg"
     Environment = var.environment
   }
 }
