@@ -4,7 +4,7 @@ resource "aws_vpc" "main" {
   enable_dns_support   = true
 
   tags = {
-    Name        = "free9ja-${var.environment}-vpc"
+    Name        = "${var.website}-${var.environment}-vpc"
     Environment = var.environment
   }
 }
@@ -19,7 +19,7 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name        = "free9ja-${var.environment}-public-${var.availability_zones[count.index]}"
+    Name        = "${var.website}-${var.environment}-public-${var.availability_zones[count.index]}"
     Environment = var.environment
   }
 }
@@ -32,7 +32,7 @@ resource "aws_subnet" "private" {
   availability_zone = var.availability_zones[count.index]
 
   tags = {
-    Name        = "free9ja-${var.environment}-private-${var.availability_zones[count.index]}"
+    Name        = "${var.website}-${var.environment}-private-${var.availability_zones[count.index]}"
     Environment = var.environment
   }
 }
@@ -45,7 +45,7 @@ resource "aws_subnet" "database" {
   availability_zone = var.availability_zones[count.index]
 
   tags = {
-    Name        = "free9ja-${var.environment}-database-${var.availability_zones[count.index]}"
+    Name        = "${var.website}-${var.environment}-database-${var.availability_zones[count.index]}"
     Environment = var.environment
   }
 }
@@ -55,7 +55,7 @@ resource "aws_internet_gateway" "igw" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name        = "free9ja-${var.environment}-igw"
+    Name        = "${var.website}-${var.environment}-igw"
     Environment = var.environment
   }
 }
@@ -70,7 +70,7 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = {
-    Name        = "free9ja-${var.environment}-nat-eip"
+    Name        = "${var.website}-${var.environment}-nat-eip"
     Environment = var.environment
   }
 }
@@ -81,7 +81,7 @@ resource "aws_nat_gateway" "nat" {
   subnet_id     = aws_subnet.public[0].id # Place in the first public subnet
 
   tags = {
-    Name        = "free9ja-${var.environment}-nat-gw"
+    Name        = "${var.website}-${var.environment}-nat-gw"
     Environment = var.environment
   }
 
@@ -99,7 +99,7 @@ resource "aws_route_table" "public" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-public-rt"
+    Name        = "${var.website}-${var.environment}-public-rt"
     Environment = var.environment
   }
 }
@@ -114,7 +114,7 @@ resource "aws_route_table" "private" {
   }
 
   tags = {
-    Name        = "free9ja-${var.environment}-private-rt"
+    Name        = "${var.website}-${var.environment}-private-rt"
     Environment = var.environment
   }
 }
@@ -124,7 +124,7 @@ resource "aws_route_table" "database" {
   vpc_id = aws_vpc.main.id
 
   tags = {
-    Name        = "free9ja-${var.environment}-database-rt"
+    Name        = "${var.website}-${var.environment}-database-rt"
     Environment = var.environment
   }
 }
@@ -150,23 +150,23 @@ resource "aws_route_table_association" "database" {
 
 # --- Subnet Groups ---
 resource "aws_db_subnet_group" "rds" {
-  name        = "free9ja-${var.environment}-rds-subnet-group"
+  name        = "${var.website}-${var.environment}-rds-subnet-group"
   subnet_ids  = aws_subnet.database[*].id
   description = "RDS Database subnet group"
 
   tags = {
-    Name        = "free9ja-${var.environment}-rds-subnet-group"
+    Name        = "${var.website}-${var.environment}-rds-subnet-group"
     Environment = var.environment
   }
 }
 
 resource "aws_elasticache_subnet_group" "redis" {
-  name        = "free9ja-${var.environment}-redis-subnet-group"
+  name        = "${var.website}-${var.environment}-redis-subnet-group"
   subnet_ids  = aws_subnet.database[*].id
   description = "ElastiCache Redis subnet group"
 
   tags = {
-    Name        = "free9ja-${var.environment}-redis-subnet-group"
+    Name        = "${var.website}-${var.environment}-redis-subnet-group"
     Environment = var.environment
   }
 }
