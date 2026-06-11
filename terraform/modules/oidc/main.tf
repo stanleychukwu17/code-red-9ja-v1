@@ -1,38 +1,41 @@
-# Conditionally create the OIDC provider (only once per account)
-resource "aws_iam_openid_connect_provider" "github" {
-  count           = var.create_oidc_provider ? 1 : 0
-  url             = "https://token.actions.githubusercontent.com"
-  client_id_list  = ["sts.amazonaws.com"]
-  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"] # GitHub OIDC Root CA Thumbprint
-}
-
+# --- Data Source for OIDC Provider (Created Globally) ---
 data "aws_iam_openid_connect_provider" "github" {
-  count = var.create_oidc_provider ? 0 : 1
-  url   = "https://token.actions.githubusercontent.com"
+  url = "https://token.actions.githubusercontent.com"
 }
 
 locals {
-  github_provider_arn = var.create_oidc_provider ? aws_iam_openid_connect_provider.github[0].arn : data.aws_iam_openid_connect_provider.github[0].arn
+  github_provider_arn = data.aws_iam_openid_connect_provider.github.arn
 }
 
 # --- GitHub Actions Deployment IAM Role ---
 resource "aws_iam_role" "github_actions" {
-  name        = "free9ja-${var.environment}-github-actions-role"
+  name        = "${var.website}-${var.environment}-github-actions-role"
   description = "IAM Role assumed by GitHub Actions for deploying ${var.environment} environment"
 
+  # The trust policy that grants GitHub Actions permission to assume this role.
+  # We use OIDC (OpenID Connect) to avoid storing long-lived AWS credentials in GitHub secrets.
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
         Effect = "Allow"
+
+        # The Principal is the Shared GitHub OIDC Identity Provider (created globally)
         Principal = {
           Federated = local.github_provider_arn
         }
+
+        # This action allows the OIDC token from GitHub to be exchanged for temporary AWS credentials
         Action = "sts:AssumeRoleWithWebIdentity"
+
+        # Conditions are critical for security to prevent unauthorized access.
         Condition = {
+          # Ensure the audience (aud) matches the official AWS STS endpoint
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
+          # Ensure that ONLY workflows running in our specific GitHub repository can assume this role.
+          # The '*' allows any branch, tag, or environment within the repository to authenticate.
           StringLike = {
             "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
           }
@@ -44,7 +47,7 @@ resource "aws_iam_role" "github_actions" {
 
 # --- Deployment Policy for ECR and ECS ---
 resource "aws_iam_policy" "deploy" {
-  name        = "free9ja-${var.environment}-github-deploy-policy"
+  name        = "${var.website}-${var.environment}-github-deploy-policy"
   description = "Allows GitHub Actions to push images to ECR and deploy tasks to ECS"
 
   policy = jsonencode({
@@ -93,12 +96,14 @@ resource "aws_iam_policy" "deploy" {
       {
         Effect   = "Allow"
         Action   = "iam:PassRole"
-        Resource = "arn:aws:iam::*:role/free9ja-${var.environment}-ecs-*"
+        Resource = "arn:aws:iam::*:role/${var.website}-${var.environment}-ecs-*"
       }
     ]
   })
 }
 
+# --- Attach Policy to Role ---
+# Attach the deployment policy created above to the GitHub Actions IAM role
 resource "aws_iam_role_policy_attachment" "deploy" {
   role       = aws_iam_role.github_actions.name
   policy_arn = aws_iam_policy.deploy.arn
