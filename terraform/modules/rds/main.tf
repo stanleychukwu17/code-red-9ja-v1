@@ -1,5 +1,5 @@
 resource "aws_db_instance" "postgres" {
-  identifier             = "free9ja-${var.environment}-db"
+  identifier             = "${var.website}-${var.environment}-db"
   allocated_storage      = var.allocated_storage
   max_allocated_storage  = 100
   engine                 = "postgres"
@@ -14,7 +14,7 @@ resource "aws_db_instance" "postgres" {
   publicly_accessible    = false
 
   tags = {
-    Name        = "free9ja-${var.environment}-db"
+    Name        = "${var.website}-${var.environment}-db"
     Environment = var.environment
   }
 }

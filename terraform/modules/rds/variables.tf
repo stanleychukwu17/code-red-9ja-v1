@@ -8,6 +8,11 @@ variable "environment" {
   description = "Environment name (e.g., staging, production)"
 }
 
+variable "engine_version" {
+  type        = string
+  description = "The database engine version"
+}
+
 variable "allocated_storage" {
   type        = number
   description = "The allocated storage in gigabytes"
@@ -44,9 +49,4 @@ variable "security_group_id" {
   description = "The security group ID for the RDS instance"
 }
 
-variable "engine_version" {
-  type        = string
-  description = "The database engine version"
-  default     = "16.13"
-}
 
