@@ -21,7 +21,6 @@ type Querier interface {
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
-	GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error)
 	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
