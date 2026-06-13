@@ -21,5 +21,4 @@ variable "cloudflare_zone_id" {
 variable "subject_alternative_names" {
   type        = list(string)
   description = "Subject alternative names for the certificate"
-  default     = []
 }

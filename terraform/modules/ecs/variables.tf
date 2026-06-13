@@ -83,7 +83,6 @@ variable "redis_port" {
 variable "redis_password" {
   type        = string
   description = "The Redis password"
-  default     = ""
   sensitive   = true
 }
 

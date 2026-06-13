@@ -53,6 +53,10 @@ variable "backend_subdomain" {
   description = "The backend subdomain (e.g., staging-api)"
 }
 
+variable "create_frontend_domain" {
+  type        = bool
+  description = "Whether to create the frontend custom domain"
+}
 variable "frontend_subdomain" {
   type        = string
   description = "The frontend subdomain (e.g., staging)"
@@ -97,6 +101,12 @@ variable "redis_node_type" {
 variable "redis_num_cache_nodes" {
   type        = number
   description = "The number of cache nodes in the cluster"
+}
+
+variable "redis_password" {
+  type        = string
+  description = "The password for the Redis cluster"
+  sensitive   = true
 }
 
 variable "app_port" {
@@ -162,4 +172,39 @@ variable "bastion_ssh_public_key_path" {
 variable "bastion_allowed_cidr" {
   type        = string
   description = "The CIDR block allowed to connect to the Bastion host"
+}
+
+variable "vpc_cidr" {
+  type        = string
+  description = "CIDR block for the VPC"
+}
+
+variable "availability_zones" {
+  type        = list(string)
+  description = "List of availability zones in the region"
+}
+
+variable "public_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for public subnets (ALBs)"
+}
+
+variable "private_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for private subnets (ECS Tasks)"
+}
+
+variable "database_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for database/cache subnets (RDS, Redis)"
+}
+
+variable "alb_health_check_path" {
+  type        = string
+  description = "The health check endpoint path for the ALB"
+}
+
+variable "acm_subject_alternative_names" {
+  type        = list(string)
+  description = "Subject alternative names for the certificate"
 }

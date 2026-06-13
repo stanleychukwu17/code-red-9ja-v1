@@ -25,6 +25,12 @@ variable "domain_name" {
   description = "The root domain name (e.g., domain.com)"
 }
 
+variable "create_frontend_domain" {
+  type        = bool
+  description = "Whether to create the frontend custom domain. Needs to be deployed to a worker before being created."
+  default     = false
+}
+
 variable "frontend_subdomain" {
   type        = string
   description = "Subdomain for the frontend (e.g., www, staging)"
@@ -38,10 +44,4 @@ variable "backend_subdomain" {
 variable "alb_dns_name" {
   type        = string
   description = "The DNS name of the AWS Application Load Balancer"
-}
-
-variable "production_branch" {
-  type        = string
-  description = "The production branch of the project"
-  default     = "main"
 }
