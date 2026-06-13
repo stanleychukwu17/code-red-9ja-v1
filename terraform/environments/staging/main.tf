@@ -12,13 +12,13 @@ terraform {
   }
 
   # HCP Terraform remote state configuration
-  # cloud {
-  #   organization = "free9ja_team" # Replace with your actual HCP organization name
-
-  #   workspaces {
-  #     name = "free9ja-staging"
-  #   }
-  # }
+  # if you want to test the environment locally, you can comment out the whole cloud block below
+  cloud {
+    organization = "free9ja_team"
+    workspaces {
+      name = "free9ja-staging"
+    }
+  }
 }
 
 provider "aws" {
@@ -35,9 +35,14 @@ provider "cloudflare" {
 # creates aws_vpc, aws_subnet, aws_internet_gateway, aws_eip(Elastic IP), aws_nat_gateway, aws_route_table,
 # aws_subnet_route_table_association, aws_db_subnet_group, aws_elasticache_subnet_group
 module "vpc" {
-  source      = "../../modules/vpc"
-  website     = var.website
-  environment = var.environment
+  source                = "../../modules/vpc"
+  website               = var.website
+  environment           = var.environment
+  vpc_cidr              = var.vpc_cidr
+  availability_zones    = var.availability_zones
+  public_subnet_cidrs   = var.public_subnet_cidrs
+  private_subnet_cidrs  = var.private_subnet_cidrs
+  database_subnet_cidrs = var.database_subnet_cidrs
 }
 
 # # --- Security Groups Module ---
@@ -52,11 +57,12 @@ module "security_groups" {
 
 # --- ACM Module ---
 module "acm" {
-  source             = "../../modules/acm"
-  website            = var.website
-  environment        = var.environment
-  domain_name        = "${var.backend_subdomain}.${var.domain_name}"
-  cloudflare_zone_id = var.cloudflare_zone_id
+  source                    = "../../modules/acm"
+  website                   = var.website
+  environment               = var.environment
+  domain_name               = "${var.backend_subdomain}.${var.domain_name}"
+  cloudflare_zone_id        = var.cloudflare_zone_id
+  subject_alternative_names = var.acm_subject_alternative_names
 }
 
 # --- ALB Module ---
@@ -68,20 +74,22 @@ module "alb" {
   public_subnet_ids = module.vpc.public_subnet_ids
   security_group_id = module.security_groups.alb_security_group_id
   certificate_arn   = module.acm.certificate_arn
+  app_port          = var.app_port
+  health_check_path = var.alb_health_check_path
 }
 
 # --- Cloudflare CDN & DNS Module ---
 module "cloudflare" {
-  source                = "../../modules/cloudflare"
-  website               = var.website
-  environment           = var.environment
-  cloudflare_account_id = var.cloudflare_account_id
-  cloudflare_zone_id    = var.cloudflare_zone_id
-  domain_name           = var.domain_name
-  frontend_subdomain    = var.frontend_subdomain
-  backend_subdomain     = var.backend_subdomain
-  alb_dns_name          = module.alb.alb_dns_name
-  production_branch     = var.environment
+  source                 = "../../modules/cloudflare"
+  website                = var.website
+  environment            = var.environment
+  cloudflare_account_id  = var.cloudflare_account_id
+  cloudflare_zone_id     = var.cloudflare_zone_id
+  domain_name            = var.domain_name
+  create_frontend_domain = var.create_frontend_domain
+  frontend_subdomain     = var.frontend_subdomain
+  backend_subdomain      = var.backend_subdomain
+  alb_dns_name           = module.alb.alb_dns_name
 }
 
 # # --- RDS Database Module ---
@@ -131,7 +139,7 @@ module "ecs" {
 
   redis_host     = module.elasticache.redis_host
   redis_port     = module.elasticache.redis_port
-  redis_password = "" # Local Redis has no password, default is empty
+  redis_password = var.redis_password # Local Redis has no password, default is empty
 
   is_ci_cd       = var.is_ci_cd
   run_migrations = var.run_migrations
