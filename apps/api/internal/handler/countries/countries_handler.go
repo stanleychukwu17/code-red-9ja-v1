@@ -3,6 +3,7 @@ package countrieshandler
 import (
 	"context"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/logger"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -38,8 +39,11 @@ func NewHandler(countryService CountryService, utils *utils.Utils) *Handler {
 // @Failure      500  {string}  failed to fetch countries
 // @Router       /countries [get]
 func (h *Handler) GetCountries(w http.ResponseWriter, r *http.Request) {
+	log := logger.FromContext(r.Context()).With("component", logger.ComponentCountriesHandler)
+
 	countries, err := h.countryService.GetAllCountries(r.Context())
 	if err != nil {
+		log.Error(logger.EventFetchCountriesFailed, "error", err)
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch countries: "+err.Error())
 		return
 	}
@@ -61,15 +65,19 @@ func (h *Handler) GetCountries(w http.ResponseWriter, r *http.Request) {
 // @Failure      500        {string}  failed to fetch states
 // @Router       /countries/{countryID}/states [get]
 func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
+	log := logger.FromContext(r.Context()).With("component", logger.ComponentCountriesHandler)
 	countryIDStr := chi.URLParam(r, "countryID")
+	
 	countryID, err := strconv.ParseInt(countryIDStr, 10, 16)
 	if err != nil {
+		log.Warn(logger.EventInvalidCountryID, "country_id", countryIDStr, "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid country ID: "+err.Error())
 		return
 	}
 
 	states, err := h.countryService.GetStatesByCountryID(r.Context(), int16(countryID))
 	if err != nil {
+		log.Error(logger.EventFetchStatesFailed, "country_id", countryID, "error", err)
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch states: "+err.Error())
 		return
 	}
@@ -91,15 +99,19 @@ func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
 // @Failure      500      {string}  failed to fetch cities
 // @Router       /states/{stateID}/cities [get]
 func (h *Handler) GetCities(w http.ResponseWriter, r *http.Request) {
+	log := logger.FromContext(r.Context()).With("component", logger.ComponentCountriesHandler)
 	stateIDStr := chi.URLParam(r, "stateID")
+	
 	stateID, err := strconv.ParseInt(stateIDStr, 10, 16)
 	if err != nil {
+		log.Warn(logger.EventInvalidStateID, "state_id", stateIDStr, "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID: "+err.Error())
 		return
 	}
 
 	cities, err := h.countryService.GetCitiesByStateID(r.Context(), int16(stateID))
 	if err != nil {
+		log.Error(logger.EventFetchCitiesFailed, "state_id", stateID, "error", err)
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch cities: "+err.Error())
 		return
 	}
