@@ -26,11 +26,14 @@ variable "security_group_id" {
 variable "app_port" {
   type        = number
   description = "The port the Go application runs on"
-  default     = 4000
 }
 
 variable "health_check_path" {
   type        = string
   description = "The health check endpoint path"
-  default     = "/api/v1"
+}
+
+variable "certificate_arn" {
+  type        = string
+  description = "The ARN of the ACM certificate for HTTPS listener (optional)"
 }
