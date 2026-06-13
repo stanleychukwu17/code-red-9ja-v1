@@ -31,20 +31,25 @@ jobs:
       TARGET_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
 
     steps:
+      # Checkout the code from the repository. This step is required to access
+      # the source code during the workflow execution.
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # Install pnpm
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.33.0
 
+      # Setup Node.js
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: "pnpm"
 
+      # Install Dependencies
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
@@ -55,6 +60,7 @@ jobs:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: pnpm --filter web build
 
+      # Deploy to Cloudflare Workers
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
         with:
