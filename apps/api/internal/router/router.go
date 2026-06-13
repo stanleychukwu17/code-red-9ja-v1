@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -13,6 +14,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "free9ja/api/docs"
+	"free9ja/api/internal/logger"
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
@@ -44,7 +46,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	mainRouter.Use(corsMiddleware)
 	mainRouter.Use(middleware.RequestID)
 	mainRouter.Use(middleware.RealIP)
-	mainRouter.Use(middleware.Logger)
+	mainRouter.Use(requestLoggerMiddleware)
 	mainRouter.Use(middleware.Recoverer)
 
 	// Swagger documentation (Dev only)
@@ -120,5 +122,40 @@ func corsMiddleware(next http.Handler) http.Handler {
 
 		// Call the next handler in the chain
 		next.ServeHTTP(w, r)
+	})
+}
+
+// requestLoggerMiddleware injects a request-scoped logger into the context
+// and logs the start and end of HTTP requests.
+func requestLoggerMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reqID := middleware.GetReqID(r.Context())
+		if reqID == "" {
+			reqID = "unknown"
+		}
+
+		// Create a child logger with the request_id
+		log := slog.Default().With("request_id", reqID, "component", logger.ComponentRouter)
+
+		// Inject into context
+		ctx := logger.WithContext(r.Context(), log)
+		r = r.WithContext(ctx)
+
+		// We need to wrap the response writer to get the status code
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+
+		start := time.Now()
+
+		defer func() {
+			log.Info(logger.EventHTTPRequest,
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", ww.Status(),
+				"duration", time.Since(start).String(),
+				"ip", r.RemoteAddr,
+			)
+		}()
+
+		next.ServeHTTP(ww, r)
 	})
 }
