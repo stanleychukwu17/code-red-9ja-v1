@@ -2,7 +2,7 @@ import { Button } from "@repo/ui/components/button";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Bell, Edit3, Upload, User } from "lucide-react";
+import { Bell, Edit3, Upload } from "lucide-react";
 import { CANDIDATES, DASHBOARD_STATE_RANKINGS } from "../../../data/dashboard";
 import { useAppSelector } from "#/redux/hooks";
 
@@ -14,7 +14,7 @@ function RouteComponent() {
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
   // console.log({user})
-  
+
   // useEffect(() => {
   //   const body = document.querySelector("body");
   //   const userDetails = body?.getAttribute("data-user-details");
@@ -117,9 +117,8 @@ function RouteComponent() {
                         params: { stateId: state.name },
                       })
                     }
-                    className={`grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 rounded-[16px] px-4 py-4 md:gap-4 md:px-5 ${
-                      state.highlighted ? "bg-[#def1e6]" : "bg-transparent"
-                    } text-left transition hover:bg-[#f5f1f3]`}
+                    className={`grid grid-cols-[minmax(0,1fr)_auto_auto_auto] items-center gap-2 rounded-[16px] px-4 py-4 md:gap-4 md:px-5 ${state.highlighted ? "bg-[#def1e6]" : "bg-transparent"
+                      } text-left transition hover:bg-[#f5f1f3]`}
                   >
                     <span className="text-[17px] font-normal text-[#202020]">
                       {state.name}
