@@ -1,0 +1,64 @@
+name: Deploy Web
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/deploy-web.yml"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "turbo.json"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-frontend:
+    name: Deploy TanStack React Frontend (Cloudflare Pages)
+    runs-on: ubuntu-latest
+
+    env:
+      TARGET_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Compile web application
+      - name: Build Web Application
+        env:
+          VITE_APP_NAME: "Free9ja"
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: pnpm --filter web build
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/web
+          command: deploy --name free9ja-${{ env.TARGET_ENV }}-web
