@@ -21,7 +21,6 @@ variable "vpc_id" {
 variable "instance_type" {
   type        = string
   description = "The instance type for the bastion host"
-  default     = "t3.nano"
 }
 
 variable "subnet_id" {
