@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"time"
@@ -8,25 +9,28 @@ import (
 	"github.com/lmittmann/tint"
 )
 
-// SetupLogger initializes the default slog logger with the tint handler
-// for colorized structured logging.
-func SetupLogger(version, commit string) *slog.Logger {
-	env := os.Getenv("ENV") // Get environment from environment variable
-	if env == "" {
-		env = "development"
-	}
+type Config struct {
+	Service string
+	Env     string
+	Version string
+	Commit  string
+	Level   slog.Level
+}
 
-	// ---- HANDLER ----
+type ctxKey struct{}
+
+// New initializes a new structured logger with the given configuration.
+func New(cfg Config) *slog.Logger {
 	var handler slog.Handler
 
-	// If in production or staging, use JSON handler for structured logging
-	// Otherwise, use tint for pretty, colorful output for local development
+	opts := &slog.HandlerOptions{
+		Level:     cfg.Level,
+		AddSource: cfg.Env == "development",
+	}
 
-	switch env {
-	case "development":
+	if cfg.Env == "development" {
 		handler = tint.NewHandler(os.Stdout, &tint.Options{
-			Level: slog.LevelDebug,
-			// AddSource: false,
+			Level:      cfg.Level,
 			AddSource:  true,
 			TimeFormat: time.Kitchen,
 
@@ -35,23 +39,31 @@ func SetupLogger(version, commit string) *slog.Logger {
 				return a
 			},
 		})
-
-	default: // staging, production
-		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
-		})
+	} else {
+		handler = slog.NewJSONHandler(os.Stdout, opts)
 	}
 
-	// ---- LOGGER ----
-	logger := slog.New(handler).With("env", env)
-
-	if env == "production" || env == "staging" {
-		logger = logger.With(
-			"version", version,
-			"commit", commit,
-		)
-	}
+	logger := slog.New(handler).With(
+		"service", cfg.Service,
+		"env", cfg.Env,
+		"version", cfg.Version,
+		"commit", cfg.Commit,
+	)
 
 	slog.SetDefault(logger)
 	return logger
+}
+
+// WithContext returns a new context with the provided logger attached.
+func WithContext(ctx context.Context, logger *slog.Logger) context.Context {
+	return context.WithValue(ctx, ctxKey{}, logger)
+}
+
+// FromContext extracts the logger from the context. If no logger is found,
+// it returns the default global logger.
+func FromContext(ctx context.Context) *slog.Logger {
+	if logger, ok := ctx.Value(ctxKey{}).(*slog.Logger); ok {
+		return logger
+	}
+	return slog.Default()
 }
