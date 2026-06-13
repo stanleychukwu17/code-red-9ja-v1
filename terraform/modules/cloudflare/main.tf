@@ -7,32 +7,13 @@ terraform {
   }
 }
 
-# --- Cloudflare Pages Project (Direct Upload) ---
-resource "cloudflare_pages_project" "frontend" {
-  account_id        = var.cloudflare_account_id
-  name              = "${var.website}-${var.environment}-web"
-  production_branch = var.production_branch
-
-  # Uses Wrangler in GitHub Actions for direct uploads, no source block needed
-}
-
-# --- Custom Domain for Pages Frontend ---
-resource "cloudflare_pages_domain" "frontend" {
-  account_id   = var.cloudflare_account_id
-  project_name = cloudflare_pages_project.frontend.name
-  name         = var.frontend_subdomain == "" ? var.domain_name : "${var.frontend_subdomain}.${var.domain_name}"
-}
-
-# CNAME record pointing the frontend subdomain to Pages dev subdomain
-resource "cloudflare_dns_record" "frontend_cname" {
-  name    = var.frontend_subdomain == "" ? "@" : var.frontend_subdomain
-  zone_id = var.cloudflare_zone_id
-  # content = cloudflare_pages_project.frontend.subdomain
-  content = "${cloudflare_pages_project.frontend.name}.pages.dev" # gemini says its better than above "content"
-  type    = "CNAME"
-  proxied = true
-  comment = "Managed by Terraform, frontend → Pages project"
-  ttl     = 1 # ttl is ignored by Cloudflare when proxied = true
+# --- Custom Domain for Worker Frontend ---
+resource "cloudflare_workers_custom_domain" "frontend" {
+  count      = var.create_frontend_domain ? 1 : 0
+  account_id = var.cloudflare_account_id
+  zone_id    = var.cloudflare_zone_id
+  hostname   = var.frontend_subdomain == "" ? var.domain_name : "${var.frontend_subdomain}.${var.domain_name}"
+  service    = "${var.website}-${var.environment}-web"
 }
 
 # --- CNAME record for AWS Backend API (Proxied through Cloudflare) ---
