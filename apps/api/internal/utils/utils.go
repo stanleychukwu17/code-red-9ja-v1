@@ -2,14 +2,20 @@ package utils
 
 import (
 	"context"
+	cryptoRand "crypto/rand"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	mathRand "math/rand"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type Utils struct {
@@ -27,6 +33,34 @@ func (u *Utils) RespondJSON(w http.ResponseWriter, status int, body any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
+}
+
+// RespondError writes a JSON error response using the same envelope shape as
+// RespondSuccess: { success: false, message: string, data: null }.
+func (u *Utils) RespondError(w http.ResponseWriter, statusCode int, message string) {
+	u.RespondJSON(w, statusCode, map[string]interface{}{
+		"success": false,
+		"message": message,
+		"data":    nil,
+	})
+}
+
+// RespondSuccess writes a JSON success response.
+// Shape: { success: true, message: string, data: {...}, meta?: {...} }
+func (u *Utils) RespondSuccess(w http.ResponseWriter, statusCode int, message string, data map[string]interface{}) {
+	res := map[string]interface{}{
+		"success": true,
+		"message": message,
+		"data":    nil,
+	}
+	if data != nil {
+		if meta, ok := data["meta"]; ok {
+			res["meta"] = meta
+			delete(data, "meta")
+		}
+		res["data"] = data
+	}
+	u.RespondJSON(w, statusCode, res)
 }
 
 type PostgresTestConfig struct {
@@ -98,4 +132,78 @@ func SetupRedisTestContainer(redis_port string) (string, testcontainers.Containe
 
 	addr := fmt.Sprintf("%s:%s", host, port.Port())
 	return addr, container, nil
+}
+
+func GenerateOTP() (string, string, error) {
+	n, err := cryptoRand.Int(cryptoRand.Reader, big.NewInt(1000000))
+	if err != nil {
+		return "", "", err
+	}
+
+	otp := fmt.Sprintf("%06d", n.Int64())
+
+	hashedOTP, err := bcrypt.GenerateFromPassword([]byte(otp), bcrypt.DefaultCost)
+	if err != nil {
+		return "", "", err
+	}
+
+	return otp, string(hashedOTP), nil
+}
+
+// function: generates fake_id using the original id
+func GenerateFakeID(id int64) int64 {
+	front_id := mathRand.Intn(1000)
+	back_id := mathRand.Intn(1000)
+
+	fake_id := fmt.Sprintf("%d%d%d", front_id, id, back_id)
+	fake_id_int, _ := strconv.ParseInt(fake_id, 10, 64)
+	return fake_id_int
+}
+
+// JSONDate is a custom wrapper around time.Time that supports unmarshaling
+// both standard RFC3339 strings and YYYY-MM-DD date-only strings.
+type JSONDate time.Time
+
+// Time returns the underlying time.Time value.
+func (jd JSONDate) Time() time.Time {
+	return time.Time(jd)
+}
+
+// IsZero returns true if the underlying time is zero.
+func (jd JSONDate) IsZero() bool {
+	return time.Time(jd).IsZero()
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (jd *JSONDate) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	s = strings.Trim(s, `"`)
+	if s == "" || s == "null" {
+		return nil
+	}
+
+	// Try RFC3339Nano (covers standard RFC3339 with or without fractional seconds)
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		*jd = JSONDate(t)
+		return nil
+	}
+
+	// Try date-only YYYY-MM-DD
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		*jd = JSONDate(t)
+		return nil
+	}
+
+	// Try ISO date-time string without timezone (e.g. "2006-01-02T15:04:05")
+	if t, err := time.Parse("2006-01-02T15:04:05", s); err == nil {
+		*jd = JSONDate(t)
+		return nil
+	}
+
+	return fmt.Errorf("cannot parse %q as date/time", s)
+}
+
+// MarshalJSON implements json.Marshaler.
+func (jd JSONDate) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(jd))
 }

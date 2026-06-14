@@ -41,7 +41,8 @@ CREATE TABLE c_cities (
   state_id SMALLINT NOT NULL,
   country_id SMALLINT NOT NULL,
   latitude DECIMAL(10, 8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
-  longitude DECIMAL(11, 8) NOT NULL CHECK (longitude BETWEEN -180 AND 180)
+  longitude DECIMAL(11, 8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+  city_rank SMALLINT DEFAULT 1
 );
 
 
@@ -64,6 +65,7 @@ CREATE INDEX idx_c_cities_state_id ON c_cities(state_id);
 CREATE INDEX idx_c_cities_country_id ON c_cities(country_id);
 CREATE INDEX idx_c_cities_latitude ON c_cities(latitude);
 CREATE INDEX idx_c_cities_longitude ON c_cities(longitude);
+CREATE INDEX idx_c_cities_city_rank ON c_cities(city_rank);
 
 -- +goose Down
 DROP TABLE IF EXISTS c_cities;

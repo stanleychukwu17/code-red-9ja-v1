@@ -34,6 +34,16 @@ import (
 // @host localhost:4000
 // @BasePath /api/v1
 
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer " followed by your access token.
+
+// @securityDefinitions.apikey RefreshToken
+// @in header
+// @name RefreshToken
+// @description Type your refresh token.
+
 type App struct {
 	cfg    *config.Config
 	server *http.Server
@@ -67,9 +77,8 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 	}
 
 	// Initialize router
-	r := router.New(pool, rdb)
+	r := router.New(cfg, pool, rdb)
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	slog.Info("starting server", "addr", addr)
 
 	return &App{
 		cfg: cfg,

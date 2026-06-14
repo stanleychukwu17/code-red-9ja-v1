@@ -3,13 +3,13 @@ CREATE TABLE IF NOT EXISTS wards (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     abbreviation VARCHAR(10) NOT NULL,
-    local_government_id INTEGER NOT NULL,
-    local_government_name VARCHAR(255) NOT NULL,
+    lga_id INTEGER NOT NULL,
+    lga_name VARCHAR(255) NOT NULL,
     state_id INTEGER NOT NULL,
     state_name VARCHAR(255) NOT NULL
 );
 
-INSERT INTO wards (id, name, abbreviation, local_government_id, local_government_name, state_id, state_name) VALUES
+INSERT INTO wards (id, name, abbreviation, lga_id, lga_name, state_id, state_name) VALUES
     (1, 'EZIAMA', '01', 1, 'ABA NORTH', 1, 'ABIA'),
     (2, 'INDUSTRIAL AREA', '02', 1, 'ABA NORTH', 1, 'ABIA'),
     (3, 'OSUSU I', '03', 1, 'ABA NORTH', 1, 'ABIA'),

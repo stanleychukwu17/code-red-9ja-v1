@@ -111,7 +111,8 @@
 
 @layer base {
   :root {
-    --background: rgb(251 246 250);
+    /* --background: rgb(251 246 250); */
+    --background: rgb(255 255 255);
     --background-2: rgb(246, 246, 246);
     --foreground: rgb(9 9 11);
     --card: rgb(255 255 255);
@@ -171,7 +172,7 @@
     --text-10: rgb(230 230 230);
 
     /* sidebar */
-    --sidebar: rgba(249 249 249);
+    --sidebar: rgba(255 255 255);
     --sidebar-width: calc(18rem);
 
     /* hover */
@@ -182,21 +183,36 @@
     --hover-10: rgb(230 230 230);
 
     /* fontsize */
-    --font-xs: 0.625rem; /* 10px */
-    --font-xsl: 0.688rem; /* 11px */
-    --font-sm: 0.75rem; /* 12px */
-    --font-sml: 0.8125rem; /* 13px */
-    --font-md: 0.875rem; /* 14px */
-    --font-lg: 1rem; /* 16px */
-    --font-xl: 1.125rem; /* 18px */
-    --font-2xl: 1.25rem; /* 20px */
-    --font-3xl: 1.375rem; /* 22px */
-    --font-4xl: 1.5rem; /* 24px */
-    --font-5xl: 1.625rem; /* 26px */
-    --font-6xl: 1.75rem; /* 28px */
-    --font-7xl: 1.875rem; /* 30px */
-    --font-8xl: 2rem; /* 32px */
-    --font-9xl: 2.125rem; /* 34px */
+    --font-xs: 0.688rem;
+    /* 11px */
+    --font-xsl: 0.75rem;
+    /* 12px */
+    --font-sm: 0.8125rem;
+    /* 13px */
+    --font-sml: 0.875;
+    /* 14px */
+    --font-md: 1rem;
+    /* 16px */
+    --font-lg: 1.125rem;
+    /* 18px */
+    --font-xl: 1.25rem;
+    /* 20px */
+    --font-2xl: 1.375rem;
+    /* 22px */
+    --font-3xl: 1.5rem;
+    /* 24px */
+    --font-4xl: 1.625rem;
+    /* 26px */
+    --font-5xl: 1.75rem;
+    /* 28px */
+    --font-6xl: 1.875rem;
+    /* 30px */
+    --font-7xl: 2rem;
+    /* 32px */
+    --font-8xl: 2.125rem;
+    /* 34px */
+    --font-9xl: 2.25rem;
+    /* 36px */
 
     /* shadcn - sidebar */
     --sidebar-background: rgb(252, 252, 250);
@@ -204,13 +220,14 @@
     --sidebar-primary: rgb(24, 24, 27);
     --sidebar-primary-foreground: rgb(250, 250, 250);
     --sidebar-accent: rgb(244, 244, 245);
-    --sidebar-accent-foreground: rgb(24, 24, 27);
+    --sidebar-accent-foreground: rgb(26, 26, 26);
     --sidebar-border: rgb(229, 231, 235);
     --sidebar-ring: rgb(59, 130, 246);
 
     /* shadow-bullet */
     --shadow-bullet: 0px 0px 4px 0px rgba(0, 0, 0, 0.1);
   }
+
   .dark {
     /* --background: 9 9 11; */
     --background: rgb(25 25 25);
@@ -244,8 +261,10 @@
     --chart-5: rgb(226, 54, 112);
     /* text */
     --text-100: rgb(255 255 255);
-    --text-90: rgb(255 255 255); /* rgb(229 229 229); */
-    --text-80: rgb(255 255 255); /* rgb(204 204 204); */
+    --text-90: rgb(255 255 255);
+    /* rgb(229 229 229); */
+    --text-80: rgb(255 255 255);
+    /* rgb(204 204 204); */
     --text-70: rgb(178 178 178);
     --text-60: rgb(153 153 153);
     --text-50: rgb(128 128 128);
@@ -283,12 +302,11 @@
   * {
     @apply border-border outline-ring/50 leading-normal;
   }
-  /* html, body {
-    @apply h-full;
-  } */
+
   body {
     @apply bg-background text-foreground text-base leading-normal;
   }
+
   span,
   p,
   h1,
@@ -301,16 +319,17 @@
   li,
   div,
   button {
-    /* line-height: normal !important; */
     line-height: normal;
   }
 
   .scrollbar-transparent {
     scrollbar-color: rgba(0, 0, 0, 0.5) transparent;
   }
+
   .dark .scrollbar-transparent {
     scrollbar-color: rgba(254, 254, 254, 0.6) transparent;
   }
+
   .scrollbar-transparent::-webkit-scrollbar-track {
     background: transparent;
   }
@@ -323,6 +342,16 @@
 }
 
 .time-input {
-  -moz-appearance: textfield; /* Firefox */
-  appearance: textfield; /* Standard */
+  -moz-appearance: textfield;
+  /* Firefox */
+  appearance: textfield;
+  /* Standard */
+}
+
+.selectElement button {
+  @apply bg-black/5 h-14 px-4 py-1 rounded-[16px] text-lg capitalize;
+}
+
+.selectElement button {
+  border: 0px solid transparent !important;
 }
