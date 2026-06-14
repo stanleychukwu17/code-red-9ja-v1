@@ -1,21 +1,22 @@
 import { useEffect, useState } from 'react'
 
-type ThemeMode = 'light' | 'dark' | 'auto'
+export type ThemeMode = 'light' | 'dark' | 'auto'
+export const ThemeModes: ThemeMode[] = ['light', 'dark', 'auto']
 
-function getInitialMode(): ThemeMode {
+export function getInitialMode(): ThemeMode {
   if (typeof window === 'undefined') {
     return 'auto'
   }
 
-  const stored = window.localStorage.getItem('theme')
-  if (stored === 'light' || stored === 'dark' || stored === 'auto') {
+  const stored = window.localStorage.getItem('theme') as ThemeMode | null
+  if (stored && ThemeModes.includes(stored)) {
     return stored
   }
 
   return 'auto'
 }
 
-function applyThemeMode(mode: ThemeMode) {
+export function applyThemeMode(mode: ThemeMode) {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
   const resolved = mode === 'auto' ? (prefersDark ? 'dark' : 'light') : mode
 
@@ -31,17 +32,17 @@ function applyThemeMode(mode: ThemeMode) {
   document.documentElement.style.colorScheme = resolved
 }
 
-export default function ThemeToggle() {
-  const [mode, setMode] = useState<ThemeMode>('auto')
+export function useTheme() {
+  const [theme, setThemeState] = useState<ThemeMode>('auto')
 
   useEffect(() => {
     const initialMode = getInitialMode()
-    setMode(initialMode)
+    setThemeState(initialMode)
     applyThemeMode(initialMode)
   }, [])
 
   useEffect(() => {
-    if (mode !== 'auto') {
+    if (theme !== 'auto') {
       return
     }
 
@@ -52,20 +53,30 @@ export default function ThemeToggle() {
     return () => {
       media.removeEventListener('change', onChange)
     }
-  }, [mode])
+  }, [theme])
+
+  const setTheme = (newTheme: ThemeMode) => {
+    setThemeState(newTheme)
+    applyThemeMode(newTheme)
+    window.localStorage.setItem('theme', newTheme)
+  }
+
+  return { theme, setTheme }
+}
+
+export default function ThemeToggle() {
+  const { theme, setTheme } = useTheme()
 
   function toggleMode() {
     const nextMode: ThemeMode =
-      mode === 'light' ? 'dark' : mode === 'dark' ? 'auto' : 'light'
-    setMode(nextMode)
-    applyThemeMode(nextMode)
-    window.localStorage.setItem('theme', nextMode)
+      theme === 'light' ? 'dark' : theme === 'dark' ? 'auto' : 'light'
+    setTheme(nextMode)
   }
 
   const label =
-    mode === 'auto'
+    theme === 'auto'
       ? 'Theme mode: auto (system). Click to switch to light mode.'
-      : `Theme mode: ${mode}. Click to switch mode.`
+      : `Theme mode: ${theme}. Click to switch mode.`
 
   return (
     <button
@@ -73,9 +84,9 @@ export default function ThemeToggle() {
       onClick={toggleMode}
       aria-label={label}
       title={label}
-      className="rounded-full border border-[var(--chip-line)] bg-[var(--chip-bg)] px-3 py-1.5 text-sm font-semibold text-[var(--sea-ink)] shadow-[0_8px_22px_rgba(30,90,72,0.08)] transition hover:-translate-y-0.5"
+      className="rounded-full border border-border bg-muted hover:bg-muted/80 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-sm transition duration-200 cursor-pointer"
     >
-      {mode === 'auto' ? 'Auto' : mode === 'dark' ? 'Dark' : 'Light'}
+      {theme === 'auto' ? 'Auto' : theme === 'dark' ? 'Dark' : 'Light'}
     </button>
   )
 }

@@ -1,22 +1,18 @@
 package logger_test
 
 import (
+	"context"
 	"log/slog"
-	"os"
 	"testing"
 
 	"free9ja/api/internal/logger"
+
 	"github.com/stretchr/testify/assert"
 )
 
-func TestSetupLogger(t *testing.T) {
-	// Store original default logger to restore it after the test
+func TestNewLogger(t *testing.T) {
 	origDefault := slog.Default()
 	defer slog.SetDefault(origDefault)
-
-	// Save original ENV to restore it
-	origEnv := os.Getenv("ENV")
-	defer os.Setenv("ENV", origEnv)
 
 	tests := []struct {
 		name    string
@@ -36,32 +32,47 @@ func TestSetupLogger(t *testing.T) {
 			version: "2.0.0",
 			commit:  "def456",
 		},
-		{
-			name:    "default to development when env is empty",
-			env:     "",
-			version: "0.0.1",
-			commit:  "local",
-		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if tt.env != "" {
-				os.Setenv("ENV", tt.env)
-			} else {
-				os.Unsetenv("ENV")
+			cfg := logger.Config{
+				Service: "test_service",
+				Env:     tt.env,
+				Version: tt.version,
+				Commit:  tt.commit,
+				Level:   slog.LevelDebug,
 			}
 
-			// Call SetupLogger
-			logger.SetupLogger(tt.version, tt.commit)
-
-			// Verify that the default logger is updated
-			l := slog.Default()
+			// Call New
+			l := logger.New(cfg)
 			assert.NotNil(t, l)
 
-			// We can't easily verify the handler type without reflection,
-			// but we can ensure it handles basic log calls
+			// Verify that the default logger is updated
+			defL := slog.Default()
+			assert.NotNil(t, defL)
+
 			l.Info("test log message", "env", tt.env)
 		})
 	}
+}
+
+func TestContextLogger(t *testing.T) {
+	ctx := context.Background()
+	cfg := logger.Config{
+		Service: "test_service",
+		Env:     "development",
+		Level:   slog.LevelDebug,
+	}
+
+	l := logger.New(cfg)
+
+	// Context without logger should return default
+	extractedL := logger.FromContext(ctx)
+	assert.Equal(t, slog.Default(), extractedL)
+
+	// Context with logger should return that logger
+	ctxWithL := logger.WithContext(ctx, l)
+	extractedL2 := logger.FromContext(ctxWithL)
+	assert.Equal(t, l, extractedL2)
 }

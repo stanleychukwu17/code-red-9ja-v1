@@ -309,23 +309,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
-const getUserNINByUserID = `-- name: GetUserNINByUserID :one
-SELECT id, nin FROM users_nin
-WHERE user_id = $1 LIMIT 1
-`
-
-type GetUserNINByUserIDRow struct {
-	ID  int32  `json:"id"`
-	Nin string `json:"nin"`
-}
-
-func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (GetUserNINByUserIDRow, error) {
-	row := q.db.QueryRow(ctx, getUserNINByUserID, userID)
-	var i GetUserNINByUserIDRow
-	err := row.Scan(&i.ID, &i.Nin)
-	return i, err
-}
-
 const getUserSecurityQuestionsByNIN = `-- name: GetUserSecurityQuestionsByNIN :one
 SELECT id, user_fid, nin, question1, answer1, question2, answer2 FROM user_security_questions
 WHERE nin = $1 LIMIT 1

@@ -41,10 +41,6 @@ WHERE fake_id = $1;
 SELECT * FROM users
 WHERE fake_id = $1 LIMIT 1;
 
--- name: GetUserNINByUserID :one
-SELECT id, nin FROM users_nin
-WHERE user_id = $1 LIMIT 1;
-
 -- name: CreateUserSecurityQuestions :one
 INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
 VALUES ($1, $2, $3, $4, $5, $6)

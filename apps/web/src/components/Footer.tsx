@@ -1,16 +1,27 @@
-import React from 'react';
+import type { CSSProperties } from 'react';
 import { useLocation } from '@tanstack/react-router';
 import { useIsMobile } from '@repo/ui/hooks/useMobile';
 import { useAppSelector } from '@/redux/hooks';
+import type { SiteState } from '@/redux/slice/siteSlice';
+import ThemeToggle from '#/components/ThemeToggle';
 
-export default function Footer() {
+interface FooterProps {
+  sitePreference?: SiteState | null;
+}
+
+export default function Footer({ sitePreference }: FooterProps = {}) {
   const location = useLocation();
-  const isAuthPage = location.pathname.startsWith('/auth');
-  const year = new Date().getFullYear()
-  const { currentSideBarWidth, allowOutletToBeResponsive } = useAppSelector((state) => state.site);
   const isMobile = useIsMobile();
+  const year = new Date().getFullYear();
+  const isAuthPage = location.pathname.startsWith('/auth');
+  const reduxSitePreference = useAppSelector((state) => state.site);
 
-  const getFooterStyle = (): React.CSSProperties => {
+  const isReduxSynced = reduxSitePreference.sideBarState !== "";
+  const allowOutletToBeResponsive = isReduxSynced ? reduxSitePreference.allowOutletToBeResponsive : (sitePreference?.allowOutletToBeResponsive ?? true);
+  const sidebarWidth = isReduxSynced ? reduxSitePreference.currentSideBarWidth : (sitePreference?.currentSideBarWidth || "16rem");
+
+
+  const getFooterStyle = (): CSSProperties => {
     if (isMobile || !allowOutletToBeResponsive || isAuthPage) {
       return {
         width: '100vw',
@@ -20,8 +31,8 @@ export default function Footer() {
     }
 
     return {
-      width: `calc(100vw - ${currentSideBarWidth})`,
-      marginLeft: `${currentSideBarWidth}`,
+      width: `calc(100vw - ${sidebarWidth})`,
+      marginLeft: `${sidebarWidth}`,
       transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
     };
   };
@@ -32,7 +43,10 @@ export default function Footer() {
         <p className="m-0 text-sm">
           &copy; {year} Your name here. All rights reserved.
         </p>
-        <p className="island-kicker m-0">Built with TanStack Start</p>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <p className="island-kicker m-0">Built with TanStack Start</p>
+          <ThemeToggle />
+        </div>
       </div>
       <div className="mt-4 flex justify-center gap-4">
         <a

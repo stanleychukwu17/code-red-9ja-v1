@@ -2,6 +2,7 @@ package messagingservice
 
 import (
 	"fmt"
+	"free9ja/api/internal/logger"
 	"log/slog"
 	"os"
 
@@ -38,7 +39,8 @@ func NewMessagingService() (*MessagingService, error) {
 }
 
 func (s *MessagingService) SendWhatsAppOTP(phone, otp string) error {
-	slog.Info("Sending otp to whatsapp: ", "otp", otp) // remove this line from production
+	log := slog.Default().With("component", logger.ComponentMessagingService)
+	log.Debug(logger.EventSendingOTP, "channel", "whatsapp", "otp", otp) // remove or set to debug for production
 
 	message := fmt.Sprintf("Your Free9ja OTP is: %s", otp)
 	to := fmt.Sprintf("whatsapp:%s", phone)
@@ -57,7 +59,8 @@ func (s *MessagingService) SendWhatsAppOTP(phone, otp string) error {
 }
 
 func (s *MessagingService) SendSmsOTP(phone, otp string) error {
-	slog.Info("Sending otp to SMS: ", "otp", otp) // remove this line from production
+	log := slog.Default().With("component", logger.ComponentMessagingService)
+	log.Debug(logger.EventSendingOTP, "channel", "sms", "otp", otp) // remove or set to debug for production
 
 	message := fmt.Sprintf("Your Free9ja OTP is: %s", otp)
 

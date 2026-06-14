@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/logger"
 	"regexp"
 	"strconv"
 	"strings"
@@ -63,6 +64,8 @@ type LoginResult struct {
 
 // Login verifies login credentials and returns JWT access and refresh tokens
 func (s *AuthService) Login(ctx context.Context, identifierType, identifier, password, iso2 string) (LoginResult, error) {
+	log := logger.FromContext(ctx).With("component", logger.ComponentAuthService)
+
 	var user queries.User
 	var err error
 	var fakeIDStr string
@@ -163,8 +166,11 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	// execute the pipeline
 	_, err = pipe.Exec(ctx)
 	if err != nil {
+		log.Error(logger.EventRedisPipelineFailed, "error", err, "operation", "login_session_storage")
 		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
 	}
+
+	log.Info(logger.EventUserLoginSuccess, "user_id", fakeID, "username", user.Username.String)
 
 	return LoginResult{
 		AccessToken:  accessToken,
@@ -175,7 +181,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			FirstName:     user.FirstName.String,
 			LastName:      user.LastName.String,
 			Role:          user.Role.String,
-			AvatarURL:     "",
+			AvatarURL:     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
 			AccountStatus: user.AccountStatus.String,
 		},
 	}, nil
@@ -189,6 +195,8 @@ type RefreshResult struct {
 
 // Refresh validates the refresh token and returns a new set of tokens
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (RefreshResult, error) {
+	log := logger.FromContext(ctx).With("component", logger.ComponentAuthService)
+
 	// hash the refresh token
 	hashed := utils.HashToken(refreshToken)
 	pipe := s.rdb.TxPipeline()
@@ -308,8 +316,11 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	// execute the pipeline
 	_, err = pipe.Exec(ctx)
 	if err != nil {
+		log.Error(logger.EventRedisPipelineFailed, "error", err, "operation", "refresh_token_storage")
 		return RefreshResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
 	}
+
+	log.Info(logger.EventTokenRefreshSuccess, "user_id", userFid)
 
 	response := RefreshResult{
 		AccessToken:  newAccessToken,
@@ -322,6 +333,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 
 // Logout invalidates the refresh token by removing the session from Redis
 func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
+	log := logger.FromContext(ctx).With("component", logger.ComponentAuthService)
+
 	// hash the refresh token
 	hashed := utils.HashToken(refreshToken)
 	// return errors.New("testing error")
@@ -389,9 +402,11 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	// send the pipeline to redis and check for errors
 	_, err = pipe.Exec(ctx)
 	if err != nil {
+		log.Error(logger.EventRedisPipelineFailed, "error", err, "operation", "logout")
 		return errors.New("piping the redis command failed")
 	}
 
+	log.Info(logger.EventUserLogoutSuccess, "user_id", userFid)
 	return nil
 }
 
@@ -543,7 +558,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, err
 	}
 
-	// fetch user details using the user fake_id, because the details does not currently exist,
+	// fetch user details using the user fake_id, because the details does not currently exist in redis,
 	// it will fetch the details and save it into redis
 	_, _ = s.GetUserDetailsByFakeID(ctx, fake_id)
 
@@ -719,7 +734,7 @@ func (s *AuthService) CheckCity(ctx context.Context, state_id int16, city_id int
 	return false, fmt.Errorf("invalid city ID")
 }
 
-// SaveSomeUserRegistrationDetails saves the user's registration details (username, email, phone, nin) in Redis and DB
+// SaveSomeUserRegistrationDetails saves the user's registration details (username, email, phone, nin) to Redis & DB
 func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, phone, nin string, userID int64, fakeID int64) error {
 	// batch redis commands
 	pipe := s.rdb.TxPipeline()
@@ -978,7 +993,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID strin
 }
 
 // UpdateCachedUserInfo refreshes the cached user information in Redis.
-// This function should be called anytime a user's details change.
+// This function should be called anytime a user's details changes
 func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) error {
 	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
 
@@ -1282,5 +1297,3 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 func (s *AuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
 	return s.queries.ListAdmins(ctx)
 }
-
-

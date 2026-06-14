@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
-import type { PayloadAction } from "@reduxjs/toolkit";
+import type { PayloadAction, Middleware } from "@reduxjs/toolkit";
+import { saveSitePreference } from "@/lib/server/sitePreference";
 
 export interface SiteState {
   // sideBarState: This is used to determine if the sidebar is collapsed or expanded
@@ -29,13 +30,20 @@ export const siteSlice = createSlice({
       if (currentSideBarWidth) state.currentSideBarWidth = currentSideBarWidth;
       if (allowOutletToBeResponsive !== undefined) state.allowOutletToBeResponsive = allowOutletToBeResponsive;
 
-      // store in local storage
-      localStorage.setItem("site", JSON.stringify(state));
-      return state
+      return state;
     },
   },
 });
 
 export const { updateSiteState } = siteSlice.actions;
+
+export const sitePreferenceMiddleware: Middleware = store => next => action => {
+  const result = next(action);
+  if (updateSiteState.match(action)) {
+    const state = store.getState() as { site: SiteState };
+    saveSitePreference({ data: state.site }).catch(console.error);
+  }
+  return result;
+};
 
 export default siteSlice.reducer;

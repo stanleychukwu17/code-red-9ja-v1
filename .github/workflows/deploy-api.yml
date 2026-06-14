@@ -1,0 +1,92 @@
+name: Deploy API
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - "apps/api/**"
+      - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  id-token: write # Required for requesting the AWS JWT (OIDC)
+  contents: read # Required for actions/checkout
+
+jobs:
+  deploy-backend:
+    name: Deploy Go Backend (AWS ECS)
+    runs-on: ubuntu-latest
+
+    env:
+      TARGET_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+
+    steps:
+      # Checkout the code from the repository. This step is required to access
+      # the source code during the workflow execution.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Configure AWS Credentials using OIDC (OpenID Connect) for secure authentication
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets[format('AWS_ROLE_ARN_{0}', env.TARGET_ENV)] }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      # Login to Amazon ECR to push the Docker image
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build, tag, and push the Docker image to Amazon ECR
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: free9ja-${{ env.TARGET_ENV }}-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./apps/api
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # Download the current task definition from ECS
+      - name: Download Active Task Definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition free9ja-${{ env.TARGET_ENV }}-api \
+            --query taskDefinition > task-def.json
+
+      # Removes metadata fields from task-def that would cause registration to fail
+      - name: Clean Task Definition
+        run: |
+          jq '. | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-def.json > clean-task-def.json
+
+      # Render the task definition with the new image tag
+      - name: Render task definition with new image tag
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: clean-task-def.json
+          container-name: api
+          image: ${{ steps.login-ecr.outputs.registry }}/free9ja-${{ env.TARGET_ENV }}-api:${{ github.sha }}
+
+      # Deploy the updated task definition to the ECS service
+      - name: Deploy to AWS ECS Service
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: free9ja-${{ env.TARGET_ENV }}-api-service
+          cluster: free9ja-${{ env.TARGET_ENV }}-cluster
+          wait-for-service-stability: true
