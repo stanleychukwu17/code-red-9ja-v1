@@ -11,14 +11,14 @@ import type { ReactNode } from "react";
 
 type ElectionsLayoutProps = {
   title: string;
-  activeTab: "groups" | "instances" | "types";
+  activeTab: "groups" | "instances" | "offices";
   children: ReactNode;
 };
 
 const TABS = [
   { id: "groups", label: "Groups", href: "/elections" },
   { id: "instances", label: "Instances", href: "/elections/instances" },
-  { id: "types", label: "Types", href: "/elections/types" },
+  { id: "offices", label: "Offices", href: "/elections/offices" },
 ] as const;
 
 export function ElectionsLayout({

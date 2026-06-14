@@ -1,0 +1,4 @@
+
+
+-- +goose Down
+DROP TABLE IF EXISTS polling_units;

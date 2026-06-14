@@ -1,9 +1,12 @@
-import * as React from "react";
+import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import LogoIcon from "@repo/ui/icons/logo-icon";
+import { Button } from "@repo/ui/components/button";
+import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { useAppDispatch } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
-import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
+import { loginAdmin, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/login")({
@@ -23,49 +26,30 @@ export const Route = createFileRoute("/auth/login")({
 function LoginComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const [identifier, setIdentifier] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const form = useForm({
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    onSubmit: async ({ value }) => {
+      setErrorMsg(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!identifier || !password) return;
+      try {
+        const response = await loginAdmin({ data: value });
 
-    setErrorMsg(null);
-    setIsSubmitting(true);
-
-    const emailRegex = /^[\w\d._%+-]+@[\w\d.-]+\.\w{2,}$/;
-    const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/;
-    let identifierType = "phone";
-    if (emailRegex.test(identifier)) {
-      identifierType = "email";
-    } else if (usernameRegex.test(identifier)) {
-      identifierType = "username";
-    }
-
-    try {
-      const response = await loginUser({
-        data: {
-          identifier,
-          password,
-          identifierType,
-        },
-      });
-
-      if (response.status === "success") {
-        dispatch(updateAuthState({ user: response.user }));
-        navigate({ to: "/home" });
-      } else {
-        setErrorMsg(response.message || "Invalid identifier or password.");
+        if (response.status === "success") {
+          dispatch(updateAuthState({ user: response.user }));
+          navigate({ to: "/home" });
+        } else {
+          setErrorMsg(response.message || "Invalid email or password.");
+        }
+      } catch (err) {
+        setErrorMsg("Connection error: Unable to reach the server.");
       }
-    } catch (err) {
-      setErrorMsg("Connection error: Unable to reach the server.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    },
+  });
 
   return (
     <div className="min-h-screen bg-white flex flex-col justify-between p-8 md:p-12">
@@ -86,36 +70,79 @@ function LoginComponent() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <input
-              type="text"
-              placeholder="Email or Phone number"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className="w-full h-14 px-4 bg-[#ececef] rounded-[16px] border border-transparent text-[16px] text-[#181818] outline-none focus:border-[#00cf79] focus:bg-white transition-all"
-              required
-            />
-          </div>
+        <form
+          className="flex flex-col gap-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            form.handleSubmit();
+          }}
+        >
+          <form.Field
+            name="email"
+            validators={{
+              onChange: ({ value }) =>
+                !value
+                  ? "Email is required"
+                  : !/^[\w\d._%+-]+@[\w\d.-]+\.\w{2,}$/.test(value)
+                    ? "Invalid email format"
+                    : undefined,
+            }}
+            children={(field) => (
+              <FormInput
+                type="text"
+                placeholder="Email address"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                errorMsg={
+                  field.state.meta.isTouched && field.state.meta.errors.length
+                    ? (field.state.meta.errors[0] as string)
+                    : undefined
+                }
+              />
+            )}
+          />
 
-          <div>
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full h-14 px-4 bg-[#ececef] rounded-[16px] border border-transparent text-[16px] text-[#181818] outline-none focus:border-[#00cf79] focus:bg-white transition-all"
-              required
-            />
-          </div>
+          <form.Field
+            name="password"
+            validators={{
+              onChange: ({ value }) =>
+                !value
+                  ? "Password is required"
+                  : value.length < 5
+                    ? "Password must be at least 5 characters"
+                    : undefined,
+            }}
+            children={(field) => (
+              <PasswordInput
+                placeholder="Password"
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                errorMsg={
+                  field.state.meta.isTouched && field.state.meta.errors.length
+                    ? (field.state.meta.errors[0] as string)
+                    : undefined
+                }
+              />
+            )}
+          />
 
-          <button
-            type="submit"
-            disabled={isSubmitting || !identifier || !password}
-            className="w-full h-14 bg-[#00cf79] hover:bg-[#00b568] disabled:bg-[#a3f3cf] disabled:cursor-not-allowed text-white text-[16px] font-bold rounded-full transition-all mt-2 cursor-pointer flex items-center justify-center"
-          >
-            {isSubmitting ? "Logging in..." : "Log in"}
-          </button>
+          <form.Subscribe
+            selector={(state) => [state.canSubmit, state.isSubmitting]}
+            children={([canSubmit, isSubmitting]) => (
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={!canSubmit}
+                loading={isSubmitting}
+                className="mt-2"
+              >
+                Log in
+              </Button>
+            )}
+          />
         </form>
       </div>
 

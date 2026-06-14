@@ -5,11 +5,11 @@ import (
 	cryptoRand "crypto/rand"
 	"encoding/json"
 	"fmt"
-	"maps"
 	"math/big"
 	mathRand "math/rand"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -35,39 +35,32 @@ func (u *Utils) RespondJSON(w http.ResponseWriter, status int, body any) {
 	_ = json.NewEncoder(w).Encode(body)
 }
 
-// FormatResponse creates a standardized response map with a status and message.
-func (u *Utils) FormatResponse(status string, message string) map[string]interface{} {
-	return map[string]interface{}{
-		"status":  status,
-		"message": message,
-	}
-}
-
-// FormatResponseData creates a standardized response map and includes additional data.
-func (u *Utils) FormatResponseData(status string, message string, data map[string]interface{}) map[string]interface{} {
-	res := map[string]interface{}{
-		"status":  status,
-		"message": message,
-	}
-
-	// copy all the fields from the data map to the response map
-	maps.Copy(res, data)
-
-	return res
-}
-
-// RespondError writes a JSON response with a standard error format.
+// RespondError writes a JSON error response using the same envelope shape as
+// RespondSuccess: { success: false, message: string, data: null }.
 func (u *Utils) RespondError(w http.ResponseWriter, statusCode int, message string) {
-	u.RespondJSON(w, statusCode, u.FormatResponse("error", message))
+	u.RespondJSON(w, statusCode, map[string]interface{}{
+		"success": false,
+		"message": message,
+		"data":    nil,
+	})
 }
 
-// RespondSuccess writes a JSON response with a standard success format.
+// RespondSuccess writes a JSON success response.
+// Shape: { success: true, message: string, data: {...}, meta?: {...} }
 func (u *Utils) RespondSuccess(w http.ResponseWriter, statusCode int, message string, data map[string]interface{}) {
-	if data == nil {
-		u.RespondJSON(w, statusCode, u.FormatResponse("success", message))
-	} else {
-		u.RespondJSON(w, statusCode, u.FormatResponseData("success", message, data))
+	res := map[string]interface{}{
+		"success": true,
+		"message": message,
+		"data":    nil,
 	}
+	if data != nil {
+		if meta, ok := data["meta"]; ok {
+			res["meta"] = meta
+			delete(data, "meta")
+		}
+		res["data"] = data
+	}
+	u.RespondJSON(w, statusCode, res)
 }
 
 type PostgresTestConfig struct {
@@ -165,4 +158,52 @@ func GenerateFakeID(id int64) int64 {
 	fake_id := fmt.Sprintf("%d%d%d", front_id, id, back_id)
 	fake_id_int, _ := strconv.ParseInt(fake_id, 10, 64)
 	return fake_id_int
+}
+
+// JSONDate is a custom wrapper around time.Time that supports unmarshaling
+// both standard RFC3339 strings and YYYY-MM-DD date-only strings.
+type JSONDate time.Time
+
+// Time returns the underlying time.Time value.
+func (jd JSONDate) Time() time.Time {
+	return time.Time(jd)
+}
+
+// IsZero returns true if the underlying time is zero.
+func (jd JSONDate) IsZero() bool {
+	return time.Time(jd).IsZero()
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (jd *JSONDate) UnmarshalJSON(b []byte) error {
+	s := string(b)
+	s = strings.Trim(s, `"`)
+	if s == "" || s == "null" {
+		return nil
+	}
+
+	// Try RFC3339Nano (covers standard RFC3339 with or without fractional seconds)
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		*jd = JSONDate(t)
+		return nil
+	}
+
+	// Try date-only YYYY-MM-DD
+	if t, err := time.Parse("2006-01-02", s); err == nil {
+		*jd = JSONDate(t)
+		return nil
+	}
+
+	// Try ISO date-time string without timezone (e.g. "2006-01-02T15:04:05")
+	if t, err := time.Parse("2006-01-02T15:04:05", s); err == nil {
+		*jd = JSONDate(t)
+		return nil
+	}
+
+	return fmt.Errorf("cannot parse %q as date/time", s)
+}
+
+// MarshalJSON implements json.Marshaler.
+func (jd JSONDate) MarshalJSON() ([]byte, error) {
+	return json.Marshal(time.Time(jd))
 }

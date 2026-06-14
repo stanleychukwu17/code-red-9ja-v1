@@ -24,6 +24,10 @@ type AuthService interface {
 	Logout(ctx context.Context, refreshToken string) error
 	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
 	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
+	AdminLogin(ctx context.Context, identifierType, identifier, password, iso2 string) (auth.LoginResult, error)
+	RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (auth.RegisterResult, error)
+	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
+	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -106,7 +110,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Note: Password hashing is handled within the service layer
 	params := queries.CreateUserParams{
 		Email:          pgtype.Text{String: req.Email, Valid: req.Email != ""},
-		Phone:          req.Phone,
+		Phone:          pgtype.Text{String: req.Phone, Valid: req.Phone != ""},
 		Username:       pgtype.Text{String: req.Username, Valid: true},
 		PasswordHash:   req.Password, // Hashed in the service layer
 		LastName:       pgtype.Text{String: req.LastName, Valid: true},
@@ -481,3 +485,232 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Password reset successfully", nil)
 }
+
+// AdminRegisterRequest represents the simplified payload for registering a new admin account
+type AdminRegisterRequest struct {
+	Email     string `json:"email" validate:"omitempty,email"`
+	Phone     string `json:"phone" validate:"required,e164"`
+	Username  string `json:"username" validate:"required,min=2,max=30"`
+	Password  string `json:"password" validate:"required,min=5,max=72"`
+	FirstName string `json:"first_name" validate:"omitempty,min=2,max=30"`
+	LastName  string `json:"last_name" validate:"omitempty,min=2,max=30"`
+	Avatar    string `json:"avatar" validate:"omitempty"`
+}
+
+// @Summary Register a new admin user
+// @Description Creates a new admin account
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body AdminRegisterRequest true "Admin registration details"
+// @Success 201 {object} AdminRegisterResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/admin/register [post]
+func (h *Handler) AdminRegister(w http.ResponseWriter, r *http.Request) {
+	var req AdminRegisterRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	result, err := h.authService.RegisterAdmin(r.Context(), req.Email, req.Phone, req.Username, req.Password, req.FirstName, req.LastName, req.Avatar)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create admin: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusCreated, "Admin registered successfully", map[string]interface{}{
+		"id": result.UserID,
+	})
+}
+
+// AdminLoginRequest represents the simplified payload for admin login
+type AdminLoginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=4"`
+}
+
+// @Summary Login admin user
+// @Description Authenticates an admin and returns access and refresh tokens
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body AdminLoginRequest true "Admin login credentials"
+// @Success 200 {object} AdminLoginResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/admin/login [post]
+func (h *Handler) AdminLogin(w http.ResponseWriter, r *http.Request) {
+	var req AdminLoginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	result, err := h.authService.AdminLogin(r.Context(), "email", req.Email, req.Password, "")
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Login successful", map[string]interface{}{
+		"accessToken":  result.AccessToken,
+		"refreshToken": result.RefreshToken,
+		"user":         result.User,
+	})
+}
+
+// AdminRegisterResponse represents the Swagger response structure for admin registration
+type AdminRegisterResponse struct {
+	Success bool              `json:"success"`
+	Message string            `json:"message"`
+	Data    AdminRegisterData `json:"data"`
+}
+
+// AdminRegisterData represents the inner response payload for admin registration
+type AdminRegisterData struct {
+	ID int64 `json:"id"`
+}
+
+// AdminLoginResponse represents the Swagger response structure for admin login
+type AdminLoginResponse struct {
+	Success bool           `json:"success"`
+	Message string         `json:"message"`
+	Data    AdminLoginData `json:"data"`
+}
+
+// AdminLoginData represents the inner response payload for admin login
+type AdminLoginData struct {
+	AccessToken  string         `json:"accessToken"`
+	RefreshToken string         `json:"refreshToken"`
+	User         auth.LoginUser `json:"user"`
+}
+
+// RegisterCandidatePlaceholderRequest represents the structure of candidate registration payload
+type RegisterCandidatePlaceholderRequest struct {
+	Email          string `json:"email" validate:"omitempty,email"`
+	Password       string `json:"password" validate:"required,min=5,max=72"`
+	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
+	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
+	MiddleName     string `json:"middle_name" validate:"omitempty,min=2,max=30"`
+	Gender         string `json:"gender" validate:"required,oneof=male female"`
+	DateOfBirth    string `json:"date_of_birth" validate:"required"` // Expects YYYY-MM-DD
+	CurrentCountry int16  `json:"current_country" validate:"required"`
+	CurrentState   int16  `json:"current_state" validate:"required"`
+	CurrentCity    int32  `json:"current_city" validate:"omitempty"`
+	StateOfOrigin  int16  `json:"state_of_origin" validate:"omitempty"`
+	PartyID        int64  `json:"party_id" validate:"required"`
+	Avatar         string `json:"avatar" validate:"omitempty"`
+	Role           string `json:"role" validate:"required,oneof=admin partymember user"`
+	RoleLevel      string `json:"role_level" validate:"required,oneof=superadmin admin member placeholder partyagent user"`
+}
+
+// @Summary Register a new candidate user with placeholder status
+// @Description Creates a new candidate placeholder user account
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body RegisterCandidatePlaceholderRequest true "Candidate registration details"
+// @Success 201 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/register_candidate [post]
+// RegisterCandidatePlaceholder registers any placeholder user (with specific role & role_level)
+// RegisterCandidatePlaceholder registers any placeholder user (with specific role & role_level)
+func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Request) {
+	var req RegisterCandidatePlaceholderRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
+		return
+	}
+
+	// Validate role and role level combination
+	isValidCombo := false
+	switch req.Role {
+	case "admin":
+		if req.RoleLevel == "superadmin" || req.RoleLevel == "admin" {
+			isValidCombo = true
+		}
+	case "partymember":
+		if req.RoleLevel == "admin" || req.RoleLevel == "member" || req.RoleLevel == "placeholder" {
+			isValidCombo = true
+		}
+	case "user":
+		if req.RoleLevel == "partyagent" || req.RoleLevel == "user" {
+			isValidCombo = true
+		}
+	}
+
+	if !isValidCombo {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid role ("+req.Role+") and role level ("+req.RoleLevel+") combination")
+		return
+	}
+
+	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date format for date_of_birth. Use YYYY-MM-DD")
+		return
+	}
+
+	result, err := h.authService.RegisterCandidatePlaceholder(
+		r.Context(),
+		req.Email,
+		req.Password,
+		req.FirstName,
+		req.LastName,
+		req.MiddleName,
+		req.Gender,
+		req.Avatar,
+		req.Role,
+		req.RoleLevel,
+		dob,
+		req.CurrentCountry,
+		req.CurrentState,
+		req.CurrentCity,
+		req.StateOfOrigin,
+		req.PartyID,
+	)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create candidate placeholder: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusCreated, "Candidate placeholder registered successfully", map[string]interface{}{
+		"id":      result.UserID,
+		"fake_id": result.FakeID,
+	})
+}
+
+// ListAdmins handles requests to list all administrative users
+func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
+	admins, err := h.authService.ListAdmins(r.Context())
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve admins: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Admins retrieved successfully", map[string]interface{}{
+		"admins": admins,
+	})
+}
+
+

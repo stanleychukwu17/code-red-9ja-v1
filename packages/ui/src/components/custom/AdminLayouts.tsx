@@ -22,7 +22,10 @@ export type PageHeaderTabProps = {
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
-    <main className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-5">
+    <main
+      className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-5"
+      style={{ scrollbarGutter: "stable" }}
+    >
       {children}
     </main>
   );
@@ -52,6 +55,13 @@ export function AddButton({
   onClick,
   onAddElection,
   onAddElectionType,
+  onAddNationwideElection,
+  onAddStateElection,
+  onAddSenatorialElection,
+  onAddFederalConstituencyElection,
+  onAddStateConstituencyElection,
+  onAddLgaElection,
+  onAddWardElection,
   onAddState,
   onAddDistrict,
   onAddLga,
@@ -63,6 +73,13 @@ export function AddButton({
   onClick?: () => void;
   onAddElection?: () => void;
   onAddElectionType?: () => void;
+  onAddNationwideElection?: () => void;
+  onAddStateElection?: () => void;
+  onAddSenatorialElection?: () => void;
+  onAddFederalConstituencyElection?: () => void;
+  onAddStateConstituencyElection?: () => void;
+  onAddLgaElection?: () => void;
+  onAddWardElection?: () => void;
   onAddState?: () => void;
   onAddDistrict?: () => void;
   onAddLga?: () => void;
@@ -76,7 +93,10 @@ export function AddButton({
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setOpen(false);
       }
     }
@@ -87,6 +107,13 @@ export function AddButton({
   const hasDropdown = !!(
     onAddElection ||
     onAddElectionType ||
+    onAddNationwideElection ||
+    onAddStateElection ||
+    onAddSenatorialElection ||
+    onAddFederalConstituencyElection ||
+    onAddStateConstituencyElection ||
+    onAddLgaElection ||
+    onAddWardElection ||
     onAddState ||
     onAddDistrict ||
     onAddLga ||
@@ -113,7 +140,7 @@ export function AddButton({
       </button>
 
       {hasDropdown && open && (
-        <div className="absolute right-0 mt-2 w-56 rounded-[16px] bg-white p-2 shadow-[0px_4px_20px_rgba(0,0,0,0.08)] border border-[#f0f0f0] z-50">
+        <div className="absolute right-0 mt-2 w-64 rounded-[16px] bg-white p-2 shadow-[0px_4px_20px_rgba(0,0,0,0.08)] border border-[#f0f0f0] z-50">
           {onAddElection && (
             <button
               onClick={() => {
@@ -123,6 +150,83 @@ export function AddButton({
               className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
             >
               Add Election
+            </button>
+          )}
+          {onAddNationwideElection && (
+            <button
+              onClick={() => {
+                onAddNationwideElection();
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
+            >
+              New Nationwide Election
+            </button>
+          )}
+          {onAddStateElection && (
+            <button
+              onClick={() => {
+                onAddStateElection();
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
+            >
+              New State Election
+            </button>
+          )}
+          {onAddSenatorialElection && (
+            <button
+              onClick={() => {
+                onAddSenatorialElection();
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
+            >
+              New Senatorial District Election
+            </button>
+          )}
+          {onAddFederalConstituencyElection && (
+            <button
+              onClick={() => {
+                onAddFederalConstituencyElection();
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
+            >
+              New Federal Constituency Election
+            </button>
+          )}
+          {onAddStateConstituencyElection && (
+            <button
+              onClick={() => {
+                onAddStateConstituencyElection();
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
+            >
+              New State Constituency Election
+            </button>
+          )}
+          {onAddLgaElection && (
+            <button
+              onClick={() => {
+                onAddLgaElection();
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
+            >
+              New LGA Election
+            </button>
+          )}
+          {onAddWardElection && (
+            <button
+              onClick={() => {
+                onAddWardElection();
+                setOpen(false);
+              }}
+              className="w-full text-left px-4 py-3 text-[15px] font-medium hover:bg-[#fafafa] rounded-[10px] text-[#1a1a1a] transition cursor-pointer"
+            >
+              New Ward Election
             </button>
           )}
           {onAddElectionType && (
@@ -218,8 +322,6 @@ export function AddButton({
     </div>
   );
 }
-
-
 
 export function PageSearchLayer({
   rightComponent,

@@ -20,9 +20,10 @@ import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_a
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/home/index'
 import { Route as AuthenticatedElectionsIndexRouteImport } from './routes/_authenticated/elections/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
-import { Route as AuthenticatedUsersSuperadminRouteImport } from './routes/_authenticated/users/superadmin'
-import { Route as AuthenticatedUsersAppUsersRouteImport } from './routes/_authenticated/users/app-users'
-import { Route as AuthenticatedElectionsTypesRouteImport } from './routes/_authenticated/elections/types'
+import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
+import { Route as AuthenticatedUsersPartyMembersRouteImport } from './routes/_authenticated/users/party-members'
+import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
+import { Route as AuthenticatedElectionsOfficesRouteImport } from './routes/_authenticated/elections/offices'
 import { Route as AuthenticatedElectionsInstancesRouteImport } from './routes/_authenticated/elections/instances'
 import { Route as AuthenticatedBodiesWardsRouteImport } from './routes/_authenticated/bodies/wards'
 import { Route as AuthenticatedBodiesStatesRouteImport } from './routes/_authenticated/bodies/states'
@@ -90,22 +91,26 @@ const AuthenticatedApplicationsIndexRoute =
     path: '/applications/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedUsersSuperadminRoute =
-  AuthenticatedUsersSuperadminRouteImport.update({
-    id: '/superadmin',
-    path: '/superadmin',
+const AuthenticatedUsersUsersRoute = AuthenticatedUsersUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AuthenticatedUsersRoute,
+} as any)
+const AuthenticatedUsersPartyMembersRoute =
+  AuthenticatedUsersPartyMembersRouteImport.update({
+    id: '/party-members',
+    path: '/party-members',
     getParentRoute: () => AuthenticatedUsersRoute,
   } as any)
-const AuthenticatedUsersAppUsersRoute =
-  AuthenticatedUsersAppUsersRouteImport.update({
-    id: '/app-users',
-    path: '/app-users',
-    getParentRoute: () => AuthenticatedUsersRoute,
-  } as any)
-const AuthenticatedElectionsTypesRoute =
-  AuthenticatedElectionsTypesRouteImport.update({
-    id: '/types',
-    path: '/types',
+const AuthenticatedUsersAdminRoute = AuthenticatedUsersAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedUsersRoute,
+} as any)
+const AuthenticatedElectionsOfficesRoute =
+  AuthenticatedElectionsOfficesRouteImport.update({
+    id: '/offices',
+    path: '/offices',
     getParentRoute: () => AuthenticatedElectionsRoute,
   } as any)
 const AuthenticatedElectionsInstancesRoute =
@@ -170,9 +175,10 @@ export interface FileRoutesByFullPath {
   '/bodies/states': typeof AuthenticatedBodiesStatesRoute
   '/bodies/wards': typeof AuthenticatedBodiesWardsRoute
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
-  '/elections/types': typeof AuthenticatedElectionsTypesRoute
-  '/users/app-users': typeof AuthenticatedUsersAppUsersRoute
-  '/users/superadmin': typeof AuthenticatedUsersSuperadminRoute
+  '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
+  '/users/admin': typeof AuthenticatedUsersAdminRoute
+  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/elections/': typeof AuthenticatedElectionsIndexRoute
   '/home/': typeof AuthenticatedHomeIndexRoute
@@ -192,9 +198,10 @@ export interface FileRoutesByTo {
   '/bodies/states': typeof AuthenticatedBodiesStatesRoute
   '/bodies/wards': typeof AuthenticatedBodiesWardsRoute
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
-  '/elections/types': typeof AuthenticatedElectionsTypesRoute
-  '/users/app-users': typeof AuthenticatedUsersAppUsersRoute
-  '/users/superadmin': typeof AuthenticatedUsersSuperadminRoute
+  '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
+  '/users/admin': typeof AuthenticatedUsersAdminRoute
+  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/elections': typeof AuthenticatedElectionsIndexRoute
   '/home': typeof AuthenticatedHomeIndexRoute
@@ -217,9 +224,10 @@ export interface FileRoutesById {
   '/_authenticated/bodies/states': typeof AuthenticatedBodiesStatesRoute
   '/_authenticated/bodies/wards': typeof AuthenticatedBodiesWardsRoute
   '/_authenticated/elections/instances': typeof AuthenticatedElectionsInstancesRoute
-  '/_authenticated/elections/types': typeof AuthenticatedElectionsTypesRoute
-  '/_authenticated/users/app-users': typeof AuthenticatedUsersAppUsersRoute
-  '/_authenticated/users/superadmin': typeof AuthenticatedUsersSuperadminRoute
+  '/_authenticated/elections/offices': typeof AuthenticatedElectionsOfficesRoute
+  '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
+  '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/elections/': typeof AuthenticatedElectionsIndexRoute
   '/_authenticated/home/': typeof AuthenticatedHomeIndexRoute
@@ -242,9 +250,10 @@ export interface FileRouteTypes {
     | '/bodies/states'
     | '/bodies/wards'
     | '/elections/instances'
-    | '/elections/types'
-    | '/users/app-users'
-    | '/users/superadmin'
+    | '/elections/offices'
+    | '/users/admin'
+    | '/users/party-members'
+    | '/users/users'
     | '/applications/'
     | '/elections/'
     | '/home/'
@@ -264,9 +273,10 @@ export interface FileRouteTypes {
     | '/bodies/states'
     | '/bodies/wards'
     | '/elections/instances'
-    | '/elections/types'
-    | '/users/app-users'
-    | '/users/superadmin'
+    | '/elections/offices'
+    | '/users/admin'
+    | '/users/party-members'
+    | '/users/users'
     | '/applications'
     | '/elections'
     | '/home'
@@ -288,9 +298,10 @@ export interface FileRouteTypes {
     | '/_authenticated/bodies/states'
     | '/_authenticated/bodies/wards'
     | '/_authenticated/elections/instances'
-    | '/_authenticated/elections/types'
-    | '/_authenticated/users/app-users'
-    | '/_authenticated/users/superadmin'
+    | '/_authenticated/elections/offices'
+    | '/_authenticated/users/admin'
+    | '/_authenticated/users/party-members'
+    | '/_authenticated/users/users'
     | '/_authenticated/applications/'
     | '/_authenticated/elections/'
     | '/_authenticated/home/'
@@ -383,25 +394,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedApplicationsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/users/superadmin': {
-      id: '/_authenticated/users/superadmin'
-      path: '/superadmin'
-      fullPath: '/users/superadmin'
-      preLoaderRoute: typeof AuthenticatedUsersSuperadminRouteImport
+    '/_authenticated/users/users': {
+      id: '/_authenticated/users/users'
+      path: '/users'
+      fullPath: '/users/users'
+      preLoaderRoute: typeof AuthenticatedUsersUsersRouteImport
       parentRoute: typeof AuthenticatedUsersRoute
     }
-    '/_authenticated/users/app-users': {
-      id: '/_authenticated/users/app-users'
-      path: '/app-users'
-      fullPath: '/users/app-users'
-      preLoaderRoute: typeof AuthenticatedUsersAppUsersRouteImport
+    '/_authenticated/users/party-members': {
+      id: '/_authenticated/users/party-members'
+      path: '/party-members'
+      fullPath: '/users/party-members'
+      preLoaderRoute: typeof AuthenticatedUsersPartyMembersRouteImport
       parentRoute: typeof AuthenticatedUsersRoute
     }
-    '/_authenticated/elections/types': {
-      id: '/_authenticated/elections/types'
-      path: '/types'
-      fullPath: '/elections/types'
-      preLoaderRoute: typeof AuthenticatedElectionsTypesRouteImport
+    '/_authenticated/users/admin': {
+      id: '/_authenticated/users/admin'
+      path: '/admin'
+      fullPath: '/users/admin'
+      preLoaderRoute: typeof AuthenticatedUsersAdminRouteImport
+      parentRoute: typeof AuthenticatedUsersRoute
+    }
+    '/_authenticated/elections/offices': {
+      id: '/_authenticated/elections/offices'
+      path: '/offices'
+      fullPath: '/elections/offices'
+      preLoaderRoute: typeof AuthenticatedElectionsOfficesRouteImport
       parentRoute: typeof AuthenticatedElectionsRoute
     }
     '/_authenticated/elections/instances': {
@@ -491,14 +509,14 @@ const AuthenticatedBodiesRouteWithChildren =
 
 interface AuthenticatedElectionsRouteChildren {
   AuthenticatedElectionsInstancesRoute: typeof AuthenticatedElectionsInstancesRoute
-  AuthenticatedElectionsTypesRoute: typeof AuthenticatedElectionsTypesRoute
+  AuthenticatedElectionsOfficesRoute: typeof AuthenticatedElectionsOfficesRoute
   AuthenticatedElectionsIndexRoute: typeof AuthenticatedElectionsIndexRoute
 }
 
 const AuthenticatedElectionsRouteChildren: AuthenticatedElectionsRouteChildren =
   {
     AuthenticatedElectionsInstancesRoute: AuthenticatedElectionsInstancesRoute,
-    AuthenticatedElectionsTypesRoute: AuthenticatedElectionsTypesRoute,
+    AuthenticatedElectionsOfficesRoute: AuthenticatedElectionsOfficesRoute,
     AuthenticatedElectionsIndexRoute: AuthenticatedElectionsIndexRoute,
   }
 
@@ -508,13 +526,15 @@ const AuthenticatedElectionsRouteWithChildren =
   )
 
 interface AuthenticatedUsersRouteChildren {
-  AuthenticatedUsersAppUsersRoute: typeof AuthenticatedUsersAppUsersRoute
-  AuthenticatedUsersSuperadminRoute: typeof AuthenticatedUsersSuperadminRoute
+  AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
+  AuthenticatedUsersPartyMembersRoute: typeof AuthenticatedUsersPartyMembersRoute
+  AuthenticatedUsersUsersRoute: typeof AuthenticatedUsersUsersRoute
 }
 
 const AuthenticatedUsersRouteChildren: AuthenticatedUsersRouteChildren = {
-  AuthenticatedUsersAppUsersRoute: AuthenticatedUsersAppUsersRoute,
-  AuthenticatedUsersSuperadminRoute: AuthenticatedUsersSuperadminRoute,
+  AuthenticatedUsersAdminRoute: AuthenticatedUsersAdminRoute,
+  AuthenticatedUsersPartyMembersRoute: AuthenticatedUsersPartyMembersRoute,
+  AuthenticatedUsersUsersRoute: AuthenticatedUsersUsersRoute,
 }
 
 const AuthenticatedUsersRouteWithChildren =

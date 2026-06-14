@@ -9,10 +9,10 @@ import {
   type ElectionInstanceType,
 } from "./tiles/election-instance-tile";
 import {
-  ElectionTypeTableHeader,
-  ElectionTypeTableTile,
-  type ElectionTypeType,
-} from "./tiles/election-type-tile";
+  OfficeTableHeader,
+  OfficeTableTile,
+  type OfficeType,
+} from "./tiles/office-tile";
 import {
   StateTableHeader,
   StateTableTile,
@@ -58,7 +58,7 @@ import {
 export {
   type ElectionGroupType,
   type ElectionInstanceType,
-  type ElectionTypeType,
+  type OfficeType,
   type StateType,
   type DistrictType,
   type FederalConstituencyType,
@@ -76,8 +76,8 @@ export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
       <ElectionGroupTableHeader />
 
       <div>
-        {items.map((data, index) => (
-          <ElectionGroupTableTile key={`${data.title}-${index}`} data={data} />
+        {items.map((data) => (
+          <ElectionGroupTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -94,9 +94,9 @@ export function ElectionInstancesTable({
       <ElectionInstanceTableHeader />
 
       <div>
-        {items.map((data, index) => (
+        {items.map((data) => (
           <ElectionInstanceTableTile
-            key={`${data.title}-${index}`}
+            key={data.id}
             data={data}
           />
         ))}
@@ -105,14 +105,14 @@ export function ElectionInstancesTable({
   );
 }
 
-export function ElectionTypesTable({ items }: { items: ElectionTypeType[] }) {
+export function OfficesTable({ items }: { items: OfficeType[] }) {
   return (
     <div className="w-full">
-      <ElectionTypeTableHeader />
+      <OfficeTableHeader />
 
       <div>
         {items.map((data, index) => (
-          <ElectionTypeTableTile key={`${data.title}-${index}`} data={data} />
+          <OfficeTableTile key={`${data.name}-${index}`} data={data} />
         ))}
       </div>
     </div>
@@ -125,7 +125,7 @@ export function StatesTable({ items }: { items: StateType[] }) {
       <StateTableHeader />
       <div>
         {items.map((data) => (
-          <StateTableTile key={data.title} data={data} />
+          <StateTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -155,7 +155,7 @@ export function FederalConstituenciesTable({
       <FederalConstituencyTableHeader />
       <div>
         {items.map((data) => (
-          <FederalConstituencyTableTile key={data.title} data={data} />
+          <FederalConstituencyTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -172,7 +172,7 @@ export function StateConstituenciesTable({
       <StateConstituencyTableHeader />
       <div>
         {items.map((data) => (
-          <StateConstituencyTableTile key={data.title} data={data} />
+          <StateConstituencyTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -185,7 +185,7 @@ export function LgasTable({ items }: { items: LgaType[] }) {
       <LgaTableHeader />
       <div>
         {items.map((data) => (
-          <LgaTableTile key={data.title} data={data} />
+          <LgaTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -198,7 +198,7 @@ export function WardsTable({ items }: { items: WardType[] }) {
       <WardTableHeader />
       <div>
         {items.map((data) => (
-          <WardTableTile key={data.title} data={data} />
+          <WardTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -211,20 +211,30 @@ export function PollingUnitsTable({ items }: { items: PollingUnitType[] }) {
       <PollingUnitTableHeader />
       <div>
         {items.map((data) => (
-          <PollingUnitTableTile key={data.title} data={data} />
+          <PollingUnitTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
   );
 }
 
-export function UsersTable({ items }: { items: UserType[] }) {
+export function UsersTable({
+  items,
+  refetch,
+}: {
+  items: UserType[];
+  refetch?: () => void;
+}) {
   return (
     <div className="w-full">
       <UserTableHeader />
       <div>
         {items.map((data, index) => (
-          <UserTableTile key={`${data.name}-${index}`} data={data} />
+          <UserTableTile
+            key={`${data.name || data.id}-${index}`}
+            data={data}
+            refetch={refetch}
+          />
         ))}
       </div>
     </div>
@@ -237,7 +247,10 @@ export function PartiesTable({ items }: { items: PartyType[] }) {
       <PartyTableHeader />
       <div>
         {items.map((data) => (
-          <PartyTableTile key={data.code} data={data} />
+          <PartyTableTile
+            key={data.id || data.short_name}
+            data={data}
+          />
         ))}
       </div>
     </div>

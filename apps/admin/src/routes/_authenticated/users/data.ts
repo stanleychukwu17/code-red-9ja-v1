@@ -1,6 +1,7 @@
-export type UsersTabId = "superadmin" | "app-users";
+export type UsersTabId = "admin" | "app-users";
 
 export const USERS_TABS = [
-  { id: "superadmin", label: "Superadmin", href: "/users/superadmin" },
-  { id: "app-users", label: "App users", href: "/users/app-users" },
+  { id: "admin", label: "Admin", href: "/users/admin" },
+  { id: "party-members", label: "Party members", href: "/users/party-members" },
+  { id: "users", label: "Users", href: "/users/users" },
 ];

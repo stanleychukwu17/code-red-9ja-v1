@@ -5,6 +5,12 @@ import {
 } from "@repo/ui/components/custom/AppSidebar";
 import HomeIcon from "@repo/ui/icons/navbar/home-icon";
 import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
+import CubeIcon from "@repo/ui/icons/navbar/cube-icon";
+import CubeSolidIcon from "@repo/ui/icons/navbar/cube-solid-icon";
+import PartyIcon from "@repo/ui/icons/navbar/party-icon";
+import PartySolidIcon from "@repo/ui/icons/navbar/party-solid-icon";
+import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
+import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import CalendarIcon from "@repo/ui/icons/navbar/calendar-icon";
 import CalendarSolidIcon from "@repo/ui/icons/navbar/calendar-solid-icon";
 import UserIcon from "@repo/ui/icons/navbar/user-icon";
@@ -18,16 +24,17 @@ import { updateAuthState } from "@/redux/slice/authSlice";
 import {
   logoutUser,
   checkIfRefreshTokenInCookie,
+  refreshUserToken,
 } from "#/lib/server/auth/auth";
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated")({
-  // beforeLoad: async () => {
-  //   const isLoggedIn = await checkIfRefreshTokenInCookie();
-  //   if (isLoggedIn.status !== "success") {
-  //     throw redirect({ to: "/auth/login" });
-  //   }
-  // },
+  beforeLoad: async () => {
+    const res = await refreshUserToken();
+    if (res.status !== "success") {
+      throw redirect({ to: "/auth/login" });
+    }
+  },
   component: AuthenticatedRoutes,
   errorComponent: ({ error }) => <div>{error.message}</div>,
 });
@@ -43,8 +50,8 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "elections",
     label: "Elections",
-    icon: <CalendarIcon className="shrink-0 size-6" />,
-    selectedIcon: <CalendarSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <CubeIcon className="shrink-0 size-6" />,
+    selectedIcon: <CubeSolidIcon className="shrink-0 size-6 text-c-90" />,
     href: "/elections",
   },
   {
@@ -59,13 +66,13 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     label: "Users",
     icon: <UserIcon className="shrink-0 size-6" />,
     selectedIcon: <UserSolidIcon className="shrink-0 size-6 text-c-90" />,
-    href: "/users/superadmin",
+    href: "/users/admin",
   },
   {
     id: "parties",
     label: "Parties",
-    icon: <UserIcon className="shrink-0 size-6" />,
-    selectedIcon: <UserSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <PartyIcon className="shrink-0 size-6" />,
+    selectedIcon: <PartySolidIcon className="shrink-0 size-6 text-c-90" />,
     href: "/parties",
   },
   {
@@ -78,8 +85,10 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "notifications",
     label: "Notifications",
-    icon: <CalendarIcon className="shrink-0 size-6" />,
-    selectedIcon: <CalendarSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <NotificationIcon className="shrink-0 size-6" />,
+    selectedIcon: (
+      <NotificationSolidIcon className="shrink-0 size-6 text-c-90" />
+    ),
     href: "/notifications",
   },
 ];

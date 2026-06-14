@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Layout,
   PageHeader,
@@ -8,86 +8,69 @@ import {
   FilterButton,
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
-import { ElectionInstancesTable } from "#/components/Tables";
-import { NewElectionInstanceDialog } from "#/components/dialogs/NewElectionInstanceDialog";
-import { CreateElectionTypeDialog } from "#/components/dialogs/CreateElectionTypeDialog";
+import { ElectionInstancesTable, type ElectionInstanceType } from "#/components/Tables";
+import { NationwideElectionFormDialog } from "#/components/dialogs/NationwideElectionFormDialog";
+import { StateElectionFormDialog } from "#/components/dialogs/StateElectionFormDialog";
+import { SenatorialDistrictElectionFormDialog } from "#/components/dialogs/SenatorialDistrictElectionFormDialog";
+import { FederalConstituencyElectionFormDialog } from "#/components/dialogs/FederalConstituencyElectionFormDialog";
+import { StateConstituencyElectionFormDialog } from "#/components/dialogs/StateConstituencyElectionFormDialog";
+import { LgaElectionFormDialog } from "#/components/dialogs/LgaElectionFormDialog";
+import { WardElectionFormDialog } from "#/components/dialogs/WardElectionFormDialog";
 import { ELECTION_TABS } from "./data";
+import { getElections } from "#/lib/server/elections";
+import { useIntersectionObserver } from "usehooks-ts";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/elections/instances")({
-  head: () => getPageHeader({ title: "Election Instances" }),
+  head: () => getPageHeader({ title: "Elections" }),
   component: RouteComponent,
 });
 
-const ELECTION_INSTANCES = [
-  {
-    title: "Presidential",
-    badge: "Active",
-    meta: ["18", "Jan 16, 27"],
-    rank: "1",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#25654c]",
-  },
-  {
-    title: "Governorship Election (Abia)",
-    badge: "Active",
-    meta: ["13", "Jan 16, 27"],
-    rank: "2",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#ffbf2e]",
-  },
-  {
-    title: "Governorship Election (Adamawa)",
-    badge: "Active",
-    meta: ["0", "Jan 16, 27"],
-    rank: "2",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#ffbf2e]",
-  },
-  {
-    title: "Governorship Election (Akwa Ibom)",
-    badge: "Active",
-    meta: ["0", "Jan 16, 27"],
-    rank: "2",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#ffbf2e]",
-  },
-  {
-    title: "Senatorial Election (Abia North)",
-    badge: "Active",
-    meta: ["13", "Jan 16, 27"],
-    rank: "3",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#00d87f]",
-  },
-  {
-    title: "Senatorial Election (Abia Central)",
-    badge: "Active",
-    meta: ["8", "Jan 16, 27"],
-    rank: "3",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#00d87f]",
-  },
-  {
-    title: "Senatorial Election (Abia South)",
-    badge: "Active",
-    meta: ["0", "Jan 16, 27"],
-    rank: "3",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#00d87f]",
-  },
-  {
-    title: "House of Representative (Aba North / Aba South)",
-    badge: "Active",
-    meta: ["0", "Jan 16, 27"],
-    rank: "3",
-    rankIcon: "star" as const,
-    rankIconColor: "text-[#00d87f]",
-  },
-];
+
 
 function RouteComponent() {
-  const [isAddElectionOpen, setIsAddElectionOpen] = useState(false);
-  const [isAddElectionTypeOpen, setIsAddElectionTypeOpen] = useState(false);
+  const [isNationwideOpen, setIsNationwideOpen] = useState(false);
+  const [isStateOpen, setIsStateOpen] = useState(false);
+  const [isSenatorialOpen, setIsSenatorialOpen] = useState(false);
+  const [isFederalOpen, setIsFederalOpen] = useState(false);
+  const [isStateConstOpen, setIsStateConstOpen] = useState(false);
+  const [isLgaOpen, setIsLgaOpen] = useState(false);
+  const [isWardOpen, setIsWardOpen] = useState(false);
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["elections"],
+      queryFn: async ({ pageParam }) => {
+        const res = await getElections({
+          data: { limit: 20, cursor: pageParam as string },
+        });
+        if (res && res.success && res.data) {
+          return res;
+        }
+        throw new Error(res?.message || "Failed to fetch elections");
+      },
+      initialPageParam: "",
+      getNextPageParam: (lastPage) => {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+          return lastPage.meta.next_cursor || "";
+        }
+        return undefined;
+      },
+    });
+
+  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
+
+  useEffect(() => {
+    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const elections: ElectionInstanceType[] = data
+    ? data.pages.flatMap((page) => page.data?.elections ?? [])
+    : [];
 
   return (
     <Layout>
@@ -101,22 +84,64 @@ function RouteComponent() {
           <>
             <FilterButton />
             <AddButton
-              onAddElection={() => setIsAddElectionOpen(true)}
-              onAddElectionType={() => setIsAddElectionTypeOpen(true)}
+              onAddNationwideElection={() => setIsNationwideOpen(true)}
+              onAddStateElection={() => setIsStateOpen(true)}
+              onAddSenatorialElection={() => setIsSenatorialOpen(true)}
+              onAddFederalConstituencyElection={() => setIsFederalOpen(true)}
+              onAddStateConstituencyElection={() => setIsStateConstOpen(true)}
+              onAddLgaElection={() => setIsLgaOpen(true)}
+              onAddWardElection={() => setIsWardOpen(true)}
             />
           </>
         }
       />
 
-      <ElectionInstancesTable items={ELECTION_INSTANCES} />
+      {isLoading && elections.length === 0 ? (
+        <div className="py-12 text-center text-c-50 text-[15px]">
+          Loading elections...
+        </div>
+      ) : (
+        <ElectionInstancesTable items={elections} />
+      )}
 
-      <NewElectionInstanceDialog
-        open={isAddElectionOpen}
-        onClose={() => setIsAddElectionOpen(false)}
+      {hasNextPage && (
+        <div
+          ref={sentinelRef}
+          className="py-6 flex items-center justify-center text-c-50 text-[14px]"
+        >
+          {isFetchingNextPage
+            ? "Loading more elections..."
+            : "Scroll down to load more"}
+        </div>
+      )}
+
+      <NationwideElectionFormDialog
+        open={isNationwideOpen}
+        onClose={() => setIsNationwideOpen(false)}
       />
-      <CreateElectionTypeDialog
-        open={isAddElectionTypeOpen}
-        onClose={() => setIsAddElectionTypeOpen(false)}
+      <StateElectionFormDialog
+        open={isStateOpen}
+        onClose={() => setIsStateOpen(false)}
+      />
+      <SenatorialDistrictElectionFormDialog
+        open={isSenatorialOpen}
+        onClose={() => setIsSenatorialOpen(false)}
+      />
+      <FederalConstituencyElectionFormDialog
+        open={isFederalOpen}
+        onClose={() => setIsFederalOpen(false)}
+      />
+      <StateConstituencyElectionFormDialog
+        open={isStateConstOpen}
+        onClose={() => setIsStateConstOpen(false)}
+      />
+      <LgaElectionFormDialog
+        open={isLgaOpen}
+        onClose={() => setIsLgaOpen(false)}
+      />
+      <WardElectionFormDialog
+        open={isWardOpen}
+        onClose={() => setIsWardOpen(false)}
       />
     </Layout>
   );

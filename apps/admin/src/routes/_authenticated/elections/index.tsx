@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Layout,
   PageHeader,
@@ -8,40 +8,56 @@ import {
   FilterButton,
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
-import { ElectionGroupsTable } from "#/components/Tables";
-import { NewElectionInstanceDialog } from "#/components/dialogs/NewElectionInstanceDialog";
-import { CreateElectionTypeDialog } from "#/components/dialogs/CreateElectionTypeDialog";
+import { ElectionGroupsTable, type ElectionGroupType } from "#/components/Tables";
 import { ELECTION_TABS } from "./data";
+import { ElectionGroupFormDialog } from "#/components/dialogs/ElectionGroupFormDialog";
+import { getElectionGroups } from "#/lib/server/election_groups";
+import { useIntersectionObserver } from "usehooks-ts";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { DateBullet } from "@repo/ui/components/bullets/date-bullet";
 
 export const Route = createFileRoute("/_authenticated/elections/")({
   head: () => getPageHeader({ title: "Elections" }),
   component: RouteComponent,
 });
 
-const ELECTION_GROUPS = [
-  {
-    title: "2027 Presidential Election Group",
-    badge: "Active",
-    meta: ["470", "37", "Jan 16, 27"],
-    rankIcon: "folder" as const,
-  },
-  {
-    title: "2027 Governorship Election Group",
-    badge: "Active",
-    meta: ["992", "18", "Jan 16, 27"],
-    rankIcon: "folder" as const,
-  },
-  {
-    title: "2027 Local Government Area Election Group",
-    badge: "Active",
-    meta: ["360", "18", "Jan 16, 27"],
-    rankIcon: "folder" as const,
-  },
-];
-
 function RouteComponent() {
-  const [isAddElectionOpen, setIsAddElectionOpen] = useState(false);
-  const [isAddElectionTypeOpen, setIsAddElectionTypeOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["election-groups"],
+      queryFn: async ({ pageParam }) => {
+        const res = await getElectionGroups({
+          data: { limit: 20, cursor: pageParam as string },
+        });
+        if (res && res.success && res.data) {
+          return res;
+        }
+        throw new Error(res?.message || "Failed to fetch election groups");
+      },
+      initialPageParam: "",
+      getNextPageParam: (lastPage) => {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+          return lastPage.meta.next_cursor || "";
+        }
+        return undefined;
+      },
+    });
+
+  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
+
+  useEffect(() => {
+    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const electionGroups: ElectionGroupType[] = data
+    ? data.pages.flatMap((page) => page.data?.election_groups ?? [])
+    : [];
 
   return (
     <Layout>
@@ -49,24 +65,35 @@ function RouteComponent() {
       <PageSearchLayer
         rightComponent={
           <>
+            <DateBullet update={(val) => console.log(val)} />
             <FilterButton />
-            <AddButton
-              onAddElection={() => setIsAddElectionOpen(true)}
-              onAddElectionType={() => setIsAddElectionTypeOpen(true)}
-            />
+            <AddButton onClick={() => setIsAddOpen(true)} />
           </>
         }
       />
 
-      <ElectionGroupsTable items={ELECTION_GROUPS} />
+      {isLoading && electionGroups.length === 0 ? (
+        <div className="py-12 text-center text-c-50 text-[15px]">
+          Loading election groups...
+        </div>
+      ) : (
+        <ElectionGroupsTable items={electionGroups} />
+      )}
 
-      <NewElectionInstanceDialog
-        open={isAddElectionOpen}
-        onClose={() => setIsAddElectionOpen(false)}
-      />
-      <CreateElectionTypeDialog
-        open={isAddElectionTypeOpen}
-        onClose={() => setIsAddElectionTypeOpen(false)}
+      {hasNextPage && (
+        <div
+          ref={sentinelRef}
+          className="py-6 flex items-center justify-center text-c-50 text-[14px]"
+        >
+          {isFetchingNextPage
+            ? "Loading more election groups..."
+            : "Scroll down to load more"}
+        </div>
+      )}
+
+      <ElectionGroupFormDialog
+        open={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
       />
     </Layout>
   );

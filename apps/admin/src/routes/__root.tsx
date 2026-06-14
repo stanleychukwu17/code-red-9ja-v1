@@ -50,6 +50,10 @@ function RootLayout() {
   );
 }
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { userDetails } = Route.useRouteContext();
   let userDetailsString = "{}";
@@ -68,12 +72,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
       >
         <Provider store={store}>
-          <Toaster />
-          <ClientOnly>
-            <LoadSitePreference />
-            <LoadAuthSession />
-          </ClientOnly>
-          {children}
+          <QueryClientProvider client={queryClient}>
+            <Toaster />
+            <ClientOnly>
+              <LoadSitePreference />
+              <LoadAuthSession />
+            </ClientOnly>
+            {children}
+          </QueryClientProvider>
         </Provider>
         <Scripts />
       </body>

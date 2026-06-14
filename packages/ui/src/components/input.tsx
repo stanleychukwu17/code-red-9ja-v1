@@ -10,10 +10,10 @@ import { cn } from "../lib/utils";
 import { Button } from "./button";
 
 const inputClassName =
-  "group flex items-center gap-2 h-11 w-full rounded-[12px] bg-black/5 px-4 py-1 text-lg transition-colors duration-200 file:border-0 file:bg-transparent file: file:font-medium ring-inset file:text-foreground placeholder:text-c-60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
+  "group flex items-center gap-2 h-11 w-full rounded-[12px] bg-black/5 px-4 py-1 transition-colors duration-200 file:border-0 file:bg-transparent ring-inset file:text-foreground placeholder:text-c-60 focus-visible:outline-hidden focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80 disabled:cursor-not-allowed disabled:opacity-50";
 
 const fancyInputClassName =
-  "bg-transparent hover:bg-transparent! text-2xl md:text-xl text-c-80 font-semibold px-0 hover:ring-0 hover:bg-background focus-visible:ring-0";
+  "bg-transparent hover:bg-transparent! text-2xl md:text-[28px] text-c-80 font-semibold px-0 hover:ring-0 hover:bg-background focus-visible:ring-0 placeholder:text-c-30";
 
 type InputProps = React.ComponentProps<"input"> & {
   icon?: React.ReactNode;
@@ -130,7 +130,7 @@ const Label = ({
   className?: string;
 }) => {
   if (!title) return <></>;
-  return <p className={cn("font-medium text-c-70", className)}>{title}</p>;
+  return <p className={cn("text-sm text-c-70", className)}>{title}</p>;
 };
 
 const textareaClassName =

@@ -4,10 +4,20 @@ import {
   TileRight,
   TileRow,
 } from "@repo/ui/components/tiles";
+import { StateConstituencyDropdown } from "../dropdowns/StateConstituencyDropdown";
 
 export type StateConstituencyType = {
-  title: string;
-  meta: string[];
+  id: number;
+  name: string;
+  lga_id: number;
+  lga_name: string;
+  state_id: number;
+  state_name: string;
+  senatorial_district_id: number;
+  senatorial_district_name: string;
+  federal_constituency_id: number;
+  federal_constituency_name: string;
+  polling_units_count?: number;
 };
 
 export function StateConstituencyTableHeader() {
@@ -20,6 +30,7 @@ export function StateConstituencyTableHeader() {
         <span className="text-c-50 text-[14px] w-[100px] text-center">PUs</span>
         <span className="text-c-50 text-[14px] w-[150px] text-center hidden sm:block">District</span>
         <span className="text-c-50 text-[14px] w-[120px] text-center">State</span>
+        <div className="w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
@@ -30,13 +41,14 @@ export function StateConstituencyTableTile({ data }: { data: StateConstituencyTy
     <TileRow>
       <TileLeft>
         <p className="truncate w-full text-[16px] text-c-80 font-medium">
-          {data.title}
+          {data.name}
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[100px] text-center">{data.meta[0]}</span>
-        <span className="text-[15px] text-c-70 w-[150px] text-center hidden sm:block">{data.meta[1]}</span>
-        <span className="text-[15px] text-c-70 w-[120px] text-center">{data.meta[2]}</span>
+        <span className="text-[15px] text-c-70 w-[100px] text-center">{data.polling_units_count ?? "-"}</span>
+        <span className="text-[15px] text-c-70 w-[150px] text-center hidden sm:block">{data.senatorial_district_name}</span>
+        <span className="text-[15px] text-c-70 w-[120px] text-center">{data.state_name}</span>
+        <StateConstituencyDropdown data={data} className="ml-2" />
       </TileRight>
     </TileRow>
   );

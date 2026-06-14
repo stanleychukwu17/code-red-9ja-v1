@@ -33,6 +33,18 @@ type RedisConfig struct {
 	DB       int    // Redis database number (default 0)
 }
 
+// R2Config holds Cloudflare R2 object-storage credentials and bucket settings.
+// These are used to initialise the S3-compatible R2 client for presigned uploads.
+type R2Config struct {
+	AccountID       string // Cloudflare Account ID (required)
+	AccessKeyID     string // R2 API token access key (required)
+	SecretAccessKey string // R2 API token secret (required)
+	BucketName      string // Target bucket name (required)
+	// PublicURL is the custom domain or r2.dev URL used to build public object URLs.
+	// e.g. "https://files.free9ja.com" or "https://pub-xxx.r2.dev"
+	PublicURL string
+}
+
 // Config holds the complete application configuration.
 // It includes environment settings, server port, and database configuration.
 type Config struct {
@@ -40,6 +52,7 @@ type Config struct {
 	Port                 string         // Server port for HTTP listener
 	Database             DatabaseConfig // Database connection configuration
 	Redis                RedisConfig    // Redis connection configuration
+	R2                   R2Config       // Cloudflare R2 storage configuration
 	JWTSecret            string
 	JWTAccessExpiration  time.Duration
 	JWTRefreshExpiration time.Duration
@@ -144,6 +157,13 @@ func LoadConfig() (*Config, error) {
 			Password: redis_password,
 			DB:       redis_db,
 		},
+		R2: R2Config{
+			AccountID:       GetEnv("R2_ACCOUNT_ID", ""),
+			AccessKeyID:     GetEnv("R2_ACCESS_KEY_ID", ""),
+			SecretAccessKey: GetEnv("R2_SECRET_ACCESS_KEY", ""),
+			BucketName:      GetEnv("R2_BUCKET_NAME", ""),
+			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),
+		},
 		JWTSecret:            jwtSecret,
 		JWTAccessExpiration:  jwtAccessExp,
 		JWTRefreshExpiration: jwtRefreshExp,
@@ -179,8 +199,15 @@ func GetIntEnv(key string, defaultValue int) int {
 }
 
 func GetEnvPath() (envPath string, envLocalPath string) {
-	envPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env"
-	envLocalPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env.local"
+	envPath = ".env"
+	envLocalPath = ".env.local"
+
+	if _, err := os.Stat(envPath); os.IsNotExist(err) {
+		envPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env"
+	}
+	if _, err := os.Stat(envLocalPath); os.IsNotExist(err) {
+		envLocalPath = "D:/Sz-projects/50-main-projects/3-free9ja/apps/api/.env.local"
+	}
 
 	// if the user sets a .env custom path, then return the custom path
 	if GetEnv("ENV_PATH", "") != "" {

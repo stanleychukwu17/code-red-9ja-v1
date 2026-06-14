@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
-import { useState } from "react";
+import * as React from "react";
 import {
   Layout,
   PageHeader,
@@ -8,49 +8,40 @@ import {
   FilterButton,
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
-import { PartiesTable } from "#/components/Tables";
-import { CreatePartyDialog } from "#/components/dialogs/CreatePartyDialog";
+import { PartiesTable, type PartyType } from "#/components/Tables";
+import { PartyFormDialog } from "#/components/dialogs/PartyFormDialog";
+import { getParties } from "#/lib/server/parties";
+import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/parties/")({
   head: () => getPageHeader({ title: "Parties" }),
   component: RouteComponent,
 });
 
-const PARTIES_DATA = [
-  {
-    code: "APC",
-    name: "All Progressives Congress",
-    logo: "https://upload.wikimedia.org/wikipedia/en/6/62/Logo_of_the_Peoples_Democratic_Party_%28Nigeria%29.png",
-    puAgents: "0 (0%)",
-  },
-  {
-    code: "ADC",
-    name: "African Democratic Congress",
-    logo: "https://upload.wikimedia.org/wikipedia/en/6/62/Logo_of_the_Peoples_Democratic_Party_%28Nigeria%29.png",
-    puAgents: "103.5k (0%)",
-  },
-  {
-    code: "PDP",
-    name: "People's Democratic Party",
-    logo: "https://upload.wikimedia.org/wikipedia/en/6/62/Logo_of_the_Peoples_Democratic_Party_%28Nigeria%29.png",
-    puAgents: "0 (0%)",
-  },
-  {
-    code: "LP",
-    name: "Labour Party",
-    logo: "https://upload.wikimedia.org/wikipedia/en/6/62/Logo_of_the_Peoples_Democratic_Party_%28Nigeria%29.png",
-    puAgents: "0 (0%)",
-  },
-  {
-    code: "NNPP",
-    name: "New Nigeria Peoples Party",
-    logo: "https://upload.wikimedia.org/wikipedia/en/6/62/Logo_of_the_Peoples_Democratic_Party_%28Nigeria%29.png",
-    puAgents: "0 (0%)",
-  },
-];
-
 function RouteComponent() {
-  const [isAddPartyOpen, setIsAddPartyOpen] = useState(false);
+  const {
+    data: parties = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery<PartyType[]>({
+    queryKey: ["parties"],
+    queryFn: async () => {
+      const res = await getParties();
+      if (res && res.success && res.data?.parties) {
+        return res.data.parties;
+      }
+      throw new Error(res?.message || "Failed to load parties");
+    },
+  });
+
+  // Dialog state for creating a new party
+  const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
+
+  const handleCreateClick = () => {
+    setCreateDialogOpen(true);
+  };
 
   return (
     <Layout>
@@ -59,16 +50,33 @@ function RouteComponent() {
         rightComponent={
           <>
             <FilterButton />
-            <AddButton onClick={() => setIsAddPartyOpen(true)} />
+            <AddButton onClick={handleCreateClick} />
           </>
         }
       />
 
-      <PartiesTable items={PARTIES_DATA} />
+      {isLoading ? (
+        <div className="w-full h-60 flex items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-c-50" />
+        </div>
+      ) : error ? (
+        <div className="w-full p-6 text-center text-red-600 font-medium">
+          {error instanceof Error ? error.message : "Failed to load parties"}
+        </div>
+      ) : parties.length === 0 ? (
+        <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
+          No parties found. Click the + button to add one.
+        </div>
+      ) : (
+        <PartiesTable items={parties} />
+      )}
 
-      <CreatePartyDialog
-        open={isAddPartyOpen}
-        onClose={() => setIsAddPartyOpen(false)}
+      {/* Create dialog only — edit/delete now handled by PartyDropdown in each tile */}
+      <PartyFormDialog
+        open={createDialogOpen}
+        mode="create"
+        onClose={() => setCreateDialogOpen(false)}
+        onSuccess={() => refetch()}
       />
     </Layout>
   );

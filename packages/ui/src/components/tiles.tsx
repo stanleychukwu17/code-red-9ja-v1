@@ -1,4 +1,12 @@
+import { Ellipsis } from "lucide-react";
 import { cn } from "../lib/utils";
+import { ReactNode, useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "./dropdown-menu";
+import { Button } from "./button";
 
 export function TileHeader({ children }: { children: React.ReactNode }) {
   return (
@@ -43,3 +51,41 @@ export function TileRight({ children }: { children: React.ReactNode }) {
     <div className="shrink-0 flex items-center gap-3 text-c-70">{children}</div>
   );
 }
+
+export const TileOptions = ({
+  dropdown,
+  className,
+  disabled,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: {
+  dropdown: ReactNode;
+  className?: string;
+  disabled?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+
+  return (
+    <div onClick={(e) => e.stopPropagation()} className={cn(className)}>
+      <DropdownMenu modal={true} open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger asChild disabled={disabled}>
+          <Button
+            variant="ghost"
+            size="icon-md"
+            className="hover:[&_svg]:text-c-80 rounded-lg"
+            disabled={disabled}
+          >
+            <Ellipsis />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          {dropdown}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
+};
