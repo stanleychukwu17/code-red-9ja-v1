@@ -34,7 +34,7 @@ import (
 // @host localhost:4000
 // @BasePath /api/v1
 
-// @securityDefinitions.apikey AccessToken
+// @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
 // @description Type "Bearer " followed by your access token.

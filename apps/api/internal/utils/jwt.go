@@ -15,14 +15,16 @@ import (
 type JWTClaims struct {
 	FakeID   int64  `json:"fake_id"`
 	Username string `json:"username"`
+	Role     string `json:"role"`
 	jwt.RegisteredClaims
 }
 
 // GenerateToken creates a signed JWT with the given claims, secret, and duration
-func GenerateToken(fakeID int64, username string, secret string, duration time.Duration) (string, error) {
+func GenerateToken(fakeID int64, username string, role string, secret string, duration time.Duration) (string, error) {
 	claims := JWTClaims{
 		FakeID:   fakeID,
 		Username: username,
+		Role:     role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

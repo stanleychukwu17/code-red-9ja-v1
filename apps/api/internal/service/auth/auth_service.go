@@ -52,6 +52,7 @@ type LoginUser struct {
 	Username      string `json:"username"`
 	FirstName     string `json:"first_name"`
 	LastName      string `json:"last_name"`
+	Role          string `json:"role"`
 	AccountStatus string `json:"account_status"`
 	AvatarURL     string `json:"avatar_url"`
 }
@@ -134,7 +135,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	jsonData, _ := json.Marshal(sessionData)
 
 	// Generate Access Token and Refresh Token
-	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, s.jwtSecret, s.jwtAccessExp)
+	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, s.jwtSecret, s.jwtAccessExp)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -179,6 +180,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			Username:      user.Username.String,
 			FirstName:     user.FirstName.String,
 			LastName:      user.LastName.String,
+			Role:          user.Role.String,
 			AvatarURL:     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
 			AccountStatus: user.AccountStatus.String,
 		},
@@ -233,6 +235,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Username:      username,
 		FirstName:     user.FirstName.String,
 		LastName:      user.LastName.String,
+		Role:          user.Role.String,
 		AvatarURL:     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
 		AccountStatus: accountStatus,
 	}
@@ -291,7 +294,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	jsonData, _ := json.Marshal(sessionData)
 
 	// Generate a new Access Token
-	newAccessToken, err := utils.GenerateToken(userFid, username, s.jwtSecret, s.jwtAccessExp)
+	newAccessToken, err := utils.GenerateToken(userFid, username, user.Role.String, s.jwtSecret, s.jwtAccessExp)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -452,7 +455,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	params.Username = pgtype.Text{String: username, Valid: true}
 
 	// check if onboarding details exist in redis
-	redisKey := db.RedisRegisterOnboarding + params.Phone
+	redisKey := db.RedisRegisterOnboarding + params.Phone.String
 	onboardingJSON, err := s.rdb.Get(ctx, redisKey).Result()
 	if err != nil {
 		return RegisterResult{}, errors.New("onboarding details not found")
@@ -484,7 +487,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// phone checks
-	phone_exist := s.CheckPhone(ctx, params.Phone)
+	phone_exist := s.CheckPhone(ctx, params.Phone.String)
 	if phone_exist {
 		return RegisterResult{}, errors.New("phone already exists")
 	}
@@ -512,7 +515,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// check phone country validation
-	_, err = s.ValidatePhoneForCountry(params.Phone, country_dts.Iso2)
+	_, err = s.ValidatePhoneForCountry(params.Phone.String, country_dts.Iso2)
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -537,7 +540,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// save some of the user details to our db & also to redis(using pipeline)
-	err = s.SaveSomeUserRegistrationDetails(ctx, username, email, params.Phone, nin, user_id, fake_id)
+	err = s.SaveSomeUserRegistrationDetails(ctx, username, email, params.Phone.String, nin, user_id, fake_id)
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -1009,4 +1012,288 @@ func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) er
 	}
 
 	return err
+}
+
+// AdminLogin verifies admin credentials and returns JWT access and refresh tokens
+func (s *AuthService) AdminLogin(ctx context.Context, identifierType, identifier, password, iso2 string) (LoginResult, error) {
+	var user queries.User
+	var err error
+	var fakeIDStr string
+	var fakeID int64
+
+	switch identifierType {
+	case "email":
+		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
+		if fakeIDStr == "" {
+			return LoginResult{}, errors.New("invalid email, this record not found")
+		}
+
+	case "username":
+		fakeIDStr = s.rdb.Get(ctx, db.RedisUsernameFakeID+identifier).Val()
+		if fakeIDStr == "" {
+			return LoginResult{}, errors.New("invalid username or password")
+		}
+
+	case "phone":
+		// validate iso2
+		if iso2 == "" {
+			return LoginResult{}, errors.New("iso2 is required")
+		}
+
+		// validate phone number using the provided iso2
+		_, err = s.ValidatePhoneForCountry(identifier, iso2)
+		if err != nil {
+			return LoginResult{}, err
+		}
+
+		fakeIDStr = s.rdb.Get(ctx, db.RedisPhoneFakeID+identifier).Val()
+		if fakeIDStr == "" {
+			return LoginResult{}, errors.New("invalid phone number or password")
+		}
+	default:
+		return LoginResult{}, errors.New("invalid identifier type")
+	}
+
+	// fetch the user details using the fakeID
+	fakeID, _ = strconv.ParseInt(fakeIDStr, 10, 64)
+	user, err = s.GetUserDetailsByFakeID(ctx, fakeID)
+	if err != nil {
+		return LoginResult{}, errors.New("invalid email or password")
+	}
+
+	// Check if user is an admin
+	if user.Role.String != "admin" {
+		return LoginResult{}, errors.New("insufficient permissions: not an admin")
+	}
+
+	//  Check if password matches
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	if err != nil {
+		return LoginResult{}, errors.New("invalid email, username, phone or password")
+	}
+
+	// Verify account status
+	status := user.AccountStatus.String
+	if status == "suspended" || status == "banned" || status == "deleted" || status == "inactive" {
+		return LoginResult{}, fmt.Errorf("your account is %s", status)
+	}
+
+	// create session details
+	sessionID := uuid.NewString()
+	timezone, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
+	now := time.Now().In(timezone)
+	sessionData := map[string]any{
+		"SessionID": sessionID,
+		"FakeID":    fakeID,
+		"TimeAdded": now.Format(time.RFC3339),
+	}
+	jsonData, _ := json.Marshal(sessionData)
+
+	// Generate Access Token and Refresh Token
+	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, s.jwtSecret, s.jwtAccessExp)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	// generate refresh token (opaque)
+	result, err := utils.GenerateRandomString()
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	// Redis: create redis pipeline
+	pipe := s.rdb.TxPipeline()
+
+	// Redis: Store the session data in redis using the hashed refresh token as the key
+	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, result.HashedToken)
+	pipe.Set(ctx, redisRefreshKey, jsonData, s.jwtRefreshExp)
+
+	// Redis: add the session ID to the set of login sessions
+	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+	pipe.SAdd(ctx, redisLoginSessionKey, result.HashedToken)
+	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp) // deletes the entire set using the jwtRefreshExpiration time
+
+	// Redis: add the session ID to the set of the user's login sessions
+	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
+	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
+	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp) // deletes the entire set using the jwtRefreshExpiration time
+
+	// execute the pipeline
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
+	}
+
+	return LoginResult{
+		AccessToken:  accessToken,
+		RefreshToken: result.RandomString,
+		User: LoginUser{
+			FakeID:        fakeID,
+			Username:      user.Username.String,
+			FirstName:     user.FirstName.String,
+			LastName:      user.LastName.String,
+			Role:          user.Role.String,
+			AvatarURL:     "",
+			AccountStatus: user.AccountStatus.String,
+		},
+	}, nil
+}
+
+// RegisterAdmin creates a new admin user in the system
+func (s *AuthService) RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (RegisterResult, error) {
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// cleans up the username
+	username = strings.TrimSpace(strings.ToLower(username))
+	username, err = CleanUsername(username)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// email checks
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email != "" && s.CheckEmail(ctx, email) {
+		return RegisterResult{}, errors.New("email already exists")
+	}
+
+	// phone checks
+	if s.CheckPhone(ctx, phone) {
+		return RegisterResult{}, errors.New("phone already exists")
+	}
+
+	// Default country/state to 1 (Nigeria/Lagos or similar first entries)
+	countryID := int16(1)
+	stateID := int16(1)
+
+	params := queries.CreateUserParams{
+		Email:          pgtype.Text{String: email, Valid: email != ""},
+		Phone:          pgtype.Text{String: phone, Valid: phone != ""},
+		Username:       pgtype.Text{String: username, Valid: true},
+		PasswordHash:   string(hashedPassword),
+		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
+		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
+		Gender:         pgtype.Text{String: "male", Valid: true},
+		DateOfBirth:    pgtype.Date{Time: time.Now().AddDate(-30, 0, 0), Valid: true}, // Default 30 years old
+		CurrentCountry: countryID,
+		CurrentState:   stateID,
+	}
+
+	// creates the user's new account in our database
+	user_id, err := s.queries.CreateUser(ctx, params)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// generate a fake_id using the user_id and update the user fake_id
+	fake_id := utils.GenerateFakeID(user_id)
+	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: user_id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// Update user role to admin and account_status to active
+	err = s.queries.UpdateUserRoleAndStatus(ctx, queries.UpdateUserRoleAndStatusParams{
+		ID:            user_id,
+		Role:          pgtype.Text{String: "admin", Valid: true},
+		AccountStatus: pgtype.Text{String: "active", Valid: true},
+	})
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	if avatar != "" {
+		err = s.queries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
+			ID:     user_id,
+			Avatar: pgtype.Text{String: avatar, Valid: true},
+		})
+		if err != nil {
+			return RegisterResult{}, err
+		}
+	}
+
+	// save some of the user details to our db & also to redis(using pipeline)
+	// For admin, we don't have NIN, so pass empty string
+	err = s.SaveSomeUserRegistrationDetails(ctx, username, email, phone, "", user_id, fake_id)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// fetch user details to cache it in Redis
+	_, _ = s.GetUserDetailsByFakeID(ctx, fake_id)
+
+	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
+}
+
+// RegisterCandidatePlaceholder creates a new candidate user in the system with placeholder status
+func (s *AuthService) RegisterCandidatePlaceholder(
+	ctx context.Context,
+	email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string,
+	dob time.Time,
+	countryID, stateID int16,
+	currentCity int32,
+	stateOfOrigin int16,
+	partyID int64,
+) (RegisterResult, error) {
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// email checks
+	email = strings.TrimSpace(strings.ToLower(email))
+	if email != "" && s.CheckEmail(ctx, email) {
+		return RegisterResult{}, errors.New("email already exists")
+	}
+
+	params := queries.CreateCandidatePlaceholderParams{
+		Email:          pgtype.Text{String: email, Valid: email != ""},
+		PasswordHash:   string(hashedPassword),
+		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
+		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
+		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
+		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
+		DateOfBirth:    pgtype.Date{Time: dob, Valid: !dob.IsZero()},
+		CurrentCountry: countryID,
+		CurrentState:   stateID,
+		CurrentCity:    pgtype.Int4{Int32: currentCity, Valid: currentCity != 0},
+		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
+		PartyID:        pgtype.Int8{Int64: partyID, Valid: partyID != 0},
+		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		Role:           pgtype.Text{String: role, Valid: role != ""},
+		RoleLevel:      pgtype.Text{String: roleLevel, Valid: roleLevel != ""},
+	}
+
+	// creates the user's new account in our database
+	userID, err := s.queries.CreateCandidatePlaceholder(ctx, params)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// generate a fake_id using the user_id and update the user fake_id
+	fakeID := utils.GenerateFakeID(userID)
+	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: userID, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// save some of the user details to our db & also to redis(using pipeline)
+	err = s.SaveSomeUserRegistrationDetails(ctx, "", email, "", "", userID, fakeID)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// fetch user details to cache it in Redis
+	_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
+
+	return RegisterResult{UserID: userID, FakeID: fakeID}, nil
+}
+
+// ListAdmins fetches all administrative users from the database
+func (s *AuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
+	return s.queries.ListAdmins(ctx)
 }

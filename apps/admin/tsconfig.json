@@ -1,0 +1,16 @@
+{
+  "extends": "@repo/typescript-config/vite",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "../../packages/ui/src/components/custom/AdminLayouts.tsx"
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "#/*": ["./src/*"],
+      "@/*": ["./src/*"],
+      "@repo/ui/*": ["../../packages/ui/src/*"]
+    }
+  }
+}

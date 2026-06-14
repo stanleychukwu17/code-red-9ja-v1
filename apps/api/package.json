@@ -2,7 +2,14 @@
   "name": "api",
   "private": true,
   "scripts": {
-    "dev": "echo 'use the start-api.sh script to start the server'",
-    "build": "go build -o bin/api ./cmd/api"
+    "dev": "go run github.com/air-verse/air@latest",
+    "build": "go build -o bin/api ./cmd/api",
+    "db:migrate": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" up",
+    "db:rollback": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" down",
+    "db:rollback:all": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" down-to 0",
+    "db:status": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" status",
+    "db:create": "goose -dir db/migrations create",
+    "sqlc:generate": "sqlc generate",
+    "swagger:generate": "swag init -g main.go -d \"./cmd/api,./internal/handler,./internal/router,./internal/service/auth,./internal/handler/auth,./internal/handler/parties,./internal/handler/files,./internal/handler/offices,./internal/handler/election_groups,./internal/handler/elections,./internal/handler/users\" -o docs"
   }
 }

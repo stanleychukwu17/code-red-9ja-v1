@@ -12,19 +12,34 @@ type AuthURLMap struct {
 	ForgotPassword          string
 	Refresh                 string
 	VerifySecurityQuestions string
+	AdminLogin              string
+	AdminRegister           string
 }
 
-type CountriesURLMap struct {
-	GetAll    string
-	GetStates string
-	GetCities string
+type BodiesURLMap struct {
+	GetAll                         string
+	GetStates                      string
+	GetCities                      string
+	GetSenatorialDistricts         string
+	GetFederalConstituencies       string
+	GetStateAssemblyConstituencies string
+	GetLGAs                        string
+	GetWards                       string
+	GetPollingUnits                string
+}
+
+type UsersURLMap struct {
+	GetMe         string
+	UpdateProfile string
+	ListUsers     string
 }
 
 type URLMap struct {
-	Root      string
-	Health    string
-	Auth      AuthURLMap
-	Countries CountriesURLMap
+	Root   string
+	Health string
+	Auth   AuthURLMap
+	Bodies BodiesURLMap
+	Users  UsersURLMap
 }
 
 // ApiUrls holds the global configuration for all API endpoints.
@@ -42,10 +57,23 @@ var ApiUrls = URLMap{
 		ForgotPassword:          "/api/v1/auth/forgot_password",
 		Refresh:                 "/api/v1/auth/refresh",
 		VerifySecurityQuestions: "/api/v1/auth/verify_security_questions",
+		AdminLogin:              "/api/v1/auth/admin/login",
+		AdminRegister:           "/api/v1/auth/admin/register",
 	},
-	Countries: CountriesURLMap{
-		GetAll:    "/api/v1/countries",
-		GetStates: "/api/v1/countries/{countryID}/states",
-		GetCities: "/api/v1/states/{stateID}/cities",
+	Bodies: BodiesURLMap{
+		GetAll:                         "/api/v1/countries",
+		GetStates:                      "/api/v1/countries/{countryID}/states",
+		GetCities:                      "/api/v1/states/{stateID}/cities",
+		GetSenatorialDistricts:         "/api/v1/senatorial-districts",
+		GetFederalConstituencies:       "/api/v1/federal-constituencies",
+		GetStateAssemblyConstituencies: "/api/v1/state-constituencies",
+		GetLGAs:                        "/api/v1/lgas",
+		GetWards:                       "/api/v1/wards",
+		GetPollingUnits:                "/api/v1/polling-units",
+	},
+	Users: UsersURLMap{
+		GetMe:         "/api/v1/users/me",
+		UpdateProfile: "/api/v1/users/profile",
+		ListUsers:     "/api/v1/users",
 	},
 }

@@ -1,4 +1,10 @@
-import { ClientOnly, HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import {
+  ClientOnly,
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router";
 import { Provider } from "react-redux";
 import appCss from "../styles.css?url";
 
@@ -27,9 +33,7 @@ export const Route = createRootRoute({
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Free9ja" },
     ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-    ],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   component: RootLayout,
   shellComponent: RootDocument,
@@ -66,7 +70,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body data-user-details={userDetailsString} className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]">
+      <body
+        data-user-details={userDetailsString}
+        className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
+      >
         <Provider store={store}>
           <Toaster />
           <Header userDetails={userDetails} sitePreference={sitePreference} />
@@ -89,7 +96,7 @@ function NotFound() {
       <h1>404</h1>
       <p>Page not found</p>
     </div>
-  )
+  );
 }
 
 function ErrorComponent({ error }: { error: any }) {
@@ -99,5 +106,5 @@ function ErrorComponent({ error }: { error: any }) {
       <p>{error?.message}</p>
       <pre>{error?.stack}</pre>
     </div>
-  )
+  );
 }

@@ -4,14 +4,27 @@
 // the shadcn blocks can be found at: https://ui.shadcn.com/blocks
 
 import {
-  Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar,
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
 } from "@repo/ui/components/sidebar";
 
 import { TooltipProvider } from "@repo/ui/components/tooltip";
 import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
 
 import {
-  Popover, PopoverContent, PopoverTrigger, PopoverHeader, PopoverDescription
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  PopoverHeader,
+  PopoverDescription,
 } from "@repo/ui/components/popover";
 
 import LogoIcon from "@repo/ui/icons/logo-icon";
@@ -26,7 +39,7 @@ import ProfileSolidIcon from "@repo/ui/icons/navbar/profile-solid-icon";
 import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
 
-import { Skeleton } from "@repo/ui/components/skeleton"
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "@repo/ui/lib/utils";
 
 import { Ellipsis, PanelRightClose, PanelLeftClose, Sun, Moon, Monitor } from "lucide-react";
@@ -139,7 +152,10 @@ export function AppSidebar({ userDetails }: { userDetails?: UserProps; sitePrefe
   }, [sideBarState, dispatch]);
 
   return (
-    <Sidebar collapsible="icon" className="bg-sidebar md:data-[side=left]:left-0" >
+    <Sidebar
+      collapsible="icon"
+      className="bg-sidebar md:data-[side=left]:left-0"
+    >
       <div className="flex h-full flex-col px-4 py-7">
         {/* This component is responsible for rendering the logo of the application */}
         <LogoComponent />
@@ -202,7 +218,11 @@ function EachLinkComponent({ item }: { item: AppSidebarItem }) {
           sideBarState === "collapsed" && "justify-center my-3"
         )}
       >
-        <Link to={item.href} className="p-0" style={{ padding: "0px !important" }}>
+        <Link
+          to={item.href}
+          className="p-0"
+          style={{ padding: "0px !important" }}
+        >
           <div className="relative -right-1 size-8 py-2 flex shrink-0 items-center justify-center">
             {isActive ? item.selectedIcon : item.icon}
           </div>
@@ -244,15 +264,13 @@ function LogoComponent() {
         {sideBarState === "expanded" ? <PanelLeftClose /> : <PanelRightClose />}
       </div>
     </div>
-  )
+  );
 }
 
 // SidebarPollButton renders a styled button typically used for polls within a sidebar context.
 function SidebarPollButton({ children }: { children: ReactNode }) {
   return (
-    <button
-      className="flex h-[62px] items-center justify-center rounded-full border border-[#e6dfdf] bg-white text-center text-[18px] font-semibold text-[#1d2c27] transition hover:bg-[#faf8f8]"
-    >
+    <button className="flex h-[62px] items-center justify-center rounded-full border border-[#e6dfdf] bg-white text-center text-[18px] font-semibold text-[#1d2c27] transition hover:bg-[#faf8f8]">
       {children}
     </button>
   );
@@ -302,7 +320,7 @@ function ProfilePicture({ userDetails }: { userDetails?: UserProps }) {
           <ProfilePicturePopover userDetails={user} />
         </PopoverContent>
       </Popover>
-    )
+    );
   }
 
   // If the sidebar is expanded, show a popover with the profile picture, name, and username

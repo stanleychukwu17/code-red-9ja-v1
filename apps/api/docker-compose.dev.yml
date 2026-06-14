@@ -12,7 +12,7 @@ services:
     ports:
       - "6379:6379"
     volumes:
-      - D:/.redisdata:/data
+      - redis_data:/data
     restart: unless-stopped
     networks:
       - free9ja_network
@@ -33,10 +33,31 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: test_db
     volumes:
-      - D:/.pgdata:/var/lib/postgresql/data
+      - pg_data:/var/lib/postgresql/data
     networks:
       - free9ja_network
+
+  pgadmin_free9ja:
+    container_name: pgadmin_free9ja
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@free9ja.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - free9ja_network
+    depends_on:
+      - postgres_free9ja
 
 networks:
   free9ja_network:
     driver: bridge
+
+volumes:
+  redis_data:
+  pg_data:
+  pgadmin_data:
