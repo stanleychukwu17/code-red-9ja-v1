@@ -1,8 +1,4 @@
-"use client";
-
-import * as React from "react";
 import { ResponsiveSelect } from "./responsive-select";
-import { STATES_BY_COUNTRY } from "./data";
 
 type StateComboboxProps = {
   country?: string;
@@ -11,24 +7,10 @@ type StateComboboxProps = {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  options?: { value: string; label: string; searchText?: string }[];
 };
 
-export function StateCombobox({
-  country,
-  value,
-  onChange,
-  placeholder = "State of residence",
-  disabled = false,
-  className,
-}: StateComboboxProps) {
-  const options = React.useMemo(() => {
-    if (!country) {
-      return [];
-    }
-
-    return STATES_BY_COUNTRY[country] ?? [];
-  }, [country]);
-
+export function StateCombobox({ country, value, onChange, placeholder = "State of residence", disabled = false, className, options = []}: StateComboboxProps) {
   return (
     <ResponsiveSelect
       searchPlaceholder="Search states"

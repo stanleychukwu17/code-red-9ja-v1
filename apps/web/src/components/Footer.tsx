@@ -1,20 +1,59 @@
-export default function Footer() {
-  const year = new Date().getFullYear()
+import type { CSSProperties } from 'react';
+import { useLocation } from '@tanstack/react-router';
+import { useIsMobile } from '@repo/ui/hooks/useMobile';
+import { useAppSelector } from '@/redux/hooks';
+import type { SiteState } from '@/redux/slice/siteSlice';
+import ThemeToggle from '#/components/ThemeToggle';
+
+interface FooterProps {
+  sitePreference?: SiteState | null;
+}
+
+export default function Footer({ sitePreference }: FooterProps = {}) {
+  const location = useLocation();
+  const isMobile = useIsMobile();
+  const year = new Date().getFullYear();
+  const isAuthPage = location.pathname.startsWith('/auth');
+  const reduxSitePreference = useAppSelector((state) => state.site);
+
+  const isReduxSynced = reduxSitePreference.sideBarState !== "";
+  const allowOutletToBeResponsive = isReduxSynced ? reduxSitePreference.allowOutletToBeResponsive : (sitePreference?.allowOutletToBeResponsive ?? true);
+  const sidebarWidth = isReduxSynced ? reduxSitePreference.currentSideBarWidth : (sitePreference?.currentSideBarWidth || "16rem");
+
+
+  const getFooterStyle = (): CSSProperties => {
+    if (isMobile || !allowOutletToBeResponsive || isAuthPage) {
+      return {
+        width: '100vw',
+        marginLeft: '0',
+        transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
+      };
+    }
+
+    return {
+      width: `calc(100vw - ${sidebarWidth})`,
+      marginLeft: `${sidebarWidth}`,
+      transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
+    };
+  };
 
   return (
-    <footer className="mt-20 border-t border-[var(--line)] px-4 pb-14 pt-10 text-[var(--sea-ink-soft)]">
+    <footer style={getFooterStyle()} className="mt-20 border-t border-(--line) px-4 pb-14 pt-10 text-(--sea-ink-soft)">
       <div className="page-wrap flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
         <p className="m-0 text-sm">
           &copy; {year} Your name here. All rights reserved.
         </p>
-        <p className="island-kicker m-0">Built with TanStack Start</p>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <p className="island-kicker m-0">Built with TanStack Start</p>
+          <ThemeToggle />
+        </div>
       </div>
       <div className="mt-4 flex justify-center gap-4">
         <a
           href="https://x.com/tan_stack"
           target="_blank"
           rel="noreferrer"
-          className="rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
+          className="rounded-xl p-2 text-(--sea-ink-soft) transition hover:bg-(--link-bg-hover) hover:text-(--sea-ink)"
         >
           <span className="sr-only">Follow TanStack on X</span>
           <svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
@@ -28,7 +67,7 @@ export default function Footer() {
           href="https://github.com/TanStack"
           target="_blank"
           rel="noreferrer"
-          className="rounded-xl p-2 text-[var(--sea-ink-soft)] transition hover:bg-[var(--link-bg-hover)] hover:text-[var(--sea-ink)]"
+          className="rounded-xl p-2 text-(--sea-ink-soft) transition hover:bg-(--link-bg-hover) hover:text-(--sea-ink)"
         >
           <span className="sr-only">Go to TanStack GitHub</span>
           <svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">

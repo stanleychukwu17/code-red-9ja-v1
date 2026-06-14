@@ -36,7 +36,7 @@ const LogoIcon = ({
         />
       </mask>
       <g mask="url(#mask0_634_12011)">
-        <path d="M0 0H32V32H0V0Z" fill="#24654B" />
+        <path d="M0 0H32V32H0V0Z" fill="currentColor" />
       </g>
     </svg>
   );

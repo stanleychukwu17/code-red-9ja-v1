@@ -1,5 +1,26 @@
 {
   "cSpell.words": [
-    "godotenv"
+    "authhandler",
+    "countrieshandler",
+    "countriesservice",
+    "dbeaver",
+    "eqfield",
+    "godoc",
+    "godotenv",
+    "hostnames",
+    "jackc",
+    "messagingservice",
+    "Nins",
+    "nyaruka",
+    "pgsql",
+    "pgtype",
+    "pgxpool",
+    "phonecode",
+    "phonenumbers",
+    "sqlc",
+    "sslmode",
+    "stanleychukwu",
+    "stretchr",
+    "swaggo"
   ]
 }

@@ -34,6 +34,16 @@ import (
 // @host localhost:4000
 // @BasePath /api/v1
 
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer " followed by your access token.
+
+// @securityDefinitions.apikey RefreshToken
+// @in header
+// @name RefreshToken
+// @description Type your refresh token.
+
 type App struct {
 	cfg    *config.Config
 	server *http.Server
@@ -42,15 +52,25 @@ type App struct {
 }
 
 func newApp(ctx context.Context, cfg *config.Config) *App {
-	// Setup better structured logging, can now do:
-	// slog.Info("hello", "key", "value")
-	// slog.Error("uh oh", "err", err)
-	// slog.Warn("careful", "msg", "something might be wrong")
-	// slog.Debug("deep details", "data", "lots of info")
-	// slog.Error("payment failed", "user_id", userID, "order_id", orderID, "step", "charge_card")
+	// Setup structured logging
 	// version and commit are located in version.go, but during production,
 	// they will be added when building the app during ci/cd
-	logger.SetupLogger(version, commit)
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "development"
+	}
+	logLevel := slog.LevelInfo
+	if env == "development" {
+		logLevel = slog.LevelDebug
+	}
+
+	logger.New(logger.Config{
+		Service: "api",
+		Env:     env,
+		Version: version,
+		Commit:  commit,
+		Level:   logLevel,
+	})
 
 	// Initialize postgres database
 	pool, err := db.NewPostgresPool(ctx, cfg.Database.URL)
@@ -67,9 +87,8 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 	}
 
 	// Initialize router
-	r := router.New(pool, rdb)
+	r := router.New(cfg, pool, rdb)
 	addr := fmt.Sprintf(":%s", cfg.Port)
-	slog.Info("starting server", "addr", addr)
 
 	return &App{
 		cfg: cfg,
