@@ -93,6 +93,11 @@ variable "rds_db_password" {
   sensitive   = true
 }
 
+variable "db_sslmode" {
+  type        = string
+  description = "PostgreSQL SSL mode used by the API and migrations"
+}
+
 variable "redis_node_type" {
   type        = string
   description = "The compute size of the cache node"
