@@ -13,7 +13,7 @@ import (
 )
 
 func TestFormatPostgresDSN(t *testing.T) {
-	dsn := utils.FormatPostgresDSN("user", "pass", "localhost", "5432", "db")
+	dsn := utils.FormatPostgresDSN("user", "pass", "localhost", "5432", "db", "disable")
 	assert.Equal(t, "postgres://user:pass@localhost:5432/db?sslmode=disable", dsn)
 }
 

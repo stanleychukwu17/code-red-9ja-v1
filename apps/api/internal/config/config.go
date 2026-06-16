@@ -103,6 +103,7 @@ func LoadConfig() (*Config, error) {
 	db_pass := GetEnv("DB_PASSWORD", "")
 	db_name := GetEnv("DB_NAME", "")
 	db_port := GetEnv("DB_PORT", "")
+	db_sslmode := GetEnv("DB_SSLMODE", "disable")
 	redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
 	redis_port := GetEnv("REDIS_PORT", "")
 	redis_password := GetEnv("REDIS_PASSWORD", "")
@@ -130,7 +131,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// create db connection url
-	db_url := utils.FormatPostgresDSN(db_user, db_pass, db_host, db_port, db_name)
+	db_url := utils.FormatPostgresDSN(db_user, db_pass, db_host, db_port, db_name, db_sslmode)
 
 	// jwt secret and expirations
 	jwtSecret := GetEnv("JWT_SECRET", "free9ja_jwt_secret_key_for_dev_only")
