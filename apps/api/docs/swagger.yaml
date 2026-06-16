@@ -136,6 +136,17 @@ definitions:
       refreshToken:
         type: string
     type: object
+  authhandler.PartyLoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        minLength: 4
+        type: string
+    required:
+    - email
+    - password
+    type: object
   authhandler.RefreshRequest:
     properties:
       refreshToken:
@@ -334,6 +345,10 @@ definitions:
       first_name:
         type: string
       last_name:
+        type: string
+      party_name:
+        type: string
+      party_short_name:
         type: string
       role:
         type: string
@@ -984,6 +999,8 @@ definitions:
         type: string
       role:
         type: string
+      role_level:
+        type: string
       updated_at:
         type: string
       username:
@@ -1292,6 +1309,38 @@ paths:
             additionalProperties: true
             type: object
       summary: Logout user
+      tags:
+      - Auth
+  /auth/partyapp/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a party member and returns access and refresh tokens
+      parameters:
+      - description: Party login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.PartyLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authhandler.AdminLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login party member user
       tags:
       - Auth
   /auth/refresh:

@@ -25,6 +25,7 @@ type AuthService interface {
 	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
 	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
 	AdminLogin(ctx context.Context, identifierType, identifier, password, iso2 string) (auth.LoginResult, error)
+	PartyLogin(ctx context.Context, identifierType, identifier, password, iso2 string) (auth.LoginResult, error)
 	RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (auth.RegisterResult, error)
 	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
@@ -561,6 +562,48 @@ func (h *Handler) AdminLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := h.authService.AdminLogin(r.Context(), "email", req.Email, req.Password, "")
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Login successful", map[string]interface{}{
+		"accessToken":  result.AccessToken,
+		"refreshToken": result.RefreshToken,
+		"user":         result.User,
+	})
+}
+
+// PartyLoginRequest represents the payload for party member login
+type PartyLoginRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=4"`
+}
+
+// @Summary Login party member user
+// @Description Authenticates a party member and returns access and refresh tokens
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body PartyLoginRequest true "Party login credentials"
+// @Success 200 {object} AdminLoginResponse
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Router /auth/partyapp/login [post]
+func (h *Handler) PartyLogin(w http.ResponseWriter, r *http.Request) {
+	var req PartyLoginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	result, err := h.authService.PartyLogin(r.Context(), "email", req.Email, req.Password, "")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return

@@ -367,6 +367,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/partyapp/login": {
+            "post": {
+                "description": "Authenticates a party member and returns access and refresh tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login party member user",
+                "parameters": [
+                    {
+                        "description": "Party login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.PartyLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/refresh": {
             "post": {
                 "description": "Handles token rotation using a valid refresh token",
@@ -4768,6 +4816,22 @@ const docTemplate = `{
                 }
             }
         },
+        "authhandler.PartyLoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                }
+            }
+        },
         "authhandler.RefreshRequest": {
             "type": "object",
             "properties": {
@@ -5034,6 +5098,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "last_name": {
+                    "type": "string"
+                },
+                "party_name": {
+                    "type": "string"
+                },
+                "party_short_name": {
                     "type": "string"
                 },
                 "role": {
@@ -6028,6 +6098,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
+                    "type": "string"
+                },
+                "role_level": {
                     "type": "string"
                 },
                 "updated_at": {
