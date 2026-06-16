@@ -1,8 +1,31 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
-  "name": "free9ja-staging-web",
+  "name": "free9ja-web",
+  "env": {
+    "staging": {
+      "name": "free9ja-staging-web",
+      "routes": [
+        {
+          "pattern": "staging.free9ja.com/*",
+          "zone_name": "free9ja.com"
+        }
+      ]
+    },
+    "production": {
+      "name": "free9ja-production-web",
+      "workers_dev": false,
+      "routes": [
+        {
+          "pattern": "www.free9ja.com/*",
+          "zone_name": "free9ja.com"
+        }
+      ]
+    }
+  },
   "compatibility_date": "2026-06-12",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
   "main": "@tanstack/react-start/server-entry",
   "observability": {
     "enabled": true
