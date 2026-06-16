@@ -32,7 +32,8 @@ func Health(w http.ResponseWriter, r *http.Request) {
 	refreshTokenValue := refreshToken.Value
 	_ = fmt.Sprintf("%s:%s", accessTokenValue, refreshTokenValue)
 
-	utilsInstance.RespondSuccess(w, http.StatusOK, "Server running successfully", nil)
+	// utilsInstance.RespondSuccess(w, http.StatusOK, "Server running successfully", nil)
+	utilsInstance.RespondJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // Root handles GET /api/v1/
