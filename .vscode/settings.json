@@ -4,6 +4,8 @@
     "countrieshandler",
     "countriesservice",
     "dbeaver",
+    "elbv",
+    "endgroup",
     "eqfield",
     "godoc",
     "godotenv",
@@ -21,6 +23,7 @@
     "sslmode",
     "stanleychukwu",
     "stretchr",
-    "swaggo"
+    "swaggo",
+    "VITE"
   ]
 }

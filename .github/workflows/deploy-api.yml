@@ -84,9 +84,71 @@ jobs:
 
       # Deploy the updated task definition to the ECS service
       - name: Deploy to AWS ECS Service
+        id: deploy-ecs
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task-def.outputs.task-definition }}
           service: free9ja-${{ env.TARGET_ENV }}-api-service
           cluster: free9ja-${{ env.TARGET_ENV }}-cluster
           wait-for-service-stability: true
+
+      - name: Print ECS diagnostics on deploy failure
+        if: failure()
+        env:
+          CLUSTER: free9ja-${{ env.TARGET_ENV }}-cluster
+          SERVICE: free9ja-${{ env.TARGET_ENV }}-api-service
+          LOG_GROUP: /ecs/free9ja-${{ env.TARGET_ENV }}-api
+        run: |
+          set +e
+
+          echo "::group::ECS service events"
+          aws ecs describe-services \
+            --cluster "$CLUSTER" \
+            --services "$SERVICE" \
+            --query 'services[0].events[:20].[createdAt,message]' \
+            --output table
+          echo "::endgroup::"
+
+          TARGET_GROUP_ARN=$(aws ecs describe-services \
+            --cluster "$CLUSTER" \
+            --services "$SERVICE" \
+            --query 'services[0].loadBalancers[0].targetGroupArn' \
+            --output text)
+
+          if [ "$TARGET_GROUP_ARN" != "None" ] && [ -n "$TARGET_GROUP_ARN" ]; then
+            echo "::group::ALB target health"
+            aws elbv2 describe-target-health \
+              --target-group-arn "$TARGET_GROUP_ARN" \
+              --query 'TargetHealthDescriptions[*].{Target:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason,Description:TargetHealth.Description}' \
+              --output table
+            echo "::endgroup::"
+          fi
+
+          STOPPED_TASKS=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --service-name "$SERVICE" \
+            --desired-status STOPPED \
+            --query 'taskArns[:10]' \
+            --output text)
+
+          RUNNING_TASKS=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --service-name "$SERVICE" \
+            --desired-status RUNNING \
+            --query 'taskArns[:10]' \
+            --output text)
+
+          TASKS="$STOPPED_TASKS $RUNNING_TASKS"
+          if [ -n "$TASKS" ]; then
+            echo "::group::ECS task stop/container reasons"
+            aws ecs describe-tasks \
+              --cluster "$CLUSTER" \
+              --tasks $TASKS \
+              --query 'tasks[*].{TaskArn:taskArn,LastStatus:lastStatus,DesiredStatus:desiredStatus,HealthStatus:healthStatus,StopCode:stopCode,StoppedReason:stoppedReason,Containers:containers[*].{Name:name,LastStatus:lastStatus,ExitCode:exitCode,Reason:reason,HealthStatus:healthStatus}}' \
+              --output json
+            echo "::endgroup::"
+          fi
+
+          echo "::group::Recent API logs"
+          aws logs tail "$LOG_GROUP" --since 30m --format short || true
+          echo "::endgroup::"
