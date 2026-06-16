@@ -4,7 +4,15 @@ import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState, clearOnboardingData } from "#/redux/slice/authSlice";
@@ -26,30 +34,41 @@ export const Route = createFileRoute("/auth/login")({
   },
 
   // Set page meta
-  head: () => getPageHeader({
-    title: "Log in to your account",
-    description: "Log in to your Free9ja account to access your dashboard and manage your profile",
-  }),
+  head: () =>
+    getPageHeader({
+      title: "Log in to your account",
+      description:
+        "Log in to your Free9ja account to access your dashboard and manage your profile",
+    }),
 
   // Load countries data
   loader: async () => {
     const countries = await getAllCountries();
-    if (countries.status !== 'success') throw new Error(countries.message);
+    if (countries.status !== "success") throw new Error(countries.message);
     return { countries: countries.countries };
   },
 
   component: RouteComponent,
 
-  errorComponent: ({ error }) => <div>{`${error?.message}, Also check if the backend server is up and running`}</div>,
+  errorComponent: ({ error }) => (
+    <div>{`${error?.message}, Also check if the backend server is up and running`}</div>
+  ),
 });
 
 function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries as { id: number; name: string; iso2: string; phonecode: string }[];
+  const countries = Route.useLoaderData().countries as {
+    id: number;
+    name: string;
+    iso2: string;
+    phonecode: string;
+  }[];
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showRegistrationSuccess, setShowRegistrationSuccess] = useState<boolean>(false);
-  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] = useState<boolean>(false);
+  const [showRegistrationSuccess, setShowRegistrationSuccess] =
+    useState<boolean>(false);
+  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] =
+    useState<boolean>(false);
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
 
   const form = useForm({
@@ -72,18 +91,18 @@ function RouteComponent() {
       // get the identifier type (email, username or phone number)
       const emailRegex = /^[\w\d._%+-]+@[\w\d.-]+\.\w{2,}$/;
       const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/; // username must start with a letter
-      let identifierType = 'phone';
+      let identifierType = "phone";
       if (emailRegex.test(value.identifier)) {
-        identifierType = 'email';
+        identifierType = "email";
       } else if (usernameRegex.test(value.identifier)) {
-        identifierType = 'username';
+        identifierType = "username";
       }
 
       // if identifier looks like a phone number, format it with country code
       const phoneRegex = /^[\d\s-]+$/;
-      if (identifierType === 'phone' && phoneRegex.test(value.identifier)) {
+      if (identifierType === "phone" && phoneRegex.test(value.identifier)) {
         const matchedCountry = countries.find(
-          (c) => c.name.toLowerCase() === value.country.toLowerCase()
+          (c) => c.name.toLowerCase() === value.country.toLowerCase(),
         );
         if (matchedCountry) {
           payload.identifier = value.identifier.startsWith("0")
@@ -99,16 +118,16 @@ function RouteComponent() {
       try {
         const response = await loginUser({ data: payload });
 
-        if (response.status === "success") {
-          dispatch(
-            updateAuthState({ user: response.user })
-          );
+        if (response.success) {
+          dispatch(updateAuthState({ user: response.data.user }));
 
           // login successful, redirect user to dashboard
           navigate({ to: APP_URL.homePage });
         } else {
           // login failed, show error message
-          setErrorMsg(response.message || "Login failed. Please check your credentials.");
+          setErrorMsg(
+            response.message || "Login failed. Please check your credentials.",
+          );
         }
       } catch (error) {
         setErrorMsg(`Connection error: ${error}`);
@@ -119,12 +138,12 @@ function RouteComponent() {
   // on page load, auto-select the country where the user is browsing from
   useEffect(() => {
     const fetchUserIpCountry = async () => {
-      const visitorDetails = await fetchCountryDetailsFromUserIP() // get country from IP
+      const visitorDetails = await fetchCountryDetailsFromUserIP(); // get country from IP
       const country = visitorDetails?.country_name?.toLowerCase() || "nigeria"; // get country name
 
       // find the matched country
       const matchedCountry = countries.find(
-        (c) => c.name.toLowerCase() === country
+        (c) => c.name.toLowerCase() === country,
       );
 
       // if no matched country, return
@@ -139,14 +158,17 @@ function RouteComponent() {
         (selectEl as HTMLSelectElement).value = country;
         selectEl.dispatchEvent(new Event("change", { bubbles: true }));
       }
-    }
+    };
 
-    fetchUserIpCountry()
+    fetchUserIpCountry();
   }, []);
 
   // check if registration was just completed (within 5 minutes)
   useEffect(() => {
-    if (onboardingData?.registrationCompleted && onboardingData?.registrationCompletedAt) {
+    if (
+      onboardingData?.registrationCompleted &&
+      onboardingData?.registrationCompletedAt
+    ) {
       const completionTime = new Date(onboardingData.registrationCompletedAt);
       const currentTime = new Date();
       const timeDiff = currentTime.getTime() - completionTime.getTime();
@@ -162,7 +184,10 @@ function RouteComponent() {
 
   // check if password was just changed (within 5 minutes)
   useEffect(() => {
-    if (onboardingData?.passwordChangeCompleted && onboardingData?.passwordChangeCompletedAt) {
+    if (
+      onboardingData?.passwordChangeCompleted &&
+      onboardingData?.passwordChangeCompletedAt
+    ) {
       const completionTime = new Date(onboardingData.passwordChangeCompletedAt);
       const currentTime = new Date();
       const timeDiff = currentTime.getTime() - completionTime.getTime();
@@ -202,7 +227,8 @@ function RouteComponent() {
         <form.Field
           name="country"
           validators={{
-            onChange: ({ value }) => (!value ? "Country is required" : undefined),
+            onChange: ({ value }) =>
+              !value ? "Country is required" : undefined,
           }}
           children={(field) => (
             <div className="selectElement flex flex-col gap-1">
@@ -219,9 +245,17 @@ function RouteComponent() {
                   <SelectGroup>
                     <SelectLabel>Countries</SelectLabel>
                     {countries.map((country) => (
-                      <SelectItem key={country.name} value={country.name.toLowerCase()}>
+                      <SelectItem
+                        key={country.name}
+                        value={country.name.toLowerCase()}
+                      >
                         <span className="flex items-center gap-2 capitalize py-1.5 cursor-pointer">
-                          <span className="country"><img src={`https://flagcdn.com/w40/${country.iso2.toLowerCase()}.png`} width="23" /></span>
+                          <span className="country">
+                            <img
+                              src={`https://flagcdn.com/w40/${country.iso2.toLowerCase()}.png`}
+                              width="23"
+                            />
+                          </span>
                           <span>{country.name}</span>
                         </span>
                       </SelectItem>
@@ -241,7 +275,8 @@ function RouteComponent() {
         <form.Field
           name="identifier"
           validators={{
-            onChange: ({ value }) => (!value ? "Identifier is required" : undefined),
+            onChange: ({ value }) =>
+              !value ? "Identifier is required" : undefined,
           }}
           children={(field) => (
             <FormInput
@@ -287,7 +322,12 @@ function RouteComponent() {
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
           children={([canSubmit, isSubmitting]) => (
-            <Button type="submit" variant="secondary" disabled={!canSubmit} loading={isSubmitting}>
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={!canSubmit}
+              loading={isSubmitting}
+            >
               Log in
             </Button>
           )}

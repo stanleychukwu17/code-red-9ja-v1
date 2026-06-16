@@ -89,6 +89,11 @@ func (m *MockAuthService) AdminLogin(ctx context.Context, identifierType string,
 	return args.Get(0).(authservice.LoginResult), args.Error(1)
 }
 
+func (m *MockAuthService) PartyLogin(ctx context.Context, identifierType string, identifier, password string, iso2 string) (authservice.LoginResult, error) {
+	args := m.Called(ctx, identifierType, identifier, password, iso2)
+	return args.Get(0).(authservice.LoginResult), args.Error(1)
+}
+
 func (m *MockAuthService) RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (authservice.RegisterResult, error) {
 	args := m.Called(ctx, email, phone, username, password, firstName, lastName, avatar)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)

@@ -47,14 +47,25 @@ func NewAuthService(q *queries.Queries, rdb *redis.Client, messagingService Mess
 	}
 }
 
+func (s *AuthService) getPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party {
+	if partyID.Valid {
+		party, err := s.queries.GetPartyByID(ctx, partyID.Int64)
+		if err == nil {
+			return &party
+		}
+	}
+	return nil
+}
+
 type LoginUser struct {
-	FakeID        int64  `json:"fake_id"`
-	Username      string `json:"username"`
-	FirstName     string `json:"first_name"`
-	LastName      string `json:"last_name"`
-	Role          string `json:"role"`
-	AccountStatus string `json:"account_status"`
-	AvatarURL     string `json:"avatar_url"`
+	FakeID        int64          `json:"fake_id"`
+	Username      string         `json:"username"`
+	FirstName     string         `json:"first_name"`
+	LastName      string         `json:"last_name"`
+	Role          string         `json:"role"`
+	AccountStatus string         `json:"account_status"`
+	AvatarURL     string         `json:"avatar_url"`
+	Party         *queries.Party `json:"party,omitempty"`
 }
 type LoginResult struct {
 	AccessToken  string
@@ -170,7 +181,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
 	}
 
-	log.Info(logger.EventUserLoginSuccess, "user_id", fakeID, "username", user.Username.String)
+	partyObj := s.getPartyInfo(ctx, user.PartyID)
 
 	return LoginResult{
 		AccessToken:  accessToken,
@@ -181,8 +192,9 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			FirstName:     user.FirstName.String,
 			LastName:      user.LastName.String,
 			Role:          user.Role.String,
-			AvatarURL:     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
+			AvatarURL:     "",
 			AccountStatus: user.AccountStatus.String,
+			Party:         partyObj,
 		},
 	}, nil
 }
@@ -230,6 +242,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	// destructure some of the user info
 	accountStatus := user.AccountStatus.String
 	username := user.Username.String
+	partyObj := s.getPartyInfo(ctx, user.PartyID)
 	userDetails := LoginUser{
 		FakeID:        userFid,
 		Username:      username,
@@ -238,6 +251,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Role:          user.Role.String,
 		AvatarURL:     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop",
 		AccountStatus: accountStatus,
+		Party:         partyObj,
 	}
 
 	// Parse the RFC3339 string back into a time.Time
@@ -1124,6 +1138,8 @@ func (s *AuthService) AdminLogin(ctx context.Context, identifierType, identifier
 		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
 	}
 
+	partyObj := s.getPartyInfo(ctx, user.PartyID)
+
 	return LoginResult{
 		AccessToken:  accessToken,
 		RefreshToken: result.RandomString,
@@ -1135,6 +1151,135 @@ func (s *AuthService) AdminLogin(ctx context.Context, identifierType, identifier
 			Role:          user.Role.String,
 			AvatarURL:     "",
 			AccountStatus: user.AccountStatus.String,
+			Party:         partyObj,
+		},
+	}, nil
+}
+
+// PartyLogin verifies party member credentials and returns JWT access and refresh tokens
+func (s *AuthService) PartyLogin(ctx context.Context, identifierType, identifier, password, iso2 string) (LoginResult, error) {
+	var user queries.User
+	var err error
+	var fakeIDStr string
+	var fakeID int64
+
+	switch identifierType {
+	case "email":
+		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
+		if fakeIDStr == "" {
+			return LoginResult{}, errors.New("invalid email, this record not found")
+		}
+
+	case "username":
+		fakeIDStr = s.rdb.Get(ctx, db.RedisUsernameFakeID+identifier).Val()
+		if fakeIDStr == "" {
+			return LoginResult{}, errors.New("invalid username or password")
+		}
+
+	case "phone":
+		// validate iso2
+		if iso2 == "" {
+			return LoginResult{}, errors.New("iso2 is required")
+		}
+
+		// validate phone number using the provided iso2
+		_, err = s.ValidatePhoneForCountry(identifier, iso2)
+		if err != nil {
+			return LoginResult{}, err
+		}
+
+		fakeIDStr = s.rdb.Get(ctx, db.RedisPhoneFakeID+identifier).Val()
+		if fakeIDStr == "" {
+			return LoginResult{}, errors.New("invalid phone number or password")
+		}
+	default:
+		return LoginResult{}, errors.New("invalid identifier type")
+	}
+
+	// fetch the user details using the fakeID
+	fakeID, _ = strconv.ParseInt(fakeIDStr, 10, 64)
+	user, err = s.GetUserDetailsByFakeID(ctx, fakeID)
+	if err != nil {
+		return LoginResult{}, errors.New("invalid email or password")
+	}
+
+	// Check if user is a party member
+	if user.Role.String != "partymember" {
+		return LoginResult{}, errors.New("insufficient permissions: not a party member")
+	}
+
+	//  Check if password matches
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	if err != nil {
+		return LoginResult{}, errors.New("invalid email, username, phone or password")
+	}
+
+	// Verify account status
+	status := user.AccountStatus.String
+	if status == "suspended" || status == "banned" || status == "deleted" || status == "inactive" {
+		return LoginResult{}, fmt.Errorf("your account is %s", status)
+	}
+
+	// create session details
+	sessionID := uuid.NewString()
+	timezone, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
+	now := time.Now().In(timezone)
+	sessionData := map[string]any{
+		"SessionID": sessionID,
+		"FakeID":    fakeID,
+		"TimeAdded": now.Format(time.RFC3339),
+	}
+	jsonData, _ := json.Marshal(sessionData)
+
+	// Generate Access Token and Refresh Token
+	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, s.jwtSecret, s.jwtAccessExp)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	// generate refresh token (opaque)
+	result, err := utils.GenerateRandomString()
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	// Redis: create redis pipeline
+	pipe := s.rdb.TxPipeline()
+
+	// Redis: Store the session data in redis using the hashed refresh token as the key
+	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, result.HashedToken)
+	pipe.Set(ctx, redisRefreshKey, jsonData, s.jwtRefreshExp)
+
+	// Redis: add the session ID to the set of login sessions
+	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+	pipe.SAdd(ctx, redisLoginSessionKey, result.HashedToken)
+	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp) // deletes the entire set using the jwtRefreshExpiration time
+
+	// Redis: add the session ID to the set of the user's login sessions
+	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
+	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
+	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp) // deletes the entire set using the jwtRefreshExpiration time
+
+	// execute the pipeline
+	_, err = pipe.Exec(ctx)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
+	}
+
+	partyObj := s.getPartyInfo(ctx, user.PartyID)
+
+	return LoginResult{
+		AccessToken:  accessToken,
+		RefreshToken: result.RandomString,
+		User: LoginUser{
+			FakeID:        fakeID,
+			Username:      user.Username.String,
+			FirstName:     user.FirstName.String,
+			LastName:      user.LastName.String,
+			Role:          user.Role.String,
+			AvatarURL:     "",
+			AccountStatus: user.AccountStatus.String,
+			Party:         partyObj,
 		},
 	}, nil
 }

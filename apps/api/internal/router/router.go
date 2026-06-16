@@ -148,6 +148,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	mainRouter.Post(utils.ApiUrls.Auth.ForgotPassword, authHandler.ForgotPassword)                   // Forgot password endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.AdminRegister, authHandler.AdminRegister)                     // Admin register endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
+
 
 	// political & geographic bodies
 	mainRouter.Get(utils.ApiUrls.Bodies.GetAll, bodiesHandler.GetCountries)

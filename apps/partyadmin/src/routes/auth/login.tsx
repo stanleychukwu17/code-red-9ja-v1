@@ -1,14 +1,20 @@
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
-import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  redirect,
+  useRouter,
+} from "@tanstack/react-router";
 import LogoIcon from "@repo/ui/icons/logo-icon";
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { useAppDispatch } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import {
-  loginAdmin,
+  loginPartyApp,
   checkIfRefreshTokenInCookie,
+  getUserDetailsCookie,
 } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 
@@ -16,7 +22,12 @@ export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
     if (isAuthed.status === "success") {
-      throw redirect({ to: "/home" });
+      const userDetails = await getUserDetailsCookie();
+      const partyShortName = userDetails?.party?.short_name || "ndp";
+      throw redirect({
+        to: "/$partyShortName/home",
+        params: { partyShortName },
+      });
     }
   },
   head: () =>
@@ -29,6 +40,7 @@ export const Route = createFileRoute("/auth/login")({
 
 function LoginComponent() {
   const navigate = useNavigate();
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -41,11 +53,19 @@ function LoginComponent() {
       setErrorMsg(null);
 
       try {
-        const response = await loginAdmin({ data: value });
+        const response = await loginPartyApp({ data: value });
+        console.log("Response:", response);
 
         if (response.success) {
-          dispatch(updateAuthState({ user: response.data?.user }));
-          navigate({ to: "/home" });
+          console.log(1);
+          dispatch(updateAuthState({ user: response.data.user }));
+          console.log(2);
+          const partyShortName = response.data.user?.party?.short_name;
+          console.log(3, partyShortName);
+          await router.invalidate();
+          console.log(4);
+          navigate({ to: "/$partyShortName/home", params: { partyShortName } });
+          console.log(5);
         } else {
           setErrorMsg(response.message || "Invalid email or password.");
         }
