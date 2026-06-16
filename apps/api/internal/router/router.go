@@ -15,7 +15,6 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 
 	_ "free9ja/api/docs"
-	"free9ja/api/internal/logger"
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
@@ -23,9 +22,9 @@ import (
 	bodieshandler "free9ja/api/internal/handler/bodies"
 	electiongroupshandler "free9ja/api/internal/handler/election_groups"
 	electionshandler "free9ja/api/internal/handler/elections"
-	officeshandler "free9ja/api/internal/handler/offices"
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
+	officeshandler "free9ja/api/internal/handler/offices"
 	partieshandler "free9ja/api/internal/handler/parties"
 	pollingunitshandler "free9ja/api/internal/handler/polling_units"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
@@ -33,14 +32,15 @@ import (
 	stateshandler "free9ja/api/internal/handler/states"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
+	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
 	electionsservice "free9ja/api/internal/service/elections"
-	officesservice "free9ja/api/internal/service/offices"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	messagingservice "free9ja/api/internal/service/messaging"
+	officesservice "free9ja/api/internal/service/offices"
 	partiesservice "free9ja/api/internal/service/parties"
 	pollingunitsservice "free9ja/api/internal/service/polling_units"
 	r2service "free9ja/api/internal/service/r2"
@@ -83,6 +83,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb)
 	usersService := usersservice.NewUsersService(q, rdb)
 	utilsInstance := utils.NewUtils(pool)
+
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance)
 	partiesHandler := partieshandler.NewHandler(partiesService, utilsInstance)
@@ -97,7 +98,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	electionsHandler := electionshandler.NewHandler(electionsService, utilsInstance)
 	usersHandler := usershandler.NewHandler(usersService, utilsInstance)
 
-	// Initialise the R2 service (nil-safe: file endpoints return an error if unconfigured)
+	// Initialize the R2 service (nil-safe: file endpoints return an error if un-configured)
 	var filesHandler *fileshandler.Handler
 	var r2Svc *r2service.R2Service
 	var r2Err error
@@ -232,7 +233,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 		r.Put("/api/v1/lgas/{id}", bodiesHandler.UpdateLGA)
 		r.Delete("/api/v1/lgas/{id}", bodiesHandler.DeleteLGA)
 
-
 		// senatorial districts admin mutations
 		r.Post("/api/v1/senatorial-districts", senatorialDistrictsHandler.CreateSenatorialDistrict)
 		r.Put("/api/v1/senatorial-districts/{id}", senatorialDistrictsHandler.UpdateSenatorialDistrict)
@@ -281,7 +281,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 		r.Delete("/api/v1/elections/{id}", electionsHandler.DeleteElection)
 		r.Get("/api/v1/elections/{id}/candidates", electionsHandler.GetElectionCandidates)
 		r.Post("/api/v1/elections/{id}/candidates", electionsHandler.SyncElectionCandidates)
- 
+
 		// only admins can permanently delete files
 		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))
 	})
@@ -308,7 +308,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 }
 
 // fileRoute returns an http.HandlerFunc that is nil-safe: when the files handler
-// is not initialised (i.e. R2 credentials are absent) it responds with 503.
+// is not initialized (i.e. R2 credentials are absent) it responds with 503.
 func fileRoute(
 	u *utils.Utils,
 	h *fileshandler.Handler,
