@@ -67,4 +67,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/web
-          command: deploy --name free9ja-${{ env.TARGET_ENV }}-web
+          # command: deploy --name free9ja-${{ env.TARGET_ENV }}-web
+          command: deploy --env ${{ env.TARGET_ENV }}
