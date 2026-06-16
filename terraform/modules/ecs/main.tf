@@ -132,11 +132,12 @@ resource "aws_ecs_task_definition" "api" {
 
 # --- ECS Service ---
 resource "aws_ecs_service" "api" {
-  name            = "${var.website}-${var.environment}-${var.service_name}-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.api.arn
-  desired_count   = var.ecs_desired_count
-  launch_type     = "FARGATE"
+  name                              = "${var.website}-${var.environment}-${var.service_name}-service"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.api.arn
+  desired_count                     = var.ecs_desired_count
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 1200 # 20minutes
 
   network_configuration {
     subnets          = var.private_subnet_ids
