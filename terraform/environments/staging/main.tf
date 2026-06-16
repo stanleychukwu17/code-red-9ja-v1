@@ -136,6 +136,7 @@ module "ecs" {
   db_name     = module.rds.db_name
   db_user     = module.rds.db_user
   db_password = var.rds_db_password
+  db_sslmode  = var.db_sslmode
 
   redis_host     = module.elasticache.redis_host
   redis_port     = module.elasticache.redis_port

@@ -104,6 +104,7 @@ resource "aws_ecs_task_definition" "api" {
         { name = "DB_NAME", value = var.db_name },
         { name = "DB_USER", value = var.db_user },
         { name = "DB_PASSWORD", value = var.db_password },
+        { name = "DB_SSLMODE", value = var.db_sslmode },
         { name = "REDIS_ADDR", value = "${var.redis_host}:${var.redis_port}" },
         { name = "REDIS_PORT", value = tostring(var.redis_port) },
         { name = "REDIS_PASSWORD", value = var.redis_password },

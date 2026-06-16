@@ -68,9 +68,8 @@ type PostgresTestConfig struct {
 	Port string
 }
 
-func FormatPostgresDSN(db_user, db_password, db_host, db_port, db_name string) string {
-	// "postgres://<username>:<password>@localhost:<port>/<database>?sslmode=disable"
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", db_user, db_password, db_host, db_port, db_name)
+func FormatPostgresDSN(db_user, db_password, db_host, db_port, db_name, sslMode string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", db_user, db_password, db_host, db_port, db_name, sslMode)
 }
 
 func SetupPostgresTestContainer(db_user, db_password, db_name, db_port string) (PostgresTestConfig, testcontainers.Container, error) {
