@@ -54,10 +54,10 @@ func TestRoot(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, rr.Code)
 
-	expected := map[string]string{"message": "free9ja API v1"}
-	var actual map[string]string
+	var actual map[string]interface{}
 	err = json.Unmarshal(rr.Body.Bytes(), &actual)
 	require.NoError(t, err, "failed to unmarshal response body")
 
-	require.Equal(t, expected["message"], actual["message"])
+	require.Equal(t, true, actual["success"])
+	require.Equal(t, "free9ja API v1", actual["message"])
 }
