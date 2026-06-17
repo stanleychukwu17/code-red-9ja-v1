@@ -108,8 +108,8 @@ resource "aws_ecs_task_definition" "api" {
         { name = "REDIS_ADDR", value = "${var.redis_host}:${var.redis_port}" },
         { name = "REDIS_PORT", value = tostring(var.redis_port) },
         { name = "REDIS_PASSWORD", value = var.redis_password },
-        { name = "IS_CI_CD", value = var.is_ci_cd },             # Skips loading local .env file
-        { name = "RUN_MIGRATIONS", value = var.run_migrations }, # Run database migrations on task start
+        { name = "IS_CI_CD", value = var.is_ci_cd },             # if true, it skips loading local .env file
+        { name = "RUN_MIGRATIONS", value = var.run_migrations }, # if true, it runs database migrations on task start
         { name = "JWT_SECRET", value = var.jwt_secret },
         { name = "JWT_ACCESS_EXPIRATION", value = var.jwt_access_expiration },
         { name = "JWT_REFRESH_EXPIRATION", value = var.jwt_refresh_expiration }
