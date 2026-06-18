@@ -69,6 +69,7 @@ jobs:
         run: |
           pnpm --filter web build
           echo ${VITE_API_URL}
+          echo ${VITE_APP_NAME}
 
       # Deploy to Cloudflare Workers
       - name: Deploy to Cloudflare Workers
