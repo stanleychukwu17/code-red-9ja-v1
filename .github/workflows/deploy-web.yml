@@ -64,9 +64,11 @@ jobs:
       # Compile web application
       - name: Build Web Application
         env:
-          VITE_APP_NAME: "Free9ja"
+          VITE_APP_NAME: "Stanley App"
           VITE_API_URL: ${{ vars.VITE_API_URL }}
-        run: pnpm --filter web build
+        run: |
+          pnpm --filter web build
+          echo ${VITE_API_URL}
 
       # Deploy to Cloudflare Workers
       - name: Deploy to Cloudflare Workers
