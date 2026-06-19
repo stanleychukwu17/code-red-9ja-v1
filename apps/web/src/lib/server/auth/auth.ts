@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
 import { checkIfRefreshTokenInCookieImpl, getUserDetailsCookieImpl, loginUserImpl, logoutUserImpl, refreshUserTokenImpl, verifySecurityQuestionsImpl, resetPasswordImpl } from "#/lib/server/auth/auth.server"
+import { respondError, respondSuccess } from "@/lib/shared/response";
 
 
 // Starts the registration process for a new user
@@ -15,10 +16,10 @@ export const startUserRegistration = createServerFn({ method: "POST" })
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Registration error:", error);
-      return { status: "error", message: "An unexpected error occurred during registration" };
+      return respondError("An unexpected error occurred during registration");
     }
   });
 
@@ -34,10 +35,10 @@ export const checkNin = createServerFn({ method: "POST" })
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Check NIN error:", error);
-      return { status: "error", message: "An unexpected error occurred during NIN check" };
+      return respondError("An unexpected error occurred during NIN check");
     }
   });
 
@@ -53,10 +54,10 @@ export const checkUsername = createServerFn({ method: "POST" })
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Check username error:", error);
-      return { status: "error", message: "An unexpected error occurred during username check" };
+      return respondError("An unexpected error occurred during username check");
     }
   });
 
@@ -72,10 +73,10 @@ export const completeRegistration = createServerFn({ method: "POST" })
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Complete registration error:", error);
-      return { status: "error", message: "An unexpected error occurred during final registration" };
+      return respondError("An unexpected error occurred during final registration");
     }
   });
 

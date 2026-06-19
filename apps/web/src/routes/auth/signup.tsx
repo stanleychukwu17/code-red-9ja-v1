@@ -22,7 +22,7 @@ export const Route = createFileRoute("/auth/signup")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isLoggedIn = await checkIfRefreshTokenInCookie({});
-    if (isLoggedIn.status === "success") {
+    if (isLoggedIn.success) {
       throw redirect({ to: APP_URL.homePage });
     }
   },
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/auth/signup")({
   // Load countries data
   loader: async () => {
     const countries = await getAllCountries();
-    if (countries.status !== 'success') throw new Error(countries.error);
+    if (!countries.success) throw new Error(countries.message);
     return { countries: countries.countries };
   },
 
@@ -87,7 +87,7 @@ function RouteComponent() {
       const result = await startUserRegistration({ data: payload });
 
       // if the request was successful
-      if (result.status === "success") {
+      if (result.success) {
         // update the onboarding data with the result returned from the register request
         dispatch(updateOnboardingData({id: result.id}));
 

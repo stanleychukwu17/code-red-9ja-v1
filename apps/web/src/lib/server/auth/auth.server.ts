@@ -1,6 +1,7 @@
 import { createServerOnlyFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { API_URL } from "../../config";
+import { respondError, respondSuccess } from "@/lib/shared/response";
 
 // Helper function to set user details cookie
 export const setUserDetailsCookie = (userDetails: any) => {
@@ -61,14 +62,14 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
 
     const result = await response.json();
     // console.log(result)
-    if (result.status === "success" && result.refreshToken) {
+    if (result.success && result.refreshToken) {
       setAuthCookies({ refreshToken: result.refreshToken, accessToken: result.accessToken });
       delete result.refreshToken;
       delete result.accessToken;
     }
-    return result;
+    return respondSuccess(result);
   } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message };
+    return respondError("Connection error. Please try again later. " + (error as Error)?.message);
   }
 })
 
@@ -79,7 +80,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
   // If no refresh token is found, return an error
   if (!refreshToken) {
-    return { status: "error", message: "No refresh token found" };
+    return respondError("No refresh token found");
   }
 
   // Calls the API to refresh the user token
@@ -93,7 +94,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
   // console.log("from refresh", result)
 
   // If the refresh is successful, set the new access and refresh tokens in the cookies and delete them from the result
-  if (result.status === "success") {
+  if (result.success) {
     if (result.refreshToken && result.accessToken) {
       setAuthCookies({ refreshToken: result.refreshToken, accessToken: result.accessToken });
       delete result.refreshToken;
@@ -120,13 +121,13 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
     }
   }
 
-  return result;
+  return respondSuccess(result);
 })
 
 // Checks if a refresh token exists in the cookies
 export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {
   const refreshToken = getCookie("refresh_token");
-  return { status: refreshToken ? "success" : "error" };
+  return !!refreshToken ? respondSuccess() : respondError("No refresh token found");
 })
 
 export const getUserDetailsCookieImpl = createServerOnlyFn(async () => {
@@ -145,7 +146,7 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
   try {
     const refreshToken = getCookie("refresh_token");
     if (!refreshToken) {
-      return { status: "error", message: "No refresh token found" };
+      return respondError("No refresh token found");
     }
 
     const response = await fetch(API_URL.auth.logout, {
@@ -154,9 +155,9 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
       body: JSON.stringify({ refreshToken }),
     });
     const result = await response.json();
-    return result;
+    return respondSuccess(result);
   } catch (error) {
-    return { status: "error", message: error };
+    return respondError(String(error));
   } finally {
     clearAuthCookies();
   }
@@ -172,9 +173,9 @@ export const verifySecurityQuestionsImpl = createServerOnlyFn(async ({ data }) =
     });
 
     const result = await response.json();
-    return { ...result, ok: response.ok };
+    return respondSuccess({ ...result, ok: response.ok });
   } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
+    return respondError("Connection error. Please try again later. " + (error as Error)?.message);
   }
 });
 
@@ -188,8 +189,8 @@ export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
     });
 
     const result = await response.json();
-    return result
+    return respondSuccess(result);
   } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
+    return respondError("Connection error. Please try again later. " + (error as Error)?.message);
   }
 });

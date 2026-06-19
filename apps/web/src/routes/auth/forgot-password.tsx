@@ -17,7 +17,7 @@ export const Route = createFileRoute('/auth/forgot-password')({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status == "success") {
+    if (isAuthed.success) {
       throw redirect({ to: APP_URL.homePage });
     }
   },
@@ -70,7 +70,7 @@ function RouteComponent() {
         }
       });
 
-      if (res.status !== "success") {
+      if (!res.success) {
         setServerError(res.message || "Failed to reset password");
         return;
       }
