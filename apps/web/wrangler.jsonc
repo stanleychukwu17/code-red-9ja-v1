@@ -4,6 +4,7 @@
   "env": {
     "staging": {
       "name": "free9ja-staging-web",
+      "workers_dev": false,
       "routes": [
         {
           "pattern": "staging.free9ja.com/*",
