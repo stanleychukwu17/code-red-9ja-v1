@@ -5,7 +5,7 @@ import { checkIfRefreshTokenInCookie } from '#/lib/server/auth/auth'
 export const Route = createFileRoute('/_authenticated')({
   beforeLoad: async () => {
     const isLoggedIn = await checkIfRefreshTokenInCookie()
-    if (isLoggedIn.status == "success") {
+    if (isLoggedIn.success) {
       return { isLoggedIn }
     } else {
       // redirect back to login page

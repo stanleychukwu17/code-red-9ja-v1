@@ -13,7 +13,7 @@ export const getAllCountries = createServerFn().handler(async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    return { status: "failed", error: "Failed to fetch countries from API, Maybe the backend server is currently down" };
+    return { success: false, error: "Failed to fetch countries from API, Maybe the backend server is currently down" };
   }
 });
 
@@ -25,7 +25,7 @@ export const getStates = createServerFn()
       const data = await response.json();
       return data;
     } catch (error) {
-      return { status: "failed", error: "Failed to fetch states from API, Maybe the backend server is currently down" };
+      return { success: false, error: "Failed to fetch states from API, Maybe the backend server is currently down" };
     }
   });
 
@@ -38,6 +38,6 @@ export const getCities = createServerFn()
       const data = await response.json();
       return data;
     } catch (error) {
-      return { status: "failed", error: "Failed to fetch cities from API, Maybe the backend server is currently down" };
+      return { success: false, error: "Failed to fetch cities from API, Maybe the backend server is currently down" };
     }
   });

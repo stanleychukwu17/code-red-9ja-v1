@@ -13,12 +13,12 @@ export const fetchCountryDetailsFromUserIP = createClientOnlyFn(async () => {
     // the https://ipapi.co/json/ is free, if you hit any limits then switch to cloudfare: https://www.cloudflare.com/cdn-cgi/trace
     const response = await fetch("https://ipapi.co/json/");
     if (!response.ok) {
-      return { status: "failed", error: "Failed to fetch country from IP" };
+      return { success: false, error: "Failed to fetch country from IP" };
     }
 
     const data = await response.json();
-    return {status: "success", ...data};
+    return { success: true, ...data };
   } catch (error) {
-    return { status: "failed", error: "Failed to fetch country from IP" };
+    return { success: false, error: "Failed to fetch country from IP" };
   }
 })

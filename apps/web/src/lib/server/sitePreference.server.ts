@@ -8,7 +8,7 @@ export const setSitePreferenceCookieImpl = createServerOnlyFn(async ({ data }) =
     path: "/",
     maxAge: 365 * 24 * 60 * 60, // 1 year
   });
-  return { status: "success" };
+  return { success: true };
 });
 
 export const getSitePreferenceCookieImpl = createServerOnlyFn(async () => {

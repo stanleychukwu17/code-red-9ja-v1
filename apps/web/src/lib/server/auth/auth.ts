@@ -18,7 +18,7 @@ export const startUserRegistration = createServerFn({ method: "POST" })
       return result;
     } catch (error) {
       console.error("Registration error:", error);
-      return { status: "error", message: "An unexpected error occurred during registration" };
+      return { success: false, message: "An unexpected error occurred during registration" };
     }
   });
 
@@ -37,7 +37,7 @@ export const checkNin = createServerFn({ method: "POST" })
       return result;
     } catch (error) {
       console.error("Check NIN error:", error);
-      return { status: "error", message: "An unexpected error occurred during NIN check" };
+      return { success: false, message: "An unexpected error occurred during NIN check" };
     }
   });
 
@@ -56,7 +56,7 @@ export const checkUsername = createServerFn({ method: "POST" })
       return result;
     } catch (error) {
       console.error("Check username error:", error);
-      return { status: "error", message: "An unexpected error occurred during username check" };
+      return { success: false, message: "An unexpected error occurred during username check" };
     }
   });
 
@@ -75,7 +75,7 @@ export const completeRegistration = createServerFn({ method: "POST" })
       return result;
     } catch (error) {
       console.error("Complete registration error:", error);
-      return { status: "error", message: "An unexpected error occurred during final registration" };
+      return { success: false, message: "An unexpected error occurred during final registration" };
     }
   });
 
