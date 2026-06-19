@@ -36,7 +36,7 @@ export const Route = createFileRoute("/auth/signup")({
   // Load countries data
   loader: async () => {
     const countries = await getAllCountries();
-    if (!countries.success) throw new Error(countries.error);
+    if (!countries.success) throw new Error(countries.message);
     return { countries: countries.countries };
   },
 
