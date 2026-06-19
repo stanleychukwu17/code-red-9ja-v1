@@ -22,7 +22,7 @@ import { SuccessMessage } from "./_components/-success-message";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
-import { APP_URL } from "#/lib/config";
+import { APP_URL, APP_NAME } from "#/lib/config";
 
 export const Route = createFileRoute("/auth/login")({
   // Check if user is already authenticated, if so redirect to home page
@@ -38,7 +38,7 @@ export const Route = createFileRoute("/auth/login")({
     getPageHeader({
       title: "Log in to your account",
       description:
-        "Log in to your Free9ja account to access your dashboard and manage your profile",
+        `Log in to your ${APP_NAME} account to access your dashboard and manage your profile`,
     }),
 
   // Load countries data
