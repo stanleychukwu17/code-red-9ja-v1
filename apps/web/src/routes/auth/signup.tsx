@@ -10,7 +10,7 @@ import { FormError } from "./_components/-form-error";
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
-import { APP_URL } from "@/lib/config";
+import { APP_URL, APP_NAME } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
@@ -30,7 +30,7 @@ export const Route = createFileRoute("/auth/signup")({
   // Page metadata
   head: () => getPageHeader({
     title: "Sign up: Join the movement ",
-    description: "Create your account to start enjoying premium content on Free9ja",
+    description: `Create your account to start enjoying premium content on ${APP_NAME}`,
   }),
 
   // Load countries data
