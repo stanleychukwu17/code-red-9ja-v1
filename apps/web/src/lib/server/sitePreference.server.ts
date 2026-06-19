@@ -1,5 +1,6 @@
 import { createServerOnlyFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
+import { respondSuccess } from "@/lib/shared/response";
 
 export const setSitePreferenceCookieImpl = createServerOnlyFn(async ({ data }) => {
   const stringifiedDetails = JSON.stringify(data);
@@ -8,7 +9,7 @@ export const setSitePreferenceCookieImpl = createServerOnlyFn(async ({ data }) =
     path: "/",
     maxAge: 365 * 24 * 60 * 60, // 1 year
   });
-  return { success: true };
+  return respondSuccess();
 });
 
 export const getSitePreferenceCookieImpl = createServerOnlyFn(async () => {

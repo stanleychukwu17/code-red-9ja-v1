@@ -1,4 +1,5 @@
 import { createClientOnlyFn } from "@tanstack/react-start";
+import { respondError, respondSuccess } from "@/lib/shared/response";
 
 /**
  * Fetches the country data of the user's IP address from "https://ipapi.co/json/".
@@ -13,12 +14,12 @@ export const fetchCountryDetailsFromUserIP = createClientOnlyFn(async () => {
     // the https://ipapi.co/json/ is free, if you hit any limits then switch to cloudfare: https://www.cloudflare.com/cdn-cgi/trace
     const response = await fetch("https://ipapi.co/json/");
     if (!response.ok) {
-      return { success: false, error: "Failed to fetch country from IP" };
+      return respondError("Failed to fetch country from IP");
     }
 
     const data = await response.json();
-    return { success: true, ...data };
+    return respondSuccess(data);
   } catch (error) {
-    return { success: false, error: "Failed to fetch country from IP" };
+    return respondError("Failed to fetch country from IP");
   }
 })
