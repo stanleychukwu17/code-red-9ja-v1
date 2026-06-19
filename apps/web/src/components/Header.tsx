@@ -53,7 +53,7 @@ import { updateAuthState } from "@/redux/slice/authSlice";
 import type { UserProps } from "@/redux/slice/authSlice";
 import { logoutUser } from "#/lib/server/auth/auth";
 // import { useIsMobile } from "@repo/ui/hooks/useMobile";
-import { APP_URL } from "#/lib/config";
+import { APP_URL, APP_NAME } from "#/lib/config";
 import { useTheme } from "#/components/ThemeToggle";
 
 type AppSidebarItem = {
@@ -253,7 +253,7 @@ function LogoComponent() {
         <LogoIcon className="size-8 shrink-0" />
         {sideBarState === "expanded" && (
           <div className="text-[20px] font-semibold tracking-[-0.04em]">
-            Free9ja
+            {APP_NAME}
           </div>
         )}
       </div>
