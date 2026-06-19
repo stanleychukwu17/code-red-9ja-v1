@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
+import { respondError, respondSuccess } from "@/lib/shared/response";
 
 
 /**
@@ -11,9 +12,9 @@ export const getAllCountries = createServerFn().handler(async () => {
   try {
     const response = await fetch(API_URL.getAllCountries);
     const data = await response.json();
-    return data;
+    return respondSuccess(data);
   } catch (error) {
-    return { status: "failed", error: "Failed to fetch countries from API, Maybe the backend server is currently down" };
+    return respondError("Failed to fetch countries from API, Maybe the backend server is currently down");
   }
 });
 
@@ -23,9 +24,9 @@ export const getStates = createServerFn()
     try {
       const response = await fetch(API_URL.getStates(countryId));
       const data = await response.json();
-      return data;
+      return respondSuccess(data);
     } catch (error) {
-      return { status: "failed", error: "Failed to fetch states from API, Maybe the backend server is currently down" };
+      return respondError("Failed to fetch states from API, Maybe the backend server is currently down");
     }
   });
 
@@ -36,8 +37,8 @@ export const getCities = createServerFn()
       const url = `${API_URL.getCities(stateId)}?limit=${limit || 50}&cursor=${cursor || ""}`;
       const response = await fetch(url);
       const data = await response.json();
-      return data;
+      return respondSuccess(data);
     } catch (error) {
-      return { status: "failed", error: "Failed to fetch cities from API, Maybe the backend server is currently down" };
+      return respondError("Failed to fetch cities from API, Maybe the backend server is currently down");
     }
   });

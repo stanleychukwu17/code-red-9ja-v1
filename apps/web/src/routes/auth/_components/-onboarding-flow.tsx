@@ -169,7 +169,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
     try {
       const result = await completeRegistration({ data: payload });
-      if (result.status === "success" || result.id) {
+      if (result.success || result.id) {
         // Navigate to login page
         navigate({ to: APP_URL.auth.login, replace: true });
 
@@ -240,7 +240,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       setCitiesError(null);
       try {
         const res = await getCities({ data: { stateId } });
-        if (res.status === "success" && Array.isArray(res.cities)) {
+        if (res.success && Array.isArray(res.cities)) {
           const mappedCities = res.cities.map((c: { id: number; name: string }) => ({
             id: c.id,
             value: c.name,
@@ -275,7 +275,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       setStatesError(null);
       try {
         const res = await getStates({ data: { countryId } });
-        if (res.status === "success" && Array.isArray(res.states)) {
+        if (res.success && Array.isArray(res.states)) {
           const mappedStates = res.states.map((s: { id: number; name: string }) => ({
             id: s.id,
             value: s.name,
@@ -320,7 +320,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
     try {
       const res = await checkUsername({ data: { username } });
-      if (res.status === "success") {
+      if (res.success) {
         if (res.exists) {
           setUsernameError("This username is already taken");
         } else {
@@ -347,7 +347,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
     try {
       const res = await checkNin({ data: { nin: data.nin } });
-      if (res.status === "success") {
+      if (res.success) {
         if (res.exists) {
           setNinError("This NIN is already registered to another account");
         } else {

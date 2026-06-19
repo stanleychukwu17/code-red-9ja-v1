@@ -28,7 +28,7 @@ export const Route = createFileRoute("/auth/login")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status === "success") {
+    if (isAuthed.success) {
       throw redirect({ to: APP_URL.homePage });
     }
   },
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/auth/login")({
   // Load countries data
   loader: async () => {
     const countries = await getAllCountries();
-    if (countries.status !== "success") throw new Error(countries.message);
+    if (!countries.success) throw new Error(countries.message);
     return { countries: countries.countries };
   },
 
