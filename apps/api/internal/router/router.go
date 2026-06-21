@@ -69,6 +69,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 		accessExp = cfg.JWTAccessExpiration
 		refreshExp = cfg.JWTRefreshExpiration
 	}
+
+	// services
 	authService := authservice.NewAuthService(q, rdb, messagingService, jwtSecret, accessExp, refreshExp)
 	bodiesService := bodiesservice.NewBodiesService(q, rdb)
 	partiesService := partiesservice.NewPartiesService(q, rdb)
@@ -84,6 +86,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	usersService := usersservice.NewUsersService(q, rdb)
 	utilsInstance := utils.NewUtils(pool)
 
+	// handler
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance)
 	partiesHandler := partieshandler.NewHandler(partiesService, utilsInstance)
@@ -126,7 +129,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	mainRouter.Use(requestLoggerMiddleware)
 	mainRouter.Use(middleware.Recoverer)
 
-	// Swagger documentation (Dev only)
+	// Swagger documentation (Dev and Staging only)
 	if os.Getenv("ENV") != "production" {
 		mainRouter.Get("/api/v1/swagger/*", httpSwagger.Handler(
 			httpSwagger.URL("/api/v1/swagger/doc.json"),
@@ -150,7 +153,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) http.Handler
 	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.AdminRegister, authHandler.AdminRegister)                     // Admin register endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
-
 
 	// political & geographic bodies
 	mainRouter.Get(utils.ApiUrls.Bodies.GetAll, bodiesHandler.GetCountries)
@@ -392,6 +394,10 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 		start := time.Now()
 
 		defer func() {
+			if r.URL.Path == "/health" {
+				return
+			}
+
 			log.Info(logger.EventHTTPRequest,
 				"method", r.Method,
 				"path", r.URL.Path,
