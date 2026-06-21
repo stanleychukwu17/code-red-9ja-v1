@@ -70,6 +70,7 @@ type Querier interface {
 	GetStateDetailsByID(ctx context.Context, id int16) (CState, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
+	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
 	GetWardByID(ctx context.Context, id int32) (Ward, error)
 	GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, error)
