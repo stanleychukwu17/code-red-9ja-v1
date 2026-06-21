@@ -25,12 +25,6 @@ variable "domain_name" {
   description = "The root domain name (e.g., domain.com)"
 }
 
-variable "create_frontend_domain" {
-  type        = bool
-  description = "Whether to create the frontend custom domain. Needs to be deployed to a worker before being created."
-  default     = false
-}
-
 variable "frontend_subdomain" {
   type        = string
   description = "Subdomain for the frontend (e.g., www, staging)"
