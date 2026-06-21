@@ -24,6 +24,19 @@ import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
 import { APP_URL, APP_NAME } from "#/lib/config";
 
+export type countriesType = {
+  success: boolean;
+  data: {
+    countries: {
+      id: number;
+      name: string;
+      iso2: string;
+      phonecode: string;
+    }[];
+  };
+  message: string;
+};
+
 export const Route = createFileRoute("/auth/login")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
@@ -43,9 +56,9 @@ export const Route = createFileRoute("/auth/login")({
 
   // Load countries data
   loader: async () => {
-    const countries = await getAllCountries();
+    const countries = await getAllCountries() as countriesType;
     if (!countries.success) throw new Error(countries.message);
-    return { countries: countries.countries };
+    return { countries: countries.data.countries };
   },
 
   component: RouteComponent,
@@ -58,17 +71,10 @@ export const Route = createFileRoute("/auth/login")({
 function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries as {
-    id: number;
-    name: string;
-    iso2: string;
-    phonecode: string;
-  }[];
+  const countries = Route.useLoaderData().countries;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showRegistrationSuccess, setShowRegistrationSuccess] =
-    useState<boolean>(false);
-  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] =
-    useState<boolean>(false);
+  const [showRegistrationSuccess, setShowRegistrationSuccess] = useState<boolean>(false);
+  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] = useState<boolean>(false);
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
 
   const form = useForm({
@@ -117,6 +123,7 @@ function RouteComponent() {
 
       try {
         const response = await loginUser({ data: payload });
+        console.log(response)
 
         if (response.success) {
           dispatch(updateAuthState({ user: response.data.user }));

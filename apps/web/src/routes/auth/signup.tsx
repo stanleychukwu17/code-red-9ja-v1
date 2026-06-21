@@ -15,6 +15,7 @@ import { getPageHeader } from "@/lib/shared/meta";
 import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
 import { checkIfRefreshTokenInCookie, startUserRegistration } from "@/lib/server/auth/auth";
+import type { countriesType } from "./login";
 
 import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
@@ -35,9 +36,9 @@ export const Route = createFileRoute("/auth/signup")({
 
   // Load countries data
   loader: async () => {
-    const countries = await getAllCountries();
+    const countries = await getAllCountries() as countriesType;
     if (!countries.success) throw new Error(countries.message);
-    return { countries: countries.countries };
+    return { countries: countries.data.countries };
   },
 
   // Component to render
@@ -89,7 +90,7 @@ function RouteComponent() {
       // if the request was successful
       if (result.success) {
         // update the onboarding data with the result returned from the register request
-        dispatch(updateOnboardingData({id: result.id}));
+        dispatch(updateOnboardingData({ id: result.data.id }));
 
         // navigate to the verify otp page
         navigate({

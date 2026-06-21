@@ -62,10 +62,10 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
 
     const result = await response.json();
     // console.log(result)
-    if (result.success && result.refreshToken) {
-      setAuthCookies({ refreshToken: result.refreshToken, accessToken: result.accessToken });
-      delete result.refreshToken;
-      delete result.accessToken;
+    if (result.success && result.data?.refreshToken) {
+      setAuthCookies({ refreshToken: result.data.refreshToken, accessToken: result.data.accessToken });
+      delete result.data.refreshToken;
+      delete result.data.accessToken;
     }
     return respondSuccess(result);
   } catch (error) {
@@ -95,15 +95,15 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
   // If the refresh is successful, set the new access and refresh tokens in the cookies and delete them from the result
   if (result.success) {
-    if (result.refreshToken && result.accessToken) {
-      setAuthCookies({ refreshToken: result.refreshToken, accessToken: result.accessToken });
-      delete result.refreshToken;
-      delete result.accessToken;
+    if (result.data?.refreshToken && result.data?.accessToken) {
+      setAuthCookies({ refreshToken: result.data.refreshToken, accessToken: result.data.accessToken });
+      delete result.data.refreshToken;
+      delete result.data.accessToken;
     }
 
     // If the result has a user, set the user details cookie
-    if (result.user) {
-      setUserDetailsCookie(result.user)
+    if (result.data?.user) {
+      setUserDetailsCookie(result.data.user)
     }
   } else {
     // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
