@@ -154,9 +154,9 @@ export function AppSidebar({ userDetails }: { userDetails?: UserProps; sitePrefe
   return (
     <Sidebar
       collapsible="icon"
-      className="bg-sidebar md:data-[side=left]:left-0"
+      className="md:data-[side=left]:left-0"
     >
-      <div className="flex h-full flex-col px-4 py-7">
+      <div className="bg-sidebar flex h-full flex-col px-4 py-7">
         {/* This component is responsible for rendering the logo of the application */}
         <LogoComponent />
 
@@ -351,7 +351,7 @@ function ProfilePicture({ userDetails }: { userDetails?: UserProps }) {
 
       {/* The content of the popover is the profile picture popover */}
       <PopoverContent className="w-[260px]">
-        <ProfilePicturePopover userDetails={userDetails} />
+        <ProfilePicturePopover userDetails={user} />
       </PopoverContent>
     </Popover>
   );
