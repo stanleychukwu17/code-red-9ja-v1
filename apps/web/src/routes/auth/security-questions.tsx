@@ -178,7 +178,7 @@ function RouteComponent() {
                   }}
                   defaultValue={field.state.value}
                 >
-                  <SelectTrigger className="w-full text-[17px] py-2">
+                  <SelectTrigger className="w-full text-[17px]">
                     <SelectValue placeholder="Select a security question" />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,7 +235,7 @@ function RouteComponent() {
                   }}
                   defaultValue={field.state.value}
                 >
-                  <SelectTrigger className="w-full text-[17px] py-2">
+                  <SelectTrigger className="w-full text-[17px]">
                     <SelectValue placeholder="Select a security question" />
                   </SelectTrigger>
                   <SelectContent>
