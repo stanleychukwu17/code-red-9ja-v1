@@ -123,7 +123,6 @@ function RouteComponent() {
 
       try {
         const response = await loginUser({ data: payload });
-        console.log(response)
 
         if (response.success) {
           dispatch(updateAuthState({ user: response.data.user }));
@@ -245,7 +244,7 @@ function RouteComponent() {
                 }}
                 defaultValue={field.state.value}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-yellow-100">
                   <SelectValue placeholder="Select Country" />
                 </SelectTrigger>
                 <SelectContent>
