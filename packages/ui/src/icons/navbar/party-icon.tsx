@@ -13,15 +13,15 @@ const PartyIcon = (props: SVGProps<SVGSVGElement>) => {
       <path
         d="M8.364 13C10.788 10.576 13.212 10.576 15.636 13C18.122 10.87 19.514 10.87 22 13C22 7.477 17.523 3 12 3C6.477 3 2 7.477 2 13C4.486 10.87 5.878 10.87 8.364 13Z"
         stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
         stroke-linejoin="round"
       />
       <path
         d="M12 11.5V18.773C12 22.292 17.5 22.292 17.5 18.773"
         stroke="currentColor"
-        stroke-width="1.5"
-        stroke-linecap="round"
+        strokeWidth="1.5"
+        strokeLinecap="round"
         stroke-linejoin="round"
       />
     </svg>
