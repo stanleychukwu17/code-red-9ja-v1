@@ -178,7 +178,7 @@
     --text-10: rgb(230 230 230);
 
     /* sidebar */
-    --sidebar: rgba(255 255 255);
+    --sidebar: rgba(241, 242, 246, .2);
     --sidebar-width: calc(18rem);
 
     /* hover */
@@ -363,7 +363,7 @@
 }
 
 .selectElement button {
-  @apply bg-black/5 h-14 px-4 py-1 rounded-[16px] text-lg capitalize;
+  @apply bg-black/5 h-14 px-4 py-1 rounded-[4px] text-lg capitalize;
 }
 
 .selectElement button {
