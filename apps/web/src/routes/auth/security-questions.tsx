@@ -18,7 +18,7 @@ export const Route = createFileRoute('/auth/security-questions')({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
     if (isAuthed.success) {
-      throw redirect({ to: APP_URL.homePage });
+      throw redirect({ to: APP_URL.home });
     }
   },
   head: () => getPageHeader({ title: "Answer security questions", robotsAllowed: "no" }),

@@ -24,7 +24,7 @@ export const Route = createFileRoute("/auth/signup")({
   beforeLoad: async () => {
     const isLoggedIn = await checkIfRefreshTokenInCookie({});
     if (isLoggedIn.success) {
-      throw redirect({ to: APP_URL.homePage });
+      throw redirect({ to: APP_URL.home });
     }
   },
 

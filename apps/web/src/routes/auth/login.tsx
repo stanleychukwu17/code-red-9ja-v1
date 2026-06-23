@@ -42,7 +42,7 @@ export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
     if (isAuthed.success) {
-      throw redirect({ to: APP_URL.homePage });
+      throw redirect({ to: APP_URL.home });
     }
   },
 
@@ -128,7 +128,7 @@ function RouteComponent() {
           dispatch(updateAuthState({ user: response.data.user }));
 
           // login successful, redirect user to dashboard
-          navigate({ to: APP_URL.homePage });
+          navigate({ to: APP_URL.home });
         } else {
           // login failed, show error message
           setErrorMsg(
