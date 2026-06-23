@@ -104,6 +104,7 @@
   --color-hover-1_5: var(--hover-1-5);
 
   --color-sidebar: var(--sidebar);
+  --color-sidebar-mobile: var(--sidebar-mobile);
 
   --radius-6: 0.375rem;
   --radius-8: 0.5rem;
@@ -179,6 +180,7 @@
 
     /* sidebar */
     --sidebar: rgba(241, 242, 246, .2);
+    --sidebar-mobile: rgb(241, 242, 246);
     --sidebar-width: calc(18rem);
 
     /* hover */
@@ -284,6 +286,8 @@
     --text-10: rgb(25 25 25);
     /* sidebar */
     --sidebar: rgb(32 32 32);
+    --sidebar-mobile: rgb(32, 32, 32);
+
     /* hover */
     --hover-sidebar: rgb(44 44 44);
     --hover-sidebar-press: rgb(36 36 36);
@@ -293,7 +297,7 @@
     --hover-7: rgb(42 42 42);
     --hover-10: rgb(48 48 48);
 
-    /* shadcn - sidebar */
+    /* shadCn - sidebar */
     --sidebar-background: rgb(24, 24, 27);
     --sidebar-foreground: rgb(244, 244, 245);
     --sidebar-primary: rgb(29, 78, 216);
@@ -363,7 +367,7 @@
 }
 
 .selectElement button {
-  @apply bg-black/5 h-14 px-4 py-1 rounded-[4px] text-lg capitalize;
+  @apply bg-black/5 h-14 px-4 py-1 text-lg capitalize dark:bg-black/30 dark:hover:bg-black/50;
 }
 
 .selectElement button {
