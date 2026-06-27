@@ -64,8 +64,21 @@ func getIP(r *http.Request) string {
 	// Fallback to RemoteAddr
 	ip, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		return r.RemoteAddr
+		ip = r.RemoteAddr
+	} else {
+		ip = strings.TrimSpace(ip)
 	}
+
+	// Substitute loopback IP in development environment for easier local testing
+	if cfg.AppEnv == "development" {
+		parsedIP := net.ParseIP(ip)
+		if ip == "::1" || ip == "127.0.0.1" || ip == "localhost" || (parsedIP != nil && parsedIP.IsLoopback()) {
+			if cfg.DevMockIP != "" {
+				return cfg.DevMockIP
+			}
+		}
+	}
+
 	return ip
 }
 
@@ -98,6 +111,7 @@ func isRateLimited(ctx context.Context, ip string) (bool, error) {
 // 4. Augment the response with geographic location data if the GeoIP service is available.
 func ipHandler(w http.ResponseWriter, r *http.Request) {
 	ip := getIP(r)
+	slog.Info("Request received", "ip", ip, "method", r.Method, "path", r.URL.Path, "user_agent", r.UserAgent())
 
 	// Perform rate limiting check
 	limited, err := isRateLimited(r.Context(), ip)
@@ -152,6 +166,48 @@ func ipHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(res)
 }
 
+// corsMiddleware wraps an http.Handler to supply standard CORS headers and process preflight OPTIONS requests.
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		origin := r.Header.Get("Origin")
+
+		if origin != "" {
+			if cfg.AppEnv == "production" || cfg.AppEnv == "staging" {
+				// Parse host from origin
+				host := origin
+				// Strip the protocol (e.g. "https://" or "http://") to isolate the hostname and optional port
+				host = strings.TrimPrefix(host, "https://")
+				host = strings.TrimPrefix(host, "http://")
+				// Strip the port number if it exists (e.g. ":443") to get just the hostname
+				if idx := strings.Index(host, ":"); idx != -1 {
+					host = host[:idx]
+				}
+
+				if host == "free9ja.com" || strings.HasSuffix(host, ".free9ja.com") {
+					w.Header().Set("Access-Control-Allow-Origin", origin)
+					w.Header().Set("Vary", "Origin")
+				}
+			} else {
+				// In development/local, allow any origin
+				w.Header().Set("Access-Control-Allow-Origin", "*")
+			}
+		} else {
+			// If no Origin header (e.g. direct curl), set * to allow it
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		}
+
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 // main is the entry point of the application. It orchestrates the initialization phase:
 // - Loads configuration from environment variables or .env files.
 // - Sets up structured logging.
@@ -203,7 +259,8 @@ func main() {
 		defer geoSvc.Close()
 	}
 
-	http.HandleFunc("/", ipHandler)
+	// Create a new router
+	http.Handle("/", corsMiddleware(http.HandlerFunc(ipHandler)))
 
 	slog.Info("IP Service listening", "port", cfg.Port, "rate_limit_reqs", cfg.RateLimitReqs, "rate_limit_window", cfg.RateLimitWindow, "geoip_enabled", geoSvc != nil)
 
