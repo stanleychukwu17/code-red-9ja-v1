@@ -1,0 +1,8 @@
+{
+  "name": "ip-service",
+  "private": true,
+  "scripts": {
+    "dev": "bash scripts/start-ip-service.sh",
+    "build": "go build -o bin/ip-service ./main.go"
+  }
+}
