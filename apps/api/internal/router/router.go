@@ -403,7 +403,7 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 				"path", r.URL.Path,
 				"status", ww.Status(),
 				"duration", time.Since(start).String(),
-				"ip", r.RemoteAddr,
+				"ip", utils.GetIP(r),
 			)
 		}()
 
