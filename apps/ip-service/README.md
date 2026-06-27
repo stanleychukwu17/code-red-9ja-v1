@@ -4,13 +4,21 @@ This is the IP Retrieval Service for free9ja. It provides IP-based geolocation a
 
 ## Local Development
 
-For local development, you can use the provided `docker-compose.yml` to spin up the service along with its Redis dependency.
+For local development, this service shares the Redis instance with the `api` app to avoid port conflicts and save resources.
 
+The easiest way to start the service is via the provided start script. This will automatically check for and start the shared Redis container (`redis_free9ja` from the `api` project), and then run the Go server.
+
+You can start the service using your package manager from within the `apps/ip-service` directory:
 ```bash
-docker-compose up -d --build
+pnpm run dev
 ```
 
-**Note:** Ensure you have the `GeoLite2-City.mmdb` database file in the root of this folder, as the docker-compose file mounts it into the container.
+Alternatively, you can run the bash script directly:
+```bash
+bash scripts/start-ip-service.sh
+```
+
+**Note:** Ensure you have the `GeoLite2-City.mmdb` database file in the root of this folder.
 
 ## Environment Variables
 
