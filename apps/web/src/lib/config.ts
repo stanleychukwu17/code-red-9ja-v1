@@ -1,4 +1,5 @@
 // lib/config.ts
+export const IP_SERVICE_URL = import.meta.env.VITE_IP_SERVICE_URL;
 export const APP_NAME = import.meta.env.VITE_APP_NAME;
 const API_BASE = import.meta.env.VITE_API_URL
 
