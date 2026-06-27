@@ -10,6 +10,8 @@ import (
 
 // Config holds the application configuration loaded from environment variables.
 type Config struct {
+	AppEnv          string        // Environment name (e.g. development, staging, production)
+	DevMockIP       string        // Mock IP to use in development
 	RedisAddr       string        // Address of the Redis server
 	RedisPassword   string        // Password for the Redis server
 	RedisDB         int           // Redis database index
@@ -31,6 +33,9 @@ func LoadConfig() Config {
 	}
 
 	cfg := Config{}
+
+	cfg.AppEnv = getEnv("APP_ENV", "development")
+	cfg.DevMockIP = getEnv("DEV_MOCK_IP", "102.89.1.1") // Default to MTN Nigeria IP
 
 	cfg.RedisAddr = getEnv("REDIS_ADDR", "localhost:6379")
 	cfg.RedisPassword = getEnv("REDIS_PASSWORD", "")
