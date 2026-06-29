@@ -108,6 +108,7 @@ resource "aws_instance" "app" {
 
   # Render user_data using templatefile
   user_data = templatefile("${path.module}/templates/user_data.sh", {
+    compose_version        = var.compose_version
     website                = var.website
     environment            = var.environment
     db_name                = var.db_name

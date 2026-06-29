@@ -100,6 +100,7 @@ module "ec2_instance" {
   jwt_refresh_expiration = var.jwt_refresh_expiration
   run_migrations         = var.run_migrations
   ebs_data_volume_size   = var.ebs_data_volume_size
+  compose_version        = var.compose_version
 }
 
 # --- Cloudflare CDN & DNS Module ---
