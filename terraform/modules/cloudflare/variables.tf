@@ -38,4 +38,24 @@ variable "backend_subdomain" {
 variable "alb_dns_name" {
   type        = string
   description = "The DNS name of the AWS Application Load Balancer"
+  default     = null
 }
+
+variable "backend_ip" {
+  type        = string
+  description = "The static IP address of the EC2 backend instance"
+  default     = null
+}
+
+variable "ip_subdomain" {
+  type        = string
+  description = "Subdomain for the IP service (e.g., ip, ip.staging)"
+  default     = null
+}
+
+variable "ip_service_ip" {
+  type        = string
+  description = "The static IP address of the EC2 IP service instance (typically the same as backend_ip)"
+  default     = null
+}
+
