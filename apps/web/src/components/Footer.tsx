@@ -5,22 +5,48 @@ import { useAppSelector } from '@/redux/hooks';
 import type { SiteState } from '@/redux/slice/siteSlice';
 import ThemeToggle from '#/components/ThemeToggle';
 
+/**
+ * Props for the Footer component.
+ */
 interface FooterProps {
+  /** Optional site preference state to manage layout constraints (e.g. sidebar width). */
   sitePreference?: SiteState | null;
 }
 
+/**
+ * Footer Component
+ * 
+ * Displays the application footer including copyright information, 
+ * technology stack, theme toggle, and social links. It adjusts its 
+ * layout dynamically based on the sidebar state, device type (mobile vs desktop), 
+ * and whether it is rendered on an authentication page.
+ */
 export default function Footer({ sitePreference }: FooterProps = {}) {
+  // Hooks to get current routing location and device view type
   const location = useLocation();
   const isMobile = useIsMobile();
-  const year = new Date().getFullYear();
+  const year = new Date().getFullYear(); // current year to be displayed in the footer
+
+  // Determine if the current page is an authentication page
   const isAuthPage = location.pathname.startsWith('/auth');
+
+  // Access global site preferences from Redux store
   const reduxSitePreference = useAppSelector((state) => state.site);
 
+  // Fallback logic: Use Redux state if available and synced, otherwise use provided props or default values
   const isReduxSynced = reduxSitePreference.sideBarState !== "";
-  const allowOutletToBeResponsive = isReduxSynced ? reduxSitePreference.allowOutletToBeResponsive : (sitePreference?.allowOutletToBeResponsive ?? true);
-  const sidebarWidth = isReduxSynced ? reduxSitePreference.currentSideBarWidth : (sitePreference?.currentSideBarWidth || "16rem");
+  const allowOutletToBeResponsive = isReduxSynced
+    ? reduxSitePreference.allowOutletToBeResponsive
+    : (sitePreference?.allowOutletToBeResponsive ?? true);
+  const sidebarWidth = isReduxSynced
+    ? reduxSitePreference.currentSideBarWidth
+    : (sitePreference?.currentSideBarWidth || "16rem");
 
-
+  /**
+   * Calculates dynamic styles for the footer element to accommodate the sidebar.
+   * On mobile devices, authentication pages, or when responsiveness is disabled,
+   * it takes full width. Otherwise, it subtracts the sidebar width.
+   */
   const getFooterStyle = (): CSSProperties => {
     if (isMobile || !allowOutletToBeResponsive || isAuthPage) {
       return {
@@ -38,7 +64,7 @@ export default function Footer({ sitePreference }: FooterProps = {}) {
   };
 
   return (
-    <footer style={getFooterStyle()} className="mt-20 border-t border-(--line) px-4 pb-14 pt-10 text-(--sea-ink-soft)">
+    <footer style={getFooterStyle()} className="relative mt-20 border-t border-(--line) px-4 pb-14 pt-10 text-(--sea-ink-soft)">
       <div className="page-wrap flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
         <p className="m-0 text-sm">
           &copy; {year} Your name here. All rights reserved.

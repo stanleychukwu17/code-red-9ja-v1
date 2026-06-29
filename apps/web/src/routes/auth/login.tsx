@@ -20,16 +20,28 @@ import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { FormError } from "./_components/-form-error";
 import { SuccessMessage } from "./_components/-success-message";
 import { getPageHeader } from "@/lib/shared/meta";
-import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
 import { APP_URL, APP_NAME } from "#/lib/config";
+
+export type countriesType = {
+  success: boolean;
+  data: {
+    countries: {
+      id: number;
+      name: string;
+      iso2: string;
+      phonecode: string;
+    }[];
+  };
+  message: string;
+};
 
 export const Route = createFileRoute("/auth/login")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
     if (isAuthed.success) {
-      throw redirect({ to: APP_URL.homePage });
+      throw redirect({ to: APP_URL.home });
     }
   },
 
@@ -43,9 +55,9 @@ export const Route = createFileRoute("/auth/login")({
 
   // Load countries data
   loader: async () => {
-    const countries = await getAllCountries();
+    const countries = await getAllCountries() as countriesType;
     if (!countries.success) throw new Error(countries.message);
-    return { countries: countries.countries };
+    return { countries: countries.data.countries };
   },
 
   component: RouteComponent,
@@ -58,18 +70,13 @@ export const Route = createFileRoute("/auth/login")({
 function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries as {
-    id: number;
-    name: string;
-    iso2: string;
-    phonecode: string;
-  }[];
+  const countries = Route.useLoaderData().countries;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showRegistrationSuccess, setShowRegistrationSuccess] =
-    useState<boolean>(false);
-  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] =
-    useState<boolean>(false);
+  const [showRegistrationSuccess, setShowRegistrationSuccess] = useState<boolean>(false);
+  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] = useState<boolean>(false);
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
+  const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
+  const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
   const form = useForm({
     defaultValues: {
@@ -122,7 +129,7 @@ function RouteComponent() {
           dispatch(updateAuthState({ user: response.data.user }));
 
           // login successful, redirect user to dashboard
-          navigate({ to: APP_URL.homePage });
+          navigate({ to: APP_URL.home });
         } else {
           // login failed, show error message
           setErrorMsg(
@@ -135,15 +142,14 @@ function RouteComponent() {
     },
   });
 
-  // on page load, auto-select the country where the user is browsing from
+  // auto-select the country where the user is browsing from once visitorCountry is available
   useEffect(() => {
-    const fetchUserIpCountry = async () => {
-      const visitorDetails = await fetchCountryDetailsFromUserIP(); // get country from IP
-      const country = visitorDetails?.country_name?.toLowerCase() || "nigeria"; // get country name
+    if (!visitorCountry) return;
 
+    const timeoutId = setTimeout(() => {
       // find the matched country
       const matchedCountry = countries.find(
-        (c) => c.name.toLowerCase() === country,
+        (c) => c.name.toLowerCase() === visitorCountry
       );
 
       // if no matched country, return
@@ -154,14 +160,14 @@ function RouteComponent() {
 
       // find the select element for countries and set the value to the matched country
       const selectEl = document.querySelector("div.selectElement select");
-      if (selectEl && country) {
-        (selectEl as HTMLSelectElement).value = country;
+      if (selectEl) {
+        (selectEl as HTMLSelectElement).value = visitorCountry;
         selectEl.dispatchEvent(new Event("change", { bubbles: true }));
       }
-    };
+    }, 250);
 
-    fetchUserIpCountry();
-  }, []);
+    return () => clearTimeout(timeoutId);
+  }, [visitorCountry, countries, form]);
 
   // check if registration was just completed (within 5 minutes)
   useEffect(() => {
@@ -238,7 +244,7 @@ function RouteComponent() {
                 }}
                 defaultValue={field.state.value}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full bg-yellow-100">
                   <SelectValue placeholder="Select Country" />
                 </SelectTrigger>
                 <SelectContent>

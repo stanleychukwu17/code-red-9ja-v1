@@ -169,7 +169,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
     try {
       const result = await completeRegistration({ data: payload });
-      if (result.success || result.id) {
+      if (result.success || result.data?.id) {
         // Navigate to login page
         navigate({ to: APP_URL.auth.login, replace: true });
 
@@ -240,8 +240,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       setCitiesError(null);
       try {
         const res = await getCities({ data: { stateId } });
-        if (res.success && Array.isArray(res.cities)) {
-          const mappedCities = res.cities.map((c: { id: number; name: string }) => ({
+        if (res.success && Array.isArray(res.data.cities)) {
+          const mappedCities = res.data.cities.map((c: { id: number; name: string }) => ({
             id: c.id,
             value: c.name,
             label: c.name,
@@ -275,8 +275,9 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       setStatesError(null);
       try {
         const res = await getStates({ data: { countryId } });
-        if (res.success && Array.isArray(res.states)) {
-          const mappedStates = res.states.map((s: { id: number; name: string }) => ({
+        console.log(res)
+        if (res.success && Array.isArray(res.data.states)) {
+          const mappedStates = res.data.states.map((s: { id: number; name: string }) => ({
             id: s.id,
             value: s.name,
             label: s.name,
@@ -321,7 +322,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     try {
       const res = await checkUsername({ data: { username } });
       if (res.success) {
-        if (res.exists) {
+        if (res.data?.exists) {
           setUsernameError("This username is already taken");
         } else {
           // Username does not exist, proceed to next step
@@ -348,7 +349,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     try {
       const res = await checkNin({ data: { nin: data.nin } });
       if (res.success) {
-        if (res.exists) {
+        if (res.data?.exists) {
           setNinError("This NIN is already registered to another account");
         } else {
           // NIN does not exist, proceed to next step

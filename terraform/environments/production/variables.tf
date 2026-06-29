@@ -53,10 +53,6 @@ variable "backend_subdomain" {
   description = "The backend subdomain (e.g., staging-api)"
 }
 
-variable "create_frontend_domain" {
-  type        = bool
-  description = "Whether to create the frontend custom domain"
-}
 variable "frontend_subdomain" {
   type        = string
   description = "The frontend subdomain (e.g., staging)"

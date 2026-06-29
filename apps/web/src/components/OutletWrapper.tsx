@@ -60,7 +60,7 @@ export function OutletWrapper({ children, sitePreference }: OutletWrapperProps) 
   };
 
   return (
-    <div style={getMainContentStyle()} className="flex-1">
+    <div style={getMainContentStyle()} className="flex-1 relative max-sm:mt-12">
       {children}
     </div>
   );

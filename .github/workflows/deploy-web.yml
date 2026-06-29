@@ -65,7 +65,7 @@ jobs:
       - name: Build Web Application
         env:
           CLOUDFLARE_ENV: ${{ env.TARGET_ENV }}
-          VITE_APP_NAME: "Stanley App"
+          VITE_APP_NAME: "Free9ja"
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: |
           pnpm --filter web build
