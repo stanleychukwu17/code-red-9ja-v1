@@ -106,6 +106,12 @@ resource "aws_instance" "app" {
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
 
+  root_block_device {
+    volume_size           = var.ec2_root_volume_size
+    volume_type           = "gp3"
+    delete_on_termination = true
+  }
+
   # Render user_data using templatefile
   user_data = templatefile("${path.module}/templates/user_data.sh", {
     compose_version        = var.compose_version
