@@ -1,0 +1,29 @@
+Why Nginx Listens on Port 80 with Certbot Installed (The Bootstrap Flow)
+========================================================================
+
+1. The "Chicken and Egg" Problem of SSL
+---------------------------------------
+To listen on Port 443 (HTTPS), Nginx needs to point to valid SSL certificates and private key files on disk (e.g., using `ssl_certificate /etc/letsencrypt/live/...`).
+- If you configure Nginx to listen on Port 443 with these paths BEFORE Certbot runs, Nginx will fail to start because the certificate files do not exist yet.
+- But if Nginx isn't running, Certbot cannot verify your domain to issue the certificates!
+
+2. The Solution: Start with Port 80
+------------------------------------
+To solve this, the server is bootstrapped with a minimal Port 80 configuration:
+- Nginx starts up listening on Port 80.
+- We define the ACME verification route:
+  location /.well-known/acme-challenge/ {
+      root /usr/share/nginx/html;
+  }
+- When Certbot is triggered (e.g., `sudo certbot --nginx -d staging-api.example.com`), Let's Encrypt makes an HTTP request to `http://staging-api.example.com/.well-known/acme-challenge/<TOKEN>`.
+- Nginx serves this challenge token from `/usr/share/nginx/html`, proving you own the domain.
+
+3. Certbot Automatically Rewrites Nginx Config
+----------------------------------------------
+Once Let's Encrypt verifies the domain and issues the SSL certificates, Certbot automatically modifies the Nginx configuration file (/etc/nginx/conf.d/free9ja.conf) to:
+- Add the Port 443 listener (`listen 443 ssl;`).
+- Add the paths to the newly generated SSL certificates.
+- Set up an automatic HTTP-to-HTTPS redirect on Port 80.
+- Reload Nginx.
+
+Therefore, the Port 80 configuration in user_data.sh is a temporary runway to allow Certbot to complete the initial HTTP-01 challenge.
