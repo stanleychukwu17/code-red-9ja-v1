@@ -110,3 +110,10 @@ variable "compose_version" {
   type        = string
   description = "Docker Compose CLI plugin version"
 }
+
+variable "ec2_root_volume_size" {
+  type        = number
+  description = "The size of the root volume in GB"
+  default     = 20
+}
+

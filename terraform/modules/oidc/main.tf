@@ -103,7 +103,8 @@ resource "aws_iam_policy" "deploy" {
         Effect = "Allow"
         Action = [
           "ssm:SendCommand",
-          "ssm:GetCommandInvocation"
+          "ssm:GetCommandInvocation",
+          "ssm:DescribeInstanceInformation"
         ]
         Resource = "*"
       },

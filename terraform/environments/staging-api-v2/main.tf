@@ -101,6 +101,7 @@ module "ec2_instance" {
   run_migrations         = var.run_migrations
   ebs_data_volume_size   = var.ebs_data_volume_size
   compose_version        = var.compose_version
+  ec2_root_volume_size   = var.ec2_root_volume_size
 }
 
 # --- Cloudflare CDN & DNS Module ---
