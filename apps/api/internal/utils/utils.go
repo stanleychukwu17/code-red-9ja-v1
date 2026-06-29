@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	mathRand "math/rand"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -205,4 +206,35 @@ func (jd *JSONDate) UnmarshalJSON(b []byte) error {
 // MarshalJSON implements json.Marshaler.
 func (jd JSONDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(jd))
+}
+
+// GetIP extracts the client's actual IP address from the incoming HTTP request.
+// It handles scenarios where the application is deployed behind a reverse proxy,
+// load balancer, or CDN by checking standard forwarding headers (X-Forwarded-For, X-Real-IP)
+// before falling back to the raw remote address.
+func GetIP(r *http.Request) string {
+	// Check X-Forwarded-For
+	forwardedFor := r.Header.Get("X-Forwarded-For")
+	if forwardedFor != "" {
+		ips := strings.Split(forwardedFor, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// Check X-Real-IP
+	realIP := r.Header.Get("X-Real-IP")
+	if realIP != "" {
+		return strings.TrimSpace(realIP)
+	}
+
+	// Fallback to RemoteAddr
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		ip = r.RemoteAddr
+	} else {
+		ip = strings.TrimSpace(ip)
+	}
+
+	return ip
 }

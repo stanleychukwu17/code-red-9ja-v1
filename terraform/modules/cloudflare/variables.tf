@@ -25,12 +25,6 @@ variable "domain_name" {
   description = "The root domain name (e.g., domain.com)"
 }
 
-variable "create_frontend_domain" {
-  type        = bool
-  description = "Whether to create the frontend custom domain. Needs to be deployed to a worker before being created."
-  default     = false
-}
-
 variable "frontend_subdomain" {
   type        = string
   description = "Subdomain for the frontend (e.g., www, staging)"
@@ -44,4 +38,24 @@ variable "backend_subdomain" {
 variable "alb_dns_name" {
   type        = string
   description = "The DNS name of the AWS Application Load Balancer"
+  default     = null
 }
+
+variable "backend_ip" {
+  type        = string
+  description = "The static IP address of the EC2 backend instance"
+  default     = null
+}
+
+variable "ip_subdomain" {
+  type        = string
+  description = "Subdomain for the IP service (e.g., ip, ip.staging)"
+  default     = null
+}
+
+variable "ip_service_ip" {
+  type        = string
+  description = "The static IP address of the EC2 IP service instance (typically the same as backend_ip)"
+  default     = null
+}
+

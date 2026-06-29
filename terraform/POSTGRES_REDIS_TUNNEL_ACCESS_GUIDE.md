@@ -11,7 +11,7 @@ Below are the two recommended approaches to enable connection.
 
 ---
 
-## Solution 1: SSH Bastion Host (Traditional & Simpler Setup in GUI)
+## Solution 1: SSH Bastion Host (Traditional & Simpler Setup in GUI) (this is the one i used)
 
 This approach deploys a lightweight, public-facing EC2 instance (a "Bastion") in one of your public subnets. This instance acts as a secure jump box.
 

@@ -18,7 +18,7 @@ export const Route = createFileRoute('/auth/security-questions')({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
     if (isAuthed.success) {
-      throw redirect({ to: APP_URL.homePage });
+      throw redirect({ to: APP_URL.home });
     }
   },
   head: () => getPageHeader({ title: "Answer security questions", robotsAllowed: "no" }),
@@ -178,7 +178,7 @@ function RouteComponent() {
                   }}
                   defaultValue={field.state.value}
                 >
-                  <SelectTrigger className="w-full text-[17px] py-2">
+                  <SelectTrigger className="w-full text-[17px]">
                     <SelectValue placeholder="Select a security question" />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,7 +235,7 @@ function RouteComponent() {
                   }}
                   defaultValue={field.state.value}
                 >
-                  <SelectTrigger className="w-full text-[17px] py-2">
+                  <SelectTrigger className="w-full text-[17px]">
                     <SelectValue placeholder="Select a security question" />
                   </SelectTrigger>
                   <SelectContent>

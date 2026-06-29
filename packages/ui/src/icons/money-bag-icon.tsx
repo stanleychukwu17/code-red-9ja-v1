@@ -29,7 +29,7 @@ const MoneyBagIcon = (props: SVGProps<SVGSVGElement>) => {
       <path
         d="M13.343 9.18567C10.9673 14.2594 10.5586 20.6663 10.5586 20.6663"
         stroke="#6B4B46"
-        stroke-width="0.625"
+        strokeWidth="0.625"
         stroke-miterlimit="10"
       />
       <path

@@ -346,10 +346,8 @@ definitions:
         type: string
       last_name:
         type: string
-      party_name:
-        type: string
-      party_short_name:
-        type: string
+      party:
+        $ref: '#/definitions/queries.Party'
       role:
         type: string
       username:
@@ -446,24 +444,146 @@ definitions:
         type: string
     type: object
   electiongroupshandler.CreateElectionGroupRequest:
+    properties:
+      election_date:
+        type: string
+      elections_count:
+        type: integer
+      name:
+        type: string
+      rank:
+        type: integer
+      states_count:
+        type: integer
     type: object
   electiongroupshandler.UpdateElectionGroupRequest:
+    properties:
+      election_date:
+        type: string
+      elections_count:
+        type: integer
+      name:
+        type: string
+      rank:
+        type: integer
+      states_count:
+        type: integer
     type: object
   electionshandler.CreateElectionRequest:
+    properties:
+      candidates_count:
+        type: integer
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      office_id:
+        type: integer
+      senatorial_district_id:
+        type: integer
+      state_constituency_id:
+        type: integer
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
     type: object
   electionshandler.CreateFederalConstituencyElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_ids:
+        items:
+          type: integer
+        type: array
+      office_id:
+        type: integer
     type: object
   electionshandler.CreateLgaElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      lga_ids:
+        items:
+          type: integer
+        type: array
+      office_id:
+        type: integer
     type: object
   electionshandler.CreateNationwideElectionRequest:
+    properties:
+      candidate_ids:
+        items:
+          type: integer
+        type: array
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
     type: object
   electionshandler.CreateSenatorialDistrictElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      senatorial_district_ids:
+        items:
+          type: integer
+        type: array
     type: object
   electionshandler.CreateStateConstituencyElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      state_constituency_ids:
+        items:
+          type: integer
+        type: array
     type: object
   electionshandler.CreateStateElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      state_ids:
+        items:
+          type: integer
+        type: array
     type: object
   electionshandler.CreateWardElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      ward_ids:
+        items:
+          type: integer
+        type: array
     type: object
   electionshandler.SyncCandidatesRequest:
     properties:
@@ -473,6 +593,29 @@ definitions:
         type: array
     type: object
   electionshandler.UpdateElectionRequest:
+    properties:
+      candidates_count:
+        type: integer
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      office_id:
+        type: integer
+      senatorial_district_id:
+        type: integer
+      state_constituency_id:
+        type: integer
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
     type: object
   federalconstituencieshandler.CreateFederalConstituencyRequest:
     properties:
@@ -584,6 +727,26 @@ definitions:
         type: string
       short_name:
         type: string
+    type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Timestamptz:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
     type: object
   pollingunitshandler.CreatePollingUnitRequest:
     properties:
@@ -710,6 +873,21 @@ definitions:
         type: string
       ward_id:
         type: integer
+    type: object
+  queries.Party:
+    properties:
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      id:
+        type: integer
+      logo:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
     type: object
   senatorialdistrictshandler.CreateSenatorialDistrictRequest:
     properties:

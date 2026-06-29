@@ -79,17 +79,18 @@ module "alb" {
 }
 
 # --- Cloudflare CDN & DNS Module ---
+# Cloudflare SSL settings: Go to cloudflare and manually set the SSL/TLS Encryption mode to "Automatic SSL/TLS"
+# Domain-name Dashboard → SSL/TLS → Overview → {click configure button} → Automatic SSL/TLS
 module "cloudflare" {
-  source                 = "../../modules/cloudflare"
-  website                = var.website
-  environment            = var.environment
-  cloudflare_account_id  = var.cloudflare_account_id
-  cloudflare_zone_id     = var.cloudflare_zone_id
-  domain_name            = var.domain_name
-  create_frontend_domain = var.create_frontend_domain
-  frontend_subdomain     = var.frontend_subdomain
-  backend_subdomain      = var.backend_subdomain
-  alb_dns_name           = module.alb.alb_dns_name
+  source                = "../../modules/cloudflare"
+  website               = var.website
+  environment           = var.environment
+  cloudflare_account_id = var.cloudflare_account_id
+  cloudflare_zone_id    = var.cloudflare_zone_id
+  domain_name           = var.domain_name
+  frontend_subdomain    = var.frontend_subdomain
+  backend_subdomain     = var.backend_subdomain
+  alb_dns_name          = module.alb.alb_dns_name
 }
 
 # # --- RDS Database Module ---
