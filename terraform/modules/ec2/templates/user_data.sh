@@ -11,19 +11,21 @@ echo "=== Starting user_data execution ==="
 # Update packages
 dnf update -y
 
+# Add Amazon Linux SSM agent
+dnf install -y amazon-ssm-agent
+systemctl start amazon-ssm-agent # start amazon ssm agent
+systemctl enable amazon-ssm-agent # start amazon ssm agent on boot
+
 # Install Docker
 dnf install -y docker
-
-# Start and enable Docker
-systemctl start docker
-systemctl enable docker
-
-# Allow ec2-user to run Docker commands (we added the "ec2-user" to the "docker" group)
-usermod -aG docker ec2-user
+systemctl start docker # start docker
+systemctl enable docker # start docker on boot
+usermod -aG docker ec2-user # Allow ec2-user to run Docker commands (we added the "ec2-user" to the "docker" group)
 
 # Install Docker Compose CLI plugin
 mkdir -p /usr/local/lib/docker/cli-plugins
-curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+# curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose # this will download the latest version
+curl -SL https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Verify Installations
@@ -47,10 +49,17 @@ ln -sf /opt/certbot/bin/certbot /usr/bin/certbot
 # Setup persistent data volume
 DEVICE="/dev/nvme1n1"
 MOUNT_DIR="/mnt/data"
+TIMEOUT=120
+ELAPSED=0
 
 echo "Waiting for data volume $DEVICE to be attached..."
 while [ ! -b $DEVICE ]; do
+  if [ $ELAPSED -ge $TIMEOUT ]; then
+    echo "ERROR: Timed out waiting for $DEVICE after $${TIMEOUT}s"
+    exit 1
+  fi
   sleep 5
+  ELAPSED=$((ELAPSED + 5))
 done
 
 # Check if the volume is formatted (if it outputs 'data', it's unformatted)
@@ -60,24 +69,29 @@ if [ "$FS_TYPE" = "data" ]; then
   mkfs -t xfs $DEVICE
 fi
 
-# Create mount point and mount
+# Mount and persist
+# The mkdir -p command creates the mount point if it doesn't exist.
 mkdir -p $MOUNT_DIR
-mount $DEVICE $MOUNT_DIR
 
-# Add to /etc/fstab so the volume automatically remounts if the EC2 instance is rebooted.
-# Breakdown of parameters:
-# - defaults: use default mount options (rw, suid, dev, exec, auto, nouser, async)
-# - nofail: if the volume is detached, don't crash the boot process, just skip it
-# - 0: dump utility shouldn't backup this filesystem
-# - 2: fsck (file system check) should check this drive after the root drive during boot
-echo "$DEVICE $MOUNT_DIR xfs defaults,nofail 0 2" >> /etc/fstab
+# The mountpoint -q "$MOUNT_DIR" || mount "$DEVICE" "$MOUNT_DIR" command checks if the mount point is already mounted.
+# If it is not, it mounts the device.
+# The mount command mounts the specified device at the specified mount point.
+mountpoint -q "$MOUNT_DIR" || mount "$DEVICE" "$MOUNT_DIR"
+
+# Get the UUID of the mounted device.
+UUID=$(blkid -s UUID -o value $DEVICE)
+
+# The grep command checks if the UUID already exists in /etc/fstab. 
+# If it doesn't find the UUID, the expression evaluates to true, and the echo command appends the new mount entry.
+# This prevents duplicate entries if user data runs more than once.
+grep -q "$UUID" /etc/fstab || echo "UUID=$UUID $MOUNT_DIR xfs defaults,nofail 0 2" >> /etc/fstab
 
 # Create subdirectories for pgdata and redisdata
-mkdir -p $MOUNT_DIR/pgdata
-mkdir -p $MOUNT_DIR/redisdata
+mkdir -p "$MOUNT_DIR/pgdata"
+mkdir -p "$MOUNT_DIR/redisdata"
 # Set permissions so Docker containers can read/write
-chmod 777 $MOUNT_DIR/pgdata
-chmod 777 $MOUNT_DIR/redisdata
+chmod 777 "$MOUNT_DIR/pgdata"
+chmod 777 "$MOUNT_DIR/redisdata"
 
 # Create application directory
 mkdir -p /app
@@ -179,6 +193,9 @@ networks:
     driver: bridge
 EOF
 
+# After writing docker-compose.yml, validate it parses correctly
+docker compose -f /app/docker-compose.yml config --quiet || { echo "ERROR: Invalid docker-compose.yml"; exit 1; }
+
 # Write initial HTTP-only Nginx configuration (which handles Acme challenges for Certbot)
 cat << 'EOF' > /etc/nginx/nginx.conf
 user nginx;
@@ -278,4 +295,5 @@ chown -R ec2-user:ec2-user /app
 cd /app
 docker compose up -d postgres redis
 
-echo "=== Finished user_data execution ==="
+# Log completion with timestamp
+echo "=== Finished user_data execution at $(date) ==="
