@@ -86,6 +86,37 @@ jobs:
           echo "INSTANCE_ID=$INSTANCE_ID" >> $GITHUB_OUTPUT
           echo "Found instance: $INSTANCE_ID"
 
+      # Wait for the SSM agent to register and become online
+      - name: Wait for SSM Agent to be Ready
+        env:
+          INSTANCE_ID: ${{ steps.discover-ec2.outputs.INSTANCE_ID }}
+        run: |
+          echo "Waiting for SSM Agent on instance $INSTANCE_ID to become Online..."
+          
+          # Max wait time: 10 minutes (60 * 10s)
+          MAX_RETRIES=60
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            # Check ping status of the instance in SSM
+            STATUS=$(aws ssm describe-instance-information \
+              --filters "Key=InstanceIds,Values=$INSTANCE_ID" \
+              --query "InstanceInformationList[0].PingStatus" \
+              --output text)
+            
+            if [ "$STATUS" = "Online" ]; then
+              echo "SSM Agent is Online! Ready for deployment."
+              exit 0
+            fi
+            
+            echo "Current SSM agent status: ${STATUS:-Not Registered Yet}. Retrying in 10 seconds... ($((RETRY_COUNT+1))/$MAX_RETRIES)"
+            sleep 10
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+          done
+          
+          echo "Error: SSM Agent did not register as Online within the timeout period."
+          exit 1
+
       # Execute Deployment commands on the EC2 instance via AWS Systems Manager (SSM)
       - name: Deploy Containers via SSM Run Command
         env:
