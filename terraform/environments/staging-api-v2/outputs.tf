@@ -8,11 +8,6 @@ output "ec2_public_ip" {
   description = "The static Elastic IP address of the staging-api-v2 EC2 instance"
 }
 
-output "ec2_instance_id" {
-  value       = module.ec2_instance.instance_id
-  description = "The instance ID of the EC2 instance"
-}
-
 output "ecr_api_repo_url" {
   value       = aws_ecr_repository.api.repository_url
   description = "The URL of the API ECR repository"

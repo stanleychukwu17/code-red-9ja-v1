@@ -106,3 +106,7 @@ variable "ebs_data_volume_size" {
   type        = number
   description = "The size of the persistent data volume in GB"
 }
+variable "compose_version" {
+  type        = string
+  description = "Docker Compose CLI plugin version"
+}

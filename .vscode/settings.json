@@ -2,6 +2,7 @@
   "cSpell.words": [
     "apimiddleware",
     "authhandler",
+    "blkid",
     "bodieshandler",
     "bodiesservice",
     "Certbot",
@@ -27,6 +28,7 @@
     "keepalive",
     "messagingservice",
     "mmdb",
+    "mountpoint",
     "Nins",
     "nofail",
     "nopush",
