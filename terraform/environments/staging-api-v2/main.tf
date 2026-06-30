@@ -9,6 +9,10 @@ terraform {
       source  = "cloudflare/cloudflare"
       version = "~> 5.0"
     }
+    tls = {
+      source  = "hashicorp/tls"
+      version = "~> 4.0"
+    }
   }
 
   # HCP Terraform remote state configuration
@@ -102,22 +106,59 @@ module "ec2_instance" {
   ebs_data_volume_size   = var.ebs_data_volume_size
   compose_version        = var.compose_version
   ec2_root_volume_size   = var.ec2_root_volume_size
+  cloudflare_origin_cert = cloudflare_origin_ca_certificate.origin_cert.certificate
+  cloudflare_private_key = tls_private_key.origin_key.private_key_pem
 }
 
 # --- Cloudflare CDN & DNS Module ---
 # Maps staging-api.free9ja.com and staging-ip.free9ja.com directly to our EC2 Elastic IP address.
 module "cloudflare" {
-  source                = "../../modules/cloudflare"
-  website               = var.website
-  environment           = var.environment
-  cloudflare_account_id = var.cloudflare_account_id
-  cloudflare_zone_id    = var.cloudflare_zone_id
-  domain_name           = var.domain_name
-  frontend_subdomain    = var.frontend_subdomain
-  backend_subdomain     = var.backend_subdomain
-  backend_ip            = module.ec2_instance.public_ip
-  ip_subdomain          = var.ip_subdomain
-  ip_service_ip         = module.ec2_instance.public_ip
+  source                     = "../../modules/cloudflare"
+  website                    = var.website
+  environment                = var.environment
+  cloudflare_account_id      = var.cloudflare_account_id
+  cloudflare_zone_id         = var.cloudflare_zone_id
+  domain_name                = var.domain_name
+  create_backend_dns         = var.create_backend_dns
+  create_backend_a_record    = var.create_backend_a_record
+  backend_subdomain          = var.backend_subdomain
+  backend_ip                 = module.ec2_instance.public_ip
+  create_ip_service_a_record = var.create_ip_service_a_record
+  ip_subdomain               = var.ip_subdomain
+  ip_service_ip              = module.ec2_instance.public_ip
+}
+
+# --- Cloudflare Origin CA Certificate (HTTPS/SSL certificate from cloudflare) ---
+# Generates a private key and an Origin Certificate signed by Cloudflare
+# This certificate is valid for 15 years
+resource "tls_private_key" "origin_key" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "tls_cert_request" "origin_req" {
+  private_key_pem = tls_private_key.origin_key.private_key_pem
+
+  subject {
+    common_name  = var.domain_name
+    organization = "Free9ja"
+  }
+
+  dns_names = [
+    "${var.backend_subdomain}.${var.domain_name}",
+    "${var.ip_subdomain}.${var.domain_name}"
+  ]
+}
+
+# cloudflare signs the certificate
+resource "cloudflare_origin_ca_certificate" "origin_cert" {
+  csr = tls_cert_request.origin_req.cert_request_pem
+  hostnames = [
+    "${var.backend_subdomain}.${var.domain_name}",
+    "${var.ip_subdomain}.${var.domain_name}"
+  ]
+  request_type       = "origin-rsa"
+  requested_validity = 5475 # 15 years in days
 }
 
 # --- AWS OIDC GitHub Actions Role Module ---
