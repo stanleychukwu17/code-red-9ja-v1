@@ -79,6 +79,29 @@ resource "aws_iam_role_policy_attachment" "ssm_core" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# Grants the EC2 instance permission to read the Cloudflare certificates from SSM Parameter Store
+resource "aws_iam_role_policy" "ssm_read_certs" {
+  name = "${var.website}-${var.environment}-ssm-read-certs"
+  role = aws_iam_role.ec2_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters"
+        ]
+        Resource = [
+          aws_ssm_parameter.cf_cert.arn,
+          aws_ssm_parameter.cf_key.arn
+        ]
+      }
+    ]
+  })
+}
+
 # Creates the Instance Profile, which is a container for an IAM role that you can use to pass the role information to an EC2 instance when the instance starts.
 resource "aws_iam_instance_profile" "ec2_profile" {
   name = "${var.website}-${var.environment}-ec2-profile"
@@ -106,6 +129,8 @@ resource "aws_instance" "app" {
   associate_public_ip_address = true
   iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
 
+  # adds a custom volume block size, the default is 2GB which is not enough to run the docker-container
+  # with all our images including the api-service, ip-service, redis, postgres
   root_block_device {
     volume_size           = var.ec2_root_volume_size
     volume_type           = "gp3"
@@ -130,6 +155,8 @@ resource "aws_instance" "app" {
     ip_subdomain           = var.ip_subdomain
     domain_name            = var.domain_name
     aws_region             = var.aws_region
+    cf_cert_param          = aws_ssm_parameter.cf_cert.name
+    cf_key_param           = aws_ssm_parameter.cf_key.name
   })
 
   # lifecycle {
@@ -183,4 +210,26 @@ resource "aws_volume_attachment" "data_att" {
   device_name = "/dev/sdf"
   volume_id   = aws_ebs_volume.data.id
   instance_id = aws_instance.app.id
+}
+
+# aws_ssm_parameter (AWS Systems Manager Parameter Store): is a service in aws that allows you to store parameters
+# These parameters can be used to store sensitive information such as passwords, API keys, and other secrets
+# It is a managed service provided by AWS and is highly available and secure
+# it has 2 types: string and SecureString. SecureString is encrypted using AWS Key Management Service (KMS).
+# when getting a SecureString parameter, you need to decrypt it using the decrypt parameter API or SDK
+#
+# Below we use the SSM Parameter Store to store the Cloudflare Origin CA Certificate and Private Key
+resource "aws_ssm_parameter" "cf_cert" {
+  name        = "/${var.website}/${var.environment}/cloudflare_origin_cert"
+  description = "Cloudflare Origin CA Certificate"
+  type        = "SecureString"
+  value       = var.cloudflare_origin_cert
+}
+
+# Securely store the Cloudflare Origin CA Private Key
+resource "aws_ssm_parameter" "cf_key" {
+  name        = "/${var.website}/${var.environment}/cloudflare_origin_key"
+  description = "Cloudflare Origin CA Private Key"
+  type        = "SecureString"
+  value       = var.cloudflare_private_key
 }

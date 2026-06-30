@@ -117,3 +117,15 @@ variable "ec2_root_volume_size" {
   default     = 20
 }
 
+# ssl certificate from cloudflare
+variable "cloudflare_origin_cert" {
+  type        = string
+  description = "Cloudflare Origin CA Certificate (PEM)"
+  sensitive   = true
+}
+
+variable "cloudflare_private_key" {
+  type        = string
+  description = "Cloudflare Origin CA Private Key (PEM)"
+  sensitive   = true
+}
