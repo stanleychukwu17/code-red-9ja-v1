@@ -130,10 +130,6 @@ jobs:
             --document-name "AWS-RunShellScript" \
             --parameters "commands=[
               \"set -eux\",
-              \"cloud-init status --wait || (cloud-init status --long; tail -n 200 /var/log/cloud-init-output.log; exit 1)\",
-              \"aws --version\",
-              \"docker --version\",
-              \"docker compose version\",
               \"aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY\",
               \"cd /app\",
               \"test -f docker-compose.yml\",
