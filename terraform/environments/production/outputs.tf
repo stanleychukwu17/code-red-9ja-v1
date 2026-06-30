@@ -13,11 +13,6 @@ output "acm_certificate_arn" {
   description = "The ARN of the validated ACM certificate"
 }
 
-output "frontend_url" {
-  value       = module.cloudflare.frontend_url
-  description = "The custom domain URL for the frontend"
-}
-
 output "backend_url" {
   value       = module.cloudflare.backend_url
   description = "The custom domain URL for the backend API"
