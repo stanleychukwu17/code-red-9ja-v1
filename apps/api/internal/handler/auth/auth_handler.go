@@ -755,5 +755,3 @@ func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 		"admins": admins,
 	})
 }
-
-
