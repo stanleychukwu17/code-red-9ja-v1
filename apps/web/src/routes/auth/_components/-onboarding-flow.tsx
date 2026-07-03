@@ -19,7 +19,7 @@ import { checkNin, checkUsername, completeRegistration } from "#/lib/server/auth
 import { getCities, getStates } from "#/lib/server/countries";
 import { FormError } from "./-form-error";
 import { useAppSelector, useAppDispatch } from "#/redux/hooks";
-import { clearOnboardingData, updateOnboardingData } from "#/redux/slice/authSlice";
+import { updateOnboardingData } from "#/redux/slice/authSlice";
 
 
 const ONBOARDING_STEPS = ["details", "nin", "location"] as const;
@@ -275,7 +275,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       setStatesError(null);
       try {
         const res = await getStates({ data: { countryId } });
-        console.log(res)
         if (res.success && Array.isArray(res.data.states)) {
           const mappedStates = res.data.states.map((s: { id: number; name: string }) => ({
             id: s.id,

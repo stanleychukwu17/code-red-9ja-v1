@@ -36,6 +36,14 @@ export type countriesType = {
   message: string;
 };
 
+type payloadType = {
+  country: string;
+  identifier: string;
+  password: string;
+  identifierType?: string;
+  iso2?: string;
+}
+
 export const Route = createFileRoute("/auth/login")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
@@ -87,34 +95,31 @@ function RouteComponent() {
     onSubmit: async ({ value }) => {
       setErrorMsg(null);
 
-      const payload: {
-        country: string;
-        identifier: string;
-        password: string;
-        identifierType?: string;
-        iso2?: string;
-      } = { ...value };
+      const payload: payloadType = {
+        ...value,
+        identifier: value.identifier.trim().toLowerCase()
+      };
 
       // get the identifier type (email, username or phone number)
       const emailRegex = /^[\w\d._%+-]+@[\w\d.-]+\.\w{2,}$/;
       const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/; // username must start with a letter
       let identifierType = "phone";
-      if (emailRegex.test(value.identifier)) {
+      if (emailRegex.test(payload.identifier)) {
         identifierType = "email";
-      } else if (usernameRegex.test(value.identifier)) {
+      } else if (usernameRegex.test(payload.identifier)) {
         identifierType = "username";
       }
 
       // if identifier looks like a phone number, format it with country code
       const phoneRegex = /^[\d\s-]+$/;
-      if (identifierType === "phone" && phoneRegex.test(value.identifier)) {
+      if (identifierType === "phone" && phoneRegex.test(payload.identifier)) {
         const matchedCountry = countries.find(
           (c) => c.name.toLowerCase() === value.country.toLowerCase(),
         );
         if (matchedCountry) {
-          payload.identifier = value.identifier.startsWith("0")
-            ? `+${matchedCountry.phonecode}${value.identifier.slice(1)}`
-            : `+${matchedCountry.phonecode}${value.identifier}`;
+          payload.identifier = payload.identifier.startsWith("0")
+            ? `+${matchedCountry.phonecode}${payload.identifier.slice(1)}`
+            : `+${matchedCountry.phonecode}${payload.identifier}`;
           payload.iso2 = matchedCountry.iso2;
         }
       }

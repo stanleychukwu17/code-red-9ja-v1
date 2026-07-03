@@ -21,5 +21,7 @@ Copy the `github_actions_role_arn` to your GitHub secrets and add it to:
 - `AWS_ROLE_ARN_PRODUCTION`
 - `AWS_ROLE_ARN_STAGING`
 
-> [!NOTE]  
+> [!NOTE] 
+
+> you may not always need to copy and paste after each `terraform apply`. 
 > This may not be needed, because the role ARN usually stays the same.

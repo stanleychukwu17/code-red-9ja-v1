@@ -1,4 +1,5 @@
-import type { CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
+import { motion } from 'framer-motion';
 import { useLocation } from '@tanstack/react-router';
 import { useIsMobile } from '@repo/ui/hooks/useMobile';
 import { useAppSelector } from '@/redux/hooks';
@@ -25,6 +26,8 @@ export default function Footer({ sitePreference }: FooterProps = {}) {
   // Hooks to get current routing location and device view type
   const location = useLocation();
   const isMobile = useIsMobile();
+  const [mounted, setMounted] = useState(false);
+  const [footerStyle, setFooterStyle] = useState<CSSProperties | undefined>(undefined);
   const year = new Date().getFullYear(); // current year to be displayed in the footer
 
   // Determine if the current page is an authentication page
@@ -35,36 +38,33 @@ export default function Footer({ sitePreference }: FooterProps = {}) {
 
   // Fallback logic: Use Redux state if available and synced, otherwise use provided props or default values
   const isReduxSynced = reduxSitePreference.sideBarState !== "";
-  const allowOutletToBeResponsive = isReduxSynced
-    ? reduxSitePreference.allowOutletToBeResponsive
-    : (sitePreference?.allowOutletToBeResponsive ?? true);
   const sidebarWidth = isReduxSynced
     ? reduxSitePreference.currentSideBarWidth
     : (sitePreference?.currentSideBarWidth || "16rem");
 
-  /**
-   * Calculates dynamic styles for the footer element to accommodate the sidebar.
-   * On mobile devices, authentication pages, or when responsiveness is disabled,
-   * it takes full width. Otherwise, it subtracts the sidebar width.
-   */
-  const getFooterStyle = (): CSSProperties => {
-    if (isMobile || !allowOutletToBeResponsive || isAuthPage) {
-      return {
-        width: '100vw',
-        marginLeft: '0',
-        transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
-      };
-    }
 
-    return {
-      width: `calc(100vw - ${sidebarWidth})`,
-      marginLeft: `${sidebarWidth}`,
-      transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
-    };
-  };
+  // Update the footer style based on the sidebar state and device type
+  useEffect(() => {
+    setMounted(true);
+    if (isMobile || isAuthPage) {
+      setFooterStyle(undefined);
+    } else {
+      setFooterStyle({
+        width: `calc(100vw - ${sidebarWidth})`,
+        marginLeft: `${sidebarWidth}`,
+        transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
+      });
+    }
+  }, [isMobile, isAuthPage, sidebarWidth]);
 
   return (
-    <footer style={getFooterStyle()} className="relative mt-20 border-t border-(--line) px-4 pb-14 pt-10 text-(--sea-ink-soft)">
+    <motion.footer
+      className="relative mt-10 border-t border-(--line) px-4 pb-14 pt-10 text-(--sea-ink-soft)"
+      style={footerStyle}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: mounted ? 1 : 0 }}
+      transition={{ delay: .3, duration: 0.5 }}
+    >
       <div className="page-wrap flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
         <p className="m-0 text-sm">
           &copy; {year} Your name here. All rights reserved.
@@ -104,6 +104,6 @@ export default function Footer({ sitePreference }: FooterProps = {}) {
           </svg>
         </a>
       </div>
-    </footer>
+    </motion.footer>
   )
 }

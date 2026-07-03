@@ -23,7 +23,7 @@ terraform {
 # --- DNS records for AWS Backend API (Proxied through Cloudflare) ---
 # Create CNAME record if alb_dns_name is provided (production/Fargate)
 resource "cloudflare_dns_record" "backend_cname" {
-  count   = var.alb_dns_name != "" && var.alb_dns_name != null ? 1 : 0
+  count   = var.create_backend_dns ? 1 : 0
   name    = var.backend_subdomain
   zone_id = var.cloudflare_zone_id
   content = var.alb_dns_name
@@ -35,6 +35,7 @@ resource "cloudflare_dns_record" "backend_cname" {
 
 # Create A record if backend_ip is provided (staging-api-v2/EC2)
 resource "cloudflare_dns_record" "backend_a" {
+  count   = var.create_backend_a_record ? 1 : 0
   name    = var.backend_subdomain
   zone_id = var.cloudflare_zone_id
   content = var.backend_ip
@@ -46,6 +47,7 @@ resource "cloudflare_dns_record" "backend_a" {
 
 # Create A record for IP Service if ip_subdomain and ip_service_ip are provided
 resource "cloudflare_dns_record" "ip_service_a" {
+  count   = var.create_ip_service_a_record ? 1 : 0
   name    = var.ip_subdomain
   zone_id = var.cloudflare_zone_id
   content = var.ip_service_ip
@@ -54,4 +56,3 @@ resource "cloudflare_dns_record" "ip_service_a" {
   comment = "Managed by Terraform, ip-service → AWS EC2 (SSL: Full Strict)"
   ttl     = 1
 }
-

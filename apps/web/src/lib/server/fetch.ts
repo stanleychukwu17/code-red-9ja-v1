@@ -9,6 +9,7 @@ export async function apiFetch(
   init?: RequestInit
 ): Promise<Response> {
   const clientIp = getCookie("client_ip");
+  const accessToken = getCookie("access_token");
 
   // Determine headers object to modify
   const headers = new Headers(init?.headers);
@@ -16,6 +17,11 @@ export async function apiFetch(
   // If a client IP exists, forward it via X-Forwarded-For header
   if (clientIp) {
     headers.set("X-Forwarded-For", clientIp);
+  }
+
+  // If access token exists, forward it via Authorization header
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
   // Pass along the other configurations
