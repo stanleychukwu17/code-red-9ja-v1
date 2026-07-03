@@ -15,6 +15,7 @@ type AuthURLMap struct {
 	AdminLogin              string
 	AdminRegister           string
 	PartyLogin              string
+	ChangePasswordByEmail   string
 }
 
 type BodiesURLMap struct {
@@ -61,6 +62,7 @@ var ApiUrls = URLMap{
 		AdminLogin:              "/api/v1/auth/admin/login",
 		AdminRegister:           "/api/v1/auth/admin/register",
 		PartyLogin:              "/api/v1/auth/partyapp/login",
+		ChangePasswordByEmail:   "/api/v1/auth/change-password",
 	},
 	Bodies: BodiesURLMap{
 		GetAll:                         "/api/v1/countries",

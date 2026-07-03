@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -21,7 +22,13 @@ type UsersService interface {
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
 	ListUsers(ctx context.Context) ([]queries.User, error)
 	DeleteUser(ctx context.Context, id int64, fakeID int64) error
-	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, role, roleLevel string, partyID int64, email string) error
+	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, role, roleLevel string, partyID int64, email string) error
+
+	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
+	GetUserWallet(ctx context.Context, userID int64) (queries.UserWallet, error)
+	GetUserWalletTransactions(ctx context.Context, userID int64, limit, offset int32) ([]queries.UserWalletTransaction, error)
+	WithdrawFromUserWallet(ctx context.Context, userID int64, amountKobo int64, transactionReference string, bankAccountNumber, bankCode, narration string) (queries.UserWalletTransaction, error)
+	ProvisionMissingWallets(ctx context.Context) (int, int, error)
 }
 
 // Handler holds dependencies for the users handler
@@ -56,12 +63,14 @@ type UserResponse struct {
 	CurrentCountry int16  `json:"current_country"`
 	CurrentState   int16  `json:"current_state"`
 	CurrentCity    int32  `json:"current_city"`
+	StateOfOrigin  int16  `json:"state_of_origin"`
 	NinVerified    string `json:"nin_verified"`
 	PhoneVerified  string `json:"phone_verified"`
 	Role           string `json:"role"`
 	RoleLevel      string `json:"role_level"`
 	AccountStatus  string `json:"account_status"`
 	PartyID        int64  `json:"party_id,omitempty"`
+	PollingUnitID  int64  `json:"polling_unit_id,omitempty"`
 	CreatedAt      string `json:"created_at"`
 	UpdatedAt      string `json:"updated_at"`
 }
@@ -69,8 +78,9 @@ type UserResponse struct {
 func mapUserToResponse(u queries.User) UserResponse {
 	var email, avatar, phone, username, lastName, firstName, middleName, gender string
 	var dateOfBirth, ninVerified, phoneVerified, role, roleLevel, accountStatus string
-	var partyID int64
+	var partyID, pollingUnitID int64
 	var cityID int32
+	var stateOfOrigin int16
 
 	if u.Email.Valid {
 		email = u.Email.String
@@ -120,6 +130,12 @@ func mapUserToResponse(u queries.User) UserResponse {
 	if u.CurrentCity.Valid {
 		cityID = u.CurrentCity.Int32
 	}
+	if u.StateOfOrigin.Valid {
+		stateOfOrigin = u.StateOfOrigin.Int16
+	}
+	if u.PollingUnitID.Valid {
+		pollingUnitID = u.PollingUnitID.Int64
+	}
 
 	return UserResponse{
 		ID:             u.ID,
@@ -136,12 +152,14 @@ func mapUserToResponse(u queries.User) UserResponse {
 		CurrentCountry: u.CurrentCountry,
 		CurrentState:   u.CurrentState,
 		CurrentCity:    cityID,
+		StateOfOrigin:  stateOfOrigin,
 		NinVerified:    ninVerified,
 		PhoneVerified:  phoneVerified,
 		Role:           role,
 		RoleLevel:      roleLevel,
 		AccountStatus:  accountStatus,
 		PartyID:        partyID,
+		PollingUnitID:  pollingUnitID,
 		CreatedAt:      u.CreatedAt.Time.Format(time.RFC3339),
 		UpdatedAt:      u.UpdatedAt.Time.Format(time.RFC3339),
 	}
@@ -156,6 +174,7 @@ func mapUserToResponse(u queries.User) UserResponse {
 // @Success      200      {object}  UserResponse
 // @Failure      401      {object}  map[string]interface{}
 // @Failure      404      {object}  map[string]interface{}
+// @Security     BearerAuth
 // @Router       /users/me [get]
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
@@ -198,6 +217,7 @@ type UpdateProfileRequest struct {
 // @Failure      400      {object}  map[string]interface{}
 // @Failure      401      {object}  map[string]interface{}
 // @Failure      442      {object}  map[string]interface{}
+// @Security     BearerAuth
 // @Router       /users/profile [put]
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
@@ -291,10 +311,32 @@ type GetUsersData struct {
 // @Param        cursor  query     string  false  "Cursor (ID of last record)"
 // @Success      200     {object}  GetUsersResponse
 // @Failure      500     {object}  map[string]interface{}
+// @Security     BearerAuth
 // @Router       /users [get]
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	role := r.URL.Query().Get("role")
+	partyIDStr := r.URL.Query().Get("party_id")
 	limit, cursor := parsePaginationParams(r)
+
+	var partyID int64
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if ok && claims != nil && claims.Role == "partymember" {
+		currentUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch user details: "+err.Error())
+			return
+		}
+		if currentUser.PartyID.Valid {
+			partyID = currentUser.PartyID.Int64
+		} else {
+			// A party member user without a party assigned should see no users
+			partyID = -1
+		}
+	} else if partyIDStr != "" {
+		if pid, err := strconv.ParseInt(partyIDStr, 10, 64); err == nil {
+			partyID = pid
+		}
+	}
 
 	users, err := h.usersService.ListUsers(r.Context())
 	if err != nil {
@@ -303,14 +345,17 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var filteredUsers []queries.User
-	if role != "" {
-		for _, u := range users {
-			if u.Role.Valid && u.Role.String == role {
-				filteredUsers = append(filteredUsers, u)
-			}
+	for _, u := range users {
+		if role != "" && (!u.Role.Valid || u.Role.String != role) {
+			continue
 		}
-	} else {
-		filteredUsers = users
+		if partyID == -1 {
+			continue
+		}
+		if partyID > 0 && (!u.PartyID.Valid || u.PartyID.Int64 != partyID) {
+			continue
+		}
+		filteredUsers = append(filteredUsers, u)
 	}
 
 	startIndex := 0
@@ -364,6 +409,7 @@ type AdminUpdateUserRequest struct {
 	CurrentCountry int16  `json:"current_country" validate:"required"`
 	CurrentState   int16  `json:"current_state" validate:"required"`
 	CurrentCity    int32  `json:"current_city" validate:"omitempty"`
+	StateOfOrigin  int16  `json:"state_of_origin"`
 	Role           string `json:"role" validate:"required,oneof=user partymember admin"`
 	RoleLevel      string `json:"role_level" validate:"required"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
@@ -372,6 +418,12 @@ type AdminUpdateUserRequest struct {
 
 // DeleteUser handles DELETE /api/v1/admin/users/{id}
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -385,6 +437,38 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Permission checks:
+	userRole := strings.ToLower(claims.Role)
+	if userRole != "admin" && userRole != "partymember" {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+		return
+	}
+
+	if userRole == "partymember" {
+		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
+			return
+		}
+
+		if !currUser.RoleLevel.Valid || strings.ToLower(currUser.RoleLevel.String) != "admin" {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only party admins can delete members")
+			return
+		}
+
+		// Party admin can only delete users belonging to their own party
+		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only delete members of your own party")
+			return
+		}
+
+		// Party admin cannot delete administrative accounts
+		if user.Role.Valid && strings.ToLower(user.Role.String) == "admin" {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you cannot delete administrative accounts")
+			return
+		}
+	}
+
 	err = h.usersService.DeleteUser(r.Context(), user.ID, user.FakeID.Int64)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete user: "+err.Error())
@@ -396,6 +480,12 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 // AdminUpdateUser handles PUT /api/v1/admin/users/{id}
 func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -420,6 +510,55 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.Role == "partymember" && req.PartyID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: Key: 'AdminUpdateUserRequest.PartyID' Error:Field validation for 'PartyID' failed on the 'required' tag")
+		return
+	}
+
+	// Permission checks:
+	userRole := strings.ToLower(claims.Role)
+	if userRole != "admin" && userRole != "partymember" {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+		return
+	}
+
+	if userRole == "partymember" {
+		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
+			return
+		}
+
+		if !currUser.RoleLevel.Valid || strings.ToLower(currUser.RoleLevel.String) != "admin" {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only party admins can edit members")
+			return
+		}
+
+		// Party admin can only edit users belonging to their own party
+		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only edit members of your own party")
+			return
+		}
+
+		// Party admin cannot change a user's party to another party
+		if req.PartyID != currUser.PartyID.Int64 {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only assign members to your own party")
+			return
+		}
+
+		// Party admin cannot change anyone's role to admin
+		if strings.ToLower(req.Role) == "admin" {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you cannot grant administrative roles")
+			return
+		}
+
+		// Party admin cannot edit an admin user
+		if user.Role.Valid && strings.ToLower(user.Role.String) == "admin" {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you cannot edit administrative accounts")
+			return
+		}
+	}
+
 	err = h.usersService.AdminUpdateUser(
 		r.Context(),
 		user.ID,
@@ -432,6 +571,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		req.CurrentCountry,
 		req.CurrentState,
 		req.CurrentCity,
+		req.StateOfOrigin,
 		req.Role,
 		req.RoleLevel,
 		req.PartyID,

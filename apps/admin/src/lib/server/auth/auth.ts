@@ -158,17 +158,31 @@ export const registerCandidate = createServerFn({ method: "POST" })
         headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
+      console.log("[DEBUG Admin] getCookie access_token:", accessToken);
+      console.log("[DEBUG Admin] getCookie refresh_token:", refreshToken);
+
       const response = await fetch(API_URL.auth.registerCandidate, {
         method: "POST",
         headers,
         body: JSON.stringify(data),
       });
 
-      const result = await response.json();
-      return result;
+      const text = await response.text();
+      console.log("[DEBUG Admin] response status:", response.status, "body:", text);
+
+      if (!response.ok) {
+        return { success: false, message: text || `HTTP error ${response.status}` };
+      }
+
+      try {
+        const result = JSON.parse(text);
+        return result;
+      } catch (err) {
+        return { success: true, data: text }; // Fallback if raw text success
+      }
     } catch (error) {
       console.error("Register candidate error:", error);
-      return { success: false, message: "An unexpected error occurred during candidate registration" };
+      return { success: false, message: "An unexpected error occurred during candidate registration: " + (error as Error).message };
     }
   });
 

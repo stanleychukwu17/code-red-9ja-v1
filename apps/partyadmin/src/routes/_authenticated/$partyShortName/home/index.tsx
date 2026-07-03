@@ -11,6 +11,10 @@ import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
 import { SetAgentPaymentDialog } from "#/components/dialogs/set-agent-payment-dialog";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useParty } from "#/providers/providers";
+import { getPartyWallet } from "#/lib/server/parties";
+import { HomePageHeader } from "./header";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
   head: () => getPageHeader({ title: "Home" }),
@@ -20,7 +24,7 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
 function RouteComponent() {
   return (
     <DashboardLayout>
-      <HomePageHeader />
+      <HomePageHeader activeTab="main" />
       <HomeBillboard />
 
       <section className="grid gap-6 lg:grid-cols-[0.95fr_1.9fr] pb-20">
@@ -75,7 +79,7 @@ function PrimaryAction({
     >
       {children}
     </Button>
-  )
+  );
 }
 
 function TodoItem({
@@ -123,31 +127,59 @@ function ActionPill({
   );
 }
 
-function HomePageHeader() {
-  return (
-    <div className="flex items-center justify-between gap-4 pt-5">
-      <div className="flex items-center gap-4">
-        <Avatar className="size-9 ring-4 ring-white shadow-sm">
-          <AvatarImage
-            src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop"
-            alt="Peter"
-          />
-        </Avatar>
-        <h1 className="text-[32px] font-bold text-c-80">Welcome, Peter 👋</h1>
-      </div>
 
-      <button className="flex h-14 min-w-[335px] items-center justify-between rounded-[20px] bg-c-5 px-5 text-[18px] text-c-80 transition hover:bg-c-10 transition-all duration-200">
-        <span>2027 Presidential Election</span>
-        <ChevronDown className="size-5 text-[#787876]" />
-      </button>
-    </div>
-  );
-}
 
 function HomeBillboard() {
+  const { party } = useParty();
+  const partyId = party?.id;
+  const queryClient = useQueryClient();
+
   const [isWalletDialogOpen, setIsWalletDialogOpen] = React.useState(false);
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = React.useState(false);
+
+  const { data: walletRes, refetch: refetchWallet } = useQuery({
+    queryKey: ["partyWallet", partyId],
+    queryFn: () => getPartyWallet({ data: partyId! }),
+    enabled: !!partyId,
+  });
+
+  const wallet = walletRes?.data?.wallet;
+
+  const handleSlotsPurchased = () => {
+    refetchWallet();
+    if (partyId) {
+      queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+    }
+  };
+
+  // Dynamic budget calculation:
+  const allowances = party?.stateAllowances || {};
+  const defaultKobo = allowances["default"] !== undefined ? allowances["default"] : 2000000;
+  const defaultNaira = defaultKobo / 100;
+
+  const stateValues = Object.entries(allowances)
+    .filter(([key]) => key !== "default")
+    .map(([_, val]) => val / 100);
+
+  let displayBudget = "";
+  if (stateValues.length === 0) {
+    displayBudget = `₦${defaultNaira.toLocaleString("en-NG")} per agent`;
+  } else {
+    const hasOverrides = stateValues.some((val) => val !== defaultNaira);
+    if (!hasOverrides) {
+      displayBudget = `₦${defaultNaira.toLocaleString("en-NG")} per agent`;
+    } else {
+      const allValues = [defaultNaira, ...stateValues];
+      const min = Math.min(...allValues);
+      const max = Math.max(...allValues);
+      if (min === max) {
+        displayBudget = `₦${min.toLocaleString("en-NG")} per agent`;
+      } else {
+        displayBudget = `₦${min.toLocaleString("en-NG")} - ₦${max.toLocaleString("en-NG")} per agent`;
+      }
+    }
+  }
 
   return (
     <section className="flex w-full gap-20 justify-between rounded-[20px] bg-hover-3 px-10 py-6">
@@ -166,7 +198,7 @@ function HomeBillboard() {
 
       <div className="flex-3 flex flex-col gap-5">
         <h2 className="text-xl font-medium tracking-[-0.03em] text-[#202020]">
-          Party Agents
+          Polling Agents
         </h2>
 
         <div className="text-[18px] text-[#222]">
@@ -178,8 +210,8 @@ function HomeBillboard() {
             note="(Very risky)"
           />
           <MetricRow
-            label="Party Agent Election Payment"
-            value="NGN 20,000 per agent"
+            label="Polling Agent Election Payment"
+            value={displayBudget}
             valueClassName="font-semibold"
           />
         </div>
@@ -201,16 +233,26 @@ function HomeBillboard() {
         open={isWalletDialogOpen}
         setOpen={setIsWalletDialogOpen}
         onClose={() => setIsWalletDialogOpen(false)}
+        wallet={wallet}
+        onSuccess={refetchWallet}
       />
 
       <BuyAgentSlotsDialog
         open={isSlotsDialogOpen}
         onClose={() => setIsSlotsDialogOpen(false)}
+        partyId={partyId}
+        walletBalanceKobo={wallet?.balance_kobo ?? 0}
+        onSuccess={handleSlotsPurchased}
       />
 
       <SetAgentPaymentDialog
         open={isBudgetDialogOpen}
         onClose={() => setIsBudgetDialogOpen(false)}
+        onSuccess={() => {
+          if (partyId) {
+            queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+          }
+        }}
       />
     </section>
   );

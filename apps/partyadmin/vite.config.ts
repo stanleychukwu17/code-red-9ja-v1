@@ -14,6 +14,7 @@ const config = defineConfig({
     tailwindcss(),
     tanstackStart({
       server: {
+        // @ts-ignore
         preset: 'node-server',
       },
     }),

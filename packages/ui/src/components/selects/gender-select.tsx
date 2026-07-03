@@ -44,6 +44,7 @@ export const SelectGender = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between gap-2 w-full",
             className,

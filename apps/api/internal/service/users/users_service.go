@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	monnifyclient "free9ja/api/internal/service/monnify"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -13,12 +14,14 @@ import (
 type UsersService struct {
 	queries *queries.Queries
 	rdb     *redis.Client
+	monnify *monnifyclient.Client
 }
 
-func NewUsersService(q *queries.Queries, rdb *redis.Client) *UsersService {
+func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclient.Client) *UsersService {
 	return &UsersService{
 		queries: q,
 		rdb:     rdb,
+		monnify: monnify,
 	}
 }
 
@@ -68,7 +71,7 @@ func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) e
 	return nil
 }
 
-func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, role, roleLevel string, partyID int64, email string) error {
+func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, role, roleLevel string, partyID int64, email string) error {
 	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
 		ID:             id,
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
@@ -83,6 +86,7 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 		RoleLevel:      pgtype.Text{String: roleLevel, Valid: roleLevel != ""},
 		PartyID:        pgtype.Int8{Int64: partyID, Valid: partyID != 0},
 		Email:          pgtype.Text{String: email, Valid: email != ""},
+		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
 	})
 	if err != nil {
 		return err

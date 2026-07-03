@@ -34,7 +34,7 @@ export function PartyMemberTableHeader({ columns }: { columns: string[] }) {
         <p className="text-c-50 text-[14px] w-[140px] hidden sm:block">
           {dateCol}
         </p>
-        <div className="ml-5 shrink-0 size-7" />
+        <div className="ml-2 shrink-0 size-7" />
       </TileRight>
     </TileHeader>
   );
@@ -63,7 +63,7 @@ export function PartyMemberTableTile({ data }: { data: PartyMemberType }) {
           {data.dateLabel}
         </p>
 
-        <div className="ml-5 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer">
+        <div className="ml-2 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer">
           <Ellipsis className="size-5" />
         </div>
       </TileRight>

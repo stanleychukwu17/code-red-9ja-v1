@@ -144,7 +144,7 @@ const CommandItem: React.ForwardRefExoticComponent<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "h-fit min-h-12 relative leading-6 text-lg md:text-base text-c-80 font-[450] flex items-center cursor-default gap-2 select-none rounded-xl px-2 py-2 outline-hidden data-[disabled=true]:pointer-events-none md:data-[selected=true]:bg-c-5 md:dark:data-[selected=true]:bg-white/10 data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+      "h-fit min-h-12 relative leading-6 text-lg md:text-base text-c-80 flex items-center cursor-default gap-2 select-none rounded-xl px-3 py-2 outline-hidden data-[disabled=true]:pointer-events-none md:data-[selected=true]:bg-c-5 md:dark:data-[selected=true]:bg-white/10 data-[disabled=true]:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
       className,
     )}
     {...props}
