@@ -1,16 +1,19 @@
-import { Ellipsis, Folder } from "lucide-react";
+import { Ellipsis } from "lucide-react";
 import {
   TileHeader,
   TileLeft,
   TileRight,
   TileRow,
 } from "@repo/ui/components/tiles";
+import FancyFolderIcon from "@repo/ui/icons/fancy-folder-icon";
+import { formatISODate } from "@repo/ui/lib/date";
 
 export type ElectionGroupType = {
+  id: number;
   title: string;
-  pollingAgentsCoverage: string;
-  numberOfElectionsPartyIsContesting: string;
-  statesCount: number;
+  pollingAgentsCoverage: number;
+  numberOfElectionsPartyIsContesting: number;
+  instancesCount: number;
   electionDate: string;
 };
 
@@ -18,54 +21,52 @@ export function ElectionGroupTableHeader() {
   return (
     <TileHeader>
       <TileLeft>
-        <p className="truncate w-full text-[16px]">Group</p>
+        <span className="text-c-90">Group</span>
       </TileLeft>
-
       <TileRight>
-        <p className="text-c-50 text-[14px] w-[140px] hidden xl:block">
+        <span className="text-c-50 text-[14px] w-[140px] hidden xl:block">
           Agents coverage
-        </p>
-        <p className="text-c-50 text-[14px] w-[140px] hidden xl:block">
-          Elections contesting
-        </p>
-        <p className="text-c-50 text-[14px] w-[140px] hidden xl:block">
-          States
-        </p>
-
-        <p className="text-c-50 text-[14px] shrink-0 md:mr-0 md:w-[100px]">
-          Election date
-        </p>
-        <div className="text-c-50 text-[14px] ml-5 shrink-0 size-7" />
+        </span>
+        <span className="text-c-50 text-[14px] w-[100px] hidden lg:block">
+          Elections
+        </span>
+        <span className="text-c-50 text-[14px] w-[120px] hidden xl:block">
+          Contesting in
+        </span>
+        <span className="text-c-50 text-[14px] w-[110px] hidden sm:block">
+          Date
+        </span>
+        <div className="ml-2 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer" />
       </TileRight>
     </TileHeader>
   );
 }
 
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
+  const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
+
   return (
     <TileRow>
       <TileLeft>
-        <Folder className="size-5 shrink-0 fill-[#ffbf2e] text-[#ffbf2e]" />
-        {/* <Star
-          className={cn(
-            "size-5 shrink-0 fill-current",
-            row.rankIconColor ?? "text-[#0dcf79]",
-          )}
-        /> */}
-        <p className="truncate w-full text-[16px]">{data.title}</p>
+        <FancyFolderIcon />
+        <p className="truncate w-full text-[16px] text-c-90">
+          {data.title ?? "—"}
+        </p>
       </TileLeft>
-
       <TileRight>
-        <p className="w-[140px] hidden xl:block">
-          {data.pollingAgentsCoverage}
-        </p>
-        <p className="w-[140px] hidden xl:block">
+        <span className="text-[15px] text-c-70 w-[140px] hidden xl:block">
+          {data.pollingAgentsCoverage}%
+        </span>
+        <span className="text-[15px] text-c-70 w-[100px] hidden lg:block">
+          {data.instancesCount ?? 0}
+        </span>
+        <span className="text-[15px] text-c-70 w-[120px] hidden xl:block">
           {data.numberOfElectionsPartyIsContesting}
-        </p>
-        <p className="w-[140px] hidden xl:block">{data.statesCount}</p>
-        <p className="shrink-0 md:mr-0 md:w-[100px]">{data.electionDate}</p>
-
-        <div className="ml-5 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer">
+        </span>
+        <span className="text-[15px] text-c-70 w-[110px] hidden sm:block">
+          {dateLabel}
+        </span>
+        <div className="ml-2 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer">
           <Ellipsis className="size-5" />
         </div>
       </TileRight>

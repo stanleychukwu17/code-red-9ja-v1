@@ -34,7 +34,7 @@ export function LgaTableHeader() {
         <span className="text-c-50 text-[14px] w-[120px] text-center">
           State
         </span>
-        <div className="w-8 shrink-0" />
+        <div className="w-8 shrink-0 ml-2" />
       </TileRight>
     </TileHeader>
   );

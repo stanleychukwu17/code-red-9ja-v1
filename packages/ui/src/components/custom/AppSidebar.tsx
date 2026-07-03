@@ -100,14 +100,14 @@ export function AppSidebarShell({
         />
       </TooltipProvider>
 
-      <main className="flex min-h-dvh flex-1 flex-col md:hidden">
+      {/* <main className="flex min-h-dvh flex-1 flex-col md:hidden">
         <div className="flex items-center justify-between px-4 pt-4">
           <SidebarTrigger
             className="bg-white hover:bg-white opacity-100"
             img="https://github.com/shadcn.png"
           />
         </div>
-      </main>
+      </main> */}
     </SidebarProvider>
   );
 }

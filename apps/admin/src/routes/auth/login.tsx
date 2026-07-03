@@ -8,14 +8,14 @@ import { useAppDispatch } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import {
   loginAdmin,
-  checkIfRefreshTokenInCookie,
+  refreshUserToken,
 } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
-    const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status === "success") {
+    const res = await refreshUserToken();
+    if (res.status === "success" && res.user?.role === "admin") {
       throw redirect({ to: "/home" });
     }
   },

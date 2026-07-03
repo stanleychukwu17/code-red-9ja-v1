@@ -1,6 +1,4 @@
-import { Button } from "@repo/ui/components/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { APP_URL } from "@/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
 
 export const Route = createFileRoute("/")({
@@ -13,9 +11,9 @@ export const Route = createFileRoute("/")({
 
 function App() {
   return (
-    <main>
-      <Link to="/home">
-        <p className="underline">Home</p>
+    <main className="min-h-screen flex items-center justify-center bg-gray-50">
+      <Link to="/auth/login" className="text-[#234f3e] hover:underline font-medium">
+        Go to Log in
       </Link>
     </main>
   );
