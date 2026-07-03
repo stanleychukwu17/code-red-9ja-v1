@@ -90,6 +90,7 @@ export function BodiesTabs({ activeTab }: { activeTab: BodiesTabId }) {
       {TABS.map((tab) => {
         const active = tab.id === activeTab;
         return (
+          // @ts-ignore
           <Link
             key={tab.id}
             to={tab.href}

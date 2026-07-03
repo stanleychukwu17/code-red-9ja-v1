@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/router"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
 	"io"
 	"net"
 	"net/http"
@@ -20,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
@@ -96,8 +98,16 @@ func TestNewApp(t *testing.T, ctx context.Context, cfg *config.Config) *TestApp 
 	// 	t.Fatalf("failed to initialize redis: %v", err)
 	// }
 
+	// Initialize Asynq Redis Options
+	redisOpt := asynq.RedisClientOpt{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	}
+	distributor := worker.NewRedisTaskDistributor(redisOpt)
+
 	// Initialize router
-	r := router.New(cfg, pool, rdb)
+	r := router.New(cfg, pool, rdb, distributor)
 
 	// use random free port
 	listener, _ := net.Listen("tcp", ":0")

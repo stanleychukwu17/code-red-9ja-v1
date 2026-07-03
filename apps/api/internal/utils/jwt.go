@@ -13,18 +13,27 @@ import (
 
 // JWTClaims represents the custom claims payload for JWTs
 type JWTClaims struct {
-	FakeID   int64  `json:"fake_id"`
-	Username string `json:"username"`
-	Role     string `json:"role"`
+	FakeID    int64  `json:"fake_id"`
+	Username  string `json:"username"`
+	Role      string `json:"role"`
+	RoleLevel string `json:"role_level,omitempty"`
+	PartyID   int64  `json:"party_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
-// GenerateToken creates a signed JWT with the given claims, secret, and duration
-func GenerateToken(fakeID int64, username string, role string, secret string, duration time.Duration) (string, error) {
+// GenerateToken creates a signed JWT with the given claims, secret, and duration.
+// roleLevel is optional; pass an empty string if not applicable.
+func GenerateToken(fakeID int64, username string, role string, roleLevel string, secret string, duration time.Duration, partyID ...int64) (string, error) {
+	var pid int64
+	if len(partyID) > 0 {
+		pid = partyID[0]
+	}
 	claims := JWTClaims{
-		FakeID:   fakeID,
-		Username: username,
-		Role:     role,
+		FakeID:    fakeID,
+		Username:  username,
+		Role:      role,
+		RoleLevel: roleLevel,
+		PartyID:   pid,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

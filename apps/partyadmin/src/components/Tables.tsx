@@ -21,7 +21,7 @@ export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
 
       <div>
         {items.map((data) => (
-          <ElectionGroupTableTile key={data.title} data={data} />
+          <ElectionGroupTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -39,21 +39,31 @@ export function ElectionInstancesTable({
 
       <div>
         {items.map((data) => (
-          <ElectionInstanceTableTile key={data.title} data={data} />
+          <ElectionInstanceTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
   );
 }
 
-export function ApplicationsTable({ items }: { items: readonly ApplicationType[] }) {
+export function ApplicationsTable({
+  items,
+  refetch,
+}: {
+  items: readonly ApplicationType[];
+  refetch?: () => void;
+}) {
   return (
     <div className="w-full">
       <ApplicationTableHeader />
 
       <div>
         {items.map((data, index) => (
-          <ApplicationTableTile key={`${data.name}-${index}`} data={data} />
+          <ApplicationTableTile
+            key={`${data.id || data.name || index}-${index}`}
+            data={data}
+            refetch={refetch}
+          />
         ))}
       </div>
     </div>
@@ -65,6 +75,13 @@ import {
   PartyMemberTableTile,
   type PartyMemberType,
 } from "./tiles/party-member-tile";
+import {
+  UserTableHeader,
+  UserTableTile,
+  type UserType,
+} from "./tiles/user-tile";
+
+export { type UserType };
 
 export function PartyMembersTable({
   columns,
@@ -80,6 +97,29 @@ export function PartyMembersTable({
       <div>
         {items.map((data, index) => (
           <PartyMemberTableTile key={`${data.name}-${index}`} data={data} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function UsersTable({
+  items,
+  refetch,
+}: {
+  items: UserType[];
+  refetch?: () => void;
+}) {
+  return (
+    <div className="w-full">
+      <UserTableHeader />
+      <div>
+        {items.map((data, index) => (
+          <UserTableTile
+            key={`${data.name || data.id}-${index}`}
+            data={data}
+            refetch={refetch}
+          />
         ))}
       </div>
     </div>

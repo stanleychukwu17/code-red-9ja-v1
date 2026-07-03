@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -29,6 +31,9 @@ type AuthService interface {
 	RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (auth.RegisterResult, error)
 	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
+	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	ChangePasswordByEmail(ctx context.Context, email, newPassword string) error
+	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) ([]int64, error)
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -487,6 +492,46 @@ func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Password reset successfully", nil)
 }
 
+// ChangePasswordByEmailRequest represents the structure for resetting password using email
+type ChangePasswordByEmailRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=5,max=72"`
+}
+
+// ChangePasswordByEmail godoc
+// @Summary Change password by email
+// @Description Resets a user's password using their email address and a new password, invalidating active sessions
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body ChangePasswordByEmailRequest true "Email and new password details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/change-password [post]
+// ChangePasswordByEmail handles resetting the user's password by email
+func (h *Handler) ChangePasswordByEmail(w http.ResponseWriter, r *http.Request) {
+	var req ChangePasswordByEmailRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	err := h.authService.ChangePasswordByEmail(r.Context(), req.Email, req.Password)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Password changed successfully", nil)
+}
+
 // AdminRegisterRequest represents the simplified payload for registering a new admin account
 type AdminRegisterRequest struct {
 	Email     string `json:"email" validate:"omitempty,email"`
@@ -655,10 +700,10 @@ type RegisterCandidatePlaceholderRequest struct {
 	CurrentState   int16  `json:"current_state" validate:"required"`
 	CurrentCity    int32  `json:"current_city" validate:"omitempty"`
 	StateOfOrigin  int16  `json:"state_of_origin" validate:"omitempty"`
-	PartyID        int64  `json:"party_id" validate:"required"`
+	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
 	Role           string `json:"role" validate:"required,oneof=admin partymember user"`
-	RoleLevel      string `json:"role_level" validate:"required,oneof=superadmin admin member placeholder partyagent user"`
+	RoleLevel      string `json:"role_level" validate:"required,oneof=superadmin admin member placeholder pollingagent user"`
 }
 
 // @Summary Register a new candidate user with placeholder status
@@ -672,10 +717,14 @@ type RegisterCandidatePlaceholderRequest struct {
 // @Failure 500 {object} map[string]interface{}
 // @Router /auth/register_candidate [post]
 // RegisterCandidatePlaceholder registers any placeholder user (with specific role & role_level)
-// RegisterCandidatePlaceholder registers any placeholder user (with specific role & role_level)
 func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Request) {
-	var req RegisterCandidatePlaceholderRequest
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+		return
+	}
 
+	var req RegisterCandidatePlaceholderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
@@ -684,6 +733,43 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
 		return
+	}
+
+	if req.Role == "partymember" && req.PartyID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: Key: 'RegisterCandidatePlaceholderRequest.PartyID' Error:Field validation for 'PartyID' failed on the 'required' tag")
+		return
+	}
+
+	// Permission checks
+	userRole := strings.ToLower(claims.Role)
+	if userRole != "admin" && userRole != "partymember" {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+		return
+	}
+
+	if userRole == "partymember" {
+		currUser, err := h.authService.GetUserDetailsByFakeID(r.Context(), claims.FakeID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
+			return
+		}
+
+		if !currUser.RoleLevel.Valid || strings.ToLower(currUser.RoleLevel.String) != "admin" {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only party admins can add users")
+			return
+		}
+
+		// A party admin can only register users for their own party
+		if !currUser.PartyID.Valid || currUser.PartyID.Int64 != req.PartyID {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only add members to your own party")
+			return
+		}
+
+		// A party admin cannot create admin accounts
+		if strings.ToLower(req.Role) == "admin" {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party admins cannot create administrative accounts")
+			return
+		}
 	}
 
 	// Validate role and role level combination
@@ -698,7 +784,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 			isValidCombo = true
 		}
 	case "user":
-		if req.RoleLevel == "partyagent" || req.RoleLevel == "user" {
+		if req.RoleLevel == "pollingagent" || req.RoleLevel == "user" {
 			isValidCombo = true
 		}
 	}
@@ -755,5 +841,35 @@ func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 		"admins": admins,
 	})
 }
+
+// @Summary Seed testing users
+// @Description Batch registers testing users from formatted JSON data
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body []auth.SeedUserRequest true "List of users to seed"
+// @Success 200 {object} map[string]interface{} "Users seeded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 500 {object} map[string]interface{} "Failed to seed users"
+// @Router /auth/seed [post]
+// SeedUsers handles batch registration of testing users from seed data
+func (h *Handler) SeedUsers(w http.ResponseWriter, r *http.Request) {
+	var req []auth.SeedUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	ids, err := h.authService.SeedUsers(r.Context(), req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed users: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Users seeded successfully", map[string]interface{}{
+		"ids": ids,
+	})
+}
+
 
 

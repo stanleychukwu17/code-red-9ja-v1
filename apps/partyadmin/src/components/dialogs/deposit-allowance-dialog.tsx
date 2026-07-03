@@ -7,16 +7,9 @@ import {
   DialogHeader,
   DialogPadding,
 } from "@repo/ui/components/dialog";
-import { Package } from "lucide-react";
-
-const WALLET_BALANCE = 1450000000;
-
-function formatNaira(amount: number) {
-  return `₦${amount.toLocaleString("en-NG", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-}
+import { Package, Loader2 } from "lucide-react";
+import { depositPartyAllowance } from "#/lib/server/parties";
+import { toast } from "sonner";
 
 function formatNairaWithDecimals(amount: number) {
   return `₦${amount.toLocaleString("en-NG", {
@@ -28,18 +21,50 @@ function formatNairaWithDecimals(amount: number) {
 export function DepositAllowanceDialog({
   open,
   onClose,
+  partyId,
+  walletBalanceKobo,
+  onSuccess,
 }: {
   open: boolean;
   onClose: () => void;
+  partyId?: number;
+  walletBalanceKobo: number;
+  onSuccess?: () => void;
 }) {
-  const [depositAmount, setDepositAmount] = React.useState(100000000);
+  const [depositAmount, setDepositAmount] = React.useState(10000);
+  const [isPending, setIsPending] = React.useState(false);
 
-  const isInsufficient = depositAmount > WALLET_BALANCE;
+  const walletBalanceNaira = walletBalanceKobo / 100;
+  const isInsufficient = depositAmount > walletBalanceNaira;
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, "");
     const parsed = Number(rawVal) || 0;
     setDepositAmount(parsed);
+  };
+
+  const handleDeposit = async () => {
+    if (!partyId || depositAmount <= 0) return;
+    setIsPending(true);
+    try {
+      const res = await depositPartyAllowance({
+        data: {
+          partyID: partyId,
+          amountKobo: depositAmount * 100, // convert Naira input to Kobo
+        },
+      });
+      if (res && res.success) {
+        toast.success(`Successfully deposited ${formatNairaWithDecimals(depositAmount)} to polling agent allowance budget!`);
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(res?.message || "Failed to deposit allowance");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "An unexpected error occurred");
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -51,16 +76,17 @@ export function DepositAllowanceDialog({
           {/* Blue info banner */}
           <div className="flex items-start gap-3 rounded-xl bg-[#edf3ff] px-4 py-3.5">
             <Package className="size-5 shrink-0 text-[#3182ce] mt-0.5" />
-            <p className="leading-[1.6] text-sm font-medium text-[#2b6cb0]">
-              Pay your party agents easily through Free9ja. Enter the amount you
-              want to deposit and click <strong className="font-bold">Deposit</strong>.
+            <p className="leading-[1.6] text-sm text-[#2b6cb0]">
+              Pay your polling agents easily through Free9ja. Enter the amount
+              you want to deposit and click{" "}
+              <strong className="font-bold">Deposit</strong>.
             </p>
           </div>
 
           {/* Green info banner */}
           <div className="flex items-start gap-3 rounded-xl bg-[#edfff6] px-4 py-3.5">
             <Package className="size-5 shrink-0 text-[#22c55e] mt-0.5" />
-            <p className="leading-[1.6] text-sm font-medium text-[#166534]">
+            <p className="leading-[1.6] text-sm text-[#166534]">
               Free9ja pays agents directly based on task completion and
               performance. This ensures agents meet their election-day
               responsibilities, including uploading their polling unit's final
@@ -74,7 +100,9 @@ export function DepositAllowanceDialog({
             <p className="text-sm font-medium text-c-50">Deposit Amount</p>
             <div className="flex items-center justify-center w-full text-center">
               <div className="inline-flex items-center gap-1">
-                <span className="text-[52px] font-bold text-c-80 select-none">₦</span>
+                <span className="text-[52px] font-bold text-c-80 select-none">
+                  ₦
+                </span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -85,6 +113,7 @@ export function DepositAllowanceDialog({
                     fontVariantNumeric: "tabular-nums",
                     width: `${Math.max(1, depositAmount.toLocaleString("en-NG").length) * 0.62}em`,
                   }}
+                  disabled={isPending}
                 />
               </div>
             </div>
@@ -108,13 +137,13 @@ export function DepositAllowanceDialog({
           {/* Wallet balance info */}
           <div className="rounded-xl bg-[#edfff6] px-5 py-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <span className="text-xl">😩</span>
+              <span className="text-xl">💰</span>
               <span className="text-[15px] font-medium text-[#166534]">
                 Wallet balance
               </span>
             </div>
             <span className="text-[15px] font-semibold text-[#166534] whitespace-nowrap">
-              {formatNairaWithDecimals(WALLET_BALANCE)}
+              {formatNairaWithDecimals(walletBalanceNaira)}
             </span>
           </div>
         </DialogPadding>
@@ -122,10 +151,17 @@ export function DepositAllowanceDialog({
         <DialogFooter>
           <Button
             className="bg-[#00e575] hover:bg-[#00c866] text-white rounded-xl px-7 h-11 text-[15px] font-bold border-none shadow-none transition-colors duration-150"
-            disabled={depositAmount <= 0}
-            onClick={onClose}
+            disabled={depositAmount <= 0 || isInsufficient || isPending}
+            onClick={handleDeposit}
           >
-            Deposit
+            {isPending ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="size-4 animate-spin" />
+                Depositing...
+              </span>
+            ) : (
+              "Deposit"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

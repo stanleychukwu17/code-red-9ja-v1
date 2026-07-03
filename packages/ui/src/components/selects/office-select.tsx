@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { SelectProps } from "../../lib/types";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { GeneralCommand } from "../command/general-command";
+import { DrawerList } from "../command/drawer-list";
 import { LoadingSelect } from "./loading-select";
 import { Button } from "../button";
 import { cn } from "../../lib/utils";
@@ -45,7 +46,8 @@ export const SelectOffice = ({
   filterScope?: string;
 }) => {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [desktopSearch, setDesktopSearch] = useState("");
+  const [mobileSearch, setMobileSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<Office | undefined>(
     undefined,
   );
@@ -57,16 +59,13 @@ export const SelectOffice = ({
         const res = await fetchOffices({
           data: { limit: 50, cursor: pageParam as string },
         });
-        if (res && res.success && res.data) {
-          return res;
-        }
+        if (res && res.success && res.data) return res;
         throw new Error(res?.message || "Failed to fetch offices");
       },
       initialPageParam: "",
       getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more)
           return lastPage.meta.next_cursor || "";
-        }
         return undefined;
       },
     });
@@ -74,21 +73,14 @@ export const SelectOffice = ({
   const allOffices = data
     ? data.pages.flatMap((page) => page.data?.offices || [])
     : [];
-
-  // Filter by scope if filterScope is provided
   const offices = filterScope
     ? allOffices.filter((o) => o.scope === filterScope)
     : allOffices;
 
-  // Keep fetching until selectedId is found in the list, if it exists
   useEffect(() => {
     if (selectedId && hasNextPage && !isFetchingNextPage && !isLoading) {
-      const found = offices.some(
-        (o) => String(o.id) === String(selectedId),
-      );
-      if (!found) {
-        fetchNextPage();
-      }
+      const found = offices.some((o) => String(o.id) === String(selectedId));
+      if (!found) fetchNextPage();
     }
   }, [
     selectedId,
@@ -99,19 +91,18 @@ export const SelectOffice = ({
     fetchNextPage,
   ]);
 
-  // Sync selected item with selectedId prop once the matching item is loaded
   useEffect(() => {
     if (selectedId) {
-      const item = offices.find(
-        (o) => String(o.id) === String(selectedId),
-      );
-      if (item) {
-        setSelectedItem(item);
-      }
+      const item = offices.find((o) => String(o.id) === String(selectedId));
+      if (item) setSelectedItem(item);
     } else {
       setSelectedItem(undefined);
     }
   }, [selectedId, offices]);
+
+  useEffect(() => {
+    if (!open) setMobileSearch("");
+  }, [open]);
 
   const handleSelect = (item: Office) => {
     setSelectedItem(item);
@@ -119,9 +110,15 @@ export const SelectOffice = ({
     setOpen(false);
   };
 
-  const filteredOffices = offices.filter((o) =>
-    o.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    o.election.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredOffices = offices.filter(
+    (o) =>
+      o.name.toLowerCase().includes(desktopSearch.toLowerCase()) ||
+      o.election.toLowerCase().includes(desktopSearch.toLowerCase()),
+  );
+  const mobileFiltered = offices.filter(
+    (o) =>
+      o.name.toLowerCase().includes(mobileSearch.toLowerCase()) ||
+      o.election.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
   const getStatus = ():
@@ -129,25 +126,28 @@ export const SelectOffice = ({
     | "LoadingMore"
     | "LoadingFirstPage"
     | "Exhausted" => {
-    if (isLoading && offices.length === 0) {
-      return "LoadingFirstPage";
-    }
-    if (isFetchingNextPage) {
-      return "LoadingMore";
-    }
+    if (isLoading && offices.length === 0) return "LoadingFirstPage";
+    if (isFetchingNextPage) return "LoadingMore";
     return hasNextPage ? "CanLoadMore" : "Exhausted";
   };
 
   const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   };
 
-  const displayText =
-    selectedItem?.name ? `${selectedItem.name} (${selectedItem.election})` :
-    (isLoading && !selectedItem ? "Loading..." : "Select Office");
+  const displayText = selectedItem?.name
+    ? `${selectedItem.name} (${selectedItem.election})`
+    : isLoading && !selectedItem
+      ? "Loading..."
+      : "Select Office";
   const hasError = Boolean(errorMsg);
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
+  const getId = (item: Office) => `${item.id}`;
+  const getName = (item: Office) => `${item.name} (${item.election})`;
 
   if (offices.length === 0 && isLoading && !disabled) {
     return (
@@ -172,6 +172,7 @@ export const SelectOffice = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between w-full gap-2",
             hasError && "border-0.8 border-red",
@@ -186,23 +187,30 @@ export const SelectOffice = ({
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }
-    >
-      <GeneralCommand
-        data={filteredOffices}
-        getId={(item: Office) => `${item.id}`}
-        getName={(item: Office) => `${item.name} (${item.election})`}
-        handleSelect={handleSelect}
-        selectedId={
-          selectedItem?.id
-            ? `${selectedItem.id}`
-            : selectedId
-              ? `${selectedId}`
-              : undefined
-        }
-        status={getStatus()}
-        loadMore={handleLoadMore}
-        onSearch={setSearchQuery}
-      />
-    </SelectResponsiveWrapper>
+      desktopContent={
+        <GeneralCommand
+          data={filteredOffices}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleSelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          loadMore={handleLoadMore}
+          onSearch={setDesktopSearch}
+        />
+      }
+      mobileContent={
+        <DrawerList
+          data={mobileFiltered}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleSelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          searchValue={mobileSearch}
+          onSearch={setMobileSearch}
+        />
+      }
+    />
   );
 };

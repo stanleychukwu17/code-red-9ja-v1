@@ -35,7 +35,7 @@ func NewHandler(countryService CountryService, utils *utils.Utils) *Handler {
 // @Tags         Countries
 // @Accept       json
 // @Produce      json
-// @Success      200  {object} GetCountriesResponse
+// @Success      200  {object} bodieshandler.GetCountriesResponse
 // @Failure      500  {string}  failed to fetch countries
 // @Router       /countries [get]
 func (h *Handler) GetCountries(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +60,7 @@ func (h *Handler) GetCountries(w http.ResponseWriter, r *http.Request) {
 // @Accept       json
 // @Produce      json
 // @Param        countryID  path      int  true  "Country ID"
-// @Success      200        {object}  GetStatesResponse
+// @Success      200        {object}  bodieshandler.GetStatesResponse
 // @Failure      400        {string}  invalid country ID
 // @Failure      500        {string}  failed to fetch states
 // @Router       /countries/{countryID}/states [get]
@@ -94,7 +94,7 @@ func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
 // @Accept       json
 // @Produce      json
 // @Param        stateID  path      int  true  "State ID"
-// @Success      200      {object}  GetCitiesResponse
+// @Success      200      {object}  bodieshandler.GetCitiesResponse
 // @Failure      400      {string}  invalid state ID
 // @Failure      500      {string}  failed to fetch cities
 // @Router       /states/{stateID}/cities [get]

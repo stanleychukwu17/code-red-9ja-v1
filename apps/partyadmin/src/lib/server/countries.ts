@@ -18,10 +18,10 @@ export const getAllCountries = createServerFn().handler(async () => {
 });
 
 export const getStates = createServerFn()
-  .inputValidator((data: { countryId: number }) => data)
-  .handler(async ({ data: { countryId } }) => {
+  .inputValidator((data: { countryId: number; limit?: number; cursor?: string | number }) => data)
+  .handler(async ({ data: { countryId, limit, cursor } }) => {
     try {
-      const response = await fetch(API_URL.getStates(countryId));
+      const response = await fetch(API_URL.getStates(countryId, limit, cursor));
       const data = await response.json();
       return data;
     } catch (error) {

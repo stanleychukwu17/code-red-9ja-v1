@@ -60,6 +60,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
 
   const userForDialog = {
     id: data.id,
+    fake_id: data.fake_id,
     first_name: data.first_name,
     last_name: data.last_name,
     middle_name: data.middle_name,
