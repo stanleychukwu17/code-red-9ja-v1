@@ -1,26 +1,26 @@
 name: Deploy Infrastructure
 
 on:
-  push:
-    paths:
-      - 'terraform/**'
-    branches:
-      - main
-      - staging
+  # push:
+  #   paths:
+  #     - 'terraform/**'
+  #   branches:
+  #     - main
+  #     - staging
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy'
+        description: "Environment to deploy"
         required: true
-        default: 'staging'
+        default: "staging"
         type: choice
         options:
           - staging
           - production
       action:
-        description: 'Terraform Action'
+        description: "Terraform Action"
         required: true
-        default: 'plan'
+        default: "plan"
         type: choice
         options:
           - plan
