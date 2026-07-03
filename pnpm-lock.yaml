@@ -241,6 +241,8 @@ importers:
         specifier: 3.0.5
         version: 3.0.5(@types/node@22.15.3)(jiti@2.6.1)(jsdom@28.1.0)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)
 
+  apps/ip-service: {}
+
   apps/mobile:
     dependencies:
       '@expo-google-fonts/fira-sans':
