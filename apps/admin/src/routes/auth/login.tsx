@@ -8,14 +8,14 @@ import { useAppDispatch } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import {
   loginAdmin,
-  checkIfRefreshTokenInCookie,
+  refreshUserToken,
 } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
-    const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status === "success") {
+    const res = await refreshUserToken();
+    if (res.status === "success" && res.user?.role === "admin") {
       throw redirect({ to: "/home" });
     }
   },
@@ -68,7 +68,7 @@ function LoginComponent() {
       {/* Center Form */}
       <div className="mx-auto w-full max-w-[420px] flex flex-col justify-center py-12">
         <h1 className="text-[28px] font-bold text-[#181818] mb-1">Log in</h1>
-        <p className="text-[15px] text-[#767676] mb-6">Building a better Nigeria</p>
+        <p className="text-[15px] text-[#767676] mb-6">Make your vote count</p>
 
         {errorMsg && (
           <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-100 text-[14px] text-red-600 font-medium">
