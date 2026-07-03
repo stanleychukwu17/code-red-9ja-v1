@@ -39,7 +39,7 @@ const formatDate = (dateStr?: string) => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-export const SelectElectionGroup = ({
+export const SelectElectionGroupAndElection = ({
   update,
   errorMsg,
   selectedId,
@@ -70,7 +70,9 @@ export const SelectElectionGroup = ({
   const [desktopElectionSearch, setDesktopElectionSearch] = useState("");
   const [mobileElectionSearch, setMobileElectionSearch] = useState("");
 
-  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(undefined);
+  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(
+    undefined,
+  );
 
   /**
    * The group the user clicked in step 1.
@@ -91,7 +93,8 @@ export const SelectElectionGroup = ({
       },
       initialPageParam: "",
       getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) return lastPage.meta.next_cursor || "";
+        if (lastPage && lastPage.meta && lastPage.meta.has_more)
+          return lastPage.meta.next_cursor || "";
         return undefined;
       },
     });
@@ -111,23 +114,34 @@ export const SelectElectionGroup = ({
   });
 
   const elections: Election[] =
-    electionsRaw?.elections ||
-    electionsRaw?.data?.elections ||
-    [];
+    electionsRaw?.elections || electionsRaw?.data?.elections || [];
 
-  const electionStatus = isLoadingElections ? "LoadingFirstPage" as const : "Exhausted" as const;
+  const electionStatus = isLoadingElections
+    ? ("LoadingFirstPage" as const)
+    : ("Exhausted" as const);
 
   // ─── Effects ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (selectedId && hasNextPage && !isFetchingNextPage && !isLoading) {
-      const found = electionGroups.some((eg) => String(eg.id) === String(selectedId));
+      const found = electionGroups.some(
+        (eg) => String(eg.id) === String(selectedId),
+      );
       if (!found) fetchNextPage();
     }
-  }, [selectedId, electionGroups, hasNextPage, isFetchingNextPage, isLoading, fetchNextPage]);
+  }, [
+    selectedId,
+    electionGroups,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    fetchNextPage,
+  ]);
 
   useEffect(() => {
     if (selectedId) {
-      const eg = electionGroups.find((eg) => String(eg.id) === String(selectedId));
+      const eg = electionGroups.find(
+        (eg) => String(eg.id) === String(selectedId),
+      );
       if (eg) setSelectedItem(eg);
     } else {
       setSelectedItem(undefined);
@@ -174,13 +188,19 @@ export const SelectElectionGroup = ({
   };
 
   // ─── Status / filtering helpers ───────────────────────────────────────────
-  const getGroupStatus = (): "CanLoadMore" | "LoadingMore" | "LoadingFirstPage" | "Exhausted" => {
+  const getGroupStatus = ():
+    | "CanLoadMore"
+    | "LoadingMore"
+    | "LoadingFirstPage"
+    | "Exhausted" => {
     if (isLoading && electionGroups.length === 0) return "LoadingFirstPage";
     if (isFetchingNextPage) return "LoadingMore";
     return hasNextPage ? "CanLoadMore" : "Exhausted";
   };
 
-  const handleLoadMore = () => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); };
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  };
 
   const desktopFilteredGroups = electionGroups.filter((eg) =>
     eg.name.toLowerCase().includes(desktopSearch.toLowerCase()),
@@ -195,8 +215,14 @@ export const SelectElectionGroup = ({
     e.name.toLowerCase().includes(mobileElectionSearch.toLowerCase()),
   );
 
-  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : "Select Election Group");
-  const currentSelectedId = selectedItem?.id ? `${selectedItem.id}` : selectedId ? `${selectedId}` : undefined;
+  const displayText =
+    selectedItem?.name ||
+    (isLoading && !selectedItem ? "Loading..." : "Select Election Group");
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
 
   const getGroupId = (item: ElectionGroup) => `${item.id}`;
   const getGroupName = (item: ElectionGroup) => item.name;
@@ -232,7 +258,9 @@ export const SelectElectionGroup = ({
         <button
           type="button"
           onClick={handleBack}
-          className="flex items-center gap-2 w-full px-3 pt-2 pb-1 text-left hover:bg-c-10/60 transition"
+          className={cn(
+            "flex items-center gap-2 w-full px-3 pt-2 pb-1 text-left hover:bg-c-10/60 transition",
+          )}
         >
           <ChevronLeft className="size-4 text-c-50 shrink-0" />
           <span className="text-sm font-semibold text-c-800 line-clamp-1">

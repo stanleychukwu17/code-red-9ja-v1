@@ -8,7 +8,7 @@ import {
   DialogPadding,
 } from "@repo/ui/components/dialog";
 import { Package, Loader2 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { getPartySlotPrice, buyPartySlots } from "#/lib/server/parties";
 import { toast } from "sonner";
 
@@ -30,7 +30,22 @@ export function BuyAgentSlotsDialog({
   onSuccess?: () => void;
 }) {
   const [slots, setSlots] = React.useState(100);
-  const [isPending, setIsPending] = React.useState(false);
+
+  const buySlotsMutation = useMutation({
+    mutationFn: (variables: { partyID: number; quantity: number }) => buyPartySlots({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        toast.success(`Successfully purchased ${slots} slots!`);
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(res?.message || "Failed to purchase slots");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "An unexpected error occurred");
+    }
+  });
 
   const { data: priceRes, isLoading: isPriceLoading } = useQuery({
     queryKey: ["partySlotPrice", partyId],
@@ -52,23 +67,9 @@ export function BuyAgentSlotsDialog({
     if (val <= 5_000_000) setSlots(val || 0);
   };
 
-  const handleBuySlots = async () => {
+  const handleBuySlots = () => {
     if (!partyId || slots <= 0) return;
-    setIsPending(true);
-    try {
-      const res = await buyPartySlots({ data: { partyID: partyId, quantity: slots } });
-      if (res && res.success) {
-        toast.success(`Successfully purchased ${slots} slots!`);
-        onSuccess?.();
-        onClose();
-      } else {
-        toast.error(res?.message || "Failed to purchase slots");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "An unexpected error occurred");
-    } finally {
-      setIsPending(false);
-    }
+    buySlotsMutation.mutate({ partyID: partyId, quantity: slots });
   };
 
   return (
@@ -111,7 +112,7 @@ export function BuyAgentSlotsDialog({
                 placeholder="0"
                 className="text-[52px] font-bold text-c-80 text-center bg-transparent outline-none w-full leading-none pb-1 caret-c-80"
                 style={{ fontVariantNumeric: "tabular-nums" }}
-                disabled={isPending}
+                disabled={buySlotsMutation.isPending}
               />
             </div>
           </div>
@@ -171,10 +172,10 @@ export function BuyAgentSlotsDialog({
         <DialogFooter>
           <Button
             className="bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-[14px] px-7 h-11 text-[16px] font-bold border-none shadow-none transition-colors duration-150"
-            disabled={slots === 0 || isInsufficient || isPending || isPriceLoading}
+            disabled={slots === 0 || isInsufficient || buySlotsMutation.isPending || isPriceLoading}
             onClick={handleBuySlots}
           >
-            {isPending ? (
+            {buySlotsMutation.isPending ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="size-4 animate-spin" />
                 Processing...

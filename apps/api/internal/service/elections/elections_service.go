@@ -1323,6 +1323,14 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		if err != nil {
 			return err
 		}
+
+		err = txQueries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+			ID:      cand.CandidateID,
+			PartyID: pgtype.Int8{Int64: cand.PartyID, Valid: cand.PartyID != 0},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// Get election instance

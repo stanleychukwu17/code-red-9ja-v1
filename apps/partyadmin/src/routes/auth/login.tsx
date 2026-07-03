@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
@@ -11,10 +12,7 @@ import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { useAppDispatch } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
-import {
-  loginPartyApp,
-  refreshUserToken,
-} from "#/lib/server/auth/auth";
+import { loginPartyApp, refreshUserToken } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/login")({
@@ -42,6 +40,25 @@ function LoginComponent() {
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const loginMutation = useMutation({
+    mutationFn: (credentials: { email: string; password: string }) =>
+      loginPartyApp({ data: credentials }),
+    onSuccess: async (response) => {
+      console.log("RESPONSE:", response);
+      if (response.success) {
+        dispatch(updateAuthState({ user: response.data.user }));
+        const partyShortName = response.data.user?.party?.short_name || "party";
+        await router.invalidate();
+        navigate({ to: "/$partyShortName/home", params: { partyShortName } });
+      } else {
+        setErrorMsg(response.message || "Invalid email or password.");
+      }
+    },
+    onError: () => {
+      setErrorMsg("Connection error: Unable to reach the server.");
+    },
+  });
+
   const form = useForm({
     defaultValues: {
       email: "",
@@ -49,27 +66,7 @@ function LoginComponent() {
     },
     onSubmit: async ({ value }) => {
       setErrorMsg(null);
-
-      try {
-        const response = await loginPartyApp({ data: value });
-        console.log("Response:", response);
-
-        if (response.success) {
-          console.log(1);
-          dispatch(updateAuthState({ user: response.data.user }));
-          console.log(2);
-          const partyShortName = response.data.user?.party?.short_name || "party";
-          console.log(3, partyShortName);
-          await router.invalidate();
-          console.log(4);
-          navigate({ to: "/$partyShortName/home", params: { partyShortName } });
-          console.log(5);
-        } else {
-          setErrorMsg(response.message || "Invalid email or password.");
-        }
-      } catch (err) {
-        setErrorMsg("Connection error: Unable to reach the server.");
-      }
+      await loginMutation.mutateAsync(value);
     },
   });
 

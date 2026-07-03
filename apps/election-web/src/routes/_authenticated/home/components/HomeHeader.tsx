@@ -3,10 +3,10 @@ import { AppAvatar } from "@repo/ui/components/avatar";
 
 import { useAuth } from "#/providers/providers";
 import {
-  SelectElectionGroup,
+  SelectElectionGroupAndElection,
   type Election,
   type ElectionGroup,
-} from "@repo/ui/components/selects/election-group-select";
+} from "@repo/ui/components/selects/election-group-and-election-select";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
@@ -36,7 +36,7 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
           className="size-7 shrink-0"
         />
         <div className="w-[180px]">
-          <SelectElectionGroup
+          <SelectElectionGroupAndElection
             fetchElectionGroups={fetchGroups}
             fetchElectionsByGroup={fetchElectionsByGroup}
             selectedId={selectedElectionGroup?.id}

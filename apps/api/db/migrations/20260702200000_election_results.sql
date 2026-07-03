@@ -93,6 +93,210 @@ ALTER TABLE elections
     CHECK (status IN ('upcoming', 'ongoing', 'ended', 'cancelled'));
 
 
+-- ============================================================
+-- polling_unit_final_results
+-- Represents the consensus (or INEC/Admin overridden) final result
+-- for a specific polling unit in an election.
+-- ============================================================
+CREATE TABLE polling_unit_final_results (
+  id                       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+  election_id              BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  election_group_id        BIGINT   REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  polling_unit_id          INTEGER  REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
+
+  -- Denormalized for fast geo-filtering
+  state_id                 SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+  lga_id                   INT      REFERENCES lgas(id) ON DELETE SET NULL,
+  ward_id                  INT      REFERENCES wards(id) ON DELETE SET NULL,
+
+  -- Final calculated values based on consensus
+  accredited_voters        INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast               INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes           INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+
+  -- Final per-candidate breakdown: [{party_short_name, vote_count}]
+  candidate_results        JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  -- Confidence metrics
+  matching_submissions_count INT     NOT NULL DEFAULT 1,
+  total_submissions_count INT     NOT NULL DEFAULT 1,
+
+  created_at               TIMESTAMPTZ DEFAULT NOW(),
+  updated_at               TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- One final result per election per polling unit
+CREATE UNIQUE INDEX uq_pu_final_result
+  ON polling_unit_final_results (election_id, polling_unit_id);
+
+CREATE INDEX idx_pu_final_results_election ON polling_unit_final_results(election_id);
+CREATE INDEX idx_pu_final_results_election_group ON polling_unit_final_results(election_group_id);
+CREATE INDEX idx_pu_final_results_pu ON polling_unit_final_results(polling_unit_id);
+CREATE INDEX idx_pu_final_results_state ON polling_unit_final_results(state_id);
+CREATE INDEX idx_pu_final_results_lga ON polling_unit_final_results(lga_id);
+
+
+-- ============================================================
+-- ward_final_result
+-- ============================================================
+CREATE TABLE ward_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  ward_id                     INT      REFERENCES wards(id) ON DELETE CASCADE NOT NULL,
+  lga_id                      INT      REFERENCES lgas(id) ON DELETE SET NULL,
+  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  polling_units_counted       INTEGER  NOT NULL DEFAULT 0,
+  total_polling_units         INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_ward_final_result_election_ward ON ward_final_result (election_id, ward_id);
+
+-- ============================================================
+-- state_constituency_final_result
+-- ============================================================
+CREATE TABLE state_constituency_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  state_constituency_id       INT      REFERENCES state_assembly_constituencies(id) ON DELETE CASCADE NOT NULL,
+  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  wards_counted               INTEGER  NOT NULL DEFAULT 0,
+  total_wards                 INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_sc_final_result_election_sc ON state_constituency_final_result (election_id, state_constituency_id);
+
+-- ============================================================
+-- lga_final_result
+-- ============================================================
+CREATE TABLE lga_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  lga_id                      INT      REFERENCES lgas(id) ON DELETE CASCADE NOT NULL,
+  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  wards_counted               INTEGER  NOT NULL DEFAULT 0,
+  total_wards                 INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_lga_final_result_election_lga ON lga_final_result (election_id, lga_id);
+
+-- ============================================================
+-- senatorial_district_final_result
+-- ============================================================
+CREATE TABLE senatorial_district_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  senatorial_district_id      INT      REFERENCES senatorial_districts(id) ON DELETE CASCADE NOT NULL,
+  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  lgas_counted                INTEGER  NOT NULL DEFAULT 0,
+  total_lgas                  INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_sd_final_result_election_sd ON senatorial_district_final_result (election_id, senatorial_district_id);
+
+-- ============================================================
+-- federal_constituency_final_result
+-- ============================================================
+CREATE TABLE federal_constituency_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  federal_constituency_id     INT      REFERENCES federal_constituencies(id) ON DELETE CASCADE NOT NULL,
+  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  lgas_counted                INTEGER  NOT NULL DEFAULT 0,
+  total_lgas                  INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_fc_final_result_election_fc ON federal_constituency_final_result (election_id, federal_constituency_id);
+
+-- ============================================================
+-- state_final_result
+-- ============================================================
+CREATE TABLE state_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE CASCADE NOT NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  lgas_counted                INTEGER  NOT NULL DEFAULT 0,
+  total_lgas                  INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_state_final_result_election_state ON state_final_result (election_id, state_id);
+
+-- ============================================================
+-- election_final_result
+-- ============================================================
+CREATE TABLE election_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  states_counted              INTEGER  NOT NULL DEFAULT 0,
+  total_states                INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_election_final_result_election ON election_final_result (election_id);
+
 -- +goose Down
 ALTER TABLE elections
   DROP COLUMN IF EXISTS status;
@@ -101,4 +305,12 @@ ALTER TABLE polling_unit_assignments
   DROP COLUMN IF EXISTS results_submitted_count,
   DROP COLUMN IF EXISTS results_status;
 
+DROP TABLE IF EXISTS election_final_result;
+DROP TABLE IF EXISTS state_final_result;
+DROP TABLE IF EXISTS federal_constituency_final_result;
+DROP TABLE IF EXISTS senatorial_district_final_result;
+DROP TABLE IF EXISTS lga_final_result;
+DROP TABLE IF EXISTS state_constituency_final_result;
+DROP TABLE IF EXISTS ward_final_result;
+DROP TABLE IF EXISTS polling_unit_final_results;
 DROP TABLE IF EXISTS polling_unit_results;

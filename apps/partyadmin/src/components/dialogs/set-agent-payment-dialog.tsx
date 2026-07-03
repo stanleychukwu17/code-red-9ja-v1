@@ -11,7 +11,7 @@ import { Info, Loader2 } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 import { useParty } from "#/providers/providers";
 import { updatePartyStateAllowances } from "#/lib/server/parties";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { getStates } from "#/lib/server/countries";
 import { toast } from "sonner";
 
@@ -34,7 +34,22 @@ export function SetAgentPaymentDialog({
   const [stateOverrides, setStateOverrides] = React.useState<
     Record<string, number>
   >({});
-  const [isPending, setIsPending] = React.useState(false);
+
+  const saveMutation = useMutation({
+    mutationFn: (variables: { partyID: number; allowances: Record<string, number> }) => updatePartyStateAllowances({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        toast.success("Agent payment budget saved successfully!");
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(res?.message || "Failed to save budget settings");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "An unexpected error occurred");
+    }
+  });
 
   // Load states from backend API
   const { data: statesRes } = useQuery({
@@ -135,9 +150,8 @@ export function SetAgentPaymentDialog({
     }));
   };
 
-  const handleSaveChanges = async () => {
+  const handleSaveChanges = () => {
     if (!partyId) return;
-    setIsPending(true);
 
     // Build JSON mapping of state names to payment amounts in Kobo
     const allowancesPayload: Record<string, number> = {
@@ -153,25 +167,10 @@ export function SetAgentPaymentDialog({
       }
     }
 
-    try {
-      const res = await updatePartyStateAllowances({
-        data: {
-          partyID: partyId,
-          allowances: allowancesPayload,
-        },
-      });
-      if (res && res.success) {
-        toast.success("Agent payment budget saved successfully!");
-        onSuccess?.();
-        onClose();
-      } else {
-        toast.error(res?.message || "Failed to save budget settings");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "An unexpected error occurred");
-    } finally {
-      setIsPending(false);
-    }
+    saveMutation.mutate({
+      partyID: partyId,
+      allowances: allowancesPayload,
+    });
   };
 
   return (
@@ -209,7 +208,7 @@ export function SetAgentPaymentDialog({
                     fontVariantNumeric: "tabular-nums",
                     width: `${Math.max(1, mainAmount.toLocaleString("en-NG").length) * 0.62}em`,
                   }}
-                  disabled={isPending}
+                  disabled={saveMutation.isPending}
                 />
               </div>
             </div>
@@ -226,7 +225,7 @@ export function SetAgentPaymentDialog({
                   ? "bg-[#d8fdf0] text-[#059669] shadow-sm"
                   : "text-c-60 hover:text-c-80",
               )}
-              disabled={isPending}
+              disabled={saveMutation.isPending}
             >
               Custom
             </button>
@@ -239,7 +238,7 @@ export function SetAgentPaymentDialog({
                   ? "bg-[#d8fdf0] text-[#059669] shadow-sm"
                   : "text-c-60 hover:text-c-80",
               )}
-              disabled={isPending}
+              disabled={saveMutation.isPending}
             >
               Same pay for all
             </button>
@@ -272,7 +271,7 @@ export function SetAgentPaymentDialog({
                           }
                           className="bg-transparent border-none outline-none font-semibold text-[14px] text-c-80 w-full text-right p-0"
                           style={{ fontVariantNumeric: "tabular-nums" }}
-                          disabled={isPending}
+                          disabled={saveMutation.isPending}
                         />
                       </div>
                     </div>
@@ -287,9 +286,9 @@ export function SetAgentPaymentDialog({
           <Button
             onClick={handleSaveChanges}
             className="bg-[#00e575] hover:bg-[#00c866] text-white rounded-xl px-6 h-11 text-[15px] font-bold border-none shadow-none transition-colors duration-150"
-            disabled={isPending}
+            disabled={saveMutation.isPending}
           >
-            {isPending ? (
+            {saveMutation.isPending ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="size-4 animate-spin" />
                 Saving...

@@ -12,6 +12,7 @@ import * as React from "react";
 import { useParty } from "#/providers/providers";
 import { fundPartyWalletTest } from "#/lib/server/parties";
 import { toast } from "sonner";
+import { useMutation } from "@tanstack/react-query";
 
 interface AccountNumber {
   accountNumber: string;
@@ -36,7 +37,22 @@ export function AccountDetailsDialog({
   onSuccess?: () => void;
 }) {
   const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
-  const [isPending, setIsPending] = React.useState(false);
+  
+  const fundMutation = useMutation({
+    mutationFn: (variables: { partyID: number; amountKobo: number }) => fundPartyWalletTest({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        toast.success(`Successfully simulated transfer of ₦${fundAmount.toLocaleString()} to your party wallet!`);
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(res?.message || "Failed to simulate wallet funding");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "An unexpected error occurred");
+    }
+  });
   const [fundAmount, setFundAmount] = React.useState(50000);
   const { party } = useParty();
   const partyId = party?.id;
@@ -53,28 +69,12 @@ export function AccountDetailsDialog({
     setFundAmount(parsed);
   };
 
-  const handleSimulateFunding = async () => {
+  const handleSimulateFunding = () => {
     if (!partyId || fundAmount <= 0) return;
-    setIsPending(true);
-    try {
-      const res = await fundPartyWalletTest({
-        data: {
-          partyID: partyId,
-          amountKobo: fundAmount * 100, // convert Naira input to Kobo
-        },
-      });
-      if (res && res.success) {
-        toast.success(`Successfully simulated transfer of ₦${fundAmount.toLocaleString()} to your party wallet!`);
-        onSuccess?.();
-        onClose();
-      } else {
-        toast.error(res?.message || "Failed to simulate wallet funding");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "An unexpected error occurred");
-    } finally {
-      setIsPending(false);
-    }
+    fundMutation.mutate({
+      partyID: partyId,
+      amountKobo: fundAmount * 100, // convert Naira input to Kobo
+    });
   };
 
   return (
@@ -153,16 +153,16 @@ export function AccountDetailsDialog({
                   onChange={handleFundAmountChange}
                   className="bg-transparent border-none outline-none font-semibold text-[14px] text-c-80 w-full text-right p-0"
                   style={{ fontVariantNumeric: "tabular-nums" }}
-                  disabled={isPending}
+                  disabled={fundMutation.isPending}
                 />
               </div>
 
               <Button
                 onClick={handleSimulateFunding}
                 className="bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-lg px-5 h-9 text-[13px] font-bold border-none shadow-none transition-colors duration-150 shrink-0"
-                disabled={fundAmount <= 0 || isPending}
+                disabled={fundAmount <= 0 || fundMutation.isPending}
               >
-                {isPending ? (
+                {fundMutation.isPending ? (
                   <span className="flex items-center gap-1.5">
                     <Loader2 className="size-3.5 animate-spin" />
                     Simulating...
