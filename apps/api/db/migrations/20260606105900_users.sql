@@ -30,6 +30,7 @@ CREATE TABLE users (
 
   nin_verified VARCHAR(5) CHECK (nin_verified IN ('true', 'false')) DEFAULT 'false',
   phone_verified VARCHAR(5) CHECK (phone_verified IN ('true', 'false')) DEFAULT 'false',
+  email_verified VARCHAR(5) CHECK (email_verified IN ('true', 'false')) DEFAULT 'false',
   role VARCHAR(20) CHECK (role IN ('user', 'partymember', 'admin')) DEFAULT 'user',
   role_level VARCHAR(20) CHECK (role_level IN ('user', 'pollingagent', 'admin', 'member', 'placeholder', 'superadmin')) DEFAULT 'user',
   -- role (role_level)
