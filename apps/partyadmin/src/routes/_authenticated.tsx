@@ -12,25 +12,26 @@ import UserIcon from "@repo/ui/icons/navbar/user-icon";
 import UserSolidIcon from "@repo/ui/icons/navbar/user-solid-icon";
 import WalletIcon from "@repo/ui/icons/navbar/wallet-icon";
 import WalletSolidIcon from "@repo/ui/icons/navbar/wallet-solid-icon";
-import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useParams,
+} from "@tanstack/react-router";
 
-import { logoutUser } from "#/lib/server/auth/auth";
+import { logoutUser, refreshUserToken } from "#/lib/server/auth/auth";
 import { useAuth } from "#/providers/providers";
 import { useAppDispatch } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
-import { PollingAgentApplicationDialog } from "#/components/dialogs/polling-agent-application-dialog";
 import { PollingAgentDialogProvider } from "#/components/dialogs/PollingAgentDialogContext";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async ({ context }) => {
-    const user = context.userDetails;
-    if (
-      !user ||
-      user.role !== "partymember" ||
-      !user.party ||
-      !user.party.short_name
-    ) {
+  beforeLoad: async () => {
+    const res = await refreshUserToken();
+    console.log("✌️ RES:", res);
+
+    if (!res.success || res.data?.user?.role !== "partymember") {
       throw redirect({ to: "/auth/login" });
     }
   },
@@ -42,7 +43,11 @@ function AuthenticatedRoutes() {
   const { userDetails } = Route.useRouteContext();
   const dispatch = useAppDispatch();
   const { party } = useAuth();
-  const partyShortName = party.shortName;
+  console.log("userDetails", userDetails);
+  console.log("party short name", party?.shortName);
+  const params = useParams({ strict: false });
+  const partyShortName =
+    party?.shortName || (params as any).partyShortName || "party";
 
   const sidebarItems: AppSidebarItem[] = [
     {

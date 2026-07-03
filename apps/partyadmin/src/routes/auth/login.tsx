@@ -13,17 +13,15 @@ import { useAppDispatch } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import {
   loginPartyApp,
-  checkIfRefreshTokenInCookie,
-  getUserDetailsCookie,
+  refreshUserToken,
 } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
-    const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status === "success") {
-      const userDetails = await getUserDetailsCookie();
-      const partyShortName = userDetails?.party?.short_name || "ndp";
+    const res = await refreshUserToken();
+    if (res.success && res.data?.user?.role === "partymember") {
+      const partyShortName = res.data.user?.party?.short_name || "party";
       throw redirect({
         to: "/$partyShortName/home",
         params: { partyShortName },
@@ -60,7 +58,7 @@ function LoginComponent() {
           console.log(1);
           dispatch(updateAuthState({ user: response.data.user }));
           console.log(2);
-          const partyShortName = response.data.user?.party?.short_name;
+          const partyShortName = response.data.user?.party?.short_name || "party";
           console.log(3, partyShortName);
           await router.invalidate();
           console.log(4);
