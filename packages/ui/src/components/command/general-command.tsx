@@ -10,6 +10,7 @@ import {
 import { cn } from "../../lib/utils";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { IconInput } from "../input";
 
 type GeneralCommandProps<T> = {
   data: T[];
@@ -101,10 +102,14 @@ export function GeneralCommand<T>({
   return (
     <Command shouldFilter={status === undefined}>
       {!disableSearch && (
-        <CommandInput
-          placeholder="Search..."
-          onValueChange={setSearch} // capture search value
-        />
+        // <CommandInput
+        // />
+        <div className="mx-2">
+          <IconInput
+            placeholder="Search..."
+            onChange={(e) => setSearch(e.target.value)} // capture search value
+          />
+        </div>
       )}
       <CommandList className="max-h-none overflow-visible">
         {beforeList}

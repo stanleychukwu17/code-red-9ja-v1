@@ -11,6 +11,9 @@
       "#/*": ["./src/*"],
       "@/*": ["./src/*"],
       "@repo/ui/*": ["../../packages/ui/src/*"]
-    }
+    },
+    "verbatimModuleSyntax": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   }
 }
