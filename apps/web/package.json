@@ -6,8 +6,8 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "vite dev --port 3001",
-    "dev:live": "vite dev --port 3001 --host",
+    "dev": "vite dev --port 3101",
+    "dev:live": "vite dev --port 3101 --host",
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
