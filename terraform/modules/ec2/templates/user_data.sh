@@ -24,8 +24,9 @@ usermod -aG docker ec2-user # Allow ec2-user to run Docker commands (we added th
 
 # Install Docker Compose CLI plugin
 mkdir -p /usr/local/lib/docker/cli-plugins
-# curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose # this will download the latest version
-curl -SL https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose # this will download the latest version
+# compose_version=v5.2.0
+# curl -SL https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # Verify Installations
@@ -142,7 +143,7 @@ services:
       - DB_USER=${db_user}
       - DB_PASSWORD=${db_password}
       - DB_SSLMODE=disable
-      - REDIS_HOST=redis
+      - REDIS_ADDR=redis:6379
       - REDIS_PORT=6379
       - REDIS_PASSWORD=
       - JWT_SECRET=${jwt_secret}
@@ -154,6 +155,8 @@ services:
     depends_on:
       - postgres
       - redis
+    ports:
+      - "127.0.0.1:4000:4000"
     restart: always
     networks:
       - free9ja-network
@@ -170,6 +173,8 @@ services:
       - PORT=8081
     depends_on:
       - redis
+    ports:
+      - "127.0.0.1:8081:8081"
     restart: always
     networks:
       - free9ja-network
@@ -244,47 +249,54 @@ http {
 }
 EOF
 
-# Create Nginx server blocks for both API and IP services (supporting HTTP-01 challenge)
+# Fetch Cloudflare Origin CA Certificate and Private Key from SSM Parameter Store
+mkdir -p /etc/nginx/ssl
+aws ssm get-parameter --name "${cf_cert_param}" --with-decryption --region "${aws_region}" --query "Parameter.Value" --output text > /etc/nginx/ssl/cloudflare_origin.crt
+aws ssm get-parameter --name "${cf_key_param}" --with-decryption --region "${aws_region}" --query "Parameter.Value" --output text > /etc/nginx/ssl/cloudflare_origin.key
+chmod 600 /etc/nginx/ssl/cloudflare_origin.key
+
+# Create Nginx server blocks for both API and IP services with Cloudflare SSL
 cat << 'EOF' > /etc/nginx/conf.d/free9ja.conf
 server {
     listen 80;
+    server_name ${backend_subdomain}.${domain_name} ${ip_subdomain}.${domain_name};
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
     server_name ${backend_subdomain}.${domain_name};
 
-    # Certbot challenge path
-    location /.well-known/acme-challenge/ {
-        root /usr/share/nginx/html;
-    }
+    ssl_certificate /etc/nginx/ssl/cloudflare_origin.crt;
+    ssl_certificate_key /etc/nginx/ssl/cloudflare_origin.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     location / {
         proxy_pass http://127.0.0.1:4000;
-        proxy_set_header Host $$host;
-        proxy_set_header X-Real-IP $$remote_addr;
-        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $$scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 
 server {
-    listen 80;
+    listen 443 ssl;
     server_name ${ip_subdomain}.${domain_name};
 
-    # Certbot challenge path
-    location /.well-known/acme-challenge/ {
-        root /usr/share/nginx/html;
-    }
+    ssl_certificate /etc/nginx/ssl/cloudflare_origin.crt;
+    ssl_certificate_key /etc/nginx/ssl/cloudflare_origin.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
 
     location / {
         proxy_pass http://127.0.0.1:8081;
-        proxy_set_header Host $$host;
-        proxy_set_header X-Real-IP $$remote_addr;
-        proxy_set_header X-Forwarded-For $$proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $$scheme;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
     }
 }
 EOF
-
-# we did not listen to port 443 because certbot will do it for us, see ./certbot_port_80_explanation.txt
-
 # Reload Nginx to apply server blocks
 systemctl reload nginx
 

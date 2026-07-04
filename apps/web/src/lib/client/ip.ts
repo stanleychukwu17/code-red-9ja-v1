@@ -19,6 +19,6 @@ export const fetchCountryDetailsFromLocalIPService = createClientOnlyFn(async ()
     // We return the entire payload wrapped in a data key to match the VisitorDetails interface structure
     return respondSuccess({ data });
   } catch (error) {
-    return respondError("Failed to fetch country from local IP service");
+    return respondError("Failed to fetch country from local IP service, check if the server is up and running");
   }
 })

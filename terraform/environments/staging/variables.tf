@@ -48,15 +48,28 @@ variable "domain_name" {
   type        = string
   description = "The custom root domain (e.g., domain.com)"
 }
+variable "create_backend_dns" {
+  type        = bool
+  description = "Whether to create the backend DNS record"
+}
+variable "create_backend_a_record" {
+  type        = bool
+  description = "Whether to create the backend A record"
+}
+variable "create_ip_service_a_record" {
+  type        = bool
+  description = "Whether to create the IP service A record"
+}
 variable "backend_subdomain" {
   type        = string
   description = "The backend subdomain (e.g., staging-api)"
 }
 
-variable "frontend_subdomain" {
+variable "ip_subdomain" {
   type        = string
-  description = "The frontend subdomain (e.g., staging)"
+  description = "The subdomain for the IP"
 }
+
 
 variable "rds_engine_version" {
   type        = string

@@ -98,7 +98,7 @@ function RouteComponent() {
             return;
           }
 
-          dispatch(updateOnboardingData({ changePasswordId: res.change_password_id, changeUserFid: res.user_fid }));
+          dispatch(updateOnboardingData({ changePasswordId: res.data.change_password_id, changeUserFid: res.data.user_fid }));
           navigate({ to: APP_URL.auth.forgotPassword });
         } catch (error) {
           setServerError((error as Error).message);

@@ -3,6 +3,15 @@
 # Navigate to the ip-service root directory
 cd "$(dirname "$0")/.."
 
+# Check if api is running
+if [ -z "$NO_AUTOSTART_API" ]; then
+    if ! netstat -aon | grep -qE ":4000\s+.*LISTEN" ; then
+        echo "API is not running. Starting it in the background..."
+        export NO_AUTOSTART_IP=1
+        (cd ../api && bash scripts/start-api.sh &)
+    fi
+fi
+
 # checks to see if there is a docker-compose file
 is_file="../api/docker-compose.dev.yml"
 if [ ! -f "$is_file" ]; then

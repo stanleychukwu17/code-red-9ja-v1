@@ -88,9 +88,13 @@ module "cloudflare" {
   cloudflare_account_id = var.cloudflare_account_id
   cloudflare_zone_id    = var.cloudflare_zone_id
   domain_name           = var.domain_name
-  frontend_subdomain    = var.frontend_subdomain
-  backend_subdomain     = var.backend_subdomain
-  alb_dns_name          = module.alb.alb_dns_name
+
+  create_backend_dns         = var.create_backend_dns
+  create_backend_a_record    = var.create_backend_a_record
+  create_ip_service_a_record = var.create_ip_service_a_record
+  backend_subdomain          = var.backend_subdomain
+  ip_subdomain               = var.ip_subdomain
+  alb_dns_name               = module.alb.alb_dns_name
 }
 
 # # --- RDS Database Module ---
