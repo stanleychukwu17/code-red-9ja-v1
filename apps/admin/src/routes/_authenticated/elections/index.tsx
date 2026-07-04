@@ -8,7 +8,10 @@ import {
   FilterButton,
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
-import { ElectionGroupsTable, type ElectionGroupType } from "#/components/Tables";
+import {
+  ElectionGroupsTable,
+  type ElectionGroupType,
+} from "#/components/Tables";
 import { ELECTION_TABS } from "./data";
 import { ElectionGroupFormDialog } from "#/components/dialogs/ElectionGroupFormDialog";
 import { getElectionGroups } from "#/lib/server/election_groups";
@@ -65,7 +68,6 @@ function RouteComponent() {
       <PageSearchLayer
         rightComponent={
           <>
-            <DateBullet update={(val) => console.log(val)} />
             <FilterButton />
             <AddButton onClick={() => setIsAddOpen(true)} />
           </>

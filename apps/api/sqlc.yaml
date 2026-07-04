@@ -11,3 +11,5 @@ sql:
         emit_json_tags: true
         emit_prepared_queries: false
         emit_interface: true # makes it easier to mock for tests
+        rename:
+          polling_unit_consensus: "PollingUnitConsensus"

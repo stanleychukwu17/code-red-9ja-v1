@@ -1,13 +1,22 @@
+import * as React from "react";
 import {
   Layout,
   PageHeader,
   PageSearchLayer,
+  AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { PartyMembersTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
-import { PARTY_MEMBERS_TABS, agentPartyMembers } from "./dummy_data";
+import { getPartyMembersTabs, getAgentPartyMembers } from "./data";
 import { PartyMembersActions } from "#/components/party-members/PartyMembersActions";
+import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
+
+// Server Functions
+import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
+import { getParties, getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
+import { registerCandidate } from "#/lib/server/auth/auth";
+import { updateUser } from "#/lib/server/users";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/party-members/agent")({
   head: () => getPageHeader({ title: "Party members" }),
@@ -15,17 +24,25 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/party-memb
 });
 
 function RouteComponent() {
+  const { partyShortName } = Route.useParams();
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+
   return (
     <Layout>
       <PageHeader
         title="Party members"
         activeTab="agent"
-        tabs={PARTY_MEMBERS_TABS}
+        tabs={getPartyMembersTabs(partyShortName)}
       />
       <PageSearchLayer
         ariaLabel="Search party members"
         placeholder="Search"
-        rightComponent={<PartyMembersActions showElectionFilter />}
+        rightComponent={
+          <>
+            <PartyMembersActions showElectionFilter />
+            <AddButton onClick={() => setIsFormOpen(true)} />
+          </>
+        }
       />
 
       <PartyMembersTable
@@ -35,7 +52,23 @@ function RouteComponent() {
           "Party office",
           "Joined at",
         ]}
-        items={agentPartyMembers}
+        items={getAgentPartyMembers(partyShortName)}
+      />
+
+      <UserFormDialog
+        open={isFormOpen}
+        onClose={() => setIsFormOpen(false)}
+        partyShortName={partyShortName}
+        defaultRole="user"
+        defaultRoleLevel="pollingagent"
+        getAllCountries={getAllCountries}
+        getStates={getStates}
+        getCities={getCities}
+        getParties={getParties}
+        getPresignedUploadURL={getPresignedUploadURL}
+        confirmFileUpload={confirmFileUpload}
+        registerCandidate={registerCandidate}
+        updateUser={updateUser}
       />
     </Layout>
   );

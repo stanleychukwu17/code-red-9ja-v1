@@ -55,6 +55,7 @@ export function UsersTabs({ activeTab }: { activeTab: UsersTabId }) {
       {TABS.map((tab) => {
         const active = tab.id === activeTab;
         return (
+          // @ts-ignore
           <Link
             key={tab.id}
             to={tab.href}

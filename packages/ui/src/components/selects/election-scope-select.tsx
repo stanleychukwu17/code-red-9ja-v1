@@ -43,6 +43,7 @@ export const SelectElectionScope = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between w-full gap-2",
             errorMsg && "border-0.8 border-red",
