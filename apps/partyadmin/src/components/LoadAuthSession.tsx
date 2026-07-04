@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAppDispatch } from "#/redux/hooks";
 import { refreshUserToken } from "#/lib/server/auth/auth";
 import { updateAuthState } from "#/redux/slice/authSlice";
@@ -9,30 +10,30 @@ import { updateAuthState } from "#/redux/slice/authSlice";
 export default function LoadAuthSession() {
   const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    const refreshSession = async () => {
-      try {
-        const response = await refreshUserToken();
-
-        if (response.success) {
-          const user = response.data.user;
-          if (user) dispatch(updateAuthState({ user }));
-        }
-      } catch (error) {
-        dispatch(updateAuthState({ user: null }));
-        console.error(`Error refreshing user token: `, error);
+  const { isError } = useQuery({
+    queryKey: ["authSession"],
+    queryFn: async () => {
+      const response = await refreshUserToken();
+      if (response.success && response.data?.user) {
+        dispatch(updateAuthState({ user: response.data.user }));
+        return response.data.user;
       }
-    };
+      throw new Error(response.message || "Failed to refresh token");
+    },
+    refetchInterval: 14 * 60 * 1000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
 
-    // Initial refresh on mount
-    refreshSession();
+  useEffect(() => {
     dispatch(updateAuthState({ userHydrated: true }));
-
-    // Periodically refresh the token every 14 minutes (since access token expires in 15 minutes)
-    const interval = setInterval(() => refreshSession(), 14 * 60 * 1000); // refresh every 14 minutes until done
-
-    return () => clearInterval(interval);
   }, [dispatch]);
+
+  useEffect(() => {
+    if (isError) {
+      dispatch(updateAuthState({ user: null }));
+    }
+  }, [isError, dispatch]);
 
   return null;
 }

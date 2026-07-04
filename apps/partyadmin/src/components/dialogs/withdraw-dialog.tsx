@@ -11,6 +11,7 @@ import { ChevronDown, Package, Loader2 } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
 import { SelectResponsiveWrapper } from "@repo/ui/components/selects/select-responsive-wrapper";
 import { GeneralCommand } from "@repo/ui/components/command/general-command";
+import { useMutation } from "@tanstack/react-query";
 import { withdrawFromPartyWallet } from "#/lib/server/parties";
 
 const NIGERIAN_BANKS = [
@@ -51,8 +52,22 @@ export function WithdrawDialog({
   const [bankOpen, setBankOpen] = React.useState(false);
   const [accountNumber, setAccountNumber] = React.useState("");
   const [narration, setNarration] = React.useState("");
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState("");
+
+  const withdrawMutation = useMutation({
+    mutationFn: (variables: any) => withdrawFromPartyWallet({ data: variables }),
+    onSuccess: (res: any) => {
+      if (res && res.success) {
+        alert("Withdrawal requested successfully!");
+        onClose();
+      } else {
+        setErrorMsg(res?.message || "Failed to process withdrawal");
+      }
+    },
+    onError: (err: any) => {
+      setErrorMsg(err.message || "Something went wrong");
+    }
+  });
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value.replace(/\D/g, "");
@@ -85,30 +100,14 @@ export function WithdrawDialog({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const res = await withdrawFromPartyWallet({
-        data: {
-          partyID: wallet.party_id,
-          amountKobo,
-          transactionReference: "wd-" + Math.random().toString(36).substring(2, 15),
-          bankAccountNumber: accountNumber,
-          bankCode: selectedBank.code,
-          narration: narration || "Wallet withdrawal",
-        },
-      }) as any;
-
-      if (res && res.success) {
-        alert("Withdrawal requested successfully!");
-        onClose();
-      } else {
-        setErrorMsg(res?.message || "Failed to process withdrawal");
-      }
-    } catch (err: any) {
-      setErrorMsg(err.message || "Something went wrong");
-    } finally {
-      setIsSubmitting(false);
-    }
+    withdrawMutation.mutate({
+      partyID: wallet.party_id,
+      amountKobo,
+      transactionReference: "wd-" + Math.random().toString(36).substring(2, 15),
+      bankAccountNumber: accountNumber,
+      bankCode: selectedBank.code,
+      narration: narration || "Wallet withdrawal",
+    });
   };
 
   return (
@@ -229,10 +228,10 @@ export function WithdrawDialog({
           </Button>
           <Button
             onClick={handleWithdraw}
-            disabled={isSubmitting}
+            disabled={withdrawMutation.isPending}
             className="bg-[#252525] hover:bg-black text-white rounded-xl px-7 h-11 text-[15px] font-bold border-none shadow-none transition-colors duration-150 flex items-center justify-center gap-2"
           >
-            {isSubmitting ? (
+            {withdrawMutation.isPending ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
                 <span>Processing...</span>

@@ -1,20 +1,15 @@
 import * as React from "react";
 
 import { ArrowUp, Eye, EyeOff } from "lucide-react";
-import TextareaAutosize, {
-  TextareaAutosizeProps,
-} from "react-textarea-autosize";
+import TextareaAutosize from "react-textarea-autosize";
+import type { TextareaAutosizeProps } from "react-textarea-autosize";
 import PaperPlaneIcon from "../icons/paper-plane-icon";
 import SearchIcon from "../icons/search-icon";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 
 const inputClassName =
-  `group flex items-center gap-2 h-11 w-full rounded-[4px] bg-black/5 px-4 py-6
-  transition-colors duration-200 file:border-0 file:bg-transparent ring-inset file:text-foreground placeholder:text-c-60
-  dark:bg-black/30 dark:hover:bg-black/90
-  focus-visible:outline-hidden focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80
-  disabled:cursor-not-allowed disabled:opacity-50`;
+  "group flex items-center gap-2 h-12 md:h-11 text-lg md:text-base w-full rounded-[12px] bg-black/5 px-4 py-1 transition-colors duration-200 file:border-0 file:bg-transparent ring-inset file:text-foreground placeholder:text-c-60 focus-visible:outline-hidden focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80 disabled:cursor-not-allowed disabled:opacity-50";
 
 const fancyInputClassName =
   "bg-transparent hover:bg-transparent! text-2xl md:text-[28px] text-c-80 font-semibold px-0 hover:ring-0 hover:bg-background focus-visible:ring-0 placeholder:text-c-30";
@@ -134,7 +129,7 @@ const Label = ({
   className?: string;
 }) => {
   if (!title) return <></>;
-  return <p className={cn("text-sm text-c-70", className)}>{title}</p>;
+  return <p className={cn("font-medium text-c-80", className)}>{title}</p>;
 };
 
 const textareaClassName =
@@ -158,7 +153,7 @@ Textarea.displayName = "Textarea";
 const TextareaInput = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea"> &
-  TextareaAutosizeProps & { errorMsg?: string }
+    TextareaAutosizeProps & { errorMsg?: string }
 >(({ className, errorMsg, ...props }, ref) => {
   return (
     <div
@@ -178,7 +173,7 @@ TextareaInput.displayName = "TextareaInput";
 export const TextareaInputComment = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea"> &
-  TextareaAutosizeProps & { errorMsg?: string; onSubmit?: () => void }
+    TextareaAutosizeProps & { errorMsg?: string; onSubmit?: () => void }
 >(({ className, errorMsg, onSubmit, ...props }, ref) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {

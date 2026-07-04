@@ -870,6 +870,3 @@ func (h *Handler) SeedUsers(w http.ResponseWriter, r *http.Request) {
 		"ids": ids,
 	})
 }
-
-
-

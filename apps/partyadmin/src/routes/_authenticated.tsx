@@ -18,6 +18,7 @@ import {
   redirect,
   useParams,
 } from "@tanstack/react-router";
+import { useMutation } from "@tanstack/react-query";
 
 import { logoutUser, refreshUserToken } from "#/lib/server/auth/auth";
 import { useAuth } from "#/providers/providers";
@@ -87,13 +88,19 @@ function AuthenticatedRoutes() {
     },
   ];
 
-  const handleLogout = async () => {
-    try {
-      await logoutUser();
-    } catch (e) {
+  const logoutMutation = useMutation({
+    mutationFn: () => logoutUser(),
+    onSuccess: () => {
+      dispatch(updateAuthState({ user: null }));
+    },
+    onError: (e) => {
       console.error(e);
+      dispatch(updateAuthState({ user: null }));
     }
-    dispatch(updateAuthState({ user: null }));
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
   };
 
   const handleSidebarStateChange = (sideBarState: "expanded" | "collapsed") => {

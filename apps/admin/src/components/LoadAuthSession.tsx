@@ -14,8 +14,8 @@ export default function LoadAuthSession() {
       try {
         const response = await refreshUserToken();
 
-        if (response.success) {
-          const user = response.data.user;
+        if (response.status === "success") {
+          const user = response.user;
           if (user) dispatch(updateAuthState({ user }));
         }
       } catch (error) {
