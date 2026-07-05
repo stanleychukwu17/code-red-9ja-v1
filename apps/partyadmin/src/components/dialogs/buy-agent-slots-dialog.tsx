@@ -30,6 +30,17 @@ export function BuyAgentSlotsDialog({
   onSuccess?: () => void;
 }) {
   const [slots, setSlots] = React.useState(100);
+  const [isPending, setIsPending] = React.useState(false);
+
+  const { data: priceRes, isLoading: isPriceLoading } = useQuery({
+    queryKey: ["partySlotPrice", partyId],
+    queryFn: () => getPartySlotPrice({ data: partyId! }),
+    enabled: !!partyId && open,
+  });
+
+  const pricePerSlot = priceRes?.success && priceRes?.data?.unit_price_kobo !== undefined
+    ? priceRes.data.unit_price_kobo / 100
+    : 1000; // fallback to 1000 NGN if loading/error
 
   const buySlotsMutation = useMutation({
     mutationFn: (variables: { partyID: number; quantity: number }) => buyPartySlots({ data: variables }),

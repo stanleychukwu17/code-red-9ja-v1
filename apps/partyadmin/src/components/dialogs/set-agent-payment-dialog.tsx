@@ -34,6 +34,84 @@ export function SetAgentPaymentDialog({
   const [stateOverrides, setStateOverrides] = React.useState<
     Record<string, number>
   >({});
+  const [isPending, setIsPending] = React.useState(false);
+
+  // Load states from backend API
+  const { data: statesRes } = useQuery({
+    queryKey: ["nigerianStates"],
+    queryFn: () => getStates({ data: { countryId: 161, limit: 50 } }),
+    enabled: open,
+  });
+
+  const statesList = React.useMemo(() => {
+    const fetched = statesRes?.data?.states || [];
+    if (fetched.length > 0) {
+      return [...fetched].map(s => s.name).sort((a, b) => a.localeCompare(b));
+    }
+    // Fallback static list (matching DB state names)
+    return [
+      "Abia",
+      "Abuja FCT",
+      "Adamawa",
+      "Akwa Ibom",
+      "Anambra",
+      "Bauchi",
+      "Bayelsa",
+      "Benue",
+      "Borno",
+      "Cross River",
+      "Delta",
+      "Ebonyi",
+      "Edo",
+      "Ekiti",
+      "Enugu",
+      "Gombe",
+      "Imo",
+      "Jigawa",
+      "Kaduna",
+      "Kano",
+      "Katsina",
+      "Kebbi",
+      "Kogi",
+      "Kwara",
+      "Lagos",
+      "Nasarawa",
+      "Niger",
+      "Ogun",
+      "Ondo",
+      "Osun",
+      "Oyo",
+      "Plateau",
+      "Rivers",
+      "Sokoto",
+      "Taraba",
+      "Yobe",
+      "Zamfara",
+    ];
+  }, [statesRes]);
+
+  // Sync component state from database settings when dialog opens
+  React.useEffect(() => {
+    if (open && party?.stateAllowances && statesList.length > 0) {
+      const allowances = party.stateAllowances;
+      const defaultKobo = allowances["default"] !== undefined ? allowances["default"] : 2000000;
+      setMainAmount(defaultKobo / 100);
+
+      const overrides: Record<string, number> = {};
+      let isDifferent = false;
+      for (const state of statesList) {
+        const val = allowances[state];
+        if (val !== undefined) {
+          overrides[state] = val / 100;
+          if (val !== defaultKobo) {
+            isDifferent = true;
+          }
+        }
+      }
+      setStateOverrides(overrides);
+      setPaymentType(isDifferent ? "custom" : "same");
+    }
+  }, [open, party?.stateAllowances, statesList]);
 
   const saveMutation = useMutation({
     mutationFn: (variables: {
