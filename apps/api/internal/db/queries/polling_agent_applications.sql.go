@@ -376,7 +376,7 @@ SET
   role_level = $13,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -436,6 +436,7 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.BankCode,
 		&i.NinVerified,
 		&i.PhoneVerified,
+		&i.EmailVerified,
 		&i.Role,
 		&i.RoleLevel,
 		&i.AccountStatus,
@@ -454,7 +455,7 @@ SET
   role = 'partymember',
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleToAgent(ctx context.Context, id int64) (User, error) {
@@ -484,6 +485,7 @@ func (q *Queries) UpdateUserRoleToAgent(ctx context.Context, id int64) (User, er
 		&i.BankCode,
 		&i.NinVerified,
 		&i.PhoneVerified,
+		&i.EmailVerified,
 		&i.Role,
 		&i.RoleLevel,
 		&i.AccountStatus,

@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { Info, Loader2 } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
-import { useParty } from "#/providers/providers";
+import { useAppContext } from "#/providers/providers";
 import { updatePartyStateAllowances } from "#/lib/server/parties";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getStates } from "#/lib/server/countries";
@@ -24,7 +24,7 @@ export function SetAgentPaymentDialog({
   onClose: () => void;
   onSuccess?: () => void;
 }) {
-  const { party } = useParty();
+  const { party } = useAppContext();
   const partyId = party?.id;
 
   const [mainAmount, setMainAmount] = React.useState(20000);
@@ -36,7 +36,10 @@ export function SetAgentPaymentDialog({
   >({});
 
   const saveMutation = useMutation({
-    mutationFn: (variables: { partyID: number; allowances: Record<string, number> }) => updatePartyStateAllowances({ data: variables }),
+    mutationFn: (variables: {
+      partyID: number;
+      allowances: Record<string, number>;
+    }) => updatePartyStateAllowances({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         toast.success("Agent payment budget saved successfully!");
@@ -48,7 +51,7 @@ export function SetAgentPaymentDialog({
     },
     onError: (error: any) => {
       toast.error(error.message || "An unexpected error occurred");
-    }
+    },
   });
 
   // Load states from backend API
@@ -61,7 +64,7 @@ export function SetAgentPaymentDialog({
   const statesList = React.useMemo(() => {
     const fetched = statesRes?.data?.states || [];
     if (fetched.length > 0) {
-      return [...fetched].map(s => s.name).sort((a, b) => a.localeCompare(b));
+      return [...fetched].map((s) => s.name).sort((a, b) => a.localeCompare(b));
     }
     // Fallback static list (matching DB state names)
     return [
@@ -109,7 +112,8 @@ export function SetAgentPaymentDialog({
   React.useEffect(() => {
     if (open && party?.stateAllowances && statesList.length > 0) {
       const allowances = party.stateAllowances;
-      const defaultKobo = allowances["default"] !== undefined ? allowances["default"] : 2000000;
+      const defaultKobo =
+        allowances["default"] !== undefined ? allowances["default"] : 2000000;
       setMainAmount(defaultKobo / 100);
 
       const overrides: Record<string, number> = {};
@@ -162,7 +166,10 @@ export function SetAgentPaymentDialog({
       if (paymentType === "same") {
         allowancesPayload[state] = mainAmount * 100;
       } else {
-        const val = stateOverrides[state] !== undefined ? stateOverrides[state] : mainAmount;
+        const val =
+          stateOverrides[state] !== undefined
+            ? stateOverrides[state]
+            : mainAmount;
         allowancesPayload[state] = val * 100;
       }
     }

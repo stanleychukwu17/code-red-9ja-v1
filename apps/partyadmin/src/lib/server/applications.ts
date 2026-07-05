@@ -126,13 +126,15 @@ export const getPollingUnits = createServerFn({ method: "GET" })
 
 export const getLGAs = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { stateID?: number } | undefined) => data,
+    (data: { stateId?: number; limit?: number; cursor?: string } | undefined) => data,
   )
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
-      if (data?.stateID) params.append("state_id", String(data.stateID));
-      params.append("limit", "200");
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      else params.append("limit", "200");
+      if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
       const url = `${API_URL.getLGAs}${qs ? `?${qs}` : ""}`;
@@ -151,14 +153,16 @@ export const getLGAs = createServerFn({ method: "GET" })
 
 export const getWards = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { lgaID?: number; stateID?: number } | undefined) => data,
+    (data: { lga_id?: number; stateId?: number; limit?: number; cursor?: string } | undefined) => data,
   )
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
-      if (data?.lgaID) params.append("lga_id", String(data.lgaID));
-      if (data?.stateID) params.append("state_id", String(data.stateID));
-      params.append("limit", "200");
+      if (data?.lga_id) params.append("lga_id", String(data.lga_id));
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.limit) params.append("limit", String(data.limit));
+      else params.append("limit", "200");
+      if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
       const url = `${API_URL.getWards}${qs ? `?${qs}` : ""}`;

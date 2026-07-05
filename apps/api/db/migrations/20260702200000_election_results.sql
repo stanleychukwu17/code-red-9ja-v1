@@ -19,6 +19,9 @@ CREATE TABLE polling_unit_results (
 
   -- Denormalized for fast geo-filtering (mirrors polling_unit_updates)
   state_id                 SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+  senatorial_district_id   INT      REFERENCES senatorial_districts(id) ON DELETE SET NULL,
+  federal_constituency_id  INT      REFERENCES federal_constituencies(id) ON DELETE SET NULL,
+  state_constituency_id    INT      REFERENCES state_assembly_constituencies(id) ON DELETE SET NULL,
   lga_id                   INT      REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id                  INT      REFERENCES wards(id) ON DELETE SET NULL,
 
@@ -107,8 +110,14 @@ CREATE TABLE polling_unit_final_results (
 
   -- Denormalized for fast geo-filtering
   state_id                 SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+  senatorial_district_id   INT      REFERENCES senatorial_districts(id) ON DELETE SET NULL,
+  federal_constituency_id  INT      REFERENCES federal_constituencies(id) ON DELETE SET NULL,
+  state_constituency_id    INT      REFERENCES state_assembly_constituencies(id) ON DELETE SET NULL,
   lga_id                   INT      REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id                  INT      REFERENCES wards(id) ON DELETE SET NULL,
+
+  -- The actual submission that was accepted as the final result
+  polling_unit_result_id BIGINT   REFERENCES polling_unit_results(id) ON DELETE SET NULL,
 
   -- Final calculated values based on consensus
   accredited_voters        INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),

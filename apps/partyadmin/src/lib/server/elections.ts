@@ -134,3 +134,226 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
       return { success: false, message: "Failed to field candidate: " + (error as Error).message };
     }
   });
+
+export const getElectionCandidates = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: { electionId: number; limit?: number; cursor?: string }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const limit = data.limit || 20;
+      const cursor = data.cursor || "";
+      const { getCookie } = await import("@tanstack/react-start/server");
+      const accessToken = getCookie("access_token");
+      const refreshToken = getCookie("refresh_token");
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+        headers["Cookie"] =
+          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
+      }
+
+      const response = await fetch(
+        `${API_URL.elections}/${data.electionId}/candidates?limit=${limit}&cursor=${cursor}`,
+        {
+          headers,
+        },
+      );
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Failed to fetch election candidates: " + (error as Error).message,
+      };
+    }
+  });
+
+export const getPollingUnitUpdates = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      electionGroupId?: number;
+      stateId?: number;
+      senatorialDistrictId?: number;
+      federalConstituencyId?: number;
+      stateAssemblyConstituencyId?: number;
+      lgaId?: number;
+      wardId?: number;
+      isReport?: boolean;
+      hasMedia?: boolean;
+      limit?: number;
+      cursor?: string | number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { getCookie } = await import("@tanstack/react-start/server");
+      const accessToken = getCookie("access_token");
+      const refreshToken = getCookie("refresh_token");
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+        headers["Cookie"] =
+          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
+      }
+
+      const params = new URLSearchParams();
+      if (data.electionGroupId)
+        params.append("election_group_id", data.electionGroupId.toString());
+      if (data.stateId) params.append("state_id", data.stateId.toString());
+      if (data.senatorialDistrictId)
+        params.append(
+          "senatorial_district_id",
+          data.senatorialDistrictId.toString(),
+        );
+      if (data.federalConstituencyId)
+        params.append(
+          "federal_constituency_id",
+          data.federalConstituencyId.toString(),
+        );
+      if (data.stateAssemblyConstituencyId)
+        params.append(
+          "state_assembly_constituency_id",
+          data.stateAssemblyConstituencyId.toString(),
+        );
+      if (data.lgaId) params.append("lga_id", data.lgaId.toString());
+      if (data.wardId) params.append("ward_id", data.wardId.toString());
+      if (data.isReport !== undefined)
+        params.append("is_report", data.isReport.toString());
+      if (data.hasMedia !== undefined)
+        params.append("has_media", data.hasMedia.toString());
+      if (data.limit) params.append("limit", data.limit.toString());
+      if (data.cursor !== undefined) params.append("cursor", data.cursor.toString());
+
+      const response = await fetch(
+        `${API_URL.pollingUnitUpdates}?${params.toString()}`,
+        {
+          headers,
+        },
+      );
+
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Failed to fetch polling unit updates: " + (error as Error).message,
+      };
+    }
+  });
+
+export const getPollingUnitFinalResults = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      electionGroupId?: number;
+      stateId?: number;
+      senatorialDistrictId?: number;
+      federalConstituencyId?: number;
+      stateAssemblyConstituencyId?: number;
+      lgaId?: number;
+      wardId?: number;
+      hasMedia?: boolean;
+      limit?: number;
+      cursor?: string | number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { getCookie } = await import("@tanstack/react-start/server");
+      const accessToken = getCookie("access_token");
+      const refreshToken = getCookie("refresh_token");
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+        headers["Cookie"] =
+          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
+      }
+
+      const params = new URLSearchParams();
+      if (data.electionGroupId)
+        params.append("election_group_id", data.electionGroupId.toString());
+      if (data.stateId) params.append("state_id", data.stateId.toString());
+      if (data.senatorialDistrictId)
+        params.append(
+          "senatorial_district_id",
+          data.senatorialDistrictId.toString(),
+        );
+      if (data.federalConstituencyId)
+        params.append(
+          "federal_constituency_id",
+          data.federalConstituencyId.toString(),
+        );
+      if (data.stateAssemblyConstituencyId)
+        params.append(
+          "state_assembly_constituency_id",
+          data.stateAssemblyConstituencyId.toString(),
+        );
+      if (data.lgaId) params.append("lga_id", data.lgaId.toString());
+      if (data.wardId) params.append("ward_id", data.wardId.toString());
+      if (data.hasMedia !== undefined)
+        params.append("has_media", data.hasMedia.toString());
+      if (data.limit) params.append("limit", data.limit.toString());
+      if (data.cursor !== undefined) params.append("cursor", data.cursor.toString());
+
+      const response = await fetch(
+        `${API_URL.pollingUnitFinalResults}?${params.toString()}`,
+        {
+          headers,
+        },
+      );
+
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Failed to fetch polling unit final results: " +
+          (error as Error).message,
+      };
+    }
+  });
+
+export const getElectionsByGroup = createServerFn({ method: "GET" })
+  .inputValidator((groupId: string | number) => groupId)
+  .handler(async ({ data: groupId }) => {
+    try {
+      const { getCookie } = await import("@tanstack/react-start/server");
+      const accessToken = getCookie("access_token");
+      const refreshToken = getCookie("refresh_token");
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+        headers["Cookie"] =
+          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
+      }
+
+      const response = await fetch(
+        `${API_URL.electionGroups}/${groupId}/elections`,
+        {
+          headers,
+        },
+      );
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch group elections: " + (error as Error).message,
+      };
+    }
+  });

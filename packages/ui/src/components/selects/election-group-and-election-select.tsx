@@ -234,7 +234,7 @@ export const SelectElectionGroupAndElection = ({
   // ─── Loading skeleton ─────────────────────────────────────────────────────
   if (electionGroups.length === 0 && isLoading && !disabled) {
     return (
-      <div className="flex items-center gap-4 cursor-pointer select-none group w-full text-left animate-pulse">
+      <div className="flex items-center gap-4 cursor-pointer select-none group text-left animate-pulse">
         <span className="text-sm font-semibold text-c-900 group-hover:text-c-800 transition line-clamp-1">
           Select Election Group
         </span>
@@ -259,7 +259,7 @@ export const SelectElectionGroupAndElection = ({
           type="button"
           onClick={handleBack}
           className={cn(
-            "flex items-center gap-2 w-full px-3 pt-2 pb-1 text-left hover:bg-c-10/60 transition",
+            "inlineflex items-center gap-2 px-3 pt-2 pb-1 text-left hover:bg-c-10/60 transition",
           )}
         >
           <ChevronLeft className="size-4 text-c-50 shrink-0" />
@@ -368,7 +368,7 @@ export const SelectElectionGroupAndElection = ({
       trigger={
         <button
           type="button"
-          className="flex items-center gap-4 cursor-pointer select-none group w-full text-left"
+          className="flex items-center gap-4 cursor-pointer select-none group text-left"
         >
           <span className="text-sm font-semibold text-c-900 group-hover:text-c-800 transition line-clamp-1">
             {displayText}

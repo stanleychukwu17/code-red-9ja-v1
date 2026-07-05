@@ -36,7 +36,8 @@ export const SelectFederalConstituency = ({
   className,
   align = "start",
   fetchFederalConstituencies,
-}: SelectProps<FederalConstituency> & {
+  showAll,
+}: SelectProps<FederalConstituency, number> & {
   stateId?: number;
   senatorialDistrictId?: number;
   fetchFederalConstituencies: (args: {
@@ -118,15 +119,18 @@ export const SelectFederalConstituency = ({
   }, [selectedId, constituencies]);
 
   useEffect(() => {
-    setSelectedItem(undefined);
-  }, [stateId, senatorialDistrictId]);
-  useEffect(() => {
     if (!open) setMobileSearch("");
   }, [open]);
 
   const handleConstituencySelect = (constituency: FederalConstituency) => {
     setSelectedItem(constituency);
     update(constituency);
+    setOpen(false);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedItem(undefined);
+    update(undefined as any);
     setOpen(false);
   };
 
@@ -211,6 +215,8 @@ export const SelectFederalConstituency = ({
           status={getStatus()}
           loadMore={handleLoadMore}
           onSearch={setDesktopSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
       mobileContent={
@@ -223,6 +229,8 @@ export const SelectFederalConstituency = ({
           status={getStatus()}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
     />

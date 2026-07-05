@@ -19,7 +19,7 @@ export type FormProps<T = unknown> = {
 export type FormMode = "create" | "update" | "delete" | "manage" | "review";
 export type DialogMode = "closable" | "not-closable";
 
-export type BulletProps<T, TID = string> = {
+export type BulletProps<T, TID = string | number> = {
   initialData?: T;
   buttonText?: string;
   update: (item: T) => void;
@@ -30,6 +30,8 @@ export type BulletProps<T, TID = string> = {
   numberOfItems?: number;
   readOnly?: boolean;
   align?: "start" | "center" | "end";
+  showAll?: boolean;
+  showNone?: boolean;
 };
 
 export type SelectProps<T, TID = string> = {

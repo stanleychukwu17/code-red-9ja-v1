@@ -392,6 +392,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// polling unit results routes
 		r.Post("/api/v1/polling-unit-results", pollingUnitResultsHandler.SubmitResult)
 		r.Get("/api/v1/polling-unit-results", pollingUnitResultsHandler.ListResults)
+		r.Get("/api/v1/polling-unit-final-results", pollingUnitResultsHandler.ListFinalResults)
 		r.Get("/api/v1/polling-unit-results/final", pollingUnitResultsHandler.GetFinalResult)
 		r.Get("/api/v1/polling-unit-results/{id}", pollingUnitResultsHandler.GetResult)
 		r.Patch("/api/v1/polling-unit-results/{id}/vote", pollingUnitResultsHandler.VoteOnResult)

@@ -150,9 +150,29 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 			params.WardID = pgtype.Int4{Int32: int32(v), Valid: true}
 		}
 	}
+	if val := r.URL.Query().Get("senatorial_district_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.SenatorialDistrictID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("federal_constituency_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.FederalConstituencyID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("state_assembly_constituency_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.StateAssemblyConstituencyID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
 	if val := r.URL.Query().Get("is_report"); val != "" {
 		if v, err := strconv.ParseBool(val); err == nil {
 			params.IsReport = pgtype.Bool{Bool: v, Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("has_media"); val != "" {
+		if v, err := strconv.ParseBool(val); err == nil {
+			params.HasMedia = pgtype.Bool{Bool: v, Valid: true}
 		}
 	}
 

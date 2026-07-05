@@ -2,6 +2,7 @@ package puassignments
 
 import (
 	"context"
+	"errors"
 	"free9ja/api/internal/db/queries"
 	"time"
 
@@ -76,6 +77,22 @@ func parseTextParam(str *string) pgtype.Text {
 }
 
 func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error) {
+	assignment, err := s.queries.GetAssignmentByID(ctx, id)
+	if err != nil {
+		return queries.UpdateAssignmentTrackingRow{}, errors.New("invalid assignment")
+	}
+
+	electionGroup, err := s.queries.GetElectionGroupByID(ctx, assignment.ElectionGroupID)
+	if err != nil {
+		return queries.UpdateAssignmentTrackingRow{}, errors.New("invalid election group")
+	}
+	if electionGroup.ElectionDate.Valid {
+		now := time.Now().UTC()
+		if now.Format("2006-01-02") != electionGroup.ElectionDate.Time.Format("2006-01-02") {
+			return queries.UpdateAssignmentTrackingRow{}, errors.New("updates can only be submitted on the election day")
+		}
+	}
+
 	return s.queries.UpdateAssignmentTracking(ctx, queries.UpdateAssignmentTrackingParams{
 		ID:                      id,
 		ArrivedAt:               parseTimeParam(arrivedAt),

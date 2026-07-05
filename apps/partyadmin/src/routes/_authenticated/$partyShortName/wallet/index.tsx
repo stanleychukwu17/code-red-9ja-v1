@@ -17,18 +17,21 @@ import {
   Loader2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParty } from "#/providers/providers";
-import { getPartyWallet, getPartyWalletTransactions } from "#/lib/server/parties";
+import { useAppContext } from "#/providers/providers";
+import {
+  getPartyWallet,
+  getPartyWalletTransactions,
+} from "#/lib/server/parties";
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/wallet/",
-)({
-  head: () => getPageHeader({ title: "Wallet" }),
-  component: RouteComponent,
-});
+export const Route = createFileRoute("/_authenticated/$partyShortName/wallet/")(
+  {
+    head: () => getPageHeader({ title: "Wallet" }),
+    component: RouteComponent,
+  },
+);
 
 function RouteComponent() {
-  const { party } = useParty();
+  const { party } = useAppContext();
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -40,7 +43,10 @@ function RouteComponent() {
 
   const { data: txRes, isLoading: isTxLoading } = useQuery({
     queryKey: ["partyWalletTransactions", partyId],
-    queryFn: () => getPartyWalletTransactions({ data: { partyID: partyId!, limit: 50, offset: 0 } }),
+    queryFn: () =>
+      getPartyWalletTransactions({
+        data: { partyID: partyId!, limit: 50, offset: 0 },
+      }),
     enabled: !!partyId,
   });
 
@@ -50,7 +56,9 @@ function RouteComponent() {
   const handleRefresh = () => {
     if (partyId) {
       queryClient.invalidateQueries({ queryKey: ["partyWallet", partyId] });
-      queryClient.invalidateQueries({ queryKey: ["partyWalletTransactions", partyId] });
+      queryClient.invalidateQueries({
+        queryKey: ["partyWalletTransactions", partyId],
+      });
       queryClient.invalidateQueries({ queryKey: ["party", partyId] });
     }
   };
@@ -63,17 +71,14 @@ function RouteComponent() {
         isLoading={isWalletLoading}
         onWithdrawalClose={handleRefresh}
       />
-      <WalletSlotsAllowanceSection
-        wallet={wallet}
-        onSuccess={handleRefresh}
-      />
+      <WalletSlotsAllowanceSection wallet={wallet} onSuccess={handleRefresh} />
       <WalletTransactions transactions={transactions} isLoading={isTxLoading} />
     </DashboardLayout>
   );
 }
 
 function WalletHeader() {
-  const { party } = useParty();
+  const { party } = useAppContext();
   return (
     <section className="h-16 flex items-center justify-between gap-4 pt-5">
       <h1 className="flex items-center gap-4">
@@ -94,14 +99,17 @@ import { DepositAllowanceDialog } from "#/components/dialogs/deposit-allowance-d
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { getLocalDate } from "@repo/ui/lib/date";
 
-
 /** Matches the Go PartyWalletTransaction struct serialised to JSON */
 interface WalletTransaction {
   id: number;
   wallet_id: number;
   transaction_reference: string;
   type: "credit" | "debit";
-  transaction_category: "wallet_funding" | "wallet_withdrawal" | "slot_purchase" | "allowance_deposit";
+  transaction_category:
+    | "wallet_funding"
+    | "wallet_withdrawal"
+    | "slot_purchase"
+    | "allowance_deposit";
   amount_kobo: number;
   balance_after_kobo: number;
   payer_name: string | null;
@@ -117,7 +125,12 @@ interface PartyWallet {
   id: number;
   party_id: number;
   account_reference: string;
-  account_numbers: { accountNumber: string; accountName: string; bankName: string; bankCode: string }[];
+  account_numbers: {
+    accountNumber: string;
+    accountName: string;
+    bankName: string;
+    bankCode: string;
+  }[];
   balance_kobo: number;
   currency_code: string;
   status: string;
@@ -136,7 +149,7 @@ function WalletBillboard({
 }) {
   const [isWalletDialogOpen, setIsWalletDialogOpen] = React.useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = React.useState(false);
-  const { party } = useParty();
+  const { party } = useAppContext();
 
   const balanceKobo = wallet?.balance_kobo ?? 0;
   const balanceNaira = balanceKobo / 100;
@@ -146,7 +159,11 @@ function WalletBillboard({
   });
 
   const balanceInBillion = balanceNaira >= 1_000_000_000;
-  const scaleLabel = balanceInBillion ? "billion" : balanceNaira >= 1_000_000 ? "million" : "";
+  const scaleLabel = balanceInBillion
+    ? "billion"
+    : balanceNaira >= 1_000_000
+      ? "million"
+      : "";
 
   const CardTitle = ({ title }: { title: string }) => (
     <h2 className="text-[22px] text-c-90">{title}</h2>
@@ -168,7 +185,11 @@ function WalletBillboard({
                 <span className="text-[40px] leading-none tracking-[-0.06em] text-c-90">
                   ₦{formattedBalance}
                 </span>
-                {scaleLabel && <span className="pb-0.5 text-[18px] text-[#8a8a8a]">{scaleLabel}</span>}
+                {scaleLabel && (
+                  <span className="pb-0.5 text-[18px] text-[#8a8a8a]">
+                    {scaleLabel}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -294,12 +315,14 @@ function WalletSlotsAllowanceSection({
   wallet: PartyWallet | undefined;
   onSuccess: () => void;
 }) {
-  const { party } = useParty();
+  const { party } = useAppContext();
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
   const [isAllowanceDialogOpen, setIsAllowanceDialogOpen] =
     React.useState(false);
 
-  const allowanceVal = ((party?.allowanceBalanceKobo ?? 0) / 100).toLocaleString("en-NG", {
+  const allowanceVal = (
+    (party?.allowanceBalanceKobo ?? 0) / 100
+  ).toLocaleString("en-NG", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   });
@@ -368,18 +391,36 @@ export function WalletTransactions({
           {transactions.map((tx) => {
             const isCredit = tx.type === "credit";
             const amountNaira = (tx.amount_kobo ?? 0) / 100;
-            const formattedAmount = `${isCredit ? "+" : "-"} ₦${amountNaira.toLocaleString("en-NG", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}`;
+            const formattedAmount = `${isCredit ? "+" : "-"} ₦${amountNaira.toLocaleString(
+              "en-NG",
+              {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              },
+            )}`;
 
             // Derive label, icon and colour from the semantic transaction_category field
             type TxMeta = { label: string; icon: React.ReactNode };
-            const categoryMeta: Record<WalletTransaction["transaction_category"], TxMeta> = {
-              wallet_funding:    { label: "Wallet Funded",           icon: <CheckCircle2 className="size-6 text-[#10dd84]" /> },
-              wallet_withdrawal: { label: "Wallet Withdrawal",       icon: <ArrowUpFromLine className="size-6 text-[#a0a0a0]" /> },
-              slot_purchase:     { label: "Polling Agent Slots",     icon: <Coins className="size-6 text-[#9b7b49]" /> },
-              allowance_deposit: { label: "Agent Allowance Deposit", icon: <Landmark className="size-6 text-[#6366f1]" /> },
+            const categoryMeta: Record<
+              WalletTransaction["transaction_category"],
+              TxMeta
+            > = {
+              wallet_funding: {
+                label: "Wallet Funded",
+                icon: <CheckCircle2 className="size-6 text-[#10dd84]" />,
+              },
+              wallet_withdrawal: {
+                label: "Wallet Withdrawal",
+                icon: <ArrowUpFromLine className="size-6 text-[#a0a0a0]" />,
+              },
+              slot_purchase: {
+                label: "Polling Agent Slots",
+                icon: <Coins className="size-6 text-[#9b7b49]" />,
+              },
+              allowance_deposit: {
+                label: "Agent Allowance Deposit",
+                icon: <Landmark className="size-6 text-[#6366f1]" />,
+              },
             };
             const meta = categoryMeta[tx.transaction_category] ?? {
               label: isCredit ? "Wallet Funded" : "Wallet Debit",
@@ -391,7 +432,11 @@ export function WalletTransactions({
 
             // created_at is a string representing the timestamp
             const dateStr = tx.created_at
-              ? getLocalDate(tx.created_at, { month: "short", day: "numeric", year: "numeric" })
+              ? getLocalDate(tx.created_at, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
               : "—";
 
             return (

@@ -11,6 +11,7 @@ import (
 
 	"free9ja/api/internal/db/queries"
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type CalculateFinalResultPayload struct {
@@ -107,8 +108,12 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		ElectionGroupID:          r.ElectionGroupID,
 		PollingUnitID:            r.PollingUnitID,
 		StateID:                  r.StateID,
+		SenatorialDistrictID:     r.SenatorialDistrictID,
+		FederalConstituencyID:    r.FederalConstituencyID,
+		StateConstituencyID:      r.StateConstituencyID,
 		LgaID:                    r.LgaID,
 		WardID:                   r.WardID,
+		PollingUnitResultID:            pgtype.Int8{Int64: r.ID, Valid: true},
 		AccreditedVoters:         r.AccreditedVoters,
 		VotesCast:                r.VotesCast,
 		ValidVotes:               r.ValidVotes,

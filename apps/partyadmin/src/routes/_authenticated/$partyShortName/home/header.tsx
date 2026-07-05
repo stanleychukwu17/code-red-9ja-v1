@@ -1,8 +1,14 @@
 import * as React from "react";
 import { useParams } from "@tanstack/react-router";
-import { useParty } from "#/providers/providers";
+import { useAppContext } from "#/providers/providers";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { SelectElectionGroupAndElection } from "@repo/ui/components/selects/election-group-and-election-select";
+import { getElectionsByGroup } from "#/lib/server/elections";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  SelectElectionGroupAndElection,
+  type Election,
+  type ElectionGroup,
+} from "@repo/ui/components/selects/election-group-and-election-select";
 import { HeaderTabs } from "@repo/ui/components/custom/AdminLayouts";
 
 export function HomePageHeader({
@@ -11,9 +17,16 @@ export function HomePageHeader({
   activeTab: "main" | "election-day";
 }) {
   const { partyShortName } = useParams({ strict: false });
-  const { party } = useParty();
+  const {
+    party,
+    selectedElectionGroup,
+    setSelectedElectionGroup,
+    setSelectedElection,
+  } = useAppContext();
   const partyId = party?.id;
-  const [selectedEgId, setSelectedEgId] = React.useState<number | undefined>(1); // Default to ID 1 (2027 Presidential Election)
+
+  const fetchGroups = useServerFn(getElectionGroups);
+  const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
   const tabs = [
     { id: "main", label: "Main", href: `/${partyShortName}/home` },
@@ -30,10 +43,15 @@ export function HomePageHeader({
 
       <div className="">
         <SelectElectionGroupAndElection
-          selectedId={selectedEgId}
-          update={(eg) => setSelectedEgId(eg.id)}
+          fetchElectionGroups={fetchGroups}
+          fetchElectionsByGroup={fetchElectionsByGroup}
+          selectedId={selectedElectionGroup?.id}
+          update={(group) => setSelectedElectionGroup(group)}
+          onElectionSelect={(group: ElectionGroup, election: Election) => {
+            setSelectedElectionGroup(group);
+            setSelectedElection(election);
+          }}
           partyId={partyId}
-          fetchElectionGroups={getElectionGroups}
           // className="h-12 rounded-[12px] bg-c-20 border-0 hover:bg-c-10 ring-0 hover:ring-0 shadow-none hover:shadow-none focus:ring-0 focus-visible:ring-0 px-5 text-[18px] text-c-80"
         />
       </div>

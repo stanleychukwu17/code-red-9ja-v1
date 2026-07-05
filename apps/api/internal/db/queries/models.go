@@ -315,8 +315,12 @@ type PollingUnitFinalResult struct {
 	ElectionGroupID          int64              `json:"election_group_id"`
 	PollingUnitID            int32              `json:"polling_unit_id"`
 	StateID                  pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID     pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID    pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID      pgtype.Int4        `json:"state_constituency_id"`
 	LgaID                    pgtype.Int4        `json:"lga_id"`
 	WardID                   pgtype.Int4        `json:"ward_id"`
+	PollingUnitResultID      pgtype.Int8        `json:"polling_unit_result_id"`
 	AccreditedVoters         int32              `json:"accredited_voters"`
 	VotesCast                int32              `json:"votes_cast"`
 	ValidVotes               int32              `json:"valid_votes"`
@@ -329,52 +333,58 @@ type PollingUnitFinalResult struct {
 }
 
 type PollingUnitResult struct {
-	ID                  int64              `json:"id"`
-	AssignmentID        pgtype.Int8        `json:"assignment_id"`
-	ElectionID          int64              `json:"election_id"`
-	ElectionGroupID     int64              `json:"election_group_id"`
-	PollingUnitID       int32              `json:"polling_unit_id"`
-	SubmittedBy         int64              `json:"submitted_by"`
-	PartyID             pgtype.Int8        `json:"party_id"`
-	StateID             pgtype.Int2        `json:"state_id"`
-	LgaID               pgtype.Int4        `json:"lga_id"`
-	WardID              pgtype.Int4        `json:"ward_id"`
-	AccreditedVoters    int32              `json:"accredited_voters"`
-	VotesCast           int32              `json:"votes_cast"`
-	ValidVotes          int32              `json:"valid_votes"`
-	RejectedVotes       int32              `json:"rejected_votes"`
-	CandidateResults    []byte             `json:"candidate_results"`
-	ResultSheetImageUrl pgtype.Text        `json:"result_sheet_image_url"`
-	ResultSheetVideoUrl pgtype.Text        `json:"result_sheet_video_url"`
-	Status              string             `json:"status"`
-	AiExtractedData     []byte             `json:"ai_extracted_data"`
-	AiConfidenceScore   pgtype.Numeric     `json:"ai_confidence_score"`
-	DisputedReason      pgtype.Text        `json:"disputed_reason"`
-	ConfirmedAt         pgtype.Timestamptz `json:"confirmed_at"`
-	ConfirmedBy         pgtype.Int8        `json:"confirmed_by"`
-	UpVotes             []int64            `json:"up_votes"`
-	DownVotes           []int64            `json:"down_votes"`
-	UploadedByInec      bool               `json:"uploaded_by_inec"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	ID                    int64              `json:"id"`
+	AssignmentID          pgtype.Int8        `json:"assignment_id"`
+	ElectionID            int64              `json:"election_id"`
+	ElectionGroupID       int64              `json:"election_group_id"`
+	PollingUnitID         int32              `json:"polling_unit_id"`
+	SubmittedBy           int64              `json:"submitted_by"`
+	PartyID               pgtype.Int8        `json:"party_id"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	WardID                pgtype.Int4        `json:"ward_id"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	ResultSheetImageUrl   pgtype.Text        `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl   pgtype.Text        `json:"result_sheet_video_url"`
+	Status                string             `json:"status"`
+	AiExtractedData       []byte             `json:"ai_extracted_data"`
+	AiConfidenceScore     pgtype.Numeric     `json:"ai_confidence_score"`
+	DisputedReason        pgtype.Text        `json:"disputed_reason"`
+	ConfirmedAt           pgtype.Timestamptz `json:"confirmed_at"`
+	ConfirmedBy           pgtype.Int8        `json:"confirmed_by"`
+	UpVotes               []int64            `json:"up_votes"`
+	DownVotes             []int64            `json:"down_votes"`
+	UploadedByInec        bool               `json:"uploaded_by_inec"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PollingUnitUpdate struct {
-	ID              int64              `json:"id"`
-	AssignmentID    pgtype.Int8        `json:"assignment_id"`
-	UserID          int64              `json:"user_id"`
-	PollingUnitID   int32              `json:"polling_unit_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PartyID         pgtype.Int8        `json:"party_id"`
-	StateID         pgtype.Int2        `json:"state_id"`
-	LgaID           pgtype.Int4        `json:"lga_id"`
-	WardID          pgtype.Int4        `json:"ward_id"`
-	Message         string             `json:"message"`
-	MediaUrls       []string           `json:"media_urls"`
-	IsReport        pgtype.Bool        `json:"is_report"`
-	ReportTypes     []string           `json:"report_types"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                          int64              `json:"id"`
+	AssignmentID                pgtype.Int8        `json:"assignment_id"`
+	UserID                      int64              `json:"user_id"`
+	PollingUnitID               int32              `json:"polling_unit_id"`
+	ElectionGroupID             int64              `json:"election_group_id"`
+	PartyID                     pgtype.Int8        `json:"party_id"`
+	StateID                     pgtype.Int2        `json:"state_id"`
+	LgaID                       pgtype.Int4        `json:"lga_id"`
+	WardID                      pgtype.Int4        `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4        `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4        `json:"state_assembly_constituency_id"`
+	Message                     string             `json:"message"`
+	MediaUrls                   []string           `json:"media_urls"`
+	IsReport                    pgtype.Bool        `json:"is_report"`
+	ReportTypes                 []string           `json:"report_types"`
+	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
 }
 
 type SenatorialDistrict struct {
@@ -478,6 +488,7 @@ type User struct {
 	BankCode          pgtype.Text        `json:"bank_code"`
 	NinVerified       pgtype.Text        `json:"nin_verified"`
 	PhoneVerified     pgtype.Text        `json:"phone_verified"`
+	EmailVerified     pgtype.Text        `json:"email_verified"`
 	Role              pgtype.Text        `json:"role"`
 	RoleLevel         pgtype.Text        `json:"role_level"`
 	AccountStatus     pgtype.Text        `json:"account_status"`
@@ -538,13 +549,15 @@ type UsersPhoneNumber struct {
 }
 
 type Ward struct {
-	ID           int32  `json:"id"`
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	LgaID        int32  `json:"lga_id"`
-	LgaName      string `json:"lga_name"`
-	StateID      int32  `json:"state_id"`
-	StateName    string `json:"state_name"`
+	ID                            int32       `json:"id"`
+	Name                          string      `json:"name"`
+	Abbreviation                  string      `json:"abbreviation"`
+	LgaID                         int32       `json:"lga_id"`
+	LgaName                       string      `json:"lga_name"`
+	StateID                       int32       `json:"state_id"`
+	StateName                     string      `json:"state_name"`
+	StateAssemblyConstituencyID   pgtype.Int4 `json:"state_assembly_constituency_id"`
+	StateAssemblyConstituencyName pgtype.Text `json:"state_assembly_constituency_name"`
 }
 
 type WardFinalResult struct {

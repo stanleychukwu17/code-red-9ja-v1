@@ -25,7 +25,7 @@ export function LeaderboardCardRow({
   avatarUrl,
   name,
   partyShortName,
-  statesWinningCount,
+  regionsWinningCount: statesWinningCount,
   votesCount,
   className,
 }: {
@@ -33,7 +33,7 @@ export function LeaderboardCardRow({
   avatarUrl?: string;
   name: string;
   partyShortName?: string;
-  statesWinningCount?: string;
+  regionsWinningCount?: string;
   votesCount: string | number;
   className?: string;
 }) {

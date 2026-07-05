@@ -9,7 +9,7 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 import { Package, Loader2, Coins } from "lucide-react";
 import * as React from "react";
-import { useParty } from "#/providers/providers";
+import { useAppContext } from "#/providers/providers";
 import { fundPartyWalletTest } from "#/lib/server/parties";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
@@ -37,12 +37,15 @@ export function AccountDetailsDialog({
   onSuccess?: () => void;
 }) {
   const [copiedIndex, setCopiedIndex] = React.useState<number | null>(null);
-  
+
   const fundMutation = useMutation({
-    mutationFn: (variables: { partyID: number; amountKobo: number }) => fundPartyWalletTest({ data: variables }),
+    mutationFn: (variables: { partyID: number; amountKobo: number }) =>
+      fundPartyWalletTest({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
-        toast.success(`Successfully simulated transfer of ₦${fundAmount.toLocaleString()} to your party wallet!`);
+        toast.success(
+          `Successfully simulated transfer of ₦${fundAmount.toLocaleString()} to your party wallet!`,
+        );
         onSuccess?.();
         onClose();
       } else {
@@ -51,10 +54,10 @@ export function AccountDetailsDialog({
     },
     onError: (error: any) => {
       toast.error(error.message || "An unexpected error occurred");
-    }
+    },
   });
   const [fundAmount, setFundAmount] = React.useState(50000);
-  const { party } = useParty();
+  const { party } = useAppContext();
   const partyId = party?.id;
 
   const handleCopy = (num: string, index: number) => {
@@ -86,16 +89,22 @@ export function AccountDetailsDialog({
           <div className="flex items-start gap-3 rounded-xl bg-[#edf3ff] px-4 py-3">
             <Package className="size-5 shrink-0 text-[#3182ce] mt-0.5" />
             <p className="leading-6 text-sm font-medium text-[#2b6cb0]">
-              Transfer money to any of the accounts below to automatically fund your party wallet.
+              Transfer money to any of the accounts below to automatically fund
+              your party wallet.
             </p>
           </div>
 
           <div className="space-y-4">
             {wallet?.account_numbers && wallet.account_numbers.length > 0 ? (
               wallet.account_numbers.map((acc, index) => (
-                <div key={index} className="border border-gray-100 rounded-xl p-5 space-y-4 bg-hover-1">
+                <div
+                  key={index}
+                  className="border border-gray-100 rounded-xl p-5 space-y-4 bg-hover-1"
+                >
                   <div className="space-y-1">
-                    <p className="text-[13px] font-medium text-c-50">Account Number</p>
+                    <p className="text-[13px] font-medium text-c-50">
+                      Account Number
+                    </p>
                     <div className="text-[32px] font-semibold text-c-80 leading-none flex items-center justify-between">
                       <span>{acc.accountNumber}</span>
                       <button
@@ -114,7 +123,9 @@ export function AccountDetailsDialog({
                         <div className="size-6 rounded-full bg-[#7a1b7a] flex items-center justify-center text-white text-[10px] font-extrabold tracking-tighter">
                           {acc.bankName.charAt(0)}
                         </div>
-                        <span className="text-sm font-medium text-c-80">{acc.bankName}</span>
+                        <span className="text-sm font-medium text-c-80">
+                          {acc.bankName}
+                        </span>
                       </div>
                     </div>
                     <div className="space-y-1">
@@ -137,15 +148,20 @@ export function AccountDetailsDialog({
           <div className="border border-dashed border-emerald-500/30 rounded-xl p-5 space-y-4 bg-emerald-50/5">
             <div className="flex items-center gap-2">
               <Coins className="size-5 text-[#22c55e]" />
-              <h4 className="text-sm font-bold text-c-80">Simulate Payment Transfer (Sandbox Dev Mode)</h4>
+              <h4 className="text-sm font-bold text-c-80">
+                Simulate Payment Transfer (Sandbox Dev Mode)
+              </h4>
             </div>
             <p className="text-xs text-c-60 leading-normal">
-              Enter an amount below to directly credit your wallet balance for local sandbox testing.
+              Enter an amount below to directly credit your wallet balance for
+              local sandbox testing.
             </p>
 
             <div className="flex gap-3">
               <div className="flex items-center bg-[#f1f1f4] rounded-lg px-3 py-1.5 flex-1 max-w-[200px]">
-                <span className="text-[14px] font-semibold text-c-70 mr-0.5">₦</span>
+                <span className="text-[14px] font-semibold text-c-70 mr-0.5">
+                  ₦
+                </span>
                 <input
                   type="text"
                   inputMode="numeric"

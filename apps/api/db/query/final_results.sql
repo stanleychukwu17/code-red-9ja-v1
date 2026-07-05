@@ -4,8 +4,12 @@ INSERT INTO polling_unit_final_results (
   election_group_id,
   polling_unit_id,
   state_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_constituency_id,
   lga_id,
   ward_id,
+  polling_unit_result_id,
   accredited_voters,
   votes_cast,
   valid_votes,
@@ -14,13 +18,17 @@ INSERT INTO polling_unit_final_results (
   matching_submissions_count,
   total_submissions_count
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
 ON CONFLICT (election_id, polling_unit_id)
 DO UPDATE SET
   state_id = EXCLUDED.state_id,
+  senatorial_district_id = EXCLUDED.senatorial_district_id,
+  federal_constituency_id = EXCLUDED.federal_constituency_id,
+  state_constituency_id = EXCLUDED.state_constituency_id,
   lga_id = EXCLUDED.lga_id,
   ward_id = EXCLUDED.ward_id,
+  polling_unit_result_id = EXCLUDED.polling_unit_result_id,
   accredited_voters = EXCLUDED.accredited_voters,
   votes_cast = EXCLUDED.votes_cast,
   valid_votes = EXCLUDED.valid_votes,
@@ -530,3 +538,49 @@ FROM (
 ) v
 WHERE ec.election_id = v.election_id 
   AND ec.party_short_name = v.party_short_name;
+
+-- name: ListPollingUnitFinalResults :many
+SELECT 
+  fr.id,
+  fr.election_id,
+  fr.election_group_id,
+  fr.polling_unit_id,
+  pu.name AS polling_unit_name,
+  fr.state_id,
+  s.name AS state_name,
+  fr.lga_id,
+  l.name AS lga_name,
+  fr.ward_id,
+  fr.senatorial_district_id,
+  fr.federal_constituency_id,
+  fr.state_constituency_id,
+  fr.polling_unit_result_id,
+  r.result_sheet_image_url,
+  r.result_sheet_video_url,
+  fr.accredited_voters,
+  fr.votes_cast,
+  fr.valid_votes,
+  fr.rejected_votes,
+  fr.candidate_results,
+  fr.created_at,
+  u.first_name AS uploader_first_name,
+  u.last_name AS uploader_last_name,
+  u.avatar AS uploader_avatar
+FROM polling_unit_final_results fr
+JOIN polling_units pu ON fr.polling_unit_id = pu.id
+LEFT JOIN c_states s ON fr.state_id = s.id
+LEFT JOIN lgas l ON fr.lga_id = l.id
+LEFT JOIN polling_unit_results r ON fr.polling_unit_result_id = r.id
+LEFT JOIN users u ON r.submitted_by = u.id
+WHERE
+  (sqlc.narg('election_group_id')::bigint IS NULL OR fr.election_group_id = sqlc.narg('election_group_id'))
+  AND (sqlc.narg('state_id')::smallint IS NULL OR fr.state_id = sqlc.narg('state_id'))
+  AND (sqlc.narg('senatorial_district_id')::int IS NULL OR fr.senatorial_district_id = sqlc.narg('senatorial_district_id'))
+  AND (sqlc.narg('federal_constituency_id')::int IS NULL OR fr.federal_constituency_id = sqlc.narg('federal_constituency_id'))
+  AND (sqlc.narg('state_constituency_id')::int IS NULL OR fr.state_constituency_id = sqlc.narg('state_constituency_id'))
+  AND (sqlc.narg('lga_id')::int IS NULL OR fr.lga_id = sqlc.narg('lga_id'))
+  AND (sqlc.narg('ward_id')::int IS NULL OR fr.ward_id = sqlc.narg('ward_id'))
+  AND (sqlc.narg('has_media')::boolean IS NULL OR (sqlc.narg('has_media') = true AND r.result_sheet_image_url IS NOT NULL) OR (sqlc.narg('has_media') = false))
+  AND fr.id < sqlc.arg('cursor')::bigint
+ORDER BY fr.id DESC
+LIMIT sqlc.arg('limit')::int;

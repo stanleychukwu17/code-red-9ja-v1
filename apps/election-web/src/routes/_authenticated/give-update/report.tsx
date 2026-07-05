@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { X, Play, Image as ImageIcon, Plus } from "lucide-react";
 import { useState, useRef } from "react";
 import {
@@ -130,6 +131,14 @@ function GiveSituationReport() {
         throw new Error("No active assignment or election group found.");
       }
 
+      if (selectedElectionGroup.election_date) {
+        const today = new Date().toISOString().split("T")[0];
+        const electionDate = new Date(selectedElectionGroup.election_date).toISOString().split("T")[0];
+        if (today !== electionDate) {
+          throw new Error("Updates can only be submitted on the election day.");
+        }
+      }
+
       if (!reportText.trim()) {
         throw new Error("Report text is required.");
       }
@@ -193,7 +202,7 @@ function GiveSituationReport() {
       navigate({ to: "/home" });
     },
     onError: (err: any) => {
-      alert(err.message || "An error occurred");
+      toast.error(err.message || "An error occurred");
     },
     onSettled: () => {
       setIsSubmitting(false);

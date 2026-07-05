@@ -7,6 +7,9 @@ INSERT INTO polling_unit_results (
   submitted_by,
   party_id,
   state_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_constituency_id,
   lga_id,
   ward_id,
   accredited_voters,
@@ -18,8 +21,23 @@ INSERT INTO polling_unit_results (
   result_sheet_video_url,
   uploaded_by_inec
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
 ) RETURNING *;
+
+-- name: UpdatePollingUnitResult :one
+UPDATE polling_unit_results
+SET
+  accredited_voters = $2,
+  votes_cast = $3,
+  valid_votes = $4,
+  rejected_votes = $5,
+  candidate_results = $6,
+  result_sheet_image_url = $7,
+  result_sheet_video_url = $8,
+  status = 'submitted',
+  updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 
 -- name: GetPollingUnitResult :one
 SELECT *

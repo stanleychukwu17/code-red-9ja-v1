@@ -14,6 +14,8 @@ import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 import { updateAssignmentTracking } from "#/lib/server/polling_unit_assignments";
 
 import { useMutation } from "@tanstack/react-query";
+import { useAuth } from "#/providers/providers";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/election-end/video")({
   component: ElectionEndVideo,
@@ -24,6 +26,7 @@ function ElectionEndVideo() {
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
   const endTime = search.endTime;
+  const { selectedElectionGroup } = useAuth();
 
   const [videoFile, setVideoFile] = useState<{
     url: string;
@@ -42,12 +45,21 @@ function ElectionEndVideo() {
       navigate({ to: "/home" });
     },
     onError: (err: any) => {
-      alert(err.message || "An error occurred while submitting.");
+      toast.error(err.message || "An error occurred while submitting.");
     }
   });
 
   const handleSubmit = async () => {
     if (!assignmentId || !videoFile) return;
+
+    if (selectedElectionGroup?.election_date) {
+      const today = new Date().toISOString().split("T")[0];
+      const electionDate = new Date(selectedElectionGroup.election_date).toISOString().split("T")[0];
+      if (today !== electionDate) {
+        toast.error("Updates can only be submitted on the election day.");
+        return;
+      }
+    }
 
     let parsedTime = new Date().toISOString();
     try {
@@ -104,7 +116,7 @@ function ElectionEndVideo() {
       });
     } catch (err: any) {
       console.error(err);
-      alert(err.message || "An error occurred during video upload");
+      toast.error(err.message || "An error occurred during video upload");
     } finally {
       setIsUploading(false);
     }

@@ -100,9 +100,6 @@ export const SelectCity = ({
   }, [selectedId, cities]);
 
   useEffect(() => {
-    setSelectedItem(undefined);
-  }, [stateId]);
-  useEffect(() => {
     if (!open) setMobileSearch("");
   }, [open]);
 

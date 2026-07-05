@@ -26,6 +26,8 @@ export type DrawerListProps<T> = {
   loadMore?: () => void;
   disableSearch?: boolean;
   emptyText?: string;
+  showAll?: boolean;
+  onSelectAll?: () => void;
 };
 
 /**
@@ -52,6 +54,8 @@ export function DrawerList<T>({
   loadMore,
   disableSearch = false,
   emptyText = "None found.",
+  showAll,
+  onSelectAll,
 }: DrawerListProps<T>) {
   // Internal search state used when the parent doesn't control it
   const [internalSearch, setInternalSearch] = useState("");
@@ -93,6 +97,30 @@ export function DrawerList<T>({
           <p className="text-center text-c-50 py-8 text-sm">{emptyText}</p>
         ) : (
           <ul className="space-y-0.5">
+            {showAll && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => onSelectAll?.()}
+                  className={cn(
+                    "w-full flex items-center justify-between gap-3 px-3 py-3.5 rounded-xl text-left transition-colors",
+                    !selectedId
+                      ? "bg-c-10 text-c-900"
+                      : "hover:bg-c-10/60 active:bg-c-10 text-c-800",
+                  )}
+                >
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-base font-medium leading-snug">All</span>
+                  </span>
+                  <Check
+                    className={cn(
+                      "size-4 shrink-0 transition-opacity",
+                      !selectedId ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                </button>
+              </li>
+            )}
             {filtered.map((item) => {
               const id = getId(item);
               const isSelected = selectedId === id;

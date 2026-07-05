@@ -51,11 +51,16 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
       </div>
       {/* Right section: Countdown & Notifications */}
       <div className="flex items-center gap-3 shrink-0">
-        {daysLeft !== undefined && (
-          <span className="text-[#c59e35] text-sm font-bold animate-pulse">
-            {daysLeft} {daysLeft === 1 ? "day" : "days"} left
-          </span>
-        )}
+        {daysLeft !== undefined &&
+          (daysLeft === 0 ? (
+            <span className="text-blue-500 text-sm font-bold animate-pulse">
+              LIVE
+            </span>
+          ) : (
+            <span className="text-[#c59e35] text-sm font-bold animate-pulse">
+              {daysLeft} {daysLeft === 1 ? "day" : "days"} left
+            </span>
+          ))}
         <div className="relative cursor-pointer p-1">
           <NotificationSolidIcon className="size-7 text-neutral-950 hover:text-neutral-800 transition" />
           {/* Red notification badge */}

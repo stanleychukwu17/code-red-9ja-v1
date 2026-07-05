@@ -1,5 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronDown } from "lucide-react";
+import { useAuth } from "#/providers/providers";
+import { toast } from "sonner";
 import { useState } from "react";
 import { SelectTime } from "@repo/ui/components/selects/time-select";
 import { PageWrapper } from "#/components/Wrappers";
@@ -17,6 +19,22 @@ function ElectionEndTime() {
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
   const [endTime, setEndTime] = useState("2:00 PM");
+  const { selectedElectionGroup } = useAuth();
+
+  const handleContinue = () => {
+    if (selectedElectionGroup?.election_date) {
+      const today = new Date().toISOString().split("T")[0];
+      const electionDate = new Date(selectedElectionGroup.election_date).toISOString().split("T")[0];
+      if (today !== electionDate) {
+        toast.error("Updates can only be submitted on the election day.");
+        return;
+      }
+    }
+    navigate({ 
+      to: "/election-end/video",
+      search: { assignmentId, endTime } as any
+    });
+  };
 
   return (
     <PageWrapper>
@@ -46,10 +64,7 @@ function ElectionEndTime() {
           type="button"
           variant="secondary"
           size="4xl"
-          onClick={() => navigate({ 
-            to: "/election-end/video",
-            search: { assignmentId, endTime } as any
-          })}
+          onClick={handleContinue}
         >
           Continue
         </Button>

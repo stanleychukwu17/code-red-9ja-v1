@@ -12,7 +12,7 @@ import (
 )
 
 const getPollingUnitFinalResult = `-- name: GetPollingUnitFinalResult :one
-SELECT id, election_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, matching_submissions_count, total_submissions_count, created_at, updated_at FROM polling_unit_final_results
+SELECT id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, matching_submissions_count, total_submissions_count, created_at, updated_at FROM polling_unit_final_results
 WHERE election_id = $1 AND polling_unit_id = $2
 `
 
@@ -30,8 +30,12 @@ func (q *Queries) GetPollingUnitFinalResult(ctx context.Context, arg GetPollingU
 		&i.ElectionGroupID,
 		&i.PollingUnitID,
 		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.PollingUnitResultID,
 		&i.AccreditedVoters,
 		&i.VotesCast,
 		&i.ValidVotes,
@@ -43,6 +47,151 @@ func (q *Queries) GetPollingUnitFinalResult(ctx context.Context, arg GetPollingU
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const listPollingUnitFinalResults = `-- name: ListPollingUnitFinalResults :many
+SELECT 
+  fr.id,
+  fr.election_id,
+  fr.election_group_id,
+  fr.polling_unit_id,
+  pu.name AS polling_unit_name,
+  fr.state_id,
+  s.name AS state_name,
+  fr.lga_id,
+  l.name AS lga_name,
+  fr.ward_id,
+  fr.senatorial_district_id,
+  fr.federal_constituency_id,
+  fr.state_constituency_id,
+  fr.polling_unit_result_id,
+  r.result_sheet_image_url,
+  r.result_sheet_video_url,
+  fr.accredited_voters,
+  fr.votes_cast,
+  fr.valid_votes,
+  fr.rejected_votes,
+  fr.candidate_results,
+  fr.created_at,
+  u.first_name AS uploader_first_name,
+  u.last_name AS uploader_last_name,
+  u.avatar AS uploader_avatar
+FROM polling_unit_final_results fr
+JOIN polling_units pu ON fr.polling_unit_id = pu.id
+LEFT JOIN c_states s ON fr.state_id = s.id
+LEFT JOIN lgas l ON fr.lga_id = l.id
+LEFT JOIN polling_unit_results r ON fr.polling_unit_result_id = r.id
+LEFT JOIN users u ON r.submitted_by = u.id
+WHERE
+  ($1::bigint IS NULL OR fr.election_group_id = $1)
+  AND ($2::smallint IS NULL OR fr.state_id = $2)
+  AND ($3::int IS NULL OR fr.senatorial_district_id = $3)
+  AND ($4::int IS NULL OR fr.federal_constituency_id = $4)
+  AND ($5::int IS NULL OR fr.state_constituency_id = $5)
+  AND ($6::int IS NULL OR fr.lga_id = $6)
+  AND ($7::int IS NULL OR fr.ward_id = $7)
+  AND ($8::boolean IS NULL OR ($8 = true AND r.result_sheet_image_url IS NOT NULL) OR ($8 = false))
+  AND fr.id < $9::bigint
+ORDER BY fr.id DESC
+LIMIT $10::int
+`
+
+type ListPollingUnitFinalResultsParams struct {
+	ElectionGroupID       pgtype.Int8 `json:"election_group_id"`
+	StateID               pgtype.Int2 `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4 `json:"lga_id"`
+	WardID                pgtype.Int4 `json:"ward_id"`
+	HasMedia              pgtype.Bool `json:"has_media"`
+	Cursor                int64       `json:"cursor"`
+	Limit                 int32       `json:"limit"`
+}
+
+type ListPollingUnitFinalResultsRow struct {
+	ID                    int64              `json:"id"`
+	ElectionID            int64              `json:"election_id"`
+	ElectionGroupID       int64              `json:"election_group_id"`
+	PollingUnitID         int32              `json:"polling_unit_id"`
+	PollingUnitName       string             `json:"polling_unit_name"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	StateName             pgtype.Text        `json:"state_name"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	LgaName               pgtype.Text        `json:"lga_name"`
+	WardID                pgtype.Int4        `json:"ward_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
+	PollingUnitResultID   pgtype.Int8        `json:"polling_unit_result_id"`
+	ResultSheetImageUrl   pgtype.Text        `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl   pgtype.Text        `json:"result_sheet_video_url"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UploaderFirstName     pgtype.Text        `json:"uploader_first_name"`
+	UploaderLastName      pgtype.Text        `json:"uploader_last_name"`
+	UploaderAvatar        pgtype.Text        `json:"uploader_avatar"`
+}
+
+func (q *Queries) ListPollingUnitFinalResults(ctx context.Context, arg ListPollingUnitFinalResultsParams) ([]ListPollingUnitFinalResultsRow, error) {
+	rows, err := q.db.Query(ctx, listPollingUnitFinalResults,
+		arg.ElectionGroupID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+		arg.LgaID,
+		arg.WardID,
+		arg.HasMedia,
+		arg.Cursor,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListPollingUnitFinalResultsRow
+	for rows.Next() {
+		var i ListPollingUnitFinalResultsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ElectionID,
+			&i.ElectionGroupID,
+			&i.PollingUnitID,
+			&i.PollingUnitName,
+			&i.StateID,
+			&i.StateName,
+			&i.LgaID,
+			&i.LgaName,
+			&i.WardID,
+			&i.SenatorialDistrictID,
+			&i.FederalConstituencyID,
+			&i.StateConstituencyID,
+			&i.PollingUnitResultID,
+			&i.ResultSheetImageUrl,
+			&i.ResultSheetVideoUrl,
+			&i.AccreditedVoters,
+			&i.VotesCast,
+			&i.ValidVotes,
+			&i.RejectedVotes,
+			&i.CandidateResults,
+			&i.CreatedAt,
+			&i.UploaderFirstName,
+			&i.UploaderLastName,
+			&i.UploaderAvatar,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const rollupElectionFinalResults = `-- name: RollupElectionFinalResults :exec
@@ -631,8 +780,12 @@ INSERT INTO polling_unit_final_results (
   election_group_id,
   polling_unit_id,
   state_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_constituency_id,
   lga_id,
   ward_id,
+  polling_unit_result_id,
   accredited_voters,
   votes_cast,
   valid_votes,
@@ -641,13 +794,17 @@ INSERT INTO polling_unit_final_results (
   matching_submissions_count,
   total_submissions_count
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
 )
 ON CONFLICT (election_id, polling_unit_id)
 DO UPDATE SET
   state_id = EXCLUDED.state_id,
+  senatorial_district_id = EXCLUDED.senatorial_district_id,
+  federal_constituency_id = EXCLUDED.federal_constituency_id,
+  state_constituency_id = EXCLUDED.state_constituency_id,
   lga_id = EXCLUDED.lga_id,
   ward_id = EXCLUDED.ward_id,
+  polling_unit_result_id = EXCLUDED.polling_unit_result_id,
   accredited_voters = EXCLUDED.accredited_voters,
   votes_cast = EXCLUDED.votes_cast,
   valid_votes = EXCLUDED.valid_votes,
@@ -656,7 +813,7 @@ DO UPDATE SET
   matching_submissions_count = EXCLUDED.matching_submissions_count,
   total_submissions_count = EXCLUDED.total_submissions_count,
   updated_at = NOW()
-RETURNING id, election_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, matching_submissions_count, total_submissions_count, created_at, updated_at
+RETURNING id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, matching_submissions_count, total_submissions_count, created_at, updated_at
 `
 
 type UpsertPollingUnitFinalResultParams struct {
@@ -664,8 +821,12 @@ type UpsertPollingUnitFinalResultParams struct {
 	ElectionGroupID          int64       `json:"election_group_id"`
 	PollingUnitID            int32       `json:"polling_unit_id"`
 	StateID                  pgtype.Int2 `json:"state_id"`
+	SenatorialDistrictID     pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID    pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID      pgtype.Int4 `json:"state_constituency_id"`
 	LgaID                    pgtype.Int4 `json:"lga_id"`
 	WardID                   pgtype.Int4 `json:"ward_id"`
+	PollingUnitResultID      pgtype.Int8 `json:"polling_unit_result_id"`
 	AccreditedVoters         int32       `json:"accredited_voters"`
 	VotesCast                int32       `json:"votes_cast"`
 	ValidVotes               int32       `json:"valid_votes"`
@@ -681,8 +842,12 @@ func (q *Queries) UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPo
 		arg.ElectionGroupID,
 		arg.PollingUnitID,
 		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
 		arg.LgaID,
 		arg.WardID,
+		arg.PollingUnitResultID,
 		arg.AccreditedVoters,
 		arg.VotesCast,
 		arg.ValidVotes,
@@ -698,8 +863,12 @@ func (q *Queries) UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPo
 		&i.ElectionGroupID,
 		&i.PollingUnitID,
 		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.PollingUnitResultID,
 		&i.AccreditedVoters,
 		&i.VotesCast,
 		&i.ValidVotes,
