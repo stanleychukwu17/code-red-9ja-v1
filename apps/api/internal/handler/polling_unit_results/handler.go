@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	pu_results "free9ja/api/internal/service/polling_unit_results"
 	"free9ja/api/internal/utils"
-	"free9ja/api/internal/db/queries"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -262,6 +262,144 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Results fetched successfully", map[string]interface{}{
 		"results":     results,
+		"next_cursor": nextCursor,
+	})
+}
+
+// ListFinalResults godoc
+// @Summary List Polling Unit Final Results
+// @Description Fetches a cursor-paginated list of final polling unit results with details
+// @Tags Results
+// @Produce json
+// @Param election_group_id query int false "Filter by Election Group ID"
+// @Param state_id query int false "Filter by State ID"
+// @Param senatorial_district_id query int false "Filter by Senatorial District ID"
+// @Param federal_constituency_id query int false "Filter by Federal Constituency ID"
+// @Param state_constituency_id query int false "Filter by State Constituency ID"
+// @Param lga_id query int false "Filter by LGA ID"
+// @Param ward_id query int false "Filter by Ward ID"
+// @Param has_media query bool false "Filter by presence of media"
+// @Param cursor query int false "Cursor (ID to paginate from)"
+// @Param limit query int false "Limit (default 20, max 100)"
+// @Success 200 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /polling-unit-final-results [get]
+// @Security BearerAuth
+func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	var params queries.ListPollingUnitFinalResultsParams
+
+	if val := r.URL.Query().Get("election_group_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 64); err == nil {
+			params.ElectionGroupID = pgtype.Int8{Int64: v, Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("state_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 16); err == nil {
+			params.StateID = pgtype.Int2{Int16: int16(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("senatorial_district_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.SenatorialDistrictID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("federal_constituency_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.FederalConstituencyID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("state_constituency_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.StateConstituencyID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("lga_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.LgaID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("ward_id"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil {
+			params.WardID = pgtype.Int4{Int32: int32(v), Valid: true}
+		}
+	}
+	if val := r.URL.Query().Get("has_media"); val != "" {
+		if v, err := strconv.ParseBool(val); err == nil {
+			params.HasMedia = pgtype.Bool{Bool: v, Valid: true}
+		}
+	}
+
+	// Cursor pagination
+	params.Cursor = math.MaxInt64
+	if val := r.URL.Query().Get("cursor"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 64); err == nil && v > 0 {
+			params.Cursor = v
+		}
+	}
+	params.Limit = 20
+	if val := r.URL.Query().Get("limit"); val != "" {
+		if v, err := strconv.ParseInt(val, 10, 32); err == nil && v > 0 {
+			if v > 100 {
+				v = 100
+			}
+			params.Limit = int32(v)
+		}
+	}
+
+	results, err := h.service.ListPollingUnitFinalResults(r.Context(), params)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch final results: "+err.Error())
+		return
+	}
+
+	var nextCursor *int64
+	if len(results) == int(params.Limit) {
+		lastID := results[len(results)-1].ID
+		nextCursor = &lastID
+	}
+
+	var mappedResults []map[string]interface{}
+	for _, res := range results {
+		mappedResults = append(mappedResults, map[string]interface{}{
+			"id":                      res.ID,
+			"election_id":             res.ElectionID,
+			"election_group_id":       res.ElectionGroupID,
+			"polling_unit_id":         res.PollingUnitID,
+			"polling_unit_name":       res.PollingUnitName,
+			"state_id":                res.StateID,
+			"state_name":              res.StateName,
+			"lga_id":                  res.LgaID,
+			"lga_name":                res.LgaName,
+			"ward_id":                 res.WardID,
+			"senatorial_district_id":  res.SenatorialDistrictID,
+			"federal_constituency_id": res.FederalConstituencyID,
+			"state_constituency_id":   res.StateConstituencyID,
+			"accredited_voters":       res.AccreditedVoters,
+			"votes_cast":              res.VotesCast,
+			"valid_votes":             res.ValidVotes,
+			"rejected_votes":          res.RejectedVotes,
+			"candidate_results":       json.RawMessage(res.CandidateResults),
+			"created_at":              res.CreatedAt,
+			"finalResult": map[string]interface{}{
+				"id":                     res.PollingUnitResultID,
+				"result_sheet_image_url": res.ResultSheetImageUrl,
+				"result_sheet_video_url": res.ResultSheetVideoUrl,
+				"uploader_first_name":    res.UploaderFirstName,
+				"uploader_last_name":     res.UploaderLastName,
+				"uploader_avatar":        res.UploaderAvatar,
+			},
+		})
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Final results fetched successfully", map[string]interface{}{
+		"results":     mappedResults,
 		"next_cursor": nextCursor,
 	})
 }

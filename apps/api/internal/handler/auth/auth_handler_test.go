@@ -85,8 +85,6 @@ func (m *MockAuthService) ForgotPassword(ctx context.Context, changePasswordID s
 	return args.Error(0)
 }
 
-
-
 func (m *MockAuthService) RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (authservice.RegisterResult, error) {
 	args := m.Called(ctx, email, phone, username, password, firstName, lastName, avatar)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
@@ -109,8 +107,6 @@ func (m *MockAuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int
 	args := m.Called(ctx, fakeID)
 	return args.Get(0).(queries.User), args.Error(1)
 }
-
-
 
 func (m *MockAuthService) SeedUsers(ctx context.Context, users []authservice.SeedUserRequest) ([]int64, error) {
 	args := m.Called(ctx, users)
@@ -400,4 +396,3 @@ func TestAdminLogin(t *testing.T) {
 		require.Equal(t, "access-token", data["accessToken"])
 	})
 }
-

@@ -1,5 +1,7 @@
 import * as React from "react";
-import { Ellipsis } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { Ellipsis, Check, X } from "lucide-react";
+import { Button } from "@repo/ui/components/button";
 import {
   TileHeader,
   TileLeft,
@@ -117,6 +119,28 @@ export function ApplicationTableTile({
   const { openApplication } = usePollingAgentDialog();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const approveMutation = useMutation({
+    mutationFn: (variables: { id: number; pollingUnitID: number }) => approveApplication({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        if (refetch) refetch();
+      } else {
+        throw new Error(res?.message || "Failed to approve application");
+      }
+    }
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (variables: { id: number; reason: string }) => rejectApplication({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        if (refetch) refetch();
+      } else {
+        throw new Error(res?.message || "Failed to reject application");
+      }
+    }
+  });
+
   const firstName = getPgString(data.first_name);
   const lastName = getPgString(data.last_name);
   const name = data.name || `${firstName} ${lastName}`.trim() || "Unknown User";
@@ -134,9 +158,9 @@ export function ApplicationTableTile({
 
   const lgaVal =
     data.current_lga &&
-    typeof data.current_lga === "object" &&
-    "Int32" in data.current_lga &&
-    data.current_lga.Valid
+      typeof data.current_lga === "object" &&
+      "Int32" in data.current_lga &&
+      data.current_lga.Valid
       ? data.current_lga.Int32
       : data.current_lga;
 
@@ -203,34 +227,14 @@ export function ApplicationTableTile({
           alert("Application ID is missing");
           return;
         }
-        const res = await approveApplication({
-          data: {
-            id: data.id,
-            pollingUnitID,
-          },
-        });
-        if (res && res.success) {
-          if (refetch) refetch();
-        } else {
-          throw new Error(res?.message || "Failed to approve application");
-        }
+        await approveMutation.mutateAsync({ id: data.id, pollingUnitID });
       },
       onReject: async (reason) => {
         if (data.id === undefined) {
           alert("Application ID is missing");
           return;
         }
-        const res = await rejectApplication({
-          data: {
-            id: data.id,
-            reason,
-          },
-        });
-        if (res && res.success) {
-          if (refetch) refetch();
-        } else {
-          throw new Error(res?.message || "Failed to reject application");
-        }
+        await rejectMutation.mutateAsync({ id: data.id, reason });
       },
     });
   };
@@ -244,9 +248,9 @@ export function ApplicationTableTile({
 
     const pollingUnitID =
       data.polling_unit_id &&
-      typeof data.polling_unit_id === "object" &&
-      "Int32" in data.polling_unit_id &&
-      data.polling_unit_id.Valid
+        typeof data.polling_unit_id === "object" &&
+        "Int32" in data.polling_unit_id &&
+        data.polling_unit_id.Valid
         ? data.polling_unit_id.Int32
         : typeof data.polling_unit_id === "number"
           ? data.polling_unit_id
@@ -257,23 +261,10 @@ export function ApplicationTableTile({
       return;
     }
 
-    setIsSubmitting(true);
     try {
-      const res = await approveApplication({
-        data: {
-          id: data.id,
-          pollingUnitID,
-        },
-      });
-      if (res && res.success) {
-        if (refetch) refetch();
-      } else {
-        alert(res?.message || "Failed to approve application");
-      }
+      await approveMutation.mutateAsync({ id: data.id, pollingUnitID });
     } catch (err: any) {
       alert(err.message || "Failed to approve application");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -289,23 +280,10 @@ export function ApplicationTableTile({
       alert("A rejection reason is required.");
       return;
     }
-    setIsSubmitting(true);
     try {
-      const res = await rejectApplication({
-        data: {
-          id: data.id,
-          reason,
-        },
-      });
-      if (res && res.success) {
-        if (refetch) refetch();
-      } else {
-        alert(res?.message || "Failed to reject application");
-      }
+      await rejectMutation.mutateAsync({ id: data.id, reason });
     } catch (err: any) {
       alert(err.message || "Failed to reject application");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -341,22 +319,20 @@ export function ApplicationTableTile({
         >
           {decisionVariant === "pending" ? (
             <>
-              <DecisionPill
-                variant="accept"
-                className="flex-1"
-                disabled={isSubmitting}
+              <Button
                 onClick={handleTileAccept}
+                disabled={approveMutation.isPending || rejectMutation.isPending}
+                className="rounded-full bg-[#10dd84] hover:bg-[#08cf79] text-c-80 p-0 size-8 border-none"
               >
-                Accept
-              </DecisionPill>
-              <DecisionPill
-                variant="reject"
-                className="flex-1"
-                disabled={isSubmitting}
+                <Check className="size-4 stroke-[3]" />
+              </Button>
+              <Button
                 onClick={handleTileReject}
+                disabled={approveMutation.isPending || rejectMutation.isPending}
+                className="rounded-full bg-[#ececec] hover:bg-[#e6e6e6] text-c-80 p-0 size-8 border-none"
               >
-                Reject
-              </DecisionPill>
+                <X className="size-4 stroke-[3]" />
+              </Button>
             </>
           ) : (
             <DecisionPill
@@ -393,11 +369,11 @@ function DecisionPill({
       className={cn(
         "h-8 rounded-[10px] px-3 text-[14px] font-semibold transition truncate text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "accept" &&
-          "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
+        "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
         variant === "reject" &&
-          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         variant === "pending" &&
-          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         className,
       )}
     >

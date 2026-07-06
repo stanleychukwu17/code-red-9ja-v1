@@ -275,7 +275,7 @@ func (q *Queries) CreateStateAssemblyConstituency(ctx context.Context, arg Creat
 const createWard = `-- name: CreateWard :one
 INSERT INTO wards (name, abbreviation, lga_id, lga_name, state_id, state_name)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name
+RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name
 `
 
 type CreateWardParams struct {
@@ -305,6 +305,8 @@ func (q *Queries) CreateWard(ctx context.Context, arg CreateWardParams) (Ward, e
 		&i.LgaName,
 		&i.StateID,
 		&i.StateName,
+		&i.StateAssemblyConstituencyID,
+		&i.StateAssemblyConstituencyName,
 	)
 	return i, err
 }
@@ -837,7 +839,7 @@ func (q *Queries) GetStatesByCountryID(ctx context.Context, countryID int16) ([]
 }
 
 const getWardByID = `-- name: GetWardByID :one
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name FROM wards
+SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name FROM wards
 WHERE id = $1 LIMIT 1
 `
 
@@ -852,12 +854,14 @@ func (q *Queries) GetWardByID(ctx context.Context, id int32) (Ward, error) {
 		&i.LgaName,
 		&i.StateID,
 		&i.StateName,
+		&i.StateAssemblyConstituencyID,
+		&i.StateAssemblyConstituencyName,
 	)
 	return i, err
 }
 
 const getWards = `-- name: GetWards :many
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name FROM wards
+SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name FROM wards
 WHERE ($1::int = 0 OR lga_id = $1) AND ($2::int = 0 OR state_id = $2)
 ORDER BY name ASC
 `
@@ -884,6 +888,8 @@ func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, err
 			&i.LgaName,
 			&i.StateID,
 			&i.StateName,
+			&i.StateAssemblyConstituencyID,
+			&i.StateAssemblyConstituencyName,
 		); err != nil {
 			return nil, err
 		}
@@ -1215,7 +1221,7 @@ const updateWard = `-- name: UpdateWard :one
 UPDATE wards
 SET name = $2, abbreviation = $3, lga_id = $4, lga_name = $5, state_id = $6, state_name = $7
 WHERE id = $1
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name
+RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name
 `
 
 type UpdateWardParams struct {
@@ -1247,6 +1253,8 @@ func (q *Queries) UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, e
 		&i.LgaName,
 		&i.StateID,
 		&i.StateName,
+		&i.StateAssemblyConstituencyID,
+		&i.StateAssemblyConstituencyName,
 	)
 	return i, err
 }

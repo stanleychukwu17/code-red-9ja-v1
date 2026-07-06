@@ -1,9 +1,8 @@
 import * as React from "react";
 
 import { ArrowUp, Eye, EyeOff } from "lucide-react";
-import TextareaAutosize, {
-  TextareaAutosizeProps,
-} from "react-textarea-autosize";
+import TextareaAutosize from "react-textarea-autosize";
+import type { TextareaAutosizeProps } from "react-textarea-autosize";
 import PaperPlaneIcon from "../icons/paper-plane-icon";
 import SearchIcon from "../icons/search-icon";
 import { cn } from "../lib/utils";
@@ -134,7 +133,7 @@ const Label = ({
   className?: string;
 }) => {
   if (!title) return <></>;
-  return <p className={cn("text-sm text-c-70", className)}>{title}</p>;
+  return <p className={cn("font-medium text-c-80", className)}>{title}</p>;
 };
 
 const textareaClassName =

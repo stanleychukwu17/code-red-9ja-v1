@@ -21,28 +21,34 @@ INSERT INTO polling_unit_updates (
   state_id,
   lga_id,
   ward_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_assembly_constituency_id,
   message,
   media_urls,
   is_report,
   report_types
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-) RETURNING id, assignment_id, user_id, polling_unit_id, election_group_id, party_id, state_id, lga_id, ward_id, message, media_urls, is_report, report_types, created_at, updated_at
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
+) RETURNING id, assignment_id, user_id, polling_unit_id, election_group_id, party_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, message, media_urls, is_report, report_types, created_at, updated_at
 `
 
 type CreatePollingUnitUpdateParams struct {
-	AssignmentID    pgtype.Int8 `json:"assignment_id"`
-	UserID          int64       `json:"user_id"`
-	PollingUnitID   int32       `json:"polling_unit_id"`
-	ElectionGroupID int64       `json:"election_group_id"`
-	PartyID         pgtype.Int8 `json:"party_id"`
-	StateID         pgtype.Int2 `json:"state_id"`
-	LgaID           pgtype.Int4 `json:"lga_id"`
-	WardID          pgtype.Int4 `json:"ward_id"`
-	Message         string      `json:"message"`
-	MediaUrls       []string    `json:"media_urls"`
-	IsReport        pgtype.Bool `json:"is_report"`
-	ReportTypes     []string    `json:"report_types"`
+	AssignmentID                pgtype.Int8 `json:"assignment_id"`
+	UserID                      int64       `json:"user_id"`
+	PollingUnitID               int32       `json:"polling_unit_id"`
+	ElectionGroupID             int64       `json:"election_group_id"`
+	PartyID                     pgtype.Int8 `json:"party_id"`
+	StateID                     pgtype.Int2 `json:"state_id"`
+	LgaID                       pgtype.Int4 `json:"lga_id"`
+	WardID                      pgtype.Int4 `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
+	Message                     string      `json:"message"`
+	MediaUrls                   []string    `json:"media_urls"`
+	IsReport                    pgtype.Bool `json:"is_report"`
+	ReportTypes                 []string    `json:"report_types"`
 }
 
 func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error) {
@@ -55,6 +61,9 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		arg.StateID,
 		arg.LgaID,
 		arg.WardID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateAssemblyConstituencyID,
 		arg.Message,
 		arg.MediaUrls,
 		arg.IsReport,
@@ -71,6 +80,9 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		&i.StateID,
 		&i.LgaID,
 		&i.WardID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateAssemblyConstituencyID,
 		&i.Message,
 		&i.MediaUrls,
 		&i.IsReport,
@@ -165,36 +177,85 @@ func (q *Queries) IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg
 }
 
 const listPollingUnitUpdates = `-- name: ListPollingUnitUpdates :many
-SELECT id, assignment_id, user_id, polling_unit_id, election_group_id, party_id, state_id, lga_id, ward_id, message, media_urls, is_report, report_types, created_at, updated_at
-FROM polling_unit_updates
+SELECT 
+  pu.id, pu.assignment_id, pu.user_id, pu.polling_unit_id, pu.election_group_id, pu.party_id, 
+  pu.state_id, pu.lga_id, pu.ward_id, pu.senatorial_district_id, pu.federal_constituency_id, 
+  pu.state_assembly_constituency_id, pu.message, pu.media_urls, pu.is_report, pu.report_types, 
+  pu.created_at, pu.updated_at,
+  u.first_name as user_first_name,
+  u.last_name as user_last_name,
+  u.avatar as user_avatar,
+  punits.name as polling_unit_name,
+  s.name as state_name,
+  l.name as lga_name
+FROM polling_unit_updates pu
+JOIN users u ON pu.user_id = u.id
+LEFT JOIN polling_units punits ON pu.polling_unit_id = punits.id
+LEFT JOIN c_states s ON pu.state_id = s.id
+LEFT JOIN lgas l ON pu.lga_id = l.id
 WHERE 
-  ($1::bigint IS NULL OR election_group_id = $1)
-  AND ($2::bigint IS NULL OR party_id = $2)
-  AND ($3::int IS NULL OR polling_unit_id = $3)
-  AND ($4::bigint IS NULL OR user_id = $4)
-  AND ($5::smallint IS NULL OR state_id = $5)
-  AND ($6::int IS NULL OR lga_id = $6)
-  AND ($7::int IS NULL OR ward_id = $7)
-  AND ($8::boolean IS NULL OR is_report = $8)
-  AND id < $9
-ORDER BY id DESC
-LIMIT $10
+  ($1::bigint IS NULL OR pu.election_group_id = $1)
+  AND ($2::bigint IS NULL OR pu.party_id = $2)
+  AND ($3::int IS NULL OR pu.polling_unit_id = $3)
+  AND ($4::bigint IS NULL OR pu.user_id = $4)
+  AND ($5::smallint IS NULL OR pu.state_id = $5)
+  AND ($6::int IS NULL OR pu.lga_id = $6)
+  AND ($7::int IS NULL OR pu.ward_id = $7)
+  AND ($8::int IS NULL OR pu.senatorial_district_id = $8)
+  AND ($9::int IS NULL OR pu.federal_constituency_id = $9)
+  AND ($10::int IS NULL OR pu.state_assembly_constituency_id = $10)
+  AND ($11::boolean IS NULL OR pu.is_report = $11)
+  AND ($12::boolean IS NULL OR ($12::boolean = true AND array_length(pu.media_urls, 1) > 0) OR ($12::boolean = false AND array_length(pu.media_urls, 1) IS NULL))
+  AND pu.id < $13
+ORDER BY pu.id DESC
+LIMIT $14
 `
 
 type ListPollingUnitUpdatesParams struct {
-	ElectionGroupID pgtype.Int8 `json:"election_group_id"`
-	PartyID         pgtype.Int8 `json:"party_id"`
-	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
-	UserID          pgtype.Int8 `json:"user_id"`
-	StateID         pgtype.Int2 `json:"state_id"`
-	LgaID           pgtype.Int4 `json:"lga_id"`
-	WardID          pgtype.Int4 `json:"ward_id"`
-	IsReport        pgtype.Bool `json:"is_report"`
-	Cursor          int64       `json:"cursor"`
-	Limit           int32       `json:"limit"`
+	ElectionGroupID             pgtype.Int8 `json:"election_group_id"`
+	PartyID                     pgtype.Int8 `json:"party_id"`
+	PollingUnitID               pgtype.Int4 `json:"polling_unit_id"`
+	UserID                      pgtype.Int8 `json:"user_id"`
+	StateID                     pgtype.Int2 `json:"state_id"`
+	LgaID                       pgtype.Int4 `json:"lga_id"`
+	WardID                      pgtype.Int4 `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4 `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4 `json:"state_assembly_constituency_id"`
+	IsReport                    pgtype.Bool `json:"is_report"`
+	HasMedia                    pgtype.Bool `json:"has_media"`
+	Cursor                      int64       `json:"cursor"`
+	Limit                       int32       `json:"limit"`
 }
 
-func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUnitUpdatesParams) ([]PollingUnitUpdate, error) {
+type ListPollingUnitUpdatesRow struct {
+	ID                          int64              `json:"id"`
+	AssignmentID                pgtype.Int8        `json:"assignment_id"`
+	UserID                      int64              `json:"user_id"`
+	PollingUnitID               int32              `json:"polling_unit_id"`
+	ElectionGroupID             int64              `json:"election_group_id"`
+	PartyID                     pgtype.Int8        `json:"party_id"`
+	StateID                     pgtype.Int2        `json:"state_id"`
+	LgaID                       pgtype.Int4        `json:"lga_id"`
+	WardID                      pgtype.Int4        `json:"ward_id"`
+	SenatorialDistrictID        pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID       pgtype.Int4        `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID pgtype.Int4        `json:"state_assembly_constituency_id"`
+	Message                     string             `json:"message"`
+	MediaUrls                   []string           `json:"media_urls"`
+	IsReport                    pgtype.Bool        `json:"is_report"`
+	ReportTypes                 []string           `json:"report_types"`
+	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
+	UserFirstName               pgtype.Text        `json:"user_first_name"`
+	UserLastName                pgtype.Text        `json:"user_last_name"`
+	UserAvatar                  pgtype.Text        `json:"user_avatar"`
+	PollingUnitName             pgtype.Text        `json:"polling_unit_name"`
+	StateName                   pgtype.Text        `json:"state_name"`
+	LgaName                     pgtype.Text        `json:"lga_name"`
+}
+
+func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUnitUpdatesParams) ([]ListPollingUnitUpdatesRow, error) {
 	rows, err := q.db.Query(ctx, listPollingUnitUpdates,
 		arg.ElectionGroupID,
 		arg.PartyID,
@@ -203,7 +264,11 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 		arg.StateID,
 		arg.LgaID,
 		arg.WardID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateAssemblyConstituencyID,
 		arg.IsReport,
+		arg.HasMedia,
 		arg.Cursor,
 		arg.Limit,
 	)
@@ -211,9 +276,9 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 		return nil, err
 	}
 	defer rows.Close()
-	var items []PollingUnitUpdate
+	var items []ListPollingUnitUpdatesRow
 	for rows.Next() {
-		var i PollingUnitUpdate
+		var i ListPollingUnitUpdatesRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.AssignmentID,
@@ -224,12 +289,21 @@ func (q *Queries) ListPollingUnitUpdates(ctx context.Context, arg ListPollingUni
 			&i.StateID,
 			&i.LgaID,
 			&i.WardID,
+			&i.SenatorialDistrictID,
+			&i.FederalConstituencyID,
+			&i.StateAssemblyConstituencyID,
 			&i.Message,
 			&i.MediaUrls,
 			&i.IsReport,
 			&i.ReportTypes,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.UserFirstName,
+			&i.UserLastName,
+			&i.UserAvatar,
+			&i.PollingUnitName,
+			&i.StateName,
+			&i.LgaName,
 		); err != nil {
 			return nil, err
 		}

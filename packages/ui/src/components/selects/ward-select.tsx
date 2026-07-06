@@ -36,6 +36,7 @@ export const SelectWard = ({
   className,
   align = "start",
   fetchWards,
+  showAll,
 }: SelectProps<Ward, number | string> & {
   lgaId?: number;
   stateId?: number;
@@ -112,15 +113,18 @@ export const SelectWard = ({
   }, [selectedId, wards]);
 
   useEffect(() => {
-    setSelectedItem(undefined);
-  }, [lgaId]);
-  useEffect(() => {
     if (!open) setMobileSearch("");
   }, [open]);
 
   const handleWardSelect = (ward: Ward) => {
     setSelectedItem(ward);
     update(ward);
+    setOpen(false);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedItem(undefined);
+    update(undefined as any);
     setOpen(false);
   };
 
@@ -147,7 +151,7 @@ export const SelectWard = ({
 
   const displayText =
     selectedItem?.name ||
-    (isLoading && !selectedItem ? "Loading..." : "Select Ward");
+    (isLoading && !selectedItem ? "Loading..." : showAll ? "All wards" : "Select Ward");
   const hasError = Boolean(errorMsg);
   const currentSelectedId = selectedItem?.id
     ? `${selectedItem.id}`
@@ -205,6 +209,8 @@ export const SelectWard = ({
           status={getStatus()}
           loadMore={handleLoadMore}
           onSearch={setDesktopSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
       mobileContent={
@@ -217,6 +223,8 @@ export const SelectWard = ({
           status={getStatus()}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
     />

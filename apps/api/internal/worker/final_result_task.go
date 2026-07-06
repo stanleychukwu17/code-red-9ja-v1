@@ -9,7 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"free9ja/api/internal/db/queries"
+
 	"github.com/hibiken/asynq"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type CalculateFinalResultPayload struct {
@@ -42,8 +45,94 @@ func hashCandidateResults(rawJSON []byte) string {
 }
 
 func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error {
-	// TODO: Re-implement final result calculation based on the new election_results schema
-	slog.Info("ProcessTaskCalculateFinalResult is temporarily disabled due to schema migration")
+	var payload CalculateFinalResultPayload
+	if err := json.Unmarshal(task.Payload(), &payload); err != nil {
+		return fmt.Errorf("failed to unmarshal payload: %w", err)
+	}
+
+	results, err := processor.q.GetAllPollingUnitResultsByPU(ctx, queries.GetAllPollingUnitResultsByPUParams{
+		ElectionID:    payload.ElectionID,
+		PollingUnitID: payload.PollingUnitID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to fetch PU results: %w", err)
+	}
+
+	if len(results) == 0 {
+		slog.Warn("no valid results found for PU", "election_id", payload.ElectionID, "polling_unit_id", payload.PollingUnitID)
+		return nil
+	}
+
+	type groupData struct {
+		Hash       string
+		Count      int
+		BaseResult queries.PollingUnitResult
+	}
+	groups := make(map[string]*groupData)
+
+	var winningGroup *groupData
+	maxCount := 0
+
+	for _, r := range results {
+		hash := hashCandidateResults(r.CandidateResults)
+		if hash == "" {
+			continue // Skip invalid JSON
+		}
+
+		if g, exists := groups[hash]; exists {
+			g.Count++
+			if g.Count > maxCount {
+				winningGroup = g
+				maxCount = g.Count
+			}
+		} else {
+			g := &groupData{
+				Hash:       hash,
+				Count:      1,
+				BaseResult: r,
+			}
+			groups[hash] = g
+			if maxCount == 0 {
+				winningGroup = g
+				maxCount = 1
+			}
+		}
+	}
+
+	if winningGroup == nil {
+		return nil
+	}
+
+	r := winningGroup.BaseResult
+	_, err = processor.q.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
+		ElectionID:               r.ElectionID,
+		ElectionGroupID:          r.ElectionGroupID,
+		PollingUnitID:            r.PollingUnitID,
+		StateID:                  r.StateID,
+		SenatorialDistrictID:     r.SenatorialDistrictID,
+		FederalConstituencyID:    r.FederalConstituencyID,
+		StateConstituencyID:      r.StateConstituencyID,
+		LgaID:                    r.LgaID,
+		WardID:                   r.WardID,
+		PollingUnitResultID:      pgtype.Int8{Int64: r.ID, Valid: true},
+		AccreditedVoters:         r.AccreditedVoters,
+		VotesCast:                r.VotesCast,
+		ValidVotes:               r.ValidVotes,
+		RejectedVotes:            r.RejectedVotes,
+		CandidateResults:         r.CandidateResults,
+		MatchingSubmissionsCount: int32(winningGroup.Count),
+		TotalSubmissionsCount:    int32(len(results)),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to upsert final result: %w", err)
+	}
+
+	slog.Info("calculated final result for PU",
+		"election_id", payload.ElectionID,
+		"polling_unit_id", payload.PollingUnitID,
+		"matching", winningGroup.Count,
+		"total", len(results))
+
 	return nil
 }
 
@@ -75,11 +164,11 @@ func (distributor *RedisTaskDistributor) DistributeTaskCalculateFinalResult(ctx 
 
 	// Prepend our standard options so callers can still append their own overrides.
 	defaults := []asynq.Option{
-		asynq.ProcessIn(2 * time.Minute),    // debounce: wait 2 min before executing
-		asynq.Unique(2 * time.Minute),       // deduplicate within the debounce window
-		asynq.MaxRetry(3),                    // retry up to 3 times on failure
-		asynq.Timeout(30 * time.Second),      // fail fast if the worker stalls
-		asynq.TaskID(uniqueKey),              // deterministic ID aids deduplication
+		asynq.ProcessIn(2 * time.Minute), // debounce: wait 2 min before executing
+		asynq.Unique(2 * time.Minute),    // deduplicate within the debounce window
+		asynq.MaxRetry(3),                // retry up to 3 times on failure
+		asynq.Timeout(30 * time.Second),  // fail fast if the worker stalls
+		asynq.TaskID(uniqueKey),          // deterministic ID aids deduplication
 	}
 	opts = append(defaults, opts...)
 

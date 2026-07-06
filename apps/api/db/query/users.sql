@@ -41,6 +41,9 @@ WHERE fake_id = $1;
 SELECT * FROM users
 WHERE fake_id = $1 LIMIT 1;
 
+-- name: GetUserByEmail :one
+SELECT * FROM users
+WHERE email = $1 LIMIT 1;
 
 -- name: CreateUserSecurityQuestions :one
 INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)

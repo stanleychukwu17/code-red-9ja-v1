@@ -25,8 +25,6 @@ func NewElectionsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Clie
 	}
 }
 
-
-
 func (s *ElectionsService) CreateElection(
 	ctx context.Context,
 	name string,
@@ -197,8 +195,8 @@ func (s *ElectionsService) CreateElection(
 		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID:       electionGroupID,
 		ElectionGroupName:     eg.Name,
-		OfficeID:        officeID,
-		OfficeName:      et.Name,
+		OfficeID:              officeID,
+		OfficeName:            et.Name,
 		Scope:                 et.Scope,
 		StateID:               stateID2,
 		SenatorialDistrictID:  senatorialDistrictID4,
@@ -319,8 +317,8 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		ElectionDate:      pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID:   groupID,
 		ElectionGroupName: groupName,
-		OfficeID:    officeID,
-		OfficeName:  et.Name,
+		OfficeID:          officeID,
+		OfficeName:        et.Name,
 		Scope:             "nationwide",
 	})
 	if err != nil {
@@ -458,8 +456,8 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			ElectionDate:      pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:   groupID,
 			ElectionGroupName: groupName,
-			OfficeID:    officeID,
-			OfficeName:  et.Name,
+			OfficeID:          officeID,
+			OfficeName:        et.Name,
 			Scope:             "state",
 			StateID:           pgtype.Int2{Int16: stateID, Valid: true},
 		})
@@ -600,8 +598,8 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			ElectionDate:         pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:      groupID,
 			ElectionGroupName:    groupName,
-			OfficeID:       officeID,
-			OfficeName:     et.Name,
+			OfficeID:             officeID,
+			OfficeName:           et.Name,
 			Scope:                "senatorial-district",
 			StateID:              pgtype.Int2{Valid: false},
 			SenatorialDistrictID: pgtype.Int4{Int32: districtID, Valid: true},
@@ -746,8 +744,8 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:       groupID,
 			ElectionGroupName:     groupName,
-			OfficeID:        officeID,
-			OfficeName:      et.Name,
+			OfficeID:              officeID,
+			OfficeName:            et.Name,
 			Scope:                 "federal-constituency",
 			StateID:               pgtype.Int2{Valid: false},
 			FederalConstituencyID: pgtype.Int4{Int32: constituencyID, Valid: true},
@@ -892,8 +890,8 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			ElectionDate:        pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:     groupID,
 			ElectionGroupName:   groupName,
-			OfficeID:      officeID,
-			OfficeName:    et.Name,
+			OfficeID:            officeID,
+			OfficeName:          et.Name,
 			Scope:               "state-constituency",
 			StateID:             pgtype.Int2{Valid: false},
 			StateConstituencyID: pgtype.Int4{Int32: constituencyID, Valid: true},
@@ -1035,8 +1033,8 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64
 			ElectionDate:      pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:   groupID,
 			ElectionGroupName: groupName,
-			OfficeID:    officeID,
-			OfficeName:  et.Name,
+			OfficeID:          officeID,
+			OfficeName:        et.Name,
 			Scope:             "lga",
 			StateID:           pgtype.Int2{Valid: false},
 			LgaID:             pgtype.Int4{Int32: lgaID, Valid: true},
@@ -1181,8 +1179,8 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int6
 			ElectionDate:      pgtype.Date{Time: electionDate, Valid: true},
 			ElectionGroupID:   groupID,
 			ElectionGroupName: groupName,
-			OfficeID:    officeID,
-			OfficeName:  et.Name,
+			OfficeID:          officeID,
+			OfficeName:        et.Name,
 			Scope:             "ward",
 			StateID:           pgtype.Int2{Valid: false},
 			WardID:            pgtype.Int4{Int32: wardID, Valid: true},
@@ -1215,7 +1213,6 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int6
 
 	return updatedElections, nil
 }
-
 
 func (s *ElectionsService) GetElectionByID(ctx context.Context, id int64) (queries.Election, error) {
 	return s.queries.GetElectionInstanceByID(ctx, id)
@@ -1277,8 +1274,8 @@ func (s *ElectionsService) UpdateElection(
 		ElectionDate:          pgtype.Date{Time: electionDate, Valid: true},
 		ElectionGroupID:       electionGroupID,
 		ElectionGroupName:     eg.Name,
-		OfficeID:        officeID,
-		OfficeName:      et.Name,
+		OfficeID:              officeID,
+		OfficeName:            et.Name,
 		Scope:                 et.Scope,
 		StateID:               stateID2,
 		SenatorialDistrictID:  senatorialDistrictID4,
@@ -1323,6 +1320,14 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		if err != nil {
 			return err
 		}
+
+		err = txQueries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+			ID:      cand.CandidateID,
+			PartyID: pgtype.Int8{Int64: cand.PartyID, Valid: cand.PartyID != 0},
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	// Get election instance
@@ -1340,8 +1345,8 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		ElectionDate:          el.ElectionDate,
 		ElectionGroupID:       el.ElectionGroupID,
 		ElectionGroupName:     el.ElectionGroupName,
-		OfficeID:        el.OfficeID,
-		OfficeName:      el.OfficeName,
+		OfficeID:              el.OfficeID,
+		OfficeName:            el.OfficeName,
 		Scope:                 el.Scope,
 		StateID:               el.StateID,
 		SenatorialDistrictID:  el.SenatorialDistrictID,
@@ -1408,22 +1413,22 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 	for _, e := range elections {
 		if e.ElectionGroupName != newGroupName {
 			_, err = txQueries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
-				ID:                     e.ID,
-				Name:                   e.Name,
-				Rank:                   e.Rank,
-				CandidatesCount:        e.CandidatesCount,
-				ElectionDate:           e.ElectionDate,
-				ElectionGroupID:        e.ElectionGroupID,
-				ElectionGroupName:      newGroupName,
-				OfficeID:               e.OfficeID,
-				OfficeName:             e.OfficeName,
-				Scope:                  e.Scope,
-				StateID:                e.StateID,
-				SenatorialDistrictID:   e.SenatorialDistrictID,
-				FederalConstituencyID:  e.FederalConstituencyID,
-				StateConstituencyID:    e.StateConstituencyID,
-				LgaID:                  e.LgaID,
-				WardID:                 e.WardID,
+				ID:                    e.ID,
+				Name:                  e.Name,
+				Rank:                  e.Rank,
+				CandidatesCount:       e.CandidatesCount,
+				ElectionDate:          e.ElectionDate,
+				ElectionGroupID:       e.ElectionGroupID,
+				ElectionGroupName:     newGroupName,
+				OfficeID:              e.OfficeID,
+				OfficeName:            e.OfficeName,
+				Scope:                 e.Scope,
+				StateID:               e.StateID,
+				SenatorialDistrictID:  e.SenatorialDistrictID,
+				FederalConstituencyID: e.FederalConstituencyID,
+				StateConstituencyID:   e.StateConstituencyID,
+				LgaID:                 e.LgaID,
+				WardID:                e.WardID,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to update election group name on election instance: %w", err)
@@ -1433,7 +1438,6 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 
 	return nil
 }
-
 
 func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int64, fakeID int64, candidateID int64) error {
 	tx, err := s.pool.Begin(ctx)
@@ -1492,4 +1496,3 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 
 	return tx.Commit(ctx)
 }
-

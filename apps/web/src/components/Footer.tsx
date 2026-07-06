@@ -60,5 +60,6 @@ export default function Footer() {
         </a>
       </div>
     </motion.footer>
+    </motion.footer >
   )
 }

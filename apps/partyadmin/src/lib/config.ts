@@ -57,4 +57,17 @@ export const API_URL = {
     `${api}/polling-agent-applications/${id}/approve`,
   rejectApplication: (id: string | number) =>
     `${api}/polling-agent-applications/${id}/reject`,
+  getSenatorialDistricts: `${api}/senatorial-districts`,
+  getFederalConstituencies: `${api}/federal-constituencies`,
+  getStateConstituencies: `${api}/state-constituencies`,
+  electionCandidates: (id: string | number) =>
+    `${api}/elections/${id}/candidates`,
+  pollingUnitUpdates: `${api}/polling-unit-updates`,
+  pollingUnitResults: `${api}/polling-unit-results`,
+  pollingUnitFinalResults: `${api}/polling-unit-final-results`,
+  stateFinalResults: `${api}/state-final-results`,
+  senatorialDistrictFinalResults: `${api}/senatorial-district-final-results`,
+  federalConstituencyFinalResults: `${api}/federal-constituency-final-results`,
+  lgaFinalResults: `${api}/lga-final-results`,
+  wardFinalResults: `${api}/ward-final-results`,
 };

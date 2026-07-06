@@ -238,6 +238,50 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Email,
+		&i.Avatar,
+		&i.Phone,
+		&i.Username,
+		&i.PasswordHash,
+		&i.LastName,
+		&i.FirstName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.CurrentCountry,
+		&i.CurrentState,
+		&i.CurrentLga,
+		&i.CurrentCity,
+		&i.StateOfOrigin,
+		&i.Vin,
+		&i.VotersCardImage,
+		&i.BankAccountNumber,
+		&i.BankCode,
+		&i.NinVerified,
+		&i.PhoneVerified,
+		&i.EmailVerified,
+		&i.Role,
+		&i.RoleLevel,
+		&i.AccountStatus,
+		&i.PartyID,
+		&i.PollingUnitID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserByFakeID = `-- name: GetUserByFakeID :one
 SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1

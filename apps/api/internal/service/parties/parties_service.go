@@ -12,6 +12,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -27,24 +29,34 @@ func pgTextFromString(s string) pgtype.Text {
 type PartiesService struct {
 	queries *queries.Queries
 	pool    *pgxpool.Pool
+	pool    *pgxpool.Pool
 	rdb     *redis.Client
+	monnify *monnifyclient.Client
 	monnify *monnifyclient.Client
 }
 
 // NewPartiesService creates a new PartiesService.
 // monnify may be nil in test environments — wallet creation will be skipped.
 func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client) *PartiesService {
+// NewPartiesService creates a new PartiesService.
+// monnify may be nil in test environments — wallet creation will be skipped.
+func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client) *PartiesService {
 	return &PartiesService{
 		queries: q,
 		pool:    pool,
+		pool:    pool,
 		rdb:     rdb,
+		monnify: monnify,
 		monnify: monnify,
 	}
 }
 
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
+// CreateParty inserts a party into the database and, if a Monnify client is
+// configured, immediately provisions a reserved virtual account (wallet) for it.
 func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string) (queries.Party, error) {
+	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 		ShortName: shortName,
 		Name:      name,
@@ -110,15 +122,77 @@ func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Pa
 }
 
 // GetPartyByID returns a party by its database ID.
+	if err != nil {
+		return queries.Party{}, err
+	}
+
+	// Provision wallet asynchronously via Monnify (best-effort).
+	// Wallet creation failure does NOT roll back the party insert — the admin
+	// can retry wallet creation later via a dedicated endpoint.
+	if s.monnify != nil {
+		if _, walletErr := s.CreatePartyWallet(ctx, party); walletErr != nil {
+			// Log but don't fail — party creation must succeed either way.
+			_ = walletErr
+		}
+	}
+
+	return party, nil
+}
+
+// CreatePartyWallet calls Monnify to create a reserved virtual account for the
+// given party, then persists the wallet record in party_wallets.
+//
+// It is safe to call this more than once — subsequent calls will return an error
+// because account_reference is UNIQUE and Monnify rejects duplicate references.
+func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Party) (queries.PartyWallet, error) {
+	if s.monnify == nil {
+		return queries.PartyWallet{}, fmt.Errorf("monnify client is not configured")
+	}
+
+	// Build a stable, human-readable reference tied to the party ID.
+	accountReference := fmt.Sprintf("free9ja-party-%d", party.ID)
+
+	resp, err := s.monnify.CreateReservedAccount(ctx, monnifyclient.ReservedAccountRequest{
+		AccountReference: accountReference,
+		AccountName:      party.Name + " - free9ja",
+		CustomerEmail:    fmt.Sprintf("party-%d@free9ja.com", party.ID),
+		CustomerName:     party.Name,
+		CustomerBvn:      "22222222222", // Default dummy BVN to ensure accounts are generated in sandbox/testing
+	})
+	if err != nil {
+		return queries.PartyWallet{}, fmt.Errorf("monnify reserved account: %w", err)
+	}
+
+	// Serialise the account numbers slice to JSONB.
+	accountNumbersJSON, err := json.Marshal(resp.AccountNumbers)
+	if err != nil {
+		return queries.PartyWallet{}, fmt.Errorf("marshal account numbers: %w", err)
+	}
+
+	wallet, err := s.queries.CreatePartyWallet(ctx, queries.CreatePartyWalletParams{
+		PartyID:          party.ID,
+		AccountReference: accountReference,
+		AccountNumbers:   accountNumbersJSON,
+	})
+	if err != nil {
+		return queries.PartyWallet{}, fmt.Errorf("persist party wallet: %w", err)
+	}
+
+	return wallet, nil
+}
+
+// GetPartyByID returns a party by its database ID.
 func (s *PartiesService) GetPartyByID(ctx context.Context, id int64) (queries.Party, error) {
 	return s.queries.GetPartyByID(ctx, id)
 }
 
 // GetPartyByShortName returns a party by its short name (e.g. "APC").
+// GetPartyByShortName returns a party by its short name (e.g. "APC").
 func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error) {
 	return s.queries.GetPartyByShortName(ctx, shortName)
 }
 
+// ListParties returns all parties ordered by ID ascending.
 // ListParties returns all parties ordered by ID ascending.
 func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, error) {
 	return s.queries.ListParties(ctx)
@@ -197,6 +271,7 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 	return party, err
 }
 
+// DeleteParty removes a party from the database (cascades to party_wallets).
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
 	return s.queries.DeleteParty(ctx, id)

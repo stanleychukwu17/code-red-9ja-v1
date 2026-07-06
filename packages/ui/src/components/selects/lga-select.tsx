@@ -35,6 +35,7 @@ export const SelectLga = ({
   className,
   align = "start",
   fetchLGAs,
+  showAll,
 }: SelectProps<Lga, number | string> & {
   stateId?: number;
   fetchLGAs: (args: {
@@ -82,12 +83,17 @@ export const SelectLga = ({
     }
   }, [selectedId, lgas]);
 
-  useEffect(() => { setSelectedItem(undefined); }, [stateId]);
   useEffect(() => { if (!open) setMobileSearch(""); }, [open]);
 
   const handleLgaSelect = (lga: Lga) => {
     setSelectedItem(lga);
     update(lga);
+    setOpen(false);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedItem(undefined);
+    update(undefined as any);
     setOpen(false);
   };
 
@@ -102,7 +108,7 @@ export const SelectLga = ({
 
   const handleLoadMore = () => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); };
 
-  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : "Select LGA");
+  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : showAll ? "All LGAs" : "Select LGA");
   const hasError = Boolean(errorMsg);
   const currentSelectedId = selectedItem?.id ? `${selectedItem.id}` : selectedId ? `${selectedId}` : undefined;
   const getId = (item: Lga) => `${item.id}`;
@@ -150,6 +156,8 @@ export const SelectLga = ({
           status={getStatus()}
           loadMore={handleLoadMore}
           onSearch={setDesktopSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
       mobileContent={
@@ -162,6 +170,8 @@ export const SelectLga = ({
           status={getStatus()}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
     />

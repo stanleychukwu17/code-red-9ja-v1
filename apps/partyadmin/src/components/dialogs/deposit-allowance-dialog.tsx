@@ -8,6 +8,7 @@ import {
   DialogPadding,
 } from "@repo/ui/components/dialog";
 import { Package, Loader2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { depositPartyAllowance } from "#/lib/server/parties";
 import { toast } from "sonner";
 
@@ -32,7 +33,22 @@ export function DepositAllowanceDialog({
   onSuccess?: () => void;
 }) {
   const [depositAmount, setDepositAmount] = React.useState(10000);
-  const [isPending, setIsPending] = React.useState(false);
+
+  const depositMutation = useMutation({
+    mutationFn: (variables: { partyID: number; amountKobo: number }) => depositPartyAllowance({ data: variables }),
+    onSuccess: (res) => {
+      if (res && res.success) {
+        toast.success(`Successfully deposited ${formatNairaWithDecimals(depositAmount)} to polling agent allowance budget!`);
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(res?.message || "Failed to deposit allowance");
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "An unexpected error occurred");
+    }
+  });
 
   const walletBalanceNaira = walletBalanceKobo / 100;
   const isInsufficient = depositAmount > walletBalanceNaira;
@@ -43,28 +59,12 @@ export function DepositAllowanceDialog({
     setDepositAmount(parsed);
   };
 
-  const handleDeposit = async () => {
+  const handleDeposit = () => {
     if (!partyId || depositAmount <= 0) return;
-    setIsPending(true);
-    try {
-      const res = await depositPartyAllowance({
-        data: {
-          partyID: partyId,
-          amountKobo: depositAmount * 100, // convert Naira input to Kobo
-        },
-      });
-      if (res && res.success) {
-        toast.success(`Successfully deposited ${formatNairaWithDecimals(depositAmount)} to polling agent allowance budget!`);
-        onSuccess?.();
-        onClose();
-      } else {
-        toast.error(res?.message || "Failed to deposit allowance");
-      }
-    } catch (error: any) {
-      toast.error(error.message || "An unexpected error occurred");
-    } finally {
-      setIsPending(false);
-    }
+    depositMutation.mutate({
+      partyID: partyId,
+      amountKobo: depositAmount * 100, // convert Naira input to Kobo
+    });
   };
 
   return (
@@ -113,7 +113,7 @@ export function DepositAllowanceDialog({
                     fontVariantNumeric: "tabular-nums",
                     width: `${Math.max(1, depositAmount.toLocaleString("en-NG").length) * 0.62}em`,
                   }}
-                  disabled={isPending}
+                  disabled={depositMutation.isPending}
                 />
               </div>
             </div>
@@ -151,10 +151,10 @@ export function DepositAllowanceDialog({
         <DialogFooter>
           <Button
             className="bg-[#00e575] hover:bg-[#00c866] text-white rounded-xl px-7 h-11 text-[15px] font-bold border-none shadow-none transition-colors duration-150"
-            disabled={depositAmount <= 0 || isInsufficient || isPending}
+            disabled={depositAmount <= 0 || isInsufficient || depositMutation.isPending}
             onClick={handleDeposit}
           >
-            {isPending ? (
+            {depositMutation.isPending ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="size-4 animate-spin" />
                 Depositing...

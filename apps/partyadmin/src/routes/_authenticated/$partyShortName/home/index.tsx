@@ -12,7 +12,7 @@ import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialo
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
 import { SetAgentPaymentDialog } from "#/components/dialogs/set-agent-payment-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useParty } from "#/providers/providers";
+import { useAppContext } from "#/providers/providers";
 import { getPartyWallet } from "#/lib/server/parties";
 import { HomePageHeader } from "./header";
 
@@ -127,10 +127,8 @@ function ActionPill({
   );
 }
 
-
-
 function HomeBillboard() {
-  const { party } = useParty();
+  const { party } = useAppContext();
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -155,7 +153,8 @@ function HomeBillboard() {
 
   // Dynamic budget calculation:
   const allowances = party?.stateAllowances || {};
-  const defaultKobo = allowances["default"] !== undefined ? allowances["default"] : 2000000;
+  const defaultKobo =
+    allowances["default"] !== undefined ? allowances["default"] : 2000000;
   const defaultNaira = defaultKobo / 100;
 
   const stateValues = Object.entries(allowances)

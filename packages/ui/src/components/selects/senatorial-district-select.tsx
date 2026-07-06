@@ -35,7 +35,8 @@ export const SelectSenatorialDistrict = ({
   className,
   align = "start",
   fetchSenatorialDistricts,
-}: SelectProps<SenatorialDistrict> & {
+  showAll,
+}: SelectProps<SenatorialDistrict, number> & {
   stateId?: number;
   fetchSenatorialDistricts: (args: {
     data: { stateId?: number; limit?: number; cursor?: string };
@@ -102,15 +103,18 @@ export const SelectSenatorialDistrict = ({
   }, [selectedId, districts]);
 
   useEffect(() => {
-    setSelectedItem(undefined);
-  }, [stateId]);
-  useEffect(() => {
     if (!open) setMobileSearch("");
   }, [open]);
 
   const handleDistrictSelect = (district: SenatorialDistrict) => {
     setSelectedItem(district);
     update(district);
+    setOpen(false);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedItem(undefined);
+    update(undefined as any);
     setOpen(false);
   };
 
@@ -195,6 +199,8 @@ export const SelectSenatorialDistrict = ({
           status={getStatus()}
           loadMore={handleLoadMore}
           onSearch={setDesktopSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
       mobileContent={
@@ -207,6 +213,8 @@ export const SelectSenatorialDistrict = ({
           status={getStatus()}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
     />

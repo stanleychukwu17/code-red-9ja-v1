@@ -121,7 +121,7 @@ export function AppSidebarShell({
             )}
           </div>
         </div>
-      </main>
+      </main> */}
     </SidebarProvider>
   );
 }

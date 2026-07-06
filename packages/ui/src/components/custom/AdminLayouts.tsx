@@ -17,7 +17,8 @@ type ElectionsLayoutProps = {
 export type PageHeaderTabProps = {
   id: string;
   label: string;
-  href: string;
+  href?: string;
+  onClick?: () => void;
 };
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -373,31 +374,84 @@ export function PageHeader({
 export function HeaderTabs({
   activeTab,
   tabs,
+  activeTabClassName = "bg-[#0b6c3e] text-white shadow-sm",
+  containerClassName,
 }: {
   activeTab: string;
   tabs?: PageHeaderTabProps[];
+  activeTabClassName?: string;
+  containerClassName?: string;
 }) {
   if (!tabs) return <></>;
 
   return (
-    <div className="flex bg-[#e9ecef] p-1 rounded-xl w-fit gap-1 select-none items-center h-11">
+    <div
+      className={cn(
+        "flex bg-[#e9ecef] p-1 rounded-xl w-fit gap-1 select-none items-center h-11",
+        containerClassName,
+      )}
+    >
       {tabs.map((tab) => {
         const active = tab.id === activeTab;
+        const className = cn(
+          "h-full px-4 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center h-full",
+          active ? activeTabClassName : "text-c-50 hover:text-c-80",
+        );
+
+        if (tab.href) {
+          return (
+            <Link
+              key={tab.id}
+              to={tab.href as never}
+              onClick={tab.onClick}
+              className={className}
+            >
+              {tab.label}
+            </Link>
+          );
+        }
+
         return (
-          <Link
-            key={tab.id}
-            to={tab.href as never}
-            className={cn(
-              "h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center h-full",
-              active
-                ? "bg-[#0b6c3e] text-white shadow-sm"
-                : "text-gray-600 hover:text-gray-900",
-            )}
-          >
+          <button key={tab.id} onClick={tab.onClick} className={className}>
             {tab.label}
-          </Link>
+          </button>
         );
       })}
+    </div>
+  );
+}
+
+export function StatCard({
+  label,
+  value,
+  icon,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-c-80 text-sm">{label}</p>
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="text-c-80 font-medium text-2xl">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+export function StatSection({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div className="bg-c-5/50 rounded-[20px] px-5 py-4 space-y-4 shadow-xs">
+      <h2 className="text-sm font-bold text-c-50 tracking-wide">{title}</h2>
+      <div className="grid grid-cols-2 gap-4 gap-y-6">{children}</div>
     </div>
   );
 }

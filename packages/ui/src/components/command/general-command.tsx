@@ -28,6 +28,8 @@ type GeneralCommandProps<T> = {
   onSearch?: (search: string) => void;
   beforeList?: ReactNode;
   children?: ReactNode;
+  showAll?: boolean;
+  onSelectAll?: () => void;
 };
 
 export function GeneralCommand<T>({
@@ -46,6 +48,8 @@ export function GeneralCommand<T>({
   onSearch,
   beforeList,
   children,
+  showAll,
+  onSelectAll,
 }: GeneralCommandProps<T>) {
   const parentRef = useRef<HTMLDivElement | null>(null);
   const [search, setSearch] = useState("");
@@ -117,6 +121,21 @@ export function GeneralCommand<T>({
           <CommandEmpty>None found.</CommandEmpty>
         ) : (
           <CommandGroup>
+            {showAll && (
+              <CommandItem
+                value="__all__"
+                onSelect={() => onSelectAll?.()}
+                className="flex items-center gap-2 py-2 px-3 cursor-pointer"
+              >
+                <div className="leading-5 font-[450] font-normal flex-1 min-w-0">All</div>
+                <Check
+                  className={cn(
+                    "shrink-0",
+                    !selectedId ? "opacity-100" : "opacity-0",
+                  )}
+                />
+              </CommandItem>
+            )}
             <div
               ref={parentRef}
               className="max-h-80 overflow-y-auto overflow-x-hidden touch-pan-y overscroll-contain"

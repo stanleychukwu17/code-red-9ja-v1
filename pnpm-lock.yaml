@@ -396,6 +396,9 @@ importers:
       '@tanstack/router-plugin':
         specifier: 1.132.0
         version: 1.132.0(@tanstack/react-router@1.168.10(react-dom@19.2.2(react@19.2.2))(react@19.2.2))(vite@7.3.1(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3))
+      date-fns:
+        specifier: ^4.4.0
+        version: 4.4.0
       framer-motion:
         specifier: 12.40.0
         version: 12.40.0(react-dom@19.2.2(react@19.2.2))(react@19.2.2)
@@ -610,7 +613,7 @@ importers:
     dependencies:
       '@base-ui/react':
         specifier: ^1.4.1
-        version: 1.4.1(@date-fns/tz@1.4.1)(@types/react@19.2.2)(date-fns@4.1.0)(react-dom@19.2.2(react@19.2.2))(react@19.2.2)
+        version: 1.4.1(@date-fns/tz@1.4.1)(@types/react@19.2.2)(date-fns@4.4.0)(react-dom@19.2.2(react@19.2.2))(react@19.2.2)
       '@radix-ui/react-dialog':
         specifier: ^1.1.16
         version: 1.1.16(@types/react-dom@19.2.2(@types/react@19.2.2))(@types/react@19.2.2)(react-dom@19.2.2(react@19.2.2))(react@19.2.2)
@@ -4917,6 +4920,9 @@ packages:
   date-fns@4.1.0:
     resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
+  date-fns@4.4.0:
+    resolution: {integrity: sha512-+1UMbeh68lH1SegH83CGWwpb6OHHbpSgr3+s5Eww5M4CAgswBpoWS0AjTOfEJ33HiYKz1hdj/KTFprzXHmq/6w==}
+
   dayjs@1.11.20:
     resolution: {integrity: sha512-YbwwqR/uYpeoP4pu043q+LTDLFBLApUP6VxRihdfNTqu4ubqMlGDLd6ErXhEgsyvY0K6nCs7nggYumAN+9uEuQ==}
 
@@ -8905,7 +8911,7 @@ snapshots:
       '@babel/helper-string-parser': 7.27.1
       '@babel/helper-validator-identifier': 7.28.5
 
-  '@base-ui/react@1.4.1(@date-fns/tz@1.4.1)(@types/react@19.2.2)(date-fns@4.1.0)(react-dom@19.2.2(react@19.2.2))(react@19.2.2)':
+  '@base-ui/react@1.4.1(@date-fns/tz@1.4.1)(@types/react@19.2.2)(date-fns@4.4.0)(react-dom@19.2.2(react@19.2.2))(react@19.2.2)':
     dependencies:
       '@babel/runtime': 7.29.2
       '@base-ui/utils': 0.2.8(@types/react@19.2.2)(react-dom@19.2.2(react@19.2.2))(react@19.2.2)
@@ -8917,7 +8923,7 @@ snapshots:
     optionalDependencies:
       '@date-fns/tz': 1.4.1
       '@types/react': 19.2.2
-      date-fns: 4.1.0
+      date-fns: 4.4.0
 
   '@base-ui/utils@0.2.8(@types/react@19.2.2)(react-dom@19.2.2(react@19.2.2))(react@19.2.2)':
     dependencies:
@@ -12776,6 +12782,8 @@ snapshots:
   date-fns-jalali@4.1.0-0: {}
 
   date-fns@4.1.0: {}
+
+  date-fns@4.4.0: {}
 
   dayjs@1.11.20: {}
 

@@ -12,7 +12,7 @@ import (
 )
 
 const getAllPollingUnitResultsByPU = `-- name: GetAllPollingUnitResultsByPU :many
-SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2
 AND status NOT IN ('nullified', 'disputed')
@@ -41,6 +41,9 @@ func (q *Queries) GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPo
 			&i.SubmittedBy,
 			&i.PartyID,
 			&i.StateID,
+			&i.SenatorialDistrictID,
+			&i.FederalConstituencyID,
+			&i.StateConstituencyID,
 			&i.LgaID,
 			&i.WardID,
 			&i.AccreditedVoters,
@@ -73,7 +76,7 @@ func (q *Queries) GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPo
 }
 
 const getPollingUnitResult = `-- name: GetPollingUnitResult :one
-SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results
 WHERE id = $1
 `
@@ -90,6 +93,9 @@ func (q *Queries) GetPollingUnitResult(ctx context.Context, id int64) (PollingUn
 		&i.SubmittedBy,
 		&i.PartyID,
 		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
 		&i.AccreditedVoters,
@@ -172,7 +178,7 @@ func (q *Queries) IncrementPartyElectionGroupResultCount(ctx context.Context, ar
 }
 
 const listPollingUnitResults = `-- name: ListPollingUnitResults :many
-SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results
 WHERE
   ($1::bigint    IS NULL OR election_id       = $1)
@@ -236,6 +242,9 @@ func (q *Queries) ListPollingUnitResults(ctx context.Context, arg ListPollingUni
 			&i.SubmittedBy,
 			&i.PartyID,
 			&i.StateID,
+			&i.SenatorialDistrictID,
+			&i.FederalConstituencyID,
+			&i.StateConstituencyID,
 			&i.LgaID,
 			&i.WardID,
 			&i.AccreditedVoters,
@@ -276,6 +285,9 @@ INSERT INTO polling_unit_results (
   submitted_by,
   party_id,
   state_id,
+  senatorial_district_id,
+  federal_constituency_id,
+  state_constituency_id,
   lga_id,
   ward_id,
   accredited_voters,
@@ -287,28 +299,31 @@ INSERT INTO polling_unit_results (
   result_sheet_video_url,
   uploaded_by_inec
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
-) RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+) RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 `
 
 type SubmitPollingUnitResultParams struct {
-	AssignmentID        pgtype.Int8 `json:"assignment_id"`
-	ElectionID          int64       `json:"election_id"`
-	ElectionGroupID     int64       `json:"election_group_id"`
-	PollingUnitID       int32       `json:"polling_unit_id"`
-	SubmittedBy         int64       `json:"submitted_by"`
-	PartyID             pgtype.Int8 `json:"party_id"`
-	StateID             pgtype.Int2 `json:"state_id"`
-	LgaID               pgtype.Int4 `json:"lga_id"`
-	WardID              pgtype.Int4 `json:"ward_id"`
-	AccreditedVoters    int32       `json:"accredited_voters"`
-	VotesCast           int32       `json:"votes_cast"`
-	ValidVotes          int32       `json:"valid_votes"`
-	RejectedVotes       int32       `json:"rejected_votes"`
-	CandidateResults    []byte      `json:"candidate_results"`
-	ResultSheetImageUrl pgtype.Text `json:"result_sheet_image_url"`
-	ResultSheetVideoUrl pgtype.Text `json:"result_sheet_video_url"`
-	UploadedByInec      bool        `json:"uploaded_by_inec"`
+	AssignmentID          pgtype.Int8 `json:"assignment_id"`
+	ElectionID            int64       `json:"election_id"`
+	ElectionGroupID       int64       `json:"election_group_id"`
+	PollingUnitID         int32       `json:"polling_unit_id"`
+	SubmittedBy           int64       `json:"submitted_by"`
+	PartyID               pgtype.Int8 `json:"party_id"`
+	StateID               pgtype.Int2 `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4 `json:"lga_id"`
+	WardID                pgtype.Int4 `json:"ward_id"`
+	AccreditedVoters      int32       `json:"accredited_voters"`
+	VotesCast             int32       `json:"votes_cast"`
+	ValidVotes            int32       `json:"valid_votes"`
+	RejectedVotes         int32       `json:"rejected_votes"`
+	CandidateResults      []byte      `json:"candidate_results"`
+	ResultSheetImageUrl   pgtype.Text `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl   pgtype.Text `json:"result_sheet_video_url"`
+	UploadedByInec        bool        `json:"uploaded_by_inec"`
 }
 
 func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error) {
@@ -320,6 +335,9 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 		arg.SubmittedBy,
 		arg.PartyID,
 		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
 		arg.LgaID,
 		arg.WardID,
 		arg.AccreditedVoters,
@@ -341,6 +359,84 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 		&i.SubmittedBy,
 		&i.PartyID,
 		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
+		&i.LgaID,
+		&i.WardID,
+		&i.AccreditedVoters,
+		&i.VotesCast,
+		&i.ValidVotes,
+		&i.RejectedVotes,
+		&i.CandidateResults,
+		&i.ResultSheetImageUrl,
+		&i.ResultSheetVideoUrl,
+		&i.Status,
+		&i.AiExtractedData,
+		&i.AiConfidenceScore,
+		&i.DisputedReason,
+		&i.ConfirmedAt,
+		&i.ConfirmedBy,
+		&i.UpVotes,
+		&i.DownVotes,
+		&i.UploadedByInec,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePollingUnitResult = `-- name: UpdatePollingUnitResult :one
+UPDATE polling_unit_results
+SET
+  accredited_voters = $2,
+  votes_cast = $3,
+  valid_votes = $4,
+  rejected_votes = $5,
+  candidate_results = $6,
+  result_sheet_image_url = $7,
+  result_sheet_video_url = $8,
+  status = 'submitted',
+  updated_at = NOW()
+WHERE id = $1
+RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+`
+
+type UpdatePollingUnitResultParams struct {
+	ID                  int64       `json:"id"`
+	AccreditedVoters    int32       `json:"accredited_voters"`
+	VotesCast           int32       `json:"votes_cast"`
+	ValidVotes          int32       `json:"valid_votes"`
+	RejectedVotes       int32       `json:"rejected_votes"`
+	CandidateResults    []byte      `json:"candidate_results"`
+	ResultSheetImageUrl pgtype.Text `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl pgtype.Text `json:"result_sheet_video_url"`
+}
+
+func (q *Queries) UpdatePollingUnitResult(ctx context.Context, arg UpdatePollingUnitResultParams) (PollingUnitResult, error) {
+	row := q.db.QueryRow(ctx, updatePollingUnitResult,
+		arg.ID,
+		arg.AccreditedVoters,
+		arg.VotesCast,
+		arg.ValidVotes,
+		arg.RejectedVotes,
+		arg.CandidateResults,
+		arg.ResultSheetImageUrl,
+		arg.ResultSheetVideoUrl,
+	)
+	var i PollingUnitResult
+	err := row.Scan(
+		&i.ID,
+		&i.AssignmentID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.PollingUnitID,
+		&i.SubmittedBy,
+		&i.PartyID,
+		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
 		&i.AccreditedVoters,
@@ -376,7 +472,7 @@ SET
   confirmed_by        = $7,
   updated_at          = NOW()
 WHERE id = $1
-RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 `
 
 type UpdateResultStatusParams struct {
@@ -409,6 +505,9 @@ func (q *Queries) UpdateResultStatus(ctx context.Context, arg UpdateResultStatus
 		&i.SubmittedBy,
 		&i.PartyID,
 		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
 		&i.AccreditedVoters,
@@ -448,7 +547,7 @@ SET
                END,
   updated_at = NOW()
 WHERE id = $3::bigint
-RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 `
 
 type VoteOnResultParams struct {
@@ -469,6 +568,9 @@ func (q *Queries) VoteOnResult(ctx context.Context, arg VoteOnResultParams) (Pol
 		&i.SubmittedBy,
 		&i.PartyID,
 		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
 		&i.AccreditedVoters,

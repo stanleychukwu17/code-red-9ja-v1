@@ -41,7 +41,7 @@ const fetchLgasAdapter = async (args: {
 }) => {
   return getLGAs({
     data: {
-      stateID: args.data.stateId,
+      stateId: args.data.stateId,
     },
   });
 };
@@ -51,8 +51,8 @@ const fetchWardsAdapter = async (args: {
 }) => {
   return getWards({
     data: {
-      lgaID: args.data.lga_id,
-      stateID: args.data.stateId,
+      lga_id: args.data.lga_id,
+      stateId: args.data.stateId,
     },
   });
 };

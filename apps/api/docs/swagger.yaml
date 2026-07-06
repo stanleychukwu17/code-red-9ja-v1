@@ -581,6 +581,17 @@ definitions:
         type: integer
       states_count:
         type: integer
+    properties:
+      election_date:
+        type: string
+      elections_count:
+        type: integer
+      name:
+        type: string
+      rank:
+        type: integer
+      states_count:
+        type: integer
     type: object
   electiongroupshandler.UpdateElectionGroupRequest:
     properties:
@@ -630,6 +641,29 @@ definitions:
         type: integer
       ward_id:
         type: integer
+    properties:
+      candidates_count:
+        type: integer
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      office_id:
+        type: integer
+      senatorial_district_id:
+        type: integer
+      state_constituency_id:
+        type: integer
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
     type: object
   electionshandler.CreateFederalConstituencyElectionRequest:
     properties:
@@ -643,8 +677,30 @@ definitions:
         type: array
       office_id:
         type: integer
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_ids:
+        items:
+          type: integer
+        type: array
+      office_id:
+        type: integer
     type: object
   electionshandler.CreateLgaElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      lga_ids:
+        items:
+          type: integer
+        type: array
+      office_id:
+        type: integer
     properties:
       election_date:
         type: string
@@ -682,6 +738,17 @@ definitions:
         items:
           type: integer
         type: array
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      senatorial_district_ids:
+        items:
+          type: integer
+        type: array
     type: object
   electionshandler.CreateStateConstituencyElectionRequest:
     properties:
@@ -695,8 +762,30 @@ definitions:
         items:
           type: integer
         type: array
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      state_constituency_ids:
+        items:
+          type: integer
+        type: array
     type: object
   electionshandler.CreateStateElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      state_ids:
+        items:
+          type: integer
+        type: array
     properties:
       election_date:
         type: string
@@ -743,6 +832,29 @@ definitions:
         type: array
     type: object
   electionshandler.UpdateElectionRequest:
+    properties:
+      candidates_count:
+        type: integer
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      office_id:
+        type: integer
+      senatorial_district_id:
+        type: integer
+      state_constituency_id:
+        type: integer
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
     properties:
       candidates_count:
         type: integer
@@ -1916,6 +2028,38 @@ paths:
             additionalProperties: true
             type: object
       summary: Logout user
+      tags:
+      - Auth
+  /auth/partyapp/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a party member and returns access and refresh tokens
+      parameters:
+      - description: Party login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.PartyLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authhandler.AdminLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login party member user
       tags:
       - Auth
   /auth/partyapp/login:

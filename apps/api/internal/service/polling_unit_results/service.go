@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 
 	"free9ja/api/internal/config"
@@ -87,9 +88,16 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		return queries.PollingUnitResult{}, errors.New("invalid polling_unit_id")
 	}
 
+	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
+	}
+
+	ward, err := qtx.GetWardByID(ctx, pu.WardID)
+	if err != nil {
+		return queries.PollingUnitResult{}, errors.New("invalid ward for polling unit")
+	}
+
 	// Make sure we have an image URL
 	if input.ResultSheetImageURL == "" {
-		return queries.PollingUnitResult{}, errors.New("result_sheet_image_url is required for AI extraction")
 	}
 
 	// Call Gemini (we extract API key from config)
@@ -147,30 +155,68 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		videoURL = pgtype.Text{String: input.ResultSheetVideoURL, Valid: true}
 	}
 
-	// Insert the result
-	// The default status in the DB is 'submitted'. Since we verified via AI, we could set status here if we wanted.
-	// But our schema says default is 'submitted'. Let's update it to 'ai_verified' immediately since we did it sync.
-	result, err := qtx.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
-		AssignmentID:        assignmentID,
-		ElectionID:          input.ElectionID,
-		ElectionGroupID:     input.ElectionGroupID,
-		PollingUnitID:       input.PollingUnitID,
-		SubmittedBy:         user.ID,
-		PartyID:             partyID,
-		StateID:             pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-		LgaID:               pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
-		WardID:              pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
-		AccreditedVoters:    int32(extracted.AccreditedVoters),
-		VotesCast:           int32(extracted.VotesCast),
-		ValidVotes:          int32(extracted.ValidVotes),
-		RejectedVotes:       int32(extracted.RejectedVotes),
-		CandidateResults:    candidateJSON,
-		ResultSheetImageUrl: imageURL,
-		ResultSheetVideoUrl: videoURL,
-		UploadedByInec:      input.UploadedByINEC,
+	// Insert or update the result
+	var result queries.PollingUnitResult
+
+	// Check if the user already submitted a result for this election
+	existingResults, err := qtx.ListPollingUnitResults(ctx, queries.ListPollingUnitResultsParams{
+		ElectionID:  pgtype.Int8{Int64: input.ElectionID, Valid: true},
+		SubmittedBy: pgtype.Int8{Int64: user.ID, Valid: true},
+		Limit:       1,
+		Cursor:      math.MaxInt32,
 	})
 	if err != nil {
 		return queries.PollingUnitResult{}, err
+	}
+
+	if len(existingResults) > 0 {
+		existing := existingResults[0]
+		if existing.PollingUnitID != input.PollingUnitID {
+			return queries.PollingUnitResult{}, errors.New("you have already submitted a result for a different polling unit in this election")
+		}
+
+		// Update existing submission
+		result, err = qtx.UpdatePollingUnitResult(ctx, queries.UpdatePollingUnitResultParams{
+			ID:                  existing.ID,
+			AccreditedVoters:    int32(extracted.AccreditedVoters),
+			VotesCast:           int32(extracted.VotesCast),
+			ValidVotes:          int32(extracted.ValidVotes),
+			RejectedVotes:       int32(extracted.RejectedVotes),
+			CandidateResults:    candidateJSON,
+			ResultSheetImageUrl: imageURL,
+			ResultSheetVideoUrl: videoURL,
+		})
+		if err != nil {
+			return queries.PollingUnitResult{}, err
+		}
+	} else {
+		// The default status in the DB is 'submitted'. Since we verified via AI, we could set status here if we wanted.
+		// But our schema says default is 'submitted'. Let's update it to 'ai_verified' immediately since we did it sync.
+		result, err = qtx.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
+			AssignmentID:          assignmentID,
+			ElectionID:            input.ElectionID,
+			ElectionGroupID:       input.ElectionGroupID,
+			PollingUnitID:         input.PollingUnitID,
+			SubmittedBy:           user.ID,
+			PartyID:               partyID,
+			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
+			FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
+			StateConstituencyID:   ward.StateAssemblyConstituencyID,
+			LgaID:                 pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
+			WardID:                pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
+			AccreditedVoters:      int32(extracted.AccreditedVoters),
+			VotesCast:             int32(extracted.VotesCast),
+			ValidVotes:            int32(extracted.ValidVotes),
+			RejectedVotes:         int32(extracted.RejectedVotes),
+			CandidateResults:      candidateJSON,
+			ResultSheetImageUrl:   imageURL,
+			ResultSheetVideoUrl:   videoURL,
+			UploadedByInec:        input.UploadedByINEC,
+		})
+		if err != nil {
+			return queries.PollingUnitResult{}, err
+		}
 	}
 	
 	// Update status immediately since we did sync verification
@@ -193,30 +239,33 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		return queries.PollingUnitResult{}, err
 	}
 
-	// Increment election_groups.results_submitted_count
-	if err := qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID); err != nil {
-		return queries.PollingUnitResult{}, err
-	}
-
-	// Increment elections.results_submitted_count for the specific election
-	if err := qtx.IncrementElectionResultCount(ctx, input.ElectionID); err != nil {
-		return queries.PollingUnitResult{}, err
-	}
-
-	// Increment party_election_groups.results_submitted_count when submitted by a party agent
-	if input.PartyID != nil {
-		if err := qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
-			PartyID:         *input.PartyID,
-			ElectionGroupID: input.ElectionGroupID,
-		}); err != nil {
+	// Only increment counters if this was a new insertion
+	if len(existingResults) == 0 {
+		// Increment election_groups.results_submitted_count
+		if err := qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID); err != nil {
 			return queries.PollingUnitResult{}, err
 		}
-	}
 
-	// Increment polling_unit_assignments.results_submitted_count if this is an agent submission
-	if input.AssignmentID != nil {
-		if err := qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID); err != nil {
+		// Increment elections.results_submitted_count for the specific election
+		if err := qtx.IncrementElectionResultCount(ctx, input.ElectionID); err != nil {
 			return queries.PollingUnitResult{}, err
+		}
+
+		// Increment party_election_groups.results_submitted_count when submitted by a party agent
+		if input.PartyID != nil {
+			if err := qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
+				PartyID:         *input.PartyID,
+				ElectionGroupID: input.ElectionGroupID,
+			}); err != nil {
+				return queries.PollingUnitResult{}, err
+			}
+		}
+
+		// Increment polling_unit_assignments.results_submitted_count if this is an agent submission
+		if input.AssignmentID != nil {
+			if err := qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID); err != nil {
+				return queries.PollingUnitResult{}, err
+			}
 		}
 	}
 
@@ -250,6 +299,11 @@ func (s *Service) GetResult(ctx context.Context, id int64) (queries.PollingUnitR
 // ListResults returns a cursor-paginated slice of polling unit results.
 func (s *Service) ListResults(ctx context.Context, params queries.ListPollingUnitResultsParams) ([]queries.PollingUnitResult, error) {
 	return s.queries.ListPollingUnitResults(ctx, params)
+}
+
+// ListPollingUnitFinalResults returns a cursor-paginated slice of final polling unit results with details.
+func (s *Service) ListPollingUnitFinalResults(ctx context.Context, params queries.ListPollingUnitFinalResultsParams) ([]queries.ListPollingUnitFinalResultsRow, error) {
+	return s.queries.ListPollingUnitFinalResults(ctx, params)
 }
 
 // VoteOnResult records an up or down vote from a user, atomically swapping

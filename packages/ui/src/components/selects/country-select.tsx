@@ -29,6 +29,7 @@ export const SelectCountry = ({
   errorMsg,
   selectedId,
   className,
+  disabled,
   align = "start",
   fetchCountries,
 }: SelectProps<Country> & {
@@ -118,6 +119,7 @@ export const SelectCountry = ({
             className,
           )}
           type="button"
+          disabled={disabled}
         >
           <p className="whitespace-normal text-left line-clamp-1">
             {selectedItem ? selectedItem.name : "Country"}

@@ -35,6 +35,7 @@ export const SelectState = ({
   className,
   align = "start",
   fetchStates,
+  showAll,
 }: SelectProps<State, number | string> & {
   countryOriginalId?: number;
   fetchStates: (args: {
@@ -82,12 +83,12 @@ export const SelectState = ({
 
   const states = data
     ? Array.from(
-        new Map(
-          data.pages
-            .flatMap((page) => page.data?.states || [])
-            .map((s) => [s.id, s]),
-        ).values(),
-      )
+      new Map(
+        data.pages
+          .flatMap((page) => page.data?.states || [])
+          .map((s) => [s.id, s]),
+      ).values(),
+    )
     : [];
 
   useEffect(() => {
@@ -113,12 +114,17 @@ export const SelectState = ({
     }
   }, [selectedId, states]);
 
-  useEffect(() => { setSelectedItem(undefined); }, [countryOriginalId]);
   useEffect(() => { if (!open) setMobileSearch(""); }, [open]);
 
   const handleStateSelect = (state: State) => {
     setSelectedItem(state);
     update(state);
+    setOpen(false);
+  };
+
+  const handleSelectAll = () => {
+    setSelectedItem(undefined);
+    update(undefined as any);
     setOpen(false);
   };
 
@@ -137,7 +143,7 @@ export const SelectState = ({
 
   const handleLoadMore = () => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); };
 
-  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : "Select state");
+  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : showAll ? "All states" : "Select state");
   const hasError = Boolean(errorMsg);
   const currentSelectedId = selectedItem?.id ? `${selectedItem.id}` : selectedId ? `${selectedId}` : undefined;
   const getId = (item: State) => `${item.id}`;
@@ -185,6 +191,8 @@ export const SelectState = ({
           status={getStatus()}
           loadMore={handleLoadMore}
           onSearch={setDesktopSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
       mobileContent={
@@ -197,6 +205,8 @@ export const SelectState = ({
           status={getStatus()}
           searchValue={mobileSearch}
           onSearch={setMobileSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
         />
       }
     />
