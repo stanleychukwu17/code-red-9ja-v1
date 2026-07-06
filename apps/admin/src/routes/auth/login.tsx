@@ -15,14 +15,7 @@ import {
 } from "@repo/ui/components/select";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
-import {
-  loginAdmin,
-  refreshUserToken,
-} from "#/lib/server/auth/auth";
-import {
-  loginAdmin,
-  refreshUserToken,
-} from "#/lib/server/auth/auth";
+import { loginAdmin, refreshUserToken } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
 
@@ -45,31 +38,30 @@ type payloadType = {
   password: string;
   identifierType?: string;
   iso2?: string;
-}
+};
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
     const res = await refreshUserToken();
     if (res.status === "success" && res.user?.role === "admin") {
-      const res = await refreshUserToken();
-      if (res.status === "success" && res.user?.role === "admin") {
-        throw redirect({ to: "/home" });
-      }
-    },
-    head: () =>
-      getPageHeader({
-        title: "Log in",
-        description: "Log in to your Free9ja Admin account",
-      }),
-      loader: async () => {
-        const countries = await getAllCountries() as countriesType;
-        if (!countries.success) throw new Error(countries.message || "Failed to load countries");
-        return { countries: countries.data.countries };
-      },
-        component: LoginComponent,
-          errorComponent: ({ error }) => (
-            <div className="p-4 text-red-600">{`${error?.message}, Also check if the backend server is up and running`}</div>
-          ),
+      throw redirect({ to: "/home" });
+    }
+  },
+  head: () =>
+    getPageHeader({
+      title: "Log in",
+      description: "Log in to your Free9ja Admin account",
+    }),
+  loader: async () => {
+    const countries = (await getAllCountries()) as countriesType;
+    if (!countries.success)
+      throw new Error(countries.message || "Failed to load countries");
+    return { countries: countries.data.countries };
+  },
+  component: LoginComponent,
+  errorComponent: ({ error }) => (
+    <div className="p-4 text-red-600">{`${error?.message}, Also check if the backend server is up and running`}</div>
+  ),
 });
 
 function LoginComponent() {
@@ -91,7 +83,7 @@ function LoginComponent() {
 
       const payload: payloadType = {
         ...value,
-        identifier: value.identifier.trim().toLowerCase()
+        identifier: value.identifier.trim().toLowerCase(),
       };
 
       // get the identifier type (email, username or phone number)
@@ -143,7 +135,7 @@ function LoginComponent() {
     const timeoutId = setTimeout(() => {
       // find the matched country
       const matchedCountry = countries.find(
-        (c) => c.name.toLowerCase() === visitorCountry
+        (c) => c.name.toLowerCase() === visitorCountry,
       );
 
       // if no matched country, return
@@ -179,7 +171,9 @@ function LoginComponent() {
       {/* Center Form */}
       <div className="mx-auto w-full max-w-[420px] flex flex-col justify-center py-12">
         <h1 className="text-[28px] font-bold text-[#181818] mb-1">Log in</h1>
-        <p className="text-[15px] text-[#767676] mb-6">Log in to Admin Dashboard</p>
+        <p className="text-[15px] text-[#767676] mb-6">
+          Log in to Admin Dashboard
+        </p>
 
         {errorMsg && (
           <div className="mb-4 p-4 rounded-xl bg-red-50 border border-red-100 text-[14px] text-red-600 font-medium">
@@ -235,7 +229,8 @@ function LoginComponent() {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
-                {field.state.meta.isTouched && field.state.meta.errors.length ? (
+                {field.state.meta.isTouched &&
+                field.state.meta.errors.length ? (
                   <span className="text-xs text-destructive">
                     {field.state.meta.errors[0] as string}
                   </span>

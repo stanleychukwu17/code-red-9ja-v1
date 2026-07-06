@@ -279,83 +279,83 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-  | '/'
-  | '/$partyShortName'
-  | '/auth/login'
-  | '/$partyShortName/applications'
-  | '/$partyShortName/bodies'
-  | '/$partyShortName/elections'
-  | '/$partyShortName/parties'
-  | '/$partyShortName/party-members'
-  | '/$partyShortName/users'
-  | '/$partyShortName/wallet'
-  | '/$partyShortName/home/results'
-  | '/$partyShortName/home/updates'
-  | '/$partyShortName/applications/accepted'
-  | '/$partyShortName/applications/rejected'
-  | '/$partyShortName/elections/instances'
-  | '/$partyShortName/home/election-day'
-  | '/$partyShortName/party-members/agent'
-  | '/$partyShortName/applications/'
-  | '/$partyShortName/elections/'
-  | '/$partyShortName/home/'
-  | '/$partyShortName/party-members/'
-  | '/$partyShortName/wallet/'
-  | '/$partyShortName/home/results/media-only'
-  | '/$partyShortName/home/updates/media-only'
-  | '/$partyShortName/home/results/'
-  | '/$partyShortName/home/updates/'
+    | '/'
+    | '/$partyShortName'
+    | '/auth/login'
+    | '/$partyShortName/applications'
+    | '/$partyShortName/bodies'
+    | '/$partyShortName/elections'
+    | '/$partyShortName/parties'
+    | '/$partyShortName/party-members'
+    | '/$partyShortName/users'
+    | '/$partyShortName/wallet'
+    | '/$partyShortName/home/results'
+    | '/$partyShortName/home/updates'
+    | '/$partyShortName/applications/accepted'
+    | '/$partyShortName/applications/rejected'
+    | '/$partyShortName/elections/instances'
+    | '/$partyShortName/home/election-day'
+    | '/$partyShortName/party-members/agent'
+    | '/$partyShortName/applications/'
+    | '/$partyShortName/elections/'
+    | '/$partyShortName/home/'
+    | '/$partyShortName/party-members/'
+    | '/$partyShortName/wallet/'
+    | '/$partyShortName/home/results/media-only'
+    | '/$partyShortName/home/updates/media-only'
+    | '/$partyShortName/home/results/'
+    | '/$partyShortName/home/updates/'
   fileRoutesByTo: FileRoutesByTo
   to:
-  | '/'
-  | '/$partyShortName'
-  | '/auth/login'
-  | '/$partyShortName/bodies'
-  | '/$partyShortName/parties'
-  | '/$partyShortName/users'
-  | '/$partyShortName/applications/accepted'
-  | '/$partyShortName/applications/rejected'
-  | '/$partyShortName/elections/instances'
-  | '/$partyShortName/home/election-day'
-  | '/$partyShortName/party-members/agent'
-  | '/$partyShortName/applications'
-  | '/$partyShortName/elections'
-  | '/$partyShortName/home'
-  | '/$partyShortName/party-members'
-  | '/$partyShortName/wallet'
-  | '/$partyShortName/home/results/media-only'
-  | '/$partyShortName/home/updates/media-only'
-  | '/$partyShortName/home/results'
-  | '/$partyShortName/home/updates'
+    | '/'
+    | '/$partyShortName'
+    | '/auth/login'
+    | '/$partyShortName/bodies'
+    | '/$partyShortName/parties'
+    | '/$partyShortName/users'
+    | '/$partyShortName/applications/accepted'
+    | '/$partyShortName/applications/rejected'
+    | '/$partyShortName/elections/instances'
+    | '/$partyShortName/home/election-day'
+    | '/$partyShortName/party-members/agent'
+    | '/$partyShortName/applications'
+    | '/$partyShortName/elections'
+    | '/$partyShortName/home'
+    | '/$partyShortName/party-members'
+    | '/$partyShortName/wallet'
+    | '/$partyShortName/home/results/media-only'
+    | '/$partyShortName/home/updates/media-only'
+    | '/$partyShortName/home/results'
+    | '/$partyShortName/home/updates'
   id:
-  | '__root__'
-  | '/'
-  | '/_authenticated'
-  | '/_authenticated/$partyShortName'
-  | '/auth/login'
-  | '/_authenticated/$partyShortName/applications'
-  | '/_authenticated/$partyShortName/bodies'
-  | '/_authenticated/$partyShortName/elections'
-  | '/_authenticated/$partyShortName/parties'
-  | '/_authenticated/$partyShortName/party-members'
-  | '/_authenticated/$partyShortName/users'
-  | '/_authenticated/$partyShortName/wallet'
-  | '/_authenticated/$partyShortName/home/results'
-  | '/_authenticated/$partyShortName/home/updates'
-  | '/_authenticated/$partyShortName/applications/accepted'
-  | '/_authenticated/$partyShortName/applications/rejected'
-  | '/_authenticated/$partyShortName/elections/instances'
-  | '/_authenticated/$partyShortName/home/election-day'
-  | '/_authenticated/$partyShortName/party-members/agent'
-  | '/_authenticated/$partyShortName/applications/'
-  | '/_authenticated/$partyShortName/elections/'
-  | '/_authenticated/$partyShortName/home/'
-  | '/_authenticated/$partyShortName/party-members/'
-  | '/_authenticated/$partyShortName/wallet/'
-  | '/_authenticated/$partyShortName/home/results/media-only'
-  | '/_authenticated/$partyShortName/home/updates/media-only'
-  | '/_authenticated/$partyShortName/home/results/'
-  | '/_authenticated/$partyShortName/home/updates/'
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/_authenticated/$partyShortName'
+    | '/auth/login'
+    | '/_authenticated/$partyShortName/applications'
+    | '/_authenticated/$partyShortName/bodies'
+    | '/_authenticated/$partyShortName/elections'
+    | '/_authenticated/$partyShortName/parties'
+    | '/_authenticated/$partyShortName/party-members'
+    | '/_authenticated/$partyShortName/users'
+    | '/_authenticated/$partyShortName/wallet'
+    | '/_authenticated/$partyShortName/home/results'
+    | '/_authenticated/$partyShortName/home/updates'
+    | '/_authenticated/$partyShortName/applications/accepted'
+    | '/_authenticated/$partyShortName/applications/rejected'
+    | '/_authenticated/$partyShortName/elections/instances'
+    | '/_authenticated/$partyShortName/home/election-day'
+    | '/_authenticated/$partyShortName/party-members/agent'
+    | '/_authenticated/$partyShortName/applications/'
+    | '/_authenticated/$partyShortName/elections/'
+    | '/_authenticated/$partyShortName/home/'
+    | '/_authenticated/$partyShortName/party-members/'
+    | '/_authenticated/$partyShortName/wallet/'
+    | '/_authenticated/$partyShortName/home/results/media-only'
+    | '/_authenticated/$partyShortName/home/updates/media-only'
+    | '/_authenticated/$partyShortName/home/results/'
+    | '/_authenticated/$partyShortName/home/updates/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -565,14 +565,14 @@ interface AuthenticatedPartyShortNameApplicationsRouteChildren {
 }
 
 const AuthenticatedPartyShortNameApplicationsRouteChildren: AuthenticatedPartyShortNameApplicationsRouteChildren =
-{
-  AuthenticatedPartyShortNameApplicationsAcceptedRoute:
-    AuthenticatedPartyShortNameApplicationsAcceptedRoute,
-  AuthenticatedPartyShortNameApplicationsRejectedRoute:
-    AuthenticatedPartyShortNameApplicationsRejectedRoute,
-  AuthenticatedPartyShortNameApplicationsIndexRoute:
-    AuthenticatedPartyShortNameApplicationsIndexRoute,
-}
+  {
+    AuthenticatedPartyShortNameApplicationsAcceptedRoute:
+      AuthenticatedPartyShortNameApplicationsAcceptedRoute,
+    AuthenticatedPartyShortNameApplicationsRejectedRoute:
+      AuthenticatedPartyShortNameApplicationsRejectedRoute,
+    AuthenticatedPartyShortNameApplicationsIndexRoute:
+      AuthenticatedPartyShortNameApplicationsIndexRoute,
+  }
 
 const AuthenticatedPartyShortNameApplicationsRouteWithChildren =
   AuthenticatedPartyShortNameApplicationsRoute._addFileChildren(
@@ -585,12 +585,12 @@ interface AuthenticatedPartyShortNameElectionsRouteChildren {
 }
 
 const AuthenticatedPartyShortNameElectionsRouteChildren: AuthenticatedPartyShortNameElectionsRouteChildren =
-{
-  AuthenticatedPartyShortNameElectionsInstancesRoute:
-    AuthenticatedPartyShortNameElectionsInstancesRoute,
-  AuthenticatedPartyShortNameElectionsIndexRoute:
-    AuthenticatedPartyShortNameElectionsIndexRoute,
-}
+  {
+    AuthenticatedPartyShortNameElectionsInstancesRoute:
+      AuthenticatedPartyShortNameElectionsInstancesRoute,
+    AuthenticatedPartyShortNameElectionsIndexRoute:
+      AuthenticatedPartyShortNameElectionsIndexRoute,
+  }
 
 const AuthenticatedPartyShortNameElectionsRouteWithChildren =
   AuthenticatedPartyShortNameElectionsRoute._addFileChildren(
@@ -603,12 +603,12 @@ interface AuthenticatedPartyShortNamePartyMembersRouteChildren {
 }
 
 const AuthenticatedPartyShortNamePartyMembersRouteChildren: AuthenticatedPartyShortNamePartyMembersRouteChildren =
-{
-  AuthenticatedPartyShortNamePartyMembersAgentRoute:
-    AuthenticatedPartyShortNamePartyMembersAgentRoute,
-  AuthenticatedPartyShortNamePartyMembersIndexRoute:
-    AuthenticatedPartyShortNamePartyMembersIndexRoute,
-}
+  {
+    AuthenticatedPartyShortNamePartyMembersAgentRoute:
+      AuthenticatedPartyShortNamePartyMembersAgentRoute,
+    AuthenticatedPartyShortNamePartyMembersIndexRoute:
+      AuthenticatedPartyShortNamePartyMembersIndexRoute,
+  }
 
 const AuthenticatedPartyShortNamePartyMembersRouteWithChildren =
   AuthenticatedPartyShortNamePartyMembersRoute._addFileChildren(
@@ -620,10 +620,10 @@ interface AuthenticatedPartyShortNameWalletRouteChildren {
 }
 
 const AuthenticatedPartyShortNameWalletRouteChildren: AuthenticatedPartyShortNameWalletRouteChildren =
-{
-  AuthenticatedPartyShortNameWalletIndexRoute:
-    AuthenticatedPartyShortNameWalletIndexRoute,
-}
+  {
+    AuthenticatedPartyShortNameWalletIndexRoute:
+      AuthenticatedPartyShortNameWalletIndexRoute,
+  }
 
 const AuthenticatedPartyShortNameWalletRouteWithChildren =
   AuthenticatedPartyShortNameWalletRoute._addFileChildren(
@@ -636,12 +636,12 @@ interface AuthenticatedPartyShortNameHomeResultsRouteRouteChildren {
 }
 
 const AuthenticatedPartyShortNameHomeResultsRouteRouteChildren: AuthenticatedPartyShortNameHomeResultsRouteRouteChildren =
-{
-  AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute:
-    AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute,
-  AuthenticatedPartyShortNameHomeResultsIndexRoute:
-    AuthenticatedPartyShortNameHomeResultsIndexRoute,
-}
+  {
+    AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute:
+      AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute,
+    AuthenticatedPartyShortNameHomeResultsIndexRoute:
+      AuthenticatedPartyShortNameHomeResultsIndexRoute,
+  }
 
 const AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren =
   AuthenticatedPartyShortNameHomeResultsRouteRoute._addFileChildren(
@@ -654,12 +654,12 @@ interface AuthenticatedPartyShortNameHomeUpdatesRouteRouteChildren {
 }
 
 const AuthenticatedPartyShortNameHomeUpdatesRouteRouteChildren: AuthenticatedPartyShortNameHomeUpdatesRouteRouteChildren =
-{
-  AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute:
-    AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute,
-  AuthenticatedPartyShortNameHomeUpdatesIndexRoute:
-    AuthenticatedPartyShortNameHomeUpdatesIndexRoute,
-}
+  {
+    AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute:
+      AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute,
+    AuthenticatedPartyShortNameHomeUpdatesIndexRoute:
+      AuthenticatedPartyShortNameHomeUpdatesIndexRoute,
+  }
 
 const AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren =
   AuthenticatedPartyShortNameHomeUpdatesRouteRoute._addFileChildren(
@@ -681,30 +681,30 @@ interface AuthenticatedPartyShortNameRouteChildren {
 }
 
 const AuthenticatedPartyShortNameRouteChildren: AuthenticatedPartyShortNameRouteChildren =
-{
-  AuthenticatedPartyShortNameApplicationsRoute:
-    AuthenticatedPartyShortNameApplicationsRouteWithChildren,
-  AuthenticatedPartyShortNameBodiesRoute:
-    AuthenticatedPartyShortNameBodiesRoute,
-  AuthenticatedPartyShortNameElectionsRoute:
-    AuthenticatedPartyShortNameElectionsRouteWithChildren,
-  AuthenticatedPartyShortNamePartiesRoute:
-    AuthenticatedPartyShortNamePartiesRoute,
-  AuthenticatedPartyShortNamePartyMembersRoute:
-    AuthenticatedPartyShortNamePartyMembersRouteWithChildren,
-  AuthenticatedPartyShortNameUsersRoute:
-    AuthenticatedPartyShortNameUsersRoute,
-  AuthenticatedPartyShortNameWalletRoute:
-    AuthenticatedPartyShortNameWalletRouteWithChildren,
-  AuthenticatedPartyShortNameHomeResultsRouteRoute:
-    AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren,
-  AuthenticatedPartyShortNameHomeUpdatesRouteRoute:
-    AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren,
-  AuthenticatedPartyShortNameHomeElectionDayRoute:
-    AuthenticatedPartyShortNameHomeElectionDayRoute,
-  AuthenticatedPartyShortNameHomeIndexRoute:
-    AuthenticatedPartyShortNameHomeIndexRoute,
-}
+  {
+    AuthenticatedPartyShortNameApplicationsRoute:
+      AuthenticatedPartyShortNameApplicationsRouteWithChildren,
+    AuthenticatedPartyShortNameBodiesRoute:
+      AuthenticatedPartyShortNameBodiesRoute,
+    AuthenticatedPartyShortNameElectionsRoute:
+      AuthenticatedPartyShortNameElectionsRouteWithChildren,
+    AuthenticatedPartyShortNamePartiesRoute:
+      AuthenticatedPartyShortNamePartiesRoute,
+    AuthenticatedPartyShortNamePartyMembersRoute:
+      AuthenticatedPartyShortNamePartyMembersRouteWithChildren,
+    AuthenticatedPartyShortNameUsersRoute:
+      AuthenticatedPartyShortNameUsersRoute,
+    AuthenticatedPartyShortNameWalletRoute:
+      AuthenticatedPartyShortNameWalletRouteWithChildren,
+    AuthenticatedPartyShortNameHomeResultsRouteRoute:
+      AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren,
+    AuthenticatedPartyShortNameHomeUpdatesRouteRoute:
+      AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren,
+    AuthenticatedPartyShortNameHomeElectionDayRoute:
+      AuthenticatedPartyShortNameHomeElectionDayRoute,
+    AuthenticatedPartyShortNameHomeIndexRoute:
+      AuthenticatedPartyShortNameHomeIndexRoute,
+  }
 
 const AuthenticatedPartyShortNameRouteWithChildren =
   AuthenticatedPartyShortNameRoute._addFileChildren(

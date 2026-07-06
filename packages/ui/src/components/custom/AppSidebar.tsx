@@ -1,6 +1,16 @@
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { PanelLeftClose, PanelRightClose, Menu, Ellipsis, LogIn, UserPlus, Sun, Monitor, Moon } from "lucide-react";
+import {
+  PanelLeftClose,
+  PanelRightClose,
+  Menu,
+  Ellipsis,
+  LogIn,
+  UserPlus,
+  Sun,
+  Monitor,
+  Moon,
+} from "lucide-react";
 import { useTheme } from "../../hooks/use-theme";
 import {
   Sidebar,
@@ -112,7 +122,11 @@ export function AppSidebarShell({
             {user ? (
               <SidebarTrigger
                 className="w-8 h-8! py-0 rounded-full hover:bg-white opacity-100"
-                img={avatarUrl ?? user?.avatar_url ?? "https://github.com/shadcn.png"}
+                img={
+                  avatarUrl ??
+                  user?.avatar_url ??
+                  "https://github.com/shadcn.png"
+                }
               />
             ) : (
               <SidebarTrigger className="w-8 h-8! py-0">
@@ -121,9 +135,8 @@ export function AppSidebarShell({
             )}
           </div>
         </div>
-      </main> */}
-    </main> */}
-    </SidebarProvider >
+      </main>
+    </SidebarProvider>
   );
 }
 
@@ -149,10 +162,7 @@ export function AppSidebar({
   }, [sideBarState, onSidebarStateChange]);
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="md:data-[side=left]:left-0"
-    >
+    <Sidebar collapsible="icon" className="md:data-[side=left]:left-0">
       <div className="bg-sidebar-mobile md:bg-sidebar flex h-full flex-col px-4 py-7">
         <LogoComponent logoBadge={logoBadge} homePageUrl={homePageUrl} />
 
@@ -160,7 +170,11 @@ export function AppSidebar({
           <SidebarGroup className="p-0">
             <SidebarMenu>
               {items.map((item) => (
-                <EachLinkComponent key={item.id} item={item} isActive={item.id === activeItemFromUrl} />
+                <EachLinkComponent
+                  key={item.id}
+                  item={item}
+                  isActive={item.id === activeItemFromUrl}
+                />
               ))}
             </SidebarMenu>
           </SidebarGroup>
@@ -187,23 +201,27 @@ function useActiveItem(items: AppSidebarItem[]): string {
   let activeItem: string = "";
 
   items.forEach((item) => {
-    const toMatch = `/${item.id}`
+    const toMatch = `/${item.id}`;
     if (location.pathname.startsWith(toMatch)) {
       activeItem = item.id;
     }
-  })
+  });
 
   return activeItem;
 }
 
-function EachLinkComponent({ item, isActive }: { item: AppSidebarItem; isActive: boolean; }) {
+function EachLinkComponent({
+  item,
+  isActive,
+}: {
+  item: AppSidebarItem;
+  isActive: boolean;
+}) {
   const { state: sideBarState, setOpenMobile, isMobile } = useSidebar();
 
   return (
     <SidebarMenuItem
-      className={cn(
-        isActive ? "bg-sidebar-active md:bg-transparent " : "",
-      )}
+      className={cn(isActive ? "bg-sidebar-active md:bg-transparent " : "")}
     >
       <SidebarMenuButton
         asChild
@@ -218,10 +236,7 @@ function EachLinkComponent({ item, isActive }: { item: AppSidebarItem; isActive:
       >
         <Link
           to={item.href}
-          className={cn(
-            "p-0",
-            sideBarState !== "collapsed" && "justify-start"
-          )}
+          className={cn("p-0", sideBarState !== "collapsed" && "justify-start")}
           // style={{ padding: "0px !important" }}
           onClick={() => {
             if (isMobile) {
@@ -235,7 +250,9 @@ function EachLinkComponent({ item, isActive }: { item: AppSidebarItem; isActive:
           <span
             className={cn(
               "whitespace-nowrap max-md:w-[80%]",
-              isActive ? "font-semibold text-c-90 dark:text-logo" : "font-normal text-c-70 dark:text-logo/80",
+              isActive
+                ? "font-semibold text-c-90 dark:text-logo"
+                : "font-normal text-c-70 dark:text-logo/80",
             )}
           >
             {item.label}
@@ -246,7 +263,13 @@ function EachLinkComponent({ item, isActive }: { item: AppSidebarItem; isActive:
   );
 }
 
-function LogoComponent({ logoBadge, homePageUrl }: { logoBadge?: ReactNode, homePageUrl?: string }) {
+function LogoComponent({
+  logoBadge,
+  homePageUrl,
+}: {
+  logoBadge?: ReactNode;
+  homePageUrl?: string;
+}) {
   const { state: sideBarState, toggleSidebar } = useSidebar();
   const isMobile = useIsMobile();
 
@@ -302,7 +325,15 @@ function LogoComponent({ logoBadge, homePageUrl }: { logoBadge?: ReactNode, home
   );
 }
 
-function ProfilePicture({ userDetails, avatarUrl, username, displayName, onLogout, homePageUrl, profilePopoverExtraContent }: {
+function ProfilePicture({
+  userDetails,
+  avatarUrl,
+  username,
+  displayName,
+  onLogout,
+  homePageUrl,
+  profilePopoverExtraContent,
+}: {
   userDetails?: any;
   avatarUrl?: string;
   username?: string;
@@ -315,7 +346,8 @@ function ProfilePicture({ userDetails, avatarUrl, username, displayName, onLogou
 
   const user = userDetails;
 
-  const avatar = avatarUrl ?? user?.avatar_url ?? "https://github.com/shadcn.png";
+  const avatar =
+    avatarUrl ?? user?.avatar_url ?? "https://github.com/shadcn.png";
   const dname =
     displayName ??
     (user?.first_name
@@ -338,10 +370,18 @@ function ProfilePicture({ userDetails, avatarUrl, username, displayName, onLogou
     }
     return (
       <div className="flex flex-col gap-4 py-4 items-center justify-center">
-        <Link to="/auth/login" className="flex items-center justify-center size-10 rounded-full hover:bg-c-10 dark:hover:bg-black" title="Log in">
+        <Link
+          to="/auth/login"
+          className="flex items-center justify-center size-10 rounded-full hover:bg-c-10 dark:hover:bg-black"
+          title="Log in"
+        >
           <LogIn className="size-5 text-c-70" />
         </Link>
-        <Link to="/auth/signup" className="flex items-center justify-center size-10 rounded-full hover:bg-c-10 dark:hover:bg-black" title="Sign up">
+        <Link
+          to="/auth/signup"
+          className="flex items-center justify-center size-10 rounded-full hover:bg-c-10 dark:hover:bg-black"
+          title="Sign up"
+        >
           <UserPlus className="size-5 text-c-70" />
         </Link>
       </div>
@@ -372,19 +412,23 @@ function ProfilePicture({ userDetails, avatarUrl, username, displayName, onLogou
   return (
     <Popover>
       <PopoverTrigger>
-        <div
-          className="flex gap-2 md:gap-2 w-full p-3 bg-sidebar-active dark:hover:bg-c-10 rounded-full cursor-pointer"
-        >
+        <div className="flex gap-2 md:gap-2 w-full p-3 bg-sidebar-active dark:hover:bg-c-10 rounded-full cursor-pointer">
           <div className="md:flex-none">
             <Avatar className="size-10 bg-[#f0f0ef]">
               <AvatarImage src={avatar} alt={dname} />
             </Avatar>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[15px] md:text-[12px] font-semibold text-c-100 dark:text-logo mt-1 py-px text-left capitalize truncate overflow-hidden" style={{ maxWidth: "160px" }}>
+            <p
+              className="text-[15px] md:text-[12px] font-semibold text-c-100 dark:text-logo mt-1 py-px text-left capitalize truncate overflow-hidden"
+              style={{ maxWidth: "160px" }}
+            >
               {dname}
             </p>
-            <p className="mt-1 text-[12px] md:text-[12px] text-left text-c-80 dark:text-logo/80 truncate overflow-hidden" style={{ maxWidth: "160px" }}>
+            <p
+              className="mt-1 text-[12px] md:text-[12px] text-left text-c-80 dark:text-logo/80 truncate overflow-hidden"
+              style={{ maxWidth: "160px" }}
+            >
               @{uname}
             </p>
           </div>
@@ -407,7 +451,13 @@ function ProfilePicture({ userDetails, avatarUrl, username, displayName, onLogou
   );
 }
 
-function ProfilePicturePopover({ dname, uname, onLogout, homePageUrl, profilePopoverExtraContent }: {
+function ProfilePicturePopover({
+  dname,
+  uname,
+  onLogout,
+  homePageUrl,
+  profilePopoverExtraContent,
+}: {
   dname: string;
   uname: string;
   onLogout?: () => void | Promise<void>;
@@ -429,10 +479,12 @@ function ProfilePicturePopover({ dname, uname, onLogout, homePageUrl, profilePop
   const themeToggler = (
     <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
       <button
-        onClick={() => setTheme('light')}
+        onClick={() => setTheme("light")}
         className={cn(
           "flex-1 flex justify-center items-center py-1.5 rounded-md text-[13px] font-medium transition-all cursor-pointer",
-          theme === 'light' ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+          theme === "light"
+            ? "bg-card text-foreground shadow-xs"
+            : "text-muted-foreground hover:text-foreground",
         )}
         title="Light Mode"
       >
@@ -440,10 +492,12 @@ function ProfilePicturePopover({ dname, uname, onLogout, homePageUrl, profilePop
         Light
       </button>
       <button
-        onClick={() => setTheme('auto')}
+        onClick={() => setTheme("auto")}
         className={cn(
           "flex-1 flex justify-center items-center py-1.5 rounded-md text-[13px] font-medium transition-all cursor-pointer",
-          theme === 'auto' ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+          theme === "auto"
+            ? "bg-card text-foreground shadow-xs"
+            : "text-muted-foreground hover:text-foreground",
         )}
         title="System Mode"
       >
@@ -451,10 +505,12 @@ function ProfilePicturePopover({ dname, uname, onLogout, homePageUrl, profilePop
         Auto
       </button>
       <button
-        onClick={() => setTheme('dark')}
+        onClick={() => setTheme("dark")}
         className={cn(
           "flex-1 flex justify-center items-center py-1.5 rounded-md text-[13px] font-medium transition-all cursor-pointer",
-          theme === 'dark' ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground"
+          theme === "dark"
+            ? "bg-card text-foreground shadow-xs"
+            : "text-muted-foreground hover:text-foreground",
         )}
         title="Dark Mode"
       >
@@ -481,16 +537,12 @@ function ProfilePicturePopover({ dname, uname, onLogout, homePageUrl, profilePop
         </span>
 
         <div className="border-t border-border my-1" />
-        <div className="px-1">
-          {themeToggler}
-        </div>
+        <div className="px-1">{themeToggler}</div>
 
         {profilePopoverExtraContent && (
           <>
             <div className="border-t border-border my-1" />
-            <div className="px-1">
-              {profilePopoverExtraContent}
-            </div>
+            <div className="px-1">{profilePopoverExtraContent}</div>
           </>
         )}
       </div>
