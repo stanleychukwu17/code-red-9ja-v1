@@ -3,6 +3,7 @@ import type { SelectProps } from "../../lib/types";
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { GeneralCommand } from "../command/general-command";
+import { DrawerList } from "../command/drawer-list";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { LoadingSelect } from "./loading-select";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -35,18 +36,23 @@ export const SelectWard = ({
   className,
   align = "start",
   fetchWards,
-}: SelectProps<Ward> & {
+  showAll,
+}: SelectProps<Ward, number | string> & {
   lgaId?: number;
   stateId?: number;
   fetchWards: (args: {
-    data: { lga_id?: number; stateId?: number; limit?: number; cursor?: string };
+    data: {
+      lga_id?: number;
+      stateId?: number;
+      limit?: number;
+      cursor?: string;
+    };
   }) => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedItem, setSelectedItem] = useState<Ward | undefined>(
-    undefined,
-  );
+  const [desktopSearch, setDesktopSearch] = useState("");
+  const [mobileSearch, setMobileSearch] = useState("");
+  const [selectedItem, setSelectedItem] = useState<Ward | undefined>(undefined);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery<WardsResponse>({
@@ -60,16 +66,13 @@ export const SelectWard = ({
             cursor: pageParam as string,
           },
         });
-        if (res && res.success && res.data) {
-          return res;
-        }
+        if (res && res.success && res.data) return res;
         throw new Error(res?.message || "Failed to fetch Wards");
       },
       initialPageParam: "",
       getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more)
           return lastPage.meta.next_cursor || "";
-        }
         return undefined;
       },
       enabled: !!lgaId,
@@ -88,9 +91,7 @@ export const SelectWard = ({
       !isLoading
     ) {
       const found = wards.some((w) => String(w.id) === String(selectedId));
-      if (!found) {
-        fetchNextPage();
-      }
+      if (!found) fetchNextPage();
     }
   }, [
     selectedId,
@@ -105,17 +106,15 @@ export const SelectWard = ({
   useEffect(() => {
     if (selectedId) {
       const ward = wards.find((w) => String(w.id) === String(selectedId));
-      if (ward) {
-        setSelectedItem(ward);
-      }
+      if (ward) setSelectedItem(ward);
     } else {
       setSelectedItem(undefined);
     }
   }, [selectedId, wards]);
 
   useEffect(() => {
-    setSelectedItem(undefined);
-  }, [lgaId]);
+    if (!open) setMobileSearch("");
+  }, [open]);
 
   const handleWardSelect = (ward: Ward) => {
     setSelectedItem(ward);
@@ -123,8 +122,17 @@ export const SelectWard = ({
     setOpen(false);
   };
 
+  const handleSelectAll = () => {
+    setSelectedItem(undefined);
+    update(undefined as any);
+    setOpen(false);
+  };
+
   const filteredWards = wards.filter((w) =>
-    w.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    w.name.toLowerCase().includes(desktopSearch.toLowerCase()),
+  );
+  const mobileFiltered = wards.filter((w) =>
+    w.name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
   const getStatus = ():
@@ -132,25 +140,26 @@ export const SelectWard = ({
     | "LoadingMore"
     | "LoadingFirstPage"
     | "Exhausted" => {
-    if (isLoading && wards.length === 0) {
-      return "LoadingFirstPage";
-    }
-    if (isFetchingNextPage) {
-      return "LoadingMore";
-    }
+    if (isLoading && wards.length === 0) return "LoadingFirstPage";
+    if (isFetchingNextPage) return "LoadingMore";
     return hasNextPage ? "CanLoadMore" : "Exhausted";
   };
 
   const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   };
 
   const displayText =
     selectedItem?.name ||
-    (isLoading && !selectedItem ? "Loading..." : "Select Ward");
+    (isLoading && !selectedItem ? "Loading..." : showAll ? "All wards" : "Select Ward");
   const hasError = Boolean(errorMsg);
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
+  const getId = (item: Ward) => `${item.id}`;
+  const getName = (item: Ward) => item.name;
 
   if (wards.length === 0 && isLoading && !disabled && lgaId) {
     return (
@@ -175,6 +184,7 @@ export const SelectWard = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between w-full gap-2",
             hasError && "border-0.8 border-red",
@@ -189,23 +199,34 @@ export const SelectWard = ({
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }
-    >
-      <GeneralCommand
-        data={filteredWards}
-        getId={(item: Ward) => `${item.id}`}
-        getName={(item: Ward) => item.name}
-        handleSelect={handleWardSelect}
-        selectedId={
-          selectedItem?.id
-            ? `${selectedItem.id}`
-            : selectedId
-              ? `${selectedId}`
-              : undefined
-        }
-        status={getStatus()}
-        loadMore={handleLoadMore}
-        onSearch={setSearchQuery}
-      />
-    </SelectResponsiveWrapper>
+      desktopContent={
+        <GeneralCommand
+          data={filteredWards}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleWardSelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          loadMore={handleLoadMore}
+          onSearch={setDesktopSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
+        />
+      }
+      mobileContent={
+        <DrawerList
+          data={mobileFiltered}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleWardSelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          searchValue={mobileSearch}
+          onSearch={setMobileSearch}
+          showAll={showAll}
+          onSelectAll={handleSelectAll}
+        />
+      }
+    />
   );
 };

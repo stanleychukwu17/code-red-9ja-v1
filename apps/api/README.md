@@ -161,3 +161,14 @@ go build -ldflags=" \
 ```
 
 This ensures that the correct version and commit are reported in the logs and via API endpoints.
+
+## 🐳 Deployment & Dockerization
+
+The API is containerized using Docker. To build and run the Docker image locally:
+
+```bash
+docker build -t free9ja-api .
+docker run -p 4000:4000 --env-file .env free9ja-api
+```
+
+The API is deployed using AWS ECS (via Terraform) and includes automated CI/CD pipelines.

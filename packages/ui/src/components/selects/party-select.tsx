@@ -3,6 +3,7 @@ import { SelectProps } from "../../lib/types";
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { GeneralCommand } from "../command/general-command";
+import { DrawerList } from "../command/drawer-list";
 import { LoadingSelect } from "./loading-select";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { useQuery } from "@tanstack/react-query";
@@ -34,7 +35,8 @@ export const SelectParty = ({
   fetchParties: () => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [desktopSearch, setDesktopSearch] = useState("");
+  const [mobileSearch, setMobileSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<Party | undefined>(
     undefined,
   );
@@ -43,9 +45,7 @@ export const SelectParty = ({
     queryKey: ["parties-select"],
     queryFn: async () => {
       const res = await fetchParties();
-      if (res && res.success && res.data) {
-        return res;
-      }
+      if (res && res.success && res.data) return res;
       throw new Error(res?.message || "Failed to fetch parties");
     },
   });
@@ -55,13 +55,15 @@ export const SelectParty = ({
   useEffect(() => {
     if (selectedId) {
       const party = parties.find((p) => String(p.id) === String(selectedId));
-      if (party) {
-        setSelectedItem(party);
-      }
+      if (party) setSelectedItem(party);
     } else {
       setSelectedItem(undefined);
     }
   }, [selectedId, parties]);
+
+  useEffect(() => {
+    if (!open) setMobileSearch("");
+  }, [open]);
 
   const handleSelect = (item: Party) => {
     setSelectedItem(item);
@@ -70,9 +72,36 @@ export const SelectParty = ({
   };
 
   const filteredParties = parties.filter(
-    (party) =>
-      party.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      party.short_name.toLowerCase().includes(searchQuery.toLowerCase()),
+    (p) =>
+      p.name.toLowerCase().includes(desktopSearch.toLowerCase()) ||
+      p.short_name.toLowerCase().includes(desktopSearch.toLowerCase()),
+  );
+  const mobileFiltered = parties.filter(
+    (p) =>
+      p.name.toLowerCase().includes(mobileSearch.toLowerCase()) ||
+      p.short_name.toLowerCase().includes(mobileSearch.toLowerCase()),
+  );
+
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
+  const getId = (item: Party) => `${item.id}`;
+  const getName = (item: Party) => item.name;
+
+  /** Logo + short name label used in both desktop and mobile */
+  const getLabel = (item: Party) => (
+    <div className="flex items-center gap-4">
+      {item.logo && (
+        <img
+          src={item.logo}
+          alt={item.short_name}
+          className="size-5 rounded-full object-cover shrink-0"
+        />
+      )}
+      <span className="font-normal text-c-90">{item.short_name}</span>
+    </div>
   );
 
   if (isLoading && parties.length === 0) {
@@ -98,6 +127,7 @@ export const SelectParty = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between w-full gap-2",
             errorMsg && "border-0.8 border-red",
@@ -124,33 +154,29 @@ export const SelectParty = ({
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }
-    >
-      <GeneralCommand
-        data={filteredParties}
-        getId={(item: Party) => `${item.id}`}
-        getName={(item: Party) => item.name}
-        getLabel={(item: Party) => (
-          <div className="flex items-center gap-4">
-            {item.logo && (
-              <img
-                src={item.logo}
-                alt={item.short_name}
-                className="size-5 rounded-full object-cover shrink-0"
-              />
-            )}
-            <span className="font-normal text-c-90">{item.short_name}</span>
-          </div>
-        )}
-        handleSelect={handleSelect}
-        selectedId={
-          selectedItem?.id
-            ? `${selectedItem.id}`
-            : selectedId
-              ? `${selectedId}`
-              : undefined
-        }
-        onSearch={setSearchQuery}
-      />
-    </SelectResponsiveWrapper>
+      desktopContent={
+        <GeneralCommand
+          data={filteredParties}
+          getId={getId}
+          getName={getName}
+          getLabel={getLabel}
+          handleSelect={handleSelect}
+          selectedId={currentSelectedId}
+          onSearch={setDesktopSearch}
+        />
+      }
+      mobileContent={
+        <DrawerList
+          data={mobileFiltered}
+          getId={getId}
+          getName={getName}
+          getLabel={getLabel}
+          handleSelect={handleSelect}
+          selectedId={currentSelectedId}
+          searchValue={mobileSearch}
+          onSearch={setMobileSearch}
+        />
+      }
+    />
   );
 };

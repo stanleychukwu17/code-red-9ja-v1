@@ -48,7 +48,7 @@ export function TileLeft({ children }: { children: React.ReactNode }) {
 
 export function TileRight({ children }: { children: React.ReactNode }) {
   return (
-    <div className="shrink-0 flex items-center gap-3 text-c-70">{children}</div>
+    <div className="shrink-0 flex items-center gap-3 text-[15px] text-c-70">{children}</div>
   );
 }
 

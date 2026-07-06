@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { setOnboardingData, updateOnboardingData } from "@/redux/slice/authSlice";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { SignupError } from "./_components/-signup-error";
@@ -10,11 +10,11 @@ import { FormError } from "./_components/-form-error";
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
-import { APP_URL } from "@/lib/config";
+import { APP_URL, APP_NAME } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
-import { fetchCountryDetailsFromUserIP } from "@/lib/client/ip";
 import { getAllCountries } from "@/lib/server/countries";
 import { checkIfRefreshTokenInCookie, startUserRegistration } from "@/lib/server/auth/auth";
+import type { countriesType } from "./login";
 
 import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
@@ -22,22 +22,22 @@ export const Route = createFileRoute("/auth/signup")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isLoggedIn = await checkIfRefreshTokenInCookie({});
-    if (isLoggedIn.status === "success") {
-      throw redirect({ to: APP_URL.homePage });
+    if (isLoggedIn.success) {
+      throw redirect({ to: APP_URL.home });
     }
   },
 
   // Page metadata
   head: () => getPageHeader({
     title: "Sign up: Join the movement ",
-    description: "Create your account to start enjoying premium content on Free9ja",
+    description: `Create your account to start enjoying premium content on ${APP_NAME}`,
   }),
 
   // Load countries data
   loader: async () => {
-    const countries = await getAllCountries();
-    if (countries.status !== 'success') throw new Error(countries.error);
-    return { countries: countries.countries };
+    const countries = await getAllCountries() as countriesType;
+    if (!countries.success) throw new Error(countries.message);
+    return { countries: countries.data.countries };
   },
 
   // Component to render
@@ -50,6 +50,8 @@ export const Route = createFileRoute("/auth/signup")({
 function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
+  const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
   const countries = Route.useLoaderData().countries as { id: number; name: string; iso2: string; phonecode: string }[];
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -87,9 +89,9 @@ function RouteComponent() {
       const result = await startUserRegistration({ data: payload });
 
       // if the request was successful
-      if (result.status === "success") {
+      if (result.success) {
         // update the onboarding data with the result returned from the register request
-        dispatch(updateOnboardingData({id: result.id}));
+        dispatch(updateOnboardingData({ id: result.data.id }));
 
         // navigate to the verify otp page
         navigate({
@@ -105,15 +107,14 @@ function RouteComponent() {
 
 
 
-  // on page load, auto-select the country where the user is browsing from
+  // auto-select the country where the user is browsing from once visitorCountry is available
   useEffect(() => {
-    const fetchUserIpCountry = async () => {
-      const visitorDetails = await fetchCountryDetailsFromUserIP() // get country from IP
-      const country = visitorDetails?.country_name?.toLowerCase() || "nigeria"; // get country name
+    if (!visitorCountry) return;
 
+    const timeoutId = setTimeout(() => {
       // find the matched country
       const matchedCountry = countries.find(
-        (c) => c.name.toLowerCase() === country
+        (c) => c.name.toLowerCase() === visitorCountry
       );
 
       // if no matched country, return
@@ -124,14 +125,14 @@ function RouteComponent() {
 
       // find the select element for countries and set the value to the matched country
       const selectEl = document.querySelector("div.selectElement select");
-      if (selectEl && country) {
-        (selectEl as HTMLSelectElement).value = country;
+      if (selectEl) {
+        (selectEl as HTMLSelectElement).value = visitorCountry;
         selectEl.dispatchEvent(new Event("change", { bubbles: true }));
       }
-    }
+    }, 250);
 
-    fetchUserIpCountry()
-  }, []);
+    return () => clearTimeout(timeoutId);
+  }, [visitorCountry, countries, form]);
 
   return (
     <AuthWrapper type="signup">

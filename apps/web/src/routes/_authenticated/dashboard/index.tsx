@@ -5,6 +5,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Bell, Edit3, Upload } from "lucide-react";
 import { CANDIDATES, DASHBOARD_STATE_RANKINGS } from "../../../data/dashboard";
 import { useAppSelector } from "#/redux/hooks";
+import { APP_NAME } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated/dashboard/")({
   component: RouteComponent,
@@ -43,7 +44,7 @@ function RouteComponent() {
                 className="size-[46px] rounded-full object-cover"
               />
               <p className="text-[18px] font-semibold text-[#181818] md:text-[20px]">
-                Hi {user?.first_name}, Free9ja
+                Hi {user?.first_name}, {APP_NAME}
               </p>
             </div>
 

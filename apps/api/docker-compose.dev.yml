@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 name: free9ja_redis_postgres
 
 services:

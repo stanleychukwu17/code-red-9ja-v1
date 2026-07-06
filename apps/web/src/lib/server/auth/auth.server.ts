@@ -1,6 +1,8 @@
 import { createServerOnlyFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { API_URL } from "../../config";
+import { respondError, respondSuccess } from "@/lib/shared/response";
+import { apiFetch } from "../fetch";
 
 // Helper function to set user details cookie
 export const setUserDetailsCookie = (userDetails: any) => {
@@ -53,7 +55,7 @@ export const clearAuthCookies = () => {
 // Logs in a user by sending a POST request to the server with the user's identifier and password.
 export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
   try {
-    const response = await fetch(API_URL.auth.login, {
+    const response = await apiFetch(API_URL.auth.login, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
@@ -61,14 +63,14 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
 
     const result = await response.json();
     // console.log(result)
-    if (result.status === "success" && result.refreshToken) {
-      setAuthCookies({ refreshToken: result.refreshToken, accessToken: result.accessToken });
-      delete result.refreshToken;
-      delete result.accessToken;
+    if (result.success && result.data?.refreshToken) {
+      setAuthCookies({ refreshToken: result.data.refreshToken, accessToken: result.data.accessToken });
+      delete result.data.refreshToken;
+      delete result.data.accessToken;
     }
-    return result;
+    return respondSuccess(result);
   } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message };
+    return respondError("Connection error. Please try again later. " + (error as Error)?.message);
   }
 })
 
@@ -79,30 +81,29 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
   // If no refresh token is found, return an error
   if (!refreshToken) {
-    return { status: "error", message: "No refresh token found" };
+    return respondError("No refresh token found");
   }
 
   // Calls the API to refresh the user token
-  const response = await fetch(API_URL.auth.refresh, {
+  const response = await apiFetch(API_URL.auth.refresh, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ refreshToken }),
   });
 
   const result = await response.json();
-  // console.log("from refresh", result)
 
   // If the refresh is successful, set the new access and refresh tokens in the cookies and delete them from the result
-  if (result.status === "success") {
-    if (result.refreshToken && result.accessToken) {
-      setAuthCookies({ refreshToken: result.refreshToken, accessToken: result.accessToken });
-      delete result.refreshToken;
-      delete result.accessToken;
+  if (result.success) {
+    if (result.data?.refreshToken && result.data?.accessToken) {
+      setAuthCookies({ refreshToken: result.data.refreshToken, accessToken: result.data.accessToken });
+      delete result.data.refreshToken;
+      delete result.data.accessToken;
     }
 
     // If the result has a user, set the user details cookie
-    if (result.user) {
-      setUserDetailsCookie(result.user)
+    if (result.data?.user) {
+      setUserDetailsCookie(result.data.user)
     }
   } else {
     // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
@@ -120,13 +121,13 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
     }
   }
 
-  return result;
+  return respondSuccess(result);
 })
 
 // Checks if a refresh token exists in the cookies
 export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {
   const refreshToken = getCookie("refresh_token");
-  return { status: refreshToken ? "success" : "error" };
+  return !!refreshToken ? respondSuccess() : respondError("No refresh token found");
 })
 
 export const getUserDetailsCookieImpl = createServerOnlyFn(async () => {
@@ -145,18 +146,18 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
   try {
     const refreshToken = getCookie("refresh_token");
     if (!refreshToken) {
-      return { status: "error", message: "No refresh token found" };
+      return respondError("No refresh token found");
     }
 
-    const response = await fetch(API_URL.auth.logout, {
+    const response = await apiFetch(API_URL.auth.logout, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken }),
     });
     const result = await response.json();
-    return result;
+    return respondSuccess(result);
   } catch (error) {
-    return { status: "error", message: error };
+    return respondError(String(error));
   } finally {
     clearAuthCookies();
   }
@@ -165,31 +166,31 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
 // Verifies security questions for a user
 export const verifySecurityQuestionsImpl = createServerOnlyFn(async ({ data }) => {
   try {
-    const response = await fetch(API_URL.auth.verifySecurityQuestions, {
+    const response = await apiFetch(API_URL.auth.verifySecurityQuestions, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     const result = await response.json();
-    return { ...result, ok: response.ok };
+    return respondSuccess({ ...result, ok: response.ok });
   } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
+    return respondError("Connection error. Please try again later. " + (error as Error)?.message);
   }
 });
 
 // Resets user's password
 export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
   try {
-    const response = await fetch(API_URL.auth.forgotPassword, {
+    const response = await apiFetch(API_URL.auth.forgotPassword, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     const result = await response.json();
-    return result
+    return respondSuccess(result);
   } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
+    return respondError("Connection error. Please try again later. " + (error as Error)?.message);
   }
 });

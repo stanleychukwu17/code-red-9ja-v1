@@ -75,7 +75,11 @@ The application structure is organized as follows:
 
 ## Deployment & Dockerization
 
-The project is dockerized and ready for deployment (e.g., to AWS EC2).
+The web application is containerized using Docker. To build and run the Docker image locally:
 
-*   For detailed build and deployment instructions, refer to [DOCKER_GUIDE.md](file:///d:/Sz-projects/50-main-projects/3-free9ja/apps/web/DOCKER_GUIDE.md).
-*   The `Dockerfile` compiles the production bundle using the highly optimized Nitro engine.
+```bash
+docker build -t free9ja-web .
+docker run -p 3001:3001 free9ja-web
+```
+
+The application is deployed as part of the Free9ja infrastructure. See the root `terraform/` directory for deployment configurations.

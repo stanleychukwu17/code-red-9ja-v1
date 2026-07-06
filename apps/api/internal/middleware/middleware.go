@@ -84,3 +84,25 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 		})
 	}
 }
+
+// RequireRoleAndLevel checks that the user has both the specified role AND roleLevel.
+// A user with role=partymember and roleLevel=admin is an admin in the party admin app.
+// Assumes AuthMiddleware has been run.
+func RequireRoleAndLevel(role string, level string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			claims, ok := r.Context().Value(ClaimsKey).(*utils.JWTClaims)
+			if !ok {
+				http.Error(w, "Unauthorized: claims not found", http.StatusUnauthorized)
+				return
+			}
+
+			if !strings.EqualFold(claims.Role, role) || !strings.EqualFold(claims.RoleLevel, level) {
+				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
+}

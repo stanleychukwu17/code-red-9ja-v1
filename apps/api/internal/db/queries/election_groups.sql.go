@@ -14,7 +14,7 @@ import (
 const createElectionGroup = `-- name: CreateElectionGroup :one
 INSERT INTO election_groups (name, rank, elections_count, states_count, election_date)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, rank, elections_count, states_count, election_date, created_at, updated_at
+RETURNING id, name, rank, elections_count, states_count, reports_count, updates_count, results_submitted_count, election_date, created_at, updated_at
 `
 
 type CreateElectionGroupParams struct {
@@ -40,6 +40,9 @@ func (q *Queries) CreateElectionGroup(ctx context.Context, arg CreateElectionGro
 		&i.Rank,
 		&i.ElectionsCount,
 		&i.StatesCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.ElectionDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -57,7 +60,7 @@ func (q *Queries) DeleteElectionGroup(ctx context.Context, id int64) error {
 }
 
 const getElectionGroupByID = `-- name: GetElectionGroupByID :one
-SELECT id, name, rank, elections_count, states_count, election_date, created_at, updated_at FROM election_groups WHERE id = $1
+SELECT id, name, rank, elections_count, states_count, reports_count, updates_count, results_submitted_count, election_date, created_at, updated_at FROM election_groups WHERE id = $1
 `
 
 func (q *Queries) GetElectionGroupByID(ctx context.Context, id int64) (ElectionGroup, error) {
@@ -69,6 +72,9 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int64) (ElectionG
 		&i.Rank,
 		&i.ElectionsCount,
 		&i.StatesCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.ElectionDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -77,7 +83,7 @@ func (q *Queries) GetElectionGroupByID(ctx context.Context, id int64) (ElectionG
 }
 
 const getElectionGroupByName = `-- name: GetElectionGroupByName :one
-SELECT id, name, rank, elections_count, states_count, election_date, created_at, updated_at FROM election_groups WHERE name = $1
+SELECT id, name, rank, elections_count, states_count, reports_count, updates_count, results_submitted_count, election_date, created_at, updated_at FROM election_groups WHERE name = $1
 `
 
 func (q *Queries) GetElectionGroupByName(ctx context.Context, name string) (ElectionGroup, error) {
@@ -89,6 +95,9 @@ func (q *Queries) GetElectionGroupByName(ctx context.Context, name string) (Elec
 		&i.Rank,
 		&i.ElectionsCount,
 		&i.StatesCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.ElectionDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -97,7 +106,7 @@ func (q *Queries) GetElectionGroupByName(ctx context.Context, name string) (Elec
 }
 
 const listElectionGroups = `-- name: ListElectionGroups :many
-SELECT id, name, rank, elections_count, states_count, election_date, created_at, updated_at FROM election_groups
+SELECT id, name, rank, elections_count, states_count, reports_count, updates_count, results_submitted_count, election_date, created_at, updated_at FROM election_groups
 ORDER BY election_date DESC, id DESC
 `
 
@@ -116,9 +125,74 @@ func (q *Queries) ListElectionGroups(ctx context.Context) ([]ElectionGroup, erro
 			&i.Rank,
 			&i.ElectionsCount,
 			&i.StatesCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
+			&i.ResultsSubmittedCount,
 			&i.ElectionDate,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listElectionGroupsWithPartyStats = `-- name: ListElectionGroupsWithPartyStats :many
+SELECT 
+    eg.id, 
+    eg.name, 
+    eg.rank, 
+    eg.elections_count, 
+    eg.states_count, 
+    eg.election_date, 
+    eg.created_at, 
+    eg.updated_at,
+    COALESCE(peg.polling_agents_coverage, '{}'::jsonb)::jsonb AS polling_agents_coverage,
+    COALESCE(peg.elections_contesting, 0)::integer AS elections_contesting
+FROM election_groups eg
+LEFT JOIN party_election_groups peg 
+    ON eg.id = peg.election_group_id AND peg.party_id = $1
+ORDER BY eg.election_date DESC, eg.id DESC
+`
+
+type ListElectionGroupsWithPartyStatsRow struct {
+	ID                    int64              `json:"id"`
+	Name                  string             `json:"name"`
+	Rank                  int32              `json:"rank"`
+	ElectionsCount        int32              `json:"elections_count"`
+	StatesCount           int32              `json:"states_count"`
+	ElectionDate          pgtype.Date        `json:"election_date"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	PollingAgentsCoverage []byte             `json:"polling_agents_coverage"`
+	ElectionsContesting   int32              `json:"elections_contesting"`
+}
+
+func (q *Queries) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int64) ([]ListElectionGroupsWithPartyStatsRow, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupsWithPartyStats, partyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListElectionGroupsWithPartyStatsRow
+	for rows.Next() {
+		var i ListElectionGroupsWithPartyStatsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Rank,
+			&i.ElectionsCount,
+			&i.StatesCount,
+			&i.ElectionDate,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PollingAgentsCoverage,
+			&i.ElectionsContesting,
 		); err != nil {
 			return nil, err
 		}
@@ -134,7 +208,7 @@ const updateElectionGroup = `-- name: UpdateElectionGroup :one
 UPDATE election_groups
 SET name = $1, rank = $2, elections_count = $3, states_count = $4, election_date = $5, updated_at = NOW()
 WHERE id = $6
-RETURNING id, name, rank, elections_count, states_count, election_date, created_at, updated_at
+RETURNING id, name, rank, elections_count, states_count, reports_count, updates_count, results_submitted_count, election_date, created_at, updated_at
 `
 
 type UpdateElectionGroupParams struct {
@@ -162,7 +236,85 @@ func (q *Queries) UpdateElectionGroup(ctx context.Context, arg UpdateElectionGro
 		&i.Rank,
 		&i.ElectionsCount,
 		&i.StatesCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.ElectionDate,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertPartyElectionGroupCoverage = `-- name: UpsertPartyElectionGroupCoverage :one
+INSERT INTO party_election_groups (party_id, election_group_id, polling_agents_coverage, elections_contesting)
+VALUES ($1, $2, $3::jsonb, 0)
+ON CONFLICT (party_id, election_group_id) 
+DO UPDATE SET 
+    polling_agents_coverage = EXCLUDED.polling_agents_coverage,
+    updated_at = NOW()
+RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_contesting, reports_count, updates_count, results_submitted_count, created_at, updated_at
+`
+
+type UpsertPartyElectionGroupCoverageParams struct {
+	PartyID         int64  `json:"party_id"`
+	ElectionGroupID int64  `json:"election_group_id"`
+	Column3         []byte `json:"column_3"`
+}
+
+func (q *Queries) UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error) {
+	row := q.db.QueryRow(ctx, upsertPartyElectionGroupCoverage, arg.PartyID, arg.ElectionGroupID, arg.Column3)
+	var i PartyElectionGroup
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.ElectionGroupID,
+		&i.PollingAgentsCoverage,
+		&i.ElectionsContesting,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const upsertPartyElectionGroupStats = `-- name: UpsertPartyElectionGroupStats :one
+INSERT INTO party_election_groups (party_id, election_group_id, polling_agents_coverage, elections_contesting)
+VALUES ($1, $2, $3::jsonb, $4)
+ON CONFLICT (party_id, election_group_id) 
+DO UPDATE SET 
+    polling_agents_coverage = EXCLUDED.polling_agents_coverage,
+    elections_contesting = EXCLUDED.elections_contesting,
+    updated_at = NOW()
+RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_contesting, reports_count, updates_count, results_submitted_count, created_at, updated_at
+`
+
+type UpsertPartyElectionGroupStatsParams struct {
+	PartyID             int64  `json:"party_id"`
+	ElectionGroupID     int64  `json:"election_group_id"`
+	Column3             []byte `json:"column_3"`
+	ElectionsContesting int32  `json:"elections_contesting"`
+}
+
+func (q *Queries) UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error) {
+	row := q.db.QueryRow(ctx, upsertPartyElectionGroupStats,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.Column3,
+		arg.ElectionsContesting,
+	)
+	var i PartyElectionGroup
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.ElectionGroupID,
+		&i.PollingAgentsCoverage,
+		&i.ElectionsContesting,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

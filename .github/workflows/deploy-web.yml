@@ -27,6 +27,14 @@ jobs:
     name: Deploy TanStack React Frontend (Cloudflare Pages)
     runs-on: ubuntu-latest
 
+    # when using ${{vars.env}}, e.g: ${{ vars.VITE_API_URL }},
+    # you have to explicitly set the environment, if you do not set environment, ${{ vars.VITE_API_URL }} will return an empty string
+    # if environment is production || staging, then ${{ vars.VITE_API_URL }} will return the value of the environment variable set in the
+    # github repo for that environment.
+    # if production the branch must be main, and if the branch is staging, the env must be staging
+    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+
+    # add TARGET_ENV to runtime variables
     env:
       TARGET_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
 
@@ -46,7 +54,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.2.0
           cache: "pnpm"
 
       # Install Dependencies
@@ -56,9 +64,14 @@ jobs:
       # Compile web application
       - name: Build Web Application
         env:
+          CLOUDFLARE_ENV: ${{ env.TARGET_ENV }}
           VITE_APP_NAME: "Free9ja"
           VITE_API_URL: ${{ vars.VITE_API_URL }}
-        run: pnpm --filter web build
+        run: |
+          pnpm --filter web build
+          echo ${VITE_API_URL}
+          echo ${VITE_APP_NAME}
+          echo ${CLOUDFLARE_ENV}
 
       # Deploy to Cloudflare Workers
       - name: Deploy to Cloudflare Workers
@@ -67,4 +80,5 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/web
-          command: deploy --name free9ja-${{ env.TARGET_ENV }}-web
+          # command: deploy --name free9ja-${{ env.TARGET_ENV }}-web
+          command: deploy --env ${{ env.TARGET_ENV }}

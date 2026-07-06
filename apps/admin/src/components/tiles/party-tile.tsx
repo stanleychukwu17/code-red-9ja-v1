@@ -25,7 +25,7 @@ export function PartyTableHeader() {
         <span className="text-c-50 text-[14px] w-[140px] text-right hidden sm:block">
           PU agents
         </span>
-        <div className="w-8 shrink-0" />
+        <div className="ml-2 w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
