@@ -79,15 +79,6 @@ func (s *AuthService) getPartyInfo(ctx context.Context, partyID pgtype.Int8) *qu
 	return nil
 }
 
-func (s *AuthService) getPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party {
-	if partyID.Valid {
-		party, err := s.queries.GetPartyByID(ctx, partyID.Int64)
-		if err == nil {
-			return &party
-		}
-	}
-	return nil
-}
 
 type LoginUser struct {
 	queries.User
@@ -113,16 +104,8 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	switch identifierType {
 	case "email":
 		identifier = strings.TrimSpace(strings.ToLower(identifier))
-		identifier = strings.TrimSpace(strings.ToLower(identifier))
 		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
 		if fakeIDStr == "" {
-			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
-			if err == nil && dbUser.FakeID.Valid {
-				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)
-				_ = s.SaveSomeUserRegistrationDetails(ctx, dbUser.Username.String, dbUser.Email.String, dbUser.Phone.String, "", dbUser.ID, dbUser.FakeID.Int64)
-			} else {
-				return LoginResult{}, errors.New("invalid email, this record not found")
-			}
 			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
 			if err == nil && dbUser.FakeID.Valid {
 				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)
@@ -207,13 +190,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		partyID = user.PartyID.Int64
 	}
 
-	var partyID int64
-	if user.PartyID.Valid {
-		partyID = user.PartyID.Int64
-	}
-
 	// Generate Access Token and Refresh Token
-	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
@@ -258,8 +235,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		AccessToken:  accessToken,
 		RefreshToken: result.RandomString,
 		User: LoginUser{
-			User:  user,
-			Party: partyObj,
 			User:  user,
 			Party: partyObj,
 		},
@@ -314,8 +289,6 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int64)
 	}
 	userDetails := LoginUser{
-		User:  user,
-		Party: partyObj,
 		User:  user,
 		Party: partyObj,
 	}
@@ -378,13 +351,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		partyID = user.PartyID.Int64
 	}
 
-	var partyID int64
-	if user.PartyID.Valid {
-		partyID = user.PartyID.Int64
-	}
-
 	// Generate a new Access Token
-	newAccessToken, err := utils.GenerateToken(userFid, username, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	newAccessToken, err := utils.GenerateToken(userFid, username, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
@@ -1063,6 +1030,12 @@ func (s *AuthService) VerifySecurityQuestions(ctx context.Context, nin string, q
 		ChangePasswordID: changePasswordID,
 		UserFID:          secQ.UserFid,
 	}, nil
+}
+
+// ChangePasswordByEmail resets a user's password using their email address
+func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, newPassword string) error {
+	// TODO: Implement the actual password change logic
+	return errors.New("ChangePasswordByEmail is not implemented yet")
 }
 
 func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error {

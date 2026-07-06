@@ -98,6 +98,7 @@ type Querier interface {
 	GetStateDetailsByID(ctx context.Context, id int16) (CState, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
+	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
