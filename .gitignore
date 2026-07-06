@@ -36,3 +36,17 @@ yarn-error.log*
 # Misc
 .DS_Store
 *.pem
+
+# Large database seed files
+states/polling-units.json
+
+
+# DevOps, Terraform
+*.tfvars
+.terraform/
+*.tfstate
+*.tfstate.*
+.tfstate.d/
+crash.log
+terraform.tfvars
+terraform.tfvars.json

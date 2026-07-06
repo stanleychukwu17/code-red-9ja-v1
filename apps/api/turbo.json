@@ -1,6 +1,8 @@
 {
   "$schema": "https://turborepo.dev/schema.json",
-  "extends": ["//"],
+  "extends": [
+    "//"
+  ],
   "tasks": {
     "dev": {
       "cache": false,
@@ -21,7 +23,9 @@
       ]
     },
     "build": {
-      "outputs": ["bin/**"],
+      "outputs": [
+        "bin/**"
+      ],
       "passThroughEnv": [
         "LOCALAPPDATA",
         "APPDATA",

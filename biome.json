@@ -51,21 +51,14 @@
 			"allowWrongLineComments": true
 		},
 		"linter": {
-			"enabled": true,
-			"rules": {
-				"recommended": true
-			}
+			"enabled": true
 		}
 	},
 	"overrides": [
 		{
 			"includes": ["**/*.css"],
 			"linter": {
-				"rules": {
-					"nursery": {
-						"noUnknownAtRule": "off"
-					}
-				}
+				"enabled": true
 			}
 		}
 	]

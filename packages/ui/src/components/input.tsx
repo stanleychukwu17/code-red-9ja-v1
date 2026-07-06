@@ -1,19 +1,22 @@
 import * as React from "react";
 
 import { ArrowUp, Eye, EyeOff } from "lucide-react";
-import TextareaAutosize, {
-  TextareaAutosizeProps,
-} from "react-textarea-autosize";
+import TextareaAutosize from "react-textarea-autosize";
+import type { TextareaAutosizeProps } from "react-textarea-autosize";
 import PaperPlaneIcon from "../icons/paper-plane-icon";
 import SearchIcon from "../icons/search-icon";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 
 const inputClassName =
-  "group flex items-center gap-2 h-14 w-full rounded-[16px] bg-black/5 px-4 py-1 text-lg transition-colors duration-200 file:border-0 file:bg-transparent file: file:font-medium ring-inset file:text-foreground placeholder:text-c-60 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed disabled:opacity-50";
+  `group flex items-center gap-2 h-11 w-full rounded-[4px] bg-black/5 px-4 py-6
+  transition-colors duration-200 file:border-0 file:bg-transparent ring-inset file:text-foreground placeholder:text-c-60
+  dark:bg-black/30 dark:hover:bg-black/90
+  focus-visible:outline-hidden focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80
+  disabled:cursor-not-allowed disabled:opacity-50`;
 
 const fancyInputClassName =
-  "bg-transparent hover:bg-transparent! text-2xl md:text-xl text-c-80 font-semibold px-0 hover:ring-0 hover:bg-background focus-visible:ring-0";
+  "bg-transparent hover:bg-transparent! text-2xl md:text-[28px] text-c-80 font-semibold px-0 hover:ring-0 hover:bg-background focus-visible:ring-0 placeholder:text-c-30";
 
 type InputProps = React.ComponentProps<"input"> & {
   icon?: React.ReactNode;
@@ -66,12 +69,12 @@ const IconInput = ({
     <div
       className={cn(
         inputClassName,
-        "focus-within:ring-primary focus-within:ring-1 focus-within:hover:ring-primary",
+        "focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80",
         className,
       )}
     >
       <div className="mb-px">
-        {icon ?? <SearchIcon className={"text-c-50"} />}
+        {icon ?? <SearchIcon className={"text-c-50 size-6"} />}
       </div>
       <input
         type={type}
@@ -130,7 +133,7 @@ const Label = ({
   className?: string;
 }) => {
   if (!title) return <></>;
-  return <p className={cn("font-medium text-c-70", className)}>{title}</p>;
+  return <p className={cn("font-medium text-c-80", className)}>{title}</p>;
 };
 
 const textareaClassName =
@@ -154,7 +157,7 @@ Textarea.displayName = "Textarea";
 const TextareaInput = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea"> &
-    TextareaAutosizeProps & { errorMsg?: string }
+  TextareaAutosizeProps & { errorMsg?: string }
 >(({ className, errorMsg, ...props }, ref) => {
   return (
     <div
@@ -174,7 +177,7 @@ TextareaInput.displayName = "TextareaInput";
 export const TextareaInputComment = React.forwardRef<
   HTMLTextAreaElement,
   React.ComponentProps<"textarea"> &
-    TextareaAutosizeProps & { errorMsg?: string; onSubmit?: () => void }
+  TextareaAutosizeProps & { errorMsg?: string; onSubmit?: () => void }
 >(({ className, errorMsg, onSubmit, ...props }, ref) => {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -291,38 +294,6 @@ const TextareaComment = ({
       </div>
     </div>
   );
-};
-
-// Simple icon components for username validation
-const CheckCircle = ({ className }: { className?: string }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-
-const XCircle = ({ className }: { className?: string }) => (
-  <svg className={className} fill="currentColor" viewBox="0 0 20 20">
-    <path
-      fillRule="evenodd"
-      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-      clipRule="evenodd"
-    />
-  </svg>
-);
-
-type UsernameInputProps = React.ComponentProps<"input"> & {
-  checkFunction: (
-    username: string,
-  ) => Promise<{ available: boolean }> | { available: boolean } | null;
-  validateFormat?: (username: string) => { isValid: boolean; error?: string };
-  onValidationChange?: (isValid: boolean) => void;
-  debounceMs?: number;
-  errorMsg?: string;
-  preventInvalidChars?: boolean;
 };
 
 type PasswordInputProps = React.ComponentProps<"input"> & {

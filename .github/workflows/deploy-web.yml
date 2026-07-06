@@ -1,0 +1,84 @@
+name: Deploy Web
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - "apps/web/**"
+      - ".github/workflows/deploy-web.yml"
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "turbo.json"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-frontend:
+    name: Deploy TanStack React Frontend (Cloudflare Pages)
+    runs-on: ubuntu-latest
+
+    # when using ${{vars.env}}, e.g: ${{ vars.VITE_API_URL }},
+    # you have to explicitly set the environment, if you do not set environment, ${{ vars.VITE_API_URL }} will return an empty string
+    # if environment is production || staging, then ${{ vars.VITE_API_URL }} will return the value of the environment variable set in the
+    # github repo for that environment.
+    # if production the branch must be main, and if the branch is staging, the env must be staging
+    environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+
+    # add TARGET_ENV to runtime variables
+    env:
+      TARGET_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+
+    steps:
+      # Checkout the code from the repository. This step is required to access
+      # the source code during the workflow execution.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      # Setup Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.2.0
+          cache: "pnpm"
+
+      # Install Dependencies
+      - name: Install Dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Compile web application
+      - name: Build Web Application
+        env:
+          CLOUDFLARE_ENV: ${{ env.TARGET_ENV }}
+          VITE_APP_NAME: "Free9ja"
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+        run: |
+          pnpm --filter web build
+          echo ${VITE_API_URL}
+          echo ${VITE_APP_NAME}
+          echo ${CLOUDFLARE_ENV}
+
+      # Deploy to Cloudflare Workers
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/web
+          # command: deploy --name free9ja-${{ env.TARGET_ENV }}-web
+          command: deploy --env ${{ env.TARGET_ENV }}

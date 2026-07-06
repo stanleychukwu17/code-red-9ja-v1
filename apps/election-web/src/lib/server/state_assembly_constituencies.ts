@@ -1,0 +1,152 @@
+import { createServerFn } from "@tanstack/react-start";
+import { getCookie } from "@tanstack/react-start/server";
+import { API_URL } from "../config";
+
+function getAuthHeaders() {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  const accessToken = getCookie("access_token");
+  const refreshToken = getCookie("refresh_token");
+
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
+    headers["Cookie"] =
+      `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
+  }
+
+  return headers;
+}
+
+export const createStateAssemblyConstituency = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: {
+      name: string;
+      lga_id: number;
+      state_id: number;
+      senatorial_district_id: number;
+      federal_constituency_id: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await fetch(API_URL.stateAssemblyConstituencies, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Failed to create state assembly constituency: " +
+          (error as Error).message,
+      };
+    }
+  });
+
+export const updateStateAssemblyConstituency = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: {
+      id: string | number;
+      name: string;
+      lga_id: number;
+      state_id: number;
+      senatorial_district_id: number;
+      federal_constituency_id: number;
+    }) => data,
+  )
+  .handler(async ({ data: { id, ...body } }) => {
+    try {
+      const response = await fetch(API_URL.stateAssemblyConstituencyById(id), {
+        method: "PUT",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(body),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Failed to update state assembly constituency: " +
+          (error as Error).message,
+      };
+    }
+  });
+
+export const deleteStateAssemblyConstituency = createServerFn({
+  method: "POST",
+})
+  .inputValidator((id: string | number) => id)
+  .handler(async ({ data: id }) => {
+    try {
+      const response = await fetch(API_URL.stateAssemblyConstituencyById(id), {
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Failed to delete state assembly constituency: " +
+          (error as Error).message,
+      };
+    }
+  });
+
+export const getStateAssemblyConstituencyById = createServerFn({
+  method: "GET",
+})
+  .inputValidator((id: string | number) => id)
+  .handler(async ({ data: id }) => {
+    try {
+      const response = await fetch(API_URL.stateAssemblyConstituencyById(id));
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch state assembly constituency details",
+      };
+    }
+  });
+
+export const getStateAssemblyConstituencies = createServerFn()
+  .inputValidator(
+    (data: {
+      stateId?: number;
+      federalConstituencyId?: number;
+      limit?: number;
+      cursor?: string | number;
+    }) => data,
+  )
+  .handler(
+    async ({ data: { stateId, federalConstituencyId, limit, cursor } }) => {
+      try {
+        const response = await fetch(
+          API_URL.getStateAssemblyConstituencies(
+            stateId,
+            federalConstituencyId,
+            limit,
+            cursor,
+          ),
+        );
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        return {
+          status: "failed",
+          error: "Failed to fetch state assembly constituencies from API",
+        };
+      }
+    },
+  );

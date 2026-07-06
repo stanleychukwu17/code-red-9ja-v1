@@ -2,7 +2,16 @@
   "name": "api",
   "private": true,
   "scripts": {
-    "dev": "go run ./cmd/api",
-    "build": "go build -o bin/api ./cmd/api"
+    "dev": "go run github.com/air-verse/air@latest",
+    "build": "go build -o bin/api ./cmd/api",
+    "db:migrate": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" up",
+    "db:rollback": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" down",
+    "db:rollback:all": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" down-to 0",
+    "db:status": "goose -dir db/migrations postgres \"postgres://postgres:password@localhost:5432/test_db?sslmode=disable\" status",
+    "db:create": "goose -dir db/migrations create",
+    "docker:down": "docker compose -f docker-compose.dev.yml down -v",
+    "docker:up": "docker compose -f docker-compose.dev.yml up -d",
+    "sqlc:generate": "sqlc generate",
+    "swagger:generate": "swag init -g main.go --parseDependency -d \"./cmd/api,./internal/router,./internal/service/auth,./internal/handler/auth,./internal/handler/parties,./internal/handler/files,./internal/handler/offices,./internal/handler/election_groups,./internal/handler/elections,./internal/handler/users,./internal/handler/polling_unit_assignments,./internal/handler/polling_agent_applications,./internal/handler/bodies,./internal/handler/federal_constituencies,./internal/handler/polling_units,./internal/handler/senatorial_districts,./internal/handler/state_assembly_constituencies,./internal/handler/states,./internal/handler/wards,./internal/handler/polling_unit_updates,./internal/db/queries\" -o docs"
   }
 }

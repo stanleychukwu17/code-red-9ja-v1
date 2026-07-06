@@ -11,11 +11,17 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.0.0",
-    "turbo": "^2.9.1",
+    "turbo": "2.9.1",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.33.0",
   "engines": {
     "node": ">=18"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "lightningcss"
+    ]
   }
 }

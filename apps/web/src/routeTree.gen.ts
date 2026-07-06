@@ -9,19 +9,34 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthVerifyOtpRouteImport } from './routes/auth/verify-otp'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as AuthSecurityQuestionsRouteImport } from './routes/auth/security-questions'
+import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
+import { Route as AuthChangePasswordRouteImport } from './routes/auth/change-password'
+import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedStatesIndexRouteImport } from './routes/_authenticated/states/index'
+import { Route as AuthenticatedSearchIndexRouteImport } from './routes/_authenticated/search/index'
+import { Route as AuthenticatedProfileIndexRouteImport } from './routes/_authenticated/profile/index'
+import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
+import { Route as AuthenticatedFeedIndexRouteImport } from './routes/_authenticated/feed/index'
+import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard/index'
+import { Route as AuthenticatedCandidatesIndexRouteImport } from './routes/_authenticated/candidates/index'
+import { Route as AuthenticatedAppUsersIndexRouteImport } from './routes/_authenticated/app-users/index'
+import { Route as AuthenticatedPollingUnitPollingUnitIdRouteImport } from './routes/_authenticated/polling-unit/$pollingUnitId'
+import { Route as AuthenticatedStatesStateIdIndexRouteImport } from './routes/_authenticated/states/$stateId/index'
+import { Route as AuthenticatedFeedPostIdIndexRouteImport } from './routes/_authenticated/feed/$postId/index'
 
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthVerifyOtpRoute = AuthVerifyOtpRouteImport.update({
-  id: '/auth/verify-otp',
-  path: '/auth/verify-otp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
@@ -29,60 +44,259 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthSecurityQuestionsRoute = AuthSecurityQuestionsRouteImport.update({
+  id: '/auth/security-questions',
+  path: '/auth/security-questions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
+  id: '/auth/onboarding',
+  path: '/auth/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthChangePasswordRoute = AuthChangePasswordRouteImport.update({
+  id: '/auth/change-password',
+  path: '/auth/change-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedStatesIndexRoute =
+  AuthenticatedStatesIndexRouteImport.update({
+    id: '/states/',
+    path: '/states/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSearchIndexRoute =
+  AuthenticatedSearchIndexRouteImport.update({
+    id: '/search/',
+    path: '/search/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedProfileIndexRoute =
+  AuthenticatedProfileIndexRouteImport.update({
+    id: '/profile/',
+    path: '/profile/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedNotificationsIndexRoute =
+  AuthenticatedNotificationsIndexRouteImport.update({
+    id: '/notifications/',
+    path: '/notifications/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedFeedIndexRoute = AuthenticatedFeedIndexRouteImport.update({
+  id: '/feed/',
+  path: '/feed/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardIndexRoute =
+  AuthenticatedDashboardIndexRouteImport.update({
+    id: '/dashboard/',
+    path: '/dashboard/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCandidatesIndexRoute =
+  AuthenticatedCandidatesIndexRouteImport.update({
+    id: '/candidates/',
+    path: '/candidates/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAppUsersIndexRoute =
+  AuthenticatedAppUsersIndexRouteImport.update({
+    id: '/app-users/',
+    path: '/app-users/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPollingUnitPollingUnitIdRoute =
+  AuthenticatedPollingUnitPollingUnitIdRouteImport.update({
+    id: '/polling-unit/$pollingUnitId',
+    path: '/polling-unit/$pollingUnitId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedStatesStateIdIndexRoute =
+  AuthenticatedStatesStateIdIndexRouteImport.update({
+    id: '/states/$stateId/',
+    path: '/states/$stateId/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedFeedPostIdIndexRoute =
+  AuthenticatedFeedPostIdIndexRouteImport.update({
+    id: '/feed/$postId/',
+    path: '/feed/$postId/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/home': typeof AuthenticatedHomeRoute
+  '/auth/change-password': typeof AuthChangePasswordRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/auth/verify-otp': typeof AuthVerifyOtpRoute
+  '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  '/app-users/': typeof AuthenticatedAppUsersIndexRoute
+  '/candidates/': typeof AuthenticatedCandidatesIndexRoute
+  '/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/feed/': typeof AuthenticatedFeedIndexRoute
+  '/notifications/': typeof AuthenticatedNotificationsIndexRoute
+  '/profile/': typeof AuthenticatedProfileIndexRoute
+  '/search/': typeof AuthenticatedSearchIndexRoute
+  '/states/': typeof AuthenticatedStatesIndexRoute
+  '/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
+  '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/home': typeof AuthenticatedHomeRoute
+  '/auth/change-password': typeof AuthChangePasswordRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/auth/verify-otp': typeof AuthVerifyOtpRoute
+  '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  '/app-users': typeof AuthenticatedAppUsersIndexRoute
+  '/candidates': typeof AuthenticatedCandidatesIndexRoute
+  '/dashboard': typeof AuthenticatedDashboardIndexRoute
+  '/feed': typeof AuthenticatedFeedIndexRoute
+  '/notifications': typeof AuthenticatedNotificationsIndexRoute
+  '/profile': typeof AuthenticatedProfileIndexRoute
+  '/search': typeof AuthenticatedSearchIndexRoute
+  '/states': typeof AuthenticatedStatesIndexRoute
+  '/feed/$postId': typeof AuthenticatedFeedPostIdIndexRoute
+  '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_authenticated/home': typeof AuthenticatedHomeRoute
+  '/auth/change-password': typeof AuthChangePasswordRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
-  '/auth/verify-otp': typeof AuthVerifyOtpRoute
+  '/_authenticated/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  '/_authenticated/app-users/': typeof AuthenticatedAppUsersIndexRoute
+  '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
+  '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/_authenticated/feed/': typeof AuthenticatedFeedIndexRoute
+  '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
+  '/_authenticated/profile/': typeof AuthenticatedProfileIndexRoute
+  '/_authenticated/search/': typeof AuthenticatedSearchIndexRoute
+  '/_authenticated/states/': typeof AuthenticatedStatesIndexRoute
+  '/_authenticated/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
+  '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth/login' | '/auth/signup' | '/auth/verify-otp'
+  fullPaths:
+    | '/'
+    | '/home'
+    | '/auth/change-password'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/security-questions'
+    | '/auth/signup'
+    | '/polling-unit/$pollingUnitId'
+    | '/app-users/'
+    | '/candidates/'
+    | '/dashboard/'
+    | '/feed/'
+    | '/notifications/'
+    | '/profile/'
+    | '/search/'
+    | '/states/'
+    | '/feed/$postId/'
+    | '/states/$stateId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth/login' | '/auth/signup' | '/auth/verify-otp'
-  id: '__root__' | '/' | '/auth/login' | '/auth/signup' | '/auth/verify-otp'
+  to:
+    | '/'
+    | '/home'
+    | '/auth/change-password'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/security-questions'
+    | '/auth/signup'
+    | '/polling-unit/$pollingUnitId'
+    | '/app-users'
+    | '/candidates'
+    | '/dashboard'
+    | '/feed'
+    | '/notifications'
+    | '/profile'
+    | '/search'
+    | '/states'
+    | '/feed/$postId'
+    | '/states/$stateId'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/_authenticated/home'
+    | '/auth/change-password'
+    | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/security-questions'
+    | '/auth/signup'
+    | '/_authenticated/polling-unit/$pollingUnitId'
+    | '/_authenticated/app-users/'
+    | '/_authenticated/candidates/'
+    | '/_authenticated/dashboard/'
+    | '/_authenticated/feed/'
+    | '/_authenticated/notifications/'
+    | '/_authenticated/profile/'
+    | '/_authenticated/search/'
+    | '/_authenticated/states/'
+    | '/_authenticated/feed/$postId/'
+    | '/_authenticated/states/$stateId/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  AuthChangePasswordRoute: typeof AuthChangePasswordRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthOnboardingRoute: typeof AuthOnboardingRoute
+  AuthSecurityQuestionsRoute: typeof AuthSecurityQuestionsRoute
   AuthSignupRoute: typeof AuthSignupRoute
-  AuthVerifyOtpRoute: typeof AuthVerifyOtpRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/verify-otp': {
-      id: '/auth/verify-otp'
-      path: '/auth/verify-otp'
-      fullPath: '/auth/verify-otp'
-      preLoaderRoute: typeof AuthVerifyOtpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/signup': {
@@ -92,6 +306,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthSignupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/security-questions': {
+      id: '/auth/security-questions'
+      path: '/auth/security-questions'
+      fullPath: '/auth/security-questions'
+      preLoaderRoute: typeof AuthSecurityQuestionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/onboarding': {
+      id: '/auth/onboarding'
+      path: '/auth/onboarding'
+      fullPath: '/auth/onboarding'
+      preLoaderRoute: typeof AuthOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
@@ -99,14 +327,151 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/change-password': {
+      id: '/auth/change-password'
+      path: '/auth/change-password'
+      fullPath: '/auth/change-password'
+      preLoaderRoute: typeof AuthChangePasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/states/': {
+      id: '/_authenticated/states/'
+      path: '/states'
+      fullPath: '/states/'
+      preLoaderRoute: typeof AuthenticatedStatesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/search/': {
+      id: '/_authenticated/search/'
+      path: '/search'
+      fullPath: '/search/'
+      preLoaderRoute: typeof AuthenticatedSearchIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profile/': {
+      id: '/_authenticated/profile/'
+      path: '/profile'
+      fullPath: '/profile/'
+      preLoaderRoute: typeof AuthenticatedProfileIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notifications/': {
+      id: '/_authenticated/notifications/'
+      path: '/notifications'
+      fullPath: '/notifications/'
+      preLoaderRoute: typeof AuthenticatedNotificationsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/feed/': {
+      id: '/_authenticated/feed/'
+      path: '/feed'
+      fullPath: '/feed/'
+      preLoaderRoute: typeof AuthenticatedFeedIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard/': {
+      id: '/_authenticated/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/candidates/': {
+      id: '/_authenticated/candidates/'
+      path: '/candidates'
+      fullPath: '/candidates/'
+      preLoaderRoute: typeof AuthenticatedCandidatesIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/app-users/': {
+      id: '/_authenticated/app-users/'
+      path: '/app-users'
+      fullPath: '/app-users/'
+      preLoaderRoute: typeof AuthenticatedAppUsersIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/polling-unit/$pollingUnitId': {
+      id: '/_authenticated/polling-unit/$pollingUnitId'
+      path: '/polling-unit/$pollingUnitId'
+      fullPath: '/polling-unit/$pollingUnitId'
+      preLoaderRoute: typeof AuthenticatedPollingUnitPollingUnitIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/states/$stateId/': {
+      id: '/_authenticated/states/$stateId/'
+      path: '/states/$stateId'
+      fullPath: '/states/$stateId/'
+      preLoaderRoute: typeof AuthenticatedStatesStateIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/feed/$postId/': {
+      id: '/_authenticated/feed/$postId/'
+      path: '/feed/$postId'
+      fullPath: '/feed/$postId/'
+      preLoaderRoute: typeof AuthenticatedFeedPostIdIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
+  AuthenticatedPollingUnitPollingUnitIdRoute: typeof AuthenticatedPollingUnitPollingUnitIdRoute
+  AuthenticatedAppUsersIndexRoute: typeof AuthenticatedAppUsersIndexRoute
+  AuthenticatedCandidatesIndexRoute: typeof AuthenticatedCandidatesIndexRoute
+  AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
+  AuthenticatedFeedIndexRoute: typeof AuthenticatedFeedIndexRoute
+  AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
+  AuthenticatedProfileIndexRoute: typeof AuthenticatedProfileIndexRoute
+  AuthenticatedSearchIndexRoute: typeof AuthenticatedSearchIndexRoute
+  AuthenticatedStatesIndexRoute: typeof AuthenticatedStatesIndexRoute
+  AuthenticatedFeedPostIdIndexRoute: typeof AuthenticatedFeedPostIdIndexRoute
+  AuthenticatedStatesStateIdIndexRoute: typeof AuthenticatedStatesStateIdIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedHomeRoute: AuthenticatedHomeRoute,
+  AuthenticatedPollingUnitPollingUnitIdRoute:
+    AuthenticatedPollingUnitPollingUnitIdRoute,
+  AuthenticatedAppUsersIndexRoute: AuthenticatedAppUsersIndexRoute,
+  AuthenticatedCandidatesIndexRoute: AuthenticatedCandidatesIndexRoute,
+  AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
+  AuthenticatedFeedIndexRoute: AuthenticatedFeedIndexRoute,
+  AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
+  AuthenticatedProfileIndexRoute: AuthenticatedProfileIndexRoute,
+  AuthenticatedSearchIndexRoute: AuthenticatedSearchIndexRoute,
+  AuthenticatedStatesIndexRoute: AuthenticatedStatesIndexRoute,
+  AuthenticatedFeedPostIdIndexRoute: AuthenticatedFeedPostIdIndexRoute,
+  AuthenticatedStatesStateIdIndexRoute: AuthenticatedStatesStateIdIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  AuthChangePasswordRoute: AuthChangePasswordRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthOnboardingRoute: AuthOnboardingRoute,
+  AuthSecurityQuestionsRoute: AuthSecurityQuestionsRoute,
   AuthSignupRoute: AuthSignupRoute,
-  AuthVerifyOtpRoute: AuthVerifyOtpRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

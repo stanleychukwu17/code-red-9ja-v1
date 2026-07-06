@@ -1,0 +1,158 @@
+name: Deploy API
+
+on:
+  # push:
+  #   branches:
+  #     - main
+  #   paths:
+  #     - "apps/api/**"
+  #     - ".github/workflows/deploy-api.yml"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - staging
+          - production
+
+permissions:
+  id-token: write # Required for requesting the AWS JWT (OIDC)
+  contents: read # Required for actions/checkout
+
+jobs:
+  deploy-backend:
+    name: Deploy Go Backend (AWS ECS)
+    runs-on: ubuntu-latest
+
+    env:
+      TARGET_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || 'staging') }}
+
+    steps:
+      # Checkout the code from the repository. This step is required to access
+      # the source code during the workflow execution.
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Configure AWS Credentials using OIDC (OpenID Connect) for secure authentication
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets[format('AWS_ROLE_ARN_{0}', env.TARGET_ENV)] }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      # Login to Amazon ECR to push the Docker image
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build, tag, and push the Docker image to Amazon ECR
+      - name: Build, tag, and push image to Amazon ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: free9ja-${{ env.TARGET_ENV }}-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg VERSION=${{ github.ref_name }} \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            ./apps/api
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # Download the current task definition from ECS
+      - name: Download Active Task Definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition free9ja-${{ env.TARGET_ENV }}-api \
+            --query taskDefinition > task-def.json
+
+      # Removes metadata fields from task-def that would cause registration to fail
+      - name: Clean Task Definition
+        run: |
+          jq '. | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)' task-def.json > clean-task-def.json
+
+      # Render the task definition with the new image tag
+      - name: Render task definition with new image tag
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: clean-task-def.json
+          container-name: api
+          image: ${{ steps.login-ecr.outputs.registry }}/free9ja-${{ env.TARGET_ENV }}-api:${{ github.sha }}
+
+      # Deploy the updated task definition to the ECS service
+      - name: Deploy to AWS ECS Service
+        id: deploy-ecs
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: free9ja-${{ env.TARGET_ENV }}-api-service
+          cluster: free9ja-${{ env.TARGET_ENV }}-cluster
+          wait-for-service-stability: true
+
+      - name: Print ECS diagnostics on deploy failure
+        if: failure()
+        env:
+          CLUSTER: free9ja-${{ env.TARGET_ENV }}-cluster
+          SERVICE: free9ja-${{ env.TARGET_ENV }}-api-service
+          LOG_GROUP: /ecs/free9ja-${{ env.TARGET_ENV }}-api
+        run: |
+          set +e
+
+          echo "::group::ECS service events"
+          aws ecs describe-services \
+            --cluster "$CLUSTER" \
+            --services "$SERVICE" \
+            --query 'services[0].events[:20].[createdAt,message]' \
+            --output table
+          echo "::endgroup::"
+
+          TARGET_GROUP_ARN=$(aws ecs describe-services \
+            --cluster "$CLUSTER" \
+            --services "$SERVICE" \
+            --query 'services[0].loadBalancers[0].targetGroupArn' \
+            --output text)
+
+          if [ "$TARGET_GROUP_ARN" != "None" ] && [ -n "$TARGET_GROUP_ARN" ]; then
+            echo "::group::ALB target health"
+            aws elbv2 describe-target-health \
+              --target-group-arn "$TARGET_GROUP_ARN" \
+              --query 'TargetHealthDescriptions[*].{Target:Target.Id,Port:Target.Port,State:TargetHealth.State,Reason:TargetHealth.Reason,Description:TargetHealth.Description}' \
+              --output table
+            echo "::endgroup::"
+          fi
+
+          STOPPED_TASKS=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --service-name "$SERVICE" \
+            --desired-status STOPPED \
+            --query 'taskArns[:10]' \
+            --output text)
+
+          RUNNING_TASKS=$(aws ecs list-tasks \
+            --cluster "$CLUSTER" \
+            --service-name "$SERVICE" \
+            --desired-status RUNNING \
+            --query 'taskArns[:10]' \
+            --output text)
+
+          TASKS="$STOPPED_TASKS $RUNNING_TASKS"
+          if [ -n "$TASKS" ]; then
+            echo "::group::ECS task stop/container reasons"
+            aws ecs describe-tasks \
+              --cluster "$CLUSTER" \
+              --tasks $TASKS \
+              --query 'tasks[*].{TaskArn:taskArn,LastStatus:lastStatus,DesiredStatus:desiredStatus,HealthStatus:healthStatus,StopCode:stopCode,StoppedReason:stoppedReason,Containers:containers[*].{Name:name,LastStatus:lastStatus,ExitCode:exitCode,Reason:reason,HealthStatus:healthStatus}}' \
+              --output json
+            echo "::endgroup::"
+          fi
+
+          echo "::group::Recent API logs"
+          aws logs tail "$LOG_GROUP" --since 30m --format short || true
+          echo "::endgroup::"

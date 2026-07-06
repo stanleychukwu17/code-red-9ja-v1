@@ -18,11 +18,12 @@ export default function LoginScreen() {
       }}
       footerLinks={[
         {
-          label: "Don't have an account? Sign up",
+          label: "Don't have an account?",
+          action: "Sign up",
           href: "/signup",
           accent: true,
         },
-        { label: "Forgot password", href: "/login" },
+        { label: "Forgot password", href: "/forgot-password" },
       ]}
     >
       <AuthField
