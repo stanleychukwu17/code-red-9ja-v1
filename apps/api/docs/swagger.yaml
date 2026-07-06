@@ -237,7 +237,6 @@ definitions:
         - member
         - placeholder
         - pollingagent
-        - pollingagent
         - user
         type: string
       state_of_origin:
@@ -456,57 +455,11 @@ definitions:
       date_of_birth:
         type: string
       email:
-      phone:
-        $ref: '#/definitions/pgtype.Text'
-      phone_verified:
-        $ref: '#/definitions/pgtype.Text'
-      polling_unit_id:
-        $ref: '#/definitions/pgtype.Int8'
-      role:
-        $ref: '#/definitions/pgtype.Text'
-      role_level:
-        $ref: '#/definitions/pgtype.Text'
-      state_of_origin:
-        $ref: '#/definitions/pgtype.Int2'
-      updated_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      username:
-        $ref: '#/definitions/pgtype.Text'
-      vin:
-        $ref: '#/definitions/pgtype.Text'
-      voters_card_image:
-        $ref: '#/definitions/pgtype.Text'
-    type: object
-  authservice.SeedUserRequest:
-    properties:
-      account_status:
-        type: string
-      avatar:
-        type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_lga:
-        type: integer
-      current_state:
-        type: integer
-      date_of_birth:
-        type: string
-      email:
         type: string
       fake_id:
         type: integer
       first_name:
         type: string
-      gender:
-        type: string
-      id:
-        type: integer
       gender:
         type: string
       id:
@@ -525,24 +478,8 @@ definitions:
         type: string
       phone_verified:
         type: string
-      middle_name:
-        type: string
-      nin_verified:
-        type: string
-      party_id:
-        type: integer
-      password:
-        type: string
-      phone:
-        type: string
-      phone_verified:
-        type: string
       role:
         type: string
-      role_level:
-        type: string
-      state_of_origin:
-        type: integer
       role_level:
         type: string
       state_of_origin:
@@ -656,41 +593,8 @@ definitions:
         type: integer
       states_count:
         type: integer
-    properties:
-      election_date:
-        type: string
-      elections_count:
-        type: integer
-      name:
-        type: string
-      rank:
-        type: integer
-      states_count:
-        type: integer
     type: object
   electiongroupshandler.UpdateElectionGroupRequest:
-    properties:
-      election_date:
-        type: string
-      elections_count:
-        type: integer
-      name:
-        type: string
-      rank:
-        type: integer
-      states_count:
-        type: integer
-    type: object
-  electiongroupshandler.UpsertPartyElectionGroupStatsRequest:
-    properties:
-      elections_contesting:
-        type: integer
-      party_id:
-        type: integer
-      polling_agents_coverage:
-        items:
-          type: integer
-        type: array
     properties:
       election_date:
         type: string
@@ -738,42 +642,8 @@ definitions:
         type: integer
       ward_id:
         type: integer
-    properties:
-      candidates_count:
-        type: integer
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      federal_constituency_id:
-        type: integer
-      lga_id:
-        type: integer
-      name:
-        type: string
-      office_id:
-        type: integer
-      senatorial_district_id:
-        type: integer
-      state_constituency_id:
-        type: integer
-      state_id:
-        type: integer
-      ward_id:
-        type: integer
     type: object
   electionshandler.CreateFederalConstituencyElectionRequest:
-    properties:
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      federal_constituency_ids:
-        items:
-          type: integer
-        type: array
-      office_id:
-        type: integer
     properties:
       election_date:
         type: string
@@ -798,30 +668,8 @@ definitions:
         type: array
       office_id:
         type: integer
-    properties:
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      lga_ids:
-        items:
-          type: integer
-        type: array
-      office_id:
-        type: integer
     type: object
   electionshandler.CreateNationwideElectionRequest:
-    properties:
-      candidates:
-        items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
-        type: array
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      office_id:
-        type: integer
     properties:
       candidates:
         items:
@@ -846,17 +694,6 @@ definitions:
         items:
           type: integer
         type: array
-    properties:
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      office_id:
-        type: integer
-      senatorial_district_ids:
-        items:
-          type: integer
-        type: array
     type: object
   electionshandler.CreateStateConstituencyElectionRequest:
     properties:
@@ -870,30 +707,8 @@ definitions:
         items:
           type: integer
         type: array
-    properties:
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      office_id:
-        type: integer
-      state_constituency_ids:
-        items:
-          type: integer
-        type: array
     type: object
   electionshandler.CreateStateElectionRequest:
-    properties:
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      office_id:
-        type: integer
-      state_ids:
-        items:
-          type: integer
-        type: array
     properties:
       election_date:
         type: string
@@ -931,64 +746,15 @@ definitions:
     - candidate_id
     - party_id
     - party_short_name
-    properties:
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      office_id:
-        type: integer
-      ward_ids:
-        items:
-          type: integer
-        type: array
-    type: object
-  electionshandler.ElectionCandidateInput:
-    properties:
-      candidate_id:
-        type: integer
-      party_id:
-        type: integer
-      party_short_name:
-        type: string
-    required:
-    - candidate_id
-    - party_id
-    - party_short_name
     type: object
   electionshandler.SyncCandidatesRequest:
     properties:
       candidates:
-      candidates:
         items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
           $ref: '#/definitions/electionshandler.ElectionCandidateInput'
         type: array
     type: object
   electionshandler.UpdateElectionRequest:
-    properties:
-      candidates_count:
-        type: integer
-      election_date:
-        type: string
-      election_group_id:
-        type: integer
-      federal_constituency_id:
-        type: integer
-      lga_id:
-        type: integer
-      name:
-        type: string
-      office_id:
-        type: integer
-      senatorial_district_id:
-        type: integer
-      state_constituency_id:
-        type: integer
-      state_id:
-        type: integer
-      ward_id:
-        type: integer
     properties:
       candidates_count:
         type: integer
@@ -1154,54 +920,6 @@ definitions:
       quantity:
         type: integer
     type: object
-  paapplicationshandler.ApproveApplicationRequest:
-    properties:
-      polling_unit_id:
-        type: integer
-      role_type:
-        type: string
-    type: object
-  paapplicationshandler.RejectApplicationRequest:
-    properties:
-      reason:
-        type: string
-    type: object
-  paapplicationshandler.SubmitApplicationRequest:
-    properties:
-      avatar:
-        type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_lga:
-        type: integer
-      current_state:
-        type: integer
-      election_group_id:
-        type: integer
-      election_group_ids:
-        items:
-          type: integer
-        type: array
-      party_id:
-        type: integer
-      polling_unit_id:
-        type: integer
-      vin:
-        type: string
-      voters_card_image:
-        type: string
-    type: object
-  partieshandler.BuySlotsRequest:
-    properties:
-      quantity:
-        type: integer
-    type: object
   partieshandler.CreatePartyRequest:
     properties:
       logo:
@@ -1210,21 +928,6 @@ definitions:
         type: string
       short_name:
         type: string
-    type: object
-  partieshandler.DepositAllowanceRequest:
-    properties:
-      amount_kobo:
-        type: integer
-    type: object
-  partieshandler.SetPartyDiscountRequest:
-    properties:
-      discount_percentage:
-        type: number
-    type: object
-  partieshandler.SetSlotPriceRequest:
-    properties:
-      price_kobo:
-        type: integer
     type: object
   partieshandler.DepositAllowanceRequest:
     properties:
@@ -1831,14 +1534,8 @@ definitions:
         type: string
       polling_unit_id:
         type: integer
-      polling_unit_id:
-        type: integer
       role:
         type: string
-      role_level:
-        type: string
-      state_of_origin:
-        type: integer
       role_level:
         type: string
       state_of_origin:
@@ -1846,17 +1543,6 @@ definitions:
       updated_at:
         type: string
       username:
-        type: string
-    type: object
-  usershandler.UserWithdrawRequest:
-    properties:
-      amount_kobo:
-        type: integer
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
-      narration:
         type: string
     type: object
   usershandler.UserWithdrawRequest:
@@ -1961,75 +1647,6 @@ paths:
       summary: API Root
       tags:
       - root
-  /admin/parties/{id}/discount:
-    put:
-      consumes:
-      - application/json
-      description: Sets the slot discount percentage for a political party (Admin
-        only)
-      parameters:
-      - description: Party ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Discount request payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.SetPartyDiscountRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Party discount updated
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Set customized slot discount for a party
-      tags:
-      - Admin Parties
-  /admin/settings/slot-price:
-    get:
-      description: Retrieves the global, app-wide price of a single polling unit slot
-        in Kobo
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Global slot price retrieved
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get global slot price
-      tags:
-      - Admin Settings
-    put:
-      consumes:
-      - application/json
-      description: Updates the global, app-wide price of a single polling unit slot
-        in Kobo (Admin only)
-      parameters:
-      - description: Slot Price request payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/partieshandler.SetSlotPriceRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Global slot price updated
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Update global slot price
-      tags:
-      - Admin Settings
   /admin/parties/{id}/discount:
     put:
       consumes:
@@ -2379,38 +1996,6 @@ paths:
       summary: Login party member user
       tags:
       - Auth
-  /auth/partyapp/login:
-    post:
-      consumes:
-      - application/json
-      description: Authenticates a party member and returns access and refresh tokens
-      parameters:
-      - description: Party login credentials
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/authhandler.PartyLoginRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/authhandler.AdminLoginResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Login party member user
-      tags:
-      - Auth
   /auth/refresh:
     post:
       consumes:
@@ -2574,41 +2159,6 @@ paths:
       summary: Seed testing users
       tags:
       - Auth
-  /auth/seed:
-    post:
-      consumes:
-      - application/json
-      description: Batch registers testing users from formatted JSON data
-      parameters:
-      - description: List of users to seed
-        in: body
-        name: request
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/authservice.SeedUserRequest'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Users seeded successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Failed to seed users
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Seed testing users
-      tags:
-      - Auth
   /auth/verify_security_questions:
     post:
       consumes:
@@ -2714,10 +2264,6 @@ paths:
         in: query
         name: cursor
         type: string
-      - description: Party ID for stats
-        in: query
-        name: party_id
-        type: integer
       - description: Party ID for stats
         in: query
         name: party_id
@@ -2885,75 +2431,6 @@ paths:
             additionalProperties: true
             type: object
       summary: Update an election group
-      tags:
-      - ElectionGroups
-  /election-groups/{id}/elections:
-    get:
-      description: Fetches the list of elections associated with a specific election
-        group ID
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Elections fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid election group ID
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: List elections for an election group
-      tags:
-      - ElectionGroups
-  /election-groups/{id}/party-stats:
-    put:
-      consumes:
-      - application/json
-      description: Upserts party-specific statistics for an election group
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Upsert Stats payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Stats upserted successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid payload or parameters
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Upsert party election group stats
       tags:
       - ElectionGroups
   /election-groups/{id}/elections:
@@ -3780,7 +3257,6 @@ paths:
             additionalProperties: true
             type: object
       security:
-      - BearerAuth: []
       - BearerAuth: []
       summary: Create Ward elections
       tags:
@@ -5486,6 +4962,74 @@ paths:
       summary: Update polling unit assignment tracking (arrival, phases)
       tags:
       - PollingUnitAssignments
+  /polling-unit-final-results:
+    get:
+      description: Fetches a cursor-paginated list of final polling unit results with
+        details
+      parameters:
+      - description: Filter by Election Group ID
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by State ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Filter by Senatorial District ID
+        in: query
+        name: senatorial_district_id
+        type: integer
+      - description: Filter by Federal Constituency ID
+        in: query
+        name: federal_constituency_id
+        type: integer
+      - description: Filter by State Constituency ID
+        in: query
+        name: state_constituency_id
+        type: integer
+      - description: Filter by LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Filter by Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: Filter by presence of media
+        in: query
+        name: has_media
+        type: boolean
+      - description: Cursor (ID to paginate from)
+        in: query
+        name: cursor
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List Polling Unit Final Results
+      tags:
+      - Results
   /polling-unit-results:
     get:
       description: Fetches a cursor-paginated list of polling unit results with filters
@@ -6772,52 +6316,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      security:
-      - BearerAuth: []
       summary: List users
-      tags:
-      - Users
-  /users/{id}/wallet:
-    post:
-      consumes:
-      - application/json
-      description: Manually provisions a Monnify reserved virtual account for a user
-        that does not yet have a wallet.
-      parameters:
-      - description: User Fake ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Wallet created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid ID
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: User not found
-          schema:
-            additionalProperties: true
-            type: object
-        "409":
-          description: Wallet already exists
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Create a wallet for a user (admin / recovery)
       tags:
       - Users
   /users/{id}/wallet:
@@ -6887,121 +6386,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      security:
-      - BearerAuth: []
       summary: Get current user profile
-      tags:
-      - Users
-  /users/me/wallet:
-    get:
-      consumes:
-      - application/json
-      description: Returns the virtual account details and current balance (in Kobo)
-        for the logged-in user.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Wallet fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Wallet not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get current user's wallet
-      tags:
-      - Users
-  /users/me/wallet/transactions:
-    get:
-      consumes:
-      - application/json
-      description: Returns a paginated list of credit/debit transactions for the logged-in
-        user's wallet, ordered newest first.
-      parameters:
-      - description: Number of results (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Offset for pagination (default 0)
-        in: query
-        name: offset
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Transactions fetched successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Wallet not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List current user's wallet transactions
-      tags:
-      - Users
-  /users/me/wallet/withdraw:
-    post:
-      consumes:
-      - application/json
-      description: Debits the user's wallet balance and records a withdrawal transaction.
-      parameters:
-      - description: Withdrawal payload
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/usershandler.UserWithdrawRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Withdrawal recorded
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid payload
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "402":
-          description: Insufficient funds
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Wallet not found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Withdraw from current user's wallet
       tags:
       - Users
   /users/me/wallet:
@@ -7153,32 +6538,7 @@ paths:
             type: object
       security:
       - BearerAuth: []
-      security:
-      - BearerAuth: []
       summary: Update user profile
-      tags:
-      - Users
-  /users/wallets/provision-missing:
-    post:
-      consumes:
-      - application/json
-      description: Iterates over all existing users and provisions a Monnify reserved
-        account wallet for any user that currently lacks one. Used primarily for testing
-        and manual recovery.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Provisioning details
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Provision missing wallets for users
       tags:
       - Users
   /users/wallets/provision-missing:
@@ -7418,29 +6778,6 @@ paths:
       summary: Update a ward
       tags:
       - Wards
-  /webhooks/monnify:
-    post:
-      consumes:
-      - application/json
-      description: Receives and processes Monnify payment notification events. Verifies
-        the HMAC-SHA512 signature, then credits the appropriate party wallet for SUCCESSFUL_TRANSACTION
-        events.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Event processed
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid signature or payload
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Monnify payment webhook
-      tags:
-      - Webhooks
   /webhooks/monnify:
     post:
       consumes:

@@ -113,6 +113,15 @@ func (s *PartiesService) GetPartyByID(ctx context.Context, id int64) (queries.Pa
 	return s.queries.GetPartyByID(ctx, id)
 }
 
+// GetPartyBasicInfo retrieves basic party info.
+func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int64) *queries.GetPartyBasicInfoRow {
+	party, err := s.queries.GetPartyBasicInfo(ctx, partyID)
+	if err != nil {
+		return nil
+	}
+	return &party
+}
+
 // GetPartyByShortName returns a party by its short name (e.g. "APC").
 func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error) {
 	return s.queries.GetPartyByShortName(ctx, shortName)
@@ -131,9 +140,6 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 		Name:      name,
 		Logo:      logo,
 	})
-	if err == nil {
-		s.clearPartyCache(ctx, id)
-	}
 	return party, err
 }
 
