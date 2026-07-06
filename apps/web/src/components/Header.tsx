@@ -3,6 +3,8 @@
 // the shadcn sidebar component can be found at: https://ui.shadcn.com/docs/components/radix/sidebar
 // the shadcn blocks can be found at: https://ui.shadcn.com/blocks
 
+import { motion } from "framer-motion";
+
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +26,6 @@ import {
   PopoverContent,
   PopoverTrigger,
   PopoverHeader,
-  PopoverDescription,
 } from "@repo/ui/components/popover";
 
 import LogoIcon from "@repo/ui/icons/logo-icon";
@@ -38,11 +39,12 @@ import ProfileIcon from "@repo/ui/icons/navbar/profile-icon";
 import ProfileSolidIcon from "@repo/ui/icons/navbar/profile-solid-icon";
 import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
+import DashboardIcon from "@repo/ui/icons/navbar/dashboard-icon";
 
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "@repo/ui/lib/utils";
 
-import { Ellipsis, PanelRightClose, PanelLeftClose, Sun, Moon, Monitor } from "lucide-react";
+import { Ellipsis, PanelRightClose, PanelLeftClose, Sun, Moon, Monitor, Menu } from "lucide-react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, type CSSProperties, type ReactNode } from "react";
 
@@ -53,7 +55,7 @@ import { updateAuthState } from "@/redux/slice/authSlice";
 import type { UserProps } from "@/redux/slice/authSlice";
 import { logoutUser } from "#/lib/server/auth/auth";
 // import { useIsMobile } from "@repo/ui/hooks/useMobile";
-import { APP_URL } from "#/lib/config";
+import { APP_URL, APP_NAME } from "#/lib/config";
 import { useTheme } from "#/components/ThemeToggle";
 
 type AppSidebarItem = {
@@ -64,40 +66,49 @@ type AppSidebarItem = {
   href?: string;
 };
 
+const ICON_CLASS = "size-4! md:size-6!";
+
 const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "home",
     label: "Home",
-    icon: <HomeIcon className="size-6!" />,
-    selectedIcon: <HomeSolidIcon className="size-6!" />,
+    icon: <HomeIcon className={ICON_CLASS} />,
+    selectedIcon: <HomeSolidIcon className={ICON_CLASS} />,
+    href: "/",
+  },
+  {
+    id: "dashboard",
+    label: "Dashboard",
+    icon: <DashboardIcon className={ICON_CLASS} />,
+    selectedIcon: <DashboardIcon className={ICON_CLASS} fill={"black"} stroke="white" />,
     href: "/dashboard",
   },
   {
     id: "feed",
     label: "Feed",
-    icon: <FeedIcon className="size-6!" />,
-    selectedIcon: <FeedSolidIcon className="size-6!" />,
+    icon: <FeedIcon className={ICON_CLASS} />,
+    selectedIcon: <FeedSolidIcon className={ICON_CLASS} />,
     href: "/feed",
   },
   {
     id: "search",
     label: "Search",
-    icon: <SearchIcon className="size-6!" />,
-    selectedIcon: <SearchSolidIcon className="size-6!" />,
+    icon: <SearchIcon className={ICON_CLASS} />,
+    selectedIcon: <SearchSolidIcon className={ICON_CLASS} />,
     href: "/search",
   },
   {
     id: "notifications",
     label: "Notifications",
-    icon: <NotificationIcon className="size-6!" />,
-    selectedIcon: <NotificationSolidIcon className="size-6!" />,
+    icon: <NotificationIcon className={ICON_CLASS} />,
+    selectedIcon: <NotificationSolidIcon className={ICON_CLASS} />,
     href: "/notifications",
   },
   {
     id: "profile",
     label: "Profile",
-    icon: <ProfileIcon className="size-6!" />,
-    selectedIcon: <ProfileSolidIcon className="size-6!" />,
+    icon: <ProfileIcon className={ICON_CLASS} />,
+    selectedIcon: <ProfileSolidIcon className={ICON_CLASS} />,
     href: "/profile",
   },
 ];
@@ -107,6 +118,8 @@ export function AppSidebarShell({ userDetails, sitePreference }: { userDetails?:
   const preloadedSiteState = sitePreference;
   const location = useLocation();
   const isAuthPage = location.pathname.startsWith("/auth");
+  const { user: authUser } = useAppSelector((state) => state.auth);
+  const user = authUser || userDetails;
 
   if (isAuthPage) {
     return null;
@@ -114,7 +127,7 @@ export function AppSidebarShell({ userDetails, sitePreference }: { userDetails?:
 
 
   return (
-    <div className="fixed">
+    <div className="fixed top-0">
       <SidebarProvider
         id="sidebar-wrapper"
         defaultOpen={preloadedSiteState?.sideBarState === "expanded"}
@@ -132,10 +145,34 @@ export function AppSidebarShell({ userDetails, sitePreference }: { userDetails?:
         </TooltipProvider>
 
         {/* Collapsing of the sidebar */}
-        <main className="flex min-h-dvh flex-1 flex-col md:hidden">
-          <div className="flex items-center justify-between px-4 pt-4">
+        <main className="bg-sidebar h-12 flex flex-1 flex-col ">
+          <div className="flex items-center justify-between px-4 w-dvw py-2 md:hidden">
+            {/* { logo } */}
+            <motion.div
+              className=""
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
+              <Link to={APP_URL.home}>
+                <LogoIcon className="size-8 shrink-0 text-logo" />
+              </Link>
+            </motion.div>
+
             {/* Sidebar trigger button with an optional image, The image is only visible on mobile devices */}
-            <SidebarTrigger className="bg-white hover:bg-white opacity-100" img={userDetails?.avatar_url || "https://github.com/shadcn.png"} />
+            <div className="relative overflow-hidden w-8 h-8">
+              {/* if user is authenticated, show user avatar, else show menu icon */}
+              {user ? (
+                <SidebarTrigger
+                  className="w-8 h-8! py-0 rounded-full hover:bg-white opacity-100"
+                  img={user?.avatar_url}
+                />
+              ) : (
+                <SidebarTrigger className="w-8 h-8! py-0">
+                  <Menu className="size-6" />
+                </SidebarTrigger>
+              )}
+            </div>
           </div>
         </main>
       </SidebarProvider>
@@ -154,9 +191,9 @@ export function AppSidebar({ userDetails }: { userDetails?: UserProps; sitePrefe
   return (
     <Sidebar
       collapsible="icon"
-      className="bg-sidebar md:data-[side=left]:left-0"
+      className="md:data-[side=left]:left-0"
     >
-      <div className="flex h-full flex-col px-4 py-7">
+      <div className="bg-sidebar-mobile md:bg-sidebar flex h-full flex-col px-4 py-7">
         {/* This component is responsible for rendering the logo of the application */}
         <LogoComponent />
 
@@ -168,12 +205,13 @@ export function AppSidebar({ userDetails }: { userDetails?: UserProps; sitePrefe
               ))}
             </SidebarMenu>
           </SidebarGroup>
-
-          {sideBarState === "expanded" && (
-            <div className="mt-4 flex flex-col gap-3 px-1">
-              <SidebarPollButton>Will you be voting?</SidebarPollButton>
-            </div>
-          )}
+          {/*
+            you can add custom components here
+            e.g:
+              <div className="mt-4 flex flex-col gap-3 px-1">
+                <SidebarPollButton>Will you be voting?</SidebarPollButton>
+              </div>
+          */}
         </SidebarContent>
 
         <SidebarFooter className="py-4 px-0">
@@ -189,44 +227,56 @@ function useActiveItem(): string {
   const location = useLocation();
   let activeItem: string = "";
 
-  for (const item of APP_SIDEBAR_ITEMS) {
-    if (item.href && location.pathname.startsWith(item.href)) {
+  APP_SIDEBAR_ITEMS.forEach((item) => {
+    if (item.href === location.pathname) {
       activeItem = item.id;
-      break;
+      return;
     }
-  }
+  })
 
   return activeItem;
 }
 
 function EachLinkComponent({ item }: { item: AppSidebarItem }) {
   const activeItemFromUrl = useActiveItem();
-  const { state: sideBarState } = useSidebar();
+  const { state: sideBarState, setOpenMobile, isMobile } = useSidebar();
   const isActive = item.id === activeItemFromUrl;
 
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem
+      className={cn(
+        isActive ? "bg-sidebar-active md:bg-transparent " : "",
+      )}
+    >
       <SidebarMenuButton
         asChild
         isActive={isActive}
         tooltip={item.label}
-        className={cn(
-          "h-14 rounded-[16px] px-5 text-[18px] transition-all duration-300 cursor-pointer",
-          isActive
-            ? "bg-sidebar-active! text-(--text-80)! hover:bg-sidebar-active-hover! hover:text-white!"
-            : "hover:bg-c-10 text-[#181818] hover:text-[#181818]",
+        className={cn(`
+          h-8 md:h-12 py-0! px-0 md:px-5 text-[15px] md:text-[18px] rounded-[16px] cursor-pointer transition-all duration-300
+          hover:bg-c-10  dark:hover:bg-black`,
+          isActive ? "md:bg-sidebar-active! " : "",
           sideBarState === "collapsed" && "justify-center my-3"
         )}
       >
         <Link
           to={item.href}
-          className="p-0"
+          className={cn(
+            `p-0`,
+            sideBarState != "collapsed" && "justify-start"
+          )}
           style={{ padding: "0px !important" }}
+          onClick={() => {
+            // Automatically closes the sidebar overlay on mobile devices once a navigation link is clicked.
+            if (isMobile) {
+              setOpenMobile(false);
+            }
+          }}
         >
-          <div className="relative -right-1 size-8 py-2 flex shrink-0 items-center justify-center">
+          <div className="relative -right-1 size-4 md:size-8 py-2 flex shrink-0 items-center justify-center">
             {isActive ? item.selectedIcon : item.icon}
           </div>
-          <span className={cn("whitespace-nowrap")}>
+          <span className={cn("useForBarWidth whitespace-nowrap max-md:w-[80%]")}>
             {item.label}
           </span>
         </Link>
@@ -236,13 +286,16 @@ function EachLinkComponent({ item }: { item: AppSidebarItem }) {
 }
 
 function LogoComponent() {
-  const { state: sideBarState, toggleSidebar } = useSidebar();
+  const { state: sideBarState, toggleSidebar, isMobile } = useSidebar();
 
   let flexDir = "flex-row";
   try {
     flexDir = sideBarState === "collapsed" ? "flex-col" : "flex-row";
   } catch (error) {
-    console.error(error);
+  }
+
+  if (isMobile) {
+    flexDir = "flex-row";
   }
 
   return (
@@ -250,10 +303,12 @@ function LogoComponent() {
       className={cn(`mb-7 flex ${flexDir} justify-between items-center gap-3 px-2 text-logo`, sideBarState === "collapsed" && "px-0")}
     >
       <div className="flex items-center gap-2">
-        <LogoIcon className="size-8 shrink-0" />
+        <Link to={APP_URL.home}>
+          <LogoIcon className="size-8 shrink-0" />
+        </Link>
         {sideBarState === "expanded" && (
           <div className="text-[20px] font-semibold tracking-[-0.04em]">
-            Free9ja
+            {APP_NAME}
           </div>
         )}
       </div>
@@ -267,19 +322,11 @@ function LogoComponent() {
   );
 }
 
-// SidebarPollButton renders a styled button typically used for polls within a sidebar context.
-function SidebarPollButton({ children }: { children: ReactNode }) {
-  return (
-    <button className="flex h-[62px] items-center justify-center rounded-full border border-[#e6dfdf] bg-white text-center text-[18px] font-semibold text-[#1d2c27] transition hover:bg-[#faf8f8]">
-      {children}
-    </button>
-  );
-}
 
 // ProfilePicture renders the user's profile picture or a default avatar.
 // It uses the user data from the auth store or the userDetails prop.
 function ProfilePicture({ userDetails }: { userDetails?: UserProps }) {
-  const { state: sideBarState } = useSidebar();
+  const { state: sideBarState, isMobile, openMobile } = useSidebar();
   const { user: authUser, userHydrated } = useAppSelector((state) => state.auth);
   const user = authUser || userDetails;
 
@@ -304,8 +351,9 @@ function ProfilePicture({ userDetails }: { userDetails?: UserProps }) {
     }
   }
 
-  // If the sidebar is collapsed, show a popover with the profile picture
-  if (sideBarState === "collapsed") {
+  // If the sidebar is collapsed and not open on mobile, show a popover with the profile picture
+  // The sideBarState remains 'collapsed' on mobile, so we check openMobile to see if it's actually expanded
+  if (sideBarState === "collapsed" && !(isMobile && openMobile)) {
     return (
       <Popover>
         {/* The trigger element is the avatar */}
@@ -316,30 +364,30 @@ function ProfilePicture({ userDetails }: { userDetails?: UserProps }) {
         </PopoverTrigger>
 
         {/* The content of the popover is the profile picture */}
-        <PopoverContent>
+        {/* Fix: 'pointer-events-auto' overrides the mobile sidebar modal locking pointer events, allowing buttons to be clickable. */}
+        <PopoverContent className="pointer-events-auto">
           <ProfilePicturePopover userDetails={user} />
         </PopoverContent>
       </Popover>
     );
   }
-
   // If the sidebar is expanded, show a popover with the profile picture, name, and username
   return (
     <Popover>
       {/* The trigger element is a div that contains the avatar, name, and username */}
       <PopoverTrigger>
-        <div className="flex gap-4 p-4 bg-sidebar-active dark:hover:bg-c-10 rounded-full cursor-pointer" style={{ width: "260px" }}>
-          <div className="flex-none">
-            {/* The avatar */}
+        {/* style={{ width: "260px" }} */}
+        <div className="flex gap-2 md:gap-3 w-full md:w-[260px] p-4 bg-sidebar-active dark:hover:bg-c-10 rounded-full cursor-pointer" >
+          <div className="md:flex-none">
             <Avatar className="size-12 bg-[#f0f0ef]">
               <AvatarImage src={user?.avatar_url} alt={user?.username || "User"} />
             </Avatar>
           </div>
           <div className="flex-1">
-            <p className="text-[16px] font-semibold text-c-100 dark:text-logo py-px truncate overflow-hidden" style={{ maxWidth: "160px" }}>
+            <p className="text-[15px] md:text-[14px] font-semibold text-c-100 dark:text-logo mt-1 py-px text-left capitalize truncate overflow-hidden" style={{ maxWidth: "160px" }}>
               {user?.last_name} {user?.first_name}
             </p>
-            <p className="mt-1 text-[14px] text-c-80 dark:text-logo/80 truncate overflow-hidden" style={{ maxWidth: "160px" }}>
+            <p className="mt-1 text-[12px] md:text-[12px] text-left text-c-80 dark:text-logo/80 truncate overflow-hidden" style={{ maxWidth: "160px" }}>
               @{user?.username}
             </p>
           </div>
@@ -350,8 +398,9 @@ function ProfilePicture({ userDetails }: { userDetails?: UserProps }) {
       </PopoverTrigger>
 
       {/* The content of the popover is the profile picture popover */}
-      <PopoverContent className="w-[260px]">
-        <ProfilePicturePopover userDetails={userDetails} />
+      {/* Fix: 'pointer-events-auto' overrides the mobile sidebar modal locking pointer events, allowing buttons to be clickable. */}
+      <PopoverContent className="w-[260px] pointer-events-auto">
+        <ProfilePicturePopover userDetails={user} />
       </PopoverContent>
     </Popover>
   );
@@ -371,7 +420,7 @@ function ProfilePicturePopover({ userDetails }: { userDetails?: UserProps }) {
     }
 
     dispatch(updateAuthState({ user: null }));
-    navigate({ to: APP_URL.homePage });
+    navigate({ to: APP_URL.dashboard });
   };
 
   return (
@@ -379,7 +428,7 @@ function ProfilePicturePopover({ userDetails }: { userDetails?: UserProps }) {
       <PopoverHeader className="px-3 pb-1 border-b border-border capitalize text-foreground font-semibold">
         {userDetails?.last_name} {userDetails?.first_name}
       </PopoverHeader>
-      <PopoverDescription className="mt-2 flex flex-col gap-2">
+      <div className="mt-2 flex flex-col gap-2">
         <span
           onClick={handleLogout}
           className="
@@ -393,7 +442,7 @@ function ProfilePicturePopover({ userDetails }: { userDetails?: UserProps }) {
         <div className="border-t border-border my-1" />
 
         <div className="px-3 py-1">
-          <p className="text-[12px] text-muted-foreground font-medium mb-2">Theme</p>
+          <div className="text-[12px] text-muted-foreground font-medium mb-2">Theme</div>
           <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
             <button
               onClick={() => setTheme('light')}
@@ -430,7 +479,7 @@ function ProfilePicturePopover({ userDetails }: { userDetails?: UserProps }) {
             </button>
           </div>
         </div>
-      </PopoverDescription>
+      </div>
     </>
   );
 }

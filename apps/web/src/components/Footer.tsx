@@ -1,44 +1,70 @@
-import type { CSSProperties } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
+import { motion } from 'framer-motion';
 import { useLocation } from '@tanstack/react-router';
 import { useIsMobile } from '@repo/ui/hooks/useMobile';
 import { useAppSelector } from '@/redux/hooks';
 import type { SiteState } from '@/redux/slice/siteSlice';
 import ThemeToggle from '#/components/ThemeToggle';
 
+/**
+ * Props for the Footer component.
+ */
 interface FooterProps {
+  /** Optional site preference state to manage layout constraints (e.g. sidebar width). */
   sitePreference?: SiteState | null;
 }
 
+/**
+ * Footer Component
+ * 
+ * Displays the application footer including copyright information, 
+ * technology stack, theme toggle, and social links. It adjusts its 
+ * layout dynamically based on the sidebar state, device type (mobile vs desktop), 
+ * and whether it is rendered on an authentication page.
+ */
 export default function Footer({ sitePreference }: FooterProps = {}) {
+  // Hooks to get current routing location and device view type
   const location = useLocation();
   const isMobile = useIsMobile();
-  const year = new Date().getFullYear();
+  const [mounted, setMounted] = useState(false);
+  const [footerStyle, setFooterStyle] = useState<CSSProperties | undefined>(undefined);
+  const year = new Date().getFullYear(); // current year to be displayed in the footer
+
+  // Determine if the current page is an authentication page
   const isAuthPage = location.pathname.startsWith('/auth');
+
+  // Access global site preferences from Redux store
   const reduxSitePreference = useAppSelector((state) => state.site);
 
+  // Fallback logic: Use Redux state if available and synced, otherwise use provided props or default values
   const isReduxSynced = reduxSitePreference.sideBarState !== "";
-  const allowOutletToBeResponsive = isReduxSynced ? reduxSitePreference.allowOutletToBeResponsive : (sitePreference?.allowOutletToBeResponsive ?? true);
-  const sidebarWidth = isReduxSynced ? reduxSitePreference.currentSideBarWidth : (sitePreference?.currentSideBarWidth || "16rem");
+  const sidebarWidth = isReduxSynced
+    ? reduxSitePreference.currentSideBarWidth
+    : (sitePreference?.currentSideBarWidth || "16rem");
 
 
-  const getFooterStyle = (): CSSProperties => {
-    if (isMobile || !allowOutletToBeResponsive || isAuthPage) {
-      return {
-        width: '100vw',
-        marginLeft: '0',
+  // Update the footer style based on the sidebar state and device type
+  useEffect(() => {
+    setMounted(true);
+    if (isMobile || isAuthPage) {
+      setFooterStyle(undefined);
+    } else {
+      setFooterStyle({
+        width: `calc(100vw - ${sidebarWidth})`,
+        marginLeft: `${sidebarWidth}`,
         transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
-      };
+      });
     }
-
-    return {
-      width: `calc(100vw - ${sidebarWidth})`,
-      marginLeft: `${sidebarWidth}`,
-      transition: 'width 0.2s ease-in-out, margin-left 0.2s ease-in-out',
-    };
-  };
+  }, [isMobile, isAuthPage, sidebarWidth]);
 
   return (
-    <footer style={getFooterStyle()} className="mt-20 border-t border-(--line) px-4 pb-14 pt-10 text-(--sea-ink-soft)">
+    <motion.footer
+      className="relative mt-10 border-t border-(--line) px-4 pb-14 pt-10 text-(--sea-ink-soft)"
+      style={footerStyle}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: mounted ? 1 : 0 }}
+      transition={{ delay: .3, duration: 0.5 }}
+    >
       <div className="page-wrap flex flex-col items-center justify-between gap-4 text-center sm:flex-row sm:text-left">
         <p className="m-0 text-sm">
           &copy; {year} Your name here. All rights reserved.
@@ -78,6 +104,6 @@ export default function Footer({ sitePreference }: FooterProps = {}) {
           </svg>
         </a>
       </div>
-    </footer>
+    </motion.footer>
   )
 }

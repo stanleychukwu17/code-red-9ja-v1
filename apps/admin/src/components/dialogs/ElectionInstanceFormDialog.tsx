@@ -17,6 +17,7 @@ import { SelectOffice } from "@repo/ui/components/selects/office-select";
 import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-bullet";
 import { getOffices } from "#/lib/server/offices";
 import { updateElection } from "#/lib/server/elections";
+import { getElectionGroups } from "#/lib/server/election_groups";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 
 export function ElectionInstanceFormDialog({
@@ -91,18 +92,20 @@ export function ElectionInstanceFormDialog({
       }
 
       const res = await updateElection({
-        id: electionInstance.id,
-        name: values.name.trim(),
-        candidates_count: Number(values.candidatesCount) || 0,
-        election_date: values.electionDate,
-        election_group_id: values.electionGroupId || 0,
-        office_id: values.officeId,
-        state_id: electionInstance.state_id,
-        senatorial_district_id: electionInstance.senatorial_district_id,
-        federal_constituency_id: electionInstance.federal_constituency_id,
-        state_constituency_id: electionInstance.state_constituency_id,
-        lga_id: electionInstance.lga_id,
-        ward_id: electionInstance.ward_id,
+        data: {
+          id: electionInstance.id,
+          name: values.name.trim(),
+          candidates_count: Number(values.candidatesCount) || 0,
+          election_date: values.electionDate,
+          election_group_id: values.electionGroupId || 0,
+          office_id: values.officeId,
+          state_id: electionInstance.state_id,
+          senatorial_district_id: electionInstance.senatorial_district_id,
+          federal_constituency_id: electionInstance.federal_constituency_id,
+          state_constituency_id: electionInstance.state_constituency_id,
+          lga_id: electionInstance.lga_id,
+          ward_id: electionInstance.ward_id,
+        },
       });
 
       if (!res.success) {
@@ -190,7 +193,7 @@ export function ElectionInstanceFormDialog({
                   children={(field) => (
                     <SelectOffice
                       selectedId={field.state.value}
-                      update={(val) => field.handleChange(val)}
+                      update={(val) => field.handleChange(val.id)}
                       fetchOffices={getOffices}
                       errorMsg={field.state.meta.errors?.join(", ")}
                     />
@@ -240,7 +243,7 @@ export function ElectionInstanceFormDialog({
                       form.setFieldValue("electionDate", item.election_date);
                     }
                   }}
-                  filterDate={selectedDateStr || undefined}
+                  fetchElectionGroups={getElectionGroups}
                 />
               )}
             />

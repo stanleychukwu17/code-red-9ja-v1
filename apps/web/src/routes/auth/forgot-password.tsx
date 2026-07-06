@@ -11,14 +11,14 @@ import { getPageHeader } from "@/lib/shared/meta";
 import { checkIfRefreshTokenInCookie, resetPassword } from "@/lib/server/auth/auth";
 import { APP_URL } from "@/lib/config";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { updateAuthState, updateOnboardingData } from "#/redux/slice/authSlice";
+import { updateOnboardingData } from "#/redux/slice/authSlice";
 
 export const Route = createFileRoute('/auth/forgot-password')({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status == "success") {
-      throw redirect({ to: APP_URL.homePage });
+    if (isAuthed.success) {
+      throw redirect({ to: APP_URL.home });
     }
   },
 
@@ -70,7 +70,7 @@ function RouteComponent() {
         }
       });
 
-      if (res.status !== "success") {
+      if (!res.success) {
         setServerError(res.message || "Failed to reset password");
         return;
       }

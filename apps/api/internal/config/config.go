@@ -45,6 +45,22 @@ type R2Config struct {
 	PublicURL string
 }
 
+// MonnifyConfig holds credentials for the Monnify payment gateway.
+// Used for creating reserved virtual accounts and verifying webhook signatures.
+type MonnifyConfig struct {
+	// BaseURL is the Monnify API root.
+	// Sandbox:    https://sandbox.monnify.com
+	// Production: https://api.monnify.com
+	BaseURL string
+
+	// APIKey and SecretKey are found on the Monnify Dashboard → Settings → API Keys.
+	APIKey    string
+	SecretKey string
+
+	// ContractCode identifies your business contract on Monnify.
+	ContractCode string
+}
+
 // Config holds the complete application configuration.
 // It includes environment settings, server port, and database configuration.
 type Config struct {
@@ -53,6 +69,8 @@ type Config struct {
 	Database             DatabaseConfig // Database connection configuration
 	Redis                RedisConfig    // Redis connection configuration
 	R2                   R2Config       // Cloudflare R2 storage configuration
+	Monnify              MonnifyConfig  // Monnify payment gateway configuration
+	GeminiAPIKey         string
 	JWTSecret            string
 	JWTAccessExpiration  time.Duration
 	JWTRefreshExpiration time.Duration
@@ -93,8 +111,25 @@ func LoadConfig() (*Config, error) {
 	if isCiCd == "true" {
 		slog.Info("Running in CI/CD environment, skipping .env file loading")
 	} else {
-		if err := godotenv.Load(envLocalPath, envPath); err != nil {
-			slog.Warn("No .env file found, relying on system environment variables")
+		// Load files only if they exist. We load envLocalPath first so that
+		// its values take precedence (godotenv.Load does not overwrite existing values).
+		var loaded bool
+		if _, err := os.Stat(envLocalPath); err == nil {
+			if err := godotenv.Load(envLocalPath); err == nil {
+				loaded = true
+			} else {
+				slog.Warn("Error loading .env.local file", "error", err)
+			}
+		}
+		if _, err := os.Stat(envPath); err == nil {
+			if err := godotenv.Load(envPath); err == nil {
+				loaded = true
+			} else {
+				slog.Warn("Error loading .env file", "error", err)
+			}
+		}
+		if !loaded {
+			slog.Warn("No .env or .env.local files were loaded, relying on system environment variables")
 		}
 	}
 
@@ -103,6 +138,7 @@ func LoadConfig() (*Config, error) {
 	db_pass := GetEnv("DB_PASSWORD", "")
 	db_name := GetEnv("DB_NAME", "")
 	db_port := GetEnv("DB_PORT", "")
+	db_sslmode := GetEnv("DB_SSLMODE", "disable")
 	redis_addr := GetEnv("REDIS_ADDR", "") //localhost:6379
 	redis_port := GetEnv("REDIS_PORT", "")
 	redis_password := GetEnv("REDIS_PASSWORD", "")
@@ -130,7 +166,7 @@ func LoadConfig() (*Config, error) {
 	}
 
 	// create db connection url
-	db_url := utils.FormatPostgresDSN(db_user, db_pass, db_host, db_port, db_name)
+	db_url := utils.FormatPostgresDSN(db_user, db_pass, db_host, db_port, db_name, db_sslmode)
 
 	// jwt secret and expirations
 	jwtSecret := GetEnv("JWT_SECRET", "free9ja_jwt_secret_key_for_dev_only")
@@ -165,6 +201,13 @@ func LoadConfig() (*Config, error) {
 			BucketName:      GetEnv("R2_BUCKET_NAME", ""),
 			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),
 		},
+		Monnify: MonnifyConfig{
+			BaseURL:      GetEnv("MONNIFY_BASE_URL", "https://sandbox.monnify.com"),
+			APIKey:       GetEnv("MONNIFY_API_KEY", ""),
+			SecretKey:    GetEnv("MONNIFY_SECRET_KEY", ""),
+			ContractCode: GetEnv("MONNIFY_CONTRACT_CODE", ""),
+		},
+		GeminiAPIKey:         GetEnv("GEMINI_API_KEY", ""),
 		JWTSecret:            jwtSecret,
 		JWTAccessExpiration:  jwtAccessExp,
 		JWTRefreshExpiration: jwtRefreshExp,

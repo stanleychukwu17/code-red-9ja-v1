@@ -116,7 +116,7 @@ export const deleteElection = createServerFn({ method: "POST" })
   });
 
 export const createNationwideElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; candidate_ids: number[] }) => data)
+  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; candidates: { candidate_id: number; party_id: number; party_short_name: string }[] }) => data)
   .handler(async ({ data }) => {
     try {
       const response = await fetch(API_URL.electionsNationwide, {
@@ -242,13 +242,13 @@ export const getElectionCandidates = createServerFn({ method: "GET" })
   });
 
 export const syncElectionCandidates = createServerFn({ method: "POST" })
-  .inputValidator((data: { electionId: string | number; candidateIds: number[] }) => data)
+  .inputValidator((data: { electionId: string | number; candidates: { candidate_id: number; party_id: number; party_short_name: string }[] }) => data)
   .handler(async ({ data }) => {
     try {
       const response = await fetch(API_URL.electionCandidates(data.electionId), {
         method: "POST",
         headers: getAuthHeaders(),
-        body: JSON.stringify({ candidate_ids: data.candidateIds }),
+        body: JSON.stringify({ candidates: data.candidates }),
       });
       const resData = await response.json();
       return resData;

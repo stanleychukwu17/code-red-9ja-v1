@@ -14,7 +14,9 @@ export const AuthWrapper = ({
   return (
     <main className="page-wrap px-4 pb-8 py-24 flex justify-center min-h-screen">
       <div className="max-w-[400px] w-full space-y-6">
-        <LogoIcon />
+        <div className="text-logo">
+          <LogoIcon />
+        </div>
         <div className="space-y-1">
           {type === "login" || type === "forgot-password" ? (
             <p className="text-2xl font-bold text-primary">
@@ -46,12 +48,12 @@ export const AuthWrapper = ({
           )}
 
           <p className="text-c-70 hover:text-c-90 cursor-pointer transition-colors duration-200">
-              <Link 
-                to={APP_URL.auth.securityQuestions}
-                search={{flow}}
-              >
-                Forgot password
-              </Link>
+            <Link
+              to={APP_URL.auth.securityQuestions}
+              search={{ flow }}
+            >
+              Forgot password
+            </Link>
           </p>
         </div>
       </div>

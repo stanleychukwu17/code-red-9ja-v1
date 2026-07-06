@@ -1,6 +1,6 @@
 import { Button } from "@repo/ui/components/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { APP_URL } from "@/lib/config";
+import { APP_URL, APP_NAME } from "@/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
 
 export const Route = createFileRoute("/")({
@@ -14,7 +14,7 @@ function App() {
   return (
     <main>
       <div className="max-w-[400px] mx-auto space-y-5">
-        <h1>Welcome to Free9ja</h1>
+        <h1>Welcome to, wetin dey happen {APP_NAME}</h1>
         <div className="flex gap-5 w-full">
           <Link to={APP_URL.auth.login} className="w-full">
             <Button variant="default" className="w-full px-10">

@@ -21,6 +21,6 @@
 //       return result;
 //     } catch (error) {
 //       console.error("Health check error:", error);
-//       return { status: "error", message: "Failed to check server health" };
+//       return { success: false, message: "Failed to check server health" };
 //     }
 //   });

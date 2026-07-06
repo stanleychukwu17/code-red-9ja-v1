@@ -3,6 +3,7 @@ import { SelectProps } from "../../lib/types";
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { GeneralCommand } from "../command/general-command";
+import { DrawerList } from "../command/drawer-list";
 import { LoadingSelect } from "./loading-select";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { useQuery } from "@tanstack/react-query";
@@ -28,13 +29,15 @@ export const SelectCountry = ({
   errorMsg,
   selectedId,
   className,
+  disabled,
   align = "start",
   fetchCountries,
 }: SelectProps<Country> & {
   fetchCountries: () => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [desktopSearch, setDesktopSearch] = useState("");
+  const [mobileSearch, setMobileSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<Country | undefined>(
     undefined,
   );
@@ -43,9 +46,7 @@ export const SelectCountry = ({
     queryKey: ["countries"],
     queryFn: async () => {
       const res = await fetchCountries();
-      if (res && res.success && res.data) {
-        return res;
-      }
+      if (res && res.success && res.data) return res;
       throw new Error(res?.message || "Failed to fetch countries");
     },
   });
@@ -57,13 +58,15 @@ export const SelectCountry = ({
       const country = countries.find(
         (c) => String(c.id) === String(selectedId),
       );
-      if (country) {
-        setSelectedItem(country);
-      }
+      if (country) setSelectedItem(country);
     } else {
       setSelectedItem(undefined);
     }
   }, [selectedId, countries]);
+
+  useEffect(() => {
+    if (!open) setMobileSearch("");
+  }, [open]);
 
   const handleSelect = (item: Country) => {
     setSelectedItem(item);
@@ -71,11 +74,21 @@ export const SelectCountry = ({
     setOpen(false);
   };
 
-  const filteredCountries = countries.filter((country) =>
-    country.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredCountries = countries.filter((c) =>
+    c.name.toLowerCase().includes(desktopSearch.toLowerCase()),
+  );
+  const mobileFiltered = countries.filter((c) =>
+    c.name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
-  // Show loading state while countries are loading
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
+  const getId = (item: Country) => `${item.id}`;
+  const getName = (item: Country) => item.name;
+
   if (isLoading && countries.length === 0) {
     return (
       <LoadingSelect
@@ -99,12 +112,14 @@ export const SelectCountry = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between w-full gap-2",
             errorMsg && "border-0.8 border-red",
             className,
           )}
           type="button"
+          disabled={disabled}
         >
           <p className="whitespace-normal text-left line-clamp-1">
             {selectedItem ? selectedItem.name : "Country"}
@@ -112,21 +127,27 @@ export const SelectCountry = ({
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }
-    >
-      <GeneralCommand
-        data={filteredCountries}
-        getId={(item: Country) => `${item.id}`}
-        getName={(item: Country) => item.name}
-        handleSelect={handleSelect}
-        selectedId={
-          selectedItem?.id
-            ? `${selectedItem.id}`
-            : selectedId
-              ? `${selectedId}`
-              : undefined
-        }
-        onSearch={setSearchQuery}
-      />
-    </SelectResponsiveWrapper>
+      desktopContent={
+        <GeneralCommand
+          data={filteredCountries}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleSelect}
+          selectedId={currentSelectedId}
+          onSearch={setDesktopSearch}
+        />
+      }
+      mobileContent={
+        <DrawerList
+          data={mobileFiltered}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleSelect}
+          selectedId={currentSelectedId}
+          searchValue={mobileSearch}
+          onSearch={setMobileSearch}
+        />
+      }
+    />
   );
 };

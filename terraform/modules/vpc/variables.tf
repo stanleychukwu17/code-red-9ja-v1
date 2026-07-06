@@ -32,3 +32,10 @@ variable "database_subnet_cidrs" {
   type        = list(string)
   description = "CIDR blocks for database/cache subnets (RDS, Redis)"
 }
+
+variable "enable_nat_gateway" {
+  type        = bool
+  description = "Whether to create a NAT Gateway and route private subnet traffic through it"
+  default     = true
+}
+

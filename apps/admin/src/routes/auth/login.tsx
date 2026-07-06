@@ -6,20 +6,24 @@ import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { useAppDispatch } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
-import { loginAdmin, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
+import {
+  loginAdmin,
+  refreshUserToken,
+} from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
-    const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status === "success") {
+    const res = await refreshUserToken();
+    if (res.status === "success" && res.user?.role === "admin") {
       throw redirect({ to: "/home" });
     }
   },
-  head: () => getPageHeader({
-    title: "Log in - Free9ja Admin",
-    description: "Log in to your Free9ja Admin account",
-  }),
+  head: () =>
+    getPageHeader({
+      title: "Log in - Free9ja Admin",
+      description: "Log in to your Free9ja Admin account",
+    }),
   component: LoginComponent,
 });
 
@@ -39,8 +43,8 @@ function LoginComponent() {
       try {
         const response = await loginAdmin({ data: value });
 
-        if (response.status === "success") {
-          dispatch(updateAuthState({ user: response.user }));
+        if (response.success) {
+          dispatch(updateAuthState({ user: response.data?.user }));
           navigate({ to: "/home" });
         } else {
           setErrorMsg(response.message || "Invalid email or password.");
@@ -56,7 +60,9 @@ function LoginComponent() {
       {/* Top Header Logo */}
       <div className="flex items-center gap-2 text-[#234f3e]">
         <LogoIcon className="size-8 shrink-0" />
-        <span className="text-[24px] font-semibold tracking-[-0.04em]">Free9ja.</span>
+        <span className="text-[24px] font-semibold tracking-[-0.04em]">
+          Free9ja.
+        </span>
       </div>
 
       {/* Center Form */}

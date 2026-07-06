@@ -31,7 +31,8 @@ import { APP_URL } from "#/lib/config";
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const res = await refreshUserToken();
-    if (res.status !== "success") {
+    console.log("✌️ RES:", res);
+    if (res.status !== "success" || res.user?.role !== "admin") {
       throw redirect({ to: "/auth/login" });
     }
   },

@@ -100,7 +100,11 @@ export function NationwideElectionFormDialog({
           office_id: values.officeId,
           election_date: values.electionDate,
           election_group_id: values.electionGroupId,
-          candidate_ids: candidates.map((c) => c.id),
+          candidates: candidates.map((c) => ({
+            candidate_id: c.id,
+            party_id: c.party_id!,
+            party_short_name: c.party_short_name,
+          })),
         },
       });
 

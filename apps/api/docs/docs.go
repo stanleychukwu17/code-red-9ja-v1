@@ -367,6 +367,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/partyapp/login": {
+            "post": {
+                "description": "Authenticates a party member and returns access and refresh tokens",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Login party member user",
+                "parameters": [
+                    {
+                        "description": "Party login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.PartyLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/refresh": {
             "post": {
                 "description": "Handles token rotation using a valid refresh token",
@@ -4768,6 +4816,22 @@ const docTemplate = `{
                 }
             }
         },
+        "authhandler.PartyLoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 4
+                }
+            }
+        },
         "authhandler.RefreshRequest": {
             "type": "object",
             "properties": {
@@ -5036,6 +5100,9 @@ const docTemplate = `{
                 "last_name": {
                     "type": "string"
                 },
+                "party": {
+                    "$ref": "#/definitions/queries.Party"
+                },
                 "role": {
                     "type": "string"
                 },
@@ -5185,34 +5252,222 @@ const docTemplate = `{
             }
         },
         "electiongroupshandler.CreateElectionGroupRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "elections_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "states_count": {
+                    "type": "integer"
+                }
+            }
         },
         "electiongroupshandler.UpdateElectionGroupRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "elections_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "states_count": {
+                    "type": "integer"
+                }
+            }
         },
         "electionshandler.CreateElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "candidates_count": {
+                    "type": "integer"
+                },
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "federal_constituency_id": {
+                    "type": "integer"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "senatorial_district_id": {
+                    "type": "integer"
+                },
+                "state_constituency_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
         },
         "electionshandler.CreateFederalConstituencyElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "federal_constituency_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "office_id": {
+                    "type": "integer"
+                }
+            }
         },
         "electionshandler.CreateLgaElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "lga_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "office_id": {
+                    "type": "integer"
+                }
+            }
         },
         "electionshandler.CreateNationwideElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "candidate_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                }
+            }
         },
         "electionshandler.CreateSenatorialDistrictElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "senatorial_district_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
         },
         "electionshandler.CreateStateConstituencyElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "state_constituency_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
         },
         "electionshandler.CreateStateElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "state_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
         },
         "electionshandler.CreateWardElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "ward_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
         },
         "electionshandler.SyncCandidatesRequest": {
             "type": "object",
@@ -5226,7 +5481,42 @@ const docTemplate = `{
             }
         },
         "electionshandler.UpdateElectionRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "candidates_count": {
+                    "type": "integer"
+                },
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "federal_constituency_id": {
+                    "type": "integer"
+                },
+                "lga_id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "senatorial_district_id": {
+                    "type": "integer"
+                },
+                "state_constituency_id": {
+                    "type": "integer"
+                },
+                "state_id": {
+                    "type": "integer"
+                },
+                "ward_id": {
+                    "type": "integer"
+                }
+            }
         },
         "federalconstituencieshandler.CreateFederalConstituencyRequest": {
             "type": "object",
@@ -5397,6 +5687,34 @@ const docTemplate = `{
                 },
                 "short_name": {
                     "type": "string"
+                }
+            }
+        },
+        "pgtype.InfinityModifier": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                1,
+                0,
+                -1
+            ],
+            "x-enum-varnames": [
+                "Infinity",
+                "Finite",
+                "NegativeInfinity"
+            ]
+        },
+        "pgtype.Timestamptz": {
+            "type": "object",
+            "properties": {
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
                 }
             }
         },
@@ -5589,6 +5907,29 @@ const docTemplate = `{
                 },
                 "ward_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "queries.Party": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 }
             }
         },
@@ -6028,6 +6369,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "role": {
+                    "type": "string"
+                },
+                "role_level": {
                     "type": "string"
                 },
                 "updated_at": {
