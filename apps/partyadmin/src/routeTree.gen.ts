@@ -30,8 +30,11 @@ import { Route as AuthenticatedPartyShortNameHomeElectionDayRouteImport } from '
 import { Route as AuthenticatedPartyShortNameElectionsInstancesRouteImport } from './routes/_authenticated/$partyShortName/elections/instances'
 import { Route as AuthenticatedPartyShortNameApplicationsRejectedRouteImport } from './routes/_authenticated/$partyShortName/applications/rejected'
 import { Route as AuthenticatedPartyShortNameApplicationsAcceptedRouteImport } from './routes/_authenticated/$partyShortName/applications/accepted'
+import { Route as AuthenticatedPartyShortNameHomeUpdatesRouteRouteImport } from './routes/_authenticated/$partyShortName/home/updates/route'
 import { Route as AuthenticatedPartyShortNameHomeResultsRouteRouteImport } from './routes/_authenticated/$partyShortName/home/results/route'
+import { Route as AuthenticatedPartyShortNameHomeUpdatesIndexRouteImport } from './routes/_authenticated/$partyShortName/home/updates/index'
 import { Route as AuthenticatedPartyShortNameHomeResultsIndexRouteImport } from './routes/_authenticated/$partyShortName/home/results/index'
+import { Route as AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRouteImport } from './routes/_authenticated/$partyShortName/home/updates/media-only'
 import { Route as AuthenticatedPartyShortNameHomeResultsMediaOnlyRouteImport } from './routes/_authenticated/$partyShortName/home/results/media-only'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
@@ -156,17 +159,35 @@ const AuthenticatedPartyShortNameApplicationsAcceptedRoute =
     path: '/accepted',
     getParentRoute: () => AuthenticatedPartyShortNameApplicationsRoute,
   } as any)
+const AuthenticatedPartyShortNameHomeUpdatesRouteRoute =
+  AuthenticatedPartyShortNameHomeUpdatesRouteRouteImport.update({
+    id: '/home/updates',
+    path: '/home/updates',
+    getParentRoute: () => AuthenticatedPartyShortNameRoute,
+  } as any)
 const AuthenticatedPartyShortNameHomeResultsRouteRoute =
   AuthenticatedPartyShortNameHomeResultsRouteRouteImport.update({
     id: '/home/results',
     path: '/home/results',
     getParentRoute: () => AuthenticatedPartyShortNameRoute,
   } as any)
+const AuthenticatedPartyShortNameHomeUpdatesIndexRoute =
+  AuthenticatedPartyShortNameHomeUpdatesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedPartyShortNameHomeUpdatesRouteRoute,
+  } as any)
 const AuthenticatedPartyShortNameHomeResultsIndexRoute =
   AuthenticatedPartyShortNameHomeResultsIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedPartyShortNameHomeResultsRouteRoute,
+  } as any)
+const AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute =
+  AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRouteImport.update({
+    id: '/media-only',
+    path: '/media-only',
+    getParentRoute: () => AuthenticatedPartyShortNameHomeUpdatesRouteRoute,
   } as any)
 const AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute =
   AuthenticatedPartyShortNameHomeResultsMediaOnlyRouteImport.update({
@@ -187,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/$partyShortName/users': typeof AuthenticatedPartyShortNameUsersRoute
   '/$partyShortName/wallet': typeof AuthenticatedPartyShortNameWalletRouteWithChildren
   '/$partyShortName/home/results': typeof AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren
+  '/$partyShortName/home/updates': typeof AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren
   '/$partyShortName/applications/accepted': typeof AuthenticatedPartyShortNameApplicationsAcceptedRoute
   '/$partyShortName/applications/rejected': typeof AuthenticatedPartyShortNameApplicationsRejectedRoute
   '/$partyShortName/elections/instances': typeof AuthenticatedPartyShortNameElectionsInstancesRoute
@@ -198,7 +220,9 @@ export interface FileRoutesByFullPath {
   '/$partyShortName/party-members/': typeof AuthenticatedPartyShortNamePartyMembersIndexRoute
   '/$partyShortName/wallet/': typeof AuthenticatedPartyShortNameWalletIndexRoute
   '/$partyShortName/home/results/media-only': typeof AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute
+  '/$partyShortName/home/updates/media-only': typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute
   '/$partyShortName/home/results/': typeof AuthenticatedPartyShortNameHomeResultsIndexRoute
+  '/$partyShortName/home/updates/': typeof AuthenticatedPartyShortNameHomeUpdatesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -218,7 +242,9 @@ export interface FileRoutesByTo {
   '/$partyShortName/party-members': typeof AuthenticatedPartyShortNamePartyMembersIndexRoute
   '/$partyShortName/wallet': typeof AuthenticatedPartyShortNameWalletIndexRoute
   '/$partyShortName/home/results/media-only': typeof AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute
+  '/$partyShortName/home/updates/media-only': typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute
   '/$partyShortName/home/results': typeof AuthenticatedPartyShortNameHomeResultsIndexRoute
+  '/$partyShortName/home/updates': typeof AuthenticatedPartyShortNameHomeUpdatesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -234,6 +260,7 @@ export interface FileRoutesById {
   '/_authenticated/$partyShortName/users': typeof AuthenticatedPartyShortNameUsersRoute
   '/_authenticated/$partyShortName/wallet': typeof AuthenticatedPartyShortNameWalletRouteWithChildren
   '/_authenticated/$partyShortName/home/results': typeof AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren
+  '/_authenticated/$partyShortName/home/updates': typeof AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren
   '/_authenticated/$partyShortName/applications/accepted': typeof AuthenticatedPartyShortNameApplicationsAcceptedRoute
   '/_authenticated/$partyShortName/applications/rejected': typeof AuthenticatedPartyShortNameApplicationsRejectedRoute
   '/_authenticated/$partyShortName/elections/instances': typeof AuthenticatedPartyShortNameElectionsInstancesRoute
@@ -245,7 +272,9 @@ export interface FileRoutesById {
   '/_authenticated/$partyShortName/party-members/': typeof AuthenticatedPartyShortNamePartyMembersIndexRoute
   '/_authenticated/$partyShortName/wallet/': typeof AuthenticatedPartyShortNameWalletIndexRoute
   '/_authenticated/$partyShortName/home/results/media-only': typeof AuthenticatedPartyShortNameHomeResultsMediaOnlyRoute
+  '/_authenticated/$partyShortName/home/updates/media-only': typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute
   '/_authenticated/$partyShortName/home/results/': typeof AuthenticatedPartyShortNameHomeResultsIndexRoute
+  '/_authenticated/$partyShortName/home/updates/': typeof AuthenticatedPartyShortNameHomeUpdatesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -261,6 +290,7 @@ export interface FileRouteTypes {
     | '/$partyShortName/users'
     | '/$partyShortName/wallet'
     | '/$partyShortName/home/results'
+    | '/$partyShortName/home/updates'
     | '/$partyShortName/applications/accepted'
     | '/$partyShortName/applications/rejected'
     | '/$partyShortName/elections/instances'
@@ -272,7 +302,9 @@ export interface FileRouteTypes {
     | '/$partyShortName/party-members/'
     | '/$partyShortName/wallet/'
     | '/$partyShortName/home/results/media-only'
+    | '/$partyShortName/home/updates/media-only'
     | '/$partyShortName/home/results/'
+    | '/$partyShortName/home/updates/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -292,7 +324,9 @@ export interface FileRouteTypes {
     | '/$partyShortName/party-members'
     | '/$partyShortName/wallet'
     | '/$partyShortName/home/results/media-only'
+    | '/$partyShortName/home/updates/media-only'
     | '/$partyShortName/home/results'
+    | '/$partyShortName/home/updates'
   id:
     | '__root__'
     | '/'
@@ -307,6 +341,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$partyShortName/users'
     | '/_authenticated/$partyShortName/wallet'
     | '/_authenticated/$partyShortName/home/results'
+    | '/_authenticated/$partyShortName/home/updates'
     | '/_authenticated/$partyShortName/applications/accepted'
     | '/_authenticated/$partyShortName/applications/rejected'
     | '/_authenticated/$partyShortName/elections/instances'
@@ -318,7 +353,9 @@ export interface FileRouteTypes {
     | '/_authenticated/$partyShortName/party-members/'
     | '/_authenticated/$partyShortName/wallet/'
     | '/_authenticated/$partyShortName/home/results/media-only'
+    | '/_authenticated/$partyShortName/home/updates/media-only'
     | '/_authenticated/$partyShortName/home/results/'
+    | '/_authenticated/$partyShortName/home/updates/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -476,6 +513,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyShortNameApplicationsAcceptedRouteImport
       parentRoute: typeof AuthenticatedPartyShortNameApplicationsRoute
     }
+    '/_authenticated/$partyShortName/home/updates': {
+      id: '/_authenticated/$partyShortName/home/updates'
+      path: '/home/updates'
+      fullPath: '/$partyShortName/home/updates'
+      preLoaderRoute: typeof AuthenticatedPartyShortNameHomeUpdatesRouteRouteImport
+      parentRoute: typeof AuthenticatedPartyShortNameRoute
+    }
     '/_authenticated/$partyShortName/home/results': {
       id: '/_authenticated/$partyShortName/home/results'
       path: '/home/results'
@@ -483,12 +527,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartyShortNameHomeResultsRouteRouteImport
       parentRoute: typeof AuthenticatedPartyShortNameRoute
     }
+    '/_authenticated/$partyShortName/home/updates/': {
+      id: '/_authenticated/$partyShortName/home/updates/'
+      path: '/'
+      fullPath: '/$partyShortName/home/updates/'
+      preLoaderRoute: typeof AuthenticatedPartyShortNameHomeUpdatesIndexRouteImport
+      parentRoute: typeof AuthenticatedPartyShortNameHomeUpdatesRouteRoute
+    }
     '/_authenticated/$partyShortName/home/results/': {
       id: '/_authenticated/$partyShortName/home/results/'
       path: '/'
       fullPath: '/$partyShortName/home/results/'
       preLoaderRoute: typeof AuthenticatedPartyShortNameHomeResultsIndexRouteImport
       parentRoute: typeof AuthenticatedPartyShortNameHomeResultsRouteRoute
+    }
+    '/_authenticated/$partyShortName/home/updates/media-only': {
+      id: '/_authenticated/$partyShortName/home/updates/media-only'
+      path: '/media-only'
+      fullPath: '/$partyShortName/home/updates/media-only'
+      preLoaderRoute: typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRouteImport
+      parentRoute: typeof AuthenticatedPartyShortNameHomeUpdatesRouteRoute
     }
     '/_authenticated/$partyShortName/home/results/media-only': {
       id: '/_authenticated/$partyShortName/home/results/media-only'
@@ -590,6 +648,24 @@ const AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren =
     AuthenticatedPartyShortNameHomeResultsRouteRouteChildren,
   )
 
+interface AuthenticatedPartyShortNameHomeUpdatesRouteRouteChildren {
+  AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute: typeof AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute
+  AuthenticatedPartyShortNameHomeUpdatesIndexRoute: typeof AuthenticatedPartyShortNameHomeUpdatesIndexRoute
+}
+
+const AuthenticatedPartyShortNameHomeUpdatesRouteRouteChildren: AuthenticatedPartyShortNameHomeUpdatesRouteRouteChildren =
+  {
+    AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute:
+      AuthenticatedPartyShortNameHomeUpdatesMediaOnlyRoute,
+    AuthenticatedPartyShortNameHomeUpdatesIndexRoute:
+      AuthenticatedPartyShortNameHomeUpdatesIndexRoute,
+  }
+
+const AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren =
+  AuthenticatedPartyShortNameHomeUpdatesRouteRoute._addFileChildren(
+    AuthenticatedPartyShortNameHomeUpdatesRouteRouteChildren,
+  )
+
 interface AuthenticatedPartyShortNameRouteChildren {
   AuthenticatedPartyShortNameApplicationsRoute: typeof AuthenticatedPartyShortNameApplicationsRouteWithChildren
   AuthenticatedPartyShortNameBodiesRoute: typeof AuthenticatedPartyShortNameBodiesRoute
@@ -599,6 +675,7 @@ interface AuthenticatedPartyShortNameRouteChildren {
   AuthenticatedPartyShortNameUsersRoute: typeof AuthenticatedPartyShortNameUsersRoute
   AuthenticatedPartyShortNameWalletRoute: typeof AuthenticatedPartyShortNameWalletRouteWithChildren
   AuthenticatedPartyShortNameHomeResultsRouteRoute: typeof AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren
+  AuthenticatedPartyShortNameHomeUpdatesRouteRoute: typeof AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren
   AuthenticatedPartyShortNameHomeElectionDayRoute: typeof AuthenticatedPartyShortNameHomeElectionDayRoute
   AuthenticatedPartyShortNameHomeIndexRoute: typeof AuthenticatedPartyShortNameHomeIndexRoute
 }
@@ -621,6 +698,8 @@ const AuthenticatedPartyShortNameRouteChildren: AuthenticatedPartyShortNameRoute
       AuthenticatedPartyShortNameWalletRouteWithChildren,
     AuthenticatedPartyShortNameHomeResultsRouteRoute:
       AuthenticatedPartyShortNameHomeResultsRouteRouteWithChildren,
+    AuthenticatedPartyShortNameHomeUpdatesRouteRoute:
+      AuthenticatedPartyShortNameHomeUpdatesRouteRouteWithChildren,
     AuthenticatedPartyShortNameHomeElectionDayRoute:
       AuthenticatedPartyShortNameHomeElectionDayRoute,
     AuthenticatedPartyShortNameHomeIndexRoute:

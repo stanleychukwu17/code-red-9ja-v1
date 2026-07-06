@@ -70,4 +70,11 @@ export const API_URL = {
   federalConstituencyFinalResults: `${api}/federal-constituency-final-results`,
   lgaFinalResults: `${api}/lga-final-results`,
   wardFinalResults: `${api}/ward-final-results`,
+  // Combined geo + final result endpoints (election_id required)
+  electionResultsStates: `${api}/elections/results/states`,
+  electionResultsSenatorialDistricts: `${api}/elections/results/senatorial-districts`,
+  electionResultsFederalConstituencies: `${api}/elections/results/federal-constituencies`,
+  electionResultsLGAs: `${api}/elections/results/lgas`,
+  electionResultsWards: `${api}/elections/results/wards`,
+  electionResultsPollingUnits: `${api}/elections/results/polling-units`,
 };

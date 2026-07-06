@@ -4,7 +4,6 @@ import {
   Outlet,
   useParams,
   useLocation,
-  Link,
 } from "@tanstack/react-router";
 import { useAppContext } from "#/providers/providers";
 import { getElectionGroups } from "#/lib/server/election_groups";
@@ -22,17 +21,26 @@ import {
   PageHeader,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
-import { cn } from "@repo/ui/lib/utils";
+import { zodValidator } from "@tanstack/zod-adapter";
+import { z } from "zod";
 
-export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/home/results",
-)({
-  head: () => getPageHeader({ title: "Election Results" }),
-  component: ResultsLayoutComponent,
+const updatesSearchSchema = z.object({
+  is_report: z.union([z.boolean(), z.literal("true"), z.literal("false")])
+    .transform((val) => val === "true" || val === true)
+    .optional(),
 });
 
-function ResultsLayoutComponent() {
+export const Route = createFileRoute(
+  "/_authenticated/$partyShortName/home/updates",
+)({
+  validateSearch: zodValidator(updatesSearchSchema),
+  head: () => getPageHeader({ title: "Polling Unit Updates" }),
+  component: UpdatesLayoutComponent,
+});
+
+function UpdatesLayoutComponent() {
   const { partyShortName } = useParams({ strict: false });
+  const { is_report } = Route.useSearch();
   const {
     party,
     selectedElectionGroup,
@@ -47,18 +55,33 @@ function ResultsLayoutComponent() {
 
   const isMediaOnly = location.pathname.endsWith("/media-only");
 
+  const activeHeaderTab =
+    is_report === true ? "reports" : is_report === false ? "updates" : "all";
+
   return (
     <DashboardLayout>
       <div className="flex flex-col">
         {/* Header Row */}
         <PageHeader
-          title="Results"
-          activeTab="all"
-          // tabs={[
-          //   { id: "all", label: "All", href: `/${partyShortName}/home/results` },
-          //   { id: "updates", label: "Updates", href: `/${partyShortName}/home/updates` },
-          //   { id: "reports", label: "Reports", href: `/${partyShortName}/home/updates?is_report=true` },
-          // ]}
+          title="Issues"
+          activeTab={activeHeaderTab}
+          tabs={[
+            {
+              id: "all",
+              label: "All",
+              href: `/${partyShortName}/home/updates`,
+            },
+            {
+              id: "updates",
+              label: "Updates",
+              href: `/${partyShortName}/home/updates?is_report=false`,
+            },
+            {
+              id: "reports",
+              label: "Reports",
+              href: `/${partyShortName}/home/updates?is_report=true`,
+            },
+          ]}
           rightComponent={
             <SelectElectionGroupAndElection
               fetchElectionGroups={fetchGroups}
@@ -87,12 +110,12 @@ function ResultsLayoutComponent() {
               {
                 id: "all",
                 label: "All",
-                href: `/${partyShortName}/home/results`,
+                href: `/${partyShortName}/home/updates${is_report !== undefined ? `?is_report=${is_report}` : ""}`,
               },
               {
                 id: "media",
                 label: "Media Only",
-                href: `/${partyShortName}/home/results/media-only`,
+                href: `/${partyShortName}/home/updates/media-only${is_report !== undefined ? `?is_report=${is_report}` : ""}`,
               },
             ]}
             activeTabClassName="bg-c-90 text-white shadow"
@@ -100,7 +123,7 @@ function ResultsLayoutComponent() {
           />
         </div>
 
-        {/* Child Content (Table or Grid) */}
+        {/* Child Content (Feed or Grid) */}
         <div className="pt-2">
           <Outlet />
         </div>

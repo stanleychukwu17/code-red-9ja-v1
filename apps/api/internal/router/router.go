@@ -59,6 +59,7 @@ import (
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puresults "free9ja/api/internal/service/polling_unit_results"
+	electionresultshandler "free9ja/api/internal/handler/election_results"
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 )
@@ -131,6 +132,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
+	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 
 	// Initialise the R2 service (nil-safe: file endpoints return an error if unconfigured)
 	var filesHandler *fileshandler.Handler
@@ -198,6 +200,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get(utils.ApiUrls.Bodies.GetLGAs, bodiesHandler.GetLGAs)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetWards, wardsHandler.GetWards)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetPollingUnits, pollingUnitsHandler.GetPollingUnits)
+
+	// election geo-results endpoints (geography joined with final results)
+	mainRouter.Get("/api/v1/elections/results/states", electionResultsHandler.GetStatesWithResults)
+	mainRouter.Get("/api/v1/elections/results/senatorial-districts", electionResultsHandler.GetSenatorialDistrictsWithResults)
+	mainRouter.Get("/api/v1/elections/results/federal-constituencies", electionResultsHandler.GetFederalConstituenciesWithResults)
+	mainRouter.Get("/api/v1/elections/results/lgas", electionResultsHandler.GetLGAsWithResults)
+	mainRouter.Get("/api/v1/elections/results/wards", electionResultsHandler.GetWardsWithResults)
+	mainRouter.Get("/api/v1/elections/results/polling-units", electionResultsHandler.GetPollingUnitsWithResults)
 
 	// political parties public routes
 	mainRouter.Get("/api/v1/parties", partiesHandler.ListParties)
