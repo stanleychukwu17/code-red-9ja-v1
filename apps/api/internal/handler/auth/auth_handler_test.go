@@ -15,6 +15,7 @@ import (
 	authservice "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -54,8 +55,8 @@ func (m *MockAuthService) CheckUsername(ctx context.Context, username string) bo
 	return args.Bool(0)
 }
 
-func (m *MockAuthService) Login(ctx context.Context, identifierType string, identifier, password string, iso2 string) (authservice.LoginResult, error) {
-	args := m.Called(ctx, identifierType, identifier, password, iso2)
+func (m *MockAuthService) Login(ctx context.Context, identifierType string, identifier, password string, iso2 string, allowedRoles ...string) (authservice.LoginResult, error) {
+	args := m.Called(ctx, identifierType, identifier, password, iso2, allowedRoles)
 	return args.Get(0).(authservice.LoginResult), args.Error(1)
 }
 
@@ -84,10 +85,7 @@ func (m *MockAuthService) ForgotPassword(ctx context.Context, changePasswordID s
 	return args.Error(0)
 }
 
-func (m *MockAuthService) AdminLogin(ctx context.Context, identifierType string, identifier, password string, iso2 string) (authservice.LoginResult, error) {
-	args := m.Called(ctx, identifierType, identifier, password, iso2)
-	return args.Get(0).(authservice.LoginResult), args.Error(1)
-}
+
 
 func (m *MockAuthService) RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (authservice.RegisterResult, error) {
 	args := m.Called(ctx, email, phone, username, password, firstName, lastName, avatar)
@@ -105,6 +103,22 @@ func (m *MockAuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsR
 func (m *MockAuthService) RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar string, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (authservice.RegisterResult, error) {
 	args := m.Called(ctx, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel, dob, countryID, stateID, currentCity, stateOfOrigin, partyID)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
+}
+
+func (m *MockAuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
+	args := m.Called(ctx, fakeID)
+	return args.Get(0).(queries.User), args.Error(1)
+}
+
+
+
+func (m *MockAuthService) SeedUsers(ctx context.Context, users []authservice.SeedUserRequest) ([]int64, error) {
+	args := m.Called(ctx, users)
+	var ids []int64
+	if args.Get(0) != nil {
+		ids = args.Get(0).([]int64)
+	}
+	return ids, args.Error(1)
 }
 
 // TestRegister tests the Register method of the AuthHandler
@@ -354,21 +368,24 @@ func TestAdminLogin(t *testing.T) {
 		handler := authhandler.NewHandler(mockService, utilsInstance)
 
 		reqBody := authhandler.AdminLoginRequest{
-			Email:    "admin@example.com",
-			Password: "password123",
+			IdentifierType: "email",
+			Identifier:     "admin@example.com",
+			Password:       "password123",
 		}
 
 		body, _ := json.Marshal(reqBody)
 		req, _ := http.NewRequest("POST", "/api/v1/auth/admin/login", bytes.NewBuffer(body))
 		rr := httptest.NewRecorder()
 
-		mockService.On("AdminLogin", mock.Anything, "email", reqBody.Email, reqBody.Password, "").Return(authservice.LoginResult{
+		mockService.On("Login", mock.Anything, reqBody.IdentifierType, reqBody.Identifier, reqBody.Password, "", []string{"admin"}).Return(authservice.LoginResult{
 			AccessToken:  "access-token",
 			RefreshToken: "refresh-token",
 			User: authservice.LoginUser{
-				FakeID:   12345,
-				Username: "superadmin",
-				Role:     "admin",
+				User: queries.User{
+					FakeID:   pgtype.Int8{Int64: 12345, Valid: true},
+					Username: pgtype.Text{String: "superadmin", Valid: true},
+					Role:     pgtype.Text{String: "admin", Valid: true},
+				},
 			},
 		}, nil)
 
@@ -383,3 +400,4 @@ func TestAdminLogin(t *testing.T) {
 		require.Equal(t, "access-token", data["accessToken"])
 	})
 }
+

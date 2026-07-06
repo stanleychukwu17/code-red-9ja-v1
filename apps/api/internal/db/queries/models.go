@@ -59,6 +59,9 @@ type Election struct {
 	Name                  string             `json:"name"`
 	Rank                  int32              `json:"rank"`
 	CandidatesCount       int32              `json:"candidates_count"`
+	ReportsCount          int32              `json:"reports_count"`
+	UpdatesCount          int32              `json:"updates_count"`
+	ResultsSubmittedCount int32              `json:"results_submitted_count"`
 	ElectionDate          pgtype.Date        `json:"election_date"`
 	ElectionGroupID       int64              `json:"election_group_id"`
 	ElectionGroupName     string             `json:"election_group_name"`
@@ -73,24 +76,32 @@ type Election struct {
 	WardID                pgtype.Int4        `json:"ward_id"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	Status                string             `json:"status"`
 }
 
 type ElectionCandidate struct {
-	ID          int64              `json:"id"`
-	ElectionID  int64              `json:"election_id"`
-	CandidateID int64              `json:"candidate_id"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	ID             int64              `json:"id"`
+	ElectionID     int64              `json:"election_id"`
+	CandidateID    int64              `json:"candidate_id"`
+	PartyID        int64              `json:"party_id"`
+	PartyShortName string             `json:"party_short_name"`
+	VotesCount     pgtype.Int4        `json:"votes_count"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 type ElectionGroup struct {
-	ID             int64              `json:"id"`
-	Name           string             `json:"name"`
-	Rank           int32              `json:"rank"`
-	ElectionsCount int32              `json:"elections_count"`
-	StatesCount    int32              `json:"states_count"`
-	ElectionDate   pgtype.Date        `json:"election_date"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                    int64              `json:"id"`
+	Name                  string             `json:"name"`
+	Rank                  int32              `json:"rank"`
+	ElectionsCount        int32              `json:"elections_count"`
+	StatesCount           int32              `json:"states_count"`
+	ReportsCount          int32              `json:"reports_count"`
+	UpdatesCount          int32              `json:"updates_count"`
+	ResultsSubmittedCount int32              `json:"results_submitted_count"`
+	ElectionDate          pgtype.Date        `json:"election_date"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type FederalConstituency struct {
@@ -142,12 +153,70 @@ type Office struct {
 }
 
 type Party struct {
-	ID        int64              `json:"id"`
-	ShortName string             `json:"short_name"`
-	Name      string             `json:"name"`
-	Logo      string             `json:"logo"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+	ID                   int64              `json:"id"`
+	ShortName            string             `json:"short_name"`
+	Name                 string             `json:"name"`
+	Logo                 string             `json:"logo"`
+	Status               string             `json:"status"`
+	Slots                int32              `json:"slots"`
+	DiscountPercentage   pgtype.Numeric     `json:"discount_percentage"`
+	AllowanceBalanceKobo int64              `json:"allowance_balance_kobo"`
+	StateAllowances      []byte             `json:"state_allowances"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PartyElectionGroup struct {
+	ID                    int64              `json:"id"`
+	PartyID               int64              `json:"party_id"`
+	ElectionGroupID       int64              `json:"election_group_id"`
+	PollingAgentsCoverage []byte             `json:"polling_agents_coverage"`
+	ElectionsContesting   int32              `json:"elections_contesting"`
+	ReportsCount          int32              `json:"reports_count"`
+	UpdatesCount          int32              `json:"updates_count"`
+	ResultsSubmittedCount int32              `json:"results_submitted_count"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PartyWallet struct {
+	ID               int64              `json:"id"`
+	PartyID          int64              `json:"party_id"`
+	AccountReference string             `json:"account_reference"`
+	AccountNumbers   []byte             `json:"account_numbers"`
+	BalanceKobo      int64              `json:"balance_kobo"`
+	CurrencyCode     string             `json:"currency_code"`
+	Status           string             `json:"status"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PartyWalletTransaction struct {
+	ID                   int64              `json:"id"`
+	WalletID             int64              `json:"wallet_id"`
+	TransactionReference string             `json:"transaction_reference"`
+	Type                 string             `json:"type"`
+	AmountKobo           int64              `json:"amount_kobo"`
+	BalanceAfterKobo     int64              `json:"balance_after_kobo"`
+	PayerName            pgtype.Text        `json:"payer_name"`
+	PayerAccountNumber   pgtype.Text        `json:"payer_account_number"`
+	PayerBankCode        pgtype.Text        `json:"payer_bank_code"`
+	Narration            pgtype.Text        `json:"narration"`
+	TransactionCategory  string             `json:"transaction_category"`
+	RawPayload           []byte             `json:"raw_payload"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+}
+
+type PollingAgentApplication struct {
+	ID              int64              `json:"id"`
+	UserID          int64              `json:"user_id"`
+	PartyID         int64              `json:"party_id"`
+	ElectionGroupID int64              `json:"election_group_id"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	Status          string             `json:"status"`
+	RejectedReason  pgtype.Text        `json:"rejected_reason"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PollingUnit struct {
@@ -169,6 +238,78 @@ type PollingUnit struct {
 	PreciseLocation    pgtype.Text   `json:"precise_location"`
 	FormattedAddress   pgtype.Text   `json:"formatted_address"`
 	GooglePlaceID      pgtype.Text   `json:"google_place_id"`
+}
+
+type PollingUnitAssignment struct {
+	ID                      int64              `json:"id"`
+	UserID                  int64              `json:"user_id"`
+	PollingUnitID           int32              `json:"polling_unit_id"`
+	ElectionGroupID         int64              `json:"election_group_id"`
+	PartyID                 int64              `json:"party_id"`
+	RoleType                pgtype.Text        `json:"role_type"`
+	AssignedBy              pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl         pgtype.Text        `json:"arrival_video_url"`
+	ElectionStartedAt       pgtype.Timestamptz `json:"election_started_at"`
+	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
+	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
+	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
+	LastUpdateAt            pgtype.Timestamptz `json:"last_update_at"`
+	ReportsCount            int32              `json:"reports_count"`
+	UpdatesCount            int32              `json:"updates_count"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	ResultsSubmittedCount   int32              `json:"results_submitted_count"`
+	ResultsStatus           string             `json:"results_status"`
+}
+
+type PollingUnitResult struct {
+	ID                  int64              `json:"id"`
+	AssignmentID        pgtype.Int8        `json:"assignment_id"`
+	ElectionID          int64              `json:"election_id"`
+	ElectionGroupID     int64              `json:"election_group_id"`
+	PollingUnitID       int32              `json:"polling_unit_id"`
+	SubmittedBy         int64              `json:"submitted_by"`
+	PartyID             pgtype.Int8        `json:"party_id"`
+	StateID             pgtype.Int2        `json:"state_id"`
+	LgaID               pgtype.Int4        `json:"lga_id"`
+	WardID              pgtype.Int4        `json:"ward_id"`
+	AccreditedVoters    int32              `json:"accredited_voters"`
+	VotesCast           int32              `json:"votes_cast"`
+	ValidVotes          int32              `json:"valid_votes"`
+	RejectedVotes       int32              `json:"rejected_votes"`
+	CandidateResults    []byte             `json:"candidate_results"`
+	ResultSheetImageUrl pgtype.Text        `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl pgtype.Text        `json:"result_sheet_video_url"`
+	Status              string             `json:"status"`
+	AiExtractedData     []byte             `json:"ai_extracted_data"`
+	AiConfidenceScore   pgtype.Numeric     `json:"ai_confidence_score"`
+	DisputedReason      pgtype.Text        `json:"disputed_reason"`
+	ConfirmedAt         pgtype.Timestamptz `json:"confirmed_at"`
+	ConfirmedBy         pgtype.Int8        `json:"confirmed_by"`
+	UpVotes             []int64            `json:"up_votes"`
+	DownVotes           []int64            `json:"down_votes"`
+	UploadedByInec      bool               `json:"uploaded_by_inec"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PollingUnitUpdate struct {
+	ID              int64              `json:"id"`
+	AssignmentID    pgtype.Int8        `json:"assignment_id"`
+	UserID          int64              `json:"user_id"`
+	PollingUnitID   int32              `json:"polling_unit_id"`
+	ElectionGroupID int64              `json:"election_group_id"`
+	PartyID         pgtype.Int8        `json:"party_id"`
+	StateID         pgtype.Int2        `json:"state_id"`
+	LgaID           pgtype.Int4        `json:"lga_id"`
+	WardID          pgtype.Int4        `json:"ward_id"`
+	Message         string             `json:"message"`
+	MediaUrls       []string           `json:"media_urls"`
+	IsReport        pgtype.Bool        `json:"is_report"`
+	ReportTypes     []string           `json:"report_types"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type SenatorialDistrict struct {
@@ -193,31 +334,46 @@ type StateAssemblyConstituency struct {
 	FederalConstituencyName string `json:"federal_constituency_name"`
 }
 
+type SystemSetting struct {
+	Key         string             `json:"key"`
+	Value       []byte             `json:"value"`
+	Description pgtype.Text        `json:"description"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
 type User struct {
-	ID             int64              `json:"id"`
-	FakeID         pgtype.Int8        `json:"fake_id"`
-	Email          pgtype.Text        `json:"email"`
-	Avatar         pgtype.Text        `json:"avatar"`
-	Phone          pgtype.Text        `json:"phone"`
-	Username       pgtype.Text        `json:"username"`
-	PasswordHash   string             `json:"password_hash"`
-	LastName       pgtype.Text        `json:"last_name"`
-	FirstName      pgtype.Text        `json:"first_name"`
-	MiddleName     pgtype.Text        `json:"middle_name"`
-	Gender         pgtype.Text        `json:"gender"`
-	DateOfBirth    pgtype.Date        `json:"date_of_birth"`
-	CurrentCountry int16              `json:"current_country"`
-	CurrentState   int16              `json:"current_state"`
-	CurrentCity    pgtype.Int4        `json:"current_city"`
-	StateOfOrigin  pgtype.Int2        `json:"state_of_origin"`
-	NinVerified    pgtype.Text        `json:"nin_verified"`
-	PhoneVerified  pgtype.Text        `json:"phone_verified"`
-	Role           pgtype.Text        `json:"role"`
-	RoleLevel      pgtype.Text        `json:"role_level"`
-	AccountStatus  pgtype.Text        `json:"account_status"`
-	PartyID        pgtype.Int8        `json:"party_id"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                int64              `json:"id"`
+	FakeID            pgtype.Int8        `json:"fake_id"`
+	Email             pgtype.Text        `json:"email"`
+	Avatar            pgtype.Text        `json:"avatar"`
+	Phone             pgtype.Text        `json:"phone"`
+	Username          pgtype.Text        `json:"username"`
+	PasswordHash      string             `json:"password_hash"`
+	LastName          pgtype.Text        `json:"last_name"`
+	FirstName         pgtype.Text        `json:"first_name"`
+	MiddleName        pgtype.Text        `json:"middle_name"`
+	Gender            pgtype.Text        `json:"gender"`
+	DateOfBirth       pgtype.Date        `json:"date_of_birth"`
+	CurrentCountry    int16              `json:"current_country"`
+	CurrentState      int16              `json:"current_state"`
+	CurrentLga        pgtype.Int4        `json:"current_lga"`
+	CurrentCity       pgtype.Int4        `json:"current_city"`
+	StateOfOrigin     pgtype.Int2        `json:"state_of_origin"`
+	Vin               pgtype.Text        `json:"vin"`
+	VotersCardImage   pgtype.Text        `json:"voters_card_image"`
+	BankAccountNumber pgtype.Text        `json:"bank_account_number"`
+	BankCode          pgtype.Text        `json:"bank_code"`
+	NinVerified       pgtype.Text        `json:"nin_verified"`
+	PhoneVerified     pgtype.Text        `json:"phone_verified"`
+	EmailVerified     pgtype.Text        `json:"email_verified"`
+	Role              pgtype.Text        `json:"role"`
+	RoleLevel         pgtype.Text        `json:"role_level"`
+	AccountStatus     pgtype.Text        `json:"account_status"`
+	PartyID           pgtype.Int8        `json:"party_id"`
+	PollingUnitID     pgtype.Int8        `json:"polling_unit_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserSecurityQuestion struct {
@@ -228,6 +384,33 @@ type UserSecurityQuestion struct {
 	Answer1   string `json:"answer1"`
 	Question2 int16  `json:"question2"`
 	Answer2   string `json:"answer2"`
+}
+
+type UserWallet struct {
+	ID               int64              `json:"id"`
+	UserID           int64              `json:"user_id"`
+	AccountReference string             `json:"account_reference"`
+	AccountNumbers   []byte             `json:"account_numbers"`
+	BalanceKobo      int64              `json:"balance_kobo"`
+	CurrencyCode     string             `json:"currency_code"`
+	Status           string             `json:"status"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserWalletTransaction struct {
+	ID                   int64              `json:"id"`
+	WalletID             int64              `json:"wallet_id"`
+	TransactionReference string             `json:"transaction_reference"`
+	Type                 string             `json:"type"`
+	AmountKobo           int64              `json:"amount_kobo"`
+	BalanceAfterKobo     int64              `json:"balance_after_kobo"`
+	PayerName            pgtype.Text        `json:"payer_name"`
+	PayerAccountNumber   pgtype.Text        `json:"payer_account_number"`
+	PayerBankCode        pgtype.Text        `json:"payer_bank_code"`
+	Narration            pgtype.Text        `json:"narration"`
+	RawPayload           []byte             `json:"raw_payload"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
 }
 
 type UsersNin struct {

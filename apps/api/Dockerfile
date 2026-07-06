@@ -1,5 +1,5 @@
 # --- Stage 1: Build ---
-FROM golang:1.23-alpine AS builder
+FROM golang:1.26.4-alpine3.24 AS builder
 
 WORKDIR /app
 
@@ -13,8 +13,11 @@ RUN go mod download
 # Copy the rest of the application source code
 COPY . .
 
+ARG VERSION
+ARG COMMIT_SHA
+
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s" -o /app/bin/api ./cmd/api
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-w -s -X 'main.version=${VERSION}' -X 'main.commit=${COMMIT_SHA}'" -o /app/bin/api ./cmd/api
 
 # Install goose CLI for migrations
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
@@ -37,7 +40,6 @@ COPY --from=builder /app/entrypoint.sh /app/entrypoint.sh
 RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod +x /app/entrypoint.sh
 
 ENV PORT=4000
-# ENV ENV=production
 EXPOSE 4000
 
 ENTRYPOINT ["/app/entrypoint.sh"]

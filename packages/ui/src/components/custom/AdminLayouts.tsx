@@ -380,7 +380,7 @@ export function HeaderTabs({
   if (!tabs) return <></>;
 
   return (
-    <div className="h-11 inline-flex overflow-hidden rounded-[12px] bg-[#f2f2f2] p-1">
+    <div className="flex bg-[#e9ecef] p-1 rounded-xl w-fit gap-1 select-none items-center h-11">
       {tabs.map((tab) => {
         const active = tab.id === activeTab;
         return (
@@ -388,10 +388,10 @@ export function HeaderTabs({
             key={tab.id}
             to={tab.href as never}
             className={cn(
-              "rounded-[10px] px-6 text-[16px] transition flex items-center justify-center",
+              "h-10 px-4 rounded-lg text-sm font-semibold transition-all duration-200 flex items-center justify-center h-full",
               active
-                ? "bg-primary text-white shadow-sm"
-                : "text-c-60 hover:text-c-80",
+                ? "bg-[#0b6c3e] text-white shadow-sm"
+                : "text-gray-600 hover:text-gray-900",
             )}
           >
             {tab.label}

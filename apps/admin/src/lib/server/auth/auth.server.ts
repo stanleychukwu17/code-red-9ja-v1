@@ -52,36 +52,6 @@ export const clearAuthCookies = () => {
   });
 };
 
-// Logs in a user by sending a POST request to the server with the user's identifier and password.
-export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
-  try {
-    const response = await fetch(API_URL.auth.login, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    // console.log(result)
-    if (result.status === "success" && result.refreshToken) {
-      setAuthCookies({
-        refreshToken: result.refreshToken,
-        accessToken: result.accessToken,
-      });
-      delete result.refreshToken;
-      delete result.accessToken;
-    }
-    return result;
-  } catch (error) {
-    return {
-      status: "error",
-      message:
-        "Connection error. Please try again later. " +
-        (error as Error)?.message,
-    };
-  }
-});
-
 // Logs in an admin by sending a POST request to the server with email and password.
 export const loginAdminImpl = createServerOnlyFn(async ({ data }) => {
   try {
@@ -97,18 +67,24 @@ export const loginAdminImpl = createServerOnlyFn(async ({ data }) => {
         refreshToken: result.data.refreshToken,
         accessToken: result.data.accessToken,
       });
+      if (result.data.user) {
+        setUserDetailsCookie(result.data.user);
+      }
       return {
-        status: "success",
-        user: result.data.user,
+        success: true,
+        data: {
+          user: result.data.user,
+        },
+        message: result.message || "Login successful",
       };
     }
     return {
-      status: "error",
+      success: false,
       message: result.message || "Invalid email or password.",
     };
   } catch (error) {
     return {
-      status: "error",
+      success: false,
       message:
         "Connection error. Please try again later. " +
         (error as Error)?.message,
@@ -207,48 +183,3 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
   }
 });
 
-// Verifies security questions for a user
-export const verifySecurityQuestionsImpl = createServerOnlyFn(
-  async ({ data }) => {
-    try {
-      const response = await fetch(API_URL.auth.verifySecurityQuestions, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      return { ...result, ok: response.ok };
-    } catch (error) {
-      return {
-        status: "error",
-        message:
-          "Connection error. Please try again later. " +
-          (error as Error)?.message,
-        ok: false,
-      };
-    }
-  },
-);
-
-// Resets user's password
-export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
-  try {
-    const response = await fetch(API_URL.auth.forgotPassword, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    return {
-      status: "error",
-      message:
-        "Connection error. Please try again later. " +
-        (error as Error)?.message,
-      ok: false,
-    };
-  }
-});

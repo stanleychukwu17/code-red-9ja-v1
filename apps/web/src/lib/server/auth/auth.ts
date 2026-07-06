@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
 import { checkIfRefreshTokenInCookieImpl, getUserDetailsCookieImpl, loginUserImpl, logoutUserImpl, refreshUserTokenImpl, verifySecurityQuestionsImpl, resetPasswordImpl } from "#/lib/server/auth/auth.server"
+import { respondError, respondSuccess } from "@/lib/shared/response";
+import { apiFetch } from "../fetch";
 
 
 // Starts the registration process for a new user
@@ -8,17 +10,17 @@ export const startUserRegistration = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.auth.registerPhaseSignUp, {
+      const response = await apiFetch(API_URL.auth.registerPhaseSignUp, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Registration error:", error);
-      return { status: "error", message: "An unexpected error occurred during registration" };
+      return respondError("An unexpected error occurred during registration");
     }
   });
 
@@ -27,17 +29,17 @@ export const checkNin = createServerFn({ method: "POST" })
   .inputValidator((data: { nin: string }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.auth.checkNin, {
+      const response = await apiFetch(API_URL.auth.checkNin, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Check NIN error:", error);
-      return { status: "error", message: "An unexpected error occurred during NIN check" };
+      return respondError("An unexpected error occurred during NIN check");
     }
   });
 
@@ -46,17 +48,17 @@ export const checkUsername = createServerFn({ method: "POST" })
   .inputValidator((data: { username: string }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.auth.checkUsername, {
+      const response = await apiFetch(API_URL.auth.checkUsername, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Check username error:", error);
-      return { status: "error", message: "An unexpected error occurred during username check" };
+      return respondError("An unexpected error occurred during username check");
     }
   });
 
@@ -65,28 +67,28 @@ export const completeRegistration = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.auth.register, {
+      const response = await apiFetch(API_URL.auth.register, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
       const result = await response.json();
-      return result;
+      return respondSuccess(result);
     } catch (error) {
       console.error("Complete registration error:", error);
-      return { status: "error", message: "An unexpected error occurred during final registration" };
+      return respondError("An unexpected error occurred during final registration");
     }
   });
 
 
 // Sends a POST request to the server to log in a user with their identifier (email, phone number, or username) and password.
-export const loginUser = createServerFn({method: "POST"})
-.inputValidator((data: { identifier: string; password: string; iso2?: string, identifierType?: string }) => data)
-.handler(async ({ data }) => {
-  const result = await loginUserImpl({data}) // Logs in a user
-  return result
-})
+export const loginUser = createServerFn({ method: "POST" })
+  .inputValidator((data: { identifier: string; password: string; iso2?: string, identifierType?: string }) => data)
+  .handler(async ({ data }) => {
+    const result = await loginUserImpl({ data }) // Logs in a user
+    return result
+  })
 
 // Sends a POST request to the server to refresh the user's access token.
 export const refreshUserToken = createServerFn({ method: "POST" })

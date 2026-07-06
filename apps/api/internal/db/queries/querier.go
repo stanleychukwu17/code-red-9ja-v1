@@ -11,8 +11,11 @@ import (
 )
 
 type Querier interface {
+	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
+	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PollingAgentApplication, error)
+	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
 	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error)
 	CreateElectionCandidate(ctx context.Context, arg CreateElectionCandidateParams) (ElectionCandidate, error)
 	CreateElectionGroup(ctx context.Context, arg CreateElectionGroupParams) (ElectionGroup, error)
@@ -22,15 +25,27 @@ type Querier interface {
 	CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, error)
 	CreateOffice(ctx context.Context, arg CreateOfficeParams) (Office, error)
 	CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error)
+	CreatePartyWallet(ctx context.Context, arg CreatePartyWalletParams) (PartyWallet, error)
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
 	CreatePollingUnit(ctx context.Context, arg CreatePollingUnitParams) (PollingUnit, error)
+	CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error)
 	CreateSenatorialDistrict(ctx context.Context, arg CreateSenatorialDistrictParams) (SenatorialDistrict, error)
 	CreateState(ctx context.Context, arg CreateStateParams) (CState, error)
 	CreateStateAssemblyConstituency(ctx context.Context, arg CreateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error)
 	CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error)
+	CreateUserWallet(ctx context.Context, arg CreateUserWalletParams) (UserWallet, error)
+	CreateUserWalletTransaction(ctx context.Context, arg CreateUserWalletTransactionParams) (UserWalletTransaction, error)
+	CreateWalletTransaction(ctx context.Context, arg CreateWalletTransactionParams) (PartyWalletTransaction, error)
 	CreateWard(ctx context.Context, arg CreateWardParams) (Ward, error)
+	CreditPartyWallet(ctx context.Context, arg CreditPartyWalletParams) (PartyWallet, error)
+	CreditUserWallet(ctx context.Context, arg CreditUserWalletParams) (UserWallet, error)
+	DebitPartyWallet(ctx context.Context, arg DebitPartyWalletParams) (PartyWallet, error)
+	DebitUserWallet(ctx context.Context, arg DebitUserWalletParams) (UserWallet, error)
+	DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (Party, error)
+	DeleteAssignment(ctx context.Context, id int64) error
+	DeleteElectionCandidateForParty(ctx context.Context, arg DeleteElectionCandidateForPartyParams) error
 	DeleteElectionCandidatesForElection(ctx context.Context, electionID int64) error
 	DeleteElectionGroup(ctx context.Context, id int64) error
 	DeleteElectionInstance(ctx context.Context, id int64) error
@@ -44,9 +59,14 @@ type Querier interface {
 	DeleteStateAssemblyConstituency(ctx context.Context, id int32) error
 	DeleteUser(ctx context.Context, id int64) error
 	DeleteWard(ctx context.Context, id int32) error
+	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)
+	GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPollingUnitResultsByPUParams) ([]PollingUnitResult, error)
+	GetApplicationByID(ctx context.Context, id int64) (PollingAgentApplication, error)
+	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
+	GetElectionCandidatesCount(ctx context.Context, electionID int64) (int64, error)
 	GetElectionGroupByID(ctx context.Context, id int64) (ElectionGroup, error)
 	GetElectionGroupByName(ctx context.Context, name string) (ElectionGroup, error)
 	GetElectionInstanceByID(ctx context.Context, id int64) (Election, error)
@@ -58,10 +78,17 @@ type Querier interface {
 	GetLGAs(ctx context.Context, stateID int32) ([]Lga, error)
 	GetOfficeByID(ctx context.Context, id int64) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
+	GetPartyBasicInfo(ctx context.Context, id int64) (GetPartyBasicInfoRow, error)
 	GetPartyByID(ctx context.Context, id int64) (Party, error)
 	GetPartyByShortName(ctx context.Context, shortName string) (Party, error)
+	GetPartyElectionGroupCoverageDistribution(ctx context.Context, arg GetPartyElectionGroupCoverageDistributionParams) ([]GetPartyElectionGroupCoverageDistributionRow, error)
+	GetPartyWalletByAccountReference(ctx context.Context, accountReference string) (PartyWallet, error)
+	GetPartyWalletByID(ctx context.Context, id int64) (PartyWallet, error)
+	GetPartyWalletByPartyID(ctx context.Context, partyID int64) (PartyWallet, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit, error)
+	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
+	GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPollingUnitsWithAgentCountsParams) ([]GetPollingUnitsWithAgentCountsRow, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (SenatorialDistrict, error)
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]SenatorialDistrict, error)
 	GetStateAssemblyConstituencies(ctx context.Context, arg GetStateAssemblyConstituenciesParams) ([]StateAssemblyConstituency, error)
@@ -69,38 +96,79 @@ type Querier interface {
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
 	GetStateDetailsByID(ctx context.Context, id int16) (CState, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
+	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
+	GetUserByID(ctx context.Context, id int64) (User, error)
+	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
 	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
+	GetUserWalletByAccountReference(ctx context.Context, accountReference string) (UserWallet, error)
+	GetUserWalletByID(ctx context.Context, id int64) (UserWallet, error)
+	GetUserWalletByUserID(ctx context.Context, userID int64) (UserWallet, error)
+	GetUserWalletTransactionByReference(ctx context.Context, transactionReference string) (UserWalletTransaction, error)
+	GetWalletTransactionByReference(ctx context.Context, transactionReference string) (PartyWalletTransaction, error)
 	GetWardByID(ctx context.Context, id int32) (Ward, error)
 	GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, error)
 	HardDeleteFile(ctx context.Context, id int64) error
+	IncrementAssignmentResultCount(ctx context.Context, id int64) error
+	IncrementElectionGroupMetrics(ctx context.Context, arg IncrementElectionGroupMetricsParams) error
+	IncrementElectionGroupResultCount(ctx context.Context, id int64) error
+	IncrementElectionMetricsByGroup(ctx context.Context, arg IncrementElectionMetricsByGroupParams) error
+	IncrementElectionResultCount(ctx context.Context, id int64) error
+	IncrementPartyElectionGroupMetrics(ctx context.Context, arg IncrementPartyElectionGroupMetricsParams) error
+	IncrementPartyElectionGroupResultCount(ctx context.Context, arg IncrementPartyElectionGroupResultCountParams) error
+	IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error
 	ListAdmins(ctx context.Context) ([]ListAdminsRow, error)
+	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
+	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	ListElectionCandidatesByElectionID(ctx context.Context, electionID int64) ([]ElectionCandidate, error)
 	ListElectionCandidatesDetailedByElectionID(ctx context.Context, electionID int64) ([]ListElectionCandidatesDetailedByElectionIDRow, error)
 	ListElectionGroups(ctx context.Context) ([]ElectionGroup, error)
+	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int64) ([]ListElectionGroupsWithPartyStatsRow, error)
 	ListElectionInstances(ctx context.Context) ([]Election, error)
+	ListElectionsDetailedByGroupID(ctx context.Context, electionGroupID int64) ([]ListElectionsDetailedByGroupIDRow, error)
 	ListFiles(ctx context.Context, arg ListFilesParams) ([]File, error)
 	ListOffices(ctx context.Context) ([]Office, error)
 	ListParties(ctx context.Context) ([]Party, error)
+	ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
+	ListPollingUnitResults(ctx context.Context, arg ListPollingUnitResultsParams) ([]PollingUnitResult, error)
+	ListPollingUnitUpdates(ctx context.Context, arg ListPollingUnitUpdatesParams) ([]PollingUnitUpdate, error)
+	ListUserWalletTransactions(ctx context.Context, arg ListUserWalletTransactionsParams) ([]UserWalletTransaction, error)
 	ListUsers(ctx context.Context) ([]User, error)
+	ListUsersWithoutWallet(ctx context.Context) ([]User, error)
+	ListWalletTransactions(ctx context.Context, arg ListWalletTransactionsParams) ([]PartyWalletTransaction, error)
 	MarkFileDeleted(ctx context.Context, id int64) (File, error)
+	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
+	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
+	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PollingAgentApplication, error)
+	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
+	UpdateElectionCandidatesCount(ctx context.Context, arg UpdateElectionCandidatesCountParams) error
+	UpdateElectionDatesByGroup(ctx context.Context, arg UpdateElectionDatesByGroupParams) error
 	UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error)
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)
 	UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error)
+	UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error)
+	UpdatePartyStateAllowances(ctx context.Context, arg UpdatePartyStateAllowancesParams) (Party, error)
 	UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error)
+	UpdateResultStatus(ctx context.Context, arg UpdateResultStatusParams) (PollingUnitResult, error)
 	UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenatorialDistrictParams) (SenatorialDistrict, error)
 	UpdateState(ctx context.Context, arg UpdateStateParams) (CState, error)
 	UpdateStateAssemblyConstituency(ctx context.Context, arg UpdateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
+	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
+	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error)
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpdateUserRoleAndStatus(ctx context.Context, arg UpdateUserRoleAndStatusParams) error
+	UpdateUserRoleToAgent(ctx context.Context, id int64) (User, error)
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
+	UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error)
+	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)
+	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }
 
 var _ Querier = (*Queries)(nil)

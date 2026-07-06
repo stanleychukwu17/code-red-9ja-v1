@@ -19,7 +19,7 @@ export function getPageHeader({ title, description, robotsAllowed = "yes" }: Get
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: "robots", content: robotsAllowed === "yes" ? "index, follow" : "noindex, nofollow" },
-      ...(title ? [{ title: `${title} - ${APP_NAME}` }] : []),
+      ...(title ? [{ title: `${title} - ${APP_NAME} Admin` }] : []),
       ...(description ? [{ name: "description", content: description }] : []),
     ]
   }

@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  ip-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ip-service
+    hostname: ip-service
+    ports:
+      - "8081:8081"
+    environment:
+      - APP_ENV=production
+      - REDIS_ADDR=redis:6379
+      - REDIS_PASSWORD=
+      - REDIS_DB=0
+      - PORT=8081
+      # Note: Rate limit configs will use default if omitted, but can be explicitly set:
+      # - RATE_LIMIT_REQUESTS=100
+      # - RATE_LIMIT_WINDOW=60
+    depends_on:
+      - redis
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - free9ja-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: ip-service-redis
+    hostname: ip-service-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    networks:
+      - free9ja-net
+
+volumes:
+  redis_data:
+
+networks:
+  free9ja-net:
+    driver: bridge
+

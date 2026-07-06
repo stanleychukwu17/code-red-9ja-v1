@@ -1,0 +1,139 @@
+-- name: CreateApplication :one
+INSERT INTO polling_agent_applications (
+  user_id,
+  party_id,
+  election_group_id,
+  polling_unit_id,
+  status
+) VALUES (
+  $1, $2, $3, $4, 'pending'
+) RETURNING *;
+
+-- name: UpdateUserAgentDetails :one
+UPDATE users
+SET
+  party_id = $2,
+  avatar = COALESCE($3, avatar),
+  vin = $4,
+  voters_card_image = $5,
+  current_country = $6,
+  current_state = $7,
+  current_lga = $8,
+  current_city = $9,
+  bank_account_number = $10,
+  bank_code = $11,
+  role = $12,
+  role_level = $13,
+  updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: GetApplicationByID :one
+SELECT * FROM polling_agent_applications
+WHERE id = $1 LIMIT 1;
+
+-- name: ListApplications :many
+SELECT 
+  pa.id,
+  pa.user_id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.status,
+  pa.rejected_reason,
+  pa.created_at,
+  pa.updated_at,
+  u.first_name,
+  u.last_name,
+  u.email,
+  u.phone,
+  u.username,
+  u.avatar,
+  u.vin,
+  u.voters_card_image,
+  u.current_country,
+  u.current_state,
+  u.current_lga,
+  u.current_city,
+  u.bank_account_number,
+  u.bank_code,
+  eg.name AS election_group_name,
+  eg.election_date,
+  p.name AS party_name,
+  p.short_name AS party_short_name,
+  p.logo AS party_logo,
+  st.name AS state_name,
+  lg.name AS lga_name,
+  ct.name AS city_name,
+  pu.name AS polling_unit_name,
+  pu.delimitation AS polling_unit_code,
+  COALESCE(
+    (
+      SELECT COUNT(*)::integer 
+      FROM polling_unit_assignments pua
+      WHERE pua.polling_unit_id = pa.polling_unit_id 
+        AND pua.party_id = pa.party_id 
+        AND pua.election_group_id = pa.election_group_id
+    ),
+    0
+  )::integer AS agents_count
+FROM polling_agent_applications pa
+JOIN users u ON pa.user_id = u.id
+JOIN election_groups eg ON pa.election_group_id = eg.id
+JOIN parties p ON pa.party_id = p.id
+LEFT JOIN c_states st ON u.current_state = st.id
+LEFT JOIN lgas lg ON u.current_lga = lg.id
+LEFT JOIN c_cities ct ON u.current_city = ct.id
+LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
+WHERE 
+  (sqlc.arg(user_id)::bigint = 0 OR pa.user_id = sqlc.arg(user_id)) AND
+  (sqlc.arg(party_id)::bigint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
+  (sqlc.arg(election_group_id)::bigint = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
+  (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
+  (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
+ORDER BY pa.id DESC
+LIMIT sqlc.arg(limit_val);
+
+-- name: UpdateApplicationStatus :one
+UPDATE polling_agent_applications
+SET
+  status = $2,
+  rejected_reason = $3,
+  updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: UpdateUserRoleToAgent :one
+UPDATE users
+SET
+  role_level = 'pollingagent',
+  role = 'partymember',
+  updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: GetPollingUnitsWithAgentCounts :many
+SELECT
+  pu.id,
+  pu.name,
+  pu.ward_id,
+  pu.ward_name,
+  pu.lga_id,
+  pu.lga_name,
+  pu.state_id,
+  pu.state_name,
+  COALESCE(
+    (
+      SELECT COUNT(*)::integer
+      FROM polling_unit_assignments pua
+      WHERE pua.polling_unit_id = pu.id
+        AND pua.party_id = sqlc.arg(party_id)::bigint
+        AND pua.election_group_id = sqlc.arg(election_group_id)::bigint
+    ),
+    0
+  )::integer AS agents_count
+FROM polling_units pu
+WHERE
+  (sqlc.arg(lga_id)::integer = 0 OR pu.lga_id = sqlc.arg(lga_id)::integer)
+ORDER BY agents_count ASC, pu.id ASC
+LIMIT sqlc.arg(limit_val)::integer;

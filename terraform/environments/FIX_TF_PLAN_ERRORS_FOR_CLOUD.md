@@ -1,4 +1,4 @@
-# When using Terraform Cloud for storage of the `.tfstate` file
+# When using Terraform Cloud for storage of the `terraform.tfstate` file
 
 As it is now, if you run the command `terraform plan` or `terraform apply`, you might get an error that says:
 
@@ -13,7 +13,7 @@ There are different ways to solve this error:
 
 ### 1. Set working_directory in HCP Terraform (Recommended)
 In your HCP Terraform workspace settings, set the Terraform Working Directory to:
-`environments/staging`
+`environments/staging` or `environments/production` or `environments/global`
 
 And make sure your VCS root is the repo root (`.`). This tells HCP Terraform to upload the entire repo but run Terraform from the subdirectory, so `../../modules` resolves correctly.
 

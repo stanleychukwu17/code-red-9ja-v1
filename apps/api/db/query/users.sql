@@ -41,6 +41,7 @@ WHERE fake_id = $1;
 SELECT * FROM users
 WHERE fake_id = $1 LIMIT 1;
 
+
 -- name: CreateUserSecurityQuestions :one
 INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -92,6 +93,17 @@ ORDER BY id DESC;
 DELETE FROM users
 WHERE id = $1;
 
+-- name: SeedUser :one
+INSERT INTO users (
+  fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
+  gender, date_of_birth, current_country, current_state, current_lga, current_city,
+  state_of_origin, vin, voters_card_image, bank_account_number, bank_code,
+  nin_verified, phone_verified, role, role_level, account_status, party_id
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+RETURNING id;
+
+
 -- name: AdminUpdateUser :exec
 UPDATE users
 SET first_name = $2,
@@ -106,5 +118,10 @@ SET first_name = $2,
     role_level = $11,
     party_id = $12,
     email = $13,
+    state_of_origin = $14,
     updated_at = NOW()
 WHERE id = $1;
+
+-- name: GetUserNINByUserID :one
+SELECT * FROM users_nin
+WHERE user_id = $1 LIMIT 1;

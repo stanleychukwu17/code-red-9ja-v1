@@ -79,17 +79,21 @@ module "alb" {
 }
 
 # --- Cloudflare CDN & DNS Module ---
+# Cloudflare SSL settings: Go to cloudflare and manually set the SSL/TLS Encryption mode to "Automatic SSL/TLS"
+# Domain-name Dashboard → SSL/TLS → Overview → {click configure button} → Automatic SSL/TLS
 module "cloudflare" {
-  source                 = "../../modules/cloudflare"
-  website                = var.website
-  environment            = var.environment
-  cloudflare_account_id  = var.cloudflare_account_id
-  cloudflare_zone_id     = var.cloudflare_zone_id
-  domain_name            = var.domain_name
-  create_frontend_domain = var.create_frontend_domain
-  frontend_subdomain     = var.frontend_subdomain
-  backend_subdomain      = var.backend_subdomain
-  alb_dns_name           = module.alb.alb_dns_name
+  source                     = "../../modules/cloudflare"
+  website                    = var.website
+  environment                = var.environment
+  cloudflare_account_id      = var.cloudflare_account_id
+  cloudflare_zone_id         = var.cloudflare_zone_id
+  domain_name                = var.domain_name
+  create_backend_dns         = var.create_backend_dns
+  create_backend_a_record    = var.create_backend_a_record
+  create_ip_service_a_record = var.create_ip_service_a_record
+  backend_subdomain          = var.backend_subdomain
+  alb_dns_name               = module.alb.alb_dns_name
+  ip_subdomain               = var.ip_subdomain
 }
 
 # # --- RDS Database Module ---
@@ -136,6 +140,7 @@ module "ecs" {
   db_name     = module.rds.db_name
   db_user     = module.rds.db_user
   db_password = var.rds_db_password
+  db_sslmode  = var.db_sslmode
 
   redis_host     = module.elasticache.redis_host
   redis_port     = module.elasticache.redis_port

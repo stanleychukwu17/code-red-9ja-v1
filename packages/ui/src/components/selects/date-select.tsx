@@ -1,11 +1,28 @@
 import { useEffect, useState } from "react";
-import { getLocalDate } from "../../lib/date";
+import {
+  getLocalDate,
+  formatDateToYYYYMMDD,
+  parseDateString,
+} from "../../lib/date";
 import { SelectProps } from "../../lib/types";
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { Calendar } from "../calendar";
 import CalendarIcon from "../../icons/navbar/calendar-icon";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
+
+const parseSafeDate = (value: string | undefined): Date | undefined => {
+  if (!value) return undefined;
+  if (value.includes("T")) {
+    const parsed = new Date(value);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  const parsed = parseDateString(value);
+  if (parsed && !isNaN(parsed.getTime())) return parsed;
+  const fallback = new Date(value);
+  if (!isNaN(fallback.getTime())) return fallback;
+  return undefined;
+};
 
 export const SelectDate = ({
   initialData,
@@ -24,33 +41,18 @@ export const SelectDate = ({
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Date | undefined>(() => {
-    if (selectedId) {
-      const parsed = new Date(selectedId);
-      if (!isNaN(parsed.getTime())) return parsed;
-    }
-    if (initialData) {
-      const parsed = new Date(initialData);
-      if (!isNaN(parsed.getTime())) return parsed;
-    }
-    return undefined;
+    return parseSafeDate(selectedId) || parseSafeDate(initialData);
   });
 
   useEffect(() => {
-    if (selectedId) {
-      const parsed = new Date(selectedId);
-      if (!isNaN(parsed.getTime())) {
-        setSelectedItem(parsed);
-      } else {
-        setSelectedItem(undefined);
-      }
-    } else {
-      setSelectedItem(undefined);
-    }
-  }, [selectedId]);
+    const val = selectedId || initialData;
+    setSelectedItem(parseSafeDate(val));
+  }, [selectedId, initialData]);
 
   const handleSelect = (date: Date | undefined) => {
     if (!date) return;
-    update(date.toISOString());
+    const formatted = formatDateToYYYYMMDD(date);
+    update(formatted);
     setSelectedItem(date);
     setOpen(false);
   };
@@ -67,6 +69,7 @@ export const SelectDate = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-start w-full gap-2",
             className,

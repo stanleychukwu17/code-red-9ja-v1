@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	mathRand "math/rand"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -68,9 +69,8 @@ type PostgresTestConfig struct {
 	Port string
 }
 
-func FormatPostgresDSN(db_user, db_password, db_host, db_port, db_name string) string {
-	// "postgres://<username>:<password>@localhost:<port>/<database>?sslmode=disable"
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", db_user, db_password, db_host, db_port, db_name)
+func FormatPostgresDSN(db_user, db_password, db_host, db_port, db_name, sslMode string) string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s", db_user, db_password, db_host, db_port, db_name, sslMode)
 }
 
 func SetupPostgresTestContainer(db_user, db_password, db_name, db_port string) (PostgresTestConfig, testcontainers.Container, error) {
@@ -206,4 +206,35 @@ func (jd *JSONDate) UnmarshalJSON(b []byte) error {
 // MarshalJSON implements json.Marshaler.
 func (jd JSONDate) MarshalJSON() ([]byte, error) {
 	return json.Marshal(time.Time(jd))
+}
+
+// GetIP extracts the client's actual IP address from the incoming HTTP request.
+// It handles scenarios where the application is deployed behind a reverse proxy,
+// load balancer, or CDN by checking standard forwarding headers (X-Forwarded-For, X-Real-IP)
+// before falling back to the raw remote address.
+func GetIP(r *http.Request) string {
+	// Check X-Forwarded-For
+	forwardedFor := r.Header.Get("X-Forwarded-For")
+	if forwardedFor != "" {
+		ips := strings.Split(forwardedFor, ",")
+		if len(ips) > 0 {
+			return strings.TrimSpace(ips[0])
+		}
+	}
+
+	// Check X-Real-IP
+	realIP := r.Header.Get("X-Real-IP")
+	if realIP != "" {
+		return strings.TrimSpace(realIP)
+	}
+
+	// Fallback to RemoteAddr
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		ip = r.RemoteAddr
+	} else {
+		ip = strings.TrimSpace(ip)
+	}
+
+	return ip
 }

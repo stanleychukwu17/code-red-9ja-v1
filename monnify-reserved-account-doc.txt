@@ -1,0 +1,394 @@
+Monnify
+menu
+Home
+menu
+Accept Payments
+Overview
+Quickstart
+Payment Methods
+International Payments
+One-Time Payments
+Recurring Payments
+Overview
+Reserved / Virtual Accounts
+Direct Debit / Mandates
+Card Tokenization
+Retry & Failure Handling
+Manage Payments
+menu
+Transfer/Payout
+menu
+Wallets
+menu
+Verification APIs
+menu
+Bills Payment
+menu
+Integrations Tools
+menu
+Webhooks
+menu
+Settlement
+menu
+Going Live
+menu
+Changelogs
+menu
+Test Cards
+menu
+Error Codes
+menu
+Supported Banks
+API Reference
+Monnify Status
+Blog
+Support
+☀️
+Home
+Monnify Collections
+Customer Reserved Account
+Customer Reserved Account
+This feature allows you to generate a virtual account for your customers. The account number generated is dedicated to a customer and every payment to that virtual account is associated with the customer for which the account was reserved.
+
+These accounts are very useful for merchants whose;
+
+
+Customers can only pay for a single service: This is common for electricity companies, internet service providers, etc. The account reserved for the customer in this scenario allows them to pay for a service by doing a simple transfer to their reserved account and the payment is confirmed.
+
+Businesses that involves the use of a wallet: Here, an account number is reserved for each customer's wallet to enable them to top up by simply transferring to that account. Examples of this are Super Agents, Investment Applications, Betting Platforms, Logistics Applications, etc.
+
+
+alert image
+Note:
+For virtual accounts generated in Sandbox, Use the Monnify Payment simulator to complete test payments. Real transactions are not supported in Sandbox mode.
+
+How does Customer Reserved Account work?
+You can generate a reserved account for your customers by making a POST request to the Reserve an Account API.
+
+Once the account is created, the customer can then make payments to the reserved account at any time.
+
+Once the transfer is made by the customer, the partner bank gets notified, Monnify is notified and the merchant is then notified of the transaction on the account
+
+The transaction details along with the account reference for the transaction is made available to the merchant.
+
+
+alert image
+Note:
+If you want to reserve accounts across all partner banks for your customers, you will need to pass “true” for the “getAllAvailableBanks” field. For now, Moniepoint bank accounts are the default virtual accounts.
+
+Create Reserved Account
+alert image
+Note:
+Please note that the BVN or NIN of your customer must be supplied when sending this request.
+cURL
+JavaScript
+Python
+PHP
+Copy
+curl -X POST https://sandbox.monnify.com/api/v2/bank-transfer/reserved-accounts \
+-H "Authorization: Bearer <accessToken>" \
+-H "Content-Type: application/json" \
+-d '{
+  "accountReference": "abc123",
+  "accountName": "Test Reserved Account",
+  "currencyCode": "NGN",
+  "contractCode": "8389328412",
+  "customerEmail": "test@tester.com",
+  "bvn": "21212121212",
+  "customerName": "John Doe",
+  "getAllAvailableBanks": true
+}'
+Reserve Account Response Body
+response.json
+Copy
+{
+"requestSuccessful": true,
+"responseMessage": "success",
+"responseCode": "0",
+"responseBody": {
+  "contractCode": "8389328412",
+  "accountReference": "abc1234",
+  "accountName": "Tes",
+  "currencyCode": "NGN",
+  "customerEmail": "test@tester.com",
+  "customerName": "John Doe",
+  "accounts": [
+    {
+      "bankCode": "50515",
+      "bankName": "Moniepoint Microfinance Bank",
+      "accountNumber": "6254727989",
+      "accountName": "Tes"
+    }
+  ],
+  "collectionChannel": "RESERVED_ACCOUNT",
+  "reservationReference": "NWA7DMJ0W2UDK1KN5SLF",
+  "reservedAccountType": "GENERAL",
+  "status": "ACTIVE",
+  "createdOn": "2023-04-14 12:04:39.034",
+  "incomeSplitConfig": [],
+  "bvn": "21212121212",
+  "restrictPaymentSource": false
+}
+}
+
+
+Invoice Reserved Account
+Monnify invoice reserved account allows you to reserve an account for your customers to whom you send invoices to regularly. This account can be attached to invoices being generated for a customer so that the same account number is received for every invoice peculiar to that customer.
+
+
+These accounts are slightly different from regular customer reserved accounts as customers cannot pay into these accounts until they are attached to an invoice. Basically, the account number is inactive until when attached to an invoice and returns to it's inactive state when the invoice is paid.
+
+
+See Invoice Reserved-Account API for details on how to implement one.
+
+
+
+Reserved Account Creation on Monnify Dashboard
+To create reserved account via the Monnify dashboard, kindly navigate to the reserved account section, click on the “create new” button and populate the fields shown in the image below;
+
+
+Split payments on Reserved Accounts
+The incomeSplitConfig field allows you to use split payments with your reserved accounts by specifying one or more sub-account(s) and a specific percentage of each payment to be credited into each sub-account. IncomeSplitConfig is an array of objects so you can split into multiple sub-accounts per transaction.
+
+
+
+Sample Request
+cURL
+JavaScript
+Python
+PHP
+Copy
+curl -X POST https://sandbox.monnify.com/api/v2/bank-transfer/reserved-accounts \
+-H "Authorization: Bearer <accessToken>" \
+-H "Content-Type: application/json" \
+-d '{
+  "accountReference": "abc123",
+  "accountName": "Test Reserved Account",
+  "currencyCode": "NGN",
+  "contractCode": "8389328412",
+  "customerEmail": "test@tester.com",
+  "customerName": "John Doe",
+  "bvn": "21212121212",
+  "nin": "12034875601",
+  "getAllAvailableBanks": true,
+  "incomeSplitConfig": [
+    {
+      "subAccountCode": "MFY_SUB_319452883228",
+      "feePercentage": 10.5,
+      "splitPercentage": 20,
+      "feeBearer": true
+    }
+  ]
+}'
+Transaction Limits
+You can establish a limit on a customer's account using the Transaction Limit APIs. This means that on a customer's account, you can specify the maximum amount per transaction, the maximum number of transactions per day, and the total amount per day.
+To do so, you will need to create a Limit Profile and use the Limit Profile code to assign customers to the limit profile.
+
+
+
+In managing Transaction Limits, you can do the following
+
+Create Limit profiles: The Create Limit API, allows you to set a limit on a customers account. Once the POST request has been made to this endpoint, a limit profile code is returned. This code becomes the unique identifier for the limit profile created, and will be used to reference the limit profile in reserve account requests.
+Update Limit profile: To make updates to any limit profile you have created, you are required to make a PUT request to the Update Limit Profile API, providing updates such as, the single transaction value, daily transaction volume and daily transaction value.
+Reserve Account with Limit: You can create a reserved account on Monnify and creating a limit profile on the account. It works similar to creating a reserve account, except that a limit profile code in included in the request to create the reserved account. See Reserve Account with limit API
+
+Get Limit profiles: The Get Limit Profile API helps you get a list of all the limit profiles you have created.
+
+Update Reserve Account Limit: The Update Reserve Account Limit API helps you update the information on an existing limit profile created for a reserved account.
+
+Restriction of Payment Sources on Reserved Accounts
+Merchants are able to restrict source accounts that can fund a reserved account using either BVNs or Account Name or Account Number. This is mandatory if the restrictPaymentSource request parameter is set to true.
+
+This feature is useful for merchants in a regulated business category, where only the authorized user(s) of a reserved account should fund the reserved account, to allow more payment sources, only BVNs will be used to allow more payment sources other than the default customerBvn already on a reserve account.
+
+
+The rule application is as follows:
+
+If only account numbers are specified, funding of account will be restricted to specified account numbers.
+If only account names are specified, funding of account will be restricted to specified account names.
+If both account numbers and account names are specified, funding will be permitted when either of the two rules match, i.e. source account number matches specified account numbers or source account name matches specified account name.
+
+Sample Request
+cURL
+JavaScript
+Python
+PHP
+Copy
+curl -X POST https://sandbox.monnify.com/api/v2/bank-transfer/reserved-accounts \
+-H "Authorization: Bearer <accessToken>" \
+-H "Content-Type: application/json" \
+-d '{
+  "accountReference": "abc123",
+  "accountName": "Test Reserved Account",
+  "currencyCode": "NGN",
+  "contractCode": "8389328412",
+  "customerEmail": "test@tester.com",
+  "customerName": "John Doe",
+  "bvn": "21212121212",
+  "restrictPaymentSource": true,
+  "allowedPaymentSources": {
+    "bvns": ["21212121212", "20202020202"],
+    "bankAccounts": [
+      { "accountNumber": "0068687503", "bankCode": "232" },
+      { "accountNumber": "2048714015", "bankCode": "057" }
+    ],
+    "accountNames": ["SAMUEL DAMILARE OGUNNAIKE"]
+  }
+}'
+
+Sample Response
+response.json
+Copy
+{
+"requestSuccessful": true,
+"responseMessage": "success",
+"responseCode": "0",
+"responseBody": {
+  "contractCode": "8389328412",
+  "accountReference": "abc123",
+  "accountName": "Tes",
+  "currencyCode": "NGN",
+  "customerEmail": "test@tester.com",
+  "customerName": "John Doe",
+  "accounts": [
+    {
+      "bankCode": "50515",
+      "bankName": "Moniepoint Microfinance Bank",
+      "accountNumber": "6254727989",
+      "accountName": "Tes"
+    }
+  ],
+  "collectionChannel": "RESERVED_ACCOUNT",
+  "reservationReference": "NWA7DMJ0W2UDK1KN5SLF",
+  "reservedAccountType": "GENERAL",
+  "status": "ACTIVE",
+  "createdOn": "2023-04-14 12:04:39.034",
+  "incomeSplitConfig": [],
+  "bvn": "21212121212",
+  "restrictPaymentSource": true,
+  "allowedPaymentSources": {
+    "bvns": ["21212121212", "20202020202"],
+    "bankAccounts": [
+      {
+        "accountNumber": "0068687503",
+        "bankCode": "232"
+      },
+      {
+        "accountNumber": "2048714015",
+        "bankCode": "057"
+      }
+    ],
+    "accountNames": ["SAMUEL DAMILARE OGUNNAIKE"]
+  }
+}
+}
+Update Reserved Account KYC Info
+The Update Kyc Info API allows merchants to link a customer's BVN and/or NIN to their respective static reserved account.
+
+
+The API accepts either the customer’s BVN or NIN or both, subject to the following merchant requirements:
+
+For accounts that wish to enjoy the maximum transaction limit, both BVN and NIN must be linked to the reserved account.
+
+For accounts with limited transaction amounts, one of NIN or BVN is required.
+
+
+
+
+Sample Error Messages
+Error Message	Meaning	Action
+You can not reserve two accounts with the same reference.
+
+The accountReference parameter in the request payload has already been used by you.
+
+Retry with a unique accountReference
+
+You cannot reserve more than 1 account(s) for a customer. Please contact support for assistance.
+
+There is an exisiting active reserved account generated with this customerEmail.
+
+Kindly share exsting account details with your customer.
+
+Invalid contract code supplied.
+
+The contractCode in the request parameter is not correct or it doesn’t belong to the merchant.
+
+Navigate to the "Settings > Contract Setup", section of your Monnify dashboard to get your contact code
+
+Is invalid. Must be 11 digits	
+This most times implies that the BVN provided is invalid
+
+If BVN/NIN is supplied, confirm that it has the required length
+
+BVN or NIN is required.	
+BVN and NIN were not supplied in the request payload.
+
+Retry with the BVN and/or NIN details of the customer.
+
+Unknown currency code supplied.
+
+The currency code supplied is not valid or supported
+
+Reconfirm the currency code supplied
+
+We do not support virtual accounts from banks with code XXX.
+
+This implies that we do not create virtual account for some of the bank codes passed in the preferredBanks array
+
+Retry with any of the supported bank codes
+
+Unknown sub account code XXXXXXX.
+
+The happen when using the incomeSplitConfig and the sub account doesn’t belong to the merchant.
+
+Kindly confirm from the SubAccount section of your Monnify dashboard if the subAccount being used exists there
+
+R42	
+You cannot reserve more than 1 account(s) for a customer. Please contact support for assistance.
+
+Kindly use unique customer email when generating reserved account
+
+Rate this page
+
+How helpful is the content on this page?
+
+★
+★
+★
+★
+★
+On this page
+
+Customer Reserved Account
+How does Customer Reserved Account work?
+Create Reserved Account
+Reserve Account Response Body
+Invoice Reserved Account
+Reserved Account Creation on Monnify Dashboard
+Split payments on Reserved Accounts
+Sample Request
+Transaction Limits
+Restriction of Payment Sources on Reserved Accounts
+Sample Request
+Sample Response
+Update Reserved Account KYC Info
+Sample Error Messages
+
+get info
+Got Questions
+
+Reach out to us at support@monnify.com if you have any questions as regards integrating with the Monnify API.
+youtube
+Monnify Tutorial Videos
+
+Check out Our Youtube channel for tutorials on how to integrate the Monnify API.
+slack
+Join Our Slack Community
+
+Click here to join the Monnify Slack community.
+Copyright © 2026 Monnify
+instagram
+facebook
+icon
+Terms of Service
+Privacy Policy

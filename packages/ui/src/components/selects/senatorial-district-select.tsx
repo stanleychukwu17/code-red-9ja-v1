@@ -3,6 +3,7 @@ import { SelectProps } from "../../lib/types";
 import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { GeneralCommand } from "../command/general-command";
+import { DrawerList } from "../command/drawer-list";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { LoadingSelect } from "./loading-select";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -41,32 +42,26 @@ export const SelectSenatorialDistrict = ({
   }) => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedItem, setSelectedItem] = useState<SenatorialDistrict | undefined>(
-    undefined,
-  );
+  const [desktopSearch, setDesktopSearch] = useState("");
+  const [mobileSearch, setMobileSearch] = useState("");
+  const [selectedItem, setSelectedItem] = useState<
+    SenatorialDistrict | undefined
+  >(undefined);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery<SenatorialDistrictsResponse>({
       queryKey: ["senatorial_districts", stateId],
       queryFn: async ({ pageParam }) => {
         const res = await fetchSenatorialDistricts({
-          data: {
-            stateId,
-            limit: 50,
-            cursor: pageParam as string,
-          },
+          data: { stateId, limit: 50, cursor: pageParam as string },
         });
-        if (res && res.success && res.data) {
-          return res;
-        }
+        if (res && res.success && res.data) return res;
         throw new Error(res?.message || "Failed to fetch districts");
       },
       initialPageParam: "",
       getNextPageParam: (lastPage) => {
-        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more)
           return lastPage.meta.next_cursor || "";
-        }
         return undefined;
       },
       enabled: !!stateId,
@@ -85,9 +80,7 @@ export const SelectSenatorialDistrict = ({
       !isLoading
     ) {
       const found = districts.some((d) => String(d.id) === String(selectedId));
-      if (!found) {
-        fetchNextPage();
-      }
+      if (!found) fetchNextPage();
     }
   }, [
     selectedId,
@@ -101,10 +94,8 @@ export const SelectSenatorialDistrict = ({
 
   useEffect(() => {
     if (selectedId) {
-      const district = districts.find((d) => String(d.id) === String(selectedId));
-      if (district) {
-        setSelectedItem(district);
-      }
+      const d = districts.find((d) => String(d.id) === String(selectedId));
+      if (d) setSelectedItem(d);
     } else {
       setSelectedItem(undefined);
     }
@@ -113,6 +104,9 @@ export const SelectSenatorialDistrict = ({
   useEffect(() => {
     setSelectedItem(undefined);
   }, [stateId]);
+  useEffect(() => {
+    if (!open) setMobileSearch("");
+  }, [open]);
 
   const handleDistrictSelect = (district: SenatorialDistrict) => {
     setSelectedItem(district);
@@ -121,7 +115,10 @@ export const SelectSenatorialDistrict = ({
   };
 
   const filteredDistricts = districts.filter((d) =>
-    d.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    d.name.toLowerCase().includes(desktopSearch.toLowerCase()),
+  );
+  const mobileFiltered = districts.filter((d) =>
+    d.name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
   const getStatus = ():
@@ -129,25 +126,26 @@ export const SelectSenatorialDistrict = ({
     | "LoadingMore"
     | "LoadingFirstPage"
     | "Exhausted" => {
-    if (isLoading && districts.length === 0) {
-      return "LoadingFirstPage";
-    }
-    if (isFetchingNextPage) {
-      return "LoadingMore";
-    }
+    if (isLoading && districts.length === 0) return "LoadingFirstPage";
+    if (isFetchingNextPage) return "LoadingMore";
     return hasNextPage ? "CanLoadMore" : "Exhausted";
   };
 
   const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   };
 
   const displayText =
     selectedItem?.name ||
     (isLoading && !selectedItem ? "Loading..." : "Select district");
   const hasError = Boolean(errorMsg);
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
+  const getId = (item: SenatorialDistrict) => `${item.id}`;
+  const getName = (item: SenatorialDistrict) => item.name;
 
   if (districts.length === 0 && isLoading && !disabled && stateId) {
     return (
@@ -172,6 +170,7 @@ export const SelectSenatorialDistrict = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between w-full gap-2",
             hasError && "border-0.8 border-red",
@@ -186,23 +185,30 @@ export const SelectSenatorialDistrict = ({
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }
-    >
-      <GeneralCommand
-        data={filteredDistricts}
-        getId={(item: SenatorialDistrict) => `${item.id}`}
-        getName={(item: SenatorialDistrict) => item.name}
-        handleSelect={handleDistrictSelect}
-        selectedId={
-          selectedItem?.id
-            ? `${selectedItem.id}`
-            : selectedId
-              ? `${selectedId}`
-              : undefined
-        }
-        status={getStatus()}
-        loadMore={handleLoadMore}
-        onSearch={setSearchQuery}
-      />
-    </SelectResponsiveWrapper>
+      desktopContent={
+        <GeneralCommand
+          data={filteredDistricts}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleDistrictSelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          loadMore={handleLoadMore}
+          onSearch={setDesktopSearch}
+        />
+      }
+      mobileContent={
+        <DrawerList
+          data={mobileFiltered}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleDistrictSelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          searchValue={mobileSearch}
+          onSearch={setMobileSearch}
+        />
+      }
+    />
   );
 };

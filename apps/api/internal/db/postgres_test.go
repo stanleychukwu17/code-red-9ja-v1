@@ -25,7 +25,7 @@ func TestNewPostgresPool(t *testing.T) {
 	defer pgContainer.Terminate(ctx)
 
 	// create db connection url
-	dsn := utils.FormatPostgresDSN(user, password, pgConfig.Host, pgConfig.Port, db_name)
+	dsn := utils.FormatPostgresDSN(user, password, pgConfig.Host, pgConfig.Port, db_name, "disable")
 
 	// 2. Test successful connection
 	pool, err := db.NewPostgresPool(ctx, dsn)

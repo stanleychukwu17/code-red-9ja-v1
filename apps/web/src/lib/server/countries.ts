@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
+import { respondError, respondSuccess } from "@/lib/shared/response";
+import { apiFetch } from "./fetch";
 
 
 /**
@@ -9,11 +11,11 @@ import { API_URL } from "../config";
 */
 export const getAllCountries = createServerFn().handler(async () => {
   try {
-    const response = await fetch(API_URL.getAllCountries);
+    const response = await apiFetch(API_URL.getAllCountries);
     const data = await response.json();
-    return data;
+    return respondSuccess(data);
   } catch (error) {
-    return { status: "failed", error: "Failed to fetch countries from API, Maybe the backend server is currently down" };
+    return respondError("Failed to fetch countries from API, Maybe the backend server is currently down");
   }
 });
 
@@ -21,11 +23,11 @@ export const getStates = createServerFn()
   .inputValidator((data: { countryId: number }) => data)
   .handler(async ({ data: { countryId } }) => {
     try {
-      const response = await fetch(API_URL.getStates(countryId));
+      const response = await apiFetch(API_URL.getStates(countryId));
       const data = await response.json();
-      return data;
+      return respondSuccess(data);
     } catch (error) {
-      return { status: "failed", error: "Failed to fetch states from API, Maybe the backend server is currently down" };
+      return respondError("Failed to fetch states from API, Maybe the backend server is currently down");
     }
   });
 
@@ -33,11 +35,11 @@ export const getCities = createServerFn()
   .inputValidator((data: { stateId: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
-      const url = `${API_URL.getCities(stateId)}?limit=${limit || 50}&cursor=${cursor || ""}`;
-      const response = await fetch(url);
+      const url = `${API_URL.getCities(stateId)}?limit=${limit || 150}&cursor=${cursor || ""}`;
+      const response = await apiFetch(url);
       const data = await response.json();
-      return data;
+      return respondSuccess(data);
     } catch (error) {
-      return { status: "failed", error: "Failed to fetch cities from API, Maybe the backend server is currently down" };
+      return respondError("Failed to fetch cities from API, Maybe the backend server is currently down");
     }
   });

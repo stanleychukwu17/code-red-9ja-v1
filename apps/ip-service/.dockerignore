@@ -1,0 +1,18 @@
+# Git
+.git
+.gitignore
+
+# Environment variables
+.env
+.env.*
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Go test files
+*test.go
+
+# OS specific files
+.DS_Store
+Thumbs.db
