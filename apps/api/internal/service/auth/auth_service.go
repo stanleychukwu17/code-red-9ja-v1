@@ -79,6 +79,16 @@ func (s *AuthService) getPartyInfo(ctx context.Context, partyID pgtype.Int8) *qu
 	return nil
 }
 
+func (s *AuthService) getPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party {
+	if partyID.Valid {
+		party, err := s.queries.GetPartyByID(ctx, partyID.Int64)
+		if err == nil {
+			return &party
+		}
+	}
+	return nil
+}
+
 type LoginUser struct {
 	queries.User
 	PasswordHash string                        `json:"-"`
@@ -103,8 +113,16 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	switch identifierType {
 	case "email":
 		identifier = strings.TrimSpace(strings.ToLower(identifier))
+		identifier = strings.TrimSpace(strings.ToLower(identifier))
 		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
 		if fakeIDStr == "" {
+			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
+			if err == nil && dbUser.FakeID.Valid {
+				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)
+				_ = s.SaveSomeUserRegistrationDetails(ctx, dbUser.Username.String, dbUser.Email.String, dbUser.Phone.String, "", dbUser.ID, dbUser.FakeID.Int64)
+			} else {
+				return LoginResult{}, errors.New("invalid email, this record not found")
+			}
 			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
 			if err == nil && dbUser.FakeID.Valid {
 				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)

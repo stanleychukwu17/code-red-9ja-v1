@@ -21,10 +21,10 @@ import (
 	authhandler "free9ja/api/internal/handler/auth"
 	bodieshandler "free9ja/api/internal/handler/bodies"
 	electiongroupshandler "free9ja/api/internal/handler/election_groups"
+	electionresultshandler "free9ja/api/internal/handler/election_results"
 	electionshandler "free9ja/api/internal/handler/elections"
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
-	officeshandler "free9ja/api/internal/handler/offices"
 	officeshandler "free9ja/api/internal/handler/offices"
 	partieshandler "free9ja/api/internal/handler/parties"
 	paapplicationshandler "free9ja/api/internal/handler/polling_agent_applications"
@@ -39,8 +39,6 @@ import (
 	wardshandler "free9ja/api/internal/handler/wards"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
 	"free9ja/api/internal/logger"
-	webhookshandler "free9ja/api/internal/handler/webhooks"
-	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
@@ -48,8 +46,6 @@ import (
 	electionsservice "free9ja/api/internal/service/elections"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	messagingservice "free9ja/api/internal/service/messaging"
-	monnifyservice "free9ja/api/internal/service/monnify"
-	officesservice "free9ja/api/internal/service/offices"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
 	partiesservice "free9ja/api/internal/service/parties"
@@ -64,21 +60,11 @@ import (
 	statesservice "free9ja/api/internal/service/states"
 	usersservice "free9ja/api/internal/service/users"
 	wardsservice "free9ja/api/internal/service/wards"
-	puassignmentshandler "free9ja/api/internal/handler/polling_unit_assignments"
-	puassignments "free9ja/api/internal/service/polling_unit_assignments"
-	paapplicationshandler "free9ja/api/internal/handler/polling_agent_applications"
-	paapplications "free9ja/api/internal/service/polling_agent_applications"
-	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
-	puupdates "free9ja/api/internal/service/polling_unit_updates"
-	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
-	puresults "free9ja/api/internal/service/polling_unit_results"
 	"free9ja/api/internal/utils"
-	"free9ja/api/internal/worker"
 	"free9ja/api/internal/worker"
 )
 
 // New creates and returns a configured Chi router.
-func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor worker.TaskDistributor) http.Handler {
 func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor worker.TaskDistributor) http.Handler {
 	mainRouter := chi.NewRouter()
 
@@ -127,10 +113,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingAgentApplicationsService := paapplications.NewService(q, pool, rdb)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
-	pollingUnitAssignmentsService := puassignments.NewService(q, rdb)
-	pollingAgentApplicationsService := paapplications.NewService(q, pool, rdb)
-	pollingUnitUpdatesService := puupdates.NewService(q, pool)
-	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
 	utilsInstance := utils.NewUtils(pool)
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance)
@@ -150,11 +132,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
-	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, utilsInstance)
-	pollingAgentApplicationsHandler := paapplicationshandler.NewHandler(pollingAgentApplicationsService, usersService, utilsInstance)
-	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
-	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
-	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
+	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 
 	// Initialise the R2 service (nil-safe: file endpoints return an error if unconfigured)
 	var filesHandler *fileshandler.Handler
@@ -222,17 +200,17 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get(utils.ApiUrls.Bodies.GetWards, wardsHandler.GetWards)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetPollingUnits, pollingUnitsHandler.GetPollingUnits)
 
+	// election geo-results endpoints (geography joined with final results)
+	mainRouter.Get("/api/v1/elections/results/states", electionResultsHandler.GetStatesWithResults)
+	mainRouter.Get("/api/v1/elections/results/senatorial-districts", electionResultsHandler.GetSenatorialDistrictsWithResults)
+	mainRouter.Get("/api/v1/elections/results/federal-constituencies", electionResultsHandler.GetFederalConstituenciesWithResults)
+	mainRouter.Get("/api/v1/elections/results/lgas", electionResultsHandler.GetLGAsWithResults)
+	mainRouter.Get("/api/v1/elections/results/wards", electionResultsHandler.GetWardsWithResults)
+	mainRouter.Get("/api/v1/elections/results/polling-units", electionResultsHandler.GetPollingUnitsWithResults)
+
 	// political parties public routes
 	mainRouter.Get("/api/v1/parties", partiesHandler.ListParties)
 	mainRouter.Get("/api/v1/parties/{id}", partiesHandler.GetParty)
-	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
-
-	// Monnify webhook — must be public (Monnify POSTs from their servers)
-	mainRouter.Post("/api/v1/webhooks/monnify", webhookHandler.HandleMonnify)
-
-	// Testing & recovery wallet provisioning (public/unauthenticated)
-	mainRouter.Post("/api/v1/parties/wallets/provision-missing", partiesHandler.ProvisionMissingPartyWallets)
-	mainRouter.Post("/api/v1/users/wallets/provision-missing", usersHandler.ProvisionMissingUserWallets)
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
 
 	// Monnify webhook — must be public (Monnify POSTs from their servers)
@@ -268,7 +246,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/election-groups", electionGroupsHandler.ListElectionGroups)
 	mainRouter.Get("/api/v1/election-groups/{id}", electionGroupsHandler.GetElectionGroup)
 	mainRouter.Get("/api/v1/election-groups/{id}/elections", electionGroupsHandler.ListGroupElections)
-	mainRouter.Get("/api/v1/election-groups/{id}/elections", electionGroupsHandler.ListGroupElections)
 
 	// elections public routes
 	mainRouter.Get("/api/v1/elections", electionsHandler.ListElections)
@@ -297,12 +274,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/parties", partiesHandler.CreateParty)
 		r.Put("/api/v1/parties/{id}", partiesHandler.UpdateParty)
 		r.Delete("/api/v1/parties/{id}", partiesHandler.DeleteParty)
-		r.Put("/api/v1/admin/parties/{id}/discount", partiesHandler.UpdatePartyDiscount)
-		// manual wallet creation for a party (in case auto-create failed)
-		r.Post("/api/v1/parties/{id}/wallet", partiesHandler.CreatePartyWalletHandler)
-		// slot pricing settings
-		r.Get("/api/v1/admin/settings/slot-price", partiesHandler.GetGlobalSlotPrice)
-		r.Put("/api/v1/admin/settings/slot-price", partiesHandler.UpdateGlobalSlotPrice)
 		r.Put("/api/v1/admin/parties/{id}/discount", partiesHandler.UpdatePartyDiscount)
 		// manual wallet creation for a party (in case auto-create failed)
 		r.Post("/api/v1/parties/{id}/wallet", partiesHandler.CreatePartyWalletHandler)
@@ -428,6 +399,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// polling unit results routes
 		r.Post("/api/v1/polling-unit-results", pollingUnitResultsHandler.SubmitResult)
 		r.Get("/api/v1/polling-unit-results", pollingUnitResultsHandler.ListResults)
+		r.Get("/api/v1/polling-unit-final-results", pollingUnitResultsHandler.ListFinalResults)
 		r.Get("/api/v1/polling-unit-results/final", pollingUnitResultsHandler.GetFinalResult)
 		r.Get("/api/v1/polling-unit-results/{id}", pollingUnitResultsHandler.GetResult)
 		r.Patch("/api/v1/polling-unit-results/{id}/vote", pollingUnitResultsHandler.VoteOnResult)

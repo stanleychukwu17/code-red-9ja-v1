@@ -396,3 +396,72 @@ func TestAdminLogin(t *testing.T) {
 		require.Equal(t, "access-token", data["accessToken"])
 	})
 }
+
+// TestChangePasswordByEmail tests the ChangePasswordByEmail method of the AuthHandler
+func TestChangePasswordByEmail(t *testing.T) {
+	utilsInstance := utils.NewUtils(nil)
+
+	t.Run("successful password change", func(t *testing.T) {
+		mockService := new(MockAuthService)
+		handler := authhandler.NewHandler(mockService, utilsInstance)
+
+		reqBody := authhandler.ChangePasswordByEmailRequest{
+			Email:    "user@example.com",
+			Password: "newpassword123",
+		}
+
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		mockService.On("ChangePasswordByEmail", mock.Anything, reqBody.Email, reqBody.Password).Return(nil)
+
+		handler.ChangePasswordByEmail(rr, req)
+
+		require.Equal(t, http.StatusOK, rr.Code)
+		var response map[string]any
+		err := json.Unmarshal(rr.Body.Bytes(), &response)
+		require.NoError(t, err)
+		require.Equal(t, "Password changed successfully", response["message"])
+	})
+
+	t.Run("validation failure - short password", func(t *testing.T) {
+		mockService := new(MockAuthService)
+		handler := authhandler.NewHandler(mockService, utilsInstance)
+
+		reqBody := authhandler.ChangePasswordByEmailRequest{
+			Email:    "user@example.com",
+			Password: "123", // too short
+		}
+
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		handler.ChangePasswordByEmail(rr, req)
+
+		require.Equal(t, http.StatusBadRequest, rr.Code)
+		require.Contains(t, rr.Body.String(), "Validation failed")
+	})
+
+	t.Run("service failure - user not found", func(t *testing.T) {
+		mockService := new(MockAuthService)
+		handler := authhandler.NewHandler(mockService, utilsInstance)
+
+		reqBody := authhandler.ChangePasswordByEmailRequest{
+			Email:    "notfound@example.com",
+			Password: "newpassword123",
+		}
+
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest("POST", "/api/v1/auth/change-password", bytes.NewBuffer(body))
+		rr := httptest.NewRecorder()
+
+		mockService.On("ChangePasswordByEmail", mock.Anything, reqBody.Email, reqBody.Password).Return(errors.New("user not found"))
+
+		handler.ChangePasswordByEmail(rr, req)
+
+		require.Equal(t, http.StatusBadRequest, rr.Code)
+		require.Contains(t, rr.Body.String(), "user not found")
+	})
+}

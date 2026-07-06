@@ -99,7 +99,7 @@ export const rejectApplication = createServerFn({ method: "POST" })
 
 export const getPollingUnits = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { wardID?: number; lgaID?: number; stateID?: number } | undefined) =>
+    (data: { wardID?: number; lgaID?: number; stateID?: number; limit?: number; cursor?: string | number } | undefined) =>
       data,
   )
   .handler(async ({ data }) => {
@@ -108,6 +108,8 @@ export const getPollingUnits = createServerFn({ method: "GET" })
       if (data?.wardID) params.append("ward_id", String(data.wardID));
       if (data?.lgaID) params.append("lga_id", String(data.lgaID));
       if (data?.stateID) params.append("state_id", String(data.stateID));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
       const qs = params.toString();
 
       const url = `${API_URL.pollingUnits}${qs ? `?${qs}` : ""}`;
@@ -126,12 +128,13 @@ export const getPollingUnits = createServerFn({ method: "GET" })
 
 export const getLGAs = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { stateId?: number; limit?: number; cursor?: string } | undefined) => data,
+    (data: { stateId?: number; federalConstituencyId?: number; limit?: number; cursor?: string } | undefined) => data,
   )
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
       if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.federalConstituencyId) params.append("federal_constituency_id", String(data.federalConstituencyId));
       if (data?.limit) params.append("limit", String(data.limit));
       else params.append("limit", "200");
       if (data?.cursor) params.append("cursor", String(data.cursor));
@@ -153,13 +156,14 @@ export const getLGAs = createServerFn({ method: "GET" })
 
 export const getWards = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { lga_id?: number; stateId?: number; limit?: number; cursor?: string } | undefined) => data,
+    (data: { lga_id?: number; stateId?: number; stateConstituencyId?: number; limit?: number; cursor?: string } | undefined) => data,
   )
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
       if (data?.lga_id) params.append("lga_id", String(data.lga_id));
       if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.stateConstituencyId) params.append("state_constituency_id", String(data.stateConstituencyId));
       if (data?.limit) params.append("limit", String(data.limit));
       else params.append("limit", "200");
       if (data?.cursor) params.append("cursor", String(data.cursor));

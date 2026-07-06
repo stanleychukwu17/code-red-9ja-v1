@@ -4,14 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -29,99 +26,29 @@ func pgTextFromString(s string) pgtype.Text {
 type PartiesService struct {
 	queries *queries.Queries
 	pool    *pgxpool.Pool
-	pool    *pgxpool.Pool
 	rdb     *redis.Client
-	monnify *monnifyclient.Client
 	monnify *monnifyclient.Client
 }
 
-// NewPartiesService creates a new PartiesService.
-// monnify may be nil in test environments — wallet creation will be skipped.
-func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client) *PartiesService {
 // NewPartiesService creates a new PartiesService.
 // monnify may be nil in test environments — wallet creation will be skipped.
 func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, monnify *monnifyclient.Client) *PartiesService {
 	return &PartiesService{
 		queries: q,
 		pool:    pool,
-		pool:    pool,
 		rdb:     rdb,
-		monnify: monnify,
 		monnify: monnify,
 	}
 }
 
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
-// CreateParty inserts a party into the database and, if a Monnify client is
-// configured, immediately provisions a reserved virtual account (wallet) for it.
 func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string) (queries.Party, error) {
-	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 		ShortName: shortName,
 		Name:      name,
 		Logo:      logo,
 	})
-	if err != nil {
-		return queries.Party{}, err
-	}
-
-	// Provision wallet asynchronously via Monnify (best-effort).
-	// Wallet creation failure does NOT roll back the party insert — the admin
-	// can retry wallet creation later via a dedicated endpoint.
-	if s.monnify != nil {
-		if _, walletErr := s.CreatePartyWallet(ctx, party); walletErr != nil {
-			// Log but don't fail — party creation must succeed either way.
-			_ = walletErr
-		}
-	}
-
-	return party, nil
-}
-
-// CreatePartyWallet calls Monnify to create a reserved virtual account for the
-// given party, then persists the wallet record in party_wallets.
-//
-// It is safe to call this more than once — subsequent calls will return an error
-// because account_reference is UNIQUE and Monnify rejects duplicate references.
-func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Party) (queries.PartyWallet, error) {
-	if s.monnify == nil {
-		return queries.PartyWallet{}, fmt.Errorf("monnify client is not configured")
-	}
-
-	// Build a stable, human-readable reference tied to the party ID.
-	accountReference := fmt.Sprintf("free9ja-party-%d", party.ID)
-
-	resp, err := s.monnify.CreateReservedAccount(ctx, monnifyclient.ReservedAccountRequest{
-		AccountReference: accountReference,
-		AccountName:      party.Name + " - free9ja",
-		CustomerEmail:    fmt.Sprintf("party-%d@free9ja.com", party.ID),
-		CustomerName:     party.Name,
-		CustomerBvn:      "22222222222", // Default dummy BVN to ensure accounts are generated in sandbox/testing
-	})
-	if err != nil {
-		return queries.PartyWallet{}, fmt.Errorf("monnify reserved account: %w", err)
-	}
-
-	// Serialise the account numbers slice to JSONB.
-	accountNumbersJSON, err := json.Marshal(resp.AccountNumbers)
-	if err != nil {
-		return queries.PartyWallet{}, fmt.Errorf("marshal account numbers: %w", err)
-	}
-
-	wallet, err := s.queries.CreatePartyWallet(ctx, queries.CreatePartyWalletParams{
-		PartyID:          party.ID,
-		AccountReference: accountReference,
-		AccountNumbers:   accountNumbersJSON,
-	})
-	if err != nil {
-		return queries.PartyWallet{}, fmt.Errorf("persist party wallet: %w", err)
-	}
-
-	return wallet, nil
-}
-
-// GetPartyByID returns a party by its database ID.
 	if err != nil {
 		return queries.Party{}, err
 	}
@@ -187,74 +114,13 @@ func (s *PartiesService) GetPartyByID(ctx context.Context, id int64) (queries.Pa
 }
 
 // GetPartyByShortName returns a party by its short name (e.g. "APC").
-// GetPartyByShortName returns a party by its short name (e.g. "APC").
 func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error) {
 	return s.queries.GetPartyByShortName(ctx, shortName)
 }
 
 // ListParties returns all parties ordered by ID ascending.
-// ListParties returns all parties ordered by ID ascending.
 func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, error) {
 	return s.queries.ListParties(ctx)
-}
-
-// clearPartyCache removes the cached party info from Redis
-func (s *PartiesService) clearPartyCache(ctx context.Context, partyID int64) {
-	if s.rdb != nil {
-		partyKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
-		basicKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
-		s.rdb.Del(ctx, partyKey, basicKey)
-	}
-}
-
-// GetPartyInfo fetches a party's full info with caching
-func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int64) *queries.Party {
-	partyKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
-	if s.rdb != nil {
-		partyStr := s.rdb.Get(ctx, partyKey).Val()
-		if partyStr != "" {
-			var party queries.Party
-			if err := json.Unmarshal([]byte(partyStr), &party); err == nil {
-				return &party
-			}
-		}
-	}
-
-	party, err := s.queries.GetPartyByID(ctx, partyID)
-	if err == nil {
-		if s.rdb != nil {
-			if partyBytes, err := json.Marshal(party); err == nil {
-				s.rdb.Set(ctx, partyKey, partyBytes, 24*time.Hour)
-			}
-		}
-		return &party
-	}
-	return nil
-}
-
-// GetPartyBasicInfo fetches a party's basic info with caching
-func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int64) *queries.GetPartyBasicInfoRow {
-	partyKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
-	if s.rdb != nil {
-		partyStr := s.rdb.Get(ctx, partyKey).Val()
-		if partyStr != "" {
-			var party queries.GetPartyBasicInfoRow
-			if err := json.Unmarshal([]byte(partyStr), &party); err == nil {
-				return &party
-			}
-		}
-	}
-
-	party, err := s.queries.GetPartyBasicInfo(ctx, partyID)
-	if err == nil {
-		if s.rdb != nil {
-			if partyBytes, err := json.Marshal(party); err == nil {
-				s.rdb.Set(ctx, partyKey, partyBytes, 24*time.Hour)
-			}
-		}
-		return &party
-	}
-	return nil
 }
 
 // UpdateParty modifies the short name, name, and logo of an existing party.
@@ -271,7 +137,6 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 	return party, err
 }
 
-// DeleteParty removes a party from the database (cascades to party_wallets).
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
 	return s.queries.DeleteParty(ctx, id)
@@ -605,7 +470,6 @@ func (s *PartiesService) BuySlots(ctx context.Context, partyID int64, quantity i
 		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	s.clearPartyCache(ctx, partyID)
 	return updatedParty, nil
 }
 
@@ -620,14 +484,10 @@ func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int64,
 		return queries.Party{}, fmt.Errorf("failed to parse discount percentage: %w", err)
 	}
 
-	party, err := s.queries.UpdatePartyDiscount(ctx, queries.UpdatePartyDiscountParams{
+	return s.queries.UpdatePartyDiscount(ctx, queries.UpdatePartyDiscountParams{
 		DiscountPercentage: numericDiscount,
 		ID:                 partyID,
 	})
-	if err == nil {
-		s.clearPartyCache(ctx, partyID)
-	}
-	return party, err
 }
 
 // DepositAllowance debits the party wallet and adds it to the party's dedicated polling agent allowance balance.
@@ -700,7 +560,6 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int64, am
 		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	s.clearPartyCache(ctx, partyID)
 	return updatedParty, nil
 }
 
@@ -712,12 +571,8 @@ func (s *PartiesService) UpdateStateAllowances(ctx context.Context, partyID int6
 		return queries.Party{}, fmt.Errorf("invalid allowances configuration: %w", err)
 	}
 
-	party, err := s.queries.UpdatePartyStateAllowances(ctx, queries.UpdatePartyStateAllowancesParams{
+	return s.queries.UpdatePartyStateAllowances(ctx, queries.UpdatePartyStateAllowancesParams{
 		StateAllowances: allowancesJSON,
 		ID:              partyID,
 	})
-	if err == nil {
-		s.clearPartyCache(ctx, partyID)
-	}
-	return party, err
 }

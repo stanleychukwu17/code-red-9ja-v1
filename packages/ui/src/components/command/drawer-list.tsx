@@ -71,8 +71,8 @@ export function DrawerList<T>({
   const filtered = onSearch
     ? data // caller handles filtering externally
     : data.filter((item) =>
-      getName(item).toLowerCase().includes(search.toLowerCase()),
-    );
+        getName(item).toLowerCase().includes(search.toLowerCase()),
+      );
 
   return (
     <div className="flex flex-col" style={{ maxHeight: "75dvh" }}>

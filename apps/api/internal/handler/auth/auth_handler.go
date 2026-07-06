@@ -532,6 +532,46 @@ func (h *Handler) ChangePasswordByEmail(w http.ResponseWriter, r *http.Request) 
 	h.utils.RespondSuccess(w, http.StatusOK, "Password changed successfully", nil)
 }
 
+// ChangePasswordByEmailRequest represents the structure for resetting password using email
+type ChangePasswordByEmailRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required,min=5,max=72"`
+}
+
+// ChangePasswordByEmail godoc
+// @Summary Change password by email
+// @Description Resets a user's password using their email address and a new password, invalidating active sessions
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body ChangePasswordByEmailRequest true "Email and new password details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/change-password [post]
+// ChangePasswordByEmail handles resetting the user's password by email
+func (h *Handler) ChangePasswordByEmail(w http.ResponseWriter, r *http.Request) {
+	var req ChangePasswordByEmailRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	err := h.authService.ChangePasswordByEmail(r.Context(), req.Email, req.Password)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Password changed successfully", nil)
+}
+
 // AdminRegisterRequest represents the simplified payload for registering a new admin account
 type AdminRegisterRequest struct {
 	Email     string `json:"email" validate:"omitempty,email"`

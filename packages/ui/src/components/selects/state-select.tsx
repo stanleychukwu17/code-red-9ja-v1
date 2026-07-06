@@ -83,12 +83,12 @@ export const SelectState = ({
 
   const states = data
     ? Array.from(
-      new Map(
-        data.pages
-          .flatMap((page) => page.data?.states || [])
-          .map((s) => [s.id, s]),
-      ).values(),
-    )
+        new Map(
+          data.pages
+            .flatMap((page) => page.data?.states || [])
+            .map((s) => [s.id, s]),
+        ).values(),
+      )
     : [];
 
   useEffect(() => {

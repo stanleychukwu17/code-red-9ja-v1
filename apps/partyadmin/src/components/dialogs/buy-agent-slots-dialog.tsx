@@ -58,15 +58,6 @@ export function BuyAgentSlotsDialog({
     }
   });
 
-  const { data: priceRes, isLoading: isPriceLoading } = useQuery({
-    queryKey: ["partySlotPrice", partyId],
-    queryFn: () => getPartySlotPrice({ data: partyId! }),
-    enabled: !!partyId && open,
-  });
-
-  const pricePerSlot = priceRes?.success && priceRes?.data?.unit_price_kobo !== undefined
-    ? priceRes.data.unit_price_kobo / 100
-    : 1000; // fallback to 1000 NGN if loading/error
 
   const walletBalanceNaira = walletBalanceKobo / 100;
   const totalCost = slots * pricePerSlot;

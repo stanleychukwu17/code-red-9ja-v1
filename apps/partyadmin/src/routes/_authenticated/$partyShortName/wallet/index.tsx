@@ -190,11 +190,10 @@ function WalletBillboard({
                     {scaleLabel}
                   </span>
                 )}
-              </div >
-            )
-            }
-          </div >
-        </div >
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-6">
           <CardTitle title="Bills" />
@@ -214,7 +213,7 @@ function WalletBillboard({
             />
           </div>
         </div>
-      </div >
+      </div>
 
       <div className="flex flex-wrap gap-3">
         <WalletAction
@@ -249,7 +248,7 @@ function WalletBillboard({
         }}
         wallet={wallet}
       />
-    </section >
+    </section>
   );
 }
 

@@ -58,11 +58,11 @@ type ReviewResultInput struct {
 
 // AIVerificationInput is used internally (and by a future async job) to apply Gemini findings.
 type AIVerificationInput struct {
-	ResultID          int64
-	Status            string // "ai_verified" or "disputed"
-	ExtractedData     interface{}
-	ConfidenceScore   float64
-	DisputedReason    string
+	ResultID        int64
+	Status          string // "ai_verified" or "disputed"
+	ExtractedData   interface{}
+	ConfidenceScore float64
+	DisputedReason  string
 }
 
 // SubmitResult inserts a new polling unit result inside a transaction,
@@ -89,6 +89,8 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 	}
 
 	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
+	if err != nil {
+		return queries.PollingUnitResult{}, errors.New("invalid lga for polling unit")
 	}
 
 	ward, err := qtx.GetWardByID(ctx, pu.WardID)
@@ -98,13 +100,14 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	// Make sure we have an image URL
 	if input.ResultSheetImageURL == "" {
+		return queries.PollingUnitResult{}, errors.New("result_sheet_image_url is required for AI extraction")
 	}
 
 	// Call Gemini (we extract API key from config)
 	cfg := config.Load()
 	extracted, rawJSON, err := utils.ExtractPollingUnitResultFromImage(ctx, cfg.GeminiAPIKey, input.ResultSheetImageURL)
 	if err != nil {
-		// Log the error but maybe we shouldn't fail the entire submission if Gemini fails? 
+		// Log the error but maybe we shouldn't fail the entire submission if Gemini fails?
 		// For now, let's fail it so it doesn't leave bad state, or we could insert it as "submitted" and let a worker retry.
 		// As per the plan, we are doing it synchronously.
 		return queries.PollingUnitResult{}, fmt.Errorf("failed to process image with Gemini AI: %w", err)
@@ -218,17 +221,17 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 			return queries.PollingUnitResult{}, err
 		}
 	}
-	
+
 	// Update status immediately since we did sync verification
 	// We'll set a default confidence score of 0.95 for now since the SDK doesn't expose it yet
 	score := pgtype.Numeric{}
 	score.Scan(0.95)
-	
+
 	status := "ai_verified"
 	if extracted.ValidVotes+extracted.RejectedVotes != extracted.VotesCast {
 		status = "disputed"
 	}
-	
+
 	result, err = qtx.UpdateResultStatus(ctx, queries.UpdateResultStatusParams{
 		ID:                result.ID,
 		Status:            status,

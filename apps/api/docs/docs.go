@@ -148,6 +148,107 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/parties/{id}/discount": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Sets the slot discount percentage for a political party (Admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Parties"
+                ],
+                "summary": "Set customized slot discount for a party",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Discount request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/partieshandler.SetPartyDiscountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Party discount updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/settings/slot-price": {
+            "get": {
+                "description": "Retrieves the global, app-wide price of a single polling unit slot in Kobo",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Settings"
+                ],
+                "summary": "Get global slot price",
+                "responses": {
+                    "200": {
+                        "description": "Global slot price retrieved",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "put": {
+                "description": "Updates the global, app-wide price of a single polling unit slot in Kobo (Admin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Admin Settings"
+                ],
+                "summary": "Update global slot price",
+                "parameters": [
+                    {
+                        "description": "Slot Price request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/partieshandler.SetSlotPriceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Global slot price updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/admin/login": {
             "post": {
                 "description": "Authenticates an admin and returns access and refresh tokens",
@@ -225,6 +326,55 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/authhandler.AdminRegisterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/change-password": {
+            "post": {
+                "description": "Resets a user's password using their email address and a new password, invalidating active sessions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Change password by email",
+                "parameters": [
+                    {
+                        "description": "Email and new password details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.ChangePasswordByEmailRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "400": {
@@ -805,6 +955,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/seed": {
+            "post": {
+                "description": "Batch registers testing users from formatted JSON data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Seed testing users",
+                "parameters": [
+                    {
+                        "description": "List of users to seed",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/authservice.SeedUserRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Users seeded successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to seed users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/verify_security_questions": {
             "post": {
                 "description": "Checks the answers to security questions and returns a unique ID if successful",
@@ -963,6 +1165,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Cursor (ID of last record)",
                         "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID for stats",
+                        "name": "party_id",
                         "in": "query"
                     },
                     {
@@ -1189,6 +1397,106 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Election group not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/elections": {
+            "get": {
+                "description": "Fetches the list of elections associated with a specific election group ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionGroups"
+                ],
+                "summary": "List elections for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Elections fetched successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid election group ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/party-stats": {
+            "put": {
+                "description": "Upserts party-specific statistics for an election group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionGroups"
+                ],
+                "summary": "Upsert party election group stats",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Upsert Stats payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stats upserted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload or parameters",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1543,6 +1851,400 @@ const docTemplate = `{
                 }
             }
         },
+        "/elections/results/federal-constituencies": {
+            "get": {
+                "description": "Returns federal constituencies for a senatorial district with their federal_constituency_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get federal constituencies with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID",
+                        "name": "senatorial_district_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/lgas": {
+            "get": {
+                "description": "Returns LGAs for a federal constituency with their lga_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get LGAs with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Federal Constituency ID",
+                        "name": "federal_constituency_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/polling-units": {
+            "get": {
+                "description": "Returns polling units for a ward with their polling_unit_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get polling units with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID",
+                        "name": "ward_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/senatorial-districts": {
+            "get": {
+                "description": "Returns senatorial districts for a state with their senatorial_district_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get senatorial districts with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "state_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/states": {
+            "get": {
+                "description": "Returns all Nigerian states with their state_final_result for the given election_id.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get states with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/wards": {
+            "get": {
+                "description": "Returns wards for a given LGA or state_assembly_constituency with their ward_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get wards with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State Assembly Constituency ID",
+                        "name": "state_assembly_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/elections/senatorial-district": {
             "post": {
                 "description": "Creates elections for selected senatorial districts with auto-generated names, grouped together",
@@ -1694,6 +2396,7 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
+                        "BearerAuth": []
                         "BearerAuth": []
                     }
                 ],
@@ -3015,6 +3718,37 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Forbidden (Admin only)",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/parties/wallets/provision-missing": {
+            "post": {
+                "description": "Iterates over all existing political parties and provisions a Monnify reserved account wallet for any party that currently lacks one. Used primarily for testing and manual recovery.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "summary": "Provision missing wallets for political parties",
+                "responses": {
+                    "200": {
+                        "description": "Provisioning details",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -6345,6 +7079,11 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetches the list of all registered users with role filtering and cursor-based pagination",
                 "produces": [
                     "application/json"
@@ -6392,6 +7131,11 @@ const docTemplate = `{
         },
         "/users/me": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "security": [
                     {
                         "BearerAuth": []
@@ -6600,8 +7344,181 @@ const docTemplate = `{
                 }
             }
         },
+        "/users/me/wallet": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the virtual account details and current balance (in Kobo) for the logged-in user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get current user's wallet",
+                "responses": {
+                    "200": {
+                        "description": "Wallet fetched successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Wallet not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/wallet/transactions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a paginated list of credit/debit transactions for the logged-in user's wallet, ordered newest first.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "List current user's wallet transactions",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Number of results (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset for pagination (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Transactions fetched successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Wallet not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/wallet/withdraw": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Debits the user's wallet balance and records a withdrawal transaction.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Withdraw from current user's wallet",
+                "parameters": [
+                    {
+                        "description": "Withdrawal payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usershandler.UserWithdrawRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Withdrawal recorded",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "402": {
+                        "description": "Insufficient funds",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Wallet not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/users/profile": {
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "security": [
                     {
                         "BearerAuth": []
@@ -6653,6 +7570,98 @@ const docTemplate = `{
                     },
                     "442": {
                         "description": "",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/users/wallets/provision-missing": {
+            "post": {
+                "description": "Iterates over all existing users and provisions a Monnify reserved account wallet for any user that currently lacks one. Used primarily for testing and manual recovery.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Provision missing wallets for users",
+                "responses": {
+                    "200": {
+                        "description": "Provisioning details",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{id}/wallet": {
+            "post": {
+                "description": "Manually provisions a Monnify reserved virtual account for a user that does not yet have a wallet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Create a wallet for a user (admin / recovery)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User Fake ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Wallet created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Wallet already exists",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -7094,6 +8103,37 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/webhooks/monnify": {
+            "post": {
+                "description": "Receives and processes Monnify payment notification events. Verifies the HMAC-SHA512 signature, then credits the appropriate party wallet for SUCCESSFUL_TRANSACTION events.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Monnify payment webhook",
+                "responses": {
+                    "200": {
+                        "description": "Event processed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid signature or payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -7213,6 +8253,23 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
+                }
+            }
+        },
+        "authhandler.ChangePasswordByEmailRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 5
                 }
             }
         },
@@ -7423,6 +8480,7 @@ const docTemplate = `{
                         "admin",
                         "member",
                         "placeholder",
+                        "pollingagent",
                         "pollingagent",
                         "user"
                     ]
@@ -7718,6 +8776,69 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "email": {
+                "phone": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "phone_verified": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "polling_unit_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
+                "role": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "role_level": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "state_of_origin": {
+                    "$ref": "#/definitions/pgtype.Int2"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "username": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "vin": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "voters_card_image": {
+                    "$ref": "#/definitions/pgtype.Text"
+                }
+            }
+        },
+        "authservice.SeedUserRequest": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "bank_account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "email": {
                     "type": "string"
                 },
                 "fake_id": {
@@ -7732,7 +8853,31 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "gender": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
                 "last_name": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "nin_verified": {
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "phone_verified": {
                     "type": "string"
                 },
                 "middle_name": {
@@ -7762,7 +8907,19 @@ const docTemplate = `{
                 "state_of_origin": {
                     "type": "integer"
                 },
+                "role_level": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "type": "integer"
+                },
                 "username": {
+                    "type": "string"
+                },
+                "vin": {
+                    "type": "string"
+                },
+                "voters_card_image": {
                     "type": "string"
                 },
                 "vin": {
@@ -7772,6 +8929,9 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "big.Int": {
+            "type": "object"
         },
         "bodieshandler.CityResponse": {
             "type": "object",
@@ -7987,6 +9147,41 @@ const docTemplate = `{
                     }
                 }
             }
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "elections_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "rank": {
+                    "type": "integer"
+                },
+                "states_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "electiongroupshandler.UpsertPartyElectionGroupStatsRequest": {
+            "type": "object",
+            "properties": {
+                "elections_contesting": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_agents_coverage": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
         },
         "electionshandler.CreateElectionRequest": {
             "type": "object",
@@ -8139,6 +9334,24 @@ const docTemplate = `{
             }
         },
         "electionshandler.CreateNationwideElectionRequest": {
+            "type": "object",
+            "properties": {
+                "candidates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
+                    }
+                },
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                }
+            }
             "type": "object",
             "properties": {
                 "candidates": {
@@ -8310,13 +9523,52 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+            "type": "object",
+            "properties": {
+                "election_date": {
+                    "type": "string"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "office_id": {
+                    "type": "integer"
+                },
+                "ward_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "electionshandler.ElectionCandidateInput": {
+            "type": "object",
+            "required": [
+                "candidate_id",
+                "party_id",
+                "party_short_name"
+            ],
+            "properties": {
+                "candidate_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "party_short_name": {
+                    "type": "string"
+                }
+            }
         },
         "electionshandler.SyncCandidatesRequest": {
             "type": "object",
             "properties": {
                 "candidates": {
+                "candidates": {
                     "type": "array",
                     "items": {
+                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
                         "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
                     }
                 }
@@ -8614,6 +9866,80 @@ const docTemplate = `{
                 }
             }
         },
+        "paapplicationshandler.ApproveApplicationRequest": {
+            "type": "object",
+            "properties": {
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "role_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "paapplicationshandler.RejectApplicationRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "paapplicationshandler.SubmitApplicationRequest": {
+            "type": "object",
+            "properties": {
+                "avatar": {
+                    "type": "string"
+                },
+                "bank_account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "election_group_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "vin": {
+                    "type": "string"
+                },
+                "voters_card_image": {
+                    "type": "string"
+                }
+            }
+        },
+        "partieshandler.BuySlotsRequest": {
+            "type": "object",
+            "properties": {
+                "quantity": {
+                    "type": "integer"
+                }
+            }
+        },
         "partieshandler.CreatePartyRequest": {
             "type": "object",
             "properties": {
@@ -8625,6 +9951,30 @@ const docTemplate = `{
                 },
                 "short_name": {
                     "type": "string"
+                }
+            }
+        },
+        "partieshandler.DepositAllowanceRequest": {
+            "type": "object",
+            "properties": {
+                "amount_kobo": {
+                    "type": "integer"
+                }
+            }
+        },
+        "partieshandler.SetPartyDiscountRequest": {
+            "type": "object",
+            "properties": {
+                "discount_percentage": {
+                    "type": "number"
+                }
+            }
+        },
+        "partieshandler.SetSlotPriceRequest": {
+            "type": "object",
+            "properties": {
+                "price_kobo": {
+                    "type": "integer"
                 }
             }
         },
@@ -9548,8 +10898,17 @@ const docTemplate = `{
                 "polling_unit_id": {
                     "type": "integer"
                 },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
                 "role": {
                     "type": "string"
+                },
+                "role_level": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "type": "integer"
                 },
                 "role_level": {
                     "type": "string"
@@ -9561,6 +10920,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "usershandler.UserWithdrawRequest": {
+            "type": "object",
+            "properties": {
+                "amount_kobo": {
+                    "type": "integer"
+                },
+                "bank_account_number": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "narration": {
                     "type": "string"
                 }
             }

@@ -57,6 +57,8 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	}
 
 	// Fetch LGA and Ward to get constituency IDs
+	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
+	if err != nil {
 		return queries.PollingUnitUpdate{}, errors.New("invalid lga for polling unit")
 	}
 	ward, err := qtx.GetWardByID(ctx, pu.WardID)
@@ -78,6 +80,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	var assignmentID pgtype.Int8
 	if input.AssignmentID != nil {
+		assignmentID = pgtype.Int8{Int64: *input.AssignmentID, Valid: true}
 	}
 
 	var partyID pgtype.Int8
@@ -87,21 +90,21 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	// Insert the update
 	update, err := qtx.CreatePollingUnitUpdate(ctx, queries.CreatePollingUnitUpdateParams{
-		AssignmentID:    assignmentID,
-		UserID:          user.ID,
-		PollingUnitID:   input.PollingUnitID,
-		ElectionGroupID: input.ElectionGroupID,
-		PartyID:         partyID,
-		StateID:                        pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-		LgaID:                          pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
-		WardID:                         pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
-		SenatorialDistrictID:           pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
-		FederalConstituencyID:          pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
-		StateAssemblyConstituencyID:    ward.StateAssemblyConstituencyID,
-		Message:                        input.Message,
-		MediaUrls:                      input.MediaUrls,
-		IsReport:                       pgtype.Bool{Bool: input.IsReport, Valid: true},
-		ReportTypes:                    input.ReportTypes,
+		AssignmentID:                assignmentID,
+		UserID:                      user.ID,
+		PollingUnitID:               input.PollingUnitID,
+		ElectionGroupID:             input.ElectionGroupID,
+		PartyID:                     partyID,
+		StateID:                     pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+		LgaID:                       pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
+		WardID:                      pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
+		SenatorialDistrictID:        pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
+		FederalConstituencyID:       pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
+		StateAssemblyConstituencyID: ward.StateAssemblyConstituencyID,
+		Message:                     input.Message,
+		MediaUrls:                   input.MediaUrls,
+		IsReport:                    pgtype.Bool{Bool: input.IsReport, Valid: true},
+		ReportTypes:                 input.ReportTypes,
 	})
 	if err != nil {
 		return queries.PollingUnitUpdate{}, err
@@ -169,4 +172,3 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 func (s *Service) ListUpdates(ctx context.Context, params queries.ListPollingUnitUpdatesParams) ([]queries.ListPollingUnitUpdatesRow, error) {
 	return s.queries.ListPollingUnitUpdates(ctx, params)
 }
-

@@ -272,6 +272,7 @@ function GalleryRow({
 }
 
 function UpdatesGallery({ isReport }: { isReport: boolean }) {
+  const { partyShortName } = useParams({ strict: false });
   const [selectedIndex, setSelectedIndex] = React.useState<number | null>(
     null,
   );
@@ -353,6 +354,7 @@ function UpdatesGallery({ isReport }: { isReport: boolean }) {
         count={items.length.toString()}
         items={items}
         showReportIcon={isReport}
+        seeAllHref={`/${partyShortName}/home/updates${isReport ? "?is_report=true" : ""}`}
         onItemClick={(item) => {
           const index = items.findIndex((i: any) => i.id === item.id);
           if (index !== -1) setSelectedIndex(index);

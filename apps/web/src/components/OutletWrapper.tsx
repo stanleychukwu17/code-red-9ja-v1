@@ -24,5 +24,6 @@ export function OutletWrapper({ children }: OutletWrapperProps) {
     >
       {children}
     </motion.div>
+    </motion.div>
   );
 }
