@@ -35,20 +35,24 @@ export function ElectionGroupTableHeader() {
         <span className="text-c-50 text-[14px] w-[110px] hidden sm:block">
           Holds
         </span>
-        <div className="w-8 shrink-0" />
+        <div className="ml-2 w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
 }
 
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
-  const dateLabel = data.election_date ? formatISODate(data.election_date) : "—";
+  const dateLabel = data.election_date
+    ? formatISODate(data.election_date)
+    : "—";
 
   return (
     <TileRow>
       <TileLeft>
         <FancyFolderIcon />
-        <p className="truncate w-full text-[16px] text-c-90">{data.name ?? "—"}</p>
+        <p className="truncate w-full text-[16px] text-c-90">
+          {data.name ?? "—"}
+        </p>
       </TileLeft>
       <TileRight>
         <span className="text-[15px] text-c-70 w-[110px] hidden lg:block">

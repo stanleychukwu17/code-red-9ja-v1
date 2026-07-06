@@ -45,7 +45,7 @@ WHERE (sqlc.arg(state_id)::int = 0 OR state_id = sqlc.arg(state_id))
 ORDER BY name ASC;
 
 -- name: GetWards :many
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name FROM wards
+SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name FROM wards
 WHERE (sqlc.arg(lga_id)::int = 0 OR lga_id = sqlc.arg(lga_id)) AND (sqlc.arg(state_id)::int = 0 OR state_id = sqlc.arg(state_id))
 ORDER BY name ASC;
 
@@ -135,19 +135,19 @@ DELETE FROM state_assembly_constituencies
 WHERE id = $1;
 
 -- name: GetWardByID :one
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name FROM wards
+SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name FROM wards
 WHERE id = $1 LIMIT 1;
 
 -- name: CreateWard :one
 INSERT INTO wards (name, abbreviation, lga_id, lga_name, state_id, state_name)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name;
+RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name;
 
 -- name: UpdateWard :one
 UPDATE wards
 SET name = $2, abbreviation = $3, lga_id = $4, lga_name = $5, state_id = $6, state_name = $7
 WHERE id = $1
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name;
+RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name;
 
 -- name: DeleteWard :exec
 DELETE FROM wards

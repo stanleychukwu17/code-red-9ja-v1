@@ -1,4 +1,5 @@
 // lib/config.ts
+export const IP_SERVICE_URL = import.meta.env.VITE_IP_SERVICE_URL;
 export const APP_NAME = import.meta.env.VITE_APP_NAME;
 const API_BASE = import.meta.env.VITE_API_URL;
 
@@ -18,16 +19,10 @@ const api = `${API_BASE}/api/v1`;
 export const API_URL = {
   health: `${API_BASE}/health`,
   auth: {
-    registerPhaseSignUp: `${api}/auth/register_phase_signup`,
-    checkNin: `${api}/auth/check_nin`,
-    checkUsername: `${api}/auth/check_username`,
-    register: `${api}/auth/register`,
     login: `${api}/auth/login`,
     adminLogin: `${api}/auth/admin/login`,
     refresh: `${api}/auth/refresh`,
     logout: `${api}/auth/logout`,
-    verifySecurityQuestions: `${api}/auth/verify_security_questions`,
-    forgotPassword: `${api}/auth/forgot_password`,
     registerCandidate: `${api}/auth/register-candidate`,
   },
   getAllCountries: `${api}/countries`,

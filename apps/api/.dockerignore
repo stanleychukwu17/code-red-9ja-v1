@@ -44,8 +44,6 @@ turbo.json
 # Documentation (optional, if not needed in image)
 README.md
 DATABASE.md
-docs/
-tree.txt
 
 # scripts
 scripts/set_goose_variables.sh

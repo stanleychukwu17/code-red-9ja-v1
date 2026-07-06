@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"free9ja/api/internal/config"
 	"log/slog"
 	"time"
 
@@ -33,10 +32,7 @@ func NewPostgresPool(ctx context.Context, connString string) (*pgxpool.Pool, err
 		return nil, fmt.Errorf("unable to ping database: %w", err)
 	}
 
-	if config.GetEnv("ENV", "development") == "development" {
-		// slog.Info("Successfully connected to the postgres database", "db_url", connString)
-		slog.Info("Successfully connected to the postgres database")
-	}
+	slog.Info("Successfully connected to the postgres database")
 
 	return pool, nil
 }

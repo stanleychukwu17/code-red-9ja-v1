@@ -70,7 +70,7 @@ function RouteComponent() {
 
   return (
     <Layout>
-      <PageHeader title="Party" activeTab="party-members" tabs={USERS_TABS} />
+      <PageHeader title="Users" activeTab="party-members" tabs={USERS_TABS} />
       <PageSearchLayer
         rightComponent={
           <>
@@ -107,7 +107,9 @@ function RouteComponent() {
               {isFetchingNextPage ? (
                 <Loader2 className="size-5 animate-spin mr-2" />
               ) : null}
-              {isFetchingNextPage ? "Loading more..." : "Scroll down to load more"}
+              {isFetchingNextPage
+                ? "Loading more..."
+                : "Scroll down to load more"}
             </div>
           )}
         </>

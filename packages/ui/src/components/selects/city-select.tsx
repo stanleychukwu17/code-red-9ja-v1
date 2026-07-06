@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SelectProps } from "../../lib/types";
 import { SelectResponsiveWrapper } from "./select-responsive-wrapper";
 import { GeneralCommand } from "../command/general-command";
+import { DrawerList } from "../command/drawer-list";
 import { LoadingSelect } from "./loading-select";
 import { Button } from "../button";
 import { cn } from "../../lib/utils";
@@ -34,48 +35,40 @@ export const SelectCity = ({
   className,
   align = "start",
   fetchCities,
-}: SelectProps<City> & {
+}: SelectProps<City, number | string> & {
   stateId?: number;
   fetchCities: (args: {
     data: { stateId: number; limit?: number; cursor?: string | number };
   }) => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [desktopSearch, setDesktopSearch] = useState("");
+  const [mobileSearch, setMobileSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<City | undefined>(undefined);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery<CitiesResponse>({
-    queryKey: ["cities", stateId],
-    queryFn: async ({ pageParam }) => {
-      const res = await fetchCities({
-        data: { stateId: stateId!, limit: 50, cursor: pageParam as string },
-      });
-      if (res && res.success && res.data) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to fetch cities");
-    },
-    initialPageParam: "",
-    getNextPageParam: (lastPage) => {
-      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-        return lastPage.meta.next_cursor || "";
-      }
-      return undefined;
-    },
-    enabled: !!stateId,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery<CitiesResponse>({
+      queryKey: ["cities", stateId],
+      queryFn: async ({ pageParam }) => {
+        const res = await fetchCities({
+          data: { stateId: stateId!, limit: 50, cursor: pageParam as string },
+        });
+        if (res && res.success && res.data) return res;
+        throw new Error(res?.message || "Failed to fetch cities");
+      },
+      initialPageParam: "",
+      getNextPageParam: (lastPage) => {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more)
+          return lastPage.meta.next_cursor || "";
+        return undefined;
+      },
+      enabled: !!stateId,
+    });
 
   const cities = data
     ? data.pages.flatMap((page) => page.data?.cities || [])
     : [];
 
-  // Keep fetching until selectedId is found in the list, if it exists
   useEffect(() => {
     if (
       selectedId &&
@@ -85,9 +78,7 @@ export const SelectCity = ({
       !isLoading
     ) {
       const found = cities.some((c) => String(c.id) === String(selectedId));
-      if (!found) {
-        fetchNextPage();
-      }
+      if (!found) fetchNextPage();
     }
   }, [
     selectedId,
@@ -99,22 +90,18 @@ export const SelectCity = ({
     fetchNextPage,
   ]);
 
-  // Sync selected item with selectedId prop once the matching city is loaded
   useEffect(() => {
     if (selectedId) {
       const city = cities.find((c) => String(c.id) === String(selectedId));
-      if (city) {
-        setSelectedItem(city);
-      }
+      if (city) setSelectedItem(city);
     } else {
       setSelectedItem(undefined);
     }
   }, [selectedId, cities]);
 
-  // Reset selected item when stateId changes
   useEffect(() => {
-    setSelectedItem(undefined);
-  }, [stateId]);
+    if (!open) setMobileSearch("");
+  }, [open]);
 
   const handleCitySelect = (city: City) => {
     setSelectedItem(city);
@@ -122,8 +109,11 @@ export const SelectCity = ({
     setOpen(false);
   };
 
-  const filteredCities = cities.filter((city) =>
-    city.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  const filteredCities = cities.filter((c) =>
+    c.name.toLowerCase().includes(desktopSearch.toLowerCase()),
+  );
+  const mobileFiltered = cities.filter((c) =>
+    c.name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
   const getStatus = ():
@@ -131,27 +121,27 @@ export const SelectCity = ({
     | "LoadingMore"
     | "LoadingFirstPage"
     | "Exhausted" => {
-    if (isLoading && cities.length === 0) {
-      return "LoadingFirstPage";
-    }
-    if (isFetchingNextPage) {
-      return "LoadingMore";
-    }
+    if (isLoading && cities.length === 0) return "LoadingFirstPage";
+    if (isFetchingNextPage) return "LoadingMore";
     return hasNextPage ? "CanLoadMore" : "Exhausted";
   };
 
   const handleLoadMore = () => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   };
 
   const displayText =
     selectedItem?.name ||
     (isLoading && !selectedItem ? "Loading..." : "Select city");
   const hasError = Boolean(errorMsg);
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
+  const getId = (item: City) => `${item.id}`;
+  const getName = (item: City) => item.name;
 
-  // Show loading state while cities are loading initially and not disabled
   if (cities.length === 0 && isLoading && !disabled) {
     return (
       <LoadingSelect
@@ -175,6 +165,7 @@ export const SelectCity = ({
       trigger={
         <Button
           variant="select"
+          size="select"
           className={cn(
             "justify-between w-full gap-2",
             hasError && "border-0.8 border-red",
@@ -189,23 +180,30 @@ export const SelectCity = ({
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }
-    >
-      <GeneralCommand
-        data={filteredCities}
-        getId={(item: City) => `${item.id}`}
-        getName={(item: City) => item.name}
-        handleSelect={handleCitySelect}
-        selectedId={
-          selectedItem?.id
-            ? `${selectedItem.id}`
-            : selectedId
-              ? `${selectedId}`
-              : undefined
-        }
-        status={getStatus()}
-        loadMore={handleLoadMore}
-        onSearch={setSearchQuery}
-      />
-    </SelectResponsiveWrapper>
+      desktopContent={
+        <GeneralCommand
+          data={filteredCities}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleCitySelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          loadMore={handleLoadMore}
+          onSearch={setDesktopSearch}
+        />
+      }
+      mobileContent={
+        <DrawerList
+          data={mobileFiltered}
+          getId={getId}
+          getName={getName}
+          handleSelect={handleCitySelect}
+          selectedId={currentSelectedId}
+          status={getStatus()}
+          searchValue={mobileSearch}
+          onSearch={setMobileSearch}
+        />
+      }
+    />
   );
 };

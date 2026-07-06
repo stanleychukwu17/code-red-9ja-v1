@@ -12,7 +12,7 @@ import (
 const createParty = `-- name: CreateParty :one
 INSERT INTO parties (short_name, name, logo)
 VALUES ($1, $2, $3)
-RETURNING id, short_name, name, logo, created_at, updated_at
+RETURNING id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type CreatePartyParams struct {
@@ -29,6 +29,11 @@ func (q *Queries) CreateParty(ctx context.Context, arg CreatePartyParams) (Party
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.Status,
+		&i.Slots,
+		&i.DiscountPercentage,
+		&i.AllowanceBalanceKobo,
+		&i.StateAllowances,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -44,8 +49,31 @@ func (q *Queries) DeleteParty(ctx context.Context, id int64) error {
 	return err
 }
 
+const getPartyBasicInfo = `-- name: GetPartyBasicInfo :one
+SELECT id, short_name, name, logo FROM parties WHERE id = $1 LIMIT 1
+`
+
+type GetPartyBasicInfoRow struct {
+	ID        int64  `json:"id"`
+	ShortName string `json:"short_name"`
+	Name      string `json:"name"`
+	Logo      string `json:"logo"`
+}
+
+func (q *Queries) GetPartyBasicInfo(ctx context.Context, id int64) (GetPartyBasicInfoRow, error) {
+	row := q.db.QueryRow(ctx, getPartyBasicInfo, id)
+	var i GetPartyBasicInfoRow
+	err := row.Scan(
+		&i.ID,
+		&i.ShortName,
+		&i.Name,
+		&i.Logo,
+	)
+	return i, err
+}
+
 const getPartyByID = `-- name: GetPartyByID :one
-SELECT id, short_name, name, logo, created_at, updated_at FROM parties WHERE id = $1
+SELECT id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties WHERE id = $1
 `
 
 func (q *Queries) GetPartyByID(ctx context.Context, id int64) (Party, error) {
@@ -56,6 +84,11 @@ func (q *Queries) GetPartyByID(ctx context.Context, id int64) (Party, error) {
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.Status,
+		&i.Slots,
+		&i.DiscountPercentage,
+		&i.AllowanceBalanceKobo,
+		&i.StateAllowances,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -63,7 +96,7 @@ func (q *Queries) GetPartyByID(ctx context.Context, id int64) (Party, error) {
 }
 
 const getPartyByShortName = `-- name: GetPartyByShortName :one
-SELECT id, short_name, name, logo, created_at, updated_at FROM parties WHERE short_name = $1
+SELECT id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties WHERE short_name = $1
 `
 
 func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Party, error) {
@@ -74,6 +107,11 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.Status,
+		&i.Slots,
+		&i.DiscountPercentage,
+		&i.AllowanceBalanceKobo,
+		&i.StateAllowances,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -81,7 +119,7 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 }
 
 const listParties = `-- name: ListParties :many
-SELECT id, short_name, name, logo, created_at, updated_at FROM parties
+SELECT id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties
 ORDER BY id ASC
 `
 
@@ -99,6 +137,11 @@ func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
 			&i.ShortName,
 			&i.Name,
 			&i.Logo,
+			&i.Status,
+			&i.Slots,
+			&i.DiscountPercentage,
+			&i.AllowanceBalanceKobo,
+			&i.StateAllowances,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -116,7 +159,7 @@ const updateParty = `-- name: UpdateParty :one
 UPDATE parties
 SET short_name = $1, name = $2, logo = $3, updated_at = NOW()
 WHERE id = $4
-RETURNING id, short_name, name, logo, created_at, updated_at
+RETURNING id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type UpdatePartyParams struct {
@@ -139,6 +182,11 @@ func (q *Queries) UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.Status,
+		&i.Slots,
+		&i.DiscountPercentage,
+		&i.AllowanceBalanceKobo,
+		&i.StateAllowances,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -19,11 +19,11 @@ output "database_subnet_ids" {
 }
 
 output "rds_subnet_group_name" {
-  value       = aws_db_subnet_group.rds.name
+  value       = try(aws_db_subnet_group.rds[0].name, "")
   description = "The name of the RDS subnet group"
 }
 
 output "redis_subnet_group_name" {
-  value       = aws_elasticache_subnet_group.redis.name
+  value       = try(aws_elasticache_subnet_group.redis[0].name, "")
   description = "The name of the ElastiCache subnet group"
 }

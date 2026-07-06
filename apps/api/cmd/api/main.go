@@ -12,9 +12,12 @@ import (
 
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db"
+	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"free9ja/api/internal/router"
+	"free9ja/api/internal/worker"
 
+	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 )
@@ -45,10 +48,11 @@ import (
 // @description Type your refresh token.
 
 type App struct {
-	cfg    *config.Config
-	server *http.Server
-	db     *pgxpool.Pool
-	rdb    *redis.Client
+	cfg       *config.Config
+	server    *http.Server
+	db        *pgxpool.Pool
+	rdb       *redis.Client
+	processor worker.TaskProcessor
 }
 
 func newApp(ctx context.Context, cfg *config.Config) *App {
@@ -86,14 +90,27 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 		os.Exit(1)
 	}
 
+	// Initialize Asynq Redis Options
+	redisOpt := asynq.RedisClientOpt{
+		Addr:     cfg.Redis.Addr,
+		Password: cfg.Redis.Password,
+		DB:       cfg.Redis.DB,
+	}
+
+	// Initialize worker
+	q := queries.New(pool)
+	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb)
+	distributor := worker.NewRedisTaskDistributor(redisOpt)
+
 	// Initialize router
-	r := router.New(cfg, pool, rdb)
+	r := router.New(cfg, pool, rdb, distributor)
 	addr := fmt.Sprintf(":%s", cfg.Port)
 
 	return &App{
-		cfg: cfg,
-		db:  pool,
-		rdb: rdb,
+		cfg:       cfg,
+		db:        pool,
+		rdb:       rdb,
+		processor: processor,
 		server: &http.Server{
 			Addr:    addr,
 			Handler: r,
@@ -102,6 +119,11 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 }
 
 func (a *App) Close() error {
+	slog.Info("shutting down task processor")
+	if a.processor != nil {
+		a.processor.Shutdown()
+	}
+
 	slog.Info("closing all db connections")
 	a.db.Close()
 	a.rdb.Close()
@@ -110,6 +132,14 @@ func (a *App) Close() error {
 
 func (a *App) Run() error {
 	slog.Info("starting server", "addr", a.server.Addr)
+
+	if a.processor != nil {
+		go func() {
+			if err := a.processor.Start(); err != nil {
+				slog.Error("task processor failed", "err", err)
+			}
+		}()
+	}
 
 	if err := a.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		slog.Error("server failed", "err", err)

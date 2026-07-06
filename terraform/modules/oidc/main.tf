@@ -71,7 +71,7 @@ resource "aws_iam_policy" "deploy" {
           "ecr:PutImage",
           "ecr:UploadLayerPart"
         ]
-        Resource = var.ecr_repository_arn
+        Resource = concat(var.ecr_repository_arn != "" ? [var.ecr_repository_arn] : [], var.ecr_repository_arns)
       },
       # ECS Service deploy permissions
       {
@@ -80,7 +80,7 @@ resource "aws_iam_policy" "deploy" {
           "ecs:UpdateService",
           "ecs:DescribeServices"
         ]
-        Resource = var.ecs_service_arn
+        Resource = var.ecs_service_arn != "" ? var.ecs_service_arn : "*"
       },
       # Task Definition registration (needed for ECS deployment)
       {
@@ -97,6 +97,24 @@ resource "aws_iam_policy" "deploy" {
         Effect   = "Allow"
         Action   = "iam:PassRole"
         Resource = "arn:aws:iam::*:role/${var.website}-${var.environment}-ecs-*"
+      },
+      # SSM Run Command permissions for EC2 staging deployment
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:SendCommand",
+          "ssm:GetCommandInvocation",
+          "ssm:DescribeInstanceInformation"
+        ]
+        Resource = "*"
+      },
+      # EC2 description permissions to find instances by tags
+      {
+        Effect = "Allow"
+        Action = [
+          "ec2:DescribeInstances"
+        ]
+        Resource = "*"
       }
     ]
   })

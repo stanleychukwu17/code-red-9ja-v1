@@ -52,36 +52,6 @@ export const clearAuthCookies = () => {
   });
 };
 
-// Logs in a user by sending a POST request to the server with the user's identifier and password.
-export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
-  try {
-    const response = await fetch(API_URL.auth.login, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    // console.log(result)
-    if (result.status === "success" && result.refreshToken) {
-      setAuthCookies({
-        refreshToken: result.refreshToken,
-        accessToken: result.accessToken,
-      });
-      delete result.refreshToken;
-      delete result.accessToken;
-    }
-    return result;
-  } catch (error) {
-    return {
-      status: "error",
-      message:
-        "Connection error. Please try again later. " +
-        (error as Error)?.message,
-    };
-  }
-});
-
 // Logs in an admin by sending a POST request to the server with email and password.
 export const loginAdminImpl = createServerOnlyFn(async ({ data }) => {
   try {
@@ -97,18 +67,24 @@ export const loginAdminImpl = createServerOnlyFn(async ({ data }) => {
         refreshToken: result.data.refreshToken,
         accessToken: result.data.accessToken,
       });
+      if (result.data.user) {
+        setUserDetailsCookie(result.data.user);
+      }
       return {
-        status: "success",
-        user: result.data.user,
+        success: true,
+        data: {
+          user: result.data.user,
+        },
+        message: result.message || "Login successful",
       };
     }
     return {
-      status: "error",
+      success: false,
       message: result.message || "Invalid email or password.",
     };
   } catch (error) {
     return {
-      status: "error",
+      success: false,
       message:
         "Connection error. Please try again later. " +
         (error as Error)?.message,
@@ -118,52 +94,59 @@ export const loginAdminImpl = createServerOnlyFn(async ({ data }) => {
 
 // Refreshes the user's access token by sending a POST request to the server with the user's refresh token.
 export const refreshUserTokenImpl = createServerOnlyFn(async () => {
-  // Get the refresh token from the cookies
-  const refreshToken = getCookie("refresh_token");
+  try {
+    // Get the refresh token from the cookies
+    const refreshToken = getCookie("refresh_token");
 
-  // If no refresh token is found, return an error
-  if (!refreshToken) {
-    return { status: "error", message: "No refresh token found" };
-  }
-
-  // Calls the API to refresh the user token
-  const response = await fetch(API_URL.auth.refresh, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-
-  const result = await response.json();
-
-  // If the refresh is successful, set the new access and refresh tokens in the cookies
-  if (result.success && result.data) {
-    const { accessToken, refreshToken: newRefreshToken, user } = result.data;
-    if (newRefreshToken && accessToken) {
-      setAuthCookies({ refreshToken: newRefreshToken, accessToken });
+    // If no refresh token is found, return an error
+    if (!refreshToken) {
+      return { status: "error", message: "No refresh token found" };
     }
 
-    // If the result has a user, set the user details cookie
-    if (user) {
-      setUserDetailsCookie(user);
-    }
-    return { status: "success", user };
-  } else {
-    // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
-    const logOutConditions = [
-      "invalid or expired refresh token",
-      "user not found",
-      "your account is not active",
-    ];
+    // Calls the API to refresh the user token
+    const response = await fetch(API_URL.auth.refresh, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
 
-    if (logOutConditions.includes(result?.message)) {
-      console.log("cleared cookies because of this result", result);
-      clearAuthCookies();
+    const result = await response.json();
+
+    // If the refresh is successful, set the new access and refresh tokens in the cookies
+    if (result.success && result.data) {
+      const { accessToken, refreshToken: newRefreshToken, user } = result.data;
+      if (newRefreshToken && accessToken) {
+        setAuthCookies({ refreshToken: newRefreshToken, accessToken });
+      }
+
+      // If the result has a user, set the user details cookie
+      if (user) {
+        setUserDetailsCookie(user);
+      }
+      return { status: "success", user };
     } else {
-      console.log("other errors for token error", result);
+      // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
+      const logOutConditions = [
+        "invalid or expired refresh token",
+        "user not found",
+        "your account is not active",
+      ];
+
+      if (logOutConditions.includes(result?.message)) {
+        console.log("cleared cookies because of this result", result);
+        clearAuthCookies();
+      } else {
+        console.log("other errors for token error", result);
+      }
+      return {
+        status: "error",
+        message: result?.message || "Failed to refresh token",
+      };
     }
+  } catch (error) {
     return {
       status: "error",
-      message: result?.message || "Failed to refresh token",
+      message: "Connection error. Please try again later. " + (error as Error)?.message,
     };
   }
 });
@@ -207,48 +190,3 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
   }
 });
 
-// Verifies security questions for a user
-export const verifySecurityQuestionsImpl = createServerOnlyFn(
-  async ({ data }) => {
-    try {
-      const response = await fetch(API_URL.auth.verifySecurityQuestions, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      return { ...result, ok: response.ok };
-    } catch (error) {
-      return {
-        status: "error",
-        message:
-          "Connection error. Please try again later. " +
-          (error as Error)?.message,
-        ok: false,
-      };
-    }
-  },
-);
-
-// Resets user's password
-export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
-  try {
-    const response = await fetch(API_URL.auth.forgotPassword, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    return result;
-  } catch (error) {
-    return {
-      status: "error",
-      message:
-        "Connection error. Please try again later. " +
-        (error as Error)?.message,
-      ok: false,
-    };
-  }
-});
