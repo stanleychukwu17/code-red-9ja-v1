@@ -79,7 +79,6 @@ func (s *AuthService) getPartyInfo(ctx context.Context, partyID pgtype.Int8) *qu
 	return nil
 }
 
-
 type LoginUser struct {
 	queries.User
 	PasswordHash string                        `json:"-"`

@@ -531,7 +531,6 @@ func (h *Handler) ChangePasswordByEmail(w http.ResponseWriter, r *http.Request) 
 	h.utils.RespondSuccess(w, http.StatusOK, "Password changed successfully", nil)
 }
 
-
 // AdminRegisterRequest represents the simplified payload for registering a new admin account
 type AdminRegisterRequest struct {
 	Email     string `json:"email" validate:"omitempty,email"`
@@ -775,7 +774,6 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 			return
 		}
 	}
-
 
 	// Validate role and role level combination
 	isValidCombo := false
