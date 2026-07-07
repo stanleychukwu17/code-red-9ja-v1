@@ -40,3 +40,15 @@ export const getLGAs = createServerFn()
       return { success: false, message: "Failed to fetch LGAs from API" };
     }
   });
+
+export const getLGAs = createServerFn()
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
+  .handler(async ({ data: { stateId, limit, cursor } }) => {
+    try {
+      const response = await fetch(API_URL.getLGAs(stateId, limit, cursor));
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return { status: "failed", error: "Failed to fetch LGAs from API" };
+    }
+  });

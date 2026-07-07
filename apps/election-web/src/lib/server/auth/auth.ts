@@ -82,20 +82,20 @@ export const completeRegistration = createServerFn({ method: "POST" })
 
 
 // Sends a POST request to the server to log in a user with their identifier (email, phone number, or username) and password.
-export const loginUser = createServerFn({method: "POST"})
-.inputValidator((data: { identifier: string; password: string; iso2?: string; identifierType?: string; country?: string; countryId?: number }) => data)
-.handler(async ({ data }) => {
-  const result = await loginUserImpl({data}) // Logs in a user
-  return result
-})
+export const loginUser = createServerFn({ method: "POST" })
+  .inputValidator((data: { identifier: string; password: string; iso2?: string; identifierType?: string; country?: string; countryId?: number }) => data)
+  .handler(async ({ data }) => {
+    const result = await loginUserImpl({ data }) // Logs in a user
+    return result
+  })
 
 // Sends a POST request to the server to log in an admin with their email and password.
-export const loginAdmin = createServerFn({method: "POST"})
-.inputValidator((data: { email: string; password: string }) => data)
-.handler(async ({ data }) => {
-  const result = await loginAdminImpl({data}) // Logs in an admin
-  return result
-})
+export const loginAdmin = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; password: string }) => data)
+  .handler(async ({ data }) => {
+    const result = await loginAdminImpl({ data }) // Logs in an admin
+    return result
+  })
 
 // Sends a POST request to the server to refresh the user's access token.
 export const refreshUserToken = createServerFn({ method: "POST" })
@@ -211,5 +211,3 @@ export const getAdminUsers = createServerFn({ method: "GET" })
       return { success: false, message: "An unexpected error occurred during fetching admin users" };
     }
   });
-
-

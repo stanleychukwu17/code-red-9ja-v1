@@ -9,6 +9,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"log/slog"
+	"log/slog"
 	"regexp"
 	"strconv"
 	"strings"
@@ -36,10 +37,20 @@ type PartyService interface {
 	GetPartyBasicInfo(ctx context.Context, partyID int64) *queries.GetPartyBasicInfoRow
 }
 
+type UserWalletService interface {
+	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
+}
+
+type PartyService interface {
+	GetPartyBasicInfo(ctx context.Context, partyID int64) *queries.GetPartyBasicInfoRow
+}
+
 type AuthService struct {
 	queries          *queries.Queries
 	rdb              *redis.Client
 	messagingService MessagingService
+	walletService    UserWalletService
+	partyService     PartyService
 	walletService    UserWalletService
 	partyService     PartyService
 	jwtSecret        string
@@ -57,10 +68,22 @@ func NewAuthService(
 	jwtAccessExp time.Duration,
 	jwtRefreshExp time.Duration,
 ) *AuthService {
+func NewAuthService(
+	q *queries.Queries,
+	rdb *redis.Client,
+	messagingService MessagingService,
+	walletService UserWalletService,
+	partyService PartyService,
+	jwtSecret string,
+	jwtAccessExp time.Duration,
+	jwtRefreshExp time.Duration,
+) *AuthService {
 	return &AuthService{
 		queries:          q,
 		rdb:              rdb,
 		messagingService: messagingService,
+		walletService:    walletService,
+		partyService:     partyService,
 		walletService:    walletService,
 		partyService:     partyService,
 		jwtSecret:        jwtSecret,
@@ -91,7 +114,9 @@ type LoginResult struct {
 
 // Login verifies login credentials and returns JWT access and refresh tokens
 func (s *AuthService) Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (LoginResult, error) {
+func (s *AuthService) Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (LoginResult, error) {
 	log := logger.FromContext(ctx).With("component", logger.ComponentAuthService)
+	identifier = strings.TrimSpace(strings.ToLower(identifier))
 	identifier = strings.TrimSpace(strings.ToLower(identifier))
 
 	var user queries.User
@@ -102,8 +127,16 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	switch identifierType {
 	case "email":
 		identifier = strings.TrimSpace(strings.ToLower(identifier))
+		identifier = strings.TrimSpace(strings.ToLower(identifier))
 		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
 		if fakeIDStr == "" {
+			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
+			if err == nil && dbUser.FakeID.Valid {
+				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)
+				_ = s.SaveSomeUserRegistrationDetails(ctx, dbUser.Username.String, dbUser.Email.String, dbUser.Phone.String, "", dbUser.ID, dbUser.FakeID.Int64)
+			} else {
+				return LoginResult{}, errors.New("invalid email, this record not found")
+			}
 			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
 			if err == nil && dbUser.FakeID.Valid {
 				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)
@@ -158,6 +191,21 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		if !hasRole {
 			return LoginResult{}, errors.New("insufficient permissions")
 		}
+		return LoginResult{}, errors.New("invalid login details provided")
+	}
+
+	// Role Validation
+	if len(allowedRoles) > 0 {
+		hasRole := false
+		for _, role := range allowedRoles {
+			if user.Role.String == role {
+				hasRole = true
+				break
+			}
+		}
+		if !hasRole {
+			return LoginResult{}, errors.New("insufficient permissions")
+		}
 	}
 
 	//  Check if password matches
@@ -188,7 +236,13 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		partyID = user.PartyID.Int64
 	}
 
+	var partyID int64
+	if user.PartyID.Valid {
+		partyID = user.PartyID.Int64
+	}
+
 	// Generate Access Token and Refresh Token
+	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
@@ -211,10 +265,12 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
 	pipe.SAdd(ctx, redisLoginSessionKey, result.HashedToken)
 	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp) // sets an expiration on the entire set using the jwtRefreshExpiration time
+	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp) // sets an expiration on the entire set using the jwtRefreshExpiration time
 
 	// Redis: add the session ID to the set of the user's login sessions
 	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
 	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
+	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp) // sets an expiration on the entire set using the jwtRefreshExpiration time
 	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp) // sets an expiration on the entire set using the jwtRefreshExpiration time
 
 	// execute the pipeline
@@ -295,6 +351,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	if user.PartyID.Valid {
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int64)
 	}
+	var partyObj *queries.GetPartyBasicInfoRow
+	if user.PartyID.Valid {
+		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int64)
+	}
 	userDetails := LoginUser{
 		ID:            user.ID,
 		FakeID:        user.FakeID.Int64,
@@ -367,7 +427,13 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		partyID = user.PartyID.Int64
 	}
 
+	var partyID int64
+	if user.PartyID.Valid {
+		partyID = user.PartyID.Int64
+	}
+
 	// Generate a new Access Token
+	newAccessToken, err := utils.GenerateToken(userFid, username, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	newAccessToken, err := utils.GenerateToken(userFid, username, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
@@ -638,6 +704,30 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 
 	// delete onboarding state from redis as it is now completed
 	s.rdb.Del(ctx, redisKey)
+
+	// Create user wallet (best effort, non-blocking)
+	if s.walletService != nil {
+		if registeredUser, err := s.queries.GetUserByID(context.Background(), user_id); err == nil {
+			go func() {
+				bgCtx := context.Background()
+				if _, walletErr := s.walletService.CreateUserWallet(bgCtx, registeredUser); walletErr != nil {
+					slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
+				}
+			}()
+		}
+	}
+
+	// Create user wallet (best effort, non-blocking)
+	if s.walletService != nil {
+		if registeredUser, err := s.queries.GetUserByID(context.Background(), user_id); err == nil {
+			go func() {
+				bgCtx := context.Background()
+				if _, walletErr := s.walletService.CreateUserWallet(bgCtx, registeredUser); walletErr != nil {
+					slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
+				}
+			}()
+		}
+	}
 
 	// Create user wallet (best effort, non-blocking)
 	if s.walletService != nil {
@@ -995,6 +1085,28 @@ func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) er
 	return err
 }
 
+// UpdateCachedUserInfo refreshes the cached user information in Redis.
+// This function should be called anytime a user's details changes
+func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) error {
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+
+	// Fetch fresh data from DB
+	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		// If the user can't be fetched, remove the cache anyway to avoid stale data
+		s.rdb.Del(ctx, userInfoKey)
+		return fmt.Errorf("user not found for cache update: %w", err)
+	}
+
+	// Marshal and update Redis
+	userJSON, err := json.Marshal(user)
+	if err == nil {
+		s.rdb.Set(ctx, userInfoKey, userJSON, 0) // 0 means no expiration, or however GetUserDetailsByFakeID caches it
+	}
+
+	return err
+}
+
 type VerifySecurityQuestionsResult struct {
 	ChangePasswordID string `json:"change_password_id"`
 	UserFID          int64  `json:"user_fid"`
@@ -1046,6 +1158,12 @@ func (s *AuthService) VerifySecurityQuestions(ctx context.Context, nin string, q
 		ChangePasswordID: changePasswordID,
 		UserFID:          secQ.UserFid,
 	}, nil
+}
+
+// ChangePasswordByEmail resets a user's password using their email address
+func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, newPassword string) error {
+	// TODO: Implement the actual password change logic
+	return errors.New("ChangePasswordByEmail is not implemented yet")
 }
 
 // ChangePasswordByEmail resets a user's password using their email address
@@ -1275,6 +1393,161 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 // ListAdmins fetches all administrative users from the database
 func (s *AuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
 	return s.queries.ListAdmins(ctx)
+}
+
+type SeedUserRequest struct {
+	ID                int64   `json:"id"`
+	FakeID            int64   `json:"fake_id"`
+	Email             string  `json:"email"`
+	Avatar            string  `json:"avatar"`
+	Phone             *string `json:"phone"`
+	Username          *string `json:"username"`
+	Password          string  `json:"password"`
+	LastName          string  `json:"last_name"`
+	FirstName         string  `json:"first_name"`
+	MiddleName        *string `json:"middle_name"`
+	Gender            string  `json:"gender"`
+	DateOfBirth       string  `json:"date_of_birth"`
+	CurrentCountry    int16   `json:"current_country"`
+	CurrentState      int16   `json:"current_state"`
+	CurrentLga        *int32  `json:"current_lga"`
+	CurrentCity       *int32  `json:"current_city"`
+	StateOfOrigin     *int16  `json:"state_of_origin"`
+	Vin               *string `json:"vin"`
+	VotersCardImage   *string `json:"voters_card_image"`
+	BankAccountNumber *string `json:"bank_account_number"`
+	BankCode          *string `json:"bank_code"`
+	NinVerified       string  `json:"nin_verified"`
+	PhoneVerified     string  `json:"phone_verified"`
+	Role              string  `json:"role"`
+	RoleLevel         string  `json:"role_level"`
+	AccountStatus     string  `json:"account_status"`
+	PartyID           *int64  `json:"party_id"`
+}
+
+func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([]int64, error) {
+	var createdIDs []int64
+	for _, u := range users {
+		// Hash password
+		hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return nil, err
+		}
+
+		dob, err := time.Parse("2006-01-02", u.DateOfBirth)
+		if err != nil {
+			return nil, fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
+		}
+
+		// Prepare params
+		var emailVal, avatarVal, phoneVal, usernameVal, middleNameVal, genderVal, vinVal, votersCardVal, bankNoVal, bankCodeVal pgtype.Text
+		var currentLgaVal, currentCityVal pgtype.Int4
+		var stateOfOriginVal pgtype.Int2
+		var partyIDVal pgtype.Int8
+
+		if u.Email != "" {
+			emailVal = pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
+		}
+		if u.Avatar != "" {
+			avatarVal = pgtype.Text{String: u.Avatar, Valid: true}
+		}
+		if u.Phone != nil && *u.Phone != "" {
+			phoneVal = pgtype.Text{String: *u.Phone, Valid: true}
+		}
+		if u.Username != nil && *u.Username != "" {
+			usernameVal = pgtype.Text{String: *u.Username, Valid: true}
+		}
+		if u.MiddleName != nil && *u.MiddleName != "" {
+			middleNameVal = pgtype.Text{String: *u.MiddleName, Valid: true}
+		}
+		if u.Gender != "" {
+			genderVal = pgtype.Text{String: u.Gender, Valid: true}
+		}
+		if u.CurrentLga != nil && *u.CurrentLga != 0 {
+			currentLgaVal = pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
+		}
+		if u.CurrentCity != nil && *u.CurrentCity != 0 {
+			currentCityVal = pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
+		}
+		if u.StateOfOrigin != nil && *u.StateOfOrigin != 0 {
+			stateOfOriginVal = pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
+		}
+		if u.Vin != nil && *u.Vin != "" {
+			vinVal = pgtype.Text{String: *u.Vin, Valid: true}
+		}
+		if u.VotersCardImage != nil && *u.VotersCardImage != "" {
+			votersCardVal = pgtype.Text{String: *u.VotersCardImage, Valid: true}
+		}
+		if u.BankAccountNumber != nil && *u.BankAccountNumber != "" {
+			bankNoVal = pgtype.Text{String: *u.BankAccountNumber, Valid: true}
+		}
+		if u.BankCode != nil && *u.BankCode != "" {
+			bankCodeVal = pgtype.Text{String: *u.BankCode, Valid: true}
+		}
+		if u.PartyID != nil && *u.PartyID != 0 {
+			partyIDVal = pgtype.Int8{Int64: *u.PartyID, Valid: true}
+		}
+
+		params := queries.SeedUserParams{
+			FakeID:            pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
+			Email:             emailVal,
+			Avatar:            avatarVal,
+			Phone:             phoneVal,
+			Username:          usernameVal,
+			PasswordHash:      string(hashed),
+			LastName:          pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
+			FirstName:         pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
+			MiddleName:        middleNameVal,
+			Gender:            genderVal,
+			DateOfBirth:       pgtype.Date{Time: dob, Valid: true},
+			CurrentCountry:    u.CurrentCountry,
+			CurrentState:      u.CurrentState,
+			CurrentLga:        currentLgaVal,
+			CurrentCity:       currentCityVal,
+			StateOfOrigin:     stateOfOriginVal,
+			Vin:               vinVal,
+			VotersCardImage:   votersCardVal,
+			BankAccountNumber: bankNoVal,
+			BankCode:          bankCodeVal,
+			NinVerified:       pgtype.Text{String: u.NinVerified, Valid: u.NinVerified != ""},
+			PhoneVerified:     pgtype.Text{String: u.PhoneVerified, Valid: u.PhoneVerified != ""},
+			Role:              pgtype.Text{String: u.Role, Valid: u.Role != ""},
+			RoleLevel:         pgtype.Text{String: u.RoleLevel, Valid: u.RoleLevel != ""},
+			AccountStatus:     pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
+			PartyID:           partyIDVal,
+		}
+
+		id, err := s.queries.SeedUser(ctx, params)
+		if err != nil {
+			return nil, fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+		}
+
+		// Save details to Redis cache
+		fakeID := u.FakeID
+		if fakeID == 0 {
+			fakeID = utils.GenerateFakeID(id)
+			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
+		}
+
+		emailStr := ""
+		if emailVal.Valid {
+			emailStr = emailVal.String
+		}
+		phoneStr := ""
+		if phoneVal.Valid {
+			phoneStr = phoneVal.String
+		}
+		usernameStr := ""
+		if usernameVal.Valid {
+			usernameStr = usernameVal.String
+		}
+
+		_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, phoneStr, "", id, fakeID)
+		_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
+
+		createdIDs = append(createdIDs, id)
+	}
+	return createdIDs, nil
 }
 
 type SeedUserRequest struct {

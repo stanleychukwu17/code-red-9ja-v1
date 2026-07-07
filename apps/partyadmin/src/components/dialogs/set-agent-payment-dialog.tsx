@@ -132,7 +132,6 @@ export function SetAgentPaymentDialog({
     },
   });
 
-
   // Sync state overrides default value to mainAmount unless overridden
   const getStateAmount = (stateName: string) => {
     return stateOverrides[stateName] !== undefined
