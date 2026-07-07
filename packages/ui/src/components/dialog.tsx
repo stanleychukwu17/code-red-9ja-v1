@@ -1,9 +1,8 @@
 import * as React from "react";
-import { X, XIcon } from "lucide-react";
+import { X } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 
 import { cn } from "../lib/utils";
-import { Button } from "./button";
 
 function Dialog({
   ...props
@@ -60,7 +59,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-2 border bg-background p-6 shadow-lg duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-open:slide-in-from-left-1/2 data-open:slide-in-from-top-1/2 data-closed:slide-out-to-left-1/2 data-closed:slide-out-to-top-1/2 rounded-[24px]",
+          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-2 border bg-background p-5 shadow-lg duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-open:slide-in-from-left-1/2 data-open:slide-in-from-top-1/2 data-closed:slide-out-to-left-1/2 data-closed:slide-out-to-top-1/2 rounded-[24px]",
           className,
         )}
         onPointerDownOutside={(e) => {
@@ -136,7 +135,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="dialog-footer"
       className={cn(
         // "flex flex-row justify-end gap-2 border-t pt-4 mt-2",
-        "flex justify-end px-6 pb-3 pt-3 border-t border-border",
+        "flex justify-end px-6 pb-3 pt-3 border-t# border-border",
         className,
       )}
       {...props}
@@ -180,7 +179,7 @@ function DialogPadding({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={cn("px-6", className)}>{children}</div>;
+  return <div className={cn("px-5", className)}>{children}</div>;
 }
 
 const DialogToolbelt = ({ children }: { children: React.ReactNode }) => {

@@ -24,9 +24,7 @@ func NewRedisClient(cfg config.RedisConfig) (*redis.Client, error) {
 		return nil, fmt.Errorf("unable to ping redis: %w", err)
 	}
 
-	if config.GetEnv("ENV", "development") == "development" {
-		slog.Info("Successfully connected to Redis", "addr", cfg.Addr, "db", cfg.DB)
-	}
+	slog.Info("Successfully connected to Redis", "addr", cfg.Addr, "db", cfg.DB)
 
 	return rdb, nil
 }

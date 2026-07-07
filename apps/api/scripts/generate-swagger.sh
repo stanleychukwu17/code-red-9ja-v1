@@ -7,7 +7,7 @@ echo "Generating Swagger documentation..."
 
 if ! swag init \
   -g main.go \
-  -d ./cmd/api,./internal/handler,./internal/router,./internal/service/auth,./internal/handler/auth,./internal/handler/parties,./internal/handler/files \
+  -d ./cmd/api,./internal/handler,./internal/router,./internal/service/auth,./internal/handler/auth,./internal/handler/parties,./internal/handler/files,./internal/handler/election_results \
   -o docs; then
     echo "Swagger generation failed."
     exit 1

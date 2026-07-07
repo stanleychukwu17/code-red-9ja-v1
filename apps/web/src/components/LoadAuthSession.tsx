@@ -14,8 +14,8 @@ export default function LoadAuthSession() {
       try {
         const response = await refreshUserToken();
 
-        if (response.status === "success") {
-          const user = response.user;
+        if (response.success) {
+          const user = response.data.user;
           if (user) dispatch(updateAuthState({ user }));
         }
       } catch (error) {
@@ -30,7 +30,7 @@ export default function LoadAuthSession() {
 
     // Periodically refresh the token every 14 minutes (since access token expires in 15 minutes)
     const interval = setInterval(() => refreshSession(), 14 * 60 * 1000); // refresh every 14 minutes until done
-  
+
     return () => clearInterval(interval);
   }, [dispatch]);
 

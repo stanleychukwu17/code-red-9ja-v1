@@ -17,8 +17,8 @@ export const Route = createFileRoute('/auth/security-questions')({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie({});
-    if (isAuthed.status === "success") {
-      throw redirect({ to: APP_URL.homePage });
+    if (isAuthed.success) {
+      throw redirect({ to: APP_URL.home });
     }
   },
   head: () => getPageHeader({ title: "Answer security questions", robotsAllowed: "no" }),
@@ -93,12 +93,12 @@ function RouteComponent() {
             }
           });
 
-          if (res.status != "success") {
+          if (!res.success) {
             setServerError(res.message || "Failed to verify security questions");
             return;
           }
 
-          dispatch(updateOnboardingData({ changePasswordId: res.change_password_id, changeUserFid: res.user_fid }));
+          dispatch(updateOnboardingData({ changePasswordId: res.data.change_password_id, changeUserFid: res.data.user_fid }));
           navigate({ to: APP_URL.auth.forgotPassword });
         } catch (error) {
           setServerError((error as Error).message);
@@ -178,7 +178,7 @@ function RouteComponent() {
                   }}
                   defaultValue={field.state.value}
                 >
-                  <SelectTrigger className="w-full text-[17px] py-2">
+                  <SelectTrigger className="w-full text-[17px]">
                     <SelectValue placeholder="Select a security question" />
                   </SelectTrigger>
                   <SelectContent>
@@ -235,7 +235,7 @@ function RouteComponent() {
                   }}
                   defaultValue={field.state.value}
                 >
-                  <SelectTrigger className="w-full text-[17px] py-2">
+                  <SelectTrigger className="w-full text-[17px]">
                     <SelectValue placeholder="Select a security question" />
                   </SelectTrigger>
                   <SelectContent>

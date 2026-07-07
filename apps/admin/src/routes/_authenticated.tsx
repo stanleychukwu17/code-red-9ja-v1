@@ -31,7 +31,8 @@ import { APP_URL } from "#/lib/config";
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const res = await refreshUserToken();
-    if (res.status !== "success") {
+    console.log("✌️ RES:", res);
+    if (res.status !== "success" || res.user?.role !== "admin") {
       throw redirect({ to: "/auth/login" });
     }
   },
@@ -39,55 +40,57 @@ export const Route = createFileRoute("/_authenticated")({
   errorComponent: ({ error }) => <div>{error.message}</div>,
 });
 
+const ICON_CLASS = "shrink-0 size-6";
+const SELECTED_ICON_CLASS = `${ICON_CLASS} text-c-90`;
 const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "home",
     label: "Home",
-    icon: <HomeIcon className="shrink-0 size-6" />,
-    selectedIcon: <HomeSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <HomeIcon className={ICON_CLASS} />,
+    selectedIcon: <HomeSolidIcon className={SELECTED_ICON_CLASS} />,
     href: "/home",
   },
   {
     id: "elections",
     label: "Elections",
-    icon: <CubeIcon className="shrink-0 size-6" />,
-    selectedIcon: <CubeSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <CubeIcon className={ICON_CLASS} />,
+    selectedIcon: <CubeSolidIcon className={SELECTED_ICON_CLASS} />,
     href: "/elections",
   },
   {
     id: "bodies",
     label: "Bodies",
-    icon: <CalendarIcon className="shrink-0 size-6" />,
-    selectedIcon: <CalendarSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <CalendarIcon className={ICON_CLASS} />,
+    selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
     href: "/bodies/states",
   },
   {
     id: "users",
     label: "Users",
-    icon: <UserIcon className="shrink-0 size-6" />,
-    selectedIcon: <UserSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <UserIcon className={ICON_CLASS} />,
+    selectedIcon: <UserSolidIcon className={SELECTED_ICON_CLASS} />,
     href: "/users/admin",
   },
   {
     id: "parties",
     label: "Parties",
-    icon: <PartyIcon className="shrink-0 size-6" />,
-    selectedIcon: <PartySolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <PartyIcon className={ICON_CLASS} />,
+    selectedIcon: <PartySolidIcon className={SELECTED_ICON_CLASS} />,
     href: "/parties",
   },
   {
     id: "applications",
     label: "Applications",
-    icon: <PaperIcon className="shrink-0 size-6" />,
-    selectedIcon: <PaperSolidIcon className="shrink-0 size-6 text-c-90" />,
+    icon: <PaperIcon className={ICON_CLASS} />,
+    selectedIcon: <PaperSolidIcon className={SELECTED_ICON_CLASS} />,
     href: "/applications",
   },
   {
     id: "notifications",
     label: "Notifications",
-    icon: <NotificationIcon className="shrink-0 size-6" />,
+    icon: <NotificationIcon className={ICON_CLASS} />,
     selectedIcon: (
-      <NotificationSolidIcon className="shrink-0 size-6 text-c-90" />
+      <NotificationSolidIcon className={SELECTED_ICON_CLASS} />
     ),
     href: "/notifications",
   },
@@ -119,7 +122,19 @@ function AuthenticatedRoutes() {
         onSidebarStateChange={handleSidebarStateChange}
         homePageUrl={APP_URL.homePage}
       />
-      <Outlet />
+
+      {/* 2. A flex column container for the rest of the page */}
+      <div className="flex flex-col flex-1 w-full min-w-0">
+
+        {/* Main content expands to push footer down */}
+        <main className="flex-1">
+          <Outlet />
+        </main>
+        {/* Footer stays at the bottom */}
+        <footer className="p-4 border-t text-center font-bold">
+          Free9ja
+        </footer>
+      </div>
     </div>
   );
 }

@@ -16,7 +16,8 @@ import * as React from "react";
 import type { UserResult } from "./UserFormDialog";
 import { UserFormDialog } from "./UserFormDialog";
 import { CandidateRow } from "./CandidateRow";
-import { CandidateFinderCommand } from "../commands/CandidateFinderCommand";
+import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
+import { getUsersList } from "#/lib/server/users";
 
 interface ManageCandidatesDialogProps {
   electionId: number;
@@ -71,7 +72,11 @@ export function ManageCandidatesDialog({
       const res = await syncElectionCandidates({
         data: {
           electionId,
-          candidateIds: candidates.map((c) => c.id),
+          candidates: candidates.map((c) => ({
+            candidate_id: c.id,
+            party_id: c.party_id,
+            party_short_name: c.party_short_name,
+          })),
         },
       });
       if (!res.success) {
@@ -243,11 +248,21 @@ export function ManageCandidatesDialog({
         onSuccess={handleAddNewCandidateSuccess}
       />
 
-      <CandidateFinderCommand
+      <UserFinderCommand
         open={isExistingDialogOpen}
         onClose={() => setIsExistingDialogOpen(false)}
-        onAddCandidates={handleAddMultipleExistingCandidates}
+        onAddUsers={handleAddMultipleExistingCandidates}
         alreadySelectedIds={candidates.map((c) => c.id)}
+        fetchUsers={async () => {
+          const res = await getUsersList();
+          if (res && res.success && res.data?.users) {
+            return res.data.users;
+          }
+          return [];
+        }}
+        title="Search Candidates"
+        placeholder="Search candidates to add"
+        selectMode="multiple"
       />
     </>
   );

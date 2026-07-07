@@ -70,6 +70,11 @@ variable "db_password" {
   sensitive   = true
 }
 
+variable "db_sslmode" {
+  type        = string
+  description = "PostgreSQL SSL mode used by the API and migrations"
+}
+
 variable "redis_host" {
   type        = string
   description = "The Redis host address"

@@ -1,32 +1,23 @@
-import { Button } from "@repo/ui/components/button";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { APP_URL } from "@/lib/config";
+import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 
 export const Route = createFileRoute("/")({
   head: () => getPageHeader({
-    title: "Home"
+    title: "Welcome"
   }),
-  component: App
+  component: LandingPage
 });
 
-function App() {
+function LandingPage() {
   return (
-    <main>
-      <div className="max-w-[400px] mx-auto space-y-5">
-        <h1>Welcome to Free9ja</h1>
-        <div className="flex gap-5 w-full">
-          <Link to={APP_URL.auth.login} className="w-full">
-            <Button variant="default" className="w-full px-10">
-              Login
-            </Button>
-          </Link>
-          <Link to={APP_URL.auth.signup} className="w-full">
-            <Button variant="tertiary" className="w-full px-10">
-              Signup
-            </Button>
-          </Link>
-        </div>
+    <main className="min-h-screen flex items-center justify-center p-8">
+      <div className="max-w-2xl text-center space-y-6">
+        <h1 className="text-4xl font-extrabold tracking-tight">
+          Welcome to the Landing Page
+        </h1>
+        <p className="text-xl text-muted-foreground">
+          This is some dummy data for the index page. We will build out a full landing page here later!
+        </p>
       </div>
     </main>
   );

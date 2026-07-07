@@ -1,0 +1,39 @@
+Created At: 2026-07-05T09:42:46Z
+Completed At: 2026-07-05T09:42:46Z
+File Path: `file:///c:/Users/danie/Desktop/Repos/free9ja/apps/partyadmin/src/lib/server/elections.ts`
+Total Lines: 356
+Total Bytes: 12041
+Showing lines 170 to 200
+The following code has been modified to include a line number before every line, in the format: <line_number>: <original_line>. Please note that any changes targeting the original code should remove the line number, colon, and leading space.
+170:   });
+171: 
+172: export const getElectionCandidates = createServerFn({ method: "GET" })
+173:   .inputValidator(
+174:     (data: { electionId: number; limit?: number; cursor?: string }) => data,
+175:   )
+176:   .handler(async ({ data }) => {
+177:     try {
+178:       const limit = data.limit || 20;
+179:       const cursor = data.cursor || "";
+180:       const { getCookie } = await import("@tanstack/react-start/server");
+181:       const accessToken = getCookie("access_token");
+182:       const refreshToken = getCookie("refresh_token");
+183: 
+184:       const headers: Record<string, string> = {
+185:         "Content-Type": "application/json",
+186:       };
+187:       if (accessToken) {
+188:         headers["Authorization"] = `Bearer ${accessToken}`;
+189:         headers["Cookie"] =
+190:           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
+191:       }
+192: 
+193:       const response = await fetch(
+194:         `${API_URL.electionCandidates(data.electionId)}?limit=${limit}&cursor=${cursor}`,
+195:         {
+196:           headers,
+197:         },
+198:       );
+199:       const resData = await response.json();
+200:       return resData;
+The above content does NOT show the entire file contents. If you need to view any lines of the file which were not shown to complete your task, call this tool again to view those lines.

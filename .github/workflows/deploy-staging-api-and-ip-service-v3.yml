@@ -1,0 +1,146 @@
+name: Deploy Staging v3 (EC2 SSH)
+
+on:
+  push:
+    branches:
+      - staging
+    paths:
+      - "apps/api/**"
+      - "apps/ip-service/**"
+      - ".github/workflows/deploy-staging-api-and-ip-service-v3.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write # Required for requesting the AWS JWT (OIDC)
+  contents: read # Required for actions/checkout
+
+jobs:
+  deploy-staging-v3:
+    name: Deploy to EC2 Staging v3 via SSH
+    runs-on: ubuntu-latest
+
+    env:
+      ENVIRONMENT: staging-v2
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Configure AWS Credentials using OIDC (OpenID Connect)
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN_STAGING_V2 }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      # Login to Amazon ECR to push Docker images
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Build and push API Service
+      - name: Build and Push API Service Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: free9ja-${{ env.ENVIRONMENT }}-api
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg VERSION=${{ github.ref_name }} \
+            --build-arg COMMIT_SHA=${{ github.sha }} \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            ./apps/api
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # Build and push IP Service
+      - name: Build and Push IP Service Image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: free9ja-${{ env.ENVIRONMENT }}-ip-service
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            ./apps/ip-service
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      # Retrieve the EC2 instance details (Public IP and Security Group ID)
+      - name: Discover EC2 Instance & Security Group
+        id: discover-ec2
+        run: |
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --filters "Name=tag:Environment,Values=${{ env.ENVIRONMENT }}" "Name=tag:Name,Values=free9ja-${{ env.ENVIRONMENT }}-ec2" "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].PublicIpAddress" \
+            --output text)
+
+          SG_ID=$(aws ec2 describe-security-groups \
+            --filters "Name=tag:Name,Values=free9ja-${{ env.ENVIRONMENT }}-sg" \
+            --query "SecurityGroups[0].GroupId" \
+            --output text)
+
+          if [ -z "$PUBLIC_IP" ] || [ -z "$SG_ID" ]; then
+            echo "Error: Could not retrieve Public IP or Security Group ID for free9ja-${{ env.ENVIRONMENT }}-ec2"
+            exit 1
+          fi
+
+          echo "PUBLIC_IP=$PUBLIC_IP" >> $GITHUB_OUTPUT
+          echo "SG_ID=$SG_ID" >> $GITHUB_OUTPUT
+          echo "Discovered Public IP: $PUBLIC_IP"
+          echo "Discovered Security Group ID: $SG_ID"
+
+      # Get the runner public IP
+      - name: Get GitHub Runner Public IP
+        id: get-ip
+        run: |
+          RUNNER_IP=$(curl -s https://api.ipify.org)
+          echo "RUNNER_IP=$RUNNER_IP" >> $GITHUB_OUTPUT
+          echo "GitHub Runner Public IP: $RUNNER_IP"
+
+      # Authorize SSH access from the runner's IP
+      - name: Authorize Port 22 in Security Group
+        run: |
+          aws ec2 authorize-security-group-ingress \
+            --group-id ${{ steps.discover-ec2.outputs.SG_ID }} \
+            --protocol tcp \
+            --port 22 \
+            --cidr ${{ steps.get-ip.outputs.RUNNER_IP }}/32
+
+      # Execute Deployment commands via SSH
+      - name: Deploy Containers via SSH
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          PUBLIC_IP: ${{ steps.discover-ec2.outputs.PUBLIC_IP }}
+        run: |
+          # Set up the SSH private key
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_V2_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          # Run deployment commands on the EC2 host via SSH
+          ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP "
+            set -eux
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $ECR_REGISTRY
+            cd /app
+            test -f docker-compose.yml
+            docker compose pull api ip-service
+            docker compose up -d api ip-service
+            sudo systemctl reload nginx
+          "
+
+      # Always clean up the security group ingress rule
+      - name: Revoke Port 22 from Security Group
+        if: always()
+        run: |
+          # Check if we have the necessary variables to run cleanup
+          if [ -n "${{ steps.discover-ec2.outputs.SG_ID }}" ] && [ -n "${{ steps.get-ip.outputs.RUNNER_IP }}" ]; then
+            aws ec2 revoke-security-group-ingress \
+              --group-id ${{ steps.discover-ec2.outputs.SG_ID }} \
+              --protocol tcp \
+              --port 22 \
+              --cidr ${{ steps.get-ip.outputs.RUNNER_IP }}/32 || true
+          fi

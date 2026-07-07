@@ -2,6 +2,7 @@
 resource "aws_ecr_repository" "api" {
   name                 = "${var.website}-${var.environment}-${var.service_name}"
   image_tag_mutability = "MUTABLE"
+  force_delete         = true
 
   image_scanning_configuration {
     scan_on_push = true
@@ -104,11 +105,12 @@ resource "aws_ecs_task_definition" "api" {
         { name = "DB_NAME", value = var.db_name },
         { name = "DB_USER", value = var.db_user },
         { name = "DB_PASSWORD", value = var.db_password },
+        { name = "DB_SSLMODE", value = var.db_sslmode },
         { name = "REDIS_ADDR", value = "${var.redis_host}:${var.redis_port}" },
         { name = "REDIS_PORT", value = tostring(var.redis_port) },
         { name = "REDIS_PASSWORD", value = var.redis_password },
-        { name = "IS_CI_CD", value = var.is_ci_cd },             # Skips loading local .env file
-        { name = "RUN_MIGRATIONS", value = var.run_migrations }, # Run database migrations on task start
+        { name = "IS_CI_CD", value = var.is_ci_cd },             # if true, it skips loading local .env file
+        { name = "RUN_MIGRATIONS", value = var.run_migrations }, # if true, it runs database migrations on task start
         { name = "JWT_SECRET", value = var.jwt_secret },
         { name = "JWT_ACCESS_EXPIRATION", value = var.jwt_access_expiration },
         { name = "JWT_REFRESH_EXPIRATION", value = var.jwt_refresh_expiration }
@@ -132,11 +134,12 @@ resource "aws_ecs_task_definition" "api" {
 
 # --- ECS Service ---
 resource "aws_ecs_service" "api" {
-  name            = "${var.website}-${var.environment}-${var.service_name}-service"
-  cluster         = aws_ecs_cluster.main.id
-  task_definition = aws_ecs_task_definition.api.arn
-  desired_count   = var.ecs_desired_count
-  launch_type     = "FARGATE"
+  name                              = "${var.website}-${var.environment}-${var.service_name}-service"
+  cluster                           = aws_ecs_cluster.main.id
+  task_definition                   = aws_ecs_task_definition.api.arn
+  desired_count                     = var.ecs_desired_count
+  launch_type                       = "FARGATE"
+  health_check_grace_period_seconds = 1200 # 20minutes
 
   network_configuration {
     subnets          = var.private_subnet_ids

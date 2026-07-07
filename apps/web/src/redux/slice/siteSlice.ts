@@ -2,22 +2,41 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction, Middleware } from "@reduxjs/toolkit";
 import { saveSitePreference } from "@/lib/server/sitePreference";
 
+export interface VisitorDetails {
+  ip: string;
+  location?: {
+    city?: string;
+    country?: string;
+    country_code?: string;
+    latitude?: number;
+    longitude?: number;
+    timezone?: string;
+  };
+}
+
+export interface VisitorDetails {
+  ip: string;
+  location?: {
+    city?: string;
+    country?: string;
+    country_code?: string;
+    latitude?: number;
+    longitude?: number;
+    timezone?: string;
+  };
+}
+
 export interface SiteState {
   // sideBarState: This is used to determine if the sidebar is collapsed or expanded
   sideBarState: "" | "collapsed" | "expanded";
 
-  //currentSideBarWidth: This is used to store the current width of the sidebar
-  currentSideBarWidth: string;
-
-  //allowOutletToBeResponsive: This is used to allow the <Outlet /> component in the main __root.tsx
-  // to be responsive when the sidebar is collapsed or expanded, if false <Outlet /> will take full width
-  allowOutletToBeResponsive: boolean;
+  //visitorDetails: The details of the visitor detected via IP
+  visitorDetails?: VisitorDetails | null;
 }
 
 const initialState: SiteState = {
   sideBarState: "",
-  currentSideBarWidth: "16rem",
-  allowOutletToBeResponsive: true,
+  visitorDetails: null,
 };
 
 export const siteSlice = createSlice({
@@ -25,10 +44,9 @@ export const siteSlice = createSlice({
   initialState,
   reducers: {
     updateSiteState: (state, action: PayloadAction<Partial<SiteState>>) => {
-      const { sideBarState, currentSideBarWidth, allowOutletToBeResponsive } = action.payload;
+      const { sideBarState, visitorDetails } = action.payload;
       if (sideBarState) state.sideBarState = sideBarState;
-      if (currentSideBarWidth) state.currentSideBarWidth = currentSideBarWidth;
-      if (allowOutletToBeResponsive !== undefined) state.allowOutletToBeResponsive = allowOutletToBeResponsive;
+      if (visitorDetails !== undefined) state.visitorDetails = visitorDetails;
 
       return state;
     },

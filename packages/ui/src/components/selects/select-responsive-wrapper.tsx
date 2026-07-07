@@ -7,7 +7,13 @@ interface SelectResponsiveWrapperProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   trigger: React.ReactNode;
-  children: React.ReactNode;
+  /** Content rendered inside the Popover on desktop.
+   *  Falls back to `children` when not provided (backward compatible). */
+  desktopContent?: React.ReactNode;
+  children?: React.ReactNode;
+  /** Optional alternative content rendered inside the Drawer on mobile.
+   *  When omitted, `desktopContent ?? children` is used on both. */
+  mobileContent?: React.ReactNode;
   placeholder?: string;
   className?: string;
   align?: "start" | "center" | "end";
@@ -17,7 +23,9 @@ export function SelectResponsiveWrapper({
   open,
   onOpenChange,
   trigger,
+  desktopContent,
   children,
+  mobileContent,
   placeholder = "Select option",
   className,
   align = "start",
@@ -36,7 +44,7 @@ export function SelectResponsiveWrapper({
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
             <div className="overflow-hidden rounded-xl bg-popover shadow-[0_18px_40px_rgba(16,24,40,0.08)]">
-              {children}
+              {desktopContent ?? children}
             </div>
           </RadixPopover.Content>
         </RadixPopover.Portal>
@@ -53,9 +61,11 @@ export function SelectResponsiveWrapper({
       <DrawerTrigger asChild className={className}>
         {trigger}
       </DrawerTrigger>
-      <DrawerContent className="rounded-t-[28px] border-t-0 bg-background px-3 pt-3 pb-6 focus:outline-none">
+      <DrawerContent className="rounded-t-[28px] border-t-0 bg-background focus:outline-none">
         <DrawerTitle className="sr-only">{placeholder}</DrawerTitle>
-        <div className="mt-2 focus:outline-none">{children}</div>
+        <div className="flex flex-col flex-1 overflow-hidden">
+          {mobileContent ?? desktopContent ?? children}
+        </div>
       </DrawerContent>
     </Drawer>
   );

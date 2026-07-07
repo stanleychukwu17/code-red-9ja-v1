@@ -16,6 +16,7 @@ import { OutletWrapper } from "#/components/OutletWrapper";
 import Footer from "#/components/Footer";
 import LoadSitePreference from "#/components/LoadSitePreference";
 import LoadAuthSession from "#/components/LoadAuthSession";
+import LoadVisitorDetails from "#/components/LoadVisitorDetails";
 import { getUserDetailsCookie } from "@/lib/server/auth/auth";
 import { getSitePreference } from "@/lib/server/sitePreference";
 
@@ -31,7 +32,7 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Free9ja" },
+      { title: import.meta.env.VITE_APP_NAME },
     ],
     links: [{ rel: "stylesheet", href: appCss }],
   }),
@@ -42,9 +43,8 @@ export const Route = createRootRoute({
 });
 
 function RootLayout() {
-  const { sitePreference } = Route.useRouteContext();
   return (
-    <OutletWrapper sitePreference={sitePreference}>
+    <OutletWrapper>
       {/*
         I use the OutletWrapper to calculate the width of the div that wraps the <Outlet /> component.
         It gets the width of the sidebar from the DOM and adjusts the width of the <Outlet /> accordingly.
@@ -76,13 +76,22 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       >
         <Provider store={store}>
           <Toaster />
-          <Header userDetails={userDetails} sitePreference={sitePreference} />
           <ClientOnly>
             <LoadSitePreference sitePreference={sitePreference} />
             <LoadAuthSession />
+            <LoadVisitorDetails />
           </ClientOnly>
-          {children}
-          <Footer sitePreference={sitePreference} />
+
+          <div className="flex min-h-dvh">
+            <Header userDetails={userDetails} sitePreference={sitePreference} />
+
+            <div className="flex flex-col flex-1 w-full min-w-0">
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </div>
         </Provider>
         <Scripts />
       </body>

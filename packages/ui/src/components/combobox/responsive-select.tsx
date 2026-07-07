@@ -86,17 +86,7 @@ export function ResponsiveSelect({
 }
 
 function DesktopSelect({
-  options,
-  value,
-  onChange,
-  placeholder,
-  searchEnabled,
-  searchPlaceholder,
-  emptyMessage,
-  disabled,
-  className,
-  triggerClassName,
-  optionClassName,
+  options, value, onChange, placeholder, searchEnabled, searchPlaceholder, emptyMessage, disabled, className, triggerClassName, optionClassName,
 }: ResponsiveSelectProps) {
   const [open, setOpen] = React.useState(false);
   const selectedOption =
@@ -143,7 +133,9 @@ function DesktopSelect({
     >
       <ComboboxSelect
         className={cn(
-          "h-14 w-full rounded-[16px] bg-black/5 px-4 text-lg text-c-80 transition-colors hover:bg-black/[0.06] data-[popup-open]:bg-black/[0.06]",
+          `h-14 w-full rounded-[4px] bg-black/5 hover:bg-black/[0.06] px-4 text-md text-c-80 transition-colors
+          dark:bg-black/30 dark:hover:bg-black/90
+          data-[popup-open]:bg-black/[0.06]`,
           triggerClassName,
           className,
         )}
@@ -156,7 +148,7 @@ function DesktopSelect({
           </span>
         </span>
       </ComboboxSelect>
-      <ComboboxContent className="overflow-hidden rounded-[24px] border-0 bg-zinc-100 shadow-[0_18px_40px_rgba(16,24,40,0.08)] ring-0">
+      <ComboboxContent className="overflow-hidden rounded-[4px] border-0 bg-zinc-100 shadow-[0_18px_40px_rgba(16,24,40,0.08)] ring-0">
         {searchEnabled ? (
           <div className="px-3 pt-3">
             <div className="flex items-center gap-2 rounded-[14px] bg-black/5 px-3">
@@ -170,19 +162,23 @@ function DesktopSelect({
             </div>
           </div>
         ) : null}
-        <ComboboxList className="max-h-72 space-y-1 p-3">
+        <ComboboxList className="max-h-72 space-y-1 p-3 dark:bg-black">
           <ComboboxEmpty>{emptyMessage}</ComboboxEmpty>
           {filteredOptions.map((option) => (
             <ComboboxItem
               key={option.value}
               value={option}
               className={cn(
-                "flex min-h-11 w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-sm text-c-80 transition-colors data-highlighted:bg-black/5 data-highlighted:text-c-90",
+                `flex min-h-11 w-full items-center gap-3 rounded-[14px] px-3 py-3 text-left text-sm text-c-80
+                dark:bg-black/30 dark:hover:bg-white/90
+                transition-colors
+                data-highlighted:bg-black/5 data-highlighted:text-c-90
+                `,
                 optionClassName,
               )}
             >
               {option.leading}
-              <span className="flex-1">{option.label}</span>
+              <span className="flex-1 dark:hover:text-green!">{option.label}</span>
             </ComboboxItem>
           ))}
         </ComboboxList>
