@@ -11,12 +11,14 @@ export interface SiteState {
   //allowOutletToBeResponsive: This is used to allow the <Outlet /> component in the main __root.tsx
   // to be responsive when the sidebar is collapsed or expanded, if false <Outlet /> will take full width
   allowOutletToBeResponsive: boolean;
+  visitorDetails: any;
 }
 
 const initialState: SiteState = {
   sideBarState: "",
   currentSideBarWidth: "16rem",
   allowOutletToBeResponsive: true,
+  visitorDetails: null,
 };
 
 export const siteSlice = createSlice({
@@ -24,10 +26,11 @@ export const siteSlice = createSlice({
   initialState,
   reducers: {
     updateSiteState: (state, action: PayloadAction<Partial<SiteState>>) => {
-      const { sideBarState, currentSideBarWidth, allowOutletToBeResponsive } = action.payload;
+      const { sideBarState, currentSideBarWidth, allowOutletToBeResponsive, visitorDetails } = action.payload;
       if (sideBarState) state.sideBarState = sideBarState;
       if (currentSideBarWidth) state.currentSideBarWidth = currentSideBarWidth;
       if (allowOutletToBeResponsive !== undefined) state.allowOutletToBeResponsive = allowOutletToBeResponsive;
+      if (visitorDetails !== undefined) state.visitorDetails = visitorDetails;
 
       // store in local storage
       localStorage.setItem("site", JSON.stringify(state));

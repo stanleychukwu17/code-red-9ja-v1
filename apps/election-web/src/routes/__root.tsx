@@ -14,6 +14,7 @@ import { Toaster } from "@repo/ui/components/sonner";
 import { OutletWrapper } from "#/components/OutletWrapper";
 import LoadSitePreference from "#/components/LoadSitePreference";
 import LoadAuthSession from "#/components/LoadAuthSession";
+import LoadVisitorDetails from "#/components/LoadVisitorDetails";
 import { getUserDetailsCookie } from "@/lib/server/auth/auth";
 import { AppProvider } from "#/providers/providers";
 
@@ -78,6 +79,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             <ClientOnly>
               <LoadSitePreference />
               <LoadAuthSession />
+              <LoadVisitorDetails />
             </ClientOnly>
             <AppProvider user={userDetails as any}>{children}</AppProvider>
           </QueryClientProvider>

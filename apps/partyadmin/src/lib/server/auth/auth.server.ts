@@ -50,30 +50,6 @@ export const clearAuthCookies = () => {
 };
 
 
-// Logs in a user by sending a POST request to the server with the user's identifier and password.
-export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
-  try {
-    const response = await fetch(API_URL.auth.login, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    // console.log(result)
-    if (result.success && result.data?.refreshToken) {
-      setAuthCookies({ refreshToken: result.data.refreshToken, accessToken: result.data.accessToken });
-      if (result.data.user) {
-        setUserDetailsCookie(result.data.user);
-      }
-      delete result.data.refreshToken;
-      delete result.data.accessToken;
-    }
-    return result;
-  } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message };
-  }
-})
 
 // Logs in a party member user
 export const loginPartyAppImpl = createServerOnlyFn(async ({ data }) => {
@@ -197,34 +173,3 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
   }
 });
 
-// Verifies security questions for a user
-export const verifySecurityQuestionsImpl = createServerOnlyFn(async ({ data }) => {
-  try {
-    const response = await fetch(API_URL.auth.verifySecurityQuestions, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    return { ...result, ok: response.ok };
-  } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
-  }
-});
-
-// Resets user's password
-export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
-  try {
-    const response = await fetch(API_URL.auth.forgotPassword, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-
-    const result = await response.json();
-    return result
-  } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message, ok: false };
-  }
-});

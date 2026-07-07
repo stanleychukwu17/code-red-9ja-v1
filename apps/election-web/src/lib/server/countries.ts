@@ -12,7 +12,7 @@ export const getAllCountries = createServerFn().handler(async () => {
     const data = await response.json();
     return data;
   } catch (error) {
-    return { status: "failed", error: "Failed to fetch countries from API, Maybe the backend server is currently down" };
+    return { success: false, message: "Failed to fetch countries from API, Maybe the backend server is currently down" };
   }
 });
 
@@ -25,7 +25,19 @@ export const getCities = createServerFn()
       const data = await response.json();
       return data;
     } catch (error) {
-      return { status: "failed", error: "Failed to fetch cities from API, Maybe the backend server is currently down" };
+      return { success: false, message: "Failed to fetch cities from API, Maybe the backend server is currently down" };
+    }
+  });
+
+export const getLGAs = createServerFn()
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
+  .handler(async ({ data: { stateId, limit, cursor } }) => {
+    try {
+      const response = await fetch(API_URL.getLGAs(stateId, limit, cursor));
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return { success: false, message: "Failed to fetch LGAs from API" };
     }
   });
 
