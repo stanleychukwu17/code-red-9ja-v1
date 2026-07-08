@@ -45,11 +45,6 @@ export const Route = createRootRoute({
 function RootLayout() {
   return (
     <OutletWrapper>
-      {/*
-        I use the OutletWrapper to calculate the width of the div that wraps the <Outlet /> component.
-        It gets the width of the sidebar from the DOM and adjusts the width of the <Outlet /> accordingly.
-        This is done to ensure that the <Outlet /> always fills the remaining space in the page, regardless of the width of the sidebar.
-      */}
       <Outlet />
     </OutletWrapper>
   );

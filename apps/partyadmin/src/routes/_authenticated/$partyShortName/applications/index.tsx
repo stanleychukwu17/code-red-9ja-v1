@@ -6,7 +6,7 @@ import {
 import { ApplicationsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
-import { getApplicationTabs } from "./data";
+import { getApplicationTabs } from "./-data";
 import { ApplicationsActions } from "#/components/applications/ApplicationsActions";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";

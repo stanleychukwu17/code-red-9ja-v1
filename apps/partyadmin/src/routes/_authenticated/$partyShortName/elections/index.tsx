@@ -8,7 +8,7 @@ import {
   FilterButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { ElectionGroupsTable } from "#/components/Tables";
-import { getElectionTabs } from "./data";
+import { getElectionTabs } from "./-data";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -61,18 +61,18 @@ function RouteComponent() {
 
   const electionGroups: ElectionGroupType[] = data
     ? data.pages.flatMap((page: any) =>
-        (page.data?.election_groups ?? []).map((eg: any) => ({
-          id: eg.id,
-          title: eg.name,
-          pollingAgentsCoverage: typeof eg.polling_agents_coverage === "number"
-            ? eg.polling_agents_coverage
-            : (eg.polling_agents_coverage?.percentage ?? 0),
-          numberOfElectionsPartyIsContesting:
-            eg.number_of_elections_party_is_contesting ?? 0,
-          instancesCount: eg.elections_count,
-          electionDate: eg.election_date,
-        })),
-      )
+      (page.data?.election_groups ?? []).map((eg: any) => ({
+        id: eg.id,
+        title: eg.name,
+        pollingAgentsCoverage: typeof eg.polling_agents_coverage === "number"
+          ? eg.polling_agents_coverage
+          : (eg.polling_agents_coverage?.percentage ?? 0),
+        numberOfElectionsPartyIsContesting:
+          eg.number_of_elections_party_is_contesting ?? 0,
+        instancesCount: eg.elections_count,
+        electionDate: eg.election_date,
+      })),
+    )
     : [];
 
   return (

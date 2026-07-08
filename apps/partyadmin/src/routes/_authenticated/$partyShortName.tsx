@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName")({
   beforeLoad: ({ params, context }) => {
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/$partyShortName")({
 
     if (userParty && userParty.toLowerCase() !== pathParty.toLowerCase()) {
       throw redirect({
-        to: "/$partyShortName/home",
+        to: APP_URL.partyHome,
         params: { partyShortName: userParty },
       });
     }

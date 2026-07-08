@@ -10,7 +10,7 @@ import {
 } from "../election-day";
 import {
   FinalResultReel,
-} from "../components/final-result-reel";
+} from "../components/-final-result-reel";
 import { Button } from "@repo/ui/components/button";
 import { Loader2 } from "lucide-react";
 
@@ -31,7 +31,7 @@ function ResultsMediaOnlyComponent() {
     selectedWardId,
     electionCandidates,
   } = useAppContext();
-  
+
   const [selectedResultIndex, setSelectedResultIndex] = React.useState<
     number | null
   >(null);

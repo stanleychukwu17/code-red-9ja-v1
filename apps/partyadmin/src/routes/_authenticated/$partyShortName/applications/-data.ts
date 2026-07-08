@@ -1,5 +1,6 @@
 import type { PageHeaderTabProps } from "@repo/ui/components/custom/AdminLayouts";
 import type { ApplicationType } from "#/components/tiles/application-tile";
+import { APP_URL } from "#/lib/config";
 
 export const getApplicationTabs = (
   partyShortName: string,
@@ -8,17 +9,17 @@ export const getApplicationTabs = (
   {
     id: "pending",
     label: `Pending${counts?.pending !== undefined ? ` (${counts.pending})` : ""}`,
-    href: `/${partyShortName}/applications`,
+    href: APP_URL.partyRoutes.applications(partyShortName),
   },
   {
     id: "accepted",
     label: `Accepted${counts?.accepted !== undefined ? ` (${counts.accepted})` : ""}`,
-    href: `/${partyShortName}/applications/accepted`,
+    href: `${APP_URL.partyRoutes.applications(partyShortName)}/accepted`,
   },
   {
     id: "rejected",
     label: `Rejected${counts?.rejected !== undefined ? ` (${counts.rejected})` : ""}`,
-    href: `/${partyShortName}/applications/rejected`,
+    href: `${APP_URL.partyRoutes.applications(partyShortName)}/rejected`,
   },
 ];
 

@@ -1,14 +1,15 @@
 import type { PageHeaderTabProps } from "@repo/ui/components/custom/AdminLayouts";
 import type { PartyMemberType } from "#/components/tiles/party-member-tile";
+import { APP_URL } from "#/lib/config";
 
 export const getPartyMembersTabs = (
   partyShortName: string,
 ): PageHeaderTabProps[] => [
-  { id: "all", label: "Members", href: `/${partyShortName}/party-members` },
+  { id: "all", label: "Members", href: APP_URL.partyRoutes.members(partyShortName) },
   {
     id: "agent",
     label: "Polling agents",
-    href: `/${partyShortName}/party-members/agent`,
+    href: `${APP_URL.partyRoutes.members(partyShortName)}/agent`,
   },
 ];
 
