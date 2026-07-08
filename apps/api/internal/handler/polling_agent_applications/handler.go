@@ -23,7 +23,7 @@ type PollingAgentApplicationsService interface {
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PollingAgentApplication, error)
 	CancelApplication(ctx context.Context, id int64) (queries.PollingAgentApplication, error)
 	ApproveApplication(ctx context.Context, input paservice.ApproveApplicationInput) (queries.PollingAgentApplication, error)
-	GetPollingUnitRecommendations(ctx context.Context, partyID, electionGroupID int64, lgaID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
+	GetPollingUnitRecommendations(ctx context.Context, partyID, electionGroupID int64, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
 }
 
 type UsersService interface {
@@ -267,6 +267,7 @@ func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.R
 	partyID, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 64)
 	electionGroupID, _ := strconv.ParseInt(r.URL.Query().Get("election_group_id"), 10, 64)
 	lgaID, _ := strconv.ParseInt(r.URL.Query().Get("lga_id"), 10, 32)
+	wardID, _ := strconv.ParseInt(r.URL.Query().Get("ward_id"), 10, 32)
 	pollingUnitID, _ := strconv.ParseInt(r.URL.Query().Get("polling_unit_id"), 10, 32)
 
 	if partyID == 0 || electionGroupID == 0 {
@@ -274,7 +275,7 @@ func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	units, err := h.service.GetPollingUnitRecommendations(r.Context(), partyID, electionGroupID, int32(lgaID), int32(pollingUnitID))
+	units, err := h.service.GetPollingUnitRecommendations(r.Context(), partyID, electionGroupID, int32(lgaID), int32(wardID), int32(pollingUnitID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch recommendations: "+err.Error())
 		return
@@ -341,6 +342,9 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 type ApproveApplicationRequest struct {
 	PollingUnitID int32  `json:"polling_unit_id"`
 	RoleType      string `json:"role_type"`
+	StateID       int16  `json:"state_id"`
+	LgaID         int32  `json:"lga_id"`
+	WardID        int32  `json:"ward_id"`
 }
 
 // ApproveApplication godoc
@@ -413,6 +417,9 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		ApplicationID: id,
 		PollingUnitID: req.PollingUnitID,
 		RoleType:      roleType,
+		StateID:       req.StateID,
+		LgaID:         req.LgaID,
+		WardID:        req.WardID,
 		AssignedBy:    requester.ID,
 	})
 	if err != nil {

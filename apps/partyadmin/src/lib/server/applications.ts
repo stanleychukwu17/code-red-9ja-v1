@@ -49,7 +49,7 @@ export const getApplications = createServerFn({ method: "GET" })
 
 export const approveApplication = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { id: number; pollingUnitID?: number; roleType?: string }) => data,
+    (data: { id: number; pollingUnitID?: number; roleType?: string; stateId?: number; lgaId?: number; wardId?: number }) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -60,6 +60,9 @@ export const approveApplication = createServerFn({ method: "POST" })
       if (data.pollingUnitID !== undefined) {
         body.polling_unit_id = data.pollingUnitID;
       }
+      if (data.stateId !== undefined) body.state_id = data.stateId;
+      if (data.lgaId !== undefined) body.lga_id = data.lgaId;
+      if (data.wardId !== undefined) body.ward_id = data.wardId;
       const response = await fetch(url, {
         method: "POST",
         headers: getAuthHeaders(),
@@ -189,6 +192,7 @@ export const getPollingUnitRecommendations = createServerFn({ method: "GET" })
       partyID: number;
       electionGroupID: number;
       lgaID?: number;
+      wardID?: number;
       pollingUnitID?: number;
     }) => data,
   )
@@ -198,6 +202,7 @@ export const getPollingUnitRecommendations = createServerFn({ method: "GET" })
       params.append("party_id", String(data.partyID));
       params.append("election_group_id", String(data.electionGroupID));
       if (data.lgaID) params.append("lga_id", String(data.lgaID));
+      if (data.wardID) params.append("ward_id", String(data.wardID));
       if (data.pollingUnitID)
         params.append("polling_unit_id", String(data.pollingUnitID));
 

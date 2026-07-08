@@ -92,10 +92,10 @@ export const getWardById = createServerFn({ method: "GET" })
   });
 
 export const getWards = createServerFn()
-  .inputValidator((data: { localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { localGovernmentId, stateId, limit, cursor } }) => {
+  .inputValidator((data: { lga_id?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number }) => data)
+  .handler(async ({ data: { lga_id, localGovernmentId, stateId, limit, cursor } }) => {
     try {
-      const response = await fetch(API_URL.getWards(localGovernmentId, stateId, limit, cursor));
+      const response = await fetch(API_URL.getWards(lga_id || localGovernmentId, stateId, limit, cursor));
       const data = await response.json();
       return data;
     } catch (error) {

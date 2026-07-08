@@ -1,8 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useAppSelector } from "#/redux/hooks";
 import { AlertCircle } from "lucide-react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
 import {
   getParties,
   getPresignedUploadURL,
@@ -58,7 +58,7 @@ function ApplyPage() {
     number | null
   >(null);
   const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
-  const [selectedBankCode, setSelectedBankCode] = useState<string>("058");
+  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(null);
   const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
   const [phone, setPhone] = useState<string>(user?.phone || "");
   const [whatsappPhone, setWhatsappPhone] = useState<string>("");
@@ -175,38 +175,58 @@ function ApplyPage() {
     }
   }, [lockedPartyId, selectedPartyId, setSelectedPartyId]);
 
-  const { data: pollingUnits = [] } = useQuery({
-    queryKey: ["pollingUnits", selectedLgaId],
-    queryFn: async () => {
-      if (!selectedLgaId) return [];
+  const {
+    data: pollingUnitsData,
+    fetchNextPage: fetchNextUnits,
+    hasNextPage: hasNextUnits,
+    isFetchingNextPage: isFetchingNextUnits,
+  } = useInfiniteQuery({
+    queryKey: ["pollingUnits", selectedStateId, selectedLgaId, selectedWardId],
+    queryFn: async ({ pageParam }) => {
       const res = await getPollingUnits({
-        data: { localGovernmentId: selectedLgaId },
+        data: {
+          stateId: selectedStateId || undefined,
+          localGovernmentId: selectedLgaId || undefined,
+          wardId: selectedWardId || undefined,
+          limit: 20,
+          cursor: pageParam || undefined,
+        },
       });
-      if (
-        res &&
-        res.success &&
-        res.data?.polling_units &&
-        res.data.polling_units.length > 0
-      ) {
-        return res.data.polling_units;
+      if (res && res.success && res.data) {
+        return res;
       }
-      if (res && res.polling_units && res.polling_units.length > 0) {
-        return res.polling_units;
-      }
-      return [];
+      throw new Error(res?.message || "Failed to load polling units");
     },
-    enabled: !!selectedLgaId,
+    initialPageParam: "",
+    getNextPageParam: (lastPage: any) => {
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
+    },
+    enabled: !!selectedStateId || !!selectedLgaId || !!selectedWardId,
   });
+
+  const pollingUnits = useMemo(() => {
+    return pollingUnitsData
+      ? pollingUnitsData.pages.flatMap(
+          (page: any) => page.data?.polling_units || [],
+        )
+      : [];
+  }, [pollingUnitsData]);
 
   // Reset LGA selection when state changes
   useEffect(() => {
     setSelectedLgaId(null);
   }, [selectedStateId]);
 
-  // Load Polling Units when LGA changes
+  // Select first polling unit only if the currently selected one is not in the list
   useEffect(() => {
     if (pollingUnits && pollingUnits.length > 0) {
-      setSelectedPollingUnitId(pollingUnits[0].id);
+      setSelectedPollingUnitId((current) => {
+        const exists = pollingUnits.some((u: any) => u.id === current);
+        return exists ? current : pollingUnits[0].id;
+      });
     } else {
       setSelectedPollingUnitId(null);
     }
@@ -284,6 +304,7 @@ function ApplyPage() {
         !selectedLgaId ||
         !streetAddress ||
         !selectedPollingUnitId ||
+        !selectedBankCode ||
         !bankAccountNumber ||
         bankAccountNumber.length !== 10 ||
         !(user?.avatar || avatarUrl)
@@ -443,6 +464,13 @@ function ApplyPage() {
             selectedPollingUnitId={selectedPollingUnitId}
             setSelectedPollingUnitId={setSelectedPollingUnitId}
             getWardName={getWardName}
+            fetchNextPage={fetchNextUnits}
+            hasNextPage={hasNextUnits}
+            isFetchingNextPage={isFetchingNextUnits}
+            selectedStateId={selectedStateId}
+            selectedLgaId={selectedLgaId}
+            selectedWardId={selectedWardId}
+            setSelectedWardId={setSelectedWardId}
           />
         )}
         {step === 10 && <Step7 />}

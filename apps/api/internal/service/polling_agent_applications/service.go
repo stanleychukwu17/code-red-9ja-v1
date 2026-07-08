@@ -112,6 +112,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		GraduationYear:    pgtype.Text{String: input.GraduationYear, Valid: input.GraduationYear != ""},
 		SchoolName:        pgtype.Text{String: input.SchoolName, Valid: input.SchoolName != ""},
 		Phone:             input.Phone,
+		PollingUnitID:     pgtype.Int8{Int64: int64(input.PollingUnitID), Valid: input.PollingUnitID > 0},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user details: %w", err)
@@ -154,73 +155,76 @@ func (s *Service) ListApplications(ctx context.Context, userID, partyID, electio
 	})
 }
 
-func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID, electionGroupID int64, lgaID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
-	// 1. Fetch the ward ID of the applicant's selected polling unit.
-	var targetWardID int32
+func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID, electionGroupID int64, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
+	var finalRows []queries.GetPollingUnitsWithAgentCountsRow
+
+	// 1. Fetch the applicant's specific polling unit directly (position 1).
+	//    This also tells us its actual ward_id.
+	var applicantWardID int32
 	if pollingUnitID > 0 {
-		err := s.pool.QueryRow(ctx, "SELECT ward_id FROM polling_units WHERE id = $1", pollingUnitID).Scan(&targetWardID)
-		if err != nil {
-			// ignore and fallback to 0
-			targetWardID = 0
+		pu, err := s.queries.GetPollingUnitByID(ctx, pollingUnitID)
+		if err == nil {
+			// Count how many agents are already assigned to this unit
+			var agentsCount int32
+			_ = s.pool.QueryRow(ctx,
+				`SELECT COALESCE(COUNT(*), 0)::integer FROM polling_unit_assignments
+				 WHERE polling_unit_id = $1 AND party_id = $2 AND election_group_id = $3`,
+				pollingUnitID, partyID, electionGroupID,
+			).Scan(&agentsCount)
+
+			finalRows = append(finalRows, queries.GetPollingUnitsWithAgentCountsRow{
+				ID:          pu.ID,
+				Name:        pu.Name,
+				WardID:      pu.WardID,
+				WardName:    pu.WardName,
+				LgaID:       pu.LgaID,
+				LgaName:     pu.LgaName,
+				StateID:     pu.StateID,
+				StateName:   pu.StateName,
+				AgentsCount: agentsCount,
+			})
+			applicantWardID = pu.WardID
 		}
 	}
 
-	// 2. Fetch up to 10 lowest-agent-count units
-	rows, err := s.queries.GetPollingUnitsWithAgentCounts(ctx, queries.GetPollingUnitsWithAgentCountsParams{
+	// 2. Resolve the ward to scope recommendations.
+	//    Priority: applicant's unit's ward > caller-supplied wardID > fall back to LGA.
+	targetWardID := applicantWardID
+	if targetWardID == 0 {
+		targetWardID = wardID
+	}
+
+	wardScopeLgaID := int32(0)
+	wardScopeWardID := targetWardID
+	if targetWardID == 0 {
+		// No ward resolved at all – fall back to LGA scope
+		wardScopeLgaID = lgaID
+	}
+
+	// 3. Fetch lowest-agent-count units in the same ward (positions 2 & 3).
+	wardRows, err := s.queries.GetPollingUnitsWithAgentCounts(ctx, queries.GetPollingUnitsWithAgentCountsParams{
 		PartyID:         partyID,
 		ElectionGroupID: electionGroupID,
-		LgaID:           lgaID,
-		WardID:          targetWardID,
+		LgaID:           wardScopeLgaID,
+		WardID:          wardScopeWardID,
 		LimitVal:        10,
 	})
 	if err != nil {
-		return nil, err
+		// If this fails just return what we have (the applicant's unit)
+		return finalRows, nil
 	}
 
-	// 3. Ensure applicant's own unit is listed FIRST
-	hasApplicantUnit := false
-	var applicantRow queries.GetPollingUnitsWithAgentCountsRow
-	var otherRows []queries.GetPollingUnitsWithAgentCountsRow
-
-	for _, r := range rows {
+	// 4. Add up to 2 ward units, skipping the applicant's unit (already in position 1)
+	added := 0
+	for _, r := range wardRows {
+		if added >= 2 {
+			break
+		}
 		if r.ID == pollingUnitID {
-			hasApplicantUnit = true
-			applicantRow = r
-		} else {
-			otherRows = append(otherRows, r)
+			continue // already included
 		}
-	}
-
-	if pollingUnitID > 0 && !hasApplicantUnit {
-		// Fetch applicant's unit globally
-		applicantRows, err := s.queries.GetPollingUnitsWithAgentCounts(ctx, queries.GetPollingUnitsWithAgentCountsParams{
-			PartyID:         partyID,
-			ElectionGroupID: electionGroupID,
-			LgaID:           0,
-			WardID:          0,
-			LimitVal:        10,
-		})
-		if err == nil {
-			for _, r := range applicantRows {
-				if r.ID == pollingUnitID {
-					applicantRow = r
-					hasApplicantUnit = true
-					break
-				}
-			}
-		}
-	}
-
-	// Rebuild list with applicant's unit first
-	var finalRows []queries.GetPollingUnitsWithAgentCountsRow
-	if hasApplicantUnit {
-		finalRows = append(finalRows, applicantRow)
-	}
-	finalRows = append(finalRows, otherRows...)
-
-	// 4. Return at most 3
-	if len(finalRows) > 3 {
-		finalRows = finalRows[:3]
+		finalRows = append(finalRows, r)
+		added++
 	}
 
 	return finalRows, nil
@@ -264,6 +268,9 @@ type ApproveApplicationInput struct {
 	ApplicationID int64
 	PollingUnitID int32
 	RoleType      string
+	StateID       int16
+	LgaID         int32
+	WardID        int32
 	AssignedBy    int64
 }
 
@@ -324,9 +331,13 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PollingAgentApplication{}, fmt.Errorf("failed to update application status: %w", err)
 	}
 
-	// Create polling unit assignment
+	// Create assignment based on role
 	roleType := input.RoleType
 	if roleType == "" {
+		roleType = "polling_agent" // Note: Frontend passes 'pollingagent' or supervisor string
+	}
+	// For backward compatibility / handling frontend names
+	if roleType == "pollingagent" {
 		roleType = "polling_agent"
 	}
 	var assignedByVal pgtype.Int8
@@ -334,16 +345,50 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		assignedByVal = pgtype.Int8{Int64: input.AssignedBy, Valid: true}
 	}
 
-	_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
-		UserID:          app.UserID,
-		PollingUnitID:   pollingUnitID,
-		ElectionGroupID: app.ElectionGroupID,
-		PartyID:         app.PartyID,
-		RoleType:        pgtype.Text{String: roleType, Valid: true},
-		AssignedBy:      assignedByVal,
-	})
+	if roleType == "state-election-supervisor" || roleType == "state_supervisor" {
+		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
+			UserID:          app.UserID,
+			StateID:         input.StateID,
+			ElectionGroupID: app.ElectionGroupID,
+			PartyID:         app.PartyID,
+			RoleType:        pgtype.Text{String: "state_supervisor", Valid: true},
+			AssignedBy:      assignedByVal,
+		})
+	} else if roleType == "lga-election-supervisor" || roleType == "lga_supervisor" {
+		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
+			UserID:          app.UserID,
+			StateID:         input.StateID,
+			LgaID:           input.LgaID,
+			ElectionGroupID: app.ElectionGroupID,
+			PartyID:         app.PartyID,
+			RoleType:        pgtype.Text{String: "lga_supervisor", Valid: true},
+			AssignedBy:      assignedByVal,
+		})
+	} else if roleType == "ward-election-supervisor" || roleType == "ward_supervisor" {
+		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
+			UserID:          app.UserID,
+			StateID:         input.StateID,
+			LgaID:           input.LgaID,
+			WardID:          input.WardID,
+			ElectionGroupID: app.ElectionGroupID,
+			PartyID:         app.PartyID,
+			RoleType:        pgtype.Text{String: "ward_supervisor", Valid: true},
+			AssignedBy:      assignedByVal,
+		})
+	} else {
+		// Default to polling agent
+		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
+			UserID:          app.UserID,
+			PollingUnitID:   pollingUnitID,
+			ElectionGroupID: app.ElectionGroupID,
+			PartyID:         app.PartyID,
+			RoleType:        pgtype.Text{String: "polling_agent", Valid: true},
+			AssignedBy:      assignedByVal,
+		})
+	}
+
 	if err != nil {
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to assign user to polling unit: %w", err)
+		return queries.PollingAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {

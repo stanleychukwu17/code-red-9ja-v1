@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS polling_agent_applications (
   party_id BIGINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE,
+  role VARCHAR(50) DEFAULT 'pollingagent' CHECK (role IN ('pollingagent', 'state-election-supervisor', 'lga-election-supervisor', 'ward-election-supervisor')) NOT NULL,
   status VARCHAR(30) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled')) NOT NULL,
   rejected_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,

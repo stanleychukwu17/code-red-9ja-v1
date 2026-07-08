@@ -20,7 +20,7 @@ INSERT INTO polling_agent_applications (
   status
 ) VALUES (
   $1, $2, $3, $4, 'pending'
-) RETURNING id, user_id, party_id, election_group_id, polling_unit_id, status, rejected_reason, created_at, updated_at
+) RETURNING id, user_id, party_id, election_group_id, polling_unit_id, role, status, rejected_reason, created_at, updated_at
 `
 
 type CreateApplicationParams struct {
@@ -44,6 +44,7 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 		&i.PartyID,
 		&i.ElectionGroupID,
 		&i.PollingUnitID,
+		&i.Role,
 		&i.Status,
 		&i.RejectedReason,
 		&i.CreatedAt,
@@ -53,7 +54,7 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 }
 
 const getApplicationByID = `-- name: GetApplicationByID :one
-SELECT id, user_id, party_id, election_group_id, polling_unit_id, status, rejected_reason, created_at, updated_at FROM polling_agent_applications
+SELECT id, user_id, party_id, election_group_id, polling_unit_id, role, status, rejected_reason, created_at, updated_at FROM polling_agent_applications
 WHERE id = $1 LIMIT 1
 `
 
@@ -66,6 +67,7 @@ func (q *Queries) GetApplicationByID(ctx context.Context, id int64) (PollingAgen
 		&i.PartyID,
 		&i.ElectionGroupID,
 		&i.PollingUnitID,
+		&i.Role,
 		&i.Status,
 		&i.RejectedReason,
 		&i.CreatedAt,
@@ -357,7 +359,7 @@ SET
   rejected_reason = $3,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, user_id, party_id, election_group_id, polling_unit_id, status, rejected_reason, created_at, updated_at
+RETURNING id, user_id, party_id, election_group_id, polling_unit_id, role, status, rejected_reason, created_at, updated_at
 `
 
 type UpdateApplicationStatusParams struct {
@@ -375,6 +377,7 @@ func (q *Queries) UpdateApplicationStatus(ctx context.Context, arg UpdateApplica
 		&i.PartyID,
 		&i.ElectionGroupID,
 		&i.PollingUnitID,
+		&i.Role,
 		&i.Status,
 		&i.RejectedReason,
 		&i.CreatedAt,
@@ -407,6 +410,7 @@ SET
   current_ward = $20,
   phone = COALESCE(NULLIF($21::varchar, ''), phone),
   phone_verified = CASE WHEN NULLIF($21::varchar, '') IS NOT NULL AND NULLIF($21::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
+  polling_unit_id = $22,
   updated_at = NOW()
 WHERE id = $1
 RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
@@ -434,6 +438,7 @@ type UpdateUserAgentDetailsParams struct {
 	SchoolName        pgtype.Text `json:"school_name"`
 	CurrentWard       pgtype.Int4 `json:"current_ward"`
 	Phone             string      `json:"phone"`
+	PollingUnitID     pgtype.Int8 `json:"polling_unit_id"`
 }
 
 func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error) {
@@ -459,6 +464,7 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.SchoolName,
 		arg.CurrentWard,
 		arg.Phone,
+		arg.PollingUnitID,
 	)
 	var i User
 	err := row.Scan(

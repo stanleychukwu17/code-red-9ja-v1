@@ -33,6 +33,7 @@ SET
   current_ward = $20,
   phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
   phone_verified = CASE WHEN NULLIF(sqlc.arg(phone)::varchar, '') IS NOT NULL AND NULLIF(sqlc.arg(phone)::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
+  polling_unit_id = sqlc.arg(polling_unit_id),
   updated_at = NOW()
 WHERE id = $1
 RETURNING *;

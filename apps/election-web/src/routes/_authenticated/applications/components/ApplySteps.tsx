@@ -19,6 +19,7 @@ import { Check, Loader2, XCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { useIntersectionObserver } from "usehooks-ts";
 
 import { SelectBank } from "@repo/ui/components/selects/bank-select";
 
@@ -369,7 +370,11 @@ export const Step5 = ({
         <Label title="Which state are you currently in?" />
         <SelectState
           selectedId={selectedStateId || undefined}
-          update={(stateObj) => setSelectedStateId(stateObj?.id || null)}
+          update={(stateObj) => {
+            setSelectedStateId(stateObj?.id || null);
+            setSelectedLgaId(null);
+            setSelectedWardId(null);
+          }}
           countryOriginalId={161}
           fetchStates={getStates}
           className="w-full"
@@ -379,7 +384,10 @@ export const Step5 = ({
         <Label title="Which LGA do you stay in?" />
         <SelectLga
           selectedId={selectedLgaId || undefined}
-          update={(lgaObj) => setSelectedLgaId(lgaObj?.id || null)}
+          update={(lgaObj) => {
+            setSelectedLgaId(lgaObj?.id || null);
+            setSelectedWardId(null);
+          }}
           stateId={selectedStateId || undefined}
           disabled={!selectedStateId}
           fetchLGAs={getLGAs}
@@ -419,27 +427,92 @@ export const Step6 = ({
   selectedPollingUnitId,
   setSelectedPollingUnitId,
   getWardName,
+  fetchNextPage,
+  hasNextPage,
+  isFetchingNextPage,
+  selectedStateId,
+  selectedLgaId,
+  selectedWardId,
+  setSelectedWardId,
 }: any) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
+
+  useEffect(() => {
+    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const targetWardName =
+    pollingUnits.length > 0 ? getWardName(pollingUnits[0]) : "your";
+
   return (
     <div className="flex flex-col gap-4 w-full px-4">
       <StepHeader
-        title="Select the Polling Unit you want to be assigned to"
+        title={`Select the Polling Unit you want to be assigned to (${targetWardName} ward)`}
+        // subtitle="Pick a polling unit you'll like to be assigned to."
         subtitle="You will either be assigned to the polling unit you select or the one closest to your home address."
       />
-      <div className="space-y-3">
-        {pollingUnits.map((unit: any) => {
-          const isSelected = selectedPollingUnitId === unit.id;
-          const wardName = getWardName(unit);
-          return (
-            <SelectableCard
-              key={unit.id}
-              title={unit.name}
-              subtitle={wardName}
-              isSelected={isSelected}
-              onClick={() => setSelectedPollingUnitId(unit.id)}
-            />
-          );
-        })}
+      <div className="space-y-4">
+        <div className="flex flex-col gap-2">
+          <Label title="Change Ward (Optional)" />
+          <SelectWard
+            selectedId={selectedWardId || undefined}
+            update={(wardObj) => setSelectedWardId(wardObj?.id || null)}
+            stateId={selectedStateId || undefined}
+            lgaId={selectedLgaId || undefined}
+            disabled={!selectedLgaId}
+            fetchWards={getWards}
+          />
+        </div>
+        {/* <IconInput
+          placeholder="Search polling units..."
+          className="h-14 rounded-full"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        /> */}
+
+        <div className="space-y-3">
+          {pollingUnits
+            // .filter(
+            //   (unit: any) =>
+            //     unit.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            //     getWardName(unit)
+            //       .toLowerCase()
+            //       .includes(searchQuery.toLowerCase()),
+            // )
+            .map((unit: any) => {
+              const isSelected = selectedPollingUnitId === unit.id;
+              const wardName = getWardName(unit);
+              return (
+                <SelectableCard
+                  key={unit.id}
+                  title={unit.name}
+                  subtitle={wardName}
+                  isSelected={isSelected}
+                  onClick={() => setSelectedPollingUnitId(unit.id)}
+                />
+              );
+            })}
+        </div>
+
+        {/* Sentinel element for infinite scroll */}
+        {hasNextPage && (
+          <div
+            ref={sentinelRef}
+            className="py-6 flex items-center justify-center text-c-50 text-[14px]"
+          >
+            {isFetchingNextPage ? (
+              <Loader2 className="size-5 animate-spin mr-2" />
+            ) : null}
+            {isFetchingNextPage
+              ? "Loading more..."
+              : "Scroll down to load more"}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -508,11 +581,14 @@ export const Step11 = ({
     staleTime: 1000 * 60 * 5, // cache for 5 minutes
   });
 
-  const accountName = validationResponse?.success 
-    ? validationResponse?.data?.accountName 
+  const accountName = validationResponse?.success
+    ? validationResponse?.data?.accountName
     : validationResponse?.accountName;
 
-  const isError = validationResponse && (!validationResponse.success && validationResponse.success !== undefined);
+  const isError =
+    validationResponse &&
+    !validationResponse.success &&
+    validationResponse.success !== undefined;
   const isValid = !!accountName && !isError;
 
   useEffect(() => {
@@ -552,7 +628,7 @@ export const Step11 = ({
             fetchBanks={getBanks}
           />
         </div>
-        
+
         {bankAccountNumber.length === 10 && selectedBankCode && (
           <div
             className={cn(

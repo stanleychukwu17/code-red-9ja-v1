@@ -110,6 +110,7 @@ export function PollingAgentApplicationDialog({
       application.partyId,
       application.electionGroupId,
       application.lgaId,
+      application.wardId,
       application.pollingUnitId,
     ],
     queryFn: async () => {
@@ -118,6 +119,7 @@ export function PollingAgentApplicationDialog({
           partyID: application.partyId!,
           electionGroupID: application.electionGroupId!,
           lgaID: application.lgaId,
+          wardID: application.wardId,
           pollingUnitID: application.pollingUnitId,
         },
       });
@@ -135,6 +137,14 @@ export function PollingAgentApplicationDialog({
     },
     enabled: canFetchRecommendations,
   });
+  console.log({
+    partyID: application.partyId!,
+    electionGroupID: application.electionGroupId!,
+    lgaID: application.lgaId,
+    wardID: application.wardId,
+    pollingUnitID: application.pollingUnitId,
+  });
+  console.log({ recData });
 
   const pollingUnits: PollingUnitOption[] = React.useMemo(() => {
     if (!recData) return [];
@@ -481,11 +491,11 @@ export function PollingAgentApplicationDialog({
                         )}
                       >
                         <div className="space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-5 flex-wrap">
                             <p className="text-[15px] text-c-80">{unit.name}</p>
                             {isApplicantUnit && (
-                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 uppercase tracking-wide">
-                                Applied here
+                              <span className="text-xs font-semibold text-primary">
+                                👈 Applicants Choice
                               </span>
                             )}
                           </div>
@@ -633,11 +643,7 @@ export function ChoosePollingUnitDialog({
     },
     initialPageParam: "",
     getNextPageParam: (lastPage) => {
-      if (
-        lastPage &&
-        lastPage.meta &&
-        lastPage.meta.has_more
-      ) {
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
         return lastPage.meta.next_cursor || "";
       }
       return undefined;

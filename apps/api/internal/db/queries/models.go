@@ -274,6 +274,7 @@ type PollingAgentApplication struct {
 	PartyID         int64              `json:"party_id"`
 	ElectionGroupID int64              `json:"election_group_id"`
 	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	Role            string             `json:"role"`
 	Status          string             `json:"status"`
 	RejectedReason  pgtype.Text        `json:"rejected_reason"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
