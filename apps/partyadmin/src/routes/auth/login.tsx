@@ -174,7 +174,7 @@ function LoginComponent() {
       <div className="flex items-center gap-2 text-[#234f3e]">
         <LogoIcon className="size-8 shrink-0" />
         <span className="text-[24px] font-semibold tracking-[-0.04em]">
-          Free9ja.
+          Free9ja
         </span>
       </div>
 
