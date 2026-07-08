@@ -4,7 +4,7 @@ import { PageHeader } from "#/components/Headers";
 import { StickyFooter } from "#/components/Footers";
 import { Button } from "@repo/ui/components/button";
 import { TitleText, DescriptiveText } from "@repo/ui/components/custom/Texts";
-import { BossIllustration } from "./ApplySteps";
+import { BossIllustration } from "./-ApplySteps";
 
 export function ApplySuccess() {
   const navigate = useNavigate();

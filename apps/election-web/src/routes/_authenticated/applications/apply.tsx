@@ -14,8 +14,8 @@ import { submitPollingAgentApplication, getApplications } from "#/lib/server/app
 import { getPageHeader } from "#/lib/shared/meta";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
-import { ApplySuccess } from "./components/ApplySuccess";
-import { ApplyFooter } from "./components/ApplyFooter";
+import { ApplySuccess } from "./components/-ApplySuccess";
+import { ApplyFooter } from "./components/-ApplyFooter";
 import {
   Step1,
   Step2,
@@ -28,7 +28,7 @@ import {
   Step9,
   Step10,
   Step11,
-} from "./components/ApplySteps";
+} from "./components/-ApplySteps";
 
 export const Route = createFileRoute("/_authenticated/applications/apply")({
   head: () => getPageHeader({ title: "Apply as Polling Unit Agent" }),
@@ -84,10 +84,10 @@ function ApplyPage() {
           name: group.name,
           date: group.election_date
             ? new Date(group.election_date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
             : "TBD",
         }));
       }
@@ -117,7 +117,7 @@ function ApplyPage() {
     const activeApp = applications.find((app: any) => {
       const isActive = ["pending", "approved", "success", "accepted"].includes(app.status);
       if (!isActive) return false;
-      
+
       let electionDateStr;
       if (app.election_date && typeof app.election_date === 'object') {
         if (app.election_date.Valid) {

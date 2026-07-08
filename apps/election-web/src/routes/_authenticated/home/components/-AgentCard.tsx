@@ -1,7 +1,7 @@
 import { Button } from "@repo/ui/components/button";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 import { useNavigate } from "@tanstack/react-router";
-import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
+import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./-Shared";
 
 interface AgentCardProps {
   appCount: number;

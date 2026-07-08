@@ -5,17 +5,17 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 import { getApplications } from "#/lib/server/applications";
-import { HomeHeader } from "./components/HomeHeader";
-import { LeaderboardCard } from "./components/LeaderboardCard";
-import { AgentCard } from "./components/AgentCard";
-import { ArrivalCard } from "./components/ArrivalCard";
-import { ElectionStatusCard } from "./components/ElectionStatusCard";
+import { HomeHeader } from "./components/-HomeHeader";
+import { LeaderboardCard } from "./components/-LeaderboardCard";
+import { AgentCard } from "./components/-AgentCard";
+import { ArrivalCard } from "./components/-ArrivalCard";
+import { ElectionStatusCard } from "./components/-ElectionStatusCard";
 import { HomeTabs } from "../../../components/Tabs";
-import { FinalResultCard } from "./components/FinalResultCard";
-import { ObjectivesTab } from "./components/ObjectivesTab";
-import { ContactPartyTab } from "./components/ContactPartyTab";
-import { UploadsTab } from "./components/UploadsTab";
-import { ArrivalDrawer } from "./components/ArrivalDrawer";
+import { FinalResultCard } from "./components/-FinalResultCard";
+import { ObjectivesTab } from "./components/-ObjectivesTab";
+import { ContactPartyTab } from "./components/-ContactPartyTab";
+import { UploadsTab } from "./components/-UploadsTab";
+import { ArrivalDrawer } from "./components/-ArrivalDrawer";
 import PlusIcon from "@repo/ui/icons/plus-icon";
 import { Button } from "@repo/ui/components/button";
 
@@ -88,8 +88,8 @@ function RouteComponent() {
   const currentAssignment =
     selectedElectionGroup && assignmentsData
       ? assignmentsData.find(
-          (a: any) => a.election_group_id === selectedElectionGroup.id,
-        )
+        (a: any) => a.election_group_id === selectedElectionGroup.id,
+      )
       : null;
 
   useEffect(() => {
