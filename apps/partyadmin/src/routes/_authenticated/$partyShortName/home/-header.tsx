@@ -10,6 +10,7 @@ import {
   type ElectionGroup,
 } from "@repo/ui/components/selects/election-group-and-election-select";
 import { HeaderTabs } from "@repo/ui/components/custom/AdminLayouts";
+import { APP_URL } from "#/lib/config";
 
 export function HomePageHeader({
   activeTab,
@@ -29,11 +30,11 @@ export function HomePageHeader({
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
   const tabs = [
-    { id: "main", label: "Main", href: `/${partyShortName}/home` },
+    { id: "main", label: "Main", href: APP_URL.partyRoutes.home((partyShortName as string) || "party") },
     {
       id: "election-day",
       label: "Election day",
-      href: `/${partyShortName}/home/election-day`,
+      href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/election-day`,
     },
   ];
 

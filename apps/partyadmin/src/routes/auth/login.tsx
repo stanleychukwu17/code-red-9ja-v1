@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
@@ -21,6 +20,7 @@ import {
 } from "@repo/ui/components/select";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
+import { APP_URL } from "#/lib/config";
 import { loginPartyApp, refreshUserToken } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
@@ -52,7 +52,7 @@ export const Route = createFileRoute("/auth/login")({
     if (res.success && res.data?.user?.role === "partymember") {
       const partyShortName = res.data.user?.party?.short_name || "party";
       throw redirect({
-        to: "/$partyShortName/home",
+        to: APP_URL.partyHome,
         params: { partyShortName },
       });
     }
@@ -82,23 +82,6 @@ function LoginComponent() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
-
-  const loginMutation = useMutation({
-    mutationFn: (credentials: payloadType) => loginPartyApp({ data: credentials }),
-    onSuccess: async (response) => {
-      if (response.success) {
-        dispatch(updateAuthState({ user: response.data.user }));
-        const partyShortName = response.data.user?.party?.short_name || "party";
-        await router.invalidate();
-        navigate({ to: "/$partyShortName/home", params: { partyShortName } });
-      } else {
-        setErrorMsg(response.message || "Invalid email or password.");
-      }
-    },
-    onError: () => {
-      setErrorMsg("Connection error: Unable to reach the server.");
-    },
-  });
 
   const form = useForm({
     defaultValues: {
@@ -141,7 +124,20 @@ function LoginComponent() {
       // add the identifier type to the payload
       payload.identifierType = identifierType;
 
-      await loginMutation.mutateAsync(payload);
+      try {
+        const response = await loginPartyApp({ data: payload });
+
+        if (response.success) {
+          dispatch(updateAuthState({ user: response.data.user }));
+          const partyShortName = response.data.user?.party?.short_name || "party";
+          await router.invalidate();
+          navigate({ to: APP_URL.partyHome, params: { partyShortName } });
+        } else {
+          setErrorMsg(response.message || "Invalid email or password.");
+        }
+      } catch (err) {
+        setErrorMsg("Connection error: Unable to reach the server.");
+      }
     },
   });
 
@@ -178,7 +174,7 @@ function LoginComponent() {
       <div className="flex items-center gap-2 text-[#234f3e]">
         <LogoIcon className="size-8 shrink-0" />
         <span className="text-[24px] font-semibold tracking-[-0.04em]">
-          Free9ja.
+          Free9ja
         </span>
       </div>
 

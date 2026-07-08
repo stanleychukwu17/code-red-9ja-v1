@@ -9,7 +9,7 @@ import {
   ReelShell,
   UploaderRow,
   useReelKeyboard,
-} from "./reel-shared";
+} from "./-reel-shared";
 
 export type ResultOverlayItem = {
   polling_unit_name?: string;

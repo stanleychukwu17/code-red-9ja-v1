@@ -8,7 +8,7 @@ import {
 import { PartyMembersTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
-import { getPartyMembersTabs, getAgentPartyMembers } from "./data";
+import { getPartyMembersTabs, getAgentPartyMembers } from "./-data";
 import { PartyMembersActions } from "#/components/party-members/PartyMembersActions";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 

@@ -15,7 +15,7 @@ import {
   type Election,
   type ElectionGroup,
 } from "@repo/ui/components/selects/election-group-and-election-select";
-import { ElectionScopeSelector } from "../components/election-scope-selector";
+import { ElectionScopeSelector } from "../components/-election-scope-selector";
 import {
   DashboardLayout,
   HeaderTabs,
@@ -23,6 +23,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
 import { cn } from "@repo/ui/lib/utils";
+import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/results",
@@ -55,9 +56,9 @@ function ResultsLayoutComponent() {
           title="Results"
           activeTab="all"
           // tabs={[
-          //   { id: "all", label: "All", href: `/${partyShortName}/home/results` },
-          //   { id: "updates", label: "Updates", href: `/${partyShortName}/home/updates` },
-          //   { id: "reports", label: "Reports", href: `/${partyShortName}/home/updates?is_report=true` },
+          //   { id: "all", label: "All", href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/results` },
+          //   { id: "updates", label: "Updates", href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/updates` },
+          //   { id: "reports", label: "Reports", href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/updates?is_report=true` },
           // ]}
           rightComponent={
             <SelectElectionGroupAndElection
@@ -87,12 +88,12 @@ function ResultsLayoutComponent() {
               {
                 id: "all",
                 label: "All",
-                href: `/${partyShortName}/home/results`,
+                href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/results`,
               },
               {
                 id: "media",
                 label: "Media Only",
-                href: `/${partyShortName}/home/results/media-only`,
+                href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/results/media-only`,
               },
             ]}
             activeTabClassName="bg-c-90 text-white shadow"

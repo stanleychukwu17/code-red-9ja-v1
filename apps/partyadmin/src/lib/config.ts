@@ -5,29 +5,26 @@ const API_BASE = import.meta.env.VITE_API_URL;
 
 export const APP_URL = {
   auth: {
-    signup: "/auth/signup",
     login: "/auth/login",
     logout: "/auth/logout",
-    securityQuestions: "/auth/security-questions",
-    onboarding: "/auth/onboarding",
-    forgotPassword: "/auth/forgot-password",
   },
   homePage: "/dashboard",
-};
+  partyHome: "/$partyShortName/home",
+  partyRoutes: {
+    home: (party: string) => `/${party}/home`,
+    elections: (party: string) => `/${party}/elections`,
+    applications: (party: string) => `/${party}/applications`,
+    members: (party: string) => `/${party}/party-members`,
+    wallet: (party: string) => `/${party}/wallet`,
+  }
+} as const;
 
 const api = `${API_BASE}/api/v1`;
 export const API_URL = {
   health: `${API_BASE}/health`,
   auth: {
-    registerPhaseSignUp: `${api}/auth/register_phase_signup`,
-    checkNin: `${api}/auth/check_nin`,
-    checkUsername: `${api}/auth/check_username`,
-    register: `${api}/auth/register`,
-    login: `${api}/auth/login`,
     refresh: `${api}/auth/refresh`,
     logout: `${api}/auth/logout`,
-    verifySecurityQuestions: `${api}/auth/verify_security_questions`,
-    forgotPassword: `${api}/auth/forgot_password`,
     partyLogin: `${api}/auth/partyapp/login`,
     registerCandidate: `${api}/auth/register-candidate`,
   },

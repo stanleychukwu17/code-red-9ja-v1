@@ -20,6 +20,7 @@ import {
 } from "@tanstack/react-router";
 import { useMutation } from "@tanstack/react-query";
 
+import { APP_URL } from "#/lib/config";
 import { logoutUser, refreshUserToken } from "#/lib/server/auth/auth";
 import { useAuth } from "#/providers/providers";
 import { useAppDispatch } from "@/redux/hooks";
@@ -33,7 +34,7 @@ export const Route = createFileRoute("/_authenticated")({
     console.log("✌️ RES:", res);
 
     if (!res.success || res.data?.user?.role !== "partymember") {
-      throw redirect({ to: "/auth/login" });
+      throw redirect({ to: APP_URL.auth.login });
     }
   },
   component: AuthenticatedRoutes,
@@ -56,35 +57,35 @@ function AuthenticatedRoutes() {
       label: "Home",
       icon: <HomeIcon className="shrink-0 size-6" />,
       selectedIcon: <HomeSolidIcon className="shrink-0 size-6" />,
-      href: `/${partyShortName}/home`,
+      href: APP_URL.partyRoutes.home(partyShortName),
     },
     {
       id: "elections",
       label: "Elections",
       icon: <CalendarIcon className="shrink-0 size-6" />,
       selectedIcon: <CalendarSolidIcon className="shrink-0 size-6" />,
-      href: `/${partyShortName}/elections`,
+      href: APP_URL.partyRoutes.elections(partyShortName),
     },
     {
       id: "applications",
       label: "Applications",
       icon: <PaperIcon className="shrink-0 size-6" />,
       selectedIcon: <PaperSolidIcon className="shrink-0 size-6" />,
-      href: `/${partyShortName}/applications`,
+      href: APP_URL.partyRoutes.applications(partyShortName),
     },
     {
       id: "members",
       label: "Party members",
       icon: <UserIcon className="shrink-0 size-6" />,
       selectedIcon: <UserSolidIcon className="shrink-0 size-6" />,
-      href: `/${partyShortName}/party-members`,
+      href: APP_URL.partyRoutes.members(partyShortName),
     },
     {
       id: "wallet",
       label: "Wallet",
       icon: <WalletIcon className="shrink-0 size-6" />,
       selectedIcon: <WalletSolidIcon className="shrink-0 size-6" />,
-      href: `/${partyShortName}/wallet`,
+      href: APP_URL.partyRoutes.wallet(partyShortName),
     },
   ];
 
@@ -115,7 +116,7 @@ function AuthenticatedRoutes() {
           items={sidebarItems}
           onLogout={handleLogout}
           onSidebarStateChange={handleSidebarStateChange}
-          homePageUrl={`/${partyShortName}/home`}
+          homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
         />
         <Outlet />
       </div>

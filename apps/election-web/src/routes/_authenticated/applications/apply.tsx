@@ -17,8 +17,8 @@ import {
 import { getPageHeader } from "#/lib/shared/meta";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
-import { ApplySuccess } from "./components/ApplySuccess";
-import { ApplyFooter } from "./components/ApplyFooter";
+import { ApplySuccess } from "./components/-ApplySuccess";
+import { ApplyFooter } from "./components/-ApplyFooter";
 import {
   Step1,
   Step2,
@@ -106,10 +106,10 @@ function ApplyPage() {
           name: group.name,
           date: group.election_date
             ? new Date(group.election_date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
             : "TBD",
         }));
       }

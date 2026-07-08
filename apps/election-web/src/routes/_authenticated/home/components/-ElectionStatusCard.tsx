@@ -1,5 +1,5 @@
 import { Button } from "@repo/ui/components/button";
-import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
+import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./-Shared";
 
 interface ElectionStatusCardProps {
   pollingUnit?: string;
@@ -19,8 +19,8 @@ export function ElectionStatusCard({
   return (
     <GreyCardWrapper>
       <GreyCardTopRow title={pollingUnit} subtitle={state} />
-      <GreyCardTitle 
-        label={hasStarted ? "When election ends here, tap the button below." : "When election starts here, tap the button below."} 
+      <GreyCardTitle
+        label={hasStarted ? "When election ends here, tap the button below." : "When election starts here, tap the button below."}
       />
 
       <Button

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getFinalResult } from "#/lib/server/polling_unit_results";
-import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
+import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./-Shared";
 
 interface FinalResultCardProps {
   electionId?: number | null;
@@ -42,7 +42,7 @@ export function FinalResultCard({ electionId, pollingUnitId }: FinalResultCardPr
     <GreyCardWrapper>
       <GreyCardTopRow title="Polling Unit Final Result" subtitle={`Confidence: ${finalResultData.confidence_level?.toUpperCase()}`} />
       <GreyCardTitle label={`Based on ${finalResultData.matching_submissions_count} matching submissions.`} />
-      
+
       <div className="mt-4 flex flex-col gap-2">
         {candidates.slice(0, 3).map((c: any, i: number) => (
           <div key={i} className="flex justify-between items-center bg-white p-3 rounded-xl shadow-sm">

@@ -2,8 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
 import { getUserDetailsCookieImpl, checkIfRefreshTokenInCookieImpl, logoutUserImpl, refreshUserTokenImpl, loginPartyAppImpl } from "#/lib/server/auth/auth.server"
 
-
-
 export const loginPartyApp = createServerFn({ method: "POST" })
   .inputValidator((data: { country: string, identifierType?: string, identifier: string, password: string, iso2?: string }) => data)
   .handler(async ({ data }) => {

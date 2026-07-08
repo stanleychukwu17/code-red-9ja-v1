@@ -8,7 +8,7 @@ import {
   FilterButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { ElectionInstancesTable } from "#/components/Tables";
-import { getElectionTabs } from "./data";
+import { getElectionTabs } from "./-data";
 import { getElections } from "#/lib/server/elections";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -55,14 +55,14 @@ function RouteComponent() {
 
   const elections: ElectionInstanceType[] = data
     ? data.pages.flatMap((page: any) =>
-        (page.data?.elections ?? []).map((el: any) => ({
-          id: el.id,
-          rank: el.rank,
-          title: el.name,
-          candidate: el.candidate,
-          electionDate: el.election_date,
-        }))
-      )
+      (page.data?.elections ?? []).map((el: any) => ({
+        id: el.id,
+        rank: el.rank,
+        title: el.name,
+        candidate: el.candidate,
+        electionDate: el.election_date,
+      }))
+    )
     : [];
 
   return (
