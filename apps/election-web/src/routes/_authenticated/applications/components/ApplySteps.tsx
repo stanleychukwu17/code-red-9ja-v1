@@ -1,33 +1,24 @@
 import { getLGAs } from "#/lib/server/countries";
 import { getStates } from "#/lib/server/states";
+import { getWards } from "#/lib/server/wards";
+import { getBanks, validateBankAccount } from "#/lib/server/banks";
 import { Button } from "@repo/ui/components/button";
 import { SelectableCard } from "@repo/ui/components/cards/Rewards";
+import { GeneralCommand } from "@repo/ui/components/command/general-command";
 import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
-import {
-  IconInput,
-  Input,
-  Label,
-  TextareaInput,
-} from "@repo/ui/components/input";
+import { IconInput, Input, Label } from "@repo/ui/components/input";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
+import { SelectResponsiveWrapper } from "@repo/ui/components/selects/select-responsive-wrapper";
 import { SelectState } from "@repo/ui/components/selects/state-select";
+import { SelectWard } from "@repo/ui/components/selects/ward-select";
+import ArrowDownIcon from "@repo/ui/icons/arrow-down-icon";
 import FancyNotebookIcon from "@repo/ui/icons/fancy-notebook-icon";
 import PenIcon from "@repo/ui/icons/pen-icon";
-import {
-  UserSearch,
-  Calendar,
-  Layers,
-  MapPin,
-  Building2,
-  UploadCloud,
-  ChevronDown,
-  Check,
-  Loader2,
-  Camera,
-  Upload,
-} from "lucide-react";
-import { toast } from "sonner";
 import { cn } from "@repo/ui/lib/utils";
+import { Check, Loader2, XCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 import { SelectBank } from "@repo/ui/components/selects/bank-select";
 
@@ -42,6 +33,54 @@ export const BossIllustration = () => (
     />
   </div>
 );
+
+const SelectDropdown = ({
+  value,
+  update,
+  options,
+  placeholder,
+}: {
+  value: string;
+  update: (val: string) => void;
+  options: { label: string; value: string }[];
+  placeholder: string;
+}) => {
+  const [open, setOpen] = useState(false);
+  const selectedItem = options.find((o) => String(o.value) === String(value));
+
+  return (
+    <SelectResponsiveWrapper
+      open={open}
+      onOpenChange={setOpen}
+      placeholder={placeholder}
+      align="start"
+      trigger={
+        <Button
+          variant="select"
+          size="select"
+          className="justify-between gap-2 w-full h-14 rounded-2xl bg-transparent border border-input px-3 py-1 font-normal"
+          type="button"
+        >
+          <p className="whitespace-normal text-left line-clamp-1">
+            {selectedItem ? selectedItem.label : placeholder}
+          </p>
+          <ArrowDownIcon className="ml-auto text-c-80" />
+        </Button>
+      }
+    >
+      <GeneralCommand
+        data={options}
+        getId={(item) => String(item.value)}
+        getName={(item) => item.label}
+        handleSelect={(item) => {
+          update(item.value);
+          setOpen(false);
+        }}
+        selectedId={value}
+      />
+    </SelectResponsiveWrapper>
+  );
+};
 
 export const StepHeader = ({
   title,
@@ -213,7 +252,7 @@ export const Step3 = ({
         title="Choose an Election"
         subtitle="Select all elections you would like to be a polling unit agent."
       />
-      <div className="space-y-3 overflow-y-auto max-h-[45vh] pr-1">
+      <div className="space-y-3 pr-1">
         {elections.map((election: any) => {
           const isSelected = selectedElectionIds.includes(election.id);
           const isAlreadyApplied = appliedElectionGroupIds?.includes(
@@ -315,6 +354,8 @@ export const Step5 = ({
   setSelectedStateId,
   selectedLgaId,
   setSelectedLgaId,
+  selectedWardId,
+  setSelectedWardId,
   streetAddress,
   setStreetAddress,
 }: any) => (
@@ -323,7 +364,7 @@ export const Step5 = ({
       title="Add Your Current Address"
       subtitle="Provide the accurate details of where you currently stay."
     />
-    <div className="space-y-7 overflow-y-auto max-h-[48vh] pr-1">
+    <div className="space-y-7 pr-1">
       <div className="flex flex-col gap-2">
         <Label title="Which state are you currently in?" />
         <SelectState
@@ -346,11 +387,22 @@ export const Step5 = ({
         />
       </div>
       <div className="flex flex-col gap-2">
+        <Label title="Which ward do you stay in?" />
+        <SelectWard
+          selectedId={selectedWardId || undefined}
+          update={(wardObj) => setSelectedWardId(wardObj?.id || null)}
+          stateId={selectedStateId || undefined}
+          lgaId={selectedLgaId || undefined}
+          disabled={!selectedLgaId}
+          fetchWards={getWards}
+          className="w-full"
+        />
+      </div>
+      <div className="flex flex-col gap-2">
         <Label title="Tell us your address?" />
-        <TextareaInput
+        <Input
           placeholder="Enter address"
           onChange={(e) => setStreetAddress(e.target.value)}
-          className="min-h-14 rounded-2xl text-lg"
         />
       </div>
 
@@ -440,47 +492,281 @@ export const Step11 = ({
   selectedBankCode,
   setSelectedBankCode,
   user,
+  setIsValidatingAccount,
+  setIsAccountValid,
+}: any) => {
+  const { data: validationResponse, isLoading: isValidating } = useQuery({
+    queryKey: ["validateAccount", bankAccountNumber, selectedBankCode],
+    queryFn: () =>
+      validateBankAccount({
+        data: {
+          accountNumber: bankAccountNumber,
+          bankCode: selectedBankCode,
+        },
+      }),
+    enabled: bankAccountNumber.length === 10 && !!selectedBankCode,
+    staleTime: 1000 * 60 * 5, // cache for 5 minutes
+  });
+
+  const accountName = validationResponse?.success 
+    ? validationResponse?.data?.accountName 
+    : validationResponse?.accountName;
+
+  const isError = validationResponse && (!validationResponse.success && validationResponse.success !== undefined);
+  const isValid = !!accountName && !isError;
+
+  useEffect(() => {
+    if (setIsValidatingAccount) setIsValidatingAccount(isValidating);
+  }, [isValidating, setIsValidatingAccount]);
+
+  useEffect(() => {
+    if (setIsAccountValid) setIsAccountValid(isValid);
+  }, [isValid, setIsAccountValid]);
+
+  return (
+    <div className="flex flex-col gap-4 w-full px-4">
+      <StepHeader
+        title="Add Bank Account Details"
+        subtitle="Provide details for any future payout."
+      />
+      <div className="space-y-8 mt-2">
+        <div className="flex flex-col gap-2">
+          <Label title="Account Number" />
+          <Input
+            type="text"
+            maxLength={10}
+            placeholder="Enter acct. number"
+            value={bankAccountNumber}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, "");
+              setBankAccountNumber(val);
+            }}
+            className="h-14 rounded-2xl"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label title="Bank" />
+          <SelectBank
+            initialData={selectedBankCode}
+            update={setSelectedBankCode}
+            fetchBanks={getBanks}
+          />
+        </div>
+        
+        {bankAccountNumber.length === 10 && selectedBankCode && (
+          <div
+            className={cn(
+              "flex items-center gap-3 p-4.5 rounded-2xl mt-2",
+              isError
+                ? "bg-red-50 text-red-600"
+                : isValidating
+                  ? "bg-neutral-50 text-neutral-500"
+                  : "bg-secondary/10 text-primary",
+            )}
+          >
+            <div
+              className={cn(
+                "size-5 rounded-full flex items-center justify-center shrink-0",
+                isError
+                  ? "bg-red-100 text-red-600"
+                  : isValidating
+                    ? "bg-transparent text-neutral-500"
+                    : "bg-secondary text-white",
+              )}
+            >
+              {isValidating ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : isError ? (
+                <XCircle className="size-4" />
+              ) : (
+                <Check className="size-3 stroke-[3]" />
+              )}
+            </div>
+            <span
+              className={cn(
+                "font-medium text-lg",
+                isError ? "text-red-600" : "text-primary",
+              )}
+            >
+              {isValidating
+                ? "Verifying account..."
+                : isError
+                  ? "Invalid Account Number"
+                  : accountName || "Unknown User"}
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+export const ContactDetailsStep = ({
+  phone,
+  setPhone,
+  userPhone,
+  whatsappPhone,
+  setWhatsappPhone,
+  dataPhone,
+  setDataPhone,
 }: any) => (
   <div className="flex flex-col gap-4 w-full px-4">
     <StepHeader
-      title="Add Bank Account Details"
-      subtitle="Provide details for any future payout."
+      title="Contact Details"
+      subtitle="Provide your phone details."
     />
-    <div className="space-y-8 mt-2">
+    <div className="space-y-7 mt-2">
       <div className="flex flex-col gap-2">
-        <Label title="Account Number" />
+        <Label title="Your Phone Number (for calls)" />
         <Input
-          type="text"
-          maxLength={10}
-          placeholder="Enter acct. number"
-          value={bankAccountNumber}
-          onChange={(e) => {
-            const val = e.target.value.replace(/\D/g, "");
-            setBankAccountNumber(val);
-          }}
+          type="tel"
+          disabled={!!userPhone}
+          value={phone || ""}
+          onChange={(e) => setPhone && setPhone(e.target.value)}
+          placeholder="Enter phone number for calls"
+          className={`h-14 rounded-2xl ${!!userPhone ? "bg-gray-50" : ""}`}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label title="Your Phone Number (for data subscription)" />
+        <Input
+          type="tel"
+          value={dataPhone}
+          onChange={(e) => setDataPhone(e.target.value)}
+          placeholder="Enter phone number used for data sub"
           className="h-14 rounded-2xl"
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label title="Bank" />
-        <SelectBank
-          initialData={selectedBankCode}
-          update={setSelectedBankCode}
+        <Label title="Your Whatsapp Phone Number" />
+        <Input
+          type="tel"
+          value={whatsappPhone}
+          onChange={(e) => setWhatsappPhone(e.target.value)}
+          placeholder="Enter whatsapp phone number"
+          className="h-14 rounded-2xl"
         />
       </div>
-      {bankAccountNumber.length === 10 && (
-        <div className="flex items-center gap-3 bg-secondary/10 p-4.5 rounded-2xl mt-2">
-          <div className="size-5 rounded-full bg-secondary text-white flex items-center justify-center shrink-0">
-            <Check className="size-3 stroke-[3]" />
-          </div>
-          <span className="font-medium text-lg text-primary">
-            {user
-              ? `${user.first_name || ""} ${user.last_name || ""}`.trim() ||
-                "Unknown User"
-              : "Unknown User"}
-          </span>
-        </div>
-      )}
     </div>
   </div>
 );
+
+export const EducationalStatusStep = ({
+  educationalStatus,
+  setEducationalStatus,
+}: any) => {
+  const options = [
+    { label: "I am a graduate", value: "graduate" },
+    { label: "I'm a student", value: "student" },
+    { label: "None of the above", value: "none" },
+  ];
+  return (
+    <div className="flex flex-col gap-4 w-full px-4">
+      <StepHeader
+        title="Which option best describes you?"
+        subtitle="Increase your acceptance and assignment opportunity."
+      />
+      <div className="space-y-3 mt-2">
+        {options.map((opt) => (
+          <SelectableCard
+            key={opt.value}
+            title={opt.label}
+            subtitle=""
+            isSelected={educationalStatus === opt.value}
+            onClick={() => setEducationalStatus(opt.value)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
+export const EducationalDetailsStep = ({
+  educationalStatus,
+  highestDegree,
+  setHighestDegree,
+  graduationYear,
+  setGraduationYear,
+  schoolName,
+  setSchoolName,
+}: any) => {
+  const isStudent = educationalStatus === "student";
+  const title = isStudent
+    ? "Current Educational Details"
+    : "Educational Qualification";
+  const subtitle = isStudent
+    ? "Tell us about your current studies."
+    : "Verify your highest qualification.";
+
+  return (
+    <div className="flex flex-col gap-4 w-full px-4">
+      <StepHeader title={title} subtitle={subtitle} />
+      <div className="space-y-7 mt-2">
+        <div className="flex flex-col gap-2">
+          <Label
+            title={
+              isStudent ? "Degree to be obtained?" : "Highest Academic degree?"
+            }
+          />
+          <SelectDropdown
+            value={highestDegree}
+            update={setHighestDegree}
+            placeholder="Select Degree"
+            options={[
+              {
+                label: "Primary School Certificate",
+                value: "Primary School Certificate",
+              },
+              {
+                label: "Secondary School Certificate",
+                value: "Secondary School Certificate",
+              },
+              { label: "Bachelors", value: "Bachelors" },
+              { label: "Masters", value: "Masters" },
+              { label: "PhD", value: "PhD" },
+            ]}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label
+            title={
+              isStudent
+                ? "Which year will you be graduating?"
+                : "Which year did you graduate?"
+            }
+          />
+          <SelectDropdown
+            value={graduationYear}
+            update={setGraduationYear}
+            placeholder="Select Year"
+            options={
+              isStudent
+                ? Array.from({ length: 11 }, (_, i) => {
+                    const year = String(new Date().getFullYear() + i);
+                    return { label: year, value: year };
+                  })
+                : Array.from({ length: 71 }, (_, i) => {
+                    const year = String(new Date().getFullYear() - i);
+                    return { label: year, value: year };
+                  })
+            }
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label
+            title={
+              isStudent
+                ? "What is the name of your school?"
+                : "What is the name of the school?"
+            }
+          />
+          <Input
+            value={schoolName}
+            onChange={(e) => setSchoolName(e.target.value)}
+            placeholder="Enter school name"
+            className="h-14 rounded-2xl"
+          />
+        </div>
+      </div>
+    </div>
+  );
+};

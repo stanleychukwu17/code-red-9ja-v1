@@ -24,6 +24,15 @@ SET
   bank_code = $11,
   role = $12,
   role_level = $13,
+  whatsapp_phone = $14,
+  data_phone = $15,
+  educational_status = $16,
+  highest_degree = $17,
+  graduation_year = $18,
+  school_name = $19,
+  current_ward = $20,
+  phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
+  phone_verified = CASE WHEN NULLIF(sqlc.arg(phone)::varchar, '') IS NOT NULL AND NULLIF(sqlc.arg(phone)::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
   updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -57,6 +66,13 @@ SELECT
   u.current_city,
   u.bank_account_number,
   u.bank_code,
+  u.whatsapp_phone,
+  u.data_phone,
+  u.educational_status,
+  u.highest_degree,
+  u.graduation_year,
+  u.school_name,
+  u.current_ward,
   eg.name AS election_group_name,
   eg.election_date,
   p.name AS party_name,
@@ -134,6 +150,7 @@ SELECT
   )::integer AS agents_count
 FROM polling_units pu
 WHERE
-  (sqlc.arg(lga_id)::integer = 0 OR pu.lga_id = sqlc.arg(lga_id)::integer)
+  (sqlc.arg(lga_id)::integer = 0 OR pu.lga_id = sqlc.arg(lga_id)::integer) AND
+  (sqlc.arg(ward_id)::integer = 0 OR pu.ward_id = sqlc.arg(ward_id)::integer)
 ORDER BY agents_count ASC, pu.id ASC
 LIMIT sqlc.arg(limit_val)::integer;

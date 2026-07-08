@@ -53,13 +53,10 @@ export default function Footer() {
         </a>
         <a
           href="#"
-          href="#"
           target="_blank"
           rel="noreferrer"
           className="rounded-xl p-2 text-(--sea-ink-soft) transition hover:bg-(--link-bg-hover) hover:text-(--sea-ink)"
-          className="rounded-xl p-2 text-(--sea-ink-soft) transition hover:bg-(--link-bg-hover) hover:text-(--sea-ink)"
         >
-          <span className="sr-only">Go to Free9ja GitHub</span>
           <span className="sr-only">Go to Free9ja GitHub</span>
           <svg viewBox="0 0 16 16" aria-hidden="true" width="32" height="32">
             <path
@@ -70,6 +67,5 @@ export default function Footer() {
         </a>
       </div>
     </motion.footer>
-    </motion.footer >
   )
 }

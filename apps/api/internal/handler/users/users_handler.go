@@ -13,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	monnifyclient "free9ja/api/internal/service/monnify"
 )
 
 // UsersService interface defines the methods needed from the users service
@@ -23,6 +24,9 @@ type UsersService interface {
 	ListUsers(ctx context.Context) ([]queries.User, error)
 	DeleteUser(ctx context.Context, id int64, fakeID int64) error
 	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, role, roleLevel string, partyID int64, email string) error
+
+	GetBanks(ctx context.Context) ([]monnifyclient.Bank, error)
+	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
 
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GetUserWallet(ctx context.Context, userID int64) (queries.UserWallet, error)
@@ -45,6 +49,59 @@ func NewHandler(usersService UsersService, utilsInstance *utils.Utils) *Handler 
 		validate:     validator.New(),
 		utils:        utilsInstance,
 	}
+}
+
+// GetBanks handles GET /api/v1/banks
+// @Summary      Get list of banks
+// @Description  Returns a list of real Nigerian banks from Monnify
+// @Tags         Banks
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{} "Banks fetched successfully"
+// @Failure      500  {object} map[string]interface{} "Failed to fetch banks"
+// @Router       /banks [get]
+func (h *Handler) GetBanks(w http.ResponseWriter, r *http.Request) {
+	banks, err := h.usersService.GetBanks(r.Context())
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch banks: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Banks fetched successfully", map[string]interface{}{
+		"banks": banks,
+	})
+}
+
+// ValidateBankAccount handles GET /api/v1/banks/validate
+// @Summary      Validate bank account
+// @Description  Validates account number and bank code via Monnify, returning the account name
+// @Tags         Banks
+// @Accept       json
+// @Produce      json
+// @Param        accountNumber query string true "Account Number"
+// @Param        bankCode      query string true "Bank Code"
+// @Success      200  {object} map[string]interface{} "Account validated successfully"
+// @Failure      400  {object} map[string]interface{} "Missing parameters"
+// @Failure      500  {object} map[string]interface{} "Validation failed"
+// @Router       /banks/validate [get]
+func (h *Handler) ValidateBankAccount(w http.ResponseWriter, r *http.Request) {
+	accountNumber := r.URL.Query().Get("accountNumber")
+	bankCode := r.URL.Query().Get("bankCode")
+
+	if accountNumber == "" || bankCode == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "accountNumber and bankCode are required")
+		return
+	}
+
+	accountName, err := h.usersService.ValidateBankAccount(r.Context(), accountNumber, bankCode)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to validate account: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Account validated successfully", map[string]interface{}{
+		"accountName": accountName,
+	})
 }
 
 // UserResponse represents the sanitized user profile details returned to the frontend

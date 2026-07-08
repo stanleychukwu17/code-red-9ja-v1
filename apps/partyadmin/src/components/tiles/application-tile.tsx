@@ -36,6 +36,7 @@ export type ApplicationType = {
   current_country?: number;
   current_state?: number;
   current_lga?: any;
+  current_ward?: any;
   current_city?: any;
   bank_account_number?: any;
   bank_code?: any;
@@ -50,6 +51,14 @@ export type ApplicationType = {
   polling_unit_name?: any;
   agents_count?: number;
   party_logo?: any;
+  whatsapp_phone?: any;
+  data_phone?: any;
+  educational_status?: any;
+  highest_degree?: any;
+  graduation_year?: any;
+  school_name?: any;
+  ward_name?: any;
+  address?: any;
 
   // Mock data fields
   name?: string;
@@ -120,25 +129,27 @@ export function ApplicationTableTile({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const approveMutation = useMutation({
-    mutationFn: (variables: { id: number; pollingUnitID: number }) => approveApplication({ data: variables }),
+    mutationFn: (variables: { id: number; pollingUnitID: number }) =>
+      approveApplication({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         if (refetch) refetch();
       } else {
         throw new Error(res?.message || "Failed to approve application");
       }
-    }
+    },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (variables: { id: number; reason: string }) => rejectApplication({ data: variables }),
+    mutationFn: (variables: { id: number; reason: string }) =>
+      rejectApplication({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         if (refetch) refetch();
       } else {
         throw new Error(res?.message || "Failed to reject application");
       }
-    }
+    },
   });
 
   const firstName = getPgString(data.first_name);
@@ -158,9 +169,9 @@ export function ApplicationTableTile({
 
   const lgaVal =
     data.current_lga &&
-      typeof data.current_lga === "object" &&
-      "Int32" in data.current_lga &&
-      data.current_lga.Valid
+    typeof data.current_lga === "object" &&
+    "Int32" in data.current_lga &&
+    data.current_lga.Valid
       ? data.current_lga.Int32
       : data.current_lga;
 
@@ -215,19 +226,35 @@ export function ApplicationTableTile({
       election,
       voterId,
       phone: phone || undefined,
-      pollingUnitId: data.polling_unit_id?.Int32 || data.polling_unit_id || undefined,
+      callingPhone: phone || undefined,
+      whatsappPhone: getPgString(data.whatsapp_phone) || undefined,
+      dataPhone: getPgString(data.data_phone) || undefined,
+      schoolName: getPgString(data.school_name) || undefined,
+      degree: getPgString(data.highest_degree) || undefined,
+      graduationYear: getPgString(data.graduation_year) || undefined,
+      educationalStatus: getPgString(data.educational_status) || undefined,
+      address: getPgString(data.address) || undefined,
+      wardName: getPgString(data.ward_name) || undefined,
+      wardId: data.current_ward?.Int32 || data.current_ward || undefined,
+      pollingUnitId:
+        data.polling_unit_id?.Int32 || data.polling_unit_id || undefined,
       electionGroupId: data.election_group_id || undefined,
       partyId: data.party_id || undefined,
       stateId: data.current_state || data.stateId,
       lgaId: Number(lgaVal) || data.lgaId || undefined,
       partyLogo: partyLogo,
       partyShortName: partyShortName,
-      onApprove: async (pollingUnitID) => {
+      onApprove: async (approvalData) => {
         if (data.id === undefined) {
           alert("Application ID is missing");
           return;
         }
-        await approveMutation.mutateAsync({ id: data.id, pollingUnitID });
+        // Assuming we default to pollingUnitID for polling agent backwards compatibility
+        const targetPuId = approvalData.pollingUnitId ?? 0;
+        await approveMutation.mutateAsync({
+          id: data.id,
+          pollingUnitID: targetPuId,
+        });
       },
       onReject: async (reason) => {
         if (data.id === undefined) {
@@ -248,9 +275,9 @@ export function ApplicationTableTile({
 
     const pollingUnitID =
       data.polling_unit_id &&
-        typeof data.polling_unit_id === "object" &&
-        "Int32" in data.polling_unit_id &&
-        data.polling_unit_id.Valid
+      typeof data.polling_unit_id === "object" &&
+      "Int32" in data.polling_unit_id &&
+      data.polling_unit_id.Valid
         ? data.polling_unit_id.Int32
         : typeof data.polling_unit_id === "number"
           ? data.polling_unit_id
@@ -369,11 +396,11 @@ function DecisionPill({
       className={cn(
         "h-8 rounded-[10px] px-3 text-[14px] font-semibold transition truncate text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "accept" &&
-        "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
+          "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
         variant === "reject" &&
-        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         variant === "pending" &&
-        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         className,
       )}
     >

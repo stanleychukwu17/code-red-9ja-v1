@@ -18,12 +18,16 @@ function getAuthHeaders() {
 }
 
 export const getElectionGroups = createServerFn({ method: "GET" })
-  .inputValidator((data: { limit?: number; cursor?: string | number } | undefined) => data)
+  .inputValidator((data: { limit?: number; cursor?: string | number; upcoming?: boolean } | undefined) => data)
   .handler(async ({ data }) => {
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-      const response = await fetch(`${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}`);
+      let url = `${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}`;
+      if (data?.upcoming) {
+        url += `&upcoming=true`;
+      }
+      const response = await fetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {

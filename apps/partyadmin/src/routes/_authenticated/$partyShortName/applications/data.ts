@@ -3,26 +3,28 @@ import type { ApplicationType } from "#/components/tiles/application-tile";
 
 export const getApplicationTabs = (
   partyShortName: string,
-  counts?: { pending?: number; accepted?: number; rejected?: number }
+  counts?: { pending?: number; accepted?: number; rejected?: number },
 ): PageHeaderTabProps[] => [
   {
     id: "pending",
-    label: `Pending${counts?.pending !== undefined ? ` (${counts.pending})` : ""}`,
+    label: `Pending`,
     href: `/${partyShortName}/applications`,
   },
   {
     id: "accepted",
-    label: `Accepted${counts?.accepted !== undefined ? ` (${counts.accepted})` : ""}`,
+    label: `Accepted`,
     href: `/${partyShortName}/applications/accepted`,
   },
   {
     id: "rejected",
-    label: `Rejected${counts?.rejected !== undefined ? ` (${counts.rejected})` : ""}`,
+    label: `Rejected`,
     href: `/${partyShortName}/applications/rejected`,
   },
 ];
 
-export const getPendingApplications = (partyShortName: string): ApplicationType[] => [
+export const getPendingApplications = (
+  partyShortName: string,
+): ApplicationType[] => [
   {
     name: "Charles Ogenna",
     avatar:
@@ -75,7 +77,9 @@ export const getPendingApplications = (partyShortName: string): ApplicationType[
   },
 ];
 
-export const getAcceptedApplications = (partyShortName: string): ApplicationType[] => [
+export const getAcceptedApplications = (
+  partyShortName: string,
+): ApplicationType[] => [
   {
     name: "Charles Ogenna",
     avatar:
@@ -108,7 +112,9 @@ export const getAcceptedApplications = (partyShortName: string): ApplicationType
   },
 ];
 
-export const getRejectedApplications = (partyShortName: string): ApplicationType[] => [
+export const getRejectedApplications = (
+  partyShortName: string,
+): ApplicationType[] => [
   {
     name: "Charles Ogenna",
     avatar:

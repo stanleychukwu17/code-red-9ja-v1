@@ -14,8 +14,17 @@ export function ApplyFooter({
   streetAddress,
   selectedPollingUnitId,
   bankAccountNumber,
+  whatsappPhone,
+  dataPhone,
+  educationalStatus,
+  highestDegree,
+  graduationYear,
+  schoolName,
   isSubmitting,
   handleSubmit,
+  user,
+  isValidatingAccount,
+  isAccountValid,
 }: any) {
   return (
     <StickyFooter className="pb-20">
@@ -63,7 +72,7 @@ export function ApplyFooter({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!avatarUrl || isUploading}
+          disabled={(!avatarUrl && !user?.avatar) || isUploading}
           onClick={() => setStep(5)}
         >
           Continue
@@ -76,7 +85,7 @@ export function ApplyFooter({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!selectedStateId || !selectedLgaId || !streetAddress}
+          disabled={!whatsappPhone || !dataPhone}
           onClick={() => setStep(6)}
         >
           Continue
@@ -89,8 +98,14 @@ export function ApplyFooter({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!selectedPollingUnitId}
-          onClick={() => setStep(7)}
+          disabled={!educationalStatus}
+          onClick={() => {
+            if (educationalStatus === "none") {
+              setStep(8);
+            } else {
+              setStep(7);
+            }
+          }}
         >
           Continue
         </Button>
@@ -102,9 +117,10 @@ export function ApplyFooter({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
+          disabled={!highestDegree || !graduationYear || !schoolName}
           onClick={() => setStep(8)}
         >
-          Yes, I agree
+          Continue
         </Button>
       )}
 
@@ -114,9 +130,10 @@ export function ApplyFooter({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
+          disabled={!selectedStateId || !selectedLgaId || !streetAddress}
           onClick={() => setStep(9)}
         >
-          Yes, I agree
+          Continue
         </Button>
       )}
 
@@ -126,9 +143,10 @@ export function ApplyFooter({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
+          disabled={!selectedPollingUnitId}
           onClick={() => setStep(10)}
         >
-          Yes, I agree
+          Continue
         </Button>
       )}
 
@@ -147,13 +165,51 @@ export function ApplyFooter({
       {step === 11 && (
         <Button
           type="button"
+          variant="black"
+          size="4xl"
+          className="w-full rounded-full"
+          onClick={() => setStep(12)}
+        >
+          Yes, I agree
+        </Button>
+      )}
+
+      {step === 12 && (
+        <Button
+          type="button"
+          variant="black"
+          size="4xl"
+          className="w-full rounded-full"
+          onClick={() => setStep(13)}
+        >
+          Yes, I agree
+        </Button>
+      )}
+
+      {step === 13 && (
+        <Button
+          type="button"
+          variant="black"
+          size="4xl"
+          className="w-full rounded-full"
+          onClick={() => setStep(14)}
+        >
+          Yes, I agree
+        </Button>
+      )}
+
+      {step === 14 && (
+        <Button
+          type="button"
           variant="secondary"
           size="4xl"
           className="w-full rounded-full"
           disabled={
             !bankAccountNumber ||
             bankAccountNumber.length !== 10 ||
-            isSubmitting
+            isSubmitting ||
+            isValidatingAccount ||
+            !isAccountValid
           }
           onClick={handleSubmit}
         >

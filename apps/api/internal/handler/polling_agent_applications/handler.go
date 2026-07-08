@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	paservice "free9ja/api/internal/service/polling_agent_applications"
@@ -55,9 +56,17 @@ type SubmitApplicationRequest struct {
 	CurrentCountry    int16   `json:"current_country"`
 	CurrentState      int16   `json:"current_state"`
 	CurrentLga        int32   `json:"current_lga"`
+	CurrentWard       int32   `json:"current_ward"`
 	CurrentCity       int32   `json:"current_city"`
 	BankAccountNumber string  `json:"bank_account_number"`
 	BankCode          string  `json:"bank_code"`
+	WhatsappPhone     string  `json:"whatsapp_phone"`
+	DataPhone         string  `json:"data_phone"`
+	EducationalStatus string  `json:"educational_status"`
+	HighestDegree     string  `json:"highest_degree"`
+	GraduationYear    string  `json:"graduation_year"`
+	SchoolName        string  `json:"school_name"`
+	Phone             string  `json:"phone"`
 }
 
 // SubmitApplication godoc
@@ -82,6 +91,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 
 	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 	if err != nil {
+		fmt.Printf("SubmitApplication: GetUserByFakeID failed for fake_id: %v, error: %v\n", claims.FakeID, err)
 		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
 		return
 	}
@@ -113,9 +123,17 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		CurrentCountry:    req.CurrentCountry,
 		CurrentState:      req.CurrentState,
 		CurrentLga:        req.CurrentLga,
+		CurrentWard:       req.CurrentWard,
 		CurrentCity:       req.CurrentCity,
 		BankAccountNumber: req.BankAccountNumber,
 		BankCode:          req.BankCode,
+		WhatsappPhone:     req.WhatsappPhone,
+		DataPhone:         req.DataPhone,
+		EducationalStatus: req.EducationalStatus,
+		HighestDegree:     req.HighestDegree,
+		GraduationYear:    req.GraduationYear,
+		SchoolName:        req.SchoolName,
+		Phone:             req.Phone,
 	})
 	if err != nil {
 		errStr := err.Error()

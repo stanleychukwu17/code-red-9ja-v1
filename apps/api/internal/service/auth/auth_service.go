@@ -188,7 +188,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 
 	// Generate Access Token and Refresh Token
-	accessToken, err := utils.GenerateToken(fakeID, user.Username.String, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
+	accessToken, err := utils.GenerateToken(user.ID, fakeID, user.Username.String, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -367,7 +367,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	}
 
 	// Generate a new Access Token
-	newAccessToken, err := utils.GenerateToken(userFid, username, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
+	newAccessToken, err := utils.GenerateToken(user.ID, userFid, username, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}

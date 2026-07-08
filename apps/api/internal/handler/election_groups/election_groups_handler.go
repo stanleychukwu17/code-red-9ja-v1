@@ -6,7 +6,9 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -55,6 +57,20 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 		}
 	}
 	return limit, cursor
+}
+
+func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
+	orderBy := r.URL.Query().Get("order_by")
+	if orderBy == "" {
+		orderBy = defaultOrderBy
+	}
+
+	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
+	if orderDir != "ASC" && orderDir != "DESC" {
+		orderDir = defaultOrderDir
+	}
+
+	return orderBy, orderDir
 }
 
 type CreateElectionGroupRequest struct {
@@ -182,6 +198,34 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
+
+	if r.URL.Query().Get("upcoming") == "true" {
+		var filteredGroups []ElectionGroupResponse
+		now := time.Now()
+		// keep only time component zeroed for comparison
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		for _, eg := range responseGroups {
+			if eg.ElectionDate.Valid && !eg.ElectionDate.Time.Before(today) {
+				filteredGroups = append(filteredGroups, eg)
+			}
+		}
+		responseGroups = filteredGroups
+	}
+
+	orderBy, orderDir := parseSortParams(r, "name", "ASC")
+
+	sort.SliceStable(responseGroups, func(i, j int) bool {
+		var less bool
+		if orderBy == "name" {
+			less = responseGroups[i].Name < responseGroups[j].Name
+		} else {
+			less = responseGroups[i].ID < responseGroups[j].ID
+		}
+		if orderDir == "DESC" {
+			return !less
+		}
+		return less
+	})
 
 	startIndex := 0
 	if cursor > 0 {

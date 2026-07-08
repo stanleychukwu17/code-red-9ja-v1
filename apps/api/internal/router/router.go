@@ -189,6 +189,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
 	mainRouter.Post("/api/v1/auth/seed", authHandler.SeedUsers)                                      // Seed users endpoint
 
+	// Banks
+	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)
+	mainRouter.Get("/api/v1/banks/validate", usersHandler.ValidateBankAccount)
+
 	// political & geographic bodies
 	mainRouter.Get(utils.ApiUrls.Bodies.GetAll, bodiesHandler.GetCountries)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetStates, statesHandler.GetStates)

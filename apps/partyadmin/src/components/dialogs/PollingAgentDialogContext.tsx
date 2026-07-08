@@ -9,6 +9,16 @@ export type ApplicationData = {
   election: string;
   voterId?: string;
   phone?: string;
+  callingPhone?: string;
+  whatsappPhone?: string;
+  dataPhone?: string;
+  schoolName?: string;
+  degree?: string;
+  graduationYear?: string;
+  educationalStatus?: string;
+  address?: string;
+  wardName?: string;
+  wardId?: number;
   pollingUnitId?: number;
   electionGroupId?: number;
   partyId?: number;
@@ -17,7 +27,7 @@ export type ApplicationData = {
   partyLogo?: string;
   partyShortName?: string;
   voters_card_image?: any;
-  onApprove?: (pollingUnitID: number) => Promise<void>;
+  onApprove?: (data: { role: string; pollingUnitId?: number; stateId?: number; lgaId?: number; wardId?: number }) => Promise<void>;
   onReject?: (reason: string) => Promise<void>;
 };
 

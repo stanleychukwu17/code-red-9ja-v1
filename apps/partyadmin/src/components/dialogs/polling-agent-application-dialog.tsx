@@ -9,8 +9,14 @@ import {
 } from "@repo/ui/components/dialog";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
-import { useQuery } from "@tanstack/react-query";
-import { getPollingUnitRecommendations, getPollingUnits, getLGAs, getWards } from "#/lib/server/applications";
+import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useIntersectionObserver } from "usehooks-ts";
+import {
+  getPollingUnitRecommendations,
+  getPollingUnits,
+  getLGAs,
+  getWards,
+} from "#/lib/server/applications";
 import { getStates } from "#/lib/server/countries";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
@@ -83,6 +89,15 @@ export function PollingAgentApplicationDialog({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [openChooseDialog, setOpenChooseDialog] = React.useState(false);
 
+  const [role, setRole] = React.useState<string>("pollingagent");
+  const [selectedState, setSelectedState] = React.useState<number | "">(
+    application.stateId || "",
+  );
+  const [selectedLga, setSelectedLga] = React.useState<number | "">(
+    application.lgaId || "",
+  );
+  const [selectedWard, setSelectedWard] = React.useState<number | "">("");
+
   const votersCardImage = getPgString(application.voters_card_image);
 
   // Fetch recommendations: applicant's unit + 2 lowest-agent-count units in the LGA
@@ -154,14 +169,40 @@ export function PollingAgentApplicationDialog({
   };
 
   const handleAccept = async () => {
-    if (!selectedUnitId && pollingUnits.length > 0) {
+    if (role === "pollingagent" && !selectedUnitId && pollingUnits.length > 0) {
       alert("Please select a polling unit to assign.");
       return;
     }
+    if (role === "state-election-supervisor" && !selectedState) {
+      alert("Please select a state.");
+      return;
+    }
+    if (
+      role === "lga-election-supervisor" &&
+      (!selectedState || !selectedLga)
+    ) {
+      alert("Please select a state and LGA.");
+      return;
+    }
+    if (
+      role === "ward-election-supervisor" &&
+      (!selectedState || !selectedLga || !selectedWard)
+    ) {
+      alert("Please select a state, LGA, and Ward.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
-      if (application.onApprove && selectedUnitId) {
-        await application.onApprove(Number(selectedUnitId));
+      if (application.onApprove) {
+        await application.onApprove({
+          role,
+          pollingUnitId:
+            role === "pollingagent" ? Number(selectedUnitId) : undefined,
+          stateId: selectedState ? Number(selectedState) : undefined,
+          lgaId: selectedLga ? Number(selectedLga) : undefined,
+          wardId: selectedWard ? Number(selectedWard) : undefined,
+        });
       }
       onClose();
     } catch (err: any) {
@@ -206,173 +247,295 @@ export function PollingAgentApplicationDialog({
                 alt={application.name}
                 className="size-28 rounded-full object-cover shrink-0 border border-gray-100 shadow-sm"
               />
-              <div className="space-y-1.5">
-                <h3 className="text-xl font-semibold text-c-80 leading-tight">
-                  {application.name}
-                </h3>
-                <p className="text-sm text-c-50">{application.location}</p>
-                <p className="text-sm text-c-60 capitalize">
-                  {application.election}
-                </p>
-                <div className="flex items-center gap-3 text-sm">
-                  {application.partyLogo ? (
-                    <img
-                      src={application.partyLogo}
-                      alt={application.partyShortName || "Party"}
-                      className="size-[22px] rounded-full object-cover shrink-0"
-                    />
-                  ) : (
-                    <p className="leading-0.5">{application.partyShortName}</p>
-                  )}
-                  <span className="text-c-60 pt-0.5">
-                    {application.partyShortName || "Party"}
-                  </span>
+              <div className="space-y-1.5 w-full">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xl font-semibold text-c-80 leading-tight">
+                      {application.name}
+                    </h3>
+                    <p className="text-sm text-c-50 mt-1">
+                      Application to:{" "}
+                      <span className="font-medium text-c-80">
+                        {application.election}
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-2 gap-x-10 gap-y-2 mt-3">
+                      <p className="text-sm text-c-50">
+                        State:{" "}
+                        <span className="font-medium text-c-80">{"Abuja"}</span>
+                      </p>
+                      <p className="text-sm text-c-50">
+                        LGA:{" "}
+                        <span className="font-medium text-c-80">{"Bwari"}</span>
+                      </p>
+                      <p className="text-sm text-c-50">
+                        Ward:{" "}
+                        <span className="font-medium text-c-80">
+                          {application.wardName || "Byazhin"}
+                        </span>
+                      </p>
+                      <p className="text-sm text-c-50">
+                        Address:{" "}
+                        <span className="font-medium text-c-80">
+                          {application.address || "Army Estate Block F25"}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Voters Identification Block (Purple) */}
-            <div className="flex items-center justify-between gap-4 rounded-xl bg-[#f5f0ff] px-5 py-4">
-              <div className="space-y-2">
-                <p className="text-[14px] text-c-70">
-                  Voters Identification Number
+            {/* Phones Block */}
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-gray-200 px-5 py-4">
+              <div className="space-y-1">
+                <p className="text-[12px] text-c-50">Calling Phone No.</p>
+                <p className="font-medium text-c-80">
+                  {application.callingPhone || application.phone || "+234"}
                 </p>
-                <p className="font-medium text-c-90">
-                  {application.voterId || "904284758271"}
-                </p>
-                {application.phone && (
-                  <p className="text-[13px] text-c-60">
-                    📞 {application.phone}
-                  </p>
-                )}
               </div>
-              {/* Voter Card Image / UI */}
-              {votersCardImage && (
-                <a
-                  href={votersCardImage}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-[80px] h-[50px] rounded-lg border border-gray-200 shrink-0 relative overflow-hidden shadow-sm hover:opacity-90 transition cursor-pointer"
+              <div className="space-y-1">
+                <p className="text-[12px] text-c-50">Whatsapp Phone No.</p>
+                <p className="font-medium text-c-80">
+                  {application.whatsappPhone || application.phone || "+234"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[12px] text-c-50">Data Phone No.</p>
+                <p className="font-medium text-c-80">
+                  {application.dataPhone || application.phone || "+234"}
+                </p>
+              </div>
+            </div>
+
+            {/* Education Block */}
+            <div className="grid grid-cols-2 gap-4 rounded-xl bg-[#f5f0ff] px-5 py-4">
+              <div className="space-y-1">
+                <p className="text-[12px] text-c-50">School</p>
+                <p className="font-medium text-c-80">
+                  {application.schoolName || "N/A"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[12px] text-c-50">Graduation Year</p>
+                <p className="font-medium text-c-80">
+                  {application.graduationYear || "N/A"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[12px] text-c-50">Degree</p>
+                <p className="font-medium text-c-80">
+                  {application.degree || "N/A"}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[12px] text-c-50">Status</p>
+                <p className="font-medium text-c-80">
+                  {application.educationalStatus || "N/A"}
+                </p>
+              </div>
+            </div>
+
+            {/* Role & Assignment Block */}
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                  Role
+                </label>
+                <select
+                  value={role}
+                  onChange={(e) => {
+                    setRole(e.target.value);
+                  }}
+                  className="w-full h-11 px-3 rounded-xl border border-gray-200 outline-none focus:border-secondary transition bg-transparent"
                 >
-                  <img
-                    src={votersCardImage}
-                    alt="Voters Card"
-                    className="w-full h-full object-cover"
-                  />
-                </a>
+                  <option value="pollingagent">Polling Agent</option>
+                  <option value="state-election-supervisor">
+                    State Election Supervisor
+                  </option>
+                  <option value="lga-election-supervisor">
+                    LGA Election Supervisor
+                  </option>
+                  <option value="ward-election-supervisor">
+                    Ward Election Supervisor
+                  </option>
+                </select>
+              </div>
+
+              {role !== "pollingagent" && (
+                <div className="grid grid-cols-3 gap-3">
+                  {(role === "state-election-supervisor" ||
+                    role === "lga-election-supervisor" ||
+                    role === "ward-election-supervisor") && (
+                    <div className="space-y-1">
+                      <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                        State
+                      </label>
+                      <SelectState
+                        selectedId={
+                          selectedState ? String(selectedState) : undefined
+                        }
+                        countryOriginalId={161}
+                        fetchStates={fetchStatesAdapter}
+                        update={(state) => {
+                          setSelectedState(state.id);
+                          setSelectedLga("");
+                          setSelectedWard("");
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {(role === "lga-election-supervisor" ||
+                    role === "ward-election-supervisor") && (
+                    <div className="space-y-1">
+                      <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                        LGA
+                      </label>
+                      <SelectLga
+                        selectedId={
+                          selectedLga ? String(selectedLga) : undefined
+                        }
+                        stateId={
+                          selectedState ? Number(selectedState) : undefined
+                        }
+                        fetchLGAs={fetchLgasAdapter}
+                        update={(lga) => {
+                          setSelectedLga(lga.id);
+                          setSelectedWard("");
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {role === "ward-election-supervisor" && (
+                    <div className="space-y-1">
+                      <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                        Ward
+                      </label>
+                      <SelectWard
+                        selectedId={
+                          selectedWard ? String(selectedWard) : undefined
+                        }
+                        lgaId={selectedLga ? Number(selectedLga) : undefined}
+                        stateId={
+                          selectedState ? Number(selectedState) : undefined
+                        }
+                        fetchWards={fetchWardsAdapter}
+                        update={(ward) => setSelectedWard(ward.id)}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 
-            {/* Assign Polling Unit Header */}
-            <div className="flex items-center justify-between pt-2">
-              <h4 className="text-[16px] font-medium text-c-80">
-                Assign Polling Unit
-              </h4>
-              <button
-                type="button"
-                onClick={handleChooseAnother}
-                className="text-[15px] font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer"
-              >
-                Choose another polling unit
-              </button>
-            </div>
+            {role === "pollingagent" && (
+              <div className="flex items-center justify-between pt-2">
+                <h4 className="text-[14px] font-semibold text-c-80">
+                  Polling unit of choice
+                </h4>
+                <button
+                  type="button"
+                  onClick={handleChooseAnother}
+                  className="text-[14px] font-medium text-blue-600 hover:text-blue-700 disabled:opacity-50 disabled:pointer-events-none transition cursor-pointer"
+                >
+                  Choose another polling unit
+                </button>
+              </div>
+            )}
 
             {/* Polling Units list */}
-            <div className="space-y-3">
-              {isUnitsLoading ? (
-                <div className="py-8 flex flex-col items-center justify-center text-c-50 gap-2">
-                  <Loader2 className="size-6 animate-spin text-blue-600" />
-                  <p className="text-sm">Loading recommendations...</p>
-                </div>
-              ) : !canFetchRecommendations ? (
-                <p className="text-center text-c-50 py-4 text-sm">
-                  Party or election context missing — cannot load recommendations.
-                </p>
-              ) : pollingUnits.length === 0 ? (
-                <p className="text-center text-c-50 py-4 text-sm">
-                  No polling units found in this applicant's LGA.
-                </p>
-              ) : (
-                currentOptions.map((unit) => {
-                  const isSelected = selectedUnitId === unit.id;
-                  const isApplicantUnit =
-                    application.pollingUnitId &&
-                    unit.id === String(application.pollingUnitId);
-                  const isUrgent = unit.agentsCount === 0;
-                  return (
-                    <div
-                      key={unit.id}
-                      onClick={() => handleSelectUnit(unit.id)}
-                      className={cn(
-                        "flex items-center justify-between p-4 rounded-xl border transition cursor-pointer select-none",
-                        isSelected
-                          ? "bg-[#e6fcf5] border-[#10dd84]/60"
-                          : "bg-[#fafafa] border-transparent hover:bg-hover-2",
-                      )}
-                    >
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-[15px] text-c-80">{unit.name}</p>
-                          {isApplicantUnit && (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 uppercase tracking-wide">
-                              Applied here
-                            </span>
-                          )}
+            {role === "pollingagent" && (
+              <div className="space-y-3">
+                {isUnitsLoading ? (
+                  <div className="py-8 flex flex-col items-center justify-center text-c-50 gap-2">
+                    <Loader2 className="size-6 animate-spin text-blue-600" />
+                    <p className="text-sm">Loading recommendations...</p>
+                  </div>
+                ) : !canFetchRecommendations ? (
+                  <p className="text-center text-c-50 py-4 text-sm">
+                    Party or election context missing — cannot load
+                    recommendations.
+                  </p>
+                ) : pollingUnits.length === 0 ? (
+                  <p className="text-center text-c-50 py-4 text-sm">
+                    No polling units found in this applicant's LGA.
+                  </p>
+                ) : (
+                  currentOptions.map((unit) => {
+                    const isSelected = selectedUnitId === unit.id;
+                    const isApplicantUnit =
+                      application.pollingUnitId &&
+                      unit.id === String(application.pollingUnitId);
+                    const isUrgent = unit.agentsCount === 0;
+                    return (
+                      <div
+                        key={unit.id}
+                        onClick={() => handleSelectUnit(unit.id)}
+                        className={cn(
+                          "flex items-center justify-between p-4 rounded-xl transition cursor-pointer select-none",
+                          isSelected
+                            ? "bg-secondary/20"
+                            : "bg-c-5 hover:bg-hover-2",
+                        )}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-[15px] text-c-80">{unit.name}</p>
+                            {isApplicantUnit && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-700 uppercase tracking-wide">
+                                Applied here
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[12px] text-c-50 uppercase tracking-wider">
+                            {unit.subLocation}
+                          </p>
                         </div>
-                        <p className="text-[12px] text-c-50 uppercase tracking-wider">
-                          {unit.subLocation}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right space-y-0.5">
-                          <span className={cn(
-                            "text-[13px] font-medium",
-                            isUrgent ? "text-red-500" : "text-c-60",
-                          )}>
-                            {unit.agentsCount} agent{unit.agentsCount !== 1 ? "s" : ""}
-                          </span>
-                          {isUrgent && (
-                            <p className="text-[10px] text-red-500 font-semibold uppercase tracking-wide">
-                              Urgent
-                            </p>
-                          )}
-                        </div>
-                        <div
-                          className={cn(
-                            "size-6 rounded-full flex items-center justify-center border transition",
-                            isSelected
-                              ? "bg-[#10dd84] border-transparent text-[#083b25]"
-                              : "border-gray-200 bg-white",
-                          )}
-                        >
-                          {isSelected && (
-                            <Check className="size-3.5 stroke-[3]" />
-                          )}
+                        <div className="flex items-center gap-3">
+                          <p className="text-[13px] text-c-50 mr-3">
+                            {unit.agentsCount} agent
+                            {unit.agentsCount !== 1 ? "s" : ""}
+                          </p>
+                          <div
+                            className={cn(
+                              "size-6 rounded-full flex items-center justify-center border transition",
+                              isSelected
+                                ? "bg-[#10dd84] border-transparent text-[#083b25]"
+                                : "border-gray-200 bg-white",
+                            )}
+                          >
+                            {isSelected && (
+                              <Check className="size-3.5 stroke-[3]" />
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  );
-                })
-
-              )}
-            </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
           </DialogPadding>
 
-          <DialogFooter className="bg-white border-t border-gray-100 flex items-center justify-end gap-3 pt-3.5 pb-4 px-6">
-            <button
+          <DialogFooter>
+            <Button
               type="button"
               onClick={handleReject}
               disabled={isSubmitting}
-              className="h-11 px-6 rounded-xl hover:bg-c-5 text-c-70 text-[15px] transition cursor-pointer disabled:opacity-50"
+              variant="ghost"
+              size="4xl"
             >
               Reject
-            </button>
+            </Button>
             <Button
               onClick={handleAccept}
+              variant="secondary"
+              size="4xl"
               disabled={
                 isSubmitting || isUnitsLoading || currentOptions.length === 0
               }
-              className="bg-[#00e575] hover:bg-[#00c866] text-white rounded-xl px-7 h-11 text-[15px] border-none shadow-none transition-colors duration-150 disabled:opacity-50"
             >
               {isSubmitting ? "Processing..." : "Accept"}
             </Button>
@@ -384,6 +547,7 @@ export function PollingAgentApplicationDialog({
         onClose={() => setOpenChooseDialog(false)}
         stateId={application.stateId}
         lgaId={application.lgaId}
+        wardId={application.wardId}
         onSelect={(newUnit) => {
           const exists = currentOptions.some((u) => u.id === newUnit.id);
           if (!exists) {
@@ -410,6 +574,7 @@ type ChoosePollingUnitDialogProps = {
   onClose: () => void;
   stateId?: number;
   lgaId?: number;
+  wardId?: number;
   onSelect: (unit: {
     id: string;
     name: string;
@@ -423,6 +588,7 @@ export function ChoosePollingUnitDialog({
   onClose,
   stateId,
   lgaId,
+  wardId,
   onSelect,
 }: ChoosePollingUnitDialogProps) {
   const [selectedState, setSelectedState] = React.useState<number | "">(
@@ -431,7 +597,9 @@ export function ChoosePollingUnitDialog({
   const [selectedLga, setSelectedLga] = React.useState<number | "">(
     lgaId || "",
   );
-  const [selectedWard, setSelectedWard] = React.useState<number | "">("");
+  const [selectedWard, setSelectedWard] = React.useState<number | "">(
+    wardId || "",
+  );
   const [selectedUnitId, setSelectedUnitId] = React.useState<string>("");
   const [selectedUnitObj, setSelectedUnitObj] = React.useState<{
     id: string;
@@ -440,24 +608,59 @@ export function ChoosePollingUnitDialog({
     ward: string;
   } | null>(null);
 
-  // Polling Units infinite/lazy query
-  const { data: puData, isLoading: isUnitsLoading } = useQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading: isUnitsLoading,
+  } = useInfiniteQuery({
     queryKey: ["pu-list-choose", selectedState, selectedLga, selectedWard],
-    queryFn: async () => {
+    queryFn: async ({ pageParam }) => {
       const res = await getPollingUnits({
         data: {
           stateID: selectedState ? Number(selectedState) : undefined,
           lgaID: selectedLga ? Number(selectedLga) : undefined,
           wardID: selectedWard ? Number(selectedWard) : undefined,
+          limit: 20,
+          cursor: pageParam || undefined,
         },
       });
-      if (res && res.success && Array.isArray(res.data?.polling_units)) {
-        return res.data.polling_units;
+      if (res && res.success && res.data) {
+        return res;
       }
-      return [];
+      throw new Error(res?.message || "Failed to load polling units");
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => {
+      if (
+        lastPage &&
+        lastPage.meta &&
+        lastPage.meta.has_more
+      ) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
     },
     enabled: open && (!!selectedState || !!selectedLga || !!selectedWard),
   });
+  console.log("DATA:", data);
+  console.log("HAS NEXT PAGE:", hasNextPage);
+  console.log("IS FETCHING NEXT PAGE:", isFetchingNextPage);
+
+  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
+
+  React.useEffect(() => {
+    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const puData = data
+    ? data.pages.flatMap((page: any) => page.data?.polling_units || [])
+    : [];
 
   const handleSelectUnit = (pu: any) => {
     setSelectedUnitId(String(pu.id));
@@ -553,7 +756,7 @@ export function ChoosePollingUnitDialog({
                 No polling units found for this location.
               </p>
             ) : (
-              <div className="space-y-2.5 min-h-[60vh] overflow-y-auto pr-1">
+              <div className="space-y-2.5 pr-1">
                 {puData.map((unit: any) => {
                   const isSelected = selectedUnitId === String(unit.id);
                   return (
@@ -561,10 +764,10 @@ export function ChoosePollingUnitDialog({
                       key={unit.id}
                       onClick={() => handleSelectUnit(unit)}
                       className={cn(
-                        "flex items-center justify-between p-4 rounded-xl border transition cursor-pointer select-none",
+                        "flex items-center justify-between p-4 rounded-xl transition cursor-pointer select-none",
                         isSelected
-                          ? "bg-[#e6fcf5] border-[#10dd84]/60"
-                          : "bg-[#fafafa] border-transparent hover:bg-hover-2",
+                          ? "bg-secondary/20"
+                          : "bg-c-5 hover:bg-hover-2",
                       )}
                     >
                       <div className="space-y-0.5">
@@ -577,9 +780,9 @@ export function ChoosePollingUnitDialog({
                       <div className="flex items-center gap-3">
                         <div
                           className={cn(
-                            "size-6 rounded-full flex items-center justify-center border transition",
+                            "size-6 rounded-full flex items-center justify-center transition",
                             isSelected
-                              ? "bg-[#10dd84] border-transparent text-[#083b25]"
+                              ? "bg-secondary border-transparent text-c-90"
                               : "border-gray-200 bg-white",
                           )}
                         >
@@ -591,12 +794,27 @@ export function ChoosePollingUnitDialog({
                     </div>
                   );
                 })}
+
+                {/* Sentinel element for infinite scroll */}
+                {hasNextPage && (
+                  <div
+                    ref={sentinelRef}
+                    className="py-6 flex items-center justify-center text-c-50 text-[14px]"
+                  >
+                    {isFetchingNextPage ? (
+                      <Loader2 className="size-5 animate-spin mr-2" />
+                    ) : null}
+                    {isFetchingNextPage
+                      ? "Loading more..."
+                      : "Scroll down to load more"}
+                  </div>
+                )}
               </div>
             )}
           </div>
         </DialogPadding>
 
-        <DialogFooter className="bg-white border-t border-gray-100 flex items-center justify-end gap-3 pt-3.5 pb-4 px-6">
+        <DialogFooter>
           <button
             type="button"
             onClick={onClose}
@@ -605,11 +823,11 @@ export function ChoosePollingUnitDialog({
             Cancel
           </button>
           <Button
-            onClick={handleAssign}
-            disabled={!selectedUnitId}
             type="submit"
-            variant="black"
-            size="xl"
+            onClick={handleAssign}
+            variant="secondary"
+            size="4xl"
+            disabled={!selectedUnitId}
           >
             Assign
           </Button>

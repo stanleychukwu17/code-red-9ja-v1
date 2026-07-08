@@ -31,6 +31,9 @@ export const API_URL = {
     forgotPassword: `${api}/auth/forgot_password`,
     registerCandidate: `${api}/auth/register-candidate`,
   },
+  getBanks: `${api}/banks`,
+  validateBankAccount: (accountNumber: string, bankCode: string) =>
+    `${api}/banks/validate?accountNumber=${accountNumber}&bankCode=${bankCode}`,
   getAllCountries: `${api}/countries`,
   getStates: (countryId: number, limit?: number, cursor?: string | number) => {
     const params = new URLSearchParams();

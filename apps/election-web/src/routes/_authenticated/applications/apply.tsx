@@ -10,7 +10,10 @@ import {
 } from "#/lib/server/parties";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getPollingUnits } from "#/lib/server/polling_units";
-import { submitPollingAgentApplication, getApplications } from "#/lib/server/applications";
+import {
+  submitPollingAgentApplication,
+  getApplications,
+} from "#/lib/server/applications";
 import { getPageHeader } from "#/lib/shared/meta";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
@@ -28,7 +31,11 @@ import {
   Step9,
   Step10,
   Step11,
+  ContactDetailsStep,
+  EducationalStatusStep,
+  EducationalDetailsStep,
 } from "./components/ApplySteps";
+import { useAuth } from "#/providers/providers";
 
 export const Route = createFileRoute("/_authenticated/applications/apply")({
   head: () => getPageHeader({ title: "Apply as Polling Unit Agent" }),
@@ -37,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
 
 function ApplyPage() {
   const navigate = useNavigate();
-  const user = useAppSelector((state) => state.auth.user);
+  const { user } = useAuth();
 
   // Form states
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
@@ -45,6 +52,7 @@ function ApplyPage() {
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
   const [selectedLgaId, setSelectedLgaId] = useState<number | null>(null);
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
   const [streetAddress, setStreetAddress] = useState<string>("");
   const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<
     number | null
@@ -52,6 +60,16 @@ function ApplyPage() {
   const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
   const [selectedBankCode, setSelectedBankCode] = useState<string>("058");
   const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
+  const [phone, setPhone] = useState<string>(user?.phone || "");
+  const [whatsappPhone, setWhatsappPhone] = useState<string>("");
+  const [dataPhone, setDataPhone] = useState<string>("");
+  const [educationalStatus, setEducationalStatus] = useState<string>("");
+  const [highestDegree, setHighestDegree] = useState("");
+  const [graduationYear, setGraduationYear] = useState("");
+  const [schoolName, setSchoolName] = useState("");
+
+  const [isValidatingAccount, setIsValidatingAccount] = useState(false);
+  const [isAccountValid, setIsAccountValid] = useState(false);
 
   // UI state
   const [step, setStep] = useState<number>(1);
@@ -75,10 +93,14 @@ function ApplyPage() {
   });
 
   const { data: elections = [] } = useQuery({
-    queryKey: ["electionGroups"],
+    queryKey: ["electionGroups", { upcoming: true }],
     queryFn: async () => {
-      const res = await getElectionGroups();
-      if (res?.success && res.data?.election_groups && res.data.election_groups.length > 0) {
+      const res = await getElectionGroups({ data: { upcoming: true } });
+      if (
+        res?.success &&
+        res.data?.election_groups &&
+        res.data.election_groups.length > 0
+      ) {
         return res.data.election_groups.map((group: any) => ({
           id: group.id,
           name: group.name,
@@ -104,22 +126,26 @@ function ApplyPage() {
         return res.data.applications;
       }
       return [];
-    }
+    },
   });
 
   const appliedElectionGroupIds = applications
-    .filter((app: any) => ["pending", "approved", "success", "accepted"].includes(app.status))
+    .filter((app: any) =>
+      ["pending", "approved", "success", "accepted"].includes(app.status),
+    )
     .map((app: any) => app.election_group_id || app.election_group?.id)
     .filter(Boolean);
 
   const lockedPartyId = (() => {
     // Check if the user has an active application to a particular party for an election group that is today or in the future
     const activeApp = applications.find((app: any) => {
-      const isActive = ["pending", "approved", "success", "accepted"].includes(app.status);
+      const isActive = ["pending", "approved", "success", "accepted"].includes(
+        app.status,
+      );
       if (!isActive) return false;
-      
+
       let electionDateStr;
-      if (app.election_date && typeof app.election_date === 'object') {
+      if (app.election_date && typeof app.election_date === "object") {
         if (app.election_date.Valid) {
           electionDateStr = app.election_date.Time;
         } else {
@@ -139,7 +165,7 @@ function ApplyPage() {
       today.setHours(0, 0, 0, 0);
       return electionDate >= today;
     });
-    return activeApp ? (activeApp.party_id || activeApp.party?.id) : null;
+    return activeApp ? activeApp.party_id || activeApp.party?.id : null;
   })();
 
   // Automatically select the locked party if it exists and hasn't been selected yet
@@ -153,8 +179,15 @@ function ApplyPage() {
     queryKey: ["pollingUnits", selectedLgaId],
     queryFn: async () => {
       if (!selectedLgaId) return [];
-      const res = await getPollingUnits({ data: { localGovernmentId: selectedLgaId } });
-      if (res && res.success && res.data?.polling_units && res.data.polling_units.length > 0) {
+      const res = await getPollingUnits({
+        data: { localGovernmentId: selectedLgaId },
+      });
+      if (
+        res &&
+        res.success &&
+        res.data?.polling_units &&
+        res.data.polling_units.length > 0
+      ) {
         return res.data.polling_units;
       }
       if (res && res.polling_units && res.polling_units.length > 0) {
@@ -253,7 +286,7 @@ function ApplyPage() {
         !selectedPollingUnitId ||
         !bankAccountNumber ||
         bankAccountNumber.length !== 10 ||
-        !avatarUrl
+        !(user?.avatar || avatarUrl)
       ) {
         throw new Error("Please fill out all required fields.");
       }
@@ -263,18 +296,29 @@ function ApplyPage() {
           party_id: selectedPartyId,
           election_group_ids: selectedElectionIds,
           polling_unit_id: Number(selectedPollingUnitId),
-          avatar: avatarUrl,
+          avatar: user?.avatar || avatarUrl,
           current_country: 1,
-          current_state: selectedStateId,
-          current_lga: selectedLgaId,
+          current_state: selectedStateId!,
+          current_lga: selectedLgaId!,
+          current_ward: selectedWardId || undefined,
           current_city: 0,
           bank_account_number: bankAccountNumber,
           bank_code: selectedBankCode,
+          whatsapp_phone: whatsappPhone,
+          data_phone: dataPhone,
+          educational_status: educationalStatus,
+          highest_degree: highestDegree,
+          graduation_year: graduationYear,
+          school_name: schoolName,
+          phone: phone,
         },
       });
 
       if (!response.success && response.status !== "success") {
-        throw new Error(response.message || "Failed to submit application. Please check your inputs.");
+        throw new Error(
+          response.message ||
+            "Failed to submit application. Please check your inputs.",
+        );
       }
       return response;
     },
@@ -282,8 +326,10 @@ function ApplyPage() {
       setSuccess(true);
     },
     onError: (err: any) => {
-      setSubmitError(err.message || "Connection error. Unable to reach the server.");
-    }
+      setSubmitError(
+        err.message || "Connection error. Unable to reach the server.",
+      );
+    },
   });
 
   const isSubmitting = submitMutation.isPending;
@@ -299,6 +345,8 @@ function ApplyPage() {
   const handleBackClick = () => {
     if (step === 1) {
       navigate({ to: "/home" });
+    } else if (step === 8 && educationalStatus === "none") {
+      setStep(6);
     } else {
       setStep(step - 1);
     }
@@ -342,7 +390,7 @@ function ApplyPage() {
         )}
         {step === 4 && (
           <Step4
-            avatarUrl={avatarUrl}
+            avatarUrl={user?.avatar}
             isUploading={isUploading}
             handleUploadClick={handleUploadClick}
             fileInputRef={fileInputRef}
@@ -350,16 +398,46 @@ function ApplyPage() {
           />
         )}
         {step === 5 && (
+          <ContactDetailsStep
+            phone={phone}
+            setPhone={setPhone}
+            userPhone={user?.phone}
+            whatsappPhone={whatsappPhone}
+            setWhatsappPhone={setWhatsappPhone}
+            dataPhone={dataPhone}
+            setDataPhone={setDataPhone}
+          />
+        )}
+        {step === 6 && (
+          <EducationalStatusStep
+            educationalStatus={educationalStatus}
+            setEducationalStatus={setEducationalStatus}
+          />
+        )}
+        {step === 7 && educationalStatus !== "none" && (
+          <EducationalDetailsStep
+            educationalStatus={educationalStatus}
+            highestDegree={highestDegree}
+            setHighestDegree={setHighestDegree}
+            graduationYear={graduationYear}
+            setGraduationYear={setGraduationYear}
+            schoolName={schoolName}
+            setSchoolName={setSchoolName}
+          />
+        )}
+        {step === 8 && (
           <Step5
             selectedStateId={selectedStateId}
             setSelectedStateId={setSelectedStateId}
             selectedLgaId={selectedLgaId}
             setSelectedLgaId={setSelectedLgaId}
+            selectedWardId={selectedWardId}
+            setSelectedWardId={setSelectedWardId}
             streetAddress={streetAddress}
             setStreetAddress={setStreetAddress}
           />
         )}
-        {step === 6 && (
+        {step === 9 && (
           <Step6
             pollingUnits={pollingUnits}
             selectedPollingUnitId={selectedPollingUnitId}
@@ -367,11 +445,11 @@ function ApplyPage() {
             getWardName={getWardName}
           />
         )}
-        {step === 7 && <Step7 />}
-        {step === 8 && <Step8 />}
-        {step === 9 && <Step9 />}
-        {step === 10 && <Step10 />}
-        {step === 11 && (
+        {step === 10 && <Step7 />}
+        {step === 11 && <Step8 />}
+        {step === 12 && <Step9 />}
+        {step === 13 && <Step10 />}
+        {step === 14 && (
           <Step11
             bankAccountNumber={bankAccountNumber}
             setBankAccountNumber={setBankAccountNumber}
@@ -380,6 +458,8 @@ function ApplyPage() {
             bankDropdownOpen={bankDropdownOpen}
             setBankDropdownOpen={setBankDropdownOpen}
             user={user}
+            setIsValidatingAccount={setIsValidatingAccount}
+            setIsAccountValid={setIsAccountValid}
           />
         )}
       </div>
@@ -396,8 +476,17 @@ function ApplyPage() {
         streetAddress={streetAddress}
         selectedPollingUnitId={selectedPollingUnitId}
         bankAccountNumber={bankAccountNumber}
+        whatsappPhone={whatsappPhone}
+        dataPhone={dataPhone}
+        educationalStatus={educationalStatus}
+        highestDegree={highestDegree}
+        graduationYear={graduationYear}
+        schoolName={schoolName}
         isSubmitting={isSubmitting}
         handleSubmit={handleSubmit}
+        user={user}
+        isValidatingAccount={isValidatingAccount}
+        isAccountValid={isAccountValid}
       />
     </PageWrapper>
   );

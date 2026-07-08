@@ -13,12 +13,20 @@ CREATE TABLE users (
   first_name VARCHAR(30),
   middle_name VARCHAR(30),
   gender VARCHAR(10) CHECK (gender IN ('male', 'female')),
-
+  
   date_of_birth DATE,
 
+  whatsapp_phone VARCHAR(25),
+  data_phone VARCHAR(25),
+  educational_status VARCHAR(20) CHECK (educational_status IN ('graduate', 'student', 'none')),
+  highest_degree VARCHAR(100),
+  graduation_year VARCHAR(4),
+  school_name VARCHAR(255),
+  
   current_country SMALLINT REFERENCES c_countries(id) NOT NULL,
   current_state SMALLINT REFERENCES c_states(id) NOT NULL,
   current_lga INTEGER REFERENCES lgas(id) ON DELETE SET NULL,
+  current_ward INTEGER REFERENCES wards(id) ON DELETE SET NULL,
   current_city INT REFERENCES c_cities(id),
 
   state_of_origin SMALLINT REFERENCES c_states(id),
@@ -32,7 +40,7 @@ CREATE TABLE users (
   phone_verified VARCHAR(5) CHECK (phone_verified IN ('true', 'false')) DEFAULT 'false',
   email_verified VARCHAR(5) CHECK (email_verified IN ('true', 'false')) DEFAULT 'false',
   role VARCHAR(20) CHECK (role IN ('user', 'partymember', 'admin')) DEFAULT 'user',
-  role_level VARCHAR(20) CHECK (role_level IN ('user', 'pollingagent', 'admin', 'member', 'placeholder', 'superadmin')) DEFAULT 'user',
+  role_level VARCHAR(50) CHECK (role_level IN ('user', 'pollingagent', 'admin', 'member', 'placeholder', 'superadmin', 'state-election-supervisor', 'lga-election-supervisor', 'ward-election-supervisor')) DEFAULT 'user',
   -- role (role_level)
   -- [user (user, pollingagent) | partymember (admin, member, placeholder) | admin (admin, superadmin)]
 

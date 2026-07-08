@@ -261,6 +261,111 @@ func (c *Client) GetReservedAccount(ctx context.Context, accountReference string
 	return parseReservedAccountAPIResponse(rawBody)
 }
 
+// Bank represents a single bank from Monnify's bank list.
+type Bank struct {
+	Name                 string `json:"name"`
+	Code                 string `json:"code"`
+	UssdTemplate         string `json:"ussdTemplate"`
+	BaseUssdCode         string `json:"baseUssdCode"`
+	TransferUssdTemplate string `json:"transferUssdTemplate"`
+}
+
+type getBanksAPIResponse struct {
+	RequestSuccessful bool   `json:"requestSuccessful"`
+	ResponseMessage   string `json:"responseMessage"`
+	ResponseCode      string `json:"responseCode"`
+	ResponseBody      []Bank `json:"responseBody"`
+}
+
+// GetBanks fetches the list of available banks from Monnify.
+func (c *Client) GetBanks(ctx context.Context) ([]Bank, error) {
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	path := c.cfg.BaseURL + "/api/v1/banks"
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return nil, fmt.Errorf("monnify: build get banks request: %w", err)
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := c.http.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("monnify: get banks request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	rawBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("monnify: read get banks response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("monnify: get banks HTTP %d: %s", resp.StatusCode, string(rawBody))
+	}
+
+	var parsed getBanksAPIResponse
+	if err := json.Unmarshal(rawBody, &parsed); err != nil {
+		return nil, fmt.Errorf("monnify: decode get banks response: %w", err)
+	}
+
+	if !parsed.RequestSuccessful {
+		return nil, fmt.Errorf("monnify: get banks failed: %s (%s)", parsed.ResponseMessage, parsed.ResponseCode)
+	}
+
+	return parsed.ResponseBody, nil
+}
+
+type validateBankAccountAPIResponse struct {
+	RequestSuccessful bool   `json:"requestSuccessful"`
+	ResponseMessage   string `json:"responseMessage"`
+	ResponseCode      string `json:"responseCode"`
+	ResponseBody      struct {
+		AccountNumber string `json:"accountNumber"`
+		AccountName   string `json:"accountName"`
+		BankCode      string `json:"bankCode"`
+	} `json:"responseBody"`
+}
+
+// ValidateBankAccount fetches the account name for a given account number and bank code.
+func (c *Client) ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error) {
+	token, err := c.getToken(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	path := fmt.Sprintf("%s/api/v1/disbursements/account/validate?accountNumber=%s&bankCode=%s", c.cfg.BaseURL, url.QueryEscape(accountNumber), url.QueryEscape(bankCode))
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		return "", fmt.Errorf("monnify: build validate bank account request: %w", err)
+	}
+	httpReq.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := c.http.Do(httpReq)
+	if err != nil {
+		return "", fmt.Errorf("monnify: validate bank account request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	rawBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("monnify: read validate bank account response: %w", err)
+	}
+	
+	// Consider non-200 successful enough to parse for structured error messages from monnify
+	var parsed validateBankAccountAPIResponse
+	if err := json.Unmarshal(rawBody, &parsed); err != nil {
+		return "", fmt.Errorf("monnify: decode validate bank account response: %w", err)
+	}
+
+	if !parsed.RequestSuccessful || parsed.ResponseCode != "0" {
+		return "", fmt.Errorf("monnify: validate bank account failed: %s", parsed.ResponseMessage)
+	}
+
+	return parsed.ResponseBody.AccountName, nil
+}
+
 // CreateReservedAccount calls Monnify to provision a permanent virtual bank
 // account for a party. The returned AccountNumbers slice contains one entry per
 // partner bank.

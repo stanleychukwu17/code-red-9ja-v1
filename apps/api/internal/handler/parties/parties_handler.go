@@ -8,7 +8,9 @@ import (
 	"free9ja/api/internal/utils"
 	"io"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -72,6 +74,20 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 		}
 	}
 	return limit, cursor
+}
+
+func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
+	orderBy := r.URL.Query().Get("order_by")
+	if orderBy == "" {
+		orderBy = defaultOrderBy
+	}
+
+	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
+	if orderDir != "ASC" && orderDir != "DESC" {
+		orderDir = defaultOrderDir
+	}
+
+	return orderBy, orderDir
 }
 
 type CreatePartyRequest struct {
@@ -141,6 +157,21 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch parties: "+err.Error())
 		return
 	}
+
+	orderBy, orderDir := parseSortParams(r, "short_name", "ASC")
+
+	sort.SliceStable(parties, func(i, j int) bool {
+		var less bool
+		if orderBy == "name" {
+			less = parties[i].Name < parties[j].Name
+		} else {
+			less = parties[i].ShortName < parties[j].ShortName
+		}
+		if orderDir == "DESC" {
+			return !less
+		}
+		return less
+	})
 
 	startIndex := 0
 	if cursor > 0 {

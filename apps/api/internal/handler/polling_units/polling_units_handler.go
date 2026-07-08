@@ -6,7 +6,9 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -395,6 +397,20 @@ func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
 	return limit, cursor
 }
 
+func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
+	orderBy := r.URL.Query().Get("order_by")
+	if orderBy == "" {
+		orderBy = defaultOrderBy
+	}
+
+	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
+	if orderDir != "ASC" && orderDir != "DESC" {
+		orderDir = defaultOrderDir
+	}
+
+	return orderBy, orderDir
+}
+
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
 	valStr := r.URL.Query().Get(param)
 	if valStr == "" {
@@ -432,6 +448,21 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units: "+err.Error())
 		return
 	}
+
+	orderBy, orderDir := parseSortParams(r, "name", "ASC")
+
+	sort.SliceStable(units, func(i, j int) bool {
+		var less bool
+		if orderBy == "name" {
+			less = units[i].Name < units[j].Name
+		} else {
+			less = units[i].ID < units[j].ID
+		}
+		if orderDir == "DESC" {
+			return !less
+		}
+		return less
+	})
 
 	startIndex := 0
 	if cursor > 0 {

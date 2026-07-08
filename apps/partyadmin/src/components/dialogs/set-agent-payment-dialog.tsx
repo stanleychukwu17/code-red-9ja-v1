@@ -46,7 +46,7 @@ export function SetAgentPaymentDialog({
   const statesList = React.useMemo(() => {
     const fetched = statesRes?.data?.states || [];
     if (fetched.length > 0) {
-      return [...fetched].map(s => s.name).sort((a, b) => a.localeCompare(b));
+      return [...fetched].map((s) => s.name).sort((a, b) => a.localeCompare(b));
     }
     // Fallback static list (matching DB state names)
     return [
@@ -94,7 +94,8 @@ export function SetAgentPaymentDialog({
   React.useEffect(() => {
     if (open && party?.stateAllowances && statesList.length > 0) {
       const allowances = party.stateAllowances;
-      const defaultKobo = allowances["default"] !== undefined ? allowances["default"] : 2000000;
+      const defaultKobo =
+        allowances["default"] !== undefined ? allowances["default"] : 2000000;
       setMainAmount(defaultKobo / 100);
 
       const overrides: Record<string, number> = {};
@@ -289,7 +290,7 @@ export function SetAgentPaymentDialog({
           )}
         </DialogPadding>
 
-        <DialogFooter className="bg-white border-t border-gray-100 pt-3.5 pb-4 px-6">
+        <DialogFooter>
           <Button
             onClick={handleSaveChanges}
             className="bg-[#00e575] hover:bg-[#00c866] text-white rounded-xl px-6 h-11 text-[15px] font-bold border-none shadow-none transition-colors duration-150"

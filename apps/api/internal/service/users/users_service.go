@@ -25,6 +25,20 @@ func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclie
 	}
 }
 
+func (s *UsersService) GetBanks(ctx context.Context) ([]monnifyclient.Bank, error) {
+	if s.monnify == nil {
+		return nil, fmt.Errorf("monnify client is not configured")
+	}
+	return s.monnify.GetBanks(ctx)
+}
+
+func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error) {
+	if s.monnify == nil {
+		return "", fmt.Errorf("monnify client is not configured")
+	}
+	return s.monnify.ValidateBankAccount(ctx, accountNumber, bankCode)
+}
+
 func (s *UsersService) GetUserByID(ctx context.Context, id int64) (queries.User, error) {
 	return s.queries.GetUserByID(ctx, id)
 }

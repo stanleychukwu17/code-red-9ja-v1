@@ -30,6 +30,7 @@ export interface UserProps {
   first_name?: string;
   last_name?: string;
   avatar_url?: string;
+  phone?: string;
 }
 
 export interface AuthState {

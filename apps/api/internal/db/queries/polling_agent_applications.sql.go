@@ -96,15 +96,17 @@ SELECT
   )::integer AS agents_count
 FROM polling_units pu
 WHERE
-  ($3::integer = 0 OR pu.lga_id = $3::integer)
+  ($3::integer = 0 OR pu.lga_id = $3::integer) AND
+  ($4::integer = 0 OR pu.ward_id = $4::integer)
 ORDER BY agents_count ASC, pu.id ASC
-LIMIT $4::integer
+LIMIT $5::integer
 `
 
 type GetPollingUnitsWithAgentCountsParams struct {
 	PartyID         int64 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
+	WardID          int32 `json:"ward_id"`
 	LimitVal        int32 `json:"limit_val"`
 }
 
@@ -125,6 +127,7 @@ func (q *Queries) GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPol
 		arg.PartyID,
 		arg.ElectionGroupID,
 		arg.LgaID,
+		arg.WardID,
 		arg.LimitVal,
 	)
 	if err != nil {
@@ -180,6 +183,13 @@ SELECT
   u.current_city,
   u.bank_account_number,
   u.bank_code,
+  u.whatsapp_phone,
+  u.data_phone,
+  u.educational_status,
+  u.highest_degree,
+  u.graduation_year,
+  u.school_name,
+  u.current_ward,
   eg.name AS election_group_name,
   eg.election_date,
   p.name AS party_name,
@@ -251,6 +261,13 @@ type ListApplicationsRow struct {
 	CurrentCity       pgtype.Int4        `json:"current_city"`
 	BankAccountNumber pgtype.Text        `json:"bank_account_number"`
 	BankCode          pgtype.Text        `json:"bank_code"`
+	WhatsappPhone     pgtype.Text        `json:"whatsapp_phone"`
+	DataPhone         pgtype.Text        `json:"data_phone"`
+	EducationalStatus pgtype.Text        `json:"educational_status"`
+	HighestDegree     pgtype.Text        `json:"highest_degree"`
+	GraduationYear    pgtype.Text        `json:"graduation_year"`
+	SchoolName        pgtype.Text        `json:"school_name"`
+	CurrentWard       pgtype.Int4        `json:"current_ward"`
 	ElectionGroupName string             `json:"election_group_name"`
 	ElectionDate      pgtype.Date        `json:"election_date"`
 	PartyName         string             `json:"party_name"`
@@ -304,6 +321,13 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.CurrentCity,
 			&i.BankAccountNumber,
 			&i.BankCode,
+			&i.WhatsappPhone,
+			&i.DataPhone,
+			&i.EducationalStatus,
+			&i.HighestDegree,
+			&i.GraduationYear,
+			&i.SchoolName,
+			&i.CurrentWard,
 			&i.ElectionGroupName,
 			&i.ElectionDate,
 			&i.PartyName,
@@ -374,9 +398,18 @@ SET
   bank_code = $11,
   role = $12,
   role_level = $13,
+  whatsapp_phone = $14,
+  data_phone = $15,
+  educational_status = $16,
+  highest_degree = $17,
+  graduation_year = $18,
+  school_name = $19,
+  current_ward = $20,
+  phone = COALESCE(NULLIF($21::varchar, ''), phone),
+  phone_verified = CASE WHEN NULLIF($21::varchar, '') IS NOT NULL AND NULLIF($21::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -393,6 +426,14 @@ type UpdateUserAgentDetailsParams struct {
 	BankCode          pgtype.Text `json:"bank_code"`
 	Role              pgtype.Text `json:"role"`
 	RoleLevel         pgtype.Text `json:"role_level"`
+	WhatsappPhone     pgtype.Text `json:"whatsapp_phone"`
+	DataPhone         pgtype.Text `json:"data_phone"`
+	EducationalStatus pgtype.Text `json:"educational_status"`
+	HighestDegree     pgtype.Text `json:"highest_degree"`
+	GraduationYear    pgtype.Text `json:"graduation_year"`
+	SchoolName        pgtype.Text `json:"school_name"`
+	CurrentWard       pgtype.Int4 `json:"current_ward"`
+	Phone             string      `json:"phone"`
 }
 
 func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error) {
@@ -410,6 +451,14 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.BankCode,
 		arg.Role,
 		arg.RoleLevel,
+		arg.WhatsappPhone,
+		arg.DataPhone,
+		arg.EducationalStatus,
+		arg.HighestDegree,
+		arg.GraduationYear,
+		arg.SchoolName,
+		arg.CurrentWard,
+		arg.Phone,
 	)
 	var i User
 	err := row.Scan(
@@ -425,9 +474,16 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
+		&i.WhatsappPhone,
+		&i.DataPhone,
+		&i.EducationalStatus,
+		&i.HighestDegree,
+		&i.GraduationYear,
+		&i.SchoolName,
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentLga,
+		&i.CurrentWard,
 		&i.CurrentCity,
 		&i.StateOfOrigin,
 		&i.Vin,
@@ -455,7 +511,7 @@ SET
   role = 'partymember',
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, current_country, current_state, current_lga, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleToAgent(ctx context.Context, id int64) (User, error) {
@@ -474,9 +530,16 @@ func (q *Queries) UpdateUserRoleToAgent(ctx context.Context, id int64) (User, er
 		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
+		&i.WhatsappPhone,
+		&i.DataPhone,
+		&i.EducationalStatus,
+		&i.HighestDegree,
+		&i.GraduationYear,
+		&i.SchoolName,
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentLga,
+		&i.CurrentWard,
 		&i.CurrentCity,
 		&i.StateOfOrigin,
 		&i.Vin,

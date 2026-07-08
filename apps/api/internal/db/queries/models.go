@@ -171,6 +171,21 @@ type Lga struct {
 	FederalConstituencyName string `json:"federal_constituency_name"`
 }
 
+type LgaElectionSupervisor struct {
+	ID              int64              `json:"id"`
+	UserID          int64              `json:"user_id"`
+	StateID         int16              `json:"state_id"`
+	LgaID           int32              `json:"lga_id"`
+	ElectionGroupID int64              `json:"election_group_id"`
+	PartyID         int64              `json:"party_id"`
+	RoleType        pgtype.Text        `json:"role_type"`
+	AssignedBy      pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type LgaFinalResult struct {
 	ID               int64              `json:"id"`
 	ElectionID       int64              `json:"election_id"`
@@ -441,6 +456,20 @@ type StateConstituencyFinalResult struct {
 	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
+type StateElectionSupervisor struct {
+	ID              int64              `json:"id"`
+	UserID          int64              `json:"user_id"`
+	StateID         int16              `json:"state_id"`
+	ElectionGroupID int64              `json:"election_group_id"`
+	PartyID         int64              `json:"party_id"`
+	RoleType        pgtype.Text        `json:"role_type"`
+	AssignedBy      pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type StateFinalResult struct {
 	ID               int64              `json:"id"`
 	ElectionID       int64              `json:"election_id"`
@@ -477,9 +506,16 @@ type User struct {
 	MiddleName        pgtype.Text        `json:"middle_name"`
 	Gender            pgtype.Text        `json:"gender"`
 	DateOfBirth       pgtype.Date        `json:"date_of_birth"`
+	WhatsappPhone     pgtype.Text        `json:"whatsapp_phone"`
+	DataPhone         pgtype.Text        `json:"data_phone"`
+	EducationalStatus pgtype.Text        `json:"educational_status"`
+	HighestDegree     pgtype.Text        `json:"highest_degree"`
+	GraduationYear    pgtype.Text        `json:"graduation_year"`
+	SchoolName        pgtype.Text        `json:"school_name"`
 	CurrentCountry    int16              `json:"current_country"`
 	CurrentState      int16              `json:"current_state"`
 	CurrentLga        pgtype.Int4        `json:"current_lga"`
+	CurrentWard       pgtype.Int4        `json:"current_ward"`
 	CurrentCity       pgtype.Int4        `json:"current_city"`
 	StateOfOrigin     pgtype.Int2        `json:"state_of_origin"`
 	Vin               pgtype.Text        `json:"vin"`
@@ -558,6 +594,22 @@ type Ward struct {
 	StateName                     string      `json:"state_name"`
 	StateAssemblyConstituencyID   pgtype.Int4 `json:"state_assembly_constituency_id"`
 	StateAssemblyConstituencyName pgtype.Text `json:"state_assembly_constituency_name"`
+}
+
+type WardElectionSupervisor struct {
+	ID              int64              `json:"id"`
+	UserID          int64              `json:"user_id"`
+	StateID         int16              `json:"state_id"`
+	LgaID           int32              `json:"lga_id"`
+	WardID          int32              `json:"ward_id"`
+	ElectionGroupID int64              `json:"election_group_id"`
+	PartyID         int64              `json:"party_id"`
+	RoleType        pgtype.Text        `json:"role_type"`
+	AssignedBy      pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type WardFinalResult struct {

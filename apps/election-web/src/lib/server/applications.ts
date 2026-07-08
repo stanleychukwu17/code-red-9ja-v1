@@ -241,9 +241,17 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
       current_country: number;
       current_state: number;
       current_lga: number;
+      current_ward?: number;
       current_city: number;
       bank_account_number: string;
       bank_code: string;
+      whatsapp_phone: string;
+      data_phone: string;
+      educational_status: string;
+      highest_degree: string;
+      graduation_year: string;
+      school_name: string;
+      phone: string;
     }) => data,
   )
   .handler(async ({ data }) => {

@@ -38,8 +38,16 @@ type SubmitApplicationInput struct {
 	CurrentState      int16
 	CurrentLga        int32
 	CurrentCity       int32
+	CurrentWard       int32
 	BankAccountNumber string
 	BankCode          string
+	WhatsappPhone     string
+	DataPhone         string
+	EducationalStatus string
+	HighestDegree     string
+	GraduationYear    string
+	SchoolName        string
+	Phone             string
 }
 
 func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PollingAgentApplication, error) {
@@ -89,13 +97,21 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		Vin:               pgtype.Text{String: input.Vin, Valid: input.Vin != ""},
 		VotersCardImage:   pgtype.Text{String: input.VotersCardImage, Valid: input.VotersCardImage != ""},
 		CurrentCountry:    input.CurrentCountry,
-		CurrentState:      input.CurrentState,
+		CurrentState:      int16(input.CurrentState),
 		CurrentLga:        pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
+		CurrentWard:       pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
 		CurrentCity:       pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
 		BankAccountNumber: pgtype.Text{String: input.BankAccountNumber, Valid: input.BankAccountNumber != ""},
 		BankCode:          pgtype.Text{String: input.BankCode, Valid: input.BankCode != ""},
 		Role:              pgtype.Text{String: roleVal, Valid: true},
 		RoleLevel:         pgtype.Text{String: roleLevelVal, Valid: true},
+		WhatsappPhone:     pgtype.Text{String: input.WhatsappPhone, Valid: input.WhatsappPhone != ""},
+		DataPhone:         pgtype.Text{String: input.DataPhone, Valid: input.DataPhone != ""},
+		EducationalStatus: pgtype.Text{String: input.EducationalStatus, Valid: input.EducationalStatus != ""},
+		HighestDegree:     pgtype.Text{String: input.HighestDegree, Valid: input.HighestDegree != ""},
+		GraduationYear:    pgtype.Text{String: input.GraduationYear, Valid: input.GraduationYear != ""},
+		SchoolName:        pgtype.Text{String: input.SchoolName, Valid: input.SchoolName != ""},
+		Phone:             input.Phone,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user details: %w", err)
@@ -139,50 +155,75 @@ func (s *Service) ListApplications(ctx context.Context, userID, partyID, electio
 }
 
 func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID, electionGroupID int64, lgaID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
-	// Fetch up to 10 lowest-agent-count units in the LGA
+	// 1. Fetch the ward ID of the applicant's selected polling unit.
+	var targetWardID int32
+	if pollingUnitID > 0 {
+		err := s.pool.QueryRow(ctx, "SELECT ward_id FROM polling_units WHERE id = $1", pollingUnitID).Scan(&targetWardID)
+		if err != nil {
+			// ignore and fallback to 0
+			targetWardID = 0
+		}
+	}
+
+	// 2. Fetch up to 10 lowest-agent-count units
 	rows, err := s.queries.GetPollingUnitsWithAgentCounts(ctx, queries.GetPollingUnitsWithAgentCountsParams{
 		PartyID:         partyID,
 		ElectionGroupID: electionGroupID,
 		LgaID:           lgaID,
+		WardID:          targetWardID,
 		LimitVal:        10,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	// Ensure the applicant's own polling unit is in the list (it may have a higher agent count)
+	// 3. Ensure applicant's own unit is listed FIRST
 	hasApplicantUnit := false
+	var applicantRow queries.GetPollingUnitsWithAgentCountsRow
+	var otherRows []queries.GetPollingUnitsWithAgentCountsRow
+
 	for _, r := range rows {
 		if r.ID == pollingUnitID {
 			hasApplicantUnit = true
-			break
+			applicantRow = r
+		} else {
+			otherRows = append(otherRows, r)
 		}
 	}
 
 	if pollingUnitID > 0 && !hasApplicantUnit {
-		// Fetch just the applicant's unit with its agent count
+		// Fetch applicant's unit globally
 		applicantRows, err := s.queries.GetPollingUnitsWithAgentCounts(ctx, queries.GetPollingUnitsWithAgentCountsParams{
 			PartyID:         partyID,
 			ElectionGroupID: electionGroupID,
-			LgaID:           0, // no LGA filter — look up the specific unit globally
-			LimitVal:        200,
+			LgaID:           0,
+			WardID:          0,
+			LimitVal:        10,
 		})
 		if err == nil {
 			for _, r := range applicantRows {
 				if r.ID == pollingUnitID {
-					// Prepend the applicant's unit so it is always listed first
-					rows = append([]queries.GetPollingUnitsWithAgentCountsRow{r}, rows...)
+					applicantRow = r
+					hasApplicantUnit = true
 					break
 				}
 			}
 		}
 	}
 
-	// Return at most 3 recommendations
-	if len(rows) > 3 {
-		rows = rows[:3]
+	// Rebuild list with applicant's unit first
+	var finalRows []queries.GetPollingUnitsWithAgentCountsRow
+	if hasApplicantUnit {
+		finalRows = append(finalRows, applicantRow)
 	}
-	return rows, nil
+	finalRows = append(finalRows, otherRows...)
+
+	// 4. Return at most 3
+	if len(finalRows) > 3 {
+		finalRows = finalRows[:3]
+	}
+
+	return finalRows, nil
 }
 
 func (s *Service) RejectApplication(ctx context.Context, id int64, reason string) (queries.PollingAgentApplication, error) {

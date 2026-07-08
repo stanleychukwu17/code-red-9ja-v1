@@ -7,7 +7,8 @@ import { useCopyToClipboard } from "usehooks-ts";
 import CopyIcon from "../icons/copy-icon";
 import LoadingCircleIcon from "../icons/loading-circle-icon";
 
-const buttonVariants = cva(`
+const buttonVariants = cva(
+  `
   inline-flex font-medium items-center justify-center gap-1.5 py-6 whitespace-nowrap rounded-[4px] ring-offset-background
   transition duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
   disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:text-black/50
@@ -56,7 +57,7 @@ const buttonVariants = cva(`
         xl: "h-11 px-8",
         "2xl": "h-12 px-3",
         "3xl": "h-[52px] px-3",
-        "4xl": "h-[56px] px-3 text-lg rounded-2xl",
+        "4xl": "h-[56px] px-8 text-lg rounded-2xl",
         "5xl": "h-[60px] px-3 text-lg rounded-2xl",
         "extra-large":
           "h-[52px] rounded-[16px] w-full font-medium [&_svg]:size-5",
