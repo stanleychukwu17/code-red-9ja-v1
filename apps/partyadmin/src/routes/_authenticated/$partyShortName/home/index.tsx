@@ -1,12 +1,13 @@
 import * as React from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { APP_URL } from "#/lib/config";
 import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { cn } from "@repo/ui/lib/utils";
 import { ChevronDown } from "lucide-react";
 import { getPageHeader } from "#/lib/shared/meta";
 import { Button } from "@repo/ui/components/button";
-import { RECENT_APPLICATIONS } from "./dummy_data";
+import { RECENT_APPLICATIONS } from "./-dummy_data";
 import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
@@ -14,7 +15,7 @@ import { SetAgentPaymentDialog } from "#/components/dialogs/set-agent-payment-di
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppContext } from "#/providers/providers";
 import { getPartyWallet } from "#/lib/server/parties";
-import { HomePageHeader } from "./header";
+import { HomePageHeader } from "./-header";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
   head: () => getPageHeader({ title: "Home" }),
@@ -287,6 +288,7 @@ import { usePollingAgentDialog } from "#/components/dialogs/PollingAgentDialogCo
 
 function RecentApplicationsSection() {
   const { openApplication } = usePollingAgentDialog();
+  const { partyShortName } = Route.useParams();
 
   return (
     <div className="rounded-[24px] bg-[#fafafa] p-6 space-y-5">
@@ -297,7 +299,7 @@ function RecentApplicationsSection() {
         <div className="flex items-center gap-8 text-[16px] text-[#777]">
           <span>35,045 slots left</span>
           <Link
-            to={"/applications" as any}
+            to={APP_URL.partyRoutes.applications(partyShortName) as any}
             className="text-[#202020] transition hover:opacity-70"
           >
             See all

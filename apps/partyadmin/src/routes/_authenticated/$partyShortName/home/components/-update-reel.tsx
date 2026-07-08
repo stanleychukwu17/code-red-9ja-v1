@@ -9,7 +9,7 @@ import {
   ReelShell,
   UploaderRow,
   useReelKeyboard,
-} from "./reel-shared";
+} from "./-reel-shared";
 
 export type UpdateReelItem = {
   id?: number | string;
@@ -196,11 +196,10 @@ export function UpdateReel({
               <button
                 onClick={goToPrevMedia}
                 disabled={mediaIndex === 0}
-                className={`p-2 rounded-full transition ${
-                  mediaIndex === 0
+                className={`p-2 rounded-full transition ${mediaIndex === 0
                     ? "text-white/20 cursor-not-allowed"
                     : "text-white/70 hover:text-white hover:bg-white/10 cursor-pointer"
-                }`}
+                  }`}
               >
                 <ChevronLeft className="size-5" />
               </button>
@@ -211,9 +210,8 @@ export function UpdateReel({
                   <button
                     key={i}
                     onClick={() => setMediaIndex(i)}
-                    className={`size-2 rounded-full transition ${
-                      i === mediaIndex ? "bg-white" : "bg-white/30"
-                    }`}
+                    className={`size-2 rounded-full transition ${i === mediaIndex ? "bg-white" : "bg-white/30"
+                      }`}
                   />
                 ))}
               </div>
@@ -221,11 +219,10 @@ export function UpdateReel({
               <button
                 onClick={goToNextMedia}
                 disabled={mediaIndex === mediaUrls.length - 1}
-                className={`p-2 rounded-full transition ${
-                  mediaIndex === mediaUrls.length - 1
+                className={`p-2 rounded-full transition ${mediaIndex === mediaUrls.length - 1
                     ? "text-white/20 cursor-not-allowed"
                     : "text-white/70 hover:text-white hover:bg-white/10 cursor-pointer"
-                }`}
+                  }`}
               >
                 <ChevronRight className="size-5" />
               </button>

@@ -9,7 +9,7 @@ import {
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { UsersTable } from "#/components/Tables";
-import { USERS_TABS } from "./data";
+import { USERS_TABS } from "./-data";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getUsersList } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";

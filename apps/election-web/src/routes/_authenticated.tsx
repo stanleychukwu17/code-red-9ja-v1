@@ -5,16 +5,8 @@ import {
 } from "@repo/ui/components/custom/AppSidebar";
 import HomeIcon from "@repo/ui/icons/navbar/home-icon";
 import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
-import CubeIcon from "@repo/ui/icons/navbar/cube-icon";
-import CubeSolidIcon from "@repo/ui/icons/navbar/cube-solid-icon";
-import PartyIcon from "@repo/ui/icons/navbar/party-icon";
-import PartySolidIcon from "@repo/ui/icons/navbar/party-solid-icon";
 import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
-import CalendarIcon from "@repo/ui/icons/navbar/calendar-icon";
-import CalendarSolidIcon from "@repo/ui/icons/navbar/calendar-solid-icon";
-import UserIcon from "@repo/ui/icons/navbar/user-icon";
-import UserSolidIcon from "@repo/ui/icons/navbar/user-solid-icon";
 import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
 import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
 

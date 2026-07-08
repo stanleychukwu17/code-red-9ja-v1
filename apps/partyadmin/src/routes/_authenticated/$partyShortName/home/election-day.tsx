@@ -6,8 +6,8 @@ import {
 import {
   FinalResultReel,
   ResultOverlayItem,
-} from "./components/final-result-reel";
-import { UpdateReel } from "./components/update-reel";
+} from "./components/-final-result-reel";
+import { UpdateReel } from "./components/-update-reel";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useAppContext } from "#/providers/providers";
 import { AppAvatar } from "@repo/ui/components/avatar";
@@ -24,8 +24,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import * as React from "react";
-import { ElectionScopeSelector } from "./components/election-scope-selector";
-import { HomePageHeader } from "./header";
+import { ElectionScopeSelector } from "./components/-election-scope-selector";
+import { HomePageHeader } from "./-header";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/election-day",

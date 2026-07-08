@@ -1,5 +1,4 @@
 import { useNavigate } from "@tanstack/react-router";
-import { cn } from "@repo/ui/lib/utils";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -37,22 +36,11 @@ const APP_SIDEBAR_ITEMS = [
     label: "Dashboard",
     icon: <DashboardIcon className={ICON_CLASS} />,
     selectedIcon: <DashboardIcon className={ICON_CLASS} fill={"black"} stroke="white" />,
-    icon: <HomeIcon className={ICON_CLASS} />,
-    selectedIcon: <HomeSolidIcon className={ICON_CLASS} />,
-    href: "/",
-  },
-  {
-    id: "dashboard",
-    label: "Dashboard",
-    icon: <DashboardIcon className={ICON_CLASS} />,
-    selectedIcon: <DashboardIcon className={ICON_CLASS} fill={"black"} stroke="white" />,
     href: "/dashboard",
   },
   {
     id: "feed",
     label: "Feed",
-    icon: <FeedIcon className={ICON_CLASS} />,
-    selectedIcon: <FeedSolidIcon className={ICON_CLASS} />,
     icon: <FeedIcon className={ICON_CLASS} />,
     selectedIcon: <FeedSolidIcon className={ICON_CLASS} />,
     href: "/feed",
@@ -62,8 +50,6 @@ const APP_SIDEBAR_ITEMS = [
     label: "Search",
     icon: <SearchIcon className={ICON_CLASS} />,
     selectedIcon: <SearchSolidIcon className={ICON_CLASS} />,
-    icon: <SearchIcon className={ICON_CLASS} />,
-    selectedIcon: <SearchSolidIcon className={ICON_CLASS} />,
     href: "/search",
   },
   {
@@ -71,15 +57,11 @@ const APP_SIDEBAR_ITEMS = [
     label: "Notifications",
     icon: <NotificationIcon className={ICON_CLASS} />,
     selectedIcon: <NotificationSolidIcon className={ICON_CLASS} />,
-    icon: <NotificationIcon className={ICON_CLASS} />,
-    selectedIcon: <NotificationSolidIcon className={ICON_CLASS} />,
     href: "/notifications",
   },
   {
     id: "profile",
     label: "Profile",
-    icon: <ProfileIcon className={ICON_CLASS} />,
-    selectedIcon: <ProfileSolidIcon className={ICON_CLASS} />,
     icon: <ProfileIcon className={ICON_CLASS} />,
     selectedIcon: <ProfileSolidIcon className={ICON_CLASS} />,
     href: "/profile",

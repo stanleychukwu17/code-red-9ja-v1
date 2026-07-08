@@ -14,13 +14,15 @@ import {
   type Election,
   type ElectionGroup,
 } from "@repo/ui/components/selects/election-group-and-election-select";
-import { ElectionScopeSelector } from "../components/election-scope-selector";
+import { ElectionScopeSelector } from "../components/-election-scope-selector";
 import {
   DashboardLayout,
   HeaderTabs,
   PageHeader,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
+import { cn } from "@repo/ui/lib/utils";
+import { APP_URL } from "#/lib/config";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { z } from "zod";
 
@@ -69,17 +71,17 @@ function UpdatesLayoutComponent() {
             {
               id: "all",
               label: "All",
-              href: `/${partyShortName}/home/updates`,
+              href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/updates`,
             },
             {
               id: "updates",
               label: "Updates",
-              href: `/${partyShortName}/home/updates?is_report=false`,
+              href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/updates?is_report=false`,
             },
             {
               id: "reports",
               label: "Reports",
-              href: `/${partyShortName}/home/updates?is_report=true`,
+              href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/updates?is_report=true`,
             },
           ]}
           rightComponent={
@@ -110,12 +112,12 @@ function UpdatesLayoutComponent() {
               {
                 id: "all",
                 label: "All",
-                href: `/${partyShortName}/home/updates${is_report !== undefined ? `?is_report=${is_report}` : ""}`,
+                href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/updates${is_report !== undefined ? `?is_report=${is_report}` : ""}`,
               },
               {
                 id: "media",
                 label: "Media Only",
-                href: `/${partyShortName}/home/updates/media-only${is_report !== undefined ? `?is_report=${is_report}` : ""}`,
+                href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/updates/media-only${is_report !== undefined ? `?is_report=${is_report}` : ""}`,
               },
             ]}
             activeTabClassName="bg-c-90 text-white shadow"

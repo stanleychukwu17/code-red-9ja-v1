@@ -1,5 +1,5 @@
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
-import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
+import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./-Shared";
 import { Button } from "@repo/ui/components/button";
 
 interface ArrivalCardProps {
