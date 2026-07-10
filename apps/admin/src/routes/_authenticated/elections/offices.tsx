@@ -10,7 +10,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { OfficesTable } from "#/components/Tables";
 import { OfficeFormDialog } from "#/components/dialogs/OfficeFormDialog";
-import { ELECTION_TABS } from "./data";
+import { ELECTION_TABS } from "./-data";
 import { getOffices } from "#/lib/server/offices";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";

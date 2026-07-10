@@ -9,7 +9,7 @@ import {
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { UsersTable } from "#/components/Tables";
-import { USERS_TABS } from "./data";
+import { USERS_TABS } from "./-data";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getUsersList } from "#/lib/server/users";

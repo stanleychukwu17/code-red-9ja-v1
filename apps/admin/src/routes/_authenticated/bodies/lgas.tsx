@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { LgasTable } from "#/components/Tables";
 import type { LgaType } from "#/components/Tables";
-import { BODIES_TABS } from "./data";
+import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getLGAs } from "#/lib/server/countries";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
@@ -62,28 +62,28 @@ function RouteComponent() {
 
   const lgas: LgaType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.lgas || []).map((l: {
-          id: number;
-          name: string;
-          abbreviation: string;
-          state_id: number;
-          state_name: string;
-          senatorial_district_id: number;
-          senatorial_district_name: string;
-          federal_constituency_id: number;
-          federal_constituency_name: string;
-        }) => ({
-          id: l.id,
-          name: l.name,
-          abbreviation: l.abbreviation,
-          state_id: l.state_id,
-          state_name: l.state_name,
-          senatorial_district_id: l.senatorial_district_id,
-          senatorial_district_name: l.senatorial_district_name,
-          federal_constituency_id: l.federal_constituency_id,
-          federal_constituency_name: l.federal_constituency_name,
-        }))
-      )
+      (page.data?.lgas || []).map((l: {
+        id: number;
+        name: string;
+        abbreviation: string;
+        state_id: number;
+        state_name: string;
+        senatorial_district_id: number;
+        senatorial_district_name: string;
+        federal_constituency_id: number;
+        federal_constituency_name: string;
+      }) => ({
+        id: l.id,
+        name: l.name,
+        abbreviation: l.abbreviation,
+        state_id: l.state_id,
+        state_name: l.state_name,
+        senatorial_district_id: l.senatorial_district_id,
+        senatorial_district_name: l.senatorial_district_name,
+        federal_constituency_id: l.federal_constituency_id,
+        federal_constituency_name: l.federal_constituency_name,
+      }))
+    )
     : [];
 
   return (

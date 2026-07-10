@@ -12,7 +12,7 @@ import {
   ElectionGroupsTable,
   type ElectionGroupType,
 } from "#/components/Tables";
-import { ELECTION_TABS } from "./data";
+import { ELECTION_TABS } from "./-data";
 import { ElectionGroupFormDialog } from "#/components/dialogs/ElectionGroupFormDialog";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { useIntersectionObserver } from "usehooks-ts";

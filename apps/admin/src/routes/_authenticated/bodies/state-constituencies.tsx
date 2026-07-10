@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { StateConstituenciesTable } from "#/components/Tables";
 import type { StateConstituencyType } from "#/components/Tables";
-import { BODIES_TABS } from "./data";
+import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getStateAssemblyConstituencies } from "#/lib/server/state_assembly_constituencies";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
@@ -64,30 +64,30 @@ function RouteComponent() {
 
   const constituencies: StateConstituencyType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.constituencies || []).map((c: {
-          id: number;
-          name: string;
-          lga_id: number;
-          lga_name: string;
-          state_id: number;
-          state_name: string;
-          senatorial_district_id: number;
-          senatorial_district_name: string;
-          federal_constituency_id: number;
-          federal_constituency_name: string;
-        }) => ({
-          id: c.id,
-          name: c.name,
-          lga_id: c.lga_id,
-          lga_name: c.lga_name,
-          state_id: c.state_id,
-          state_name: c.state_name,
-          senatorial_district_id: c.senatorial_district_id,
-          senatorial_district_name: c.senatorial_district_name,
-          federal_constituency_id: c.federal_constituency_id,
-          federal_constituency_name: c.federal_constituency_name,
-        }))
-      )
+      (page.data?.constituencies || []).map((c: {
+        id: number;
+        name: string;
+        lga_id: number;
+        lga_name: string;
+        state_id: number;
+        state_name: string;
+        senatorial_district_id: number;
+        senatorial_district_name: string;
+        federal_constituency_id: number;
+        federal_constituency_name: string;
+      }) => ({
+        id: c.id,
+        name: c.name,
+        lga_id: c.lga_id,
+        lga_name: c.lga_name,
+        state_id: c.state_id,
+        state_name: c.state_name,
+        senatorial_district_id: c.senatorial_district_id,
+        senatorial_district_name: c.senatorial_district_name,
+        federal_constituency_id: c.federal_constituency_id,
+        federal_constituency_name: c.federal_constituency_name,
+      }))
+    )
     : [];
 
   return (

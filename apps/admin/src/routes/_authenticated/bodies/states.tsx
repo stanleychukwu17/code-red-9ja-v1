@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { StatesTable } from "#/components/Tables";
 import type { StateType } from "#/components/Tables";
-import { BODIES_TABS } from "./data";
+import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getStates } from "#/lib/server/states";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
@@ -68,22 +68,22 @@ function StatesListComponent() {
   // Flatten pages to items — preserve full entity data
   const states: StateType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.states || []).map((state: {
-          id: number;
-          name: string;
-          country_id?: number;
-          country_code?: string;
-          latitude?: number;
-          longitude?: number;
-        }) => ({
-          id: state.id,
-          name: state.name,
-          country_id: state.country_id ?? 161,
-          country_code: state.country_code ?? "NG",
-          latitude: state.latitude ?? 0,
-          longitude: state.longitude ?? 0,
-        }))
-      )
+      (page.data?.states || []).map((state: {
+        id: number;
+        name: string;
+        country_id?: number;
+        country_code?: string;
+        latitude?: number;
+        longitude?: number;
+      }) => ({
+        id: state.id,
+        name: state.name,
+        country_id: state.country_id ?? 161,
+        country_code: state.country_code ?? "NG",
+        latitude: state.latitude ?? 0,
+        longitude: state.longitude ?? 0,
+      }))
+    )
     : [];
 
   return (

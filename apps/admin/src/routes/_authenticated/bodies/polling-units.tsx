@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { PollingUnitsTable } from "#/components/Tables";
 import type { PollingUnitType } from "#/components/Tables";
-import { BODIES_TABS } from "./data";
+import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getPollingUnits } from "#/lib/server/polling_units";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
@@ -57,50 +57,50 @@ function RouteComponent() {
 
   const units: PollingUnitType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.polling_units || []).map(
-          (pu: {
-            id: number;
-            name: string;
-            abbreviation?: string | null;
-            units?: string | null;
-            delimitation?: string | { String: string; Valid: boolean } | null;
-            remark?: string | null;
-            registration_area_id?: number | null;
-            ward_id: number;
-            ward_name: string;
-            lga_id: number;
-            lga_name: string;
-            state_id: number;
-            state_name: string;
-            latitude?: number | null;
-            longitude?: number | null;
-            precise_location?: string | null;
-            formatted_address?: string | null;
-            google_place_id?: string | null;
-          }) => ({
-            id: pu.id,
-            name: pu.name,
-            abbreviation: pu.abbreviation ?? null,
-            units: typeof pu.units === "string" ? pu.units : null,
-            delimitation: typeof pu.delimitation === "object" && pu.delimitation && "Valid" in pu.delimitation
-              ? (pu.delimitation.Valid ? pu.delimitation.String : null)
-              : (pu.delimitation as string | null ?? null),
-            remark: pu.remark ?? null,
-            registration_area_id: pu.registration_area_id ?? null,
-            ward_id: pu.ward_id,
-            ward_name: pu.ward_name,
-            lga_id: pu.lga_id,
-            lga_name: pu.lga_name,
-            state_id: pu.state_id,
-            state_name: pu.state_name,
-            latitude: pu.latitude ?? null,
-            longitude: pu.longitude ?? null,
-            precise_location: pu.precise_location ?? null,
-            formatted_address: pu.formatted_address ?? null,
-            google_place_id: pu.google_place_id ?? null,
-          }),
-        ),
-      )
+      (page.data?.polling_units || []).map(
+        (pu: {
+          id: number;
+          name: string;
+          abbreviation?: string | null;
+          units?: string | null;
+          delimitation?: string | { String: string; Valid: boolean } | null;
+          remark?: string | null;
+          registration_area_id?: number | null;
+          ward_id: number;
+          ward_name: string;
+          lga_id: number;
+          lga_name: string;
+          state_id: number;
+          state_name: string;
+          latitude?: number | null;
+          longitude?: number | null;
+          precise_location?: string | null;
+          formatted_address?: string | null;
+          google_place_id?: string | null;
+        }) => ({
+          id: pu.id,
+          name: pu.name,
+          abbreviation: pu.abbreviation ?? null,
+          units: typeof pu.units === "string" ? pu.units : null,
+          delimitation: typeof pu.delimitation === "object" && pu.delimitation && "Valid" in pu.delimitation
+            ? (pu.delimitation.Valid ? pu.delimitation.String : null)
+            : (pu.delimitation as string | null ?? null),
+          remark: pu.remark ?? null,
+          registration_area_id: pu.registration_area_id ?? null,
+          ward_id: pu.ward_id,
+          ward_name: pu.ward_name,
+          lga_id: pu.lga_id,
+          lga_name: pu.lga_name,
+          state_id: pu.state_id,
+          state_name: pu.state_name,
+          latitude: pu.latitude ?? null,
+          longitude: pu.longitude ?? null,
+          precise_location: pu.precise_location ?? null,
+          formatted_address: pu.formatted_address ?? null,
+          google_place_id: pu.google_place_id ?? null,
+        }),
+      ),
+    )
     : [];
 
   return (
