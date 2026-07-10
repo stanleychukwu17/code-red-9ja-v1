@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import {
   AppSidebarShell,
   type AppSidebarItem,
@@ -25,7 +27,7 @@ export const Route = createFileRoute("/_authenticated")({
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
-    if (res.status != "success" || user?.role != "admin") {
+    if (res.status != "success") {
       throw redirect({ to: APP_URL.auth.login });
     }
   },
@@ -60,6 +62,7 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
 ];
 
 function AuthenticatedRoutes() {
+  const [mounted, setMounted] = useState(false);
   const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext();
   const dispatch = useAppDispatch();
   const reduxSitePreference = useAppSelector((state) => state.site);
@@ -67,6 +70,9 @@ function AuthenticatedRoutes() {
   // Use Redux state if populated, fallback to route context sitePreference (server loaded)
   const currentSitePreference = reduxSitePreference?.sideBarState ? reduxSitePreference : initialSitePreference;
   const isExpanded = currentSitePreference?.sideBarState !== "collapsed";
+
+  // fades the page in after the page has been rendered
+  useEffect(() => { setMounted(true); }, []);
 
   const handleLogout = async () => {
     try {
@@ -82,7 +88,12 @@ function AuthenticatedRoutes() {
   };
 
   return (
-    <div className="flex">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: mounted ? 1 : 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+      className="flex"
+    >
       <AppSidebarShell
         defaultOpen={isExpanded}
         userDetails={userDetails}
@@ -92,6 +103,6 @@ function AuthenticatedRoutes() {
         homePageUrl={APP_URL.homePage}
       />
       <Outlet />
-    </div>
+    </motion.div>
   );
 }
