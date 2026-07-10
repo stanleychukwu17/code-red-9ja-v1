@@ -5,15 +5,11 @@ interface OutletWrapperProps {
   children: React.ReactNode;
 }
 
-// const listToHide = ['/auth/*', '/auth'];
-
 export function OutletWrapper({ children }: OutletWrapperProps) {
   const [mounted, setMounted] = useState(false);
 
-  // Calculate width based on sidebar width from DOM
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // fades the page in after the page has been rendered
+  useEffect(() => { setMounted(true); }, []);
 
   return (
     <motion.div

@@ -12,7 +12,7 @@ export const APP_URL = {
     onboarding: "/auth/onboarding",
     forgotPassword: "/auth/forgot-password",
   },
-  homePage: "/dashboard",
+  homePage: "/",
 };
 
 const api = `${API_BASE}/api/v1`;
