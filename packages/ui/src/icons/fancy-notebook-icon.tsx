@@ -208,110 +208,110 @@ const FancyNotebookIcon = (props: SVGProps<SVGSVGElement>) => {
         <path
           d="M50.1719 23.2227H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 41.5815H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 59.9619H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 78.3169H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 96.6821H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 115.048H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 133.41H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 151.776H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 170.142H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 188.515H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 206.858H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 225.24H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 243.62H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 261.963H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 280.345H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 298.699H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 317.069H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
         <path
           d="M50.1719 335.413H267.608"
           stroke="#E1E6E9"
-          stroke-width="0.0729675"
-          stroke-miterlimit="10"
+          strokeWidth="0.0729675"
+          strokeMiterlimit="10"
         />
       </g>
       <defs>
