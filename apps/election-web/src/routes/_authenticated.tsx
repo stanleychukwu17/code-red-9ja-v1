@@ -10,22 +10,23 @@ import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon
 import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
 import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
 
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import {
   logoutUser,
   checkIfRefreshTokenInCookie,
-  refreshUserToken,
+  getUserDetailsCookie,
 } from "#/lib/server/auth/auth";
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
-    const res = await refreshUserToken();
-    console.log("✌️ RES:", res);
-    if (res.status !== "success" || !res.user) {
-      throw redirect({ to: "/auth/login" });
+    const res = await checkIfRefreshTokenInCookie();
+    const user = await getUserDetailsCookie();
+
+    if (res.status != "success" || user?.role != "admin") {
+      throw redirect({ to: APP_URL.auth.login });
     }
   },
   component: AuthenticatedRoutes,
@@ -59,8 +60,13 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
 ];
 
 function AuthenticatedRoutes() {
-  const { userDetails } = Route.useRouteContext();
+  const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext();
   const dispatch = useAppDispatch();
+  const reduxSitePreference = useAppSelector((state) => state.site);
+
+  // Use Redux state if populated, fallback to route context sitePreference (server loaded)
+  const currentSitePreference = reduxSitePreference?.sideBarState ? reduxSitePreference : initialSitePreference;
+  const isExpanded = currentSitePreference?.sideBarState !== "collapsed";
 
   const handleLogout = async () => {
     try {
@@ -78,6 +84,7 @@ function AuthenticatedRoutes() {
   return (
     <div className="flex">
       <AppSidebarShell
+        defaultOpen={isExpanded}
         userDetails={userDetails}
         items={APP_SIDEBAR_ITEMS}
         onLogout={handleLogout}

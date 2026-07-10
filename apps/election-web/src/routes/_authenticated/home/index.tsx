@@ -25,14 +25,7 @@ export const Route = createFileRoute("/_authenticated/home/")({
 
 function RouteComponent() {
   const navigate = useNavigate();
-  const { user, selectedElectionGroup, selectedElection, pollingUnitId } =
-    useAuth();
-  console.log("HOME: USE AUTH:", {
-    user,
-    selectedElectionGroup,
-    selectedElection,
-    pollingUnitId,
-  });
+  const { user, selectedElectionGroup, selectedElection, pollingUnitId } = useAuth();
 
   const [appCount, setAppCount] = useState<number>(0);
   const [primaryPU, setPrimaryPU] = useState<string>(

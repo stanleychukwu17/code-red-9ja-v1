@@ -1,5 +1,5 @@
 import { configureStore } from "@reduxjs/toolkit";
-import siteReducer from "@/redux/slice/siteSlice";
+import siteReducer, { sitePreferenceMiddleware } from "@/redux/slice/siteSlice";
 import authReducer from "@/redux/slice/authSlice";
 
 export const store = configureStore({
@@ -7,6 +7,8 @@ export const store = configureStore({
     site: siteReducer,
     auth: authReducer,
   },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware().concat(sitePreferenceMiddleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;

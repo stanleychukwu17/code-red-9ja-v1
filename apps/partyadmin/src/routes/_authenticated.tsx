@@ -45,8 +45,6 @@ function AuthenticatedRoutes() {
   const { userDetails } = Route.useRouteContext();
   const dispatch = useAppDispatch();
   const { party } = useAuth();
-  console.log("userDetails", userDetails);
-  console.log("party short name", party?.shortName);
   const params = useParams({ strict: false });
   const partyShortName =
     party?.shortName || (params as any).partyShortName || "party";

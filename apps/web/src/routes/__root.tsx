@@ -53,12 +53,6 @@ function RootLayout() {
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { userDetails, sitePreference } = Route.useRouteContext();
 
-  // Check if userDetails is not undefined, null or empty object
-  let userDetailsString = "{}";
-  if (userDetails && Object.keys(userDetails).length > 0) {
-    userDetailsString = JSON.stringify(userDetails);
-  }
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -66,7 +60,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body
-        data-user-details={userDetailsString}
         className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
       >
         <Provider store={store}>

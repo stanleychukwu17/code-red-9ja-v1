@@ -263,15 +263,8 @@ function EachLinkComponent({
   );
 }
 
-function LogoComponent({
-  logoBadge,
-  homePageUrl,
-}: {
-  logoBadge?: ReactNode;
-  homePageUrl?: string;
-}) {
+function LogoComponent({ logoBadge, homePageUrl }: { logoBadge?: ReactNode; homePageUrl?: string; }) {
   const { state: sideBarState, toggleSidebar } = useSidebar();
-  const isMobile = useIsMobile();
 
   let flexDir = "flex-row";
   try {
@@ -279,23 +272,6 @@ function LogoComponent({
   } catch (error) {
     console.error(error);
   }
-
-  useEffect(() => {
-    if (isMobile) {
-      return;
-    }
-
-    const savedSiteState = localStorage.getItem("site") || null;
-    const preloadedSiteState = savedSiteState
-      ? JSON.parse(savedSiteState)
-      : undefined;
-    if (
-      preloadedSiteState &&
-      preloadedSiteState?.sideBarState !== sideBarState
-    ) {
-      toggleSidebar();
-    }
-  }, []);
 
   return (
     <div
