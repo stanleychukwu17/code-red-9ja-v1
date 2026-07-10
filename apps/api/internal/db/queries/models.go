@@ -227,6 +227,22 @@ type Party struct {
 	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PartyApplication struct {
+	ID              int64              `json:"id"`
+	UserID          int64              `json:"user_id"`
+	PartyID         int64              `json:"party_id"`
+	ElectionGroupID int64              `json:"election_group_id"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	StateID         pgtype.Int2        `json:"state_id"`
+	LgaID           pgtype.Int4        `json:"lga_id"`
+	WardID          pgtype.Int4        `json:"ward_id"`
+	Role            string             `json:"role"`
+	Status          string             `json:"status"`
+	RejectedReason  pgtype.Text        `json:"rejected_reason"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type PartyElectionGroup struct {
 	ID                    int64              `json:"id"`
 	PartyID               int64              `json:"party_id"`
@@ -266,19 +282,6 @@ type PartyWalletTransaction struct {
 	TransactionCategory  string             `json:"transaction_category"`
 	RawPayload           []byte             `json:"raw_payload"`
 	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-}
-
-type PollingAgentApplication struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	PartyID         int64              `json:"party_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
-	Role            string             `json:"role"`
-	Status          string             `json:"status"`
-	RejectedReason  pgtype.Text        `json:"rejected_reason"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PollingUnit struct {
@@ -518,6 +521,7 @@ type User struct {
 	CurrentLga        pgtype.Int4        `json:"current_lga"`
 	CurrentWard       pgtype.Int4        `json:"current_ward"`
 	CurrentCity       pgtype.Int4        `json:"current_city"`
+	Address           pgtype.Text        `json:"address"`
 	StateOfOrigin     pgtype.Int2        `json:"state_of_origin"`
 	Vin               pgtype.Text        `json:"vin"`
 	VotersCardImage   pgtype.Text        `json:"voters_card_image"`

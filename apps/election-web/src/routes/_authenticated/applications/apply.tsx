@@ -34,7 +34,7 @@ import {
   ContactDetailsStep,
   EducationalStatusStep,
   EducationalDetailsStep,
-} from "./components/ApplySteps";
+} from "./components/-ApplySteps";
 import { useAuth } from "#/providers/providers";
 
 export const Route = createFileRoute("/_authenticated/applications/apply")({
@@ -45,31 +45,32 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
 function ApplyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  console.log("AUTH USER: ", user);
 
   // Form states
-  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(null);
+  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(user?.party_id || null);
   const [selectedElectionIds, setSelectedElectionIds] = useState<number[]>([]);
-  const [avatarUrl, setAvatarUrl] = useState<string>("");
-  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
-  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(null);
-  const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
-  const [streetAddress, setStreetAddress] = useState<string>("");
+  const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatar || "");
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(user?.current_state || null);
+  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(user?.current_lga || null);
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(user?.current_ward || null);
+  const [streetAddress, setStreetAddress] = useState<string>(user?.address || "");
   const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<
     number | null
-  >(null);
-  const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
-  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(null);
+  >(user?.polling_unit_id || null);
+  const [bankAccountNumber, setBankAccountNumber] = useState<string>(user?.bank_account_number || "");
+  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(user?.bank_code || null);
   const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
   const [phone, setPhone] = useState<string>(user?.phone || "");
-  const [whatsappPhone, setWhatsappPhone] = useState<string>("");
-  const [dataPhone, setDataPhone] = useState<string>("");
-  const [educationalStatus, setEducationalStatus] = useState<string>("");
-  const [highestDegree, setHighestDegree] = useState("");
-  const [graduationYear, setGraduationYear] = useState("");
-  const [schoolName, setSchoolName] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState<string>(user?.whatsapp_phone || "");
+  const [dataPhone, setDataPhone] = useState<string>(user?.data_phone || "");
+  const [educationalStatus, setEducationalStatus] = useState<string>(user?.educational_status || "");
+  const [highestDegree, setHighestDegree] = useState(user?.highest_degree || "");
+  const [graduationYear, setGraduationYear] = useState(user?.graduation_year || "");
+  const [schoolName, setSchoolName] = useState(user?.school_name || "");
 
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
-  const [isAccountValid, setIsAccountValid] = useState(false);
+  const [isAccountValid, setIsAccountValid] = useState(!!user?.bank_account_number);
 
   // UI state
   const [step, setStep] = useState<number>(1);
@@ -106,10 +107,10 @@ function ApplyPage() {
           name: group.name,
           date: group.election_date
             ? new Date(group.election_date).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
             : "TBD",
         }));
       }
@@ -332,6 +333,7 @@ function ApplyPage() {
           graduation_year: graduationYear,
           school_name: schoolName,
           phone: phone,
+          address: streetAddress,
         },
       });
 

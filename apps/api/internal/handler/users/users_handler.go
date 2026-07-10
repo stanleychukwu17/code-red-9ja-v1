@@ -106,37 +106,51 @@ func (h *Handler) ValidateBankAccount(w http.ResponseWriter, r *http.Request) {
 
 // UserResponse represents the sanitized user profile details returned to the frontend
 type UserResponse struct {
-	ID             int64  `json:"id"`
-	FakeID         int64  `json:"fake_id"`
-	Email          string `json:"email"`
-	Avatar         string `json:"avatar"`
-	Phone          string `json:"phone"`
-	Username       string `json:"username"`
-	LastName       string `json:"last_name"`
-	FirstName      string `json:"first_name"`
-	MiddleName     string `json:"middle_name"`
-	Gender         string `json:"gender"`
-	DateOfBirth    string `json:"date_of_birth"`
-	CurrentCountry int16  `json:"current_country"`
-	CurrentState   int16  `json:"current_state"`
-	CurrentCity    int32  `json:"current_city"`
-	StateOfOrigin  int16  `json:"state_of_origin"`
-	NinVerified    string `json:"nin_verified"`
-	PhoneVerified  string `json:"phone_verified"`
-	Role           string `json:"role"`
-	RoleLevel      string `json:"role_level"`
-	AccountStatus  string `json:"account_status"`
-	PartyID        int64  `json:"party_id,omitempty"`
-	PollingUnitID  int64  `json:"polling_unit_id,omitempty"`
-	CreatedAt      string `json:"created_at"`
-	UpdatedAt      string `json:"updated_at"`
+	ID                int64  `json:"id"`
+	FakeID            int64  `json:"fake_id"`
+	Email             string `json:"email"`
+	Avatar            string `json:"avatar"`
+	Phone             string `json:"phone"`
+	Username          string `json:"username"`
+	LastName          string `json:"last_name"`
+	FirstName         string `json:"first_name"`
+	MiddleName        string `json:"middle_name"`
+	Gender            string `json:"gender"`
+	DateOfBirth       string `json:"date_of_birth"`
+	CurrentCountry    int16  `json:"current_country"`
+	CurrentState      int16  `json:"current_state"`
+	CurrentCity       int32  `json:"current_city"`
+	CurrentLga        int32  `json:"current_lga"`
+	CurrentWard       int32  `json:"current_ward"`
+	StateOfOrigin     int16  `json:"state_of_origin"`
+	NinVerified       string `json:"nin_verified"`
+	PhoneVerified     string `json:"phone_verified"`
+	Role              string `json:"role"`
+	RoleLevel         string `json:"role_level"`
+	AccountStatus     string `json:"account_status"`
+	PartyID           int64  `json:"party_id,omitempty"`
+	PollingUnitID     int64  `json:"polling_unit_id,omitempty"`
+	CreatedAt         string `json:"created_at"`
+	UpdatedAt         string `json:"updated_at"`
+	WhatsappPhone     string `json:"whatsapp_phone"`
+	DataPhone         string `json:"data_phone"`
+	EducationalStatus string `json:"educational_status"`
+	HighestDegree     string `json:"highest_degree"`
+	GraduationYear    string `json:"graduation_year"`
+	SchoolName        string `json:"school_name"`
+	BankAccountNumber string `json:"bank_account_number"`
+	BankCode          string `json:"bank_code"`
+	VotersCardImage   string `json:"voters_card_image"`
+	Address           string `json:"address"`
 }
 
 func mapUserToResponse(u queries.User) UserResponse {
 	var email, avatar, phone, username, lastName, firstName, middleName, gender string
 	var dateOfBirth, ninVerified, phoneVerified, role, roleLevel, accountStatus string
+	var whatsappPhone, dataPhone, educationalStatus, highestDegree, graduationYear, schoolName string
+	var bankAccountNumber, bankCode, votersCardImage, address string
 	var partyID, pollingUnitID int64
-	var cityID int32
+	var cityID, lgaID, wardID int32
 	var stateOfOrigin int16
 
 	if u.Email.Valid {
@@ -193,6 +207,42 @@ func mapUserToResponse(u queries.User) UserResponse {
 	if u.PollingUnitID.Valid {
 		pollingUnitID = u.PollingUnitID.Int64
 	}
+	if u.CurrentLga.Valid {
+		lgaID = u.CurrentLga.Int32
+	}
+	if u.CurrentWard.Valid {
+		wardID = u.CurrentWard.Int32
+	}
+	if u.WhatsappPhone.Valid {
+		whatsappPhone = u.WhatsappPhone.String
+	}
+	if u.DataPhone.Valid {
+		dataPhone = u.DataPhone.String
+	}
+	if u.EducationalStatus.Valid {
+		educationalStatus = u.EducationalStatus.String
+	}
+	if u.HighestDegree.Valid {
+		highestDegree = u.HighestDegree.String
+	}
+	if u.GraduationYear.Valid {
+		graduationYear = u.GraduationYear.String
+	}
+	if u.SchoolName.Valid {
+		schoolName = u.SchoolName.String
+	}
+	if u.BankAccountNumber.Valid {
+		bankAccountNumber = u.BankAccountNumber.String
+	}
+	if u.BankCode.Valid {
+		bankCode = u.BankCode.String
+	}
+	if u.VotersCardImage.Valid {
+		votersCardImage = u.VotersCardImage.String
+	}
+	if u.Address.Valid {
+		address = u.Address.String
+	}
 
 	return UserResponse{
 		ID:             u.ID,
@@ -209,16 +259,28 @@ func mapUserToResponse(u queries.User) UserResponse {
 		CurrentCountry: u.CurrentCountry,
 		CurrentState:   u.CurrentState,
 		CurrentCity:    cityID,
-		StateOfOrigin:  stateOfOrigin,
-		NinVerified:    ninVerified,
-		PhoneVerified:  phoneVerified,
-		Role:           role,
-		RoleLevel:      roleLevel,
-		AccountStatus:  accountStatus,
-		PartyID:        partyID,
-		PollingUnitID:  pollingUnitID,
-		CreatedAt:      u.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt:      u.UpdatedAt.Time.Format(time.RFC3339),
+		CurrentLga:        lgaID,
+		CurrentWard:       wardID,
+		StateOfOrigin:     stateOfOrigin,
+		NinVerified:       ninVerified,
+		PhoneVerified:     phoneVerified,
+		Role:              role,
+		RoleLevel:         roleLevel,
+		AccountStatus:     accountStatus,
+		PartyID:           partyID,
+		PollingUnitID:     pollingUnitID,
+		CreatedAt:         u.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:         u.UpdatedAt.Time.Format(time.RFC3339),
+		WhatsappPhone:     whatsappPhone,
+		DataPhone:         dataPhone,
+		EducationalStatus: educationalStatus,
+		HighestDegree:     highestDegree,
+		GraduationYear:    graduationYear,
+		SchoolName:        schoolName,
+		BankAccountNumber: bankAccountNumber,
+		BankCode:          bankCode,
+		VotersCardImage:   votersCardImage,
+		Address:           address,
 	}
 }
 

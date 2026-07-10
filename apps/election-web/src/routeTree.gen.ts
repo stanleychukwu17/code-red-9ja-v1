@@ -13,6 +13,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
+import { Route as AuthenticatedSupervisorIndexRouteImport } from './routes/_authenticated/supervisor/index'
 import { Route as AuthenticatedReportIndexRouteImport } from './routes/_authenticated/report/index'
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
@@ -48,6 +49,12 @@ const AuthenticatedUploadResultIndexRoute =
   AuthenticatedUploadResultIndexRouteImport.update({
     id: '/upload-result/',
     path: '/upload-result/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedSupervisorIndexRoute =
+  AuthenticatedSupervisorIndexRouteImport.update({
+    id: '/supervisor/',
+    path: '/supervisor/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReportIndexRoute =
@@ -163,6 +170,7 @@ export interface FileRoutesByFullPath {
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/parties/': typeof AuthenticatedPartiesIndexRoute
   '/report/': typeof AuthenticatedReportIndexRoute
+  '/supervisor/': typeof AuthenticatedSupervisorIndexRoute
   '/upload-result/': typeof AuthenticatedUploadResultIndexRoute
 }
 export interface FileRoutesByTo {
@@ -184,6 +192,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/parties': typeof AuthenticatedPartiesIndexRoute
   '/report': typeof AuthenticatedReportIndexRoute
+  '/supervisor': typeof AuthenticatedSupervisorIndexRoute
   '/upload-result': typeof AuthenticatedUploadResultIndexRoute
 }
 export interface FileRoutesById {
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
   '/_authenticated/report/': typeof AuthenticatedReportIndexRoute
+  '/_authenticated/supervisor/': typeof AuthenticatedSupervisorIndexRoute
   '/_authenticated/upload-result/': typeof AuthenticatedUploadResultIndexRoute
 }
 export interface FileRouteTypes {
@@ -230,6 +240,7 @@ export interface FileRouteTypes {
     | '/notifications/'
     | '/parties/'
     | '/report/'
+    | '/supervisor/'
     | '/upload-result/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -251,6 +262,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/parties'
     | '/report'
+    | '/supervisor'
     | '/upload-result'
   id:
     | '__root__'
@@ -273,6 +285,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications/'
     | '/_authenticated/parties/'
     | '/_authenticated/report/'
+    | '/_authenticated/supervisor/'
     | '/_authenticated/upload-result/'
   fileRoutesById: FileRoutesById
 }
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/upload-result'
       fullPath: '/upload-result/'
       preLoaderRoute: typeof AuthenticatedUploadResultIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/supervisor/': {
+      id: '/_authenticated/supervisor/'
+      path: '/supervisor'
+      fullPath: '/supervisor/'
+      preLoaderRoute: typeof AuthenticatedSupervisorIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/report/': {
@@ -444,6 +464,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
   AuthenticatedReportIndexRoute: typeof AuthenticatedReportIndexRoute
+  AuthenticatedSupervisorIndexRoute: typeof AuthenticatedSupervisorIndexRoute
   AuthenticatedUploadResultIndexRoute: typeof AuthenticatedUploadResultIndexRoute
 }
 
@@ -464,6 +485,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
   AuthenticatedReportIndexRoute: AuthenticatedReportIndexRoute,
+  AuthenticatedSupervisorIndexRoute: AuthenticatedSupervisorIndexRoute,
   AuthenticatedUploadResultIndexRoute: AuthenticatedUploadResultIndexRoute,
 }
 

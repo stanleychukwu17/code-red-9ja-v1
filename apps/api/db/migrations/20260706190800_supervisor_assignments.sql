@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS state_election_supervisors (
   state_id SMALLINT REFERENCES c_states(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id BIGINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
-  role_type VARCHAR(50) DEFAULT 'state_supervisor' CHECK (role_type IN ('state_supervisor')),
+  role_type VARCHAR(50) DEFAULT 'state-election-supervisor' CHECK (role_type IN ('state-election-supervisor')),
   assigned_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   
   -- Agent Tracking & Verification
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS lga_election_supervisors (
   lga_id INTEGER REFERENCES lgas(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id BIGINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
-  role_type VARCHAR(50) DEFAULT 'lga_supervisor' CHECK (role_type IN ('lga_supervisor')),
+  role_type VARCHAR(50) DEFAULT 'lga-election-supervisor' CHECK (role_type IN ('lga-election-supervisor')),
   assigned_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   
   -- Agent Tracking & Verification
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS ward_election_supervisors (
   ward_id INTEGER REFERENCES wards(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   party_id BIGINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
-  role_type VARCHAR(50) DEFAULT 'ward_supervisor' CHECK (role_type IN ('ward_supervisor')),
+  role_type VARCHAR(50) DEFAULT 'ward-election-supervisor' CHECK (role_type IN ('ward-election-supervisor')),
   assigned_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   
   -- Agent Tracking & Verification

@@ -8,7 +8,7 @@ import SearchIcon from "../icons/search-icon";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
 
-const inputClassName = `group flex items-center gap-2 text-lg md:text-base h-14 md:h-11 w-full rounded-[4px] bg-black/5 px-4 py-6
+const inputClassName = `group flex items-center gap-2 text-lg md:text-base h-14 md:h-11 w-full rounded-xl bg-black/5 px-4 py-6
   transition-colors duration-200 file:border-0 file:bg-transparent ring-inset file:text-foreground placeholder:text-c-60
   dark:bg-black/30 dark:hover:bg-black/90
   focus-visible:outline-hidden focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80

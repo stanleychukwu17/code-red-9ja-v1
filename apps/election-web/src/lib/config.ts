@@ -160,14 +160,14 @@ export const API_URL = {
   adminUsers: `${api}/admin/users`,
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
   users: `${api}/users`,
-  pollingAgentApplications: `${api}/polling-agent-applications`,
-  pollingAgentRecommendations: `${api}/polling-agent-applications/recommendations`,
+  pollingAgentApplications: `${api}/party-applications`,
+  pollingAgentRecommendations: `${api}/party-applications/recommendations`,
   approveApplication: (id: string | number) =>
-    `${api}/polling-agent-applications/${id}/approve`,
+    `${api}/party-applications/${id}/approve`,
   rejectApplication: (id: string | number) =>
-    `${api}/polling-agent-applications/${id}/reject`,
+    `${api}/party-applications/${id}/reject`,
   cancelApplication: (id: string | number) =>
-    `${api}/polling-agent-applications/${id}/cancel`,
+    `${api}/party-applications/${id}/cancel`,
   pollingUnitAssignments: `${api}/polling-unit-assignments`,
   updateAssignmentTracking: (id: string | number) => 
     `${api}/polling-unit-assignments/${id}/tracking`,

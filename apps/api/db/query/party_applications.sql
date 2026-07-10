@@ -1,12 +1,15 @@
 -- name: CreateApplication :one
-INSERT INTO polling_agent_applications (
+INSERT INTO party_applications (
   user_id,
   party_id,
   election_group_id,
   polling_unit_id,
+  state_id,
+  lga_id,
+  ward_id,
   status
 ) VALUES (
-  $1, $2, $3, $4, 'pending'
+  $1, $2, $3, $4, $5, $6, $7, 'pending'
 ) RETURNING *;
 
 -- name: UpdateUserAgentDetails :one
@@ -34,12 +37,13 @@ SET
   phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
   phone_verified = CASE WHEN NULLIF(sqlc.arg(phone)::varchar, '') IS NOT NULL AND NULLIF(sqlc.arg(phone)::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
   polling_unit_id = sqlc.arg(polling_unit_id),
+  address = COALESCE(NULLIF(sqlc.arg(address)::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
 -- name: GetApplicationByID :one
-SELECT * FROM polling_agent_applications
+SELECT * FROM party_applications
 WHERE id = $1 LIMIT 1;
 
 -- name: ListApplications :many
@@ -94,7 +98,7 @@ SELECT
     ),
     0
   )::integer AS agents_count
-FROM polling_agent_applications pa
+FROM party_applications pa
 JOIN users u ON pa.user_id = u.id
 JOIN election_groups eg ON pa.election_group_id = eg.id
 JOIN parties p ON pa.party_id = p.id
@@ -112,7 +116,7 @@ ORDER BY pa.id DESC
 LIMIT sqlc.arg(limit_val);
 
 -- name: UpdateApplicationStatus :one
-UPDATE polling_agent_applications
+UPDATE party_applications
 SET
   status = $2,
   rejected_reason = $3,
@@ -120,10 +124,23 @@ SET
 WHERE id = $1
 RETURNING *;
 
--- name: UpdateUserRoleToAgent :one
+-- name: UpdateApplicationApproval :one
+UPDATE party_applications
+SET
+  status = 'accepted',
+  role = sqlc.arg(role),
+  polling_unit_id = sqlc.arg(polling_unit_id),
+  state_id = sqlc.arg(state_id),
+  lga_id = sqlc.arg(lga_id),
+  ward_id = sqlc.arg(ward_id),
+  updated_at = NOW()
+WHERE id = sqlc.arg(id)
+RETURNING *;
+
+-- name: UpdateUserRoleForPartyApp :one
 UPDATE users
 SET
-  role_level = 'pollingagent',
+  role_level = $2,
   role = 'partymember',
   updated_at = NOW()
 WHERE id = $1

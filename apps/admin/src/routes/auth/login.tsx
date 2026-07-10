@@ -227,7 +227,7 @@ function LoginComponent() {
                   </SelectContent>
                 </Select>
                 {field.state.meta.isTouched &&
-                  field.state.meta.errors.length ? (
+                field.state.meta.errors.length ? (
                   <span className="text-xs text-destructive">
                     {field.state.meta.errors[0] as string}
                   </span>
@@ -245,6 +245,7 @@ function LoginComponent() {
             children={(field) => (
               <FormInput
                 type="text"
+                className="rounded-[4px]"
                 placeholder="Email or Username or Phone number"
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -271,6 +272,7 @@ function LoginComponent() {
             children={(field) => (
               <PasswordInput
                 placeholder="Password"
+                className="rounded-[4px]"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -289,9 +291,9 @@ function LoginComponent() {
               <Button
                 type="submit"
                 variant="secondary"
+                className="rounded-[4px] mt-2"
                 disabled={!canSubmit}
                 loading={isSubmitting}
-                className="mt-2"
               >
                 Log in
               </Button>

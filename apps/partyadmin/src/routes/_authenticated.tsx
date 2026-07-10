@@ -26,7 +26,6 @@ import { useAuth } from "#/providers/providers";
 import { useAppDispatch } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
-import { PollingAgentDialogProvider } from "#/components/dialogs/PollingAgentDialogContext";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
@@ -97,7 +96,7 @@ function AuthenticatedRoutes() {
     onError: (e) => {
       console.error(e);
       dispatch(updateAuthState({ user: null }));
-    }
+    },
   });
 
   const handleLogout = () => {
@@ -109,17 +108,15 @@ function AuthenticatedRoutes() {
   };
 
   return (
-    <PollingAgentDialogProvider>
-      <div className="flex">
-        <AppSidebarShell
-          userDetails={userDetails}
-          items={sidebarItems}
-          onLogout={handleLogout}
-          onSidebarStateChange={handleSidebarStateChange}
-          homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
-        />
-        <Outlet />
-      </div>
-    </PollingAgentDialogProvider>
+    <div className="flex">
+      <AppSidebarShell
+        userDetails={userDetails}
+        items={sidebarItems}
+        onLogout={handleLogout}
+        onSidebarStateChange={handleSidebarStateChange}
+        homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
+      />
+      <Outlet />
+    </div>
   );
 }

@@ -53,6 +53,19 @@ export interface UserDetails {
   account_status?: string;
   party_id?: number;
   polling_unit_id?: number;
+  current_state?: number;
+  current_lga?: number;
+  current_ward?: number;
+  whatsapp_phone?: string;
+  data_phone?: string;
+  educational_status?: string;
+  highest_degree?: string;
+  graduation_year?: string;
+  school_name?: string;
+  bank_account_number?: string;
+  bank_code?: string;
+  voters_card_image?: string;
+  address?: string;
   party?: {
     id?: number;
     short_name?: string;

@@ -48,13 +48,13 @@ export const API_URL = {
   electionGroupById: (id: string | number) => `${api}/election-groups/${id}`,
   elections: `${api}/elections`,
   electionById: (id: string | number) => `${api}/elections/${id}`,
-  pollingAgentApplications: `${api}/polling-agent-applications`,
-  pollingAgentRecommendations: `${api}/polling-agent-applications/recommendations`,
+  partyApplications: `${api}/party-applications`,
+  partyApplicationsRecommendations: `${api}/party-applications/recommendations`,
   pollingUnits: `${api}/polling-units`,
   approveApplication: (id: string | number) =>
-    `${api}/polling-agent-applications/${id}/approve`,
+    `${api}/party-applications/${id}/approve`,
   rejectApplication: (id: string | number) =>
-    `${api}/polling-agent-applications/${id}/reject`,
+    `${api}/party-applications/${id}/reject`,
   getSenatorialDistricts: `${api}/senatorial-districts`,
   getFederalConstituencies: `${api}/federal-constituencies`,
   getStateConstituencies: `${api}/state-constituencies`,

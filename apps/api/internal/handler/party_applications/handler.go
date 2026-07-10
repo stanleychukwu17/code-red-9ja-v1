@@ -1,4 +1,4 @@
-package paapplicationshandler
+package partyapplicationshandler
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
-	paservice "free9ja/api/internal/service/polling_agent_applications"
+	partyapplications "free9ja/api/internal/service/party_applications"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -16,13 +16,13 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type PollingAgentApplicationsService interface {
-	SubmitApplication(ctx context.Context, input paservice.SubmitApplicationInput) ([]queries.PollingAgentApplication, error)
-	GetApplicationByID(ctx context.Context, id int64) (queries.PollingAgentApplication, error)
+type PartyApplicationsService interface {
+	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) ([]queries.PartyApplication, error)
+	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
 	ListApplications(ctx context.Context, userID, partyID, electionGroupID int64, status string, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
-	RejectApplication(ctx context.Context, id int64, reason string) (queries.PollingAgentApplication, error)
-	CancelApplication(ctx context.Context, id int64) (queries.PollingAgentApplication, error)
-	ApproveApplication(ctx context.Context, input paservice.ApproveApplicationInput) (queries.PollingAgentApplication, error)
+	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error)
+	CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error)
+	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyApplication, error)
 	GetPollingUnitRecommendations(ctx context.Context, partyID, electionGroupID int64, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error)
 }
 
@@ -32,12 +32,12 @@ type UsersService interface {
 }
 
 type Handler struct {
-	service      PollingAgentApplicationsService
+	service      PartyApplicationsService
 	usersService UsersService
 	utils        *utils.Utils
 }
 
-func NewHandler(service PollingAgentApplicationsService, usersService UsersService, utils *utils.Utils) *Handler {
+func NewHandler(service PartyApplicationsService, usersService UsersService, utils *utils.Utils) *Handler {
 	return &Handler{
 		service:      service,
 		usersService: usersService,
@@ -67,6 +67,7 @@ type SubmitApplicationRequest struct {
 	GraduationYear    string  `json:"graduation_year"`
 	SchoolName        string  `json:"school_name"`
 	Phone             string  `json:"phone"`
+	Address           string  `json:"address"`
 }
 
 // SubmitApplication godoc
@@ -112,7 +113,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	apps, err := h.service.SubmitApplication(r.Context(), paservice.SubmitApplicationInput{
+	apps, err := h.service.SubmitApplication(r.Context(), partyapplications.SubmitApplicationInput{
 		UserID:            requester.ID,
 		PartyID:           req.PartyID,
 		ElectionGroupIDs:  electionGroupIDs,
@@ -134,6 +135,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		GraduationYear:    req.GraduationYear,
 		SchoolName:        req.SchoolName,
 		Phone:             req.Phone,
+		Address:           req.Address,
 	})
 	if err != nil {
 		errStr := err.Error()
@@ -413,7 +415,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		roleType = "polling_agent"
 	}
 
-	updatedApp, err := h.service.ApproveApplication(r.Context(), paservice.ApproveApplicationInput{
+	updatedApp, err := h.service.ApproveApplication(r.Context(), partyapplications.ApproveApplicationInput{
 		ApplicationID: id,
 		PollingUnitID: req.PollingUnitID,
 		RoleType:      roleType,

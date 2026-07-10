@@ -66,6 +66,21 @@ const formatDate = (val: any) => {
   }
 };
 
+const isElectionInPast = (val: any) => {
+  const dateStr = val?.Time || val;
+  if (!dateStr) return false;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const electionDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const today = new Date();
+    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return electionDay.getTime() < currentDay.getTime();
+  } catch (e) {
+    return false;
+  }
+};
+
 function ApplicationsIndexPage() {
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
@@ -114,6 +129,7 @@ function ApplicationsIndexPage() {
           election: {
             name: app.election_group_name || "Unknown Election",
             date: formatDate(app.election_date) || "TBD",
+            isPast: isElectionInPast(app.election_date),
           },
           polling_unit: {
             name:
@@ -152,10 +168,11 @@ function ApplicationsIndexPage() {
 
   const activeCount = visibleApps.filter(
     (a: any) =>
-      a.status === "pending" ||
-      a.status === "approved" ||
-      a.status === "success" ||
-      a.status === "accepted",
+      (a.status === "pending" ||
+        a.status === "approved" ||
+        a.status === "success" ||
+        a.status === "accepted") &&
+      !a.election.isPast,
   ).length;
 
   if (loading) {
@@ -293,7 +310,7 @@ function ApplicationsIndexPage() {
           </div>
         </div>
 
-        {selectedApp.status === "pending" && (
+        {selectedApp.status === "pending" && !selectedApp.election.isPast && (
           <StickyFooter>
             <AlertDialog>
               <AlertDialogTrigger asChild>
@@ -338,15 +355,20 @@ function ApplicationsIndexPage() {
 
   // Filter application list by selected tab
   const filteredApps = visibleApps.filter((app: any) => {
+    const isActiveStatus =
+      app.status === "pending" ||
+      app.status === "approved" ||
+      app.status === "success" ||
+      app.status === "accepted";
+
     if (activeTab === "active") {
-      return (
-        app.status === "pending" ||
-        app.status === "approved" ||
-        app.status === "success" ||
-        app.status === "accepted"
-      );
+      return isActiveStatus && !app.election.isPast;
     } else {
-      return app.status === "rejected" || app.status === "cancelled";
+      return (
+        app.status === "rejected" ||
+        app.status === "cancelled" ||
+        (isActiveStatus && app.election.isPast)
+      );
     }
   });
 

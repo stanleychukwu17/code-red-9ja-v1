@@ -9,7 +9,7 @@ import {
   TileRow,
 } from "@repo/ui/components/tiles";
 import { cn } from "@repo/ui/lib/utils";
-import { usePollingAgentDialog } from "#/components/dialogs/PollingAgentDialogContext";
+import { PartyApplicationDialog } from "#/components/dialogs/party-application-dialog";
 import {
   approveApplication,
   rejectApplication,
@@ -125,7 +125,7 @@ export function ApplicationTableTile({
   data: ApplicationType;
   refetch?: () => void;
 }) {
-  const { openApplication } = usePollingAgentDialog();
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const approveMutation = useMutation({
@@ -217,8 +217,7 @@ export function ApplicationTableTile({
         ? "accept"
         : "reject");
 
-  const handleOpenDialog = () => {
-    openApplication({
+  const applicationDetails = {
       id: data.id,
       name,
       avatar,
@@ -244,26 +243,10 @@ export function ApplicationTableTile({
       lgaId: Number(lgaVal) || data.lgaId || undefined,
       partyLogo: partyLogo,
       partyShortName: partyShortName,
-      onApprove: async (approvalData) => {
-        if (data.id === undefined) {
-          alert("Application ID is missing");
-          return;
-        }
-        // Assuming we default to pollingUnitID for polling agent backwards compatibility
-        const targetPuId = approvalData.pollingUnitId ?? 0;
-        await approveMutation.mutateAsync({
-          id: data.id,
-          pollingUnitID: targetPuId,
-        });
-      },
-      onReject: async (reason) => {
-        if (data.id === undefined) {
-          alert("Application ID is missing");
-          return;
-        }
-        await rejectMutation.mutateAsync({ id: data.id, reason });
-      },
-    });
+  };
+
+  const handleOpenDialog = () => {
+    setIsDialogOpen(true);
   };
 
   const handleTileAccept = async (e: React.MouseEvent) => {
@@ -372,6 +355,17 @@ export function ApplicationTableTile({
           )}
         </div>
       </TileRight>
+
+      {isDialogOpen && (
+        <PartyApplicationDialog
+          open={isDialogOpen}
+          onClose={() => {
+            setIsDialogOpen(false);
+            if (refetch) refetch();
+          }}
+          application={applicationDetails as any}
+        />
+      )}
     </TileRow>
   );
 }

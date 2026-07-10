@@ -47,9 +47,9 @@ export function ArrivalDrawer({
   if (electionDate) {
     const targetTime = new Date(electionDate);
     targetTime.setHours(7, 0, 0, 0); // 7:00 AM on the election date
-    
+
     const diffMs = now.getTime() - targetTime.getTime();
-    
+
     if (diffMs > 0) {
       isLate = true;
       const diffMins = Math.floor(diffMs / (1000 * 60));
@@ -80,9 +80,6 @@ export function ArrivalDrawer({
             className="text-left"
             text="Have you arrived at your polling unit?"
           />
-          <span className="absolute right-0 top-6 text-[32px] shrink-0">
-            ⌚
-          </span>
         </DrawerHeader>
 
         {!showNoInfo ? (
@@ -90,7 +87,9 @@ export function ArrivalDrawer({
             <div className="flex items-center justify-between text-[17px]">
               <span className="text-c-50">We need you there 7AM</span>
               {electionDate && (
-                <span className={`font-bold ${isLate ? "text-c-80" : "text-green-600"}`}>
+                <span
+                  className={`font-bold ${isLate ? "text-c-80" : "text-green-600"}`}
+                >
                   {latenessText}
                 </span>
               )}

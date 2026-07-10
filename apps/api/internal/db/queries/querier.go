@@ -14,7 +14,7 @@ type Querier interface {
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
-	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PollingAgentApplication, error)
+	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
 	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error)
 	CreateElectionCandidate(ctx context.Context, arg CreateElectionCandidateParams) (ElectionCandidate, error)
@@ -64,7 +64,7 @@ type Querier interface {
 	DeleteWard(ctx context.Context, id int32) error
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)
 	GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPollingUnitResultsByPUParams) ([]PollingUnitResult, error)
-	GetApplicationByID(ctx context.Context, id int64) (PollingAgentApplication, error)
+	GetApplicationByID(ctx context.Context, id int64) (PartyApplication, error)
 	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
@@ -153,7 +153,8 @@ type Querier interface {
 	RollupWardFinalResults(ctx context.Context) error
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
-	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PollingAgentApplication, error)
+	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
+	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
 	UpdateCandidatesFromFederalConstituencyElections(ctx context.Context) error
 	UpdateCandidatesFromLGAElections(ctx context.Context) error
@@ -186,7 +187,7 @@ type Querier interface {
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpdateUserRoleAndStatus(ctx context.Context, arg UpdateUserRoleAndStatusParams) error
-	UpdateUserRoleToAgent(ctx context.Context, id int64) (User, error)
+	UpdateUserRoleForPartyApp(ctx context.Context, arg UpdateUserRoleForPartyAppParams) (User, error)
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
 	UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)

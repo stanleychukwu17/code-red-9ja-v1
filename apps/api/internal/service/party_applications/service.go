@@ -1,4 +1,4 @@
-package paapplications
+package partyapplications
 
 import (
 	"context"
@@ -48,9 +48,10 @@ type SubmitApplicationInput struct {
 	GraduationYear    string
 	SchoolName        string
 	Phone             string
+	Address           string
 }
 
-func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PollingAgentApplication, error) {
+func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PartyApplication, error) {
 	// Deduplicate election group IDs
 	uniqueGroupIDs := make([]int64, 0, len(input.ElectionGroupIDs))
 	seen := make(map[int64]bool)
@@ -112,13 +113,14 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		GraduationYear:    pgtype.Text{String: input.GraduationYear, Valid: input.GraduationYear != ""},
 		SchoolName:        pgtype.Text{String: input.SchoolName, Valid: input.SchoolName != ""},
 		Phone:             input.Phone,
+		Address:           input.Address,
 		PollingUnitID:     pgtype.Int8{Int64: int64(input.PollingUnitID), Valid: input.PollingUnitID > 0},
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user details: %w", err)
 	}
 
-	apps := make([]queries.PollingAgentApplication, 0, len(input.ElectionGroupIDs))
+	apps := make([]queries.PartyApplication, 0, len(input.ElectionGroupIDs))
 	for _, egID := range input.ElectionGroupIDs {
 		// Create application
 		app, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
@@ -126,6 +128,9 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			PartyID:         input.PartyID,
 			ElectionGroupID: egID,
 			PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
+			StateID:         pgtype.Int2{Int16: int16(input.CurrentState), Valid: input.CurrentState > 0},
+			LgaID:           pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
+			WardID:          pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create application: %w", err)
@@ -140,7 +145,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	return apps, nil
 }
 
-func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.PollingAgentApplication, error) {
+func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error) {
 	return s.queries.GetApplicationByID(ctx, id)
 }
 
@@ -230,14 +235,14 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID, el
 	return finalRows, nil
 }
 
-func (s *Service) RejectApplication(ctx context.Context, id int64, reason string) (queries.PollingAgentApplication, error) {
+func (s *Service) RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error) {
 	app, err := s.queries.GetApplicationByID(ctx, id)
 	if err != nil {
-		return queries.PollingAgentApplication{}, err
+		return queries.PartyApplication{}, err
 	}
 
 	if app.Status != "pending" {
-		return queries.PollingAgentApplication{}, errors.New("application is already processed")
+		return queries.PartyApplication{}, errors.New("application is already processed")
 	}
 
 	return s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
@@ -247,14 +252,14 @@ func (s *Service) RejectApplication(ctx context.Context, id int64, reason string
 	})
 }
 
-func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.PollingAgentApplication, error) {
+func (s *Service) CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error) {
 	app, err := s.queries.GetApplicationByID(ctx, id)
 	if err != nil {
-		return queries.PollingAgentApplication{}, err
+		return queries.PartyApplication{}, err
 	}
 
 	if app.Status != "pending" {
-		return queries.PollingAgentApplication{}, errors.New("application is already processed")
+		return queries.PartyApplication{}, errors.New("application is already processed")
 	}
 
 	return s.queries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
@@ -274,11 +279,11 @@ type ApproveApplicationInput struct {
 	AssignedBy    int64
 }
 
-func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicationInput) (queries.PollingAgentApplication, error) {
+func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicationInput) (queries.PartyApplication, error) {
 	// Begin transaction
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to begin transaction: %w", err)
+		return queries.PartyApplication{}, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 	defer tx.Rollback(ctx)
 
@@ -287,11 +292,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	// Fetch application
 	app, err := txQueries.GetApplicationByID(ctx, input.ApplicationID)
 	if err != nil {
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to get application: %w", err)
+		return queries.PartyApplication{}, fmt.Errorf("failed to get application: %w", err)
 	}
 
 	if app.Status != "pending" {
-		return queries.PollingAgentApplication{}, errors.New("application is already processed")
+		return queries.PartyApplication{}, errors.New("application is already processed")
 	}
 
 	// Deduct 1 slot from the party's slots balance. Once accepted, it is permanently consumed (no refund).
@@ -301,34 +306,9 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return queries.PollingAgentApplication{}, errors.New("insufficient slots: please purchase slots to accept applications")
+			return queries.PartyApplication{}, errors.New("insufficient slots: please purchase slots to accept applications")
 		}
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to deduct slots: %w", err)
-	}
-
-	pollingUnitID := input.PollingUnitID
-	if pollingUnitID <= 0 {
-		if app.PollingUnitID.Valid {
-			pollingUnitID = app.PollingUnitID.Int32
-		} else {
-			return queries.PollingAgentApplication{}, errors.New("polling unit ID is required but not specified in application")
-		}
-	}
-
-	// Update user role to polling agent
-	_, err = txQueries.UpdateUserRoleToAgent(ctx, app.UserID)
-	if err != nil {
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to promote user role: %w", err)
-	}
-
-	// Update application status
-	updatedApp, err := txQueries.UpdateApplicationStatus(ctx, queries.UpdateApplicationStatusParams{
-		ID:             input.ApplicationID,
-		Status:         "accepted",
-		RejectedReason: pgtype.Text{Valid: false},
-	})
-	if err != nil {
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to update application status: %w", err)
+		return queries.PartyApplication{}, fmt.Errorf("failed to deduct slots: %w", err)
 	}
 
 	// Create assignment based on role
@@ -345,13 +325,48 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		assignedByVal = pgtype.Int8{Int64: input.AssignedBy, Valid: true}
 	}
 
+	pollingUnitID := input.PollingUnitID
+	if roleType == "polling_agent" {
+		if pollingUnitID <= 0 {
+			if app.PollingUnitID.Valid {
+				pollingUnitID = app.PollingUnitID.Int32
+			} else {
+				return queries.PartyApplication{}, errors.New("polling unit ID is required for polling agents but not specified in application")
+			}
+		}
+	}
+
+	// Update user role to the dynamic role type
+	_, err = txQueries.UpdateUserRoleForPartyApp(ctx, queries.UpdateUserRoleForPartyAppParams{
+		ID:        app.UserID,
+		RoleLevel: pgtype.Text{String: roleType, Valid: true},
+	})
+	if err != nil {
+		return queries.PartyApplication{}, fmt.Errorf("failed to promote user role: %w", err)
+	}
+
+	// Update application status and final role/location
+	updatedApp, err := txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
+		ID:            input.ApplicationID,
+		Role:          roleType,
+		PollingUnitID: pgtype.Int4{Int32: pollingUnitID, Valid: pollingUnitID > 0},
+		StateID:       pgtype.Int2{Int16: input.StateID, Valid: input.StateID > 0},
+		LgaID:         pgtype.Int4{Int32: input.LgaID, Valid: input.LgaID > 0},
+		WardID:        pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
+	})
+	if err != nil {
+		return queries.PartyApplication{}, fmt.Errorf("failed to update application approval status: %w", err)
+	}
+
+
+
 	if roleType == "state-election-supervisor" || roleType == "state_supervisor" {
 		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
 			UserID:          app.UserID,
 			StateID:         input.StateID,
 			ElectionGroupID: app.ElectionGroupID,
 			PartyID:         app.PartyID,
-			RoleType:        pgtype.Text{String: "state_supervisor", Valid: true},
+			RoleType:        pgtype.Text{String: "state-election-supervisor", Valid: true},
 			AssignedBy:      assignedByVal,
 		})
 	} else if roleType == "lga-election-supervisor" || roleType == "lga_supervisor" {
@@ -361,7 +376,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			LgaID:           input.LgaID,
 			ElectionGroupID: app.ElectionGroupID,
 			PartyID:         app.PartyID,
-			RoleType:        pgtype.Text{String: "lga_supervisor", Valid: true},
+			RoleType:        pgtype.Text{String: "lga-election-supervisor", Valid: true},
 			AssignedBy:      assignedByVal,
 		})
 	} else if roleType == "ward-election-supervisor" || roleType == "ward_supervisor" {
@@ -372,7 +387,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			WardID:          input.WardID,
 			ElectionGroupID: app.ElectionGroupID,
 			PartyID:         app.PartyID,
-			RoleType:        pgtype.Text{String: "ward_supervisor", Valid: true},
+			RoleType:        pgtype.Text{String: "ward-election-supervisor", Valid: true},
 			AssignedBy:      assignedByVal,
 		})
 	} else {
@@ -388,11 +403,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	if err != nil {
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
+		return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return queries.PollingAgentApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
+		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return updatedApp, nil

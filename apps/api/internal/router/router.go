@@ -27,7 +27,7 @@ import (
 	fileshandler "free9ja/api/internal/handler/files"
 	officeshandler "free9ja/api/internal/handler/offices"
 	partieshandler "free9ja/api/internal/handler/parties"
-	paapplicationshandler "free9ja/api/internal/handler/polling_agent_applications"
+	partyapplicationshandler "free9ja/api/internal/handler/party_applications"
 	puassignmentshandler "free9ja/api/internal/handler/polling_unit_assignments"
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
@@ -49,7 +49,7 @@ import (
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
 	partiesservice "free9ja/api/internal/service/parties"
-	paapplications "free9ja/api/internal/service/polling_agent_applications"
+	partyapplications "free9ja/api/internal/service/party_applications"
 	puassignments "free9ja/api/internal/service/polling_unit_assignments"
 	puresults "free9ja/api/internal/service/polling_unit_results"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -110,7 +110,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb)
 	electionsService := electionsservice.NewElectionsService(q, pool, rdb)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb)
-	pollingAgentApplicationsService := paapplications.NewService(q, pool, rdb)
+	partyApplicationsService := partyapplications.NewService(q, pool, rdb)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
 	utilsInstance := utils.NewUtils(pool)
@@ -128,7 +128,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionsHandler := electionshandler.NewHandler(electionsService, utilsInstance)
 	usersHandler := usershandler.NewHandler(usersService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, utilsInstance)
-	pollingAgentApplicationsHandler := paapplicationshandler.NewHandler(pollingAgentApplicationsService, usersService, utilsInstance)
+	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
@@ -387,14 +387,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/polling-unit-assignments/{id}/tracking", pollingUnitAssignmentsHandler.UpdateAssignmentTracking)
 		r.Delete("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.DeleteAssignment)
 
-		// polling agent applications routes
-		r.Post("/api/v1/polling-agent-applications", pollingAgentApplicationsHandler.SubmitApplication)
-		r.Get("/api/v1/polling-agent-applications", pollingAgentApplicationsHandler.ListApplications)
-		r.Get("/api/v1/polling-agent-applications/recommendations", pollingAgentApplicationsHandler.GetPollingUnitRecommendations)
-		r.Get("/api/v1/polling-agent-applications/{id}", pollingAgentApplicationsHandler.GetApplication)
-		r.Post("/api/v1/polling-agent-applications/{id}/approve", pollingAgentApplicationsHandler.ApproveApplication)
-		r.Post("/api/v1/polling-agent-applications/{id}/reject", pollingAgentApplicationsHandler.RejectApplication)
-		r.Post("/api/v1/polling-agent-applications/{id}/cancel", pollingAgentApplicationsHandler.CancelApplication)
+		// party applications routes
+		r.Post("/api/v1/party-applications", partyApplicationsHandler.SubmitApplication)
+		r.Get("/api/v1/party-applications", partyApplicationsHandler.ListApplications)
+		r.Get("/api/v1/party-applications/recommendations", partyApplicationsHandler.GetPollingUnitRecommendations)
+		r.Get("/api/v1/party-applications/{id}", partyApplicationsHandler.GetApplication)
+		r.Post("/api/v1/party-applications/{id}/approve", partyApplicationsHandler.ApproveApplication)
+		r.Post("/api/v1/party-applications/{id}/reject", partyApplicationsHandler.RejectApplication)
+		r.Post("/api/v1/party-applications/{id}/cancel", partyApplicationsHandler.CancelApplication)
 
 		// polling unit updates routes
 		r.Post("/api/v1/polling-unit-updates", pollingUnitUpdatesHandler.CreateUpdate)

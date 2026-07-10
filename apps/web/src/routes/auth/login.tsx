@@ -42,7 +42,7 @@ type payloadType = {
   password: string;
   identifierType?: string;
   iso2?: string;
-}
+};
 
 export const Route = createFileRoute("/auth/login")({
   // Check if user is already authenticated, if so redirect to home page
@@ -57,13 +57,12 @@ export const Route = createFileRoute("/auth/login")({
   head: () =>
     getPageHeader({
       title: "Log in to your account",
-      description:
-        `Log in to your ${APP_NAME} account to access your dashboard and manage your profile`,
+      description: `Log in to your ${APP_NAME} account to access your dashboard and manage your profile`,
     }),
 
   // Load countries data
   loader: async () => {
-    const countries = await getAllCountries() as countriesType;
+    const countries = (await getAllCountries()) as countriesType;
     if (!countries.success) throw new Error(countries.message);
     return { countries: countries.data.countries };
   },
@@ -80,8 +79,10 @@ function RouteComponent() {
   const dispatch = useAppDispatch();
   const countries = Route.useLoaderData().countries;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showRegistrationSuccess, setShowRegistrationSuccess] = useState<boolean>(false);
-  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] = useState<boolean>(false);
+  const [showRegistrationSuccess, setShowRegistrationSuccess] =
+    useState<boolean>(false);
+  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] =
+    useState<boolean>(false);
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
@@ -97,7 +98,7 @@ function RouteComponent() {
 
       const payload: payloadType = {
         ...value,
-        identifier: value.identifier.trim().toLowerCase()
+        identifier: value.identifier.trim().toLowerCase(),
       };
 
       // get the identifier type (email, username or phone number)
@@ -154,7 +155,7 @@ function RouteComponent() {
     const timeoutId = setTimeout(() => {
       // find the matched country
       const matchedCountry = countries.find(
-        (c) => c.name.toLowerCase() === visitorCountry
+        (c) => c.name.toLowerCase() === visitorCountry,
       );
 
       // if no matched country, return
@@ -293,6 +294,7 @@ function RouteComponent() {
             <FormInput
               type="text"
               placeholder="Email or Username or Phone number"
+              className="rounded-[4px]"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
@@ -318,6 +320,7 @@ function RouteComponent() {
           children={(field) => (
             <PasswordInput
               placeholder="Password"
+              className="rounded-[4px]"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
@@ -335,6 +338,7 @@ function RouteComponent() {
           children={([canSubmit, isSubmitting]) => (
             <Button
               type="submit"
+              className="rounded-[4px]"
               variant="secondary"
               disabled={!canSubmit}
               loading={isSubmitting}

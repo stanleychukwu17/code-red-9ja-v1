@@ -9,19 +9,54 @@ import {
 } from "@repo/ui/components/dialog";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
-import { useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useQuery,
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useIntersectionObserver } from "usehooks-ts";
 import {
   getPollingUnitRecommendations,
   getPollingUnits,
   getLGAs,
   getWards,
+  approveApplication,
+  rejectApplication,
 } from "#/lib/server/applications";
 import { getStates } from "#/lib/server/countries";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
-import { type ApplicationData } from "./PollingAgentDialogContext";
+import { SelectRoleLevel } from "@repo/ui/components/selects/role-level-select";
+
+export type ApplicationData = {
+  id?: number;
+  name: string;
+  avatar: string;
+  location: string;
+  election: string;
+  voterId?: string;
+  phone?: string;
+  callingPhone?: string;
+  whatsappPhone?: string;
+  dataPhone?: string;
+  schoolName?: string;
+  degree?: string;
+  graduationYear?: string;
+  educationalStatus?: string;
+  address?: string;
+  wardName?: string;
+  wardId?: number;
+  pollingUnitId?: number;
+  electionGroupId?: number;
+  partyId?: number;
+  stateId?: number;
+  lgaId?: number;
+  partyLogo?: string;
+  partyShortName?: string;
+  voters_card_image?: any;
+};
 
 const getPgString = (val: any) => {
   if (val && typeof val === "object" && "String" in val) {
@@ -63,7 +98,7 @@ const fetchWardsAdapter = async (args: {
   });
 };
 
-interface PollingAgentApplicationDialogProps {
+interface PartyApplicationDialogProps {
   open: boolean;
   onClose: () => void;
   application: ApplicationData;
@@ -77,16 +112,16 @@ type PollingUnitOption = {
   ward: string;
 };
 
-export function PollingAgentApplicationDialog({
+export function PartyApplicationDialog({
   open,
   onClose,
   application,
-}: PollingAgentApplicationDialogProps) {
+}: PartyApplicationDialogProps) {
+  const queryClient = useQueryClient();
   const [selectedUnitId, setSelectedUnitId] = React.useState<string>("");
   const [currentOptions, setCurrentOptions] = React.useState<
     PollingUnitOption[]
   >([]);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [openChooseDialog, setOpenChooseDialog] = React.useState(false);
 
   const [role, setRole] = React.useState<string>("pollingagent");
@@ -137,14 +172,6 @@ export function PollingAgentApplicationDialog({
     },
     enabled: canFetchRecommendations,
   });
-  console.log({
-    partyID: application.partyId!,
-    electionGroupID: application.electionGroupId!,
-    lgaID: application.lgaId,
-    wardID: application.wardId,
-    pollingUnitID: application.pollingUnitId,
-  });
-  console.log({ recData });
 
   const pollingUnits: PollingUnitOption[] = React.useMemo(() => {
     if (!recData) return [];
@@ -178,6 +205,66 @@ export function PollingAgentApplicationDialog({
     setSelectedUnitId(id);
   };
 
+  const approveMutation = useMutation({
+    mutationFn: async (values: {
+      role: string;
+      pollingUnitId?: number;
+      stateId?: number;
+      lgaId?: number;
+      wardId?: number;
+    }) => {
+      if (!application.id) {
+        throw new Error("Missing Application ID");
+      }
+      const res = await approveApplication({
+        data: {
+          id: application.id,
+          roleType: values.role,
+          pollingUnitID: values.pollingUnitId,
+          stateId: values.stateId,
+          lgaId: values.lgaId,
+          wardId: values.wardId,
+        },
+      });
+      if (!res.success) {
+        throw new Error(res.message || "Failed to approve application");
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      onClose();
+    },
+    onError: (err: any) => {
+      alert(err.message || "Failed to approve application");
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (reason: string) => {
+      if (!application.id) {
+        throw new Error("Missing Application ID");
+      }
+      const res = await rejectApplication({
+        data: {
+          id: application.id,
+          reason,
+        },
+      });
+      if (!res.success) {
+        throw new Error(res.message || "Failed to reject application");
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["applications"] });
+      onClose();
+    },
+    onError: (err: any) => {
+      alert(err.message || "Failed to reject application");
+    },
+  });
+
   const handleAccept = async () => {
     if (role === "pollingagent" && !selectedUnitId && pollingUnits.length > 0) {
       alert("Please select a polling unit to assign.");
@@ -202,46 +289,27 @@ export function PollingAgentApplicationDialog({
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      if (application.onApprove) {
-        await application.onApprove({
-          role,
-          pollingUnitId:
-            role === "pollingagent" ? Number(selectedUnitId) : undefined,
-          stateId: selectedState ? Number(selectedState) : undefined,
-          lgaId: selectedLga ? Number(selectedLga) : undefined,
-          wardId: selectedWard ? Number(selectedWard) : undefined,
-        });
-      }
-      onClose();
-    } catch (err: any) {
-      alert(err.message || "Failed to approve application");
-    } finally {
-      setIsSubmitting(false);
-    }
+    approveMutation.mutate({
+      role,
+      pollingUnitId:
+        role === "pollingagent" ? Number(selectedUnitId) : undefined,
+      stateId: selectedState ? Number(selectedState) : undefined,
+      lgaId: selectedLga ? Number(selectedLga) : undefined,
+      wardId: selectedWard ? Number(selectedWard) : undefined,
+    });
   };
 
-  const handleReject = async () => {
-    if (application.onReject) {
-      const reason = window.prompt("Enter rejection reason:");
-      if (reason === null) return; // user cancelled prompt
-      if (reason.trim() === "") {
-        alert("A rejection reason is required.");
-        return;
-      }
-      setIsSubmitting(true);
-      try {
-        await application.onReject(reason);
-      } catch (err: any) {
-        alert(err.message || "Failed to reject application");
-        return;
-      } finally {
-        setIsSubmitting(false);
-      }
+  const handleReject = () => {
+    const reason = window.prompt("Enter rejection reason:");
+    if (reason === null) return; // user cancelled prompt
+    if (reason.trim() === "") {
+      alert("A rejection reason is required.");
+      return;
     }
-    onClose();
+    rejectMutation.mutate(reason);
   };
+
+  const isSubmitting = approveMutation.isPending || rejectMutation.isPending;
 
   return (
     <>
@@ -350,26 +418,13 @@ export function PollingAgentApplicationDialog({
             <div className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
-                  Role
+                  Role Level
                 </label>
-                <select
-                  value={role}
-                  onChange={(e) => {
-                    setRole(e.target.value);
-                  }}
-                  className="w-full h-11 px-3 rounded-xl border border-gray-200 outline-none focus:border-secondary transition bg-transparent"
-                >
-                  <option value="pollingagent">Polling Agent</option>
-                  <option value="state-election-supervisor">
-                    State Election Supervisor
-                  </option>
-                  <option value="lga-election-supervisor">
-                    LGA Election Supervisor
-                  </option>
-                  <option value="ward-election-supervisor">
-                    Ward Election Supervisor
-                  </option>
-                </select>
+                <SelectRoleLevel
+                  selectedId={role}
+                  update={setRole}
+                  className="w-full"
+                />
               </div>
 
               {role !== "pollingagent" && (
@@ -821,17 +876,13 @@ export function ChoosePollingUnitDialog({
         </DialogPadding>
 
         <DialogFooter>
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-11 px-6 rounded-xl hover:bg-c-5 text-c-70 text-[15px] transition cursor-pointer"
-          >
+          <Button type="button" onClick={onClose} variant="ghost" size="4xl">
             Cancel
-          </button>
+          </Button>
           <Button
             type="submit"
             onClick={handleAssign}
-            variant="secondary"
+            variant="black"
             size="4xl"
             disabled={!selectedUnitId}
           >

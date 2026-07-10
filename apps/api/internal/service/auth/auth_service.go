@@ -70,17 +70,39 @@ func NewAuthService(
 }
 
 type LoginUser struct {
-	ID            int64                         `json:"id"`
-	FakeID        int64                         `json:"fake_id"`
-	Email         string                        `json:"email"`
-	Username      string                        `json:"username"`
-	FirstName     string                        `json:"first_name"`
-	LastName      string                        `json:"last_name"`
-	Avatar        string                        `json:"avatar"`
-	Role          string                        `json:"role"`
-	RoleLevel     string                        `json:"role_level"`
-	AccountStatus string                        `json:"account_status"`
-	Party         *queries.GetPartyBasicInfoRow `json:"party,omitempty"`
+	ID                int64                         `json:"id"`
+	FakeID            int64                         `json:"fake_id"`
+	Email             string                        `json:"email"`
+	Username          string                        `json:"username"`
+	FirstName         string                        `json:"first_name"`
+	LastName          string                        `json:"last_name"`
+	MiddleName        string                        `json:"middle_name"`
+	Gender            string                        `json:"gender"`
+	DateOfBirth       string                        `json:"date_of_birth"`
+	Avatar            string                        `json:"avatar"`
+	Phone             string                        `json:"phone"`
+	Role              string                        `json:"role"`
+	RoleLevel         string                        `json:"role_level"`
+	AccountStatus     string                        `json:"account_status"`
+	PartyID           int64                         `json:"party_id,omitempty"`
+	PollingUnitID     int64                         `json:"polling_unit_id,omitempty"`
+	CurrentCountry    int16                         `json:"current_country"`
+	CurrentState      int16                         `json:"current_state"`
+	CurrentLga        int32                         `json:"current_lga"`
+	CurrentWard       int32                         `json:"current_ward"`
+	CurrentCity       int32                         `json:"current_city"`
+	Address           string                        `json:"address"`
+	WhatsappPhone     string                        `json:"whatsapp_phone"`
+	DataPhone         string                        `json:"data_phone"`
+	EducationalStatus string                        `json:"educational_status"`
+	HighestDegree     string                        `json:"highest_degree"`
+	GraduationYear    string                        `json:"graduation_year"`
+	SchoolName        string                        `json:"school_name"`
+	BankAccountNumber string                        `json:"bank_account_number"`
+	BankCode          string                        `json:"bank_code"`
+	VotersCardImage   string                        `json:"voters_card_image"`
+	Vin               string                        `json:"vin"`
+	Party             *queries.GetPartyBasicInfoRow `json:"party,omitempty"`
 }
 type LoginResult struct {
 	AccessToken  string
@@ -232,17 +254,38 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		AccessToken:  accessToken,
 		RefreshToken: result.RandomString,
 		User: LoginUser{
-			ID:            user.ID,
-			FakeID:        user.FakeID.Int64,
-			Email:         user.Email.String,
-			Username:      user.Username.String,
-			FirstName:     user.FirstName.String,
-			LastName:      user.LastName.String,
-			Avatar:        user.Avatar.String,
-			Role:          user.Role.String,
-			RoleLevel:     user.RoleLevel.String,
-			AccountStatus: user.AccountStatus.String,
-			Party:         partyObj,
+			ID:                user.ID,
+			FakeID:            user.FakeID.Int64,
+			Email:             user.Email.String,
+			Username:          user.Username.String,
+			FirstName:         user.FirstName.String,
+			LastName:          user.LastName.String,
+			MiddleName:        user.MiddleName.String,
+			Gender:            user.Gender.String,
+			Avatar:            user.Avatar.String,
+			Phone:             user.Phone.String,
+			Role:              user.Role.String,
+			RoleLevel:         user.RoleLevel.String,
+			AccountStatus:     user.AccountStatus.String,
+			PartyID:           partyID,
+			PollingUnitID:     user.PollingUnitID.Int64,
+			CurrentCountry:    user.CurrentCountry,
+			CurrentState:      user.CurrentState,
+			CurrentLga:        user.CurrentLga.Int32,
+			CurrentWard:       user.CurrentWard.Int32,
+			CurrentCity:       user.CurrentCity.Int32,
+			Address:           user.Address.String,
+			WhatsappPhone:     user.WhatsappPhone.String,
+			DataPhone:         user.DataPhone.String,
+			EducationalStatus: user.EducationalStatus.String,
+			HighestDegree:     user.HighestDegree.String,
+			GraduationYear:    user.GraduationYear.String,
+			SchoolName:        user.SchoolName.String,
+			BankAccountNumber: user.BankAccountNumber.String,
+			BankCode:          user.BankCode.String,
+			VotersCardImage:   user.VotersCardImage.String,
+			Vin:               user.Vin.String,
+			Party:             partyObj,
 		},
 	}, nil
 }
@@ -294,18 +337,43 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	if user.PartyID.Valid {
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int64)
 	}
+	var userPartyID int64
+	if user.PartyID.Valid {
+		userPartyID = user.PartyID.Int64
+	}
 	userDetails := LoginUser{
-		ID:            user.ID,
-		FakeID:        user.FakeID.Int64,
-		Email:         user.Email.String,
-		Username:      user.Username.String,
-		FirstName:     user.FirstName.String,
-		LastName:      user.LastName.String,
-		Avatar:        user.Avatar.String,
-		Role:          user.Role.String,
-		RoleLevel:     user.RoleLevel.String,
-		AccountStatus: user.AccountStatus.String,
-		Party:         partyObj,
+		ID:                user.ID,
+		FakeID:            user.FakeID.Int64,
+		Email:             user.Email.String,
+		Username:          user.Username.String,
+		FirstName:         user.FirstName.String,
+		LastName:          user.LastName.String,
+		MiddleName:        user.MiddleName.String,
+		Gender:            user.Gender.String,
+		Avatar:            user.Avatar.String,
+		Phone:             user.Phone.String,
+		Role:              user.Role.String,
+		RoleLevel:         user.RoleLevel.String,
+		AccountStatus:     user.AccountStatus.String,
+		PartyID:           userPartyID,
+		PollingUnitID:     user.PollingUnitID.Int64,
+		CurrentCountry:    user.CurrentCountry,
+		CurrentState:      user.CurrentState,
+		CurrentLga:        user.CurrentLga.Int32,
+		CurrentWard:       user.CurrentWard.Int32,
+		CurrentCity:       user.CurrentCity.Int32,
+		Address:           user.Address.String,
+		WhatsappPhone:     user.WhatsappPhone.String,
+		DataPhone:         user.DataPhone.String,
+		EducationalStatus: user.EducationalStatus.String,
+		HighestDegree:     user.HighestDegree.String,
+		GraduationYear:    user.GraduationYear.String,
+		SchoolName:        user.SchoolName.String,
+		BankAccountNumber: user.BankAccountNumber.String,
+		BankCode:          user.BankCode.String,
+		VotersCardImage:   user.VotersCardImage.String,
+		Vin:               user.Vin.String,
+		Party:             partyObj,
 	}
 
 	// Parse the RFC3339 string back into a time.Time

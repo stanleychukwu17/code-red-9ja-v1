@@ -33,7 +33,7 @@ export const getApplications = createServerFn({ method: "GET" })
       params.append("status", status);
       params.append("limit", String(limit));
       if (cursor) params.append("cursor", String(cursor));
-      const url = `${API_URL.pollingAgentApplications}?${params.toString()}`;
+      const url = `${API_URL.partyApplications}?${params.toString()}`;
       const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
@@ -49,7 +49,14 @@ export const getApplications = createServerFn({ method: "GET" })
 
 export const approveApplication = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { id: number; pollingUnitID?: number; roleType?: string; stateId?: number; lgaId?: number; wardId?: number }) => data,
+    (data: {
+      id: number;
+      pollingUnitID?: number;
+      roleType?: string;
+      stateId?: number;
+      lgaId?: number;
+      wardId?: number;
+    }) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -102,8 +109,17 @@ export const rejectApplication = createServerFn({ method: "POST" })
 
 export const getPollingUnits = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { wardID?: number; lgaID?: number; stateID?: number; limit?: number; cursor?: string | number } | undefined) =>
-      data,
+    (
+      data:
+        | {
+            wardID?: number;
+            lgaID?: number;
+            stateID?: number;
+            limit?: number;
+            cursor?: string | number;
+          }
+        | undefined,
+    ) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -131,13 +147,26 @@ export const getPollingUnits = createServerFn({ method: "GET" })
 
 export const getLGAs = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { stateId?: number; federalConstituencyId?: number; limit?: number; cursor?: string } | undefined) => data,
+    (
+      data:
+        | {
+            stateId?: number;
+            federalConstituencyId?: number;
+            limit?: number;
+            cursor?: string;
+          }
+        | undefined,
+    ) => data,
   )
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
       if (data?.stateId) params.append("state_id", String(data.stateId));
-      if (data?.federalConstituencyId) params.append("federal_constituency_id", String(data.federalConstituencyId));
+      if (data?.federalConstituencyId)
+        params.append(
+          "federal_constituency_id",
+          String(data.federalConstituencyId),
+        );
       if (data?.limit) params.append("limit", String(data.limit));
       else params.append("limit", "200");
       if (data?.cursor) params.append("cursor", String(data.cursor));
@@ -159,14 +188,28 @@ export const getLGAs = createServerFn({ method: "GET" })
 
 export const getWards = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { lga_id?: number; stateId?: number; stateConstituencyId?: number; limit?: number; cursor?: string } | undefined) => data,
+    (
+      data:
+        | {
+            lga_id?: number;
+            stateId?: number;
+            stateConstituencyId?: number;
+            limit?: number;
+            cursor?: string;
+          }
+        | undefined,
+    ) => data,
   )
   .handler(async ({ data }) => {
     try {
       const params = new URLSearchParams();
       if (data?.lga_id) params.append("lga_id", String(data.lga_id));
       if (data?.stateId) params.append("state_id", String(data.stateId));
-      if (data?.stateConstituencyId) params.append("state_constituency_id", String(data.stateConstituencyId));
+      if (data?.stateConstituencyId)
+        params.append(
+          "state_constituency_id",
+          String(data.stateConstituencyId),
+        );
       if (data?.limit) params.append("limit", String(data.limit));
       else params.append("limit", "200");
       if (data?.cursor) params.append("cursor", String(data.cursor));
@@ -206,7 +249,7 @@ export const getPollingUnitRecommendations = createServerFn({ method: "GET" })
       if (data.pollingUnitID)
         params.append("polling_unit_id", String(data.pollingUnitID));
 
-      const url = `${API_URL.pollingAgentRecommendations}?${params.toString()}`;
+      const url = `${API_URL.partyApplicationsRecommendations}?${params.toString()}`;
       const response = await fetch(url, {
         headers: getAuthHeaders(),
       });
@@ -215,9 +258,7 @@ export const getPollingUnitRecommendations = createServerFn({ method: "GET" })
     } catch (error) {
       return {
         success: false,
-        message:
-          "Failed to fetch recommendations: " + (error as Error).message,
+        message: "Failed to fetch recommendations: " + (error as Error).message,
       };
     }
   });
-

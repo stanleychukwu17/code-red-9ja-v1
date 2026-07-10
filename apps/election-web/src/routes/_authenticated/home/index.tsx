@@ -23,6 +23,21 @@ export const Route = createFileRoute("/_authenticated/home/")({
   component: RouteComponent,
 });
 
+const isElectionInPast = (val: any) => {
+  const dateStr = val?.Time || val;
+  if (!dateStr) return false;
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return false;
+    const electionDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const today = new Date();
+    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return electionDay.getTime() < currentDay.getTime();
+  } catch (e) {
+    return false;
+  }
+};
+
 function RouteComponent() {
   const navigate = useNavigate();
   const { user, selectedElectionGroup, selectedElection, pollingUnitId } =
@@ -94,7 +109,15 @@ function RouteComponent() {
 
   useEffect(() => {
     if (applicationsData) {
-      setAppCount(applicationsData.length);
+      const activeApps = applicationsData.filter((app: any) => {
+        const isActiveStatus =
+          app.status === "pending" ||
+          app.status === "approved" ||
+          app.status === "success" ||
+          app.status === "accepted";
+        return isActiveStatus && !isElectionInPast(app.election_date);
+      });
+      setAppCount(activeApps.length);
     } else {
       setAppCount(0);
     }

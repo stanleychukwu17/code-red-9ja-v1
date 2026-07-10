@@ -284,10 +284,10 @@ function TodoSection() {
   );
 }
 
-import { usePollingAgentDialog } from "#/components/dialogs/PollingAgentDialogContext";
+import { PartyApplicationDialog } from "#/components/dialogs/party-application-dialog";
 
 function RecentApplicationsSection() {
-  const { openApplication } = usePollingAgentDialog();
+  const [selectedApp, setSelectedApp] = React.useState<any>(null);
   const { partyShortName } = Route.useParams();
 
   return (
@@ -312,7 +312,7 @@ function RecentApplicationsSection() {
           <div
             key={item.name}
             onClick={() =>
-              openApplication({
+              setSelectedApp({
                 name: item.name,
                 avatar: item.avatar,
                 location: item.location.split(" . ")[0] || item.location,
@@ -343,6 +343,14 @@ function RecentApplicationsSection() {
           </div>
         ))}
       </div>
+
+      {selectedApp && (
+        <PartyApplicationDialog
+          open={!!selectedApp}
+          onClose={() => setSelectedApp(null)}
+          application={selectedApp}
+        />
+      )}
     </div>
   );
 }

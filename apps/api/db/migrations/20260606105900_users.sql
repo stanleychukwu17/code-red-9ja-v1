@@ -28,6 +28,7 @@ CREATE TABLE users (
   current_lga INTEGER REFERENCES lgas(id) ON DELETE SET NULL,
   current_ward INTEGER REFERENCES wards(id) ON DELETE SET NULL,
   current_city INT REFERENCES c_cities(id),
+  address VARCHAR(255),
 
   state_of_origin SMALLINT REFERENCES c_states(id),
 

@@ -8,17 +8,17 @@ export const getApplicationTabs = (
 ): PageHeaderTabProps[] => [
   {
     id: "pending",
-    label: `Pending${counts?.pending !== undefined ? ` (${counts.pending})` : ""}`,
+    label: `Pending`,
     href: APP_URL.partyRoutes.applications(partyShortName),
   },
   {
     id: "accepted",
-    label: `Accepted${counts?.accepted !== undefined ? ` (${counts.accepted})` : ""}`,
+    label: `Accepted`,
     href: `${APP_URL.partyRoutes.applications(partyShortName)}/accepted`,
   },
   {
     id: "rejected",
-    label: `Rejected${counts?.rejected !== undefined ? ` (${counts.rejected})` : ""}`,
+    label: `Rejected`,
     href: `${APP_URL.partyRoutes.applications(partyShortName)}/rejected`,
   },
 ];

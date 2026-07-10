@@ -252,6 +252,7 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
       graduation_year: string;
       school_name: string;
       phone: string;
+      address: string;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -261,7 +262,16 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
         headers: getAuthHeaders(),
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
+      const rawText = await response.text();
+      let resData: any;
+      try {
+        resData = JSON.parse(rawText);
+      } catch {
+        return {
+          success: false,
+          message: `Server returned non-JSON (status ${response.status}): ${rawText.slice(0, 200)}`,
+        };
+      }
       return resData;
     } catch (error) {
       return {
