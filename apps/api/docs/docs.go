@@ -855,6 +855,91 @@ const docTemplate = `{
                 }
             }
         },
+        "/banks": {
+            "get": {
+                "description": "Returns a list of real Nigerian banks from Monnify",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Banks"
+                ],
+                "summary": "Get list of banks",
+                "responses": {
+                    "200": {
+                        "description": "Banks fetched successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch banks",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/banks/validate": {
+            "get": {
+                "description": "Validates account number and bank code via Monnify, returning the account name",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Banks"
+                ],
+                "summary": "Validate bank account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account Number",
+                        "name": "accountNumber",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bank Code",
+                        "name": "bankCode",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Account validated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Missing parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Validation failed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/countries": {
             "get": {
                 "description": "Fetches a list of all countries with their ISO2 codes, phone codes",
@@ -8854,6 +8939,15 @@ const docTemplate = `{
                 "current_state": {
                     "type": "integer"
                 },
+                "current_ward": {
+                    "type": "integer"
+                },
+                "data_phone": {
+                    "type": "string"
+                },
+                "educational_status": {
+                    "type": "string"
+                },
                 "election_group_id": {
                     "type": "integer"
                 },
@@ -8863,16 +8957,31 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
+                "graduation_year": {
+                    "type": "string"
+                },
+                "highest_degree": {
+                    "type": "string"
+                },
                 "party_id": {
                     "type": "integer"
                 },
+                "phone": {
+                    "type": "string"
+                },
                 "polling_unit_id": {
                     "type": "integer"
+                },
+                "school_name": {
+                    "type": "string"
                 },
                 "vin": {
                     "type": "string"
                 },
                 "voters_card_image": {
+                    "type": "string"
+                },
+                "whatsapp_phone": {
                     "type": "string"
                 }
             }

@@ -858,19 +858,35 @@ definitions:
         type: integer
       current_state:
         type: integer
+      current_ward:
+        type: integer
+      data_phone:
+        type: string
+      educational_status:
+        type: string
       election_group_id:
         type: integer
       election_group_ids:
         items:
           type: integer
         type: array
+      graduation_year:
+        type: string
+      highest_degree:
+        type: string
       party_id:
         type: integer
+      phone:
+        type: string
       polling_unit_id:
         type: integer
+      school_name:
+        type: string
       vin:
         type: string
       voters_card_image:
+        type: string
+      whatsapp_phone:
         type: string
     type: object
   partieshandler.BuySlotsRequest:
@@ -2091,6 +2107,65 @@ paths:
       summary: Verify security questions
       tags:
       - Auth
+  /banks:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of real Nigerian banks from Monnify
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banks fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch banks
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get list of banks
+      tags:
+      - Banks
+  /banks/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validates account number and bank code via Monnify, returning the
+        account name
+      parameters:
+      - description: Account Number
+        in: query
+        name: accountNumber
+        required: true
+        type: string
+      - description: Bank Code
+        in: query
+        name: bankCode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account validated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Missing parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Validation failed
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Validate bank account
+      tags:
+      - Banks
   /countries:
     get:
       consumes:
