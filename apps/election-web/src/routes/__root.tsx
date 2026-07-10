@@ -60,7 +60,6 @@ const queryClient = new QueryClient();
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const { userDetails, sitePreference } = Route.useRouteContext();
-  console.log(sitePreference)
 
   return (
     <html lang="en" suppressHydrationWarning>
