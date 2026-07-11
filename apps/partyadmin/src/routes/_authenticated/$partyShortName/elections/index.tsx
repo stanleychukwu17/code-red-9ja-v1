@@ -47,7 +47,6 @@ function RouteComponent() {
         return undefined;
       },
     });
-  console.log(data);
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
