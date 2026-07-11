@@ -9,7 +9,7 @@ import {
 import { cn } from "@repo/ui/lib/utils";
 import { Package, Loader2, Coins } from "lucide-react";
 import * as React from "react";
-import { useAppContext } from "#/providers/providers";
+import { useAppContext } from "#/hooks/useAppContext";
 import { fundPartyWalletTest } from "#/lib/server/parties";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";

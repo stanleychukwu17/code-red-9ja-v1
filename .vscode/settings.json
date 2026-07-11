@@ -39,6 +39,8 @@
     "officesservice",
     "partieshandler",
     "partiesservice",
+    "partyadmin",
+    "partymember",
     "pgdata",
     "pgsql",
     "pgtype",

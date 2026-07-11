@@ -8,7 +8,7 @@ import {
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { DistrictsTable } from "#/components/Tables";
-import { BODIES_TABS } from "./data";
+import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getSenatorialDistricts } from "#/lib/server/senatorial_districts";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
@@ -63,11 +63,11 @@ function RouteComponent() {
 
   const districts = data
     ? data.pages.flatMap((page) =>
-        (page.data?.districts || []).map((district: { id: number; name: string; state_id: number; state_name: string }) => ({
-          title: district.name,
-          meta: [String(district.state_id), district.state_name],
-        }))
-      )
+      (page.data?.districts || []).map((district: { id: number; name: string; state_id: number; state_name: string }) => ({
+        title: district.name,
+        meta: [String(district.state_id), district.state_name],
+      }))
+    )
     : [];
 
   return (

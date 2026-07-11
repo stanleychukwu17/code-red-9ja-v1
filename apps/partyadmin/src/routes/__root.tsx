@@ -13,16 +13,18 @@ import { OutletWrapper } from "#/components/OutletWrapper";
 import LoadSitePreference from "#/components/LoadSitePreference";
 import LoadAuthSession from "#/components/LoadAuthSession";
 import { getUserDetailsCookie } from "@/lib/server/auth/auth";
-import { AppProvider } from "#/providers/providers";
+import { getSitePreference } from "@/lib/server/sitePreference";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import LoadVisitorDetails from "#/components/LoadVisitorDetails";
+import LoadElectionSession from "#/components/LoadElectionSession";
 
 const THEME_INIT_SCRIPT = `(function(){try{var stored=window.localStorage.getItem('theme');var mode=(stored==='light'||stored==='dark'||stored==='auto')?stored:'auto';var prefersDark=window.matchMedia('(prefers-color-scheme: dark)').matches;var resolved=mode==='auto'?(prefersDark?'dark':'light'):mode;var root=document.documentElement;root.classList.remove('light','dark');root.classList.add(resolved);if(mode==='auto'){root.removeAttribute('data-theme')}else{root.setAttribute('data-theme',mode)}root.style.colorScheme=resolved;}catch(e){}})();`;
 
 export const Route = createRootRoute({
   beforeLoad: async () => {
     const userDetails = await getUserDetailsCookie();
-    return { userDetails };
+    const sitePreference = await getSitePreference();
+    return { userDetails, sitePreference };
   },
   head: () => ({
     meta: [
@@ -49,11 +51,7 @@ function RootLayout() {
 const queryClient = new QueryClient();
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const { userDetails } = Route.useRouteContext();
-  let userDetailsString = "{}";
-  if (userDetails) {
-    userDetailsString = JSON.stringify(userDetails);
-  }
+  const { userDetails, sitePreference } = Route.useRouteContext();
 
   return (
     <html lang="en" suppressHydrationWarning>
@@ -62,18 +60,18 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body
-      // data-user-details={userDetailsString}
-      // className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
+        className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
       >
         <Provider store={store}>
           <QueryClientProvider client={queryClient}>
             <Toaster />
             <ClientOnly>
-              <LoadSitePreference />
+              <LoadSitePreference sitePreference={sitePreference} />
               <LoadAuthSession />
               <LoadVisitorDetails />
+              <LoadElectionSession />
             </ClientOnly>
-            <AppProvider user={userDetails}>{children}</AppProvider>
+            {children}
           </QueryClientProvider>
         </Provider>
         <Scripts />

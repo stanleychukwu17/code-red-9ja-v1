@@ -5,7 +5,7 @@ import {
   useParams,
   useLocation,
 } from "@tanstack/react-router";
-import { useAppContext } from "#/providers/providers";
+import { useAppContext } from "#/hooks/useAppContext";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";

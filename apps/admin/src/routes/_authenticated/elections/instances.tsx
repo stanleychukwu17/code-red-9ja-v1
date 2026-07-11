@@ -16,7 +16,7 @@ import { FederalConstituencyElectionFormDialog } from "#/components/dialogs/Fede
 import { StateConstituencyElectionFormDialog } from "#/components/dialogs/StateConstituencyElectionFormDialog";
 import { LgaElectionFormDialog } from "#/components/dialogs/LgaElectionFormDialog";
 import { WardElectionFormDialog } from "#/components/dialogs/WardElectionFormDialog";
-import { ELECTION_TABS } from "./data";
+import { ELECTION_TABS } from "./-data";
 import { getElections } from "#/lib/server/elections";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";

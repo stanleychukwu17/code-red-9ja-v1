@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { FederalConstituenciesTable } from "#/components/Tables";
 import type { FederalConstituencyType } from "#/components/Tables";
-import { BODIES_TABS } from "./data";
+import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getFederalConstituencies } from "#/lib/server/federal_constituencies";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
@@ -64,22 +64,22 @@ function RouteComponent() {
 
   const constituencies: FederalConstituencyType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.constituencies || []).map((c: {
-          id: number;
-          name: string;
-          state_id: number;
-          state_name: string;
-          senatorial_district_id: number;
-          senatorial_district_name: string;
-        }) => ({
-          id: c.id,
-          name: c.name,
-          state_id: c.state_id,
-          state_name: c.state_name,
-          senatorial_district_id: c.senatorial_district_id,
-          senatorial_district_name: c.senatorial_district_name,
-        }))
-      )
+      (page.data?.constituencies || []).map((c: {
+        id: number;
+        name: string;
+        state_id: number;
+        state_name: string;
+        senatorial_district_id: number;
+        senatorial_district_name: string;
+      }) => ({
+        id: c.id,
+        name: c.name,
+        state_id: c.state_id,
+        state_name: c.state_name,
+        senatorial_district_id: c.senatorial_district_id,
+        senatorial_district_name: c.senatorial_district_name,
+      }))
+    )
     : [];
 
   return (

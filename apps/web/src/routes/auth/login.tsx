@@ -70,7 +70,7 @@ export const Route = createFileRoute("/auth/login")({
   component: RouteComponent,
 
   errorComponent: ({ error }) => (
-    <div>{`${error?.message}, Also check if the backend server is up and running`}</div>
+    <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
   ),
 });
 

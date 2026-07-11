@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { WardsTable } from "#/components/Tables";
 import type { WardType } from "#/components/Tables";
-import { BODIES_TABS } from "./data";
+import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getWards } from "#/lib/server/wards";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
@@ -57,26 +57,26 @@ function RouteComponent() {
 
   const wards: WardType[] = data
     ? data.pages.flatMap((page) =>
-        (page.data?.wards || []).map(
-          (w: {
-            id: number;
-            name: string;
-            abbreviation?: string;
-            lga_id: number;
-            lga_name: string;
-            state_id: number;
-            state_name: string;
-          }) => ({
-            id: w.id,
-            name: w.name,
-            abbreviation: w.abbreviation ?? "",
-            lga_id: w.lga_id,
-            lga_name: w.lga_name,
-            state_id: w.state_id,
-            state_name: w.state_name,
-          }),
-        ),
-      )
+      (page.data?.wards || []).map(
+        (w: {
+          id: number;
+          name: string;
+          abbreviation?: string;
+          lga_id: number;
+          lga_name: string;
+          state_id: number;
+          state_name: string;
+        }) => ({
+          id: w.id,
+          name: w.name,
+          abbreviation: w.abbreviation ?? "",
+          lga_id: w.lga_id,
+          lga_name: w.lga_name,
+          state_id: w.state_id,
+          state_name: w.state_name,
+        }),
+      ),
+    )
     : [];
 
   return (

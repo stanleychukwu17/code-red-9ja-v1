@@ -4,6 +4,7 @@
   "private": true,
   "exports": {
     "./styles/*": "./src/styles/*",
+    "./hooks/*": "./src/hooks/*.ts",
     "./*": "./src/*.tsx"
   },
   "scripts": {

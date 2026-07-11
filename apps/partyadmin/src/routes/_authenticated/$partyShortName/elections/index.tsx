@@ -13,7 +13,7 @@ import { getElectionGroups } from "#/lib/server/election_groups";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ElectionGroupType } from "#/components/tiles/election-group-tile";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAppContext";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/elections/",
@@ -47,7 +47,6 @@ function RouteComponent() {
         return undefined;
       },
     });
-  console.log(data);
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,

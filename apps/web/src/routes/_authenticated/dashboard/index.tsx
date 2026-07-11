@@ -14,18 +14,6 @@ export const Route = createFileRoute("/_authenticated/dashboard/")({
 function RouteComponent() {
   const navigate = useNavigate();
   const user = useAppSelector((state) => state.auth.user);
-  // console.log({user})
-
-  // useEffect(() => {
-  //   const body = document.querySelector("body");
-  //   const userDetails = body?.getAttribute("data-user-details");
-  //   if (userDetails) {
-  //     const { name, email, phone } = JSON.parse(userDetails);
-  //     user.name = name;
-  //     user.email = email;
-  //     user.phone = phone;
-  //   }
-  // }, []);
 
 
   return (

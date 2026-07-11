@@ -7,7 +7,7 @@ import type { TDropdownGroup } from "@repo/ui/lib/types";
 import { Trash2, UsersIcon } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAppContext";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 
 interface PartyElectionInstanceDropdownProps {

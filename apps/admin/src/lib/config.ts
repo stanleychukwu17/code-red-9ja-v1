@@ -12,7 +12,16 @@ export const APP_URL = {
     onboarding: "/auth/onboarding",
     forgotPassword: "/auth/forgot-password",
   },
-  homePage: "/dashboard",
+  homePage: "/",
+  home: "/home",
+  elections: "/elections",
+  bodies: "/bodies/states",
+  users: {
+    admins: "/users/admin"
+  },
+  parties: "/parties",
+  applications: "/applications",
+  notifications: "/notifications",
 };
 
 const api = `${API_BASE}/api/v1`;

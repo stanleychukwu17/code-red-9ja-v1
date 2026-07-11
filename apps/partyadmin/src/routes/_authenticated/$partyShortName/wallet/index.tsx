@@ -17,7 +17,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppContext } from "#/providers/providers";
+import { useAppContext } from "#/hooks/useAppContext";
 import {
   getPartyWallet,
   getPartyWalletTransactions,

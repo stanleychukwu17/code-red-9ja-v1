@@ -18,26 +18,31 @@ import UserSolidIcon from "@repo/ui/icons/navbar/user-solid-icon";
 import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
 import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
 
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import {
   logoutUser,
   checkIfRefreshTokenInCookie,
-  refreshUserToken,
+  getUserDetailsCookie,
 } from "#/lib/server/auth/auth";
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
-    const res = await refreshUserToken();
-    console.log("✌️ RES:", res);
-    if (res.status !== "success" || res.user?.role !== "admin") {
-      throw redirect({ to: "/auth/login" });
+    const res = await checkIfRefreshTokenInCookie();
+    const user = await getUserDetailsCookie();
+
+    if (res.status != "success") {
+      throw redirect({ to: APP_URL.auth.login });
+    }
+
+    if (user?.role != "admin") {
+      throw new Error("You do not have access to this platform.");
     }
   },
   component: AuthenticatedRoutes,
-  errorComponent: ({ error }) => <div>{error.message}</div>,
+  errorComponent: ({ error }) => <div className="text-destructive">{error.message}</div>,
 });
 
 const ICON_CLASS = "shrink-0 size-6";
@@ -48,42 +53,42 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     label: "Home",
     icon: <HomeIcon className={ICON_CLASS} />,
     selectedIcon: <HomeSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/home",
+    href: APP_URL.home,
   },
   {
     id: "elections",
     label: "Elections",
     icon: <CubeIcon className={ICON_CLASS} />,
     selectedIcon: <CubeSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/elections",
+    href: APP_URL.elections,
   },
   {
     id: "bodies",
     label: "Bodies",
     icon: <CalendarIcon className={ICON_CLASS} />,
     selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/bodies/states",
+    href: APP_URL.bodies,
   },
   {
     id: "users",
     label: "Users",
     icon: <UserIcon className={ICON_CLASS} />,
     selectedIcon: <UserSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/users/admin",
+    href: APP_URL.users.admins,
   },
   {
     id: "parties",
     label: "Parties",
     icon: <PartyIcon className={ICON_CLASS} />,
     selectedIcon: <PartySolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/parties",
+    href: APP_URL.parties,
   },
   {
     id: "applications",
     label: "Applications",
     icon: <PaperIcon className={ICON_CLASS} />,
     selectedIcon: <PaperSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/applications",
+    href: APP_URL.applications,
   },
   {
     id: "notifications",
@@ -92,19 +97,20 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     selectedIcon: (
       <NotificationSolidIcon className={SELECTED_ICON_CLASS} />
     ),
-    href: "/notifications",
+    href: APP_URL.notifications,
   },
 ];
 
 function AuthenticatedRoutes() {
   const { userDetails } = Route.useRouteContext();
   const dispatch = useAppDispatch();
+  const sitePreference = useAppSelector((state) => state.site);
+  const isExpanded = sitePreference?.sideBarState !== "collapsed";
 
   const handleLogout = async () => {
     try {
       await logoutUser();
     } catch (e) {
-      console.error(e);
     }
     dispatch(updateAuthState({ user: null }));
   };
@@ -116,6 +122,7 @@ function AuthenticatedRoutes() {
   return (
     <div className="flex">
       <AppSidebarShell
+        defaultOpen={isExpanded}
         userDetails={userDetails}
         items={APP_SIDEBAR_ITEMS}
         onLogout={handleLogout}

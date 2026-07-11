@@ -1,20 +1,17 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import { updateSiteState } from "@/redux/slice/siteSlice";
+import type { SiteState } from "@/redux/slice/siteSlice";
 
-export default function LoadSitePreference() {
+export default function LoadSitePreference({ sitePreference }: { sitePreference?: Partial<SiteState> }) {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    // Get the site settings from the local storage
-    const siteSettings = localStorage.getItem("site");
+    if (!sitePreference || Object.keys(sitePreference).length === 0) return;
 
-    if (!siteSettings) return;
-    const parsed = JSON.parse(siteSettings);
-
-    // Dispatch the actions to update the Redux store with the values from the local storage
-    dispatch(updateSiteState(parsed));
-  }, []);
+    // Dispatch the actions to update the Redux store with the values from the props
+    dispatch(updateSiteState(sitePreference));
+  }, [sitePreference, dispatch]);
 
   return null;
 }

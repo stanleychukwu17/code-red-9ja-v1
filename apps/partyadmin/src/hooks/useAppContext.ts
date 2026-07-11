@@ -1,0 +1,234 @@
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useRouteContext } from "@tanstack/react-router";
+import { getParty } from "#/lib/server/parties";
+import { getElectionCandidates } from "#/lib/server/elections";
+import { useAppDispatch, useAppSelector } from "#/redux/hooks";
+import {
+  selectSelectedElectionGroup,
+  selectSelectedElection,
+  selectSelectedCountryId,
+  selectSelectedStateId,
+  selectSelectedDistrictId,
+  selectSelectedFederalConstituencyId,
+  selectSelectedStateConstituencyId,
+  selectSelectedLGAId,
+  selectSelectedWardId,
+  setSelectedElectionGroup,
+  setSelectedElection,
+  setSelectedCountryId,
+  setSelectedStateId,
+  setSelectedDistrictId,
+  setSelectedFederalConstituencyId,
+  setSelectedStateConstituencyId,
+  setSelectedLGAId,
+  setSelectedWardId,
+} from "#/redux/slice/electionSlice";
+
+export interface PartyDetails {
+  id?: number;
+  shortName: string;
+  name: string;
+  logo?: string;
+  slots?: number;
+  allowanceBalanceKobo?: number;
+  stateAllowances?: Record<string, number>;
+}
+
+export interface BackendParty {
+  id: number;
+  short_name: string;
+  name: string;
+  logo?: string;
+  slots?: number;
+  allowance_balance_kobo?: number;
+  state_allowances?: Record<string, number>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface GetPartyResponse {
+  success: boolean;
+  message: string;
+  data?: {
+    party: BackendParty;
+  };
+}
+
+export interface UserDetails {
+  fake_id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  avatar_url?: string;
+  account_status: string;
+  party_id?: number;
+  party?: {
+    id?: number;
+    short_name?: string;
+    name?: string;
+    logo?: string;
+    slots?: number;
+    allowance_balance_kobo?: number;
+    state_allowances?: Record<string, number>;
+    created_at?: string;
+    updated_at?: string;
+  };
+}
+
+export const usePartyDetails = (): PartyDetails | null => {
+  const reduxUser = useAppSelector((state) => state.auth.user);
+  let routeUser: any = null;
+  try {
+    const context = useRouteContext({ from: "__root__" }) as any;
+    routeUser = context?.userDetails;
+  } catch (e) {
+    // router context may not be available outside routing tree
+  }
+  const user = reduxUser || routeUser;
+  const partyId = user?.party?.id ?? user?.party_id;
+
+  const { data: fetchedParty } = useQuery<BackendParty | null, Error>({
+    queryKey: ["party", partyId],
+    queryFn: async () => {
+      if (!partyId) return null;
+      const res = (await getParty({ data: partyId })) as GetPartyResponse;
+      if (res && res.success && res.data?.party) {
+        return res.data.party;
+      }
+      throw new Error(res?.message || "Failed to fetch party details");
+    },
+    enabled: !!partyId,
+  });
+
+  const party = fetchedParty
+    ? {
+        id: fetchedParty.id,
+        shortName: fetchedParty.short_name,
+        name: fetchedParty.name || "",
+        logo: fetchedParty.logo,
+        slots: fetchedParty.slots || 0,
+        allowanceBalanceKobo: fetchedParty.allowance_balance_kobo || 0,
+        stateAllowances: fetchedParty.state_allowances || {},
+      }
+    : user?.party?.short_name
+      ? {
+          id: user.party.id ?? user.party_id,
+          shortName: user.party.short_name,
+          name: user.party.name || "",
+          logo: user.party.logo,
+          slots: user.party.slots || 0,
+          allowanceBalanceKobo: user.party.allowance_balance_kobo || 0,
+          stateAllowances: user.party.state_allowances || {},
+        }
+      : user?.party_id
+        ? {
+            id: user.party_id,
+            shortName: "",
+            name: "",
+            slots: 0,
+            allowanceBalanceKobo: 0,
+            stateAllowances: {},
+          }
+        : null;
+
+  return party;
+};
+
+export const useElectionCandidates = () => {
+  const selectedElection = useAppSelector(selectSelectedElection);
+  const fetchElectionCandidates = useServerFn(getElectionCandidates);
+
+  const { data: candidatesData } = useQuery({
+    queryKey: ["election-candidates", selectedElection?.id],
+    queryFn: () =>
+      fetchElectionCandidates({
+        data: { electionId: selectedElection?.id as number },
+      }),
+    enabled: !!selectedElection?.id,
+  });
+
+  return candidatesData?.data?.candidates || candidatesData?.candidates || [];
+};
+
+export const useAppContext = () => {
+  const dispatch = useAppDispatch();
+  const reduxUser = useAppSelector((state) => state.auth.user);
+  let routeUser: any = null;
+  try {
+    const context = useRouteContext({ from: "__root__" }) as any;
+    routeUser = context?.userDetails;
+  } catch (e) {
+    // context not available
+  }
+  const user = reduxUser || routeUser;
+  const party = usePartyDetails();
+
+  const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);
+  const selectedElection = useAppSelector(selectSelectedElection);
+  const selectedCountryId = useAppSelector(selectSelectedCountryId);
+  const selectedStateId = useAppSelector(selectSelectedStateId);
+  const selectedDistrictId = useAppSelector(selectSelectedDistrictId);
+  const selectedFederalConstituencyId = useAppSelector(selectSelectedFederalConstituencyId);
+  const selectedStateConstituencyId = useAppSelector(selectSelectedStateConstituencyId);
+  const selectedLGAId = useAppSelector(selectSelectedLGAId);
+  const selectedWardId = useAppSelector(selectSelectedWardId);
+  const electionCandidates = useElectionCandidates();
+
+  return {
+    user,
+    party,
+    selectedElectionGroup,
+    selectedElection,
+    setSelectedElectionGroup: (group: any | null) => dispatch(setSelectedElectionGroup(group)),
+    setSelectedElection: (election: any | null) => dispatch(setSelectedElection(election)),
+    selectedCountryId,
+    setSelectedCountryId: (id: number | undefined) => dispatch(setSelectedCountryId(id)),
+    selectedStateId,
+    setSelectedStateId: (id: number | undefined) => dispatch(setSelectedStateId(id)),
+    selectedDistrictId,
+    setSelectedDistrictId: (id: number | undefined) => dispatch(setSelectedDistrictId(id)),
+    selectedFederalConstituencyId,
+    setSelectedFederalConstituencyId: (id: number | undefined) => dispatch(setSelectedFederalConstituencyId(id)),
+    selectedStateConstituencyId,
+    setSelectedStateConstituencyId: (id: number | undefined) => dispatch(setSelectedStateConstituencyId(id)),
+    selectedLGAId,
+    setSelectedLGAId: (id: number | undefined) => dispatch(setSelectedLGAId(id)),
+    selectedWardId,
+    setSelectedWardId: (id: number | undefined) => dispatch(setSelectedWardId(id)),
+    electionCandidates,
+  };
+};
+
+export const useAuth = () => {
+  const context = useAppContext();
+  return {
+    user: context.user,
+    party: context.party || {
+      id: undefined,
+      shortName: "",
+      name: "",
+      logo: undefined,
+    },
+    selectedElectionGroup: context.selectedElectionGroup,
+    selectedElection: context.selectedElection,
+    setSelectedElectionGroup: context.setSelectedElectionGroup,
+    setSelectedElection: context.setSelectedElection,
+    selectedCountryId: context.selectedCountryId,
+    setSelectedCountryId: context.setSelectedCountryId,
+    selectedStateId: context.selectedStateId,
+    setSelectedStateId: context.setSelectedStateId,
+    selectedDistrictId: context.selectedDistrictId,
+    setSelectedDistrictId: context.setSelectedDistrictId,
+    selectedFederalConstituencyId: context.selectedFederalConstituencyId,
+    setSelectedFederalConstituencyId: context.setSelectedFederalConstituencyId,
+    selectedStateConstituencyId: context.selectedStateConstituencyId,
+    setSelectedStateConstituencyId: context.setSelectedStateConstituencyId,
+    selectedLGAId: context.selectedLGAId,
+    setSelectedLGAId: context.setSelectedLGAId,
+    selectedWardId: context.selectedWardId,
+    setSelectedWardId: context.setSelectedWardId,
+    electionCandidates: context.electionCandidates,
+  };
+};

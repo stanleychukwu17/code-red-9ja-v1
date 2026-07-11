@@ -13,7 +13,7 @@ import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialo
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
 import { SetAgentPaymentDialog } from "#/components/dialogs/set-agent-payment-dialog";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppContext } from "#/providers/providers";
+import { useAppContext } from "#/hooks/useAppContext";
 import { getPartyWallet } from "#/lib/server/parties";
 import { HomePageHeader } from "./-header";
 
