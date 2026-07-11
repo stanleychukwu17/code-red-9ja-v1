@@ -141,7 +141,7 @@ RETURNING *;
 UPDATE users
 SET
   role_level = $2,
-  role = 'partymember',
+  role = 'partyadmin',
   updated_at = NOW()
 WHERE id = $1
 RETURNING *;
