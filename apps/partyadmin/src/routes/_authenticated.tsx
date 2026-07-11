@@ -43,7 +43,7 @@ export const Route = createFileRoute("/_authenticated")({
     }
   },
   component: AuthenticatedRoutes,
-  errorComponent: ({ error }) => <div>{error.message}</div>,
+  errorComponent: ({ error }) => <div className="text-destructive">{error.message}</div>,
 });
 
 function AuthenticatedRoutes() {
