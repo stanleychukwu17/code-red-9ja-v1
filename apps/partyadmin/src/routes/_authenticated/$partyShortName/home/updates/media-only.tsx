@@ -4,7 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAppContext } from "#/providers/providers";
+import { useAppContext } from "#/hooks/useAppContext";
 import { getPollingUnitUpdates } from "#/lib/server/polling-unit-updates";
 
 export const Route = createFileRoute(

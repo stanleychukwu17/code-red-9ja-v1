@@ -9,7 +9,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { Info, Loader2 } from "lucide-react";
 import { cn } from "@repo/ui/lib/utils";
-import { useAppContext } from "#/providers/providers";
+import { useAppContext } from "#/hooks/useAppContext";
 import { updatePartyStateAllowances } from "#/lib/server/parties";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getStates } from "#/lib/server/countries";

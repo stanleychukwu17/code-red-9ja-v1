@@ -113,7 +113,7 @@ export function AppSidebarShell({
       <main className="bg-sidebar md:hidden h-12 flex flex-1 flex-col ">
         <div className="flex items-center justify-between px-4 w-dvw py-2">
           <div>
-            <Link to={homePageUrl ?? "/"}>
+            <Link to={(homePageUrl ?? "/") as any}>
               <LogoIcon className="size-8 shrink-0 text-[#234f3e] dark:text-logo" />
             </Link>
           </div>
@@ -202,6 +202,7 @@ function useActiveItem(items: AppSidebarItem[]): string {
 
   items.forEach((item) => {
     const toMatch = `/${item.id}`;
+    console.log(toMatch)
     if (location.pathname.startsWith(toMatch)) {
       activeItem = item.id;
     }
@@ -281,7 +282,7 @@ function LogoComponent({ logoBadge, homePageUrl }: { logoBadge?: ReactNode; home
       )}
     >
       <div className="flex items-center gap-2">
-        <Link to={homePageUrl ?? "/"}>
+        <Link to={(homePageUrl ?? "/") as any}>
           <LogoIcon className="size-8 shrink-0" />
         </Link>
         {sideBarState === "expanded" && (
@@ -339,7 +340,7 @@ function ProfilePicture({
             <Link to="/auth/login">Log in</Link>
           </Button>
           <Button asChild variant="outline" className="w-full border-border">
-            <Link to="/auth/signup">Sign up</Link>
+            <Link to={"/auth/signup" as any}>Sign up</Link>
           </Button>
         </div>
       );
@@ -354,7 +355,7 @@ function ProfilePicture({
           <LogIn className="size-5 text-c-70" />
         </Link>
         <Link
-          to="/auth/signup"
+          to={"/auth/signup" as any}
           className="flex items-center justify-center size-10 rounded-full hover:bg-c-10 dark:hover:bg-black"
           title="Sign up"
         >

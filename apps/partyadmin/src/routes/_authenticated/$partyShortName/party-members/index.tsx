@@ -14,7 +14,7 @@ import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAppContext";
 
 // Server Functions
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";

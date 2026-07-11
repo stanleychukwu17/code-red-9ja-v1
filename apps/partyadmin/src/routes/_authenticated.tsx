@@ -22,7 +22,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { APP_URL } from "#/lib/config";
 import { logoutUser, refreshUserToken } from "#/lib/server/auth/auth";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAppContext";
 import { useAppDispatch } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -31,7 +31,6 @@ import { PollingAgentDialogProvider } from "#/components/dialogs/PollingAgentDia
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const res = await refreshUserToken();
-    console.log("✌️ RES:", res);
 
     if (!res.success || res.data?.user?.role !== "partymember") {
       throw redirect({ to: APP_URL.auth.login });

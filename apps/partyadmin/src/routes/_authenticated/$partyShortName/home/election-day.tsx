@@ -9,7 +9,7 @@ import {
 } from "./components/-final-result-reel";
 import { UpdateReel } from "./components/-update-reel";
 import { getPageHeader } from "#/lib/shared/meta";
-import { useAppContext } from "#/providers/providers";
+import { useAppContext } from "#/hooks/useAppContext";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import { ActivitiesCard } from "@repo/ui/components/cards/activities-card";
