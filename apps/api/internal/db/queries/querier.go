@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
+	AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
@@ -105,6 +106,7 @@ type Querier interface {
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
+	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
 	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
 	GetUserWalletByAccountReference(ctx context.Context, accountReference string) (UserWallet, error)
 	GetUserWalletByID(ctx context.Context, id int64) (UserWallet, error)
@@ -186,8 +188,8 @@ type Querier interface {
 	UpdateUserParty(ctx context.Context, arg UpdateUserPartyParams) error
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
-	UpdateUserRoleAndStatus(ctx context.Context, arg UpdateUserRoleAndStatusParams) error
-	UpdateUserRoleForPartyApp(ctx context.Context, arg UpdateUserRoleForPartyAppParams) (User, error)
+	UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error)
+	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
 	UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)

@@ -20,10 +20,12 @@ import (
 type UsersService interface {
 	GetUserByID(ctx context.Context, id int64) (queries.User, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
+	AssignUserRole(ctx context.Context, userID int64, code string) error
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
 	ListUsers(ctx context.Context) ([]queries.User, error)
 	DeleteUser(ctx context.Context, id int64, fakeID int64) error
-	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, role, roleLevel string, partyID int64, email string) error
+	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int64, email string) error
 
 	GetBanks(ctx context.Context) ([]monnifyclient.Bank, error)
 	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
@@ -144,9 +146,9 @@ type UserResponse struct {
 	Address           string `json:"address"`
 }
 
-func mapUserToResponse(u queries.User) UserResponse {
+func mapUserToResponse(u queries.User, role string, roleLevel string) UserResponse {
 	var email, avatar, phone, username, lastName, firstName, middleName, gender string
-	var dateOfBirth, ninVerified, phoneVerified, role, roleLevel, accountStatus string
+	var dateOfBirth, ninVerified, phoneVerified, accountStatus string
 	var whatsappPhone, dataPhone, educationalStatus, highestDegree, graduationYear, schoolName string
 	var bankAccountNumber, bankCode, votersCardImage, address string
 	var partyID, pollingUnitID int64
@@ -185,12 +187,6 @@ func mapUserToResponse(u queries.User) UserResponse {
 	}
 	if u.PhoneVerified.Valid {
 		phoneVerified = u.PhoneVerified.String
-	}
-	if u.Role.Valid {
-		role = u.Role.String
-	}
-	if u.RoleLevel.Valid {
-		roleLevel = u.RoleLevel.String
 	}
 	if u.AccountStatus.Valid {
 		accountStatus = u.AccountStatus.String
@@ -308,8 +304,14 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	roleCode := ""
+	uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
+	if len(uRoles) > 0 {
+		roleCode = uRoles[0].Code
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "User profile retrieved successfully", map[string]interface{}{
-		"user": mapUserToResponse(user),
+		"user": mapUserToResponse(user, roleCode, ""),
 	})
 }
 
@@ -465,8 +467,18 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	var filteredUsers []queries.User
 	for _, u := range users {
-		if role != "" && (!u.Role.Valid || u.Role.String != role) {
-			continue
+		if role != "" {
+			uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
+			hasRole := false
+			for _, ur := range uRoles {
+				if ur.Code == role {
+					hasRole = true
+					break
+				}
+			}
+			if !hasRole {
+				continue
+			}
 		}
 		if partyID == -1 {
 			continue
@@ -507,7 +519,12 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	responses := make([]UserResponse, len(paginatedUsers))
 	for i, u := range paginatedUsers {
-		responses[i] = mapUserToResponse(u)
+		roleCode := ""
+		uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
+		if len(uRoles) > 0 {
+			roleCode = uRoles[0].Code
+		}
+		responses[i] = mapUserToResponse(u, roleCode, "")
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
@@ -570,10 +587,7 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !currUser.RoleLevel.Valid || strings.ToLower(currUser.RoleLevel.String) != "admin" {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only party admins can delete members")
-			return
-		}
+
 
 		// Party admin can only delete users belonging to their own party
 		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {
@@ -582,7 +596,15 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Party admin cannot delete administrative accounts
-		if user.Role.Valid && strings.ToLower(user.Role.String) == "admin" {
+		uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
+		isAdmin := false
+		for _, ur := range uRoles {
+			if strings.ToLower(ur.Code) == "admin" {
+				isAdmin = true
+				break
+			}
+		}
+		if isAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you cannot delete administrative accounts")
 			return
 		}
@@ -648,10 +670,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if !currUser.RoleLevel.Valid || strings.ToLower(currUser.RoleLevel.String) != "admin" {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only party admins can edit members")
-			return
-		}
+
 
 		// Party admin can only edit users belonging to their own party
 		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {
@@ -672,7 +691,15 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Party admin cannot edit an admin user
-		if user.Role.Valid && strings.ToLower(user.Role.String) == "admin" {
+		uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
+		isAdmin := false
+		for _, ur := range uRoles {
+			if strings.ToLower(ur.Code) == "admin" {
+				isAdmin = true
+				break
+			}
+		}
+		if isAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you cannot edit administrative accounts")
 			return
 		}
@@ -691,11 +718,12 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		req.CurrentState,
 		req.CurrentCity,
 		req.StateOfOrigin,
-		req.Role,
-		req.RoleLevel,
 		req.PartyID,
 		req.Email,
 	)
+	if err == nil && req.Role != "" {
+		_ = h.usersService.AssignUserRole(r.Context(), user.ID, req.Role)
+	}
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update user: "+err.Error())
 		return

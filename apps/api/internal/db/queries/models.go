@@ -406,6 +406,24 @@ type PollingUnitUpdate struct {
 	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Role struct {
+	ID          int16       `json:"id"`
+	Code        string      `json:"code"`
+	Name        string      `json:"name"`
+	Description pgtype.Text `json:"description"`
+}
+
+type RoleAssignedPermission struct {
+	RoleID       int16 `json:"role_id"`
+	PermissionID int16 `json:"permission_id"`
+}
+
+type RolePermission struct {
+	ID          int16       `json:"id"`
+	Code        string      `json:"code"`
+	Description pgtype.Text `json:"description"`
+}
+
 type SenatorialDistrict struct {
 	ID              int32       `json:"id"`
 	Name            string      `json:"name"`
@@ -530,13 +548,16 @@ type User struct {
 	NinVerified       pgtype.Text        `json:"nin_verified"`
 	PhoneVerified     pgtype.Text        `json:"phone_verified"`
 	EmailVerified     pgtype.Text        `json:"email_verified"`
-	Role              pgtype.Text        `json:"role"`
-	RoleLevel         pgtype.Text        `json:"role_level"`
 	AccountStatus     pgtype.Text        `json:"account_status"`
 	PartyID           pgtype.Int8        `json:"party_id"`
 	PollingUnitID     pgtype.Int8        `json:"polling_unit_id"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserRole struct {
+	UserID int64 `json:"user_id"`
+	RoleID int16 `json:"role_id"`
 }
 
 type UserSecurityQuestion struct {

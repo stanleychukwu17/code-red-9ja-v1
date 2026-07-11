@@ -167,12 +167,28 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		return LoginResult{}, errors.New("invalid login details provided")
 	}
 
+	// Fetch User Roles
+	userRoles, err := s.queries.GetUserRoles(ctx, user.ID)
+	if err != nil {
+		return LoginResult{}, errors.New("failed to fetch user roles")
+	}
+
+	var userRoleCodes []string
+	for _, ur := range userRoles {
+		userRoleCodes = append(userRoleCodes, ur.Code)
+	}
+
 	// Role Validation
 	if len(allowedRoles) > 0 {
 		hasRole := false
-		for _, role := range allowedRoles {
-			if user.Role.String == role {
-				hasRole = true
+		for _, allowedRole := range allowedRoles {
+			for _, code := range userRoleCodes {
+				if code == allowedRole {
+					hasRole = true
+					break
+				}
+			}
+			if hasRole {
 				break
 			}
 		}
@@ -209,8 +225,13 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		partyID = user.PartyID.Int64
 	}
 
+	primaryRole := ""
+	if len(userRoleCodes) > 0 {
+		primaryRole = userRoleCodes[0]
+	}
+
 	// Generate Access Token and Refresh Token
-	accessToken, err := utils.GenerateToken(user.ID, fakeID, user.Username.String, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
+	accessToken, err := utils.GenerateToken(user.ID, fakeID, user.Username.String, primaryRole, "", s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -264,8 +285,8 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			Gender:            user.Gender.String,
 			Avatar:            user.Avatar.String,
 			Phone:             user.Phone.String,
-			Role:              user.Role.String,
-			RoleLevel:         user.RoleLevel.String,
+			Role:              primaryRole,
+			RoleLevel:         "",
 			AccountStatus:     user.AccountStatus.String,
 			PartyID:           partyID,
 			PollingUnitID:     user.PollingUnitID.Int64,
@@ -341,6 +362,11 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	if user.PartyID.Valid {
 		userPartyID = user.PartyID.Int64
 	}
+	userRoles, _ := s.queries.GetUserRoles(ctx, user.ID)
+	roleCode := ""
+	if len(userRoles) > 0 {
+		roleCode = userRoles[0].Code
+	}
 	userDetails := LoginUser{
 		ID:                user.ID,
 		FakeID:            user.FakeID.Int64,
@@ -352,8 +378,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Gender:            user.Gender.String,
 		Avatar:            user.Avatar.String,
 		Phone:             user.Phone.String,
-		Role:              user.Role.String,
-		RoleLevel:         user.RoleLevel.String,
+		Role:              roleCode,
+		RoleLevel:         "",
 		AccountStatus:     user.AccountStatus.String,
 		PartyID:           userPartyID,
 		PollingUnitID:     user.PollingUnitID.Int64,
@@ -435,7 +461,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	}
 
 	// Generate a new Access Token
-	newAccessToken, err := utils.GenerateToken(user.ID, userFid, username, user.Role.String, user.RoleLevel.String, s.jwtSecret, s.jwtAccessExp, partyID)
+	newAccessToken, err := utils.GenerateToken(user.ID, userFid, username, roleCode, "", s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -1241,12 +1267,17 @@ func (s *AuthService) RegisterAdmin(ctx context.Context, email, phone, username,
 		return RegisterResult{}, err
 	}
 
-	// Update user role to admin and account_status to active
-	err = s.queries.UpdateUserRoleAndStatus(ctx, queries.UpdateUserRoleAndStatusParams{
+	// Update account_status to active
+	err = s.queries.UpdateUserStatus(ctx, queries.UpdateUserStatusParams{
 		ID:            user_id,
-		Role:          pgtype.Text{String: "admin", Valid: true},
 		AccountStatus: pgtype.Text{String: "active", Valid: true},
 	})
+	if err == nil {
+		_ = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
+			UserID: user_id,
+			Code:   "admin",
+		})
+	}
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -1310,14 +1341,18 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
 		PartyID:        pgtype.Int8{Int64: partyID, Valid: partyID != 0},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
-		Role:           pgtype.Text{String: role, Valid: role != ""},
-		RoleLevel:      pgtype.Text{String: roleLevel, Valid: roleLevel != ""},
 	}
 
 	// creates the user's new account in our database
 	userID, err := s.queries.CreateCandidatePlaceholder(ctx, params)
 	if err != nil {
 		return RegisterResult{}, err
+	}
+	if role != "" {
+		_ = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
+			UserID: userID,
+			Code:   role,
+		})
 	}
 
 	// generate a fake_id using the user_id and update the user fake_id
@@ -1460,8 +1495,6 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			BankCode:          bankCodeVal,
 			NinVerified:       pgtype.Text{String: u.NinVerified, Valid: u.NinVerified != ""},
 			PhoneVerified:     pgtype.Text{String: u.PhoneVerified, Valid: u.PhoneVerified != ""},
-			Role:              pgtype.Text{String: u.Role, Valid: u.Role != ""},
-			RoleLevel:         pgtype.Text{String: u.RoleLevel, Valid: u.RoleLevel != ""},
 			AccountStatus:     pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
 			PartyID:           partyIDVal,
 		}

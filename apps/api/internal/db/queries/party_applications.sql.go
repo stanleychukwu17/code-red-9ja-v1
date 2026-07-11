@@ -468,22 +468,20 @@ SET
   current_city = $9,
   bank_account_number = $10,
   bank_code = $11,
-  role = $12,
-  role_level = $13,
-  whatsapp_phone = $14,
-  data_phone = $15,
-  educational_status = $16,
-  highest_degree = $17,
-  graduation_year = $18,
-  school_name = $19,
-  current_ward = $20,
-  phone = COALESCE(NULLIF($21::varchar, ''), phone),
-  phone_verified = CASE WHEN NULLIF($21::varchar, '') IS NOT NULL AND NULLIF($21::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
-  polling_unit_id = $22,
-  address = COALESCE(NULLIF($23::varchar, ''), address),
+  whatsapp_phone = $12,
+  data_phone = $13,
+  educational_status = $14,
+  highest_degree = $15,
+  graduation_year = $16,
+  school_name = $17,
+  current_ward = $18,
+  phone = COALESCE(NULLIF($19::varchar, ''), phone),
+  phone_verified = CASE WHEN NULLIF($19::varchar, '') IS NOT NULL AND NULLIF($19::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
+  polling_unit_id = $20,
+  address = COALESCE(NULLIF($21::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -498,8 +496,6 @@ type UpdateUserAgentDetailsParams struct {
 	CurrentCity       pgtype.Int4 `json:"current_city"`
 	BankAccountNumber pgtype.Text `json:"bank_account_number"`
 	BankCode          pgtype.Text `json:"bank_code"`
-	Role              pgtype.Text `json:"role"`
-	RoleLevel         pgtype.Text `json:"role_level"`
 	WhatsappPhone     pgtype.Text `json:"whatsapp_phone"`
 	DataPhone         pgtype.Text `json:"data_phone"`
 	EducationalStatus pgtype.Text `json:"educational_status"`
@@ -525,8 +521,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.CurrentCity,
 		arg.BankAccountNumber,
 		arg.BankCode,
-		arg.Role,
-		arg.RoleLevel,
 		arg.WhatsappPhone,
 		arg.DataPhone,
 		arg.EducationalStatus,
@@ -572,8 +566,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.NinVerified,
 		&i.PhoneVerified,
 		&i.EmailVerified,
-		&i.Role,
-		&i.RoleLevel,
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
@@ -584,22 +576,17 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 }
 
 const updateUserRoleForPartyApp = `-- name: UpdateUserRoleForPartyApp :one
-UPDATE users
-SET
-  role_level = $2,
-  role = 'partyadmin',
-  updated_at = NOW()
-WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+WITH inserted AS (
+  INSERT INTO user_roles (user_id, role_id)
+  SELECT $1, r.id FROM roles r WHERE r.code = 'partyadmin'
+  ON CONFLICT DO NOTHING
+)
+UPDATE users SET updated_at = NOW() WHERE users.id = $1
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, created_at, updated_at
 `
 
-type UpdateUserRoleForPartyAppParams struct {
-	ID        int64       `json:"id"`
-	RoleLevel pgtype.Text `json:"role_level"`
-}
-
-func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, arg UpdateUserRoleForPartyAppParams) (User, error) {
-	row := q.db.QueryRow(ctx, updateUserRoleForPartyApp, arg.ID, arg.RoleLevel)
+func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
+	row := q.db.QueryRow(ctx, updateUserRoleForPartyApp, id)
 	var i User
 	err := row.Scan(
 		&i.ID,
@@ -634,8 +621,6 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, arg UpdateUserR
 		&i.NinVerified,
 		&i.PhoneVerified,
 		&i.EmailVerified,
-		&i.Role,
-		&i.RoleLevel,
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,

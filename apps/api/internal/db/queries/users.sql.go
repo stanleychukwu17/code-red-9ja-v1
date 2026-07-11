@@ -21,11 +21,9 @@ SET first_name = $2,
     current_country = $7,
     current_state = $8,
     current_city = $9,
-    role = $10,
-    role_level = $11,
-    party_id = $12,
-    email = $13,
-    state_of_origin = $14,
+    party_id = $10,
+    email = $11,
+    state_of_origin = $12,
     updated_at = NOW()
 WHERE id = $1
 `
@@ -40,8 +38,6 @@ type AdminUpdateUserParams struct {
 	CurrentCountry int16       `json:"current_country"`
 	CurrentState   int16       `json:"current_state"`
 	CurrentCity    pgtype.Int4 `json:"current_city"`
-	Role           pgtype.Text `json:"role"`
-	RoleLevel      pgtype.Text `json:"role_level"`
 	PartyID        pgtype.Int8 `json:"party_id"`
 	Email          pgtype.Text `json:"email"`
 	StateOfOrigin  pgtype.Int2 `json:"state_of_origin"`
@@ -58,8 +54,6 @@ func (q *Queries) AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams
 		arg.CurrentCountry,
 		arg.CurrentState,
 		arg.CurrentCity,
-		arg.Role,
-		arg.RoleLevel,
 		arg.PartyID,
 		arg.Email,
 		arg.StateOfOrigin,
@@ -71,9 +65,9 @@ const createCandidatePlaceholder = `-- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
   email, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_city, state_of_origin,
-  party_id, avatar, account_status, role, role_level
+  party_id, avatar, account_status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'placeholder', $14, $15)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'placeholder')
 RETURNING id
 `
 
@@ -91,8 +85,6 @@ type CreateCandidatePlaceholderParams struct {
 	StateOfOrigin  pgtype.Int2 `json:"state_of_origin"`
 	PartyID        pgtype.Int8 `json:"party_id"`
 	Avatar         pgtype.Text `json:"avatar"`
-	Role           pgtype.Text `json:"role"`
-	RoleLevel      pgtype.Text `json:"role_level"`
 }
 
 func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error) {
@@ -110,8 +102,6 @@ func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCand
 		arg.StateOfOrigin,
 		arg.PartyID,
 		arg.Avatar,
-		arg.Role,
-		arg.RoleLevel,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -239,7 +229,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -279,8 +269,6 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 		&i.NinVerified,
 		&i.PhoneVerified,
 		&i.EmailVerified,
-		&i.Role,
-		&i.RoleLevel,
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
@@ -291,7 +279,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -331,8 +319,6 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.NinVerified,
 		&i.PhoneVerified,
 		&i.EmailVerified,
-		&i.Role,
-		&i.RoleLevel,
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
@@ -343,7 +329,7 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -383,8 +369,6 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.NinVerified,
 		&i.PhoneVerified,
 		&i.EmailVerified,
-		&i.Role,
-		&i.RoleLevel,
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
@@ -427,10 +411,12 @@ func (q *Queries) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string)
 }
 
 const listAdmins = `-- name: ListAdmins :many
-SELECT id, fake_id, email, phone, username, first_name, last_name, gender, date_of_birth, current_country, current_state, current_city, account_status, role, created_at, updated_at
-FROM users
-WHERE role = 'admin'
-ORDER BY id DESC
+SELECT u.id, u.fake_id, u.email, u.phone, u.username, u.first_name, u.last_name, u.gender, u.date_of_birth, u.current_country, u.current_state, u.current_city, u.account_status, u.created_at, u.updated_at
+FROM users u
+JOIN user_roles ur ON u.id = ur.user_id
+JOIN roles r ON ur.role_id = r.id
+WHERE r.code = 'admin'
+ORDER BY u.id DESC
 `
 
 type ListAdminsRow struct {
@@ -447,7 +433,6 @@ type ListAdminsRow struct {
 	CurrentState   int16              `json:"current_state"`
 	CurrentCity    pgtype.Int4        `json:"current_city"`
 	AccountStatus  pgtype.Text        `json:"account_status"`
-	Role           pgtype.Text        `json:"role"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
@@ -475,7 +460,6 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 			&i.CurrentState,
 			&i.CurrentCity,
 			&i.AccountStatus,
-			&i.Role,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -490,7 +474,7 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
 ORDER BY id DESC
 `
 
@@ -536,8 +520,6 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.NinVerified,
 			&i.PhoneVerified,
 			&i.EmailVerified,
-			&i.Role,
-			&i.RoleLevel,
 			&i.AccountStatus,
 			&i.PartyID,
 			&i.PollingUnitID,
@@ -559,9 +541,9 @@ INSERT INTO users (
   fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
   state_of_origin, vin, voters_card_image, bank_account_number, bank_code,
-  nin_verified, phone_verified, role, role_level, account_status, party_id
+  nin_verified, phone_verified, account_status, party_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 RETURNING id
 `
 
@@ -588,8 +570,6 @@ type SeedUserParams struct {
 	BankCode          pgtype.Text `json:"bank_code"`
 	NinVerified       pgtype.Text `json:"nin_verified"`
 	PhoneVerified     pgtype.Text `json:"phone_verified"`
-	Role              pgtype.Text `json:"role"`
-	RoleLevel         pgtype.Text `json:"role_level"`
 	AccountStatus     pgtype.Text `json:"account_status"`
 	PartyID           pgtype.Int8 `json:"party_id"`
 }
@@ -618,8 +598,6 @@ func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, erro
 		arg.BankCode,
 		arg.NinVerified,
 		arg.PhoneVerified,
-		arg.Role,
-		arg.RoleLevel,
 		arg.AccountStatus,
 		arg.PartyID,
 	)
@@ -718,19 +696,18 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 	return err
 }
 
-const updateUserRoleAndStatus = `-- name: UpdateUserRoleAndStatus :exec
+const updateUserStatus = `-- name: UpdateUserStatus :exec
 UPDATE users
-SET role = $2, account_status = $3
+SET account_status = $2
 WHERE id = $1
 `
 
-type UpdateUserRoleAndStatusParams struct {
+type UpdateUserStatusParams struct {
 	ID            int64       `json:"id"`
-	Role          pgtype.Text `json:"role"`
 	AccountStatus pgtype.Text `json:"account_status"`
 }
 
-func (q *Queries) UpdateUserRoleAndStatus(ctx context.Context, arg UpdateUserRoleAndStatusParams) error {
-	_, err := q.db.Exec(ctx, updateUserRoleAndStatus, arg.ID, arg.Role, arg.AccountStatus)
+func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error {
+	_, err := q.db.Exec(ctx, updateUserStatus, arg.ID, arg.AccountStatus)
 	return err
 }

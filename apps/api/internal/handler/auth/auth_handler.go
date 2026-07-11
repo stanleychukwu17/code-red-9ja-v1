@@ -757,11 +757,6 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 			return
 		}
 
-		if !currUser.RoleLevel.Valid || strings.ToLower(currUser.RoleLevel.String) != "admin" {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only party admins can add users")
-			return
-		}
-
 		// A party admin can only register users for their own party
 		if !currUser.PartyID.Valid || currUser.PartyID.Int64 != req.PartyID {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only add members to your own party")

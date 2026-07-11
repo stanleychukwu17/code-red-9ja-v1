@@ -72,24 +72,6 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	txQueries := s.queries.WithTx(tx)
 
-	// Fetch current user
-	user, err := txQueries.GetUserByID(ctx, input.UserID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch user: %w", err)
-	}
-
-	// Determine role and role_level based on party change
-	roleVal := "partyadmin"
-	roleLevelVal := "member"
-	if user.PartyID.Valid && user.PartyID.Int64 == input.PartyID {
-		if user.Role.Valid {
-			roleVal = user.Role.String
-		}
-		if user.RoleLevel.Valid {
-			roleLevelVal = user.RoleLevel.String
-		}
-	}
-
 	// Update user agent details
 	_, err = txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:                input.UserID,
@@ -104,8 +86,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		CurrentCity:       pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
 		BankAccountNumber: pgtype.Text{String: input.BankAccountNumber, Valid: input.BankAccountNumber != ""},
 		BankCode:          pgtype.Text{String: input.BankCode, Valid: input.BankCode != ""},
-		Role:              pgtype.Text{String: roleVal, Valid: true},
-		RoleLevel:         pgtype.Text{String: roleLevelVal, Valid: true},
+
 		WhatsappPhone:     pgtype.Text{String: input.WhatsappPhone, Valid: input.WhatsappPhone != ""},
 		DataPhone:         pgtype.Text{String: input.DataPhone, Valid: input.DataPhone != ""},
 		EducationalStatus: pgtype.Text{String: input.EducationalStatus, Valid: input.EducationalStatus != ""},
@@ -337,10 +318,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	// Update user role to the dynamic role type
-	_, err = txQueries.UpdateUserRoleForPartyApp(ctx, queries.UpdateUserRoleForPartyAppParams{
-		ID:        app.UserID,
-		RoleLevel: pgtype.Text{String: roleType, Valid: true},
-	})
+	_, err = txQueries.UpdateUserRoleForPartyApp(ctx, app.UserID)
 	if err != nil {
 		return queries.PartyApplication{}, fmt.Errorf("failed to promote user role: %w", err)
 	}
