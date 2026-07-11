@@ -2,11 +2,24 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction, Middleware } from "@reduxjs/toolkit";
 import { saveSitePreference } from "@/lib/server/sitePreference";
 
+export interface VisitorDetails {
+  ip: string;
+  location?: {
+    city?: string;
+    country?: string;
+    country_code?: string;
+    latitude?: number;
+    longitude?: number;
+    timezone?: string;
+  };
+}
+
 export interface SiteState {
   // sideBarState: This is used to determine if the sidebar is collapsed or expanded
   sideBarState: "" | "collapsed" | "expanded";
 
-  visitorDetails: any;
+  //visitorDetails: The details of the visitor detected via IP
+  visitorDetails?: VisitorDetails | null;
 }
 
 const initialState: SiteState = {
