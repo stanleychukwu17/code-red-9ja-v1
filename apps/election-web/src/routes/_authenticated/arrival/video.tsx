@@ -13,7 +13,7 @@ import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 import { updateAssignmentTracking } from "#/lib/server/polling_unit_assignments";
 
 import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAuth";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/arrival/video")({

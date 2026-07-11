@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, ChevronDown } from "lucide-react";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAuth";
 import { toast } from "sonner";
 import { useState } from "react";
 import { SelectTime } from "@repo/ui/components/selects/time-select";

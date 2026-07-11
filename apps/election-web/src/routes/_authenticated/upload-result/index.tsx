@@ -13,7 +13,7 @@ import {
 import { useState, useRef } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAuth";
 import { PageHeader } from "#/components/Headers";
 import { Button } from "@repo/ui/components/button";
 import { StickyFooter } from "#/components/Footers";

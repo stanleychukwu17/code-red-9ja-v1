@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import siteReducer, { sitePreferenceMiddleware } from "@/redux/slice/siteSlice";
 import authReducer from "@/redux/slice/authSlice";
+import electionReducer from "@/redux/slice/electionSlice";
 
 export const store = configureStore({
   reducer: {
     site: siteReducer,
     auth: authReducer,
+    election: electionReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(sitePreferenceMiddleware),

@@ -35,7 +35,7 @@ import {
   EducationalStatusStep,
   EducationalDetailsStep,
 } from "./components/-ApplySteps";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAuth";
 
 export const Route = createFileRoute("/_authenticated/applications/apply")({
   head: () => getPageHeader({ title: "Apply as Polling Unit Agent" }),

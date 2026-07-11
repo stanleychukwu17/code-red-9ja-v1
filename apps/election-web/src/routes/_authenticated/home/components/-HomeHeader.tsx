@@ -1,7 +1,7 @@
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import { AppAvatar } from "@repo/ui/components/avatar";
 
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAuth";
 import {
   SelectElectionGroupAndElection,
   type Election,

@@ -1,5 +1,5 @@
 import { useAppSelector } from "#/redux/hooks";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAuth";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";

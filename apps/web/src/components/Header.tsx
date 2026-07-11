@@ -29,7 +29,7 @@ const APP_SIDEBAR_ITEMS = [
     label: "Home",
     icon: <HomeIcon className={ICON_CLASS} />,
     selectedIcon: <HomeSolidIcon className={ICON_CLASS} />,
-    href: "/",
+    href: "/home",
   },
   {
     id: "dashboard",

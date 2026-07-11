@@ -14,7 +14,7 @@ import { StickyFooter } from "#/components/Footers";
 import { PageWrapper } from "#/components/Wrappers";
 
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "#/providers/providers";
+import { useAuth } from "#/hooks/useAuth";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
 import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
