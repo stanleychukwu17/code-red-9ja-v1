@@ -13,6 +13,15 @@ export const APP_URL = {
     forgotPassword: "/auth/forgot-password",
   },
   homePage: "/",
+  home: "/home",
+  elections: "/elections",
+  bodies: "/bodies/states",
+  users: {
+    admins: "/users/admin"
+  },
+  parties: "/parties",
+  applications: "/applications",
+  notifications: "/notifications",
 };
 
 const api = `${API_BASE}/api/v1`;
