@@ -202,8 +202,10 @@ function useActiveItem(items: AppSidebarItem[]): string {
 
   items.forEach((item) => {
     const toMatch = `/${item.id}`;
-    console.log(toMatch)
+
     if (location.pathname.startsWith(toMatch)) {
+      activeItem = item.id;
+    } else if (location.pathname.includes(toMatch) || location.pathname.endsWith(toMatch)) {
       activeItem = item.id;
     }
   });
