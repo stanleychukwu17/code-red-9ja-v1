@@ -33,12 +33,16 @@ export const Route = createFileRoute("/_authenticated")({
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
-    if (res.status != "success" || user?.role != "admin") {
+    if (res.status != "success") {
       throw redirect({ to: APP_URL.auth.login });
+    }
+
+    if (user?.role != "admin") {
+      throw new Error("You do not have access to this platform.");
     }
   },
   component: AuthenticatedRoutes,
-  errorComponent: ({ error }) => <div>{error.message}</div>,
+  errorComponent: ({ error }) => <div className="text-destructive">{error.message}</div>,
 });
 
 const ICON_CLASS = "shrink-0 size-6";
