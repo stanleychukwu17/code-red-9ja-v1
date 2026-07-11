@@ -23,7 +23,7 @@ import { Route as AuthenticatedElectionStartIndexRouteImport } from './routes/_a
 import { Route as AuthenticatedElectionEndIndexRouteImport } from './routes/_authenticated/election-end/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
-import { Route as AuthenticatedUsersPartyMembersRouteImport } from './routes/_authenticated/users/party-members'
+import { Route as AuthenticatedUsersPartyAdminsRouteImport } from './routes/_authenticated/users/party-members'
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
 import { Route as AuthenticatedGiveUpdateReportRouteImport } from './routes/_authenticated/give-update/report'
 import { Route as AuthenticatedElectionStartVideoRouteImport } from './routes/_authenticated/election-start/video'
@@ -109,8 +109,8 @@ const AuthenticatedUsersUsersRoute = AuthenticatedUsersUsersRouteImport.update({
   path: '/users/users',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedUsersPartyMembersRoute =
-  AuthenticatedUsersPartyMembersRouteImport.update({
+const AuthenticatedUsersPartyAdminsRoute =
+  AuthenticatedUsersPartyAdminsRouteImport.update({
     id: '/users/party-members',
     path: '/users/party-members',
     getParentRoute: () => AuthenticatedRoute,
@@ -160,7 +160,7 @@ export interface FileRoutesByFullPath {
   '/election-start/video': typeof AuthenticatedElectionStartVideoRoute
   '/give-update/report': typeof AuthenticatedGiveUpdateReportRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/users/party-members': typeof AuthenticatedUsersPartyAdminsRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/election-end/': typeof AuthenticatedElectionEndIndexRoute
@@ -182,7 +182,7 @@ export interface FileRoutesByTo {
   '/election-start/video': typeof AuthenticatedElectionStartVideoRoute
   '/give-update/report': typeof AuthenticatedGiveUpdateReportRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/users/party-members': typeof AuthenticatedUsersPartyAdminsRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/election-end': typeof AuthenticatedElectionEndIndexRoute
@@ -206,7 +206,7 @@ export interface FileRoutesById {
   '/_authenticated/election-start/video': typeof AuthenticatedElectionStartVideoRoute
   '/_authenticated/give-update/report': typeof AuthenticatedGiveUpdateReportRoute
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyAdminsRoute
   '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/election-end/': typeof AuthenticatedElectionEndIndexRoute
@@ -399,7 +399,7 @@ declare module '@tanstack/react-router' {
       id: '/_authenticated/users/party-members'
       path: '/users/party-members'
       fullPath: '/users/party-members'
-      preLoaderRoute: typeof AuthenticatedUsersPartyMembersRouteImport
+      preLoaderRoute: typeof AuthenticatedUsersPartyAdminsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/users/admin': {
@@ -454,7 +454,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedElectionStartVideoRoute: typeof AuthenticatedElectionStartVideoRoute
   AuthenticatedGiveUpdateReportRoute: typeof AuthenticatedGiveUpdateReportRoute
   AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
-  AuthenticatedUsersPartyMembersRoute: typeof AuthenticatedUsersPartyMembersRoute
+  AuthenticatedUsersPartyAdminsRoute: typeof AuthenticatedUsersPartyAdminsRoute
   AuthenticatedUsersUsersRoute: typeof AuthenticatedUsersUsersRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedElectionEndIndexRoute: typeof AuthenticatedElectionEndIndexRoute
@@ -475,7 +475,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedElectionStartVideoRoute: AuthenticatedElectionStartVideoRoute,
   AuthenticatedGiveUpdateReportRoute: AuthenticatedGiveUpdateReportRoute,
   AuthenticatedUsersAdminRoute: AuthenticatedUsersAdminRoute,
-  AuthenticatedUsersPartyMembersRoute: AuthenticatedUsersPartyMembersRoute,
+  AuthenticatedUsersPartyAdminsRoute: AuthenticatedUsersPartyAdminsRoute,
   AuthenticatedUsersUsersRoute: AuthenticatedUsersUsersRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedElectionEndIndexRoute: AuthenticatedElectionEndIndexRoute,
