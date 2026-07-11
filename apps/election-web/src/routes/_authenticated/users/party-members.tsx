@@ -32,10 +32,10 @@ function RouteComponent() {
     error,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["users", "partymember"],
+    queryKey: ["users", "partyadmin"],
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
-        data: { role: "partymember", limit: 20, cursor: pageParam },
+        data: { role: "partyadmin", limit: 20, cursor: pageParam },
       });
       if (res && res.success && res.data) {
         return res;

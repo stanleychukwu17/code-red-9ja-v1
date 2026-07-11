@@ -37,7 +37,7 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: APP_URL.auth.login });
     }
 
-    if (user?.role !== "partymember") {
+    if (user?.role !== "partyadmin") {
       throw new Error("You do not have access to this platform.");
     }
   },

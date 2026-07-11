@@ -651,7 +651,7 @@ func (h *Handler) PartyLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "partymember")
+	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "partyadmin")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return
@@ -705,7 +705,7 @@ type RegisterCandidatePlaceholderRequest struct {
 	StateOfOrigin  int16  `json:"state_of_origin" validate:"omitempty"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
-	Role           string `json:"role" validate:"required,oneof=admin partymember user"`
+	Role           string `json:"role" validate:"required,oneof=admin partyadmin user"`
 	RoleLevel      string `json:"role_level" validate:"required,oneof=superadmin admin member placeholder pollingagent user"`
 }
 
@@ -738,19 +738,19 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if req.Role == "partymember" && req.PartyID == 0 {
+	if req.Role == "partyadmin" && req.PartyID == 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: Key: 'RegisterCandidatePlaceholderRequest.PartyID' Error:Field validation for 'PartyID' failed on the 'required' tag")
 		return
 	}
 
 	// Permission checks
 	userRole := strings.ToLower(claims.Role)
-	if userRole != "admin" && userRole != "partymember" {
+	if userRole != "admin" && userRole != "partyadmin" {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
 
-	if userRole == "partymember" {
+	if userRole == "partyadmin" {
 		currUser, err := h.authService.GetUserDetailsByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
@@ -782,7 +782,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		if req.RoleLevel == "superadmin" || req.RoleLevel == "admin" {
 			isValidCombo = true
 		}
-	case "partymember":
+	case "partyadmin":
 		if req.RoleLevel == "admin" || req.RoleLevel == "member" || req.RoleLevel == "placeholder" {
 			isValidCombo = true
 		}

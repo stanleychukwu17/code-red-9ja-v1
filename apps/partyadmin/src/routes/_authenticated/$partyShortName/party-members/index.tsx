@@ -8,8 +8,8 @@ import {
 import { UsersTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
-import { getPartyMembersTabs } from "./-data";
-import { PartyMembersActions } from "#/components/party-members/PartyMembersActions";
+import { getPartyAdminsTabs } from "./-data";
+import { PartyAdminsActions } from "#/components/party-members/PartyAdminsActions";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
@@ -52,7 +52,7 @@ function RouteComponent() {
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
         data: {
-          role: "partymember",
+          role: "partyadmin",
           party_id: partyId,
           limit: 20,
           cursor: pageParam,
@@ -94,14 +94,14 @@ function RouteComponent() {
       <PageHeader
         title="Party members"
         activeTab="all"
-        tabs={getPartyMembersTabs(partyShortName)}
+        tabs={getPartyAdminsTabs(partyShortName)}
       />
       <PageSearchLayer
         ariaLabel="Search party members"
         placeholder="Search"
         rightComponent={
           <>
-            <PartyMembersActions />
+            <PartyAdminsActions />
             <AddButton onClick={() => setIsFormOpen(true)} />
           </>
         }
@@ -147,7 +147,7 @@ function RouteComponent() {
         onClose={() => setIsFormOpen(false)}
         onSuccess={() => refetch()}
         partyShortName={partyShortName}
-        defaultRole="partymember"
+        defaultRole="partyadmin"
         defaultRoleLevel="member"
         getAllCountries={getAllCountries}
         getStates={getStates}

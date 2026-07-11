@@ -79,7 +79,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	}
 
 	// Determine role and role_level based on party change
-	roleVal := "partymember"
+	roleVal := "partyadmin"
 	roleLevelVal := "member"
 	if user.PartyID.Valid && user.PartyID.Int64 == input.PartyID {
 		if user.Role.Valid {

@@ -1,7 +1,7 @@
 import ExportIcon from "@repo/ui/icons/export-icon";
 import { ChevronDown, Share2, Upload } from "lucide-react";
 
-export function PartyMembersActions({
+export function PartyAdminsActions({
   showElectionFilter = false,
 }: {
   showElectionFilter?: boolean;

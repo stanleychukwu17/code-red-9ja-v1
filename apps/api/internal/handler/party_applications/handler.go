@@ -217,7 +217,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
 	var filterUserID int64
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
+		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partyadmin" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			// A regular user can only view their own applications
 			filterUserID = requester.ID
@@ -329,7 +329,7 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 	// Enforce visibility restriction
 	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
+		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partyadmin" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin || !requester.PartyID.Valid || app.PartyID != requester.PartyID.Int64 {
 			h.utils.RespondError(w, http.StatusForbidden, "Permission denied")
 			return
@@ -399,7 +399,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	// Enforce role levels
 	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
+		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partyadmin" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can approve applications")
 			return
@@ -502,7 +502,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	// Enforce role levels
 	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
+		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partyadmin" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can reject applications")
 			return

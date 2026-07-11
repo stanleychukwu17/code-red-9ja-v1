@@ -98,7 +98,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		}
 		finalPartyID = req.PartyID
 	} else {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
+		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partyadmin" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can make assignments")
 			return
@@ -321,7 +321,7 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 	// Enforce scope: party admins can only delete assignments for their own party
 	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
+		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partyadmin" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can delete assignments")
 			return

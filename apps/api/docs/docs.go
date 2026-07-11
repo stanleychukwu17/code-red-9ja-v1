@@ -6938,7 +6938,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Role (admin, partymember, user)",
+                        "description": "Role (admin, partyadmin, user)",
                         "name": "role",
                         "in": "query"
                     },
@@ -8011,7 +8011,7 @@ const docTemplate = `{
                     "type": "string",
                     "enum": [
                         "admin",
-                        "partymember",
+                        "partyadmin",
                         "user"
                     ]
                 },

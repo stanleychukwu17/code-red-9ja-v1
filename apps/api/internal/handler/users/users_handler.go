@@ -425,7 +425,7 @@ type GetUsersData struct {
 // @Description  Fetches the list of all registered users with role filtering and cursor-based pagination
 // @Tags         Users
 // @Produce      json
-// @Param        role    query     string  false  "Role (admin, partymember, user)"
+// @Param        role    query     string  false  "Role (admin, partyadmin, user)"
 // @Param        limit   query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor  query     string  false  "Cursor (ID of last record)"
 // @Success      200     {object}  GetUsersResponse
@@ -439,7 +439,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	var partyID int64
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if ok && claims != nil && claims.Role == "partymember" {
+	if ok && claims != nil && claims.Role == "partyadmin" {
 		currentUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch user details: "+err.Error())
@@ -529,7 +529,7 @@ type AdminUpdateUserRequest struct {
 	CurrentState   int16  `json:"current_state" validate:"required"`
 	CurrentCity    int32  `json:"current_city" validate:"omitempty"`
 	StateOfOrigin  int16  `json:"state_of_origin"`
-	Role           string `json:"role" validate:"required,oneof=user partymember admin"`
+	Role           string `json:"role" validate:"required,oneof=user partyadmin admin"`
 	RoleLevel      string `json:"role_level" validate:"required"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Email          string `json:"email" validate:"required,email"`
@@ -558,12 +558,12 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 
 	// Permission checks:
 	userRole := strings.ToLower(claims.Role)
-	if userRole != "admin" && userRole != "partymember" {
+	if userRole != "admin" && userRole != "partyadmin" {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
 
-	if userRole == "partymember" {
+	if userRole == "partyadmin" {
 		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
@@ -629,19 +629,19 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Role == "partymember" && req.PartyID == 0 {
+	if req.Role == "partyadmin" && req.PartyID == 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: Key: 'AdminUpdateUserRequest.PartyID' Error:Field validation for 'PartyID' failed on the 'required' tag")
 		return
 	}
 
 	// Permission checks:
 	userRole := strings.ToLower(claims.Role)
-	if userRole != "admin" && userRole != "partymember" {
+	if userRole != "admin" && userRole != "partyadmin" {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
 
-	if userRole == "partymember" {
+	if userRole == "partyadmin" {
 		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")

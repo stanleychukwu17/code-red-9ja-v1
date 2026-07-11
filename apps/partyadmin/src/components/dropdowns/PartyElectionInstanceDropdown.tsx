@@ -94,7 +94,7 @@ export const PartyElectionInstanceDropdown = ({
         fetchUsers={async () => {
           const res = await getUsersList({
             data: {
-              role: "partymember",
+              role: "partyadmin",
               party_id: userPartyId,
             },
           });
@@ -103,7 +103,7 @@ export const PartyElectionInstanceDropdown = ({
           }
           return [];
         }}
-        filterRole="partymember"
+        filterRole="partyadmin"
         filterPartyId={userPartyId}
         title="Field Candidate"
         placeholder="Search party members..."

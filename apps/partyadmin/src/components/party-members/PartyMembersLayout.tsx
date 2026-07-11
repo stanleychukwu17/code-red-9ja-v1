@@ -4,25 +4,25 @@ import { ChevronDown, Search, Share2, Upload } from "lucide-react";
 import type { ReactNode } from "react";
 import ExportIcon from "@repo/ui/icons/export-icon";
 
-export type PartyMembersTabId = "all" | "admin" | "agent";
+export type PartyAdminsTabId = "all" | "admin" | "agent";
 
-type PartyMembersLayoutProps = {
-  activeTab: PartyMembersTabId;
+type PartyAdminsLayoutProps = {
+  activeTab: PartyAdminsTabId;
   children: ReactNode;
   showElectionFilter?: boolean;
 };
 
-const TABS: Array<{ id: PartyMembersTabId; label: string; href: string }> = [
+const TABS: Array<{ id: PartyAdminsTabId; label: string; href: string }> = [
   { id: "all", label: "All", href: "/party-members" },
   { id: "admin", label: "Admin", href: "/party-members/admin" },
   { id: "agent", label: "Agent", href: "/party-members/agent" },
 ];
 
-export function PartyMembersLayout({
+export function PartyAdminsLayout({
   activeTab,
   children,
   showElectionFilter = false,
-}: PartyMembersLayoutProps) {
+}: PartyAdminsLayoutProps) {
   return (
     <main className="mx-auto flex w-full max-w-[1480px] flex-col gap-4 px-8 py-6">
       <div className="flex items-start justify-between gap-4">
@@ -81,7 +81,7 @@ export function PartyMembersLayout({
   );
 }
 
-type PartyMembersTableProps = {
+type PartyAdminsTableProps = {
   columns: string[];
   rows: ReadonlyArray<{
     name: string;
@@ -93,7 +93,7 @@ type PartyMembersTableProps = {
   }>;
 };
 
-export function PartyMembersTable({ columns, rows }: PartyMembersTableProps) {
+export function PartyAdminsTable({ columns, rows }: PartyAdminsTableProps) {
   return (
     <div className="w-full">
       <div

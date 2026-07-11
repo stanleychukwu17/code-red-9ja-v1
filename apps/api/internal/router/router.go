@@ -410,14 +410,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
 	})
 
-	// Party-admin routes: authenticated users with role=partymember AND roleLevel=admin
+	// Party-admin routes: authenticated users with role=partyadmin AND roleLevel=admin
 	mainRouter.Group(func(r chi.Router) {
 		jwtSecret := ""
 		if cfg != nil {
 			jwtSecret = cfg.JWTSecret
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
-		r.Use(apimiddleware.RequireRoleAndLevel("partymember", "admin"))
+		r.Use(apimiddleware.RequireRoleAndLevel("partyadmin", "admin"))
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)
