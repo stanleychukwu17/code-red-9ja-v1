@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import {
   AppSidebarShell,
   type AppSidebarItem,
@@ -18,22 +20,26 @@ import {
   redirect,
   useParams,
 } from "@tanstack/react-router";
-import { useMutation } from "@tanstack/react-query";
 
 import { APP_URL } from "#/lib/config";
-import { logoutUser, refreshUserToken } from "#/lib/server/auth/auth";
+import { logoutUser, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
 import { useAuth } from "#/hooks/useAppContext";
-import { useAppDispatch } from "@/redux/hooks";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
 import { PollingAgentDialogProvider } from "#/components/dialogs/PollingAgentDialogContext";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
-    const res = await refreshUserToken();
+    const res = await checkIfRefreshTokenInCookie();
+    const user = await getUserDetailsCookie();
 
-    if (!res.success || res.data?.user?.role !== "partymember") {
+    if (res.status != "success") {
       throw redirect({ to: APP_URL.auth.login });
+    }
+
+    if (user?.role !== "partymember") {
+      throw new Error("You do not have access to this platform.");
     }
   },
   component: AuthenticatedRoutes,
@@ -41,13 +47,21 @@ export const Route = createFileRoute("/_authenticated")({
 });
 
 function AuthenticatedRoutes() {
-  const { userDetails } = Route.useRouteContext();
-  const dispatch = useAppDispatch();
-  const { party } = useAuth();
-  const params = useParams({ strict: false });
-  const partyShortName =
-    party?.shortName || (params as any).partyShortName || "party";
+  const [mounted, setMounted] = useState(false);
+  const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext() as any;
 
+  //redux site state
+  const dispatch = useAppDispatch();
+  const reduxSitePreference = useAppSelector((state) => state.site);
+  const currentSitePreference = reduxSitePreference?.sideBarState ? reduxSitePreference : initialSitePreference;
+  const isExpanded = currentSitePreference?.sideBarState !== "collapsed";
+
+  //party shortname
+  const params = useParams({ strict: false });
+  const { party } = useAuth();
+  const partyShortName = party?.shortName || (params as any).partyShortName || "party";
+
+  //sidebar items
   const sidebarItems: AppSidebarItem[] = [
     {
       id: "home",
@@ -71,7 +85,7 @@ function AuthenticatedRoutes() {
       href: APP_URL.partyRoutes.applications(partyShortName),
     },
     {
-      id: "members",
+      id: "party-members",
       label: "Party members",
       icon: <UserIcon className="shrink-0 size-6" />,
       selectedIcon: <UserSolidIcon className="shrink-0 size-6" />,
@@ -86,29 +100,34 @@ function AuthenticatedRoutes() {
     },
   ];
 
-  const logoutMutation = useMutation({
-    mutationFn: () => logoutUser(),
-    onSuccess: () => {
-      dispatch(updateAuthState({ user: null }));
-    },
-    onError: (e) => {
-      console.error(e);
-      dispatch(updateAuthState({ user: null }));
-    }
-  });
+  // handles the mounting of the component
+  useEffect(() => { setMounted(true); }, []);
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
+  // handles the user logging out
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (e) {
+      console.error(e);
+    }
+    dispatch(updateAuthState({ user: null }));
   };
 
+  // handles the sidebar state change
   const handleSidebarStateChange = (sideBarState: "expanded" | "collapsed") => {
     dispatch(updateSiteState({ sideBarState }));
   };
 
   return (
     <PollingAgentDialogProvider>
-      <div className="flex">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: mounted ? 1 : 0 }}
+        transition={{ delay: 0.3, duration: 0.5 }}
+        className="flex"
+      >
         <AppSidebarShell
+          defaultOpen={isExpanded}
           userDetails={userDetails}
           items={sidebarItems}
           onLogout={handleLogout}
@@ -116,7 +135,7 @@ function AuthenticatedRoutes() {
           homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
         />
         <Outlet />
-      </div>
+      </motion.div>
     </PollingAgentDialogProvider>
   );
 }
