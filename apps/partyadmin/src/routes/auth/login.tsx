@@ -21,7 +21,7 @@ import {
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import { APP_URL } from "#/lib/config";
-import { loginPartyApp, refreshUserToken } from "#/lib/server/auth/auth";
+import { loginPartyApp, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
 
@@ -48,9 +48,10 @@ type payloadType = {
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
-    const res = await refreshUserToken();
-    if (res.success && res.data?.user?.role === "partymember") {
-      const partyShortName = res.data.user?.party?.short_name || "party";
+    const isAuthed = await checkIfRefreshTokenInCookie();
+    if (isAuthed.status === "success") {
+      const userDetails = await getUserDetailsCookie();
+      const partyShortName = userDetails?.party?.short_name || "party";
       throw redirect({
         to: APP_URL.partyHome,
         params: { partyShortName },
@@ -70,7 +71,7 @@ export const Route = createFileRoute("/auth/login")({
   },
   component: LoginComponent,
   errorComponent: ({ error }) => (
-    <div className="p-4 text-red-600">{`${error?.message}, Also check if the backend server is up and running`}</div>
+    <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
   ),
 });
 

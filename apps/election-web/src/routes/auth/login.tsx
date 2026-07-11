@@ -17,10 +17,11 @@ import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import {
   loginUser,
-  refreshUserToken,
+  checkIfRefreshTokenInCookie,
 } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
+import { APP_URL } from "#/lib/config";
 
 export type countriesType = {
   success: boolean;
@@ -46,9 +47,9 @@ type payloadType = {
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
-    const res = await refreshUserToken();
-    if (res.status === "success" && res.user) {
-      throw redirect({ to: "/home" });
+    const isAuthed = await checkIfRefreshTokenInCookie();
+    if (isAuthed.status === "success") {
+      throw redirect({ to: APP_URL.home });
     }
   },
   head: () =>
@@ -65,7 +66,7 @@ export const Route = createFileRoute("/auth/login")({
   },
   component: LoginComponent,
   errorComponent: ({ error }) => (
-    <div className="p-4 text-red-600">{`${error?.message}, Also check if the backend server is up and running`}</div>
+    <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
   ),
 });
 
