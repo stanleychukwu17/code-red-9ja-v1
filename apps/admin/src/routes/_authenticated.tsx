@@ -49,42 +49,42 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     label: "Home",
     icon: <HomeIcon className={ICON_CLASS} />,
     selectedIcon: <HomeSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/home",
+    href: APP_URL.home,
   },
   {
     id: "elections",
     label: "Elections",
     icon: <CubeIcon className={ICON_CLASS} />,
     selectedIcon: <CubeSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/elections",
+    href: APP_URL.elections,
   },
   {
     id: "bodies",
     label: "Bodies",
     icon: <CalendarIcon className={ICON_CLASS} />,
     selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/bodies/states",
+    href: APP_URL.bodies,
   },
   {
     id: "users",
     label: "Users",
     icon: <UserIcon className={ICON_CLASS} />,
     selectedIcon: <UserSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/users/admin",
+    href: APP_URL.users.admins,
   },
   {
     id: "parties",
     label: "Parties",
     icon: <PartyIcon className={ICON_CLASS} />,
     selectedIcon: <PartySolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/parties",
+    href: APP_URL.parties,
   },
   {
     id: "applications",
     label: "Applications",
     icon: <PaperIcon className={ICON_CLASS} />,
     selectedIcon: <PaperSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: "/applications",
+    href: APP_URL.applications,
   },
   {
     id: "notifications",
@@ -93,7 +93,7 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     selectedIcon: (
       <NotificationSolidIcon className={SELECTED_ICON_CLASS} />
     ),
-    href: "/notifications",
+    href: APP_URL.notifications,
   },
 ];
 

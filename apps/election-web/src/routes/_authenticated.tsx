@@ -25,7 +25,6 @@ import { APP_URL } from "#/lib/config";
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
     const res = await checkIfRefreshTokenInCookie();
-    const user = await getUserDetailsCookie();
 
     if (res.status != "success") {
       throw redirect({ to: APP_URL.auth.login });
@@ -41,14 +40,14 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     label: "Home",
     icon: <HomeIcon className="shrink-0 size-6" />,
     selectedIcon: <HomeSolidIcon className="shrink-0 size-6 text-c-90" />,
-    href: "/home",
+    href: APP_URL.home,
   },
   {
     id: "applications",
     label: "Applications",
     icon: <PaperIcon className="shrink-0 size-6" />,
     selectedIcon: <PaperSolidIcon className="shrink-0 size-6 text-c-90" />,
-    href: "/applications",
+    href: APP_URL.applications,
   },
   {
     id: "notifications",
@@ -57,7 +56,7 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     selectedIcon: (
       <NotificationSolidIcon className="shrink-0 size-6 text-c-90" />
     ),
-    href: "/notifications",
+    href: APP_URL.notifications,
   },
 ];
 
@@ -100,7 +99,7 @@ function AuthenticatedRoutes() {
         items={APP_SIDEBAR_ITEMS}
         onLogout={handleLogout}
         onSidebarStateChange={handleSidebarStateChange}
-        homePageUrl={APP_URL.homePage}
+        homePageUrl={APP_URL.home}
       />
       <Outlet />
     </motion.div>
