@@ -40,7 +40,7 @@
     "partieshandler",
     "partiesservice",
     "partyadmin",
-    "partymember",
+    "partyadmin",
     "pgdata",
     "pgsql",
     "pgtype",
