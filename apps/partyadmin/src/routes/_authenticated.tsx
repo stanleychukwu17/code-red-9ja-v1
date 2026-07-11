@@ -118,23 +118,21 @@ function AuthenticatedRoutes() {
   };
 
   return (
-    <PollingAgentDialogProvider>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: mounted ? 1 : 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-        className="flex"
-      >
-        <AppSidebarShell
-          defaultOpen={isExpanded}
-          userDetails={userDetails}
-          items={sidebarItems}
-          onLogout={handleLogout}
-          onSidebarStateChange={handleSidebarStateChange}
-        />
-          homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
-        <Outlet />
-      </motion.div>
-    </PollingAgentDialogProvider>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: mounted ? 1 : 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+      className="flex"
+    >
+      <AppSidebarShell
+        defaultOpen={isExpanded}
+        userDetails={userDetails}
+        items={sidebarItems}
+        onLogout={handleLogout}
+        onSidebarStateChange={handleSidebarStateChange}
+      />
+      homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
+      <Outlet />
+    </motion.div>
   );
 }
