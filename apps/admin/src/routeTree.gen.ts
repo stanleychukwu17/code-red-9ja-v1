@@ -21,7 +21,7 @@ import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedElectionsIndexRouteImport } from './routes/_authenticated/elections/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
-import { Route as AuthenticatedUsersPartyMembersRouteImport } from './routes/_authenticated/users/party-members'
+import { Route as AuthenticatedUsersPartyAdminsRouteImport } from './routes/_authenticated/users/party-members'
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
 import { Route as AuthenticatedElectionsOfficesRouteImport } from './routes/_authenticated/elections/offices'
 import { Route as AuthenticatedElectionsInstancesRouteImport } from './routes/_authenticated/elections/instances'
@@ -96,8 +96,8 @@ const AuthenticatedUsersUsersRoute = AuthenticatedUsersUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AuthenticatedUsersRoute,
 } as any)
-const AuthenticatedUsersPartyMembersRoute =
-  AuthenticatedUsersPartyMembersRouteImport.update({
+const AuthenticatedUsersPartyAdminsRoute =
+  AuthenticatedUsersPartyAdminsRouteImport.update({
     id: '/party-members',
     path: '/party-members',
     getParentRoute: () => AuthenticatedUsersRoute,
@@ -177,7 +177,7 @@ export interface FileRoutesByFullPath {
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/users/party-members': typeof AuthenticatedUsersPartyAdminsRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/elections/': typeof AuthenticatedElectionsIndexRoute
@@ -200,7 +200,7 @@ export interface FileRoutesByTo {
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/users/party-members': typeof AuthenticatedUsersPartyAdminsRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/elections': typeof AuthenticatedElectionsIndexRoute
@@ -226,7 +226,7 @@ export interface FileRoutesById {
   '/_authenticated/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/_authenticated/elections/offices': typeof AuthenticatedElectionsOfficesRoute
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
-  '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
+  '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyAdminsRoute
   '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/elections/': typeof AuthenticatedElectionsIndexRoute
@@ -405,7 +405,7 @@ declare module '@tanstack/react-router' {
       id: '/_authenticated/users/party-members'
       path: '/party-members'
       fullPath: '/users/party-members'
-      preLoaderRoute: typeof AuthenticatedUsersPartyMembersRouteImport
+      preLoaderRoute: typeof AuthenticatedUsersPartyAdminsRouteImport
       parentRoute: typeof AuthenticatedUsersRoute
     }
     '/_authenticated/users/admin': {
@@ -527,13 +527,13 @@ const AuthenticatedElectionsRouteWithChildren =
 
 interface AuthenticatedUsersRouteChildren {
   AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
-  AuthenticatedUsersPartyMembersRoute: typeof AuthenticatedUsersPartyMembersRoute
+  AuthenticatedUsersPartyAdminsRoute: typeof AuthenticatedUsersPartyAdminsRoute
   AuthenticatedUsersUsersRoute: typeof AuthenticatedUsersUsersRoute
 }
 
 const AuthenticatedUsersRouteChildren: AuthenticatedUsersRouteChildren = {
   AuthenticatedUsersAdminRoute: AuthenticatedUsersAdminRoute,
-  AuthenticatedUsersPartyMembersRoute: AuthenticatedUsersPartyMembersRoute,
+  AuthenticatedUsersPartyAdminsRoute: AuthenticatedUsersPartyAdminsRoute,
   AuthenticatedUsersUsersRoute: AuthenticatedUsersUsersRoute,
 }
 
