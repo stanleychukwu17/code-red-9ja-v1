@@ -227,7 +227,7 @@ definitions:
       role:
         enum:
         - admin
-        - partymember
+        - partyadmin
         - user
         type: string
       role_level:
@@ -6339,7 +6339,7 @@ paths:
       description: Fetches the list of all registered users with role filtering and
         cursor-based pagination
       parameters:
-      - description: Role (admin, partymember, user)
+      - description: Role (admin, partyadmin, user)
         in: query
         name: role
         type: string
