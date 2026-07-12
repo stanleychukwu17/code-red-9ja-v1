@@ -41,7 +41,6 @@ CREATE TABLE users (
   phone_verified VARCHAR(5) CHECK (phone_verified IN ('true', 'false')) DEFAULT 'false',
   email_verified VARCHAR(5) CHECK (email_verified IN ('true', 'false')) DEFAULT 'false',
 
-
   account_status VARCHAR(30)
     CHECK (account_status IN (
       'just_registered',
