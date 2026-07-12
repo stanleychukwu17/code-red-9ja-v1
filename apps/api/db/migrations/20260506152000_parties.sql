@@ -14,7 +14,6 @@ CREATE TABLE parties (
 );
 
 -- Seed default political parties
-
 INSERT INTO parties (id, short_name, name, logo) VALUES
     (1, 'APC', 'All Progressive Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APC-All-Progressive-Congres-5c5fbfef-21cb-4471-8d8b-23dc942acc4c.webp'),
     (2, 'APGA', 'All Progressive Grand Alliance', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APGA-All-Progressive-Grand-Alliance-65dc2762-cd75-4ea2-b0a4-fe6c7c1dec7a.webp'),
