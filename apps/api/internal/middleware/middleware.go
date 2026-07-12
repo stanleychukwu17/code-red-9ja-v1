@@ -56,7 +56,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 	}
 }
 
-// RequireRole checks if the user's role is in the allowed roles list.
+// RequireRole checks if the user's roles contain any of the allowed roles list.
 // Assumes AuthMiddleware has been run.
 func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -69,35 +69,13 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 
 			roleAllowed := false
 			for _, role := range allowedRoles {
-				if strings.ToLower(claims.Role) == strings.ToLower(role) {
+				if claims.HasRole(role) {
 					roleAllowed = true
 					break
 				}
 			}
 
 			if !roleAllowed {
-				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
-				return
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// RequireRoleAndLevel checks that the user has both the specified role AND roleLevel.
-// A user with role=partyadmin and roleLevel=admin is an admin in the party admin app.
-// Assumes AuthMiddleware has been run.
-func RequireRoleAndLevel(role string, level string) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			claims, ok := r.Context().Value(ClaimsKey).(*utils.JWTClaims)
-			if !ok {
-				http.Error(w, "Unauthorized: claims not found", http.StatusUnauthorized)
-				return
-			}
-
-			if !strings.EqualFold(claims.Role, role) || !strings.EqualFold(claims.RoleLevel, level) {
 				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
 				return
 			}

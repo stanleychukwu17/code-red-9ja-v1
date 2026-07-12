@@ -441,7 +441,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	var partyID int64
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if ok && claims != nil && claims.Role == "partyadmin" {
+	if ok && claims != nil && claims.HasRole("partyadmin") {
 		currentUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch user details: "+err.Error())
@@ -574,13 +574,14 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Permission checks:
-	userRole := strings.ToLower(claims.Role)
-	if userRole != "admin" && userRole != "partyadmin" {
+	isAdmin := claims.HasRole("admin")
+	isPartyAdmin := claims.HasRole("partyadmin")
+	if !isAdmin && !isPartyAdmin {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
 
-	if userRole == "partyadmin" {
+	if isPartyAdmin && !isAdmin {
 		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
@@ -657,13 +658,14 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Permission checks:
-	userRole := strings.ToLower(claims.Role)
-	if userRole != "admin" && userRole != "partyadmin" {
+	isAdmin := claims.HasRole("admin")
+	isPartyAdmin := claims.HasRole("partyadmin")
+	if !isAdmin && !isPartyAdmin {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
 
-	if userRole == "partyadmin" {
+	if isPartyAdmin && !isAdmin {
 		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")

@@ -195,7 +195,7 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce role-based access
-	isPlatformAdmin := claims.Role == "admin"
+	isPlatformAdmin := claims.HasRole("admin")
 	if !isPlatformAdmin {
 		if claims.PartyID > 0 {
 			// Force filter to user's party

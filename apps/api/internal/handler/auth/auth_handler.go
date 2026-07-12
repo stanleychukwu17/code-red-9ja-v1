@@ -744,13 +744,14 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 	}
 
 	// Permission checks
-	userRole := strings.ToLower(claims.Role)
-	if userRole != "admin" && userRole != "partyadmin" {
+	isAdmin := claims.HasRole("admin")
+	isPartyAdmin := claims.HasRole("partyadmin")
+	if !isAdmin && !isPartyAdmin {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
 
-	if userRole == "partyadmin" {
+	if isPartyAdmin && !isAdmin {
 		currUser, err := h.authService.GetUserDetailsByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")

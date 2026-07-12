@@ -417,7 +417,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			jwtSecret = cfg.JWTSecret
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
-		r.Use(apimiddleware.RequireRoleAndLevel("partyadmin", "admin"))
+		r.Use(apimiddleware.RequireRole("partyadmin"))
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)

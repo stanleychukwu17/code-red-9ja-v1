@@ -227,7 +227,7 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce role-based scoping: non-admins can only see their party's results
-	if claims.Role != "admin" && claims.PartyID > 0 {
+	if !claims.HasRole("admin") && claims.PartyID > 0 {
 		params.PartyID = pgtype.Int8{Int64: claims.PartyID, Valid: true}
 	}
 
@@ -472,7 +472,7 @@ func (h *Handler) ReviewResult(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-	if claims.Role != "admin" {
+	if !claims.HasRole("admin") {
 		h.utils.RespondError(w, http.StatusForbidden, "Platform admin access required")
 		return
 	}
