@@ -13,14 +13,14 @@ CREATE TABLE roles (
 );
 
 CREATE TABLE role_assigned_permissions (
-  role_id SMALLINT REFERENCES roles(id) ON DELETE CASCADE,
-  permission_id SMALLINT REFERENCES role_permissions(id) ON DELETE CASCADE,
+  role_id SMALLINT,
+  permission_id SMALLINT,
   PRIMARY KEY (role_id, permission_id)
 );
 
 CREATE TABLE user_roles (
-  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
-  role_id SMALLINT REFERENCES roles(id) ON DELETE CASCADE,
+  user_id BIGINT,
+  role_id SMALLINT,
   PRIMARY KEY (user_id, role_id)
 );
 
@@ -36,6 +36,7 @@ INSERT INTO roles (code, name, description) VALUES
 ('user', 'User', 'Regular platform user'), 
 ('admin', 'Admin', 'Standard system administrator'),
 ('super_admin', 'Super Admin', 'Super administrator with full system access'),
+('super_partyadmin', 'Super Party Admin', 'Super administrator for a political party'),
 ('partyadmin', 'Party Admin', 'Administrator for a political party');
 
 -- Map Permissions to Roles
@@ -49,7 +50,7 @@ WHERE r.code IN ('super_admin', 'admin');
 INSERT INTO role_assigned_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r, role_permissions p
-WHERE r.code = 'partyadmin' AND p.code IN ('manage_parties', 'manage_party_members', 'manage_elections');
+WHERE r.code = 'super_partyadmin' AND p.code IN ('manage_parties', 'manage_party_members', 'manage_elections');
 
 -- +goose Down
 DROP TABLE IF EXISTS role_assigned_permissions;
