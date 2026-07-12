@@ -15,7 +15,6 @@ import (
 	authservice "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -108,13 +107,17 @@ func (m *MockAuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int
 	return args.Get(0).(queries.User), args.Error(1)
 }
 
+func (m *MockAuthService) ChangePasswordByEmail(ctx context.Context, email, newPassword string) error {
+	args := m.Called(ctx, email, newPassword)
+	return args.Error(0)
+}
+
 func (m *MockAuthService) SeedUsers(ctx context.Context, users []authservice.SeedUserRequest) ([]int64, error) {
 	args := m.Called(ctx, users)
-	var ids []int64
-	if args.Get(0) != nil {
-		ids = args.Get(0).([]int64)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
 	}
-	return ids, args.Error(1)
+	return args.Get(0).([]int64), args.Error(1)
 }
 
 // TestRegister tests the Register method of the AuthHandler
@@ -377,11 +380,9 @@ func TestAdminLogin(t *testing.T) {
 			AccessToken:  "access-token",
 			RefreshToken: "refresh-token",
 			User: authservice.LoginUser{
-				User: queries.User{
-					FakeID:   pgtype.Int8{Int64: 12345, Valid: true},
-					Username: pgtype.Text{String: "superadmin", Valid: true},
-					Role:     pgtype.Text{String: "admin", Valid: true},
-				},
+				FakeID:   12345,
+				Username: "superadmin",
+				Roles:    []string{"admin"},
 			},
 		}, nil)
 
