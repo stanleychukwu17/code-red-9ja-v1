@@ -81,8 +81,7 @@ type LoginUser struct {
 	DateOfBirth       string                        `json:"date_of_birth"`
 	Avatar            string                        `json:"avatar"`
 	Phone             string                        `json:"phone"`
-	Role              string                        `json:"role"`
-	RoleLevel         string                        `json:"role_level"`
+	Roles             []string                      `json:"roles"`
 	AccountStatus     string                        `json:"account_status"`
 	PartyID           int64                         `json:"party_id,omitempty"`
 	PollingUnitID     int64                         `json:"polling_unit_id,omitempty"`
@@ -167,31 +166,35 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		return LoginResult{}, errors.New("invalid login details provided")
 	}
 
-	// Fetch User Roles
+	// Fetch the user's assigned roles from the database
 	userRoles, err := s.queries.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		return LoginResult{}, errors.New("failed to fetch user roles")
 	}
 
 	var userRoleCodes []string
+	// Extract just the role codes (e.g., "admin", "user") into a simple string slice for easier comparison
 	for _, ur := range userRoles {
 		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
 
 	// Role Validation
 	if len(allowedRoles) > 0 {
+		// Check if the user has at least one of the roles required to perform this action (allowedRoles)
 		hasRole := false
 		for _, allowedRole := range allowedRoles {
 			for _, code := range userRoleCodes {
 				if code == allowedRole {
 					hasRole = true
-					break
+					break // Stop checking once a matching role is found
 				}
 			}
 			if hasRole {
 				break
 			}
 		}
+
+		// If after checking all allowed roles, the user doesn't have any of them, deny access
 		if !hasRole {
 			return LoginResult{}, errors.New("insufficient permissions")
 		}
@@ -218,26 +221,21 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		"FakeID":    fakeID,
 		"TimeAdded": now.Format(time.RFC3339),
 	}
-	jsonData, _ := json.Marshal(sessionData)
+	jsonSessionData, _ := json.Marshal(sessionData)
 
 	var partyID int64
 	if user.PartyID.Valid {
 		partyID = user.PartyID.Int64
 	}
 
-	primaryRole := ""
-	if len(userRoleCodes) > 0 {
-		primaryRole = userRoleCodes[0]
-	}
-
 	// Generate Access Token and Refresh Token
-	accessToken, err := utils.GenerateToken(user.ID, fakeID, user.Username.String, primaryRole, "", s.jwtSecret, s.jwtAccessExp, partyID)
+	accessToken, err := utils.GenerateToken(user.ID, fakeID, user.Username.String, userRoleCodes, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
 
 	// generate refresh token (opaque)
-	result, err := utils.GenerateRandomString()
+	randStr, err := utils.GenerateRandomString()
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
@@ -246,12 +244,12 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	pipe := s.rdb.TxPipeline()
 
 	// Redis: Store the session data in redis using the hashed refresh token as the key
-	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, result.HashedToken)
-	pipe.Set(ctx, redisRefreshKey, jsonData, s.jwtRefreshExp)
+	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, randStr.HashedToken)
+	pipe.Set(ctx, redisRefreshKey, jsonSessionData, s.jwtRefreshExp)
 
 	// Redis: add the session ID to the set of login sessions
 	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
-	pipe.SAdd(ctx, redisLoginSessionKey, result.HashedToken)
+	pipe.SAdd(ctx, redisLoginSessionKey, randStr.HashedToken)
 	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp) // sets an expiration on the entire set using the jwtRefreshExpiration time
 
 	// Redis: add the session ID to the set of the user's login sessions
@@ -273,7 +271,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 
 	return LoginResult{
 		AccessToken:  accessToken,
-		RefreshToken: result.RandomString,
+		RefreshToken: randStr.RandomString,
 		User: LoginUser{
 			ID:                user.ID,
 			FakeID:            user.FakeID.Int64,
@@ -285,8 +283,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			Gender:            user.Gender.String,
 			Avatar:            user.Avatar.String,
 			Phone:             user.Phone.String,
-			Role:              primaryRole,
-			RoleLevel:         "",
+			Roles:             userRoleCodes,
 			AccountStatus:     user.AccountStatus.String,
 			PartyID:           partyID,
 			PollingUnitID:     user.PollingUnitID.Int64,
@@ -319,6 +316,7 @@ type RefreshResult struct {
 
 // Refresh validates the refresh token and returns a new set of tokens
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (RefreshResult, error) {
+	// init logger
 	log := logger.FromContext(ctx).With("component", logger.ComponentAuthService)
 
 	// hash the refresh token
@@ -363,9 +361,9 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		userPartyID = user.PartyID.Int64
 	}
 	userRoles, _ := s.queries.GetUserRoles(ctx, user.ID)
-	roleCode := ""
-	if len(userRoles) > 0 {
-		roleCode = userRoles[0].Code
+	var userRoleCodes []string
+	for _, ur := range userRoles {
+		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
 	userDetails := LoginUser{
 		ID:                user.ID,
@@ -378,8 +376,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Gender:            user.Gender.String,
 		Avatar:            user.Avatar.String,
 		Phone:             user.Phone.String,
-		Role:              roleCode,
-		RoleLevel:         "",
+		Roles:             userRoleCodes,
 		AccountStatus:     user.AccountStatus.String,
 		PartyID:           userPartyID,
 		PollingUnitID:     user.PollingUnitID.Int64,
@@ -453,7 +450,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	sessionData["TimeAdded"] = now.Format(time.RFC3339)
 
 	//convert to json
-	jsonData, _ := json.Marshal(sessionData)
+	jsonSessionData, _ := json.Marshal(sessionData)
 
 	var partyID int64
 	if user.PartyID.Valid {
@@ -461,7 +458,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	}
 
 	// Generate a new Access Token
-	newAccessToken, err := utils.GenerateToken(user.ID, userFid, username, roleCode, "", s.jwtSecret, s.jwtAccessExp, partyID)
+	newAccessToken, err := utils.GenerateToken(user.ID, userFid, username, userRoleCodes, s.jwtSecret, s.jwtAccessExp, partyID)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -474,7 +471,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 
 	// Store the new refresh token, but we use the hashed string as the key
 	newRedisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, refresh.HashedToken)
-	pipe.Set(ctx, newRedisTokenKey, jsonData, s.jwtRefreshExp)
+	pipe.Set(ctx, newRedisTokenKey, jsonSessionData, s.jwtRefreshExp)
 
 	// add the new refresh token to the session SET
 	pipe.SAdd(ctx, redisSessionKey, refresh.HashedToken)
@@ -487,8 +484,10 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		return RefreshResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
 	}
 
+	// logs token refreshed successfully
 	log.Info(logger.EventTokenRefreshSuccess, "user_id", userFid)
 
+	// set the response data
 	response := RefreshResult{
 		AccessToken:  newAccessToken,
 		RefreshToken: refresh.RandomString,
@@ -731,18 +730,6 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 
 	// delete onboarding state from redis as it is now completed
 	s.rdb.Del(ctx, redisKey)
-
-	// Create user wallet (best effort, non-blocking)
-	if s.walletService != nil {
-		if registeredUser, err := s.queries.GetUserByID(context.Background(), user_id); err == nil {
-			go func() {
-				bgCtx := context.Background()
-				if _, walletErr := s.walletService.CreateUserWallet(bgCtx, registeredUser); walletErr != nil {
-					slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
-				}
-			}()
-		}
-	}
 
 	// Create user wallet (best effort, non-blocking)
 	if s.walletService != nil {
