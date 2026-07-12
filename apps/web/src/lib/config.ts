@@ -4,18 +4,20 @@ export const APP_NAME = import.meta.env.VITE_APP_NAME;
 const API_BASE = import.meta.env.VITE_API_URL
 
 export const APP_URL = {
-  "home": "/home",
   "auth": {
-    "signup": "/auth/signup",
+    "forgotPassword": "/auth/forgot-password",
     "login": "/auth/login",
     "logout": "/auth/logout",
-    "securityQuestions": "/auth/security-questions",
     "onboarding": "/auth/onboarding",
-    "forgotPassword": "/auth/forgot-password",
+    "securityQuestions": "/auth/security-questions",
+    "signup": "/auth/signup",
   },
   "dashboard": "/dashboard",
   "feed": "/feed",
+  "home": "/home",
+  "notifications": "/notifications",
   "profile": "/profile",
+  "search": "/search",
 }
 
 const api = `${API_BASE}/api/v1`
