@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -13,18 +14,26 @@ import (
 
 // JWTClaims represents the custom claims payload for JWTs
 type JWTClaims struct {
-	UserID    int64  `json:"user_id"`
-	FakeID    int64  `json:"fake_id"`
-	Username  string `json:"username"`
-	Role      string `json:"role"`
-	RoleLevel string `json:"role_level,omitempty"`
-	PartyID   int64  `json:"party_id,omitempty"`
+	UserID    int64    `json:"user_id"`
+	FakeID    int64    `json:"fake_id"`
+	Username  string   `json:"username"`
+	Roles     []string `json:"roles"`
+	PartyID   int64    `json:"party_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
+// HasRole checks if the claims contain the specified role (case-insensitive)
+func (c *JWTClaims) HasRole(role string) bool {
+	for _, r := range c.Roles {
+		if strings.EqualFold(r, role) {
+			return true
+		}
+	}
+	return false
+}
+
 // GenerateToken creates a signed JWT with the given claims, secret, and duration.
-// roleLevel is optional; pass an empty string if not applicable.
-func GenerateToken(userID int64, fakeID int64, username string, role string, roleLevel string, secret string, duration time.Duration, partyID ...int64) (string, error) {
+func GenerateToken(userID int64, fakeID int64, username string, roles []string, secret string, duration time.Duration, partyID ...int64) (string, error) {
 	var pid int64
 	if len(partyID) > 0 {
 		pid = partyID[0]
@@ -33,8 +42,7 @@ func GenerateToken(userID int64, fakeID int64, username string, role string, rol
 		UserID:    userID,
 		FakeID:    fakeID,
 		Username:  username,
-		Role:      role,
-		RoleLevel: roleLevel,
+		Roles:     roles,
 		PartyID:   pid,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(duration)),
