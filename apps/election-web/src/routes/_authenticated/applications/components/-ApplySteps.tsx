@@ -375,7 +375,6 @@ export const Step5 = ({
             setSelectedLgaId(null);
             setSelectedWardId(null);
           }}
-          countryOriginalId={161}
           fetchStates={getStates}
           className="w-full"
         />
@@ -452,13 +451,12 @@ export const Step6 = ({
   return (
     <div className="flex flex-col gap-4 w-full px-4">
       <StepHeader
-        title={`Select the Polling Unit you want to be assigned to (${targetWardName} ward)`}
-        // subtitle="Pick a polling unit you'll like to be assigned to."
-        subtitle="You will either be assigned to the polling unit you select or the one closest to your home address."
+        title={`Select a Polling Unit`}
+        subtitle="You will be assigned to the polling unit you select or the one closest to your address."
       />
       <div className="space-y-4">
         <div className="flex flex-col gap-2">
-          <Label title="Change Ward (Optional)" />
+          <Label title="Ward" />
           <SelectWard
             selectedId={selectedWardId || undefined}
             update={(wardObj) => setSelectedWardId(wardObj?.id || null)}
@@ -475,7 +473,9 @@ export const Step6 = ({
           onChange={(e) => setSearchQuery(e.target.value)}
         /> */}
 
-        <div className="space-y-3">
+        <div className="space-y-3 mt-7">
+          <Label title={`Polling Units (${targetWardName})`} className="" />
+
           {pollingUnits
             // .filter(
             //   (unit: any) =>

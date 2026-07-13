@@ -1470,9 +1470,16 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 
 	// 2. If a new candidateID is provided (candidateID > 0), insert it
 	if candidateID > 0 {
+		party, err := txQueries.GetPartyByID(ctx, partyID)
+		if err != nil {
+			return fmt.Errorf("party not found: %w", err)
+		}
+
 		_, err = txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
-			ElectionID:  electionID,
-			CandidateID: candidateID,
+			ElectionID:     electionID,
+			CandidateID:    candidateID,
+			PartyID:        partyID,
+			PartyShortName: party.ShortName,
 		})
 		if err != nil {
 			return err
@@ -1496,3 +1503,207 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 
 	return tx.Commit(ctx)
 }
+
+type VoteInput struct {
+	ElectionID int64 `json:"election_id"`
+	PartyID    int64 `json:"party_id"`
+}
+
+// ElectionWithCandidates embeds a base Election and attaches its registered candidates.
+type ElectionWithCandidates struct {
+	queries.Election
+	Candidates []queries.ListElectionCandidatesDetailedByElectionIDRow `json:"candidates"`
+}
+
+func (s *ElectionsService) GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int64) ([]ElectionWithCandidates, error) {
+	elections, err := s.queries.GetEligibleElectionsForPollingUnit(ctx, queries.GetEligibleElectionsForPollingUnitParams{
+		ElectionGroupID: electionGroupID,
+		ID:              int32(pollingUnitID),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]ElectionWithCandidates, 0, len(elections))
+	for _, election := range elections {
+		candidates, err := s.queries.ListElectionCandidatesDetailedByElectionID(ctx, election.ID)
+		if err != nil || candidates == nil {
+			candidates = []queries.ListElectionCandidatesDetailedByElectionIDRow{}
+		}
+		result = append(result, ElectionWithCandidates{
+			Election:   election,
+			Candidates: candidates,
+		})
+	}
+
+	return result, nil
+}
+
+func (s *ElectionsService) SubmitElectionVotes(
+	ctx context.Context,
+	userID int64,
+	electionGroupID int64,
+	pollingUnitID int64,
+	votes []VoteInput,
+	vin string,
+	votersCardImage string,
+) error {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.queries.WithTx(tx)
+
+	// Fetch election group to validate date
+	eg, err := qtx.GetElectionGroupByID(ctx, electionGroupID)
+	if err != nil {
+		return fmt.Errorf("invalid election group: %w", err)
+	}
+
+	// Validate date: cannot submit votes after election day
+	now := time.Now().Truncate(24 * time.Hour)
+	egDate := eg.ElectionDate.Time.Truncate(24 * time.Hour)
+	if now.After(egDate) {
+		return fmt.Errorf("voting for this election has ended")
+	}
+
+	// Fetch polling unit to get state, lga, ward
+	pu, err := qtx.GetPollingUnitByID(ctx, int32(pollingUnitID))
+	if err != nil {
+		return fmt.Errorf("invalid polling unit: %w", err)
+	}
+
+	// Fetch LGA to get senatorial_district and federal_constituency
+	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
+	if err != nil {
+		return fmt.Errorf("invalid LGA: %w", err)
+	}
+
+	// Delete existing votes and reasons for this user and election group to allow scope changes and editing
+	err = qtx.DeleteUserVotesByElectionGroup(ctx, queries.DeleteUserVotesByElectionGroupParams{
+		UserID:          userID,
+		ElectionGroupID: electionGroupID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete existing votes: %w", err)
+	}
+	err = qtx.DeleteUserDidNotVoteReasonByElectionGroup(ctx, queries.DeleteUserDidNotVoteReasonByElectionGroupParams{
+		UserID:          userID,
+		ElectionGroupID: electionGroupID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to delete existing non-voting reason: %w", err)
+	}
+
+	// Insert votes
+	for _, v := range votes {
+		_, err = qtx.CreateElectionVote(ctx, queries.CreateElectionVoteParams{
+			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
+			FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
+			LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
+			WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
+			PollingUnitID:         pgtype.Int8{Int64: pollingUnitID, Valid: true},
+			UserID:                userID,
+			ElectionGroupID:       electionGroupID,
+			ElectionID:            v.ElectionID,
+			PartyID:               v.PartyID,
+		})
+		if err != nil {
+			return fmt.Errorf("failed to submit vote for election %d: %w", err)
+		}
+	}
+
+	// Update user's PVC details
+	err = qtx.UpdateUserVotersCard(ctx, queries.UpdateUserVotersCardParams{
+		ID:              userID,
+		Vin:             pgtype.Text{String: vin, Valid: vin != ""},
+		VotersCardImage: pgtype.Text{String: votersCardImage, Valid: votersCardImage != ""},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update PVC details: %w", err)
+	}
+
+	// Fetch ward for state_constituency_id
+	ward, err := qtx.GetWardByID(ctx, pu.WardID)
+	if err != nil {
+		return fmt.Errorf("invalid ward: %w", err)
+	}
+
+	// Refresh live vote counts and trigger rollups
+	for _, v := range votes {
+		err = qtx.RefreshPollingUnitLiveResults(ctx, queries.RefreshPollingUnitLiveResultsParams{
+			ElectionID:            v.ElectionID,
+			PollingUnitID:         int32(pollingUnitID),
+			ElectionGroupID:       electionGroupID,
+			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
+			FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
+			StateConstituencyID:   ward.StateAssemblyConstituencyID,
+			LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
+			WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to refresh live results for election %d: %w", v.ElectionID, err)
+		}
+
+
+	}
+
+	return tx.Commit(ctx)
+}
+
+type UserVoteStatus struct {
+	Status                string                                   `json:"status"` // "voted", "did_not_vote", "none"
+	Votes                 []queries.GetUserVotesByElectionGroupRow `json:"votes,omitempty"`
+	DidNotVoteReason      *string                                  `json:"did_not_vote_reason,omitempty"`
+	DidNotVoteExplanation *string                                  `json:"did_not_vote_explanation,omitempty"`
+}
+
+func (s *ElectionsService) GetUserElectionGroupVoteStatus(ctx context.Context, userID, electionGroupID int64) (UserVoteStatus, error) {
+	// Check if user voted
+	votes, err := s.queries.GetUserVotesByElectionGroup(ctx, queries.GetUserVotesByElectionGroupParams{
+		UserID:          userID,
+		ElectionGroupID: electionGroupID,
+	})
+	if err != nil {
+		return UserVoteStatus{}, fmt.Errorf("failed to check user votes: %w", err)
+	}
+
+	if len(votes) > 0 {
+		return UserVoteStatus{
+			Status: "voted",
+			Votes:  votes,
+		}, nil
+	}
+
+	// Check if user provided a did not vote reason
+	reason, err := s.queries.GetUserDidNotVoteReason(ctx, queries.GetUserDidNotVoteReasonParams{
+		UserID:          userID,
+		ElectionGroupID: electionGroupID,
+	})
+	
+	if err == nil {
+		var explanation string
+		if reason.Explanation.Valid {
+			explanation = reason.Explanation.String
+		}
+		var predefinedReason string
+		if reason.PredefinedReason.Valid {
+			predefinedReason = reason.PredefinedReason.String
+		}
+		
+		return UserVoteStatus{
+			Status:                "did_not_vote",
+			DidNotVoteReason:      &predefinedReason,
+			DidNotVoteExplanation: &explanation,
+		}, nil
+	}
+
+	return UserVoteStatus{
+		Status: "none",
+	}, nil
+}
+

@@ -71,6 +71,7 @@ type RegisterRequest struct {
 	CurrentCountry int16  `json:"current_country" validate:"required"`
 	CurrentState   int16  `json:"current_state" validate:"required"`
 	CurrentCity    int32  `json:"current_city"`
+	ReferredByCode string `json:"referred_by_code" validate:"omitempty,max=15"`
 }
 
 // @Summary Register a new user
@@ -126,6 +127,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		CurrentCountry: req.CurrentCountry,
 		CurrentState:   req.CurrentState,
 		CurrentCity:    pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
+		ReferredByCode: pgtype.Text{String: req.ReferredByCode, Valid: req.ReferredByCode != ""},
 	}
 
 	// Call the auth service to register the new user

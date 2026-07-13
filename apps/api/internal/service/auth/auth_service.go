@@ -9,6 +9,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"log/slog"
+	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
@@ -666,6 +667,37 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	if today.Sub(params.DateOfBirth.Time) < 18*365*24*time.Hour {
 		return RegisterResult{}, errors.New("you must be at least 18 years old")
 	}
+
+	// Auto-generate unique referral code format: {FIRST_NAME}{2-digit-suffix}
+	baseName := strings.ToUpper(strings.TrimSpace(params.FirstName.String))
+	reg, _ := regexp.Compile("[^a-zA-Z0-9]+")
+	baseName = reg.ReplaceAllString(baseName, "")
+	if baseName == "" {
+		baseName = "USER"
+	}
+	// Cap base name length to avoid excessively long codes
+	if len(baseName) > 10 {
+		baseName = baseName[:10]
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	var refCode string
+	for i := 0; i < 50; i++ {
+		// Use a random number up to 999 to allow more space if collisions occur
+		suffix := fmt.Sprintf("%02d", rand.Intn(100))
+		if i > 10 {
+			suffix = fmt.Sprintf("%04d", rand.Intn(10000))
+		}
+		refCode = baseName + suffix
+		exists, err := s.queries.CheckReferralCodeExists(ctx, pgtype.Text{String: refCode, Valid: true})
+		if err != nil {
+			return RegisterResult{}, err
+		}
+		if !exists {
+			break
+		}
+	}
+	params.ReferralCode = pgtype.Text{String: refCode, Valid: true}
 
 	// creates the user's new account in our database
 	user_id, err := s.queries.CreateUser(ctx, params)

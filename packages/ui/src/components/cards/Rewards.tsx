@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import FancyMoneyBagIcon from "../../icons/fancy-money-bag-icon";
 import { cn } from "../../lib/utils";
 import { Check } from "lucide-react";
+import { AppAvatar } from "../avatar";
 
 export function RewardCard({
   label,
@@ -25,16 +26,16 @@ export function RewardCard({
   return (
     <div
       className={cn(
-        `rounded-[16px] p-4 flex items-center justify-between text-[17px] [&_svg]:shrink-0`,
+        `rounded-[16px] p-4 flex items-center justify-between text-[17px] [&_svg]:shrink-0 text-c-80`,
         bgColor[variant],
         className,
       )}
     >
-      <div className="flex items-center gap-3">
-        {icon ? icon : <FancyMoneyBagIcon className="size-6 shrink-0" />}
-        <span className="text-c-90">{label}</span>
+      <div className="flex items-center gap-3 w-full">
+        {icon}
+        <p className="w-full text-c-90">{label}</p>
       </div>
-      <span className="text-c-90 font-extrabold">{value}</span>
+      <span className="font-extrabold">{value}</span>
     </div>
   );
 }
@@ -85,6 +86,27 @@ export function RewardSumCard({
   );
 }
 
+export function CheckmarkIndicator({
+  isSelected,
+  disabled,
+}: {
+  isSelected?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "size-6 rounded-full text-c-80 flex items-center justify-center transition-all shrink-0",
+        disabled && "bg-c-10",
+        isSelected && "bg-secondary",
+        !isSelected && "bg-c-20",
+      )}
+    >
+      {isSelected && !disabled && <Check className="size-4 stroke-[3]" />}
+    </div>
+  );
+}
+
 export function SelectableCard({
   title,
   subtitle,
@@ -113,17 +135,74 @@ export function SelectableCard({
         <span className="text-c-90 text-[17px]">{title}</span>
         <span className="text-sm text-c-60">{subtitle}</span>
       </div>
-      <div
-        className={`w-6 h-6 rounded-full flex items-center justify-center transition-all shrink-0 ${
-          disabled
-            ? "bg-c-10"
-            : isSelected
-              ? "bg-secondary text-white"
-              : "bg-c-20"
-        }`}
-      >
-        {isSelected && !disabled && <Check className="size-4 stroke-[3]" />}
-      </div>
+      <CheckmarkIndicator isSelected={isSelected} disabled={disabled} />
+    </div>
+  );
+}
+
+export function UserCard({
+  name,
+  image,
+  image2,
+  isSelected,
+  onClick,
+  disabled,
+}: {
+  name: string;
+  image?: string;
+  image2?: string;
+  isSelected: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        "h-16 flex items-center justify-between gap-3 px-2 rounded-2xl transition",
+        disabled && "opacity-50 cursor-not-allowed",
+        isSelected && "bg-secondary/20",
+      )}
+    >
+      <DoubleAvatar image={image} image2={image2} />
+      <p className="w-full text-c-90 text-[17px]">{name}</p>
+      <CheckmarkIndicator isSelected={isSelected} disabled={disabled} />
+    </div>
+  );
+}
+
+export function DoubleAvatar({
+  image,
+  image2,
+  avatar1ClassName,
+  avatar2ClassName,
+  containerClassName,
+}: {
+  image?: string;
+  image2?: string;
+  avatar1ClassName?: string;
+  avatar2ClassName?: string;
+  containerClassName?: string;
+}) {
+  return (
+    <div className={cn("size-10 relative", containerClassName)}>
+      {image && (
+        <AppAvatar
+          src={image}
+          alt="image"
+          className={cn("size-10", avatar1ClassName)}
+        />
+      )}
+      {image2 && (
+        <AppAvatar
+          src={image2}
+          alt="image"
+          className={cn(
+            "size-5 absolute bottom-[-1px] right-[-2px] ring-2 ring-background",
+            avatar2ClassName,
+          )}
+        />
+      )}
     </div>
   );
 }

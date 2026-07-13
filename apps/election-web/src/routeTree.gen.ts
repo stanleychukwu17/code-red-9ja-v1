@@ -12,8 +12,8 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthenticatedVoteIndexRouteImport } from './routes/_authenticated/vote/index'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
-import { Route as AuthenticatedSupervisorIndexRouteImport } from './routes/_authenticated/supervisor/index'
 import { Route as AuthenticatedReportIndexRouteImport } from './routes/_authenticated/report/index'
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
@@ -21,10 +21,12 @@ import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedGiveUpdateIndexRouteImport } from './routes/_authenticated/give-update/index'
 import { Route as AuthenticatedElectionStartIndexRouteImport } from './routes/_authenticated/election-start/index'
 import { Route as AuthenticatedElectionEndIndexRouteImport } from './routes/_authenticated/election-end/index'
+import { Route as AuthenticatedContactsIndexRouteImport } from './routes/_authenticated/contacts/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
 import { Route as AuthenticatedUsersPartyMembersRouteImport } from './routes/_authenticated/users/party-members'
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
+import { Route as AuthenticatedHomeNotVotingReasonRouteImport } from './routes/_authenticated/home/not-voting-reason'
 import { Route as AuthenticatedGiveUpdateReportRouteImport } from './routes/_authenticated/give-update/report'
 import { Route as AuthenticatedElectionStartVideoRouteImport } from './routes/_authenticated/election-start/video'
 import { Route as AuthenticatedElectionEndVideoRouteImport } from './routes/_authenticated/election-end/video'
@@ -45,16 +47,15 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedVoteIndexRoute = AuthenticatedVoteIndexRouteImport.update({
+  id: '/vote/',
+  path: '/vote/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedUploadResultIndexRoute =
   AuthenticatedUploadResultIndexRouteImport.update({
     id: '/upload-result/',
     path: '/upload-result/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedSupervisorIndexRoute =
-  AuthenticatedSupervisorIndexRouteImport.update({
-    id: '/supervisor/',
-    path: '/supervisor/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReportIndexRoute =
@@ -98,6 +99,12 @@ const AuthenticatedElectionEndIndexRoute =
     path: '/election-end/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedContactsIndexRoute =
+  AuthenticatedContactsIndexRouteImport.update({
+    id: '/contacts/',
+    path: '/contacts/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedApplicationsIndexRoute =
   AuthenticatedApplicationsIndexRouteImport.update({
     id: '/applications/',
@@ -120,6 +127,12 @@ const AuthenticatedUsersAdminRoute = AuthenticatedUsersAdminRouteImport.update({
   path: '/users/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedHomeNotVotingReasonRoute =
+  AuthenticatedHomeNotVotingReasonRouteImport.update({
+    id: '/home/not-voting-reason',
+    path: '/home/not-voting-reason',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedGiveUpdateReportRoute =
   AuthenticatedGiveUpdateReportRouteImport.update({
     id: '/give-update/report',
@@ -159,10 +172,12 @@ export interface FileRoutesByFullPath {
   '/election-end/video': typeof AuthenticatedElectionEndVideoRoute
   '/election-start/video': typeof AuthenticatedElectionStartVideoRoute
   '/give-update/report': typeof AuthenticatedGiveUpdateReportRoute
+  '/home/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
+  '/contacts/': typeof AuthenticatedContactsIndexRoute
   '/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/election-start/': typeof AuthenticatedElectionStartIndexRoute
   '/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
@@ -170,8 +185,8 @@ export interface FileRoutesByFullPath {
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/parties/': typeof AuthenticatedPartiesIndexRoute
   '/report/': typeof AuthenticatedReportIndexRoute
-  '/supervisor/': typeof AuthenticatedSupervisorIndexRoute
   '/upload-result/': typeof AuthenticatedUploadResultIndexRoute
+  '/vote/': typeof AuthenticatedVoteIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -181,10 +196,12 @@ export interface FileRoutesByTo {
   '/election-end/video': typeof AuthenticatedElectionEndVideoRoute
   '/election-start/video': typeof AuthenticatedElectionStartVideoRoute
   '/give-update/report': typeof AuthenticatedGiveUpdateReportRoute
+  '/home/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
+  '/contacts': typeof AuthenticatedContactsIndexRoute
   '/election-end': typeof AuthenticatedElectionEndIndexRoute
   '/election-start': typeof AuthenticatedElectionStartIndexRoute
   '/give-update': typeof AuthenticatedGiveUpdateIndexRoute
@@ -192,8 +209,8 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/parties': typeof AuthenticatedPartiesIndexRoute
   '/report': typeof AuthenticatedReportIndexRoute
-  '/supervisor': typeof AuthenticatedSupervisorIndexRoute
   '/upload-result': typeof AuthenticatedUploadResultIndexRoute
+  '/vote': typeof AuthenticatedVoteIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -205,10 +222,12 @@ export interface FileRoutesById {
   '/_authenticated/election-end/video': typeof AuthenticatedElectionEndVideoRoute
   '/_authenticated/election-start/video': typeof AuthenticatedElectionStartVideoRoute
   '/_authenticated/give-update/report': typeof AuthenticatedGiveUpdateReportRoute
+  '/_authenticated/home/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
   '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
   '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
+  '/_authenticated/contacts/': typeof AuthenticatedContactsIndexRoute
   '/_authenticated/election-end/': typeof AuthenticatedElectionEndIndexRoute
   '/_authenticated/election-start/': typeof AuthenticatedElectionStartIndexRoute
   '/_authenticated/give-update/': typeof AuthenticatedGiveUpdateIndexRoute
@@ -216,8 +235,8 @@ export interface FileRoutesById {
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
   '/_authenticated/report/': typeof AuthenticatedReportIndexRoute
-  '/_authenticated/supervisor/': typeof AuthenticatedSupervisorIndexRoute
   '/_authenticated/upload-result/': typeof AuthenticatedUploadResultIndexRoute
+  '/_authenticated/vote/': typeof AuthenticatedVoteIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -229,10 +248,12 @@ export interface FileRouteTypes {
     | '/election-end/video'
     | '/election-start/video'
     | '/give-update/report'
+    | '/home/not-voting-reason'
     | '/users/admin'
     | '/users/party-members'
     | '/users/users'
     | '/applications/'
+    | '/contacts/'
     | '/election-end/'
     | '/election-start/'
     | '/give-update/'
@@ -240,8 +261,8 @@ export interface FileRouteTypes {
     | '/notifications/'
     | '/parties/'
     | '/report/'
-    | '/supervisor/'
     | '/upload-result/'
+    | '/vote/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -251,10 +272,12 @@ export interface FileRouteTypes {
     | '/election-end/video'
     | '/election-start/video'
     | '/give-update/report'
+    | '/home/not-voting-reason'
     | '/users/admin'
     | '/users/party-members'
     | '/users/users'
     | '/applications'
+    | '/contacts'
     | '/election-end'
     | '/election-start'
     | '/give-update'
@@ -262,8 +285,8 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/parties'
     | '/report'
-    | '/supervisor'
     | '/upload-result'
+    | '/vote'
   id:
     | '__root__'
     | '/'
@@ -274,10 +297,12 @@ export interface FileRouteTypes {
     | '/_authenticated/election-end/video'
     | '/_authenticated/election-start/video'
     | '/_authenticated/give-update/report'
+    | '/_authenticated/home/not-voting-reason'
     | '/_authenticated/users/admin'
     | '/_authenticated/users/party-members'
     | '/_authenticated/users/users'
     | '/_authenticated/applications/'
+    | '/_authenticated/contacts/'
     | '/_authenticated/election-end/'
     | '/_authenticated/election-start/'
     | '/_authenticated/give-update/'
@@ -285,8 +310,8 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications/'
     | '/_authenticated/parties/'
     | '/_authenticated/report/'
-    | '/_authenticated/supervisor/'
     | '/_authenticated/upload-result/'
+    | '/_authenticated/vote/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -318,18 +343,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/vote/': {
+      id: '/_authenticated/vote/'
+      path: '/vote'
+      fullPath: '/vote/'
+      preLoaderRoute: typeof AuthenticatedVoteIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/upload-result/': {
       id: '/_authenticated/upload-result/'
       path: '/upload-result'
       fullPath: '/upload-result/'
       preLoaderRoute: typeof AuthenticatedUploadResultIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/supervisor/': {
-      id: '/_authenticated/supervisor/'
-      path: '/supervisor'
-      fullPath: '/supervisor/'
-      preLoaderRoute: typeof AuthenticatedSupervisorIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/report/': {
@@ -381,6 +406,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedElectionEndIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/contacts/': {
+      id: '/_authenticated/contacts/'
+      path: '/contacts'
+      fullPath: '/contacts/'
+      preLoaderRoute: typeof AuthenticatedContactsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/applications/': {
       id: '/_authenticated/applications/'
       path: '/applications'
@@ -407,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/users/admin'
       fullPath: '/users/admin'
       preLoaderRoute: typeof AuthenticatedUsersAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/home/not-voting-reason': {
+      id: '/_authenticated/home/not-voting-reason'
+      path: '/home/not-voting-reason'
+      fullPath: '/home/not-voting-reason'
+      preLoaderRoute: typeof AuthenticatedHomeNotVotingReasonRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/give-update/report': {
@@ -453,10 +492,12 @@ interface AuthenticatedRouteChildren {
   AuthenticatedElectionEndVideoRoute: typeof AuthenticatedElectionEndVideoRoute
   AuthenticatedElectionStartVideoRoute: typeof AuthenticatedElectionStartVideoRoute
   AuthenticatedGiveUpdateReportRoute: typeof AuthenticatedGiveUpdateReportRoute
+  AuthenticatedHomeNotVotingReasonRoute: typeof AuthenticatedHomeNotVotingReasonRoute
   AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
   AuthenticatedUsersPartyMembersRoute: typeof AuthenticatedUsersPartyMembersRoute
   AuthenticatedUsersUsersRoute: typeof AuthenticatedUsersUsersRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
+  AuthenticatedContactsIndexRoute: typeof AuthenticatedContactsIndexRoute
   AuthenticatedElectionEndIndexRoute: typeof AuthenticatedElectionEndIndexRoute
   AuthenticatedElectionStartIndexRoute: typeof AuthenticatedElectionStartIndexRoute
   AuthenticatedGiveUpdateIndexRoute: typeof AuthenticatedGiveUpdateIndexRoute
@@ -464,8 +505,8 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
   AuthenticatedReportIndexRoute: typeof AuthenticatedReportIndexRoute
-  AuthenticatedSupervisorIndexRoute: typeof AuthenticatedSupervisorIndexRoute
   AuthenticatedUploadResultIndexRoute: typeof AuthenticatedUploadResultIndexRoute
+  AuthenticatedVoteIndexRoute: typeof AuthenticatedVoteIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -474,10 +515,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedElectionEndVideoRoute: AuthenticatedElectionEndVideoRoute,
   AuthenticatedElectionStartVideoRoute: AuthenticatedElectionStartVideoRoute,
   AuthenticatedGiveUpdateReportRoute: AuthenticatedGiveUpdateReportRoute,
+  AuthenticatedHomeNotVotingReasonRoute: AuthenticatedHomeNotVotingReasonRoute,
   AuthenticatedUsersAdminRoute: AuthenticatedUsersAdminRoute,
   AuthenticatedUsersPartyMembersRoute: AuthenticatedUsersPartyMembersRoute,
   AuthenticatedUsersUsersRoute: AuthenticatedUsersUsersRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
+  AuthenticatedContactsIndexRoute: AuthenticatedContactsIndexRoute,
   AuthenticatedElectionEndIndexRoute: AuthenticatedElectionEndIndexRoute,
   AuthenticatedElectionStartIndexRoute: AuthenticatedElectionStartIndexRoute,
   AuthenticatedGiveUpdateIndexRoute: AuthenticatedGiveUpdateIndexRoute,
@@ -485,8 +528,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
   AuthenticatedReportIndexRoute: AuthenticatedReportIndexRoute,
-  AuthenticatedSupervisorIndexRoute: AuthenticatedSupervisorIndexRoute,
   AuthenticatedUploadResultIndexRoute: AuthenticatedUploadResultIndexRoute,
+  AuthenticatedVoteIndexRoute: AuthenticatedVoteIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

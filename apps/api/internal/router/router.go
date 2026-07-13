@@ -22,6 +22,7 @@ import (
 	bodieshandler "free9ja/api/internal/handler/bodies"
 	electiongroupshandler "free9ja/api/internal/handler/election_groups"
 	electionresultshandler "free9ja/api/internal/handler/election_results"
+	electionstatshandler "free9ja/api/internal/handler/election_stats"
 	electionshandler "free9ja/api/internal/handler/elections"
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
@@ -35,6 +36,7 @@ import (
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
 	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
 	stateshandler "free9ja/api/internal/handler/states"
+	supervisorassignmentshandler "free9ja/api/internal/handler/supervisor_assignments"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
@@ -43,6 +45,7 @@ import (
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
+	electionstats "free9ja/api/internal/service/election_stats"
 	electionsservice "free9ja/api/internal/service/elections"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	messagingservice "free9ja/api/internal/service/messaging"
@@ -58,6 +61,7 @@ import (
 	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
 	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
 	statesservice "free9ja/api/internal/service/states"
+	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	usersservice "free9ja/api/internal/service/users"
 	wardsservice "free9ja/api/internal/service/wards"
 	"free9ja/api/internal/utils"
@@ -113,6 +117,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
+	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	utilsInstance := utils.NewUtils(pool)
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance)
@@ -125,12 +130,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, q, utilsInstance)
 	officesHandler := officeshandler.NewHandler(officesService, utilsInstance)
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
+	electionStatsService := electionstats.NewElectionStatsService(q)
+	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, utilsInstance)
 	usersHandler := usershandler.NewHandler(usersService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, utilsInstance)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
+	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 
@@ -253,6 +261,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// elections public routes
 	mainRouter.Get("/api/v1/elections", electionsHandler.ListElections)
+	mainRouter.Get("/api/v1/elections/non-voting-reasons", electionsHandler.GetNonVotingReasons)
 	mainRouter.Get("/api/v1/elections/{id}", electionsHandler.GetElection)
 
 	// file metadata — public reads (nil-safe: returns 503 when R2 is not configured)
@@ -370,8 +379,22 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)
 		r.Post("/api/v1/users/{id}/wallet", usersHandler.CreateUserWalletHandler)
 		r.Post("/api/v1/auth/register-candidate", authHandler.RegisterCandidatePlaceholder)
+		r.Post("/api/v1/elections/did-not-vote", electionsHandler.CreateDidNotVoteReason)
+		r.Get("/api/v1/elections/eligible", electionsHandler.GetEligibleElectionsForPollingUnit)
+		r.Post("/api/v1/elections/votes", electionsHandler.SubmitElectionVotes)
 		r.Get("/api/v1/elections/{id}/candidates", electionsHandler.GetElectionCandidates)
+		r.Get("/api/v1/election-groups/{id}/vote-status", electionsHandler.GetUserElectionGroupVoteStatus)
 		r.Put("/api/v1/election-groups/{id}/party-stats", electionGroupsHandler.UpsertPartyElectionGroupStats)
+
+		// Geographic Stats pre-aggregated endpoints
+		r.Get("/api/v1/election-groups/{id}/stats/polling-units", electionStatsHandler.GetPollingUnitStats)
+		r.Get("/api/v1/election-groups/{id}/stats/wards", electionStatsHandler.GetWardStats)
+		r.Get("/api/v1/election-groups/{id}/stats/lgas", electionStatsHandler.GetLGAStats)
+		r.Get("/api/v1/election-groups/{id}/stats/state-constituencies", electionStatsHandler.GetStateConstituencyStats)
+		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies", electionStatsHandler.GetFederalConstituencyStats)
+		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
+		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
+
 		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesHandler.WithdrawFromPartyWallet)
 		r.Get("/api/v1/parties/{id}/slots/price", partiesHandler.GetPartySlotPrice)
@@ -386,6 +409,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.GetAssignment)
 		r.Patch("/api/v1/polling-unit-assignments/{id}/tracking", pollingUnitAssignmentsHandler.UpdateAssignmentTracking)
 		r.Delete("/api/v1/polling-unit-assignments/{id}", pollingUnitAssignmentsHandler.DeleteAssignment)
+
+		// supervisor assignments
+		r.Get("/api/v1/supervisor-assignments", supervisorAssignmentsHandler.GetSupervisorAssignments)
 
 		// party applications routes
 		r.Post("/api/v1/party-applications", partyApplicationsHandler.SubmitApplication)

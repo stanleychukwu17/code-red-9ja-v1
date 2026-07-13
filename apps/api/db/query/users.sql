@@ -2,10 +2,13 @@
 INSERT INTO users (
   email, phone, username, password_hash, last_name,
   first_name, middle_name, gender, date_of_birth, current_country,
-  current_state, current_city
+  current_state, current_city, referral_code, referred_by_code
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING id;
+
+-- name: CheckReferralCodeExists :one
+SELECT EXISTS(SELECT 1 FROM users WHERE referral_code = $1);
 
 -- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
@@ -128,3 +131,8 @@ WHERE id = $1;
 -- name: GetUserNINByUserID :one
 SELECT * FROM users_nin
 WHERE user_id = $1 LIMIT 1;
+
+-- name: UpdateUserVotersCard :exec
+UPDATE users
+SET vin = $2, voters_card_image = $3, updated_at = NOW()
+WHERE id = $1;

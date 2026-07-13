@@ -60,6 +60,14 @@ CREATE TABLE users (
   party_id BIGINT REFERENCES parties(id) ON DELETE SET NULL,
   polling_unit_id BIGINT REFERENCES polling_units(id) ON DELETE SET NULL,
 
+  -- Referral system
+  -- referral_code format: {FIRSTNAME}{2-digit suffix} e.g. "DANIEL40"
+  -- Generated server-side at user registration time, unique per user
+  referral_code VARCHAR(30) UNIQUE,
+  -- The referral code of whoever referred this user (e.g. an agent)
+  -- Stored as plain text so it survives referrer account deletions
+  referred_by_code VARCHAR(30),
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

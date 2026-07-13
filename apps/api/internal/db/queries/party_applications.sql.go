@@ -483,7 +483,7 @@ SET
   address = COALESCE(NULLIF($23::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -577,6 +577,8 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.ReferralCode,
+		&i.ReferredByCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -590,7 +592,7 @@ SET
   role = 'partymember',
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at
 `
 
 type UpdateUserRoleForPartyAppParams struct {
@@ -639,6 +641,8 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, arg UpdateUserR
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.ReferralCode,
+		&i.ReferredByCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

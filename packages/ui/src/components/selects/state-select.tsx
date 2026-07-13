@@ -31,7 +31,7 @@ export const SelectState = ({
   errorMsg,
   selectedId,
   disabled,
-  countryOriginalId,
+  countryOriginalId = 161, // Nigeria
   className,
   align = "start",
   fetchStates,
@@ -103,7 +103,16 @@ export const SelectState = ({
       const found = states.some((s) => String(s.id) === String(selectedId));
       if (!found) fetchNextPage();
     }
-  }, [selectedId, countryOriginalId, states, hasNextPage, isFetchingNextPage, isLoading, isFetching, fetchNextPage]);
+  }, [
+    selectedId,
+    countryOriginalId,
+    states,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    isFetching,
+    fetchNextPage,
+  ]);
 
   useEffect(() => {
     if (selectedId) {
@@ -114,7 +123,9 @@ export const SelectState = ({
     }
   }, [selectedId, states]);
 
-  useEffect(() => { if (!open) setMobileSearch(""); }, [open]);
+  useEffect(() => {
+    if (!open) setMobileSearch("");
+  }, [open]);
 
   const handleStateSelect = (state: State) => {
     setSelectedItem(state);
@@ -135,17 +146,33 @@ export const SelectState = ({
     s.name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
-  const getStatus = (): "CanLoadMore" | "LoadingMore" | "LoadingFirstPage" | "Exhausted" => {
+  const getStatus = ():
+    | "CanLoadMore"
+    | "LoadingMore"
+    | "LoadingFirstPage"
+    | "Exhausted" => {
     if (isLoading && states.length === 0) return "LoadingFirstPage";
     if (isFetchingNextPage) return "LoadingMore";
     return hasNextPage ? "CanLoadMore" : "Exhausted";
   };
 
-  const handleLoadMore = () => { if (hasNextPage && !isFetchingNextPage) fetchNextPage(); };
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+  };
 
-  const displayText = selectedItem?.name || (isLoading && !selectedItem ? "Loading..." : showAll ? "All states" : "Select state");
+  const displayText =
+    selectedItem?.name ||
+    (isLoading && !selectedItem
+      ? "Loading..."
+      : showAll
+        ? "All states"
+        : "Select state");
   const hasError = Boolean(errorMsg);
-  const currentSelectedId = selectedItem?.id ? `${selectedItem.id}` : selectedId ? `${selectedId}` : undefined;
+  const currentSelectedId = selectedItem?.id
+    ? `${selectedItem.id}`
+    : selectedId
+      ? `${selectedId}`
+      : undefined;
   const getId = (item: State) => `${item.id}`;
   const getName = (item: State) => item.name;
 
@@ -173,11 +200,17 @@ export const SelectState = ({
         <Button
           variant="select"
           size="select"
-          className={cn("justify-between w-full gap-2", hasError && "border-0.8 border-red", className)}
+          className={cn(
+            "justify-between w-full gap-2",
+            hasError && "border-0.8 border-red",
+            className,
+          )}
           type="button"
           disabled={disabled}
         >
-          <p className="whitespace-normal text-left line-clamp-1">{displayText}</p>
+          <p className="whitespace-normal text-left line-clamp-1">
+            {displayText}
+          </p>
           <ArrowDownIcon className="ml-auto text-c-80" />
         </Button>
       }

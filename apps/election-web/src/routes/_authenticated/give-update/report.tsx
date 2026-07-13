@@ -30,28 +30,7 @@ export const Route = createFileRoute("/_authenticated/give-update/report")({
 
 function GiveSituationReport() {
   const navigate = useNavigate();
-  const { user, selectedElectionGroup } = useAuth();
-
-  const { data: assignmentsData } = useQuery({
-    queryKey: ["pollingAgentAssignments", user?.id],
-    enabled: !!user?.id,
-    queryFn: async () => {
-      const res = await getPollingUnitAssignments({
-        data: { user_id: user?.id },
-      });
-      if (!res || !res.success || !res.data?.assignments) {
-        return [];
-      }
-      return res.data.assignments;
-    },
-  });
-
-  const currentAssignment =
-    selectedElectionGroup && assignmentsData
-      ? assignmentsData.find(
-        (a: any) => a.election_group_id === selectedElectionGroup.id,
-      )
-      : null;
+  const { user, selectedElectionGroup, selectedAssignment: currentAssignment } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 

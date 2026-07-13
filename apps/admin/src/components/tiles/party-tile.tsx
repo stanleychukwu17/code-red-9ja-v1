@@ -11,6 +11,7 @@ export type PartyType = {
   short_name: string;
   name: string;
   logo: string;
+  display_order?: number;
   puAgents?: string;
 };
 

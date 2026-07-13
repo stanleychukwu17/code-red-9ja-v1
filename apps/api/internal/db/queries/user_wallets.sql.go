@@ -295,7 +295,7 @@ func (q *Queries) ListUserWalletTransactions(ctx context.Context, arg ListUserWa
 }
 
 const listUsersWithoutWallet = `-- name: ListUsersWithoutWallet :many
-SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.whatsapp_phone, u.data_phone, u.educational_status, u.highest_degree, u.graduation_year, u.school_name, u.current_country, u.current_state, u.current_lga, u.current_ward, u.current_city, u.address, u.state_of_origin, u.vin, u.voters_card_image, u.bank_account_number, u.bank_code, u.nin_verified, u.phone_verified, u.email_verified, u.role, u.role_level, u.account_status, u.party_id, u.polling_unit_id, u.created_at, u.updated_at FROM users u
+SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.whatsapp_phone, u.data_phone, u.educational_status, u.highest_degree, u.graduation_year, u.school_name, u.current_country, u.current_state, u.current_lga, u.current_ward, u.current_city, u.address, u.state_of_origin, u.vin, u.voters_card_image, u.bank_account_number, u.bank_code, u.nin_verified, u.phone_verified, u.email_verified, u.role, u.role_level, u.account_status, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_code, u.created_at, u.updated_at FROM users u
 LEFT JOIN user_wallets uw ON uw.user_id = u.id
 WHERE uw.id IS NULL
 ORDER BY u.id ASC
@@ -348,6 +348,8 @@ func (q *Queries) ListUsersWithoutWallet(ctx context.Context) ([]User, error) {
 			&i.AccountStatus,
 			&i.PartyID,
 			&i.PollingUnitID,
+			&i.ReferralCode,
+			&i.ReferredByCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {

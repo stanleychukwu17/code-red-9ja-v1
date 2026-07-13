@@ -41,7 +41,7 @@ export const getPartyById = createServerFn({ method: "GET" })
   });
 
 export const createParty = createServerFn({ method: "POST" })
-  .inputValidator((data: { short_name: string; name: string; logo: string }) => data)
+  .inputValidator((data: { short_name: string; name: string; logo: string; display_order?: number }) => data)
   .handler(async ({ data }) => {
     try {
       const response = await fetch(API_URL.parties, {
@@ -57,7 +57,7 @@ export const createParty = createServerFn({ method: "POST" })
   });
 
 export const updateParty = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string | number; short_name: string; name: string; logo: string }) => data)
+  .inputValidator((data: { id: string | number; short_name: string; name: string; logo: string; display_order?: number }) => data)
   .handler(async ({ data: { id, ...body } }) => {
     try {
       const response = await fetch(API_URL.partyById(id), {

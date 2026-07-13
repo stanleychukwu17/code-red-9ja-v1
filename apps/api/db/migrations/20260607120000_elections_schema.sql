@@ -51,7 +51,7 @@ CREATE TABLE election_candidates (
   election_id BIGINT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
   candidate_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   party_id BIGINT NOT NULL DEFAULT 7 REFERENCES parties(id) ON DELETE RESTRICT,
-  party_short_name VARCHAR(50) NOT NULL DEFAULT 'NDC',
+  party_short_name VARCHAR(50) NOT NULL DEFAULT 'N/A',
   votes_count INTEGER DEFAULT 0,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),

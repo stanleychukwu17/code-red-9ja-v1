@@ -169,3 +169,93 @@ func (q *Queries) CreateWardSupervisor(ctx context.Context, arg CreateWardSuperv
 	)
 	return i, err
 }
+
+const getLgaSupervisorByElectionGroup = `-- name: GetLgaSupervisorByElectionGroup :one
+SELECT id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, created_at, updated_at FROM lga_election_supervisors 
+WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
+`
+
+type GetLgaSupervisorByElectionGroupParams struct {
+	UserID          int64 `json:"user_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+func (q *Queries) GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLgaSupervisorByElectionGroupParams) (LgaElectionSupervisor, error) {
+	row := q.db.QueryRow(ctx, getLgaSupervisorByElectionGroup, arg.UserID, arg.ElectionGroupID)
+	var i LgaElectionSupervisor
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.StateID,
+		&i.LgaID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getStateSupervisorByElectionGroup = `-- name: GetStateSupervisorByElectionGroup :one
+SELECT id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, created_at, updated_at FROM state_election_supervisors 
+WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
+`
+
+type GetStateSupervisorByElectionGroupParams struct {
+	UserID          int64 `json:"user_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+func (q *Queries) GetStateSupervisorByElectionGroup(ctx context.Context, arg GetStateSupervisorByElectionGroupParams) (StateElectionSupervisor, error) {
+	row := q.db.QueryRow(ctx, getStateSupervisorByElectionGroup, arg.UserID, arg.ElectionGroupID)
+	var i StateElectionSupervisor
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.StateID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getWardSupervisorByElectionGroup = `-- name: GetWardSupervisorByElectionGroup :one
+SELECT id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, created_at, updated_at FROM ward_election_supervisors 
+WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
+`
+
+type GetWardSupervisorByElectionGroupParams struct {
+	UserID          int64 `json:"user_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+func (q *Queries) GetWardSupervisorByElectionGroup(ctx context.Context, arg GetWardSupervisorByElectionGroupParams) (WardElectionSupervisor, error) {
+	row := q.db.QueryRow(ctx, getWardSupervisorByElectionGroup, arg.UserID, arg.ElectionGroupID)
+	var i WardElectionSupervisor
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

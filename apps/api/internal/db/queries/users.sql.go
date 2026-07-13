@@ -67,6 +67,17 @@ func (q *Queries) AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams
 	return err
 }
 
+const checkReferralCodeExists = `-- name: CheckReferralCodeExists :one
+SELECT EXISTS(SELECT 1 FROM users WHERE referral_code = $1)
+`
+
+func (q *Queries) CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error) {
+	row := q.db.QueryRow(ctx, checkReferralCodeExists, referralCode)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createCandidatePlaceholder = `-- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
   email, password_hash, last_name, first_name, middle_name,
@@ -140,9 +151,9 @@ const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email, phone, username, password_hash, last_name,
   first_name, middle_name, gender, date_of_birth, current_country,
-  current_state, current_city
+  current_state, current_city, referral_code, referred_by_code
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
 RETURNING id
 `
 
@@ -159,6 +170,8 @@ type CreateUserParams struct {
 	CurrentCountry int16       `json:"current_country"`
 	CurrentState   int16       `json:"current_state"`
 	CurrentCity    pgtype.Int4 `json:"current_city"`
+	ReferralCode   pgtype.Text `json:"referral_code"`
+	ReferredByCode pgtype.Text `json:"referred_by_code"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, error) {
@@ -175,6 +188,8 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 		arg.CurrentCountry,
 		arg.CurrentState,
 		arg.CurrentCity,
+		arg.ReferralCode,
+		arg.ReferredByCode,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -239,7 +254,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
 WHERE email = $1 LIMIT 1
 `
 
@@ -284,6 +299,8 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.ReferralCode,
+		&i.ReferredByCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -291,7 +308,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -336,6 +353,8 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.ReferralCode,
+		&i.ReferredByCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -343,7 +362,7 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
 WHERE id = $1 LIMIT 1
 `
 
@@ -388,6 +407,8 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
+		&i.ReferralCode,
+		&i.ReferredByCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -490,7 +511,7 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, role, role_level, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
 ORDER BY id DESC
 `
 
@@ -541,6 +562,8 @@ func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
 			&i.AccountStatus,
 			&i.PartyID,
 			&i.PollingUnitID,
+			&i.ReferralCode,
+			&i.ReferredByCode,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -732,5 +755,22 @@ type UpdateUserRoleAndStatusParams struct {
 
 func (q *Queries) UpdateUserRoleAndStatus(ctx context.Context, arg UpdateUserRoleAndStatusParams) error {
 	_, err := q.db.Exec(ctx, updateUserRoleAndStatus, arg.ID, arg.Role, arg.AccountStatus)
+	return err
+}
+
+const updateUserVotersCard = `-- name: UpdateUserVotersCard :exec
+UPDATE users
+SET vin = $2, voters_card_image = $3, updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateUserVotersCardParams struct {
+	ID              int64       `json:"id"`
+	Vin             pgtype.Text `json:"vin"`
+	VotersCardImage pgtype.Text `json:"voters_card_image"`
+}
+
+func (q *Queries) UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error {
+	_, err := q.db.Exec(ctx, updateUserVotersCard, arg.ID, arg.Vin, arg.VotersCardImage)
 	return err
 }

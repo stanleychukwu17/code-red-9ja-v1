@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   last_update_at TIMESTAMPTZ,
   reports_count INT NOT NULL DEFAULT 0,
   updates_count INT NOT NULL DEFAULT 0,
+  -- Score from 0-100 reflecting how prepared this agent is based on practice test performance
+  election_practice_test_readiness_percentage NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (election_practice_test_readiness_percentage BETWEEN 0 AND 100),
   
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

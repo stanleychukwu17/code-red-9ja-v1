@@ -39,3 +39,15 @@ INSERT INTO ward_election_supervisors (
   $1, $2, $3, $4, $5, $6, $7, $8
 )
 RETURNING *;
+
+-- name: GetStateSupervisorByElectionGroup :one
+SELECT * FROM state_election_supervisors 
+WHERE user_id = $1 AND election_group_id = $2 LIMIT 1;
+
+-- name: GetLgaSupervisorByElectionGroup :one
+SELECT * FROM lga_election_supervisors 
+WHERE user_id = $1 AND election_group_id = $2 LIMIT 1;
+
+-- name: GetWardSupervisorByElectionGroup :one
+SELECT * FROM ward_election_supervisors 
+WHERE user_id = $1 AND election_group_id = $2 LIMIT 1;

@@ -23,7 +23,7 @@ const Tab = ({
 }) => (
   <button
     onClick={() => onTabChange(value)}
-    className={`flex-1 py-2.5 rounded-[10px] text-c-80 font-medium text-center transition cursor-pointer ${activeTab === value ? "bg-primary text-white shadow-sm" : "hover:text-neutral-800"}`}
+    className={`flex-1 py-2.5 rounded-[10px] text-c-80 font-medium text-center text-[15px] transition cursor-pointer ${activeTab === value ? "bg-primary text-white shadow-sm" : "hover:text-neutral-800"}`}
   >
     {label}
   </button>
@@ -48,8 +48,8 @@ export function Tabs({ tabs, activeTab, onTabChange, className }: TabsProps) {
 }
 
 interface HomeTabsProps {
-  activeTab: "Objectives" | "Contact Party" | "Uploads";
-  onTabChange: (tab: "Objectives" | "Contact Party" | "Uploads") => void;
+  activeTab: "Earnings" | "Contact" | "Uploads";
+  onTabChange: (tab: "Earnings" | "Contact" | "Uploads") => void;
 }
 
 export function HomeTabs({ activeTab, onTabChange }: HomeTabsProps) {
@@ -59,9 +59,31 @@ export function HomeTabs({ activeTab, onTabChange }: HomeTabsProps) {
       activeTab={activeTab}
       onTabChange={onTabChange as any}
       tabs={[
-        { label: "Objectives", value: "Objectives" },
-        { label: "Contact Party", value: "Contact Party" },
+        { label: "Earnings", value: "Earnings" },
+        { label: "Contact", value: "Contact" },
         { label: "Uploads", value: "Uploads" },
+      ]}
+    />
+  );
+}
+
+interface SupervisorTabsProps {
+  activeTab: "Earnings" | "Tasks";
+  onTabChange: (tab: "Earnings" | "Tasks") => void;
+}
+
+export function SupervisorTabs({
+  activeTab,
+  onTabChange,
+}: SupervisorTabsProps) {
+  return (
+    <Tabs
+      className="mt-4"
+      activeTab={activeTab}
+      onTabChange={onTabChange as any}
+      tabs={[
+        { label: "Earnings", value: "Earnings" },
+        { label: "Tasks", value: "Tasks" },
       ]}
     />
   );

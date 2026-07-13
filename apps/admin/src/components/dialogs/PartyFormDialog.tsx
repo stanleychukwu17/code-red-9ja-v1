@@ -45,6 +45,7 @@ export function PartyFormDialog({
     defaultValues: {
       acronym: "",
       fullName: "",
+      displayOrder: 999,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
@@ -56,10 +57,12 @@ export function PartyFormDialog({
       if (mode === "update" && party) {
         form.setFieldValue("acronym", party.short_name || "");
         form.setFieldValue("fullName", party.name || "");
+        form.setFieldValue("displayOrder", party.display_order ?? 999);
         setLogoUrl(party.logo || "");
       } else {
         form.setFieldValue("acronym", "");
         form.setFieldValue("fullName", "");
+        form.setFieldValue("displayOrder", 999);
         setLogoUrl("");
       }
       setError(null);
@@ -133,7 +136,7 @@ export function PartyFormDialog({
 
   // TanStack Query Mutation for saving/creating/updating a party
   const saveMutation = useMutation({
-    mutationFn: async (values: { acronym: string; fullName: string }) => {
+    mutationFn: async (values: { acronym: string; fullName: string; displayOrder: number }) => {
       let res;
       if (mode === "update") {
         if (!party?.id) {
@@ -145,6 +148,7 @@ export function PartyFormDialog({
             short_name: values.acronym.trim().toUpperCase(),
             name: values.fullName.trim(),
             logo: logoUrl,
+            display_order: values.displayOrder,
           },
         });
       } else {
@@ -153,6 +157,7 @@ export function PartyFormDialog({
             short_name: values.acronym.trim().toUpperCase(),
             name: values.fullName.trim(),
             logo: logoUrl,
+            display_order: values.displayOrder,
           },
         });
       }
@@ -244,6 +249,34 @@ export function PartyFormDialog({
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    errorMsg={
+                      field.state.meta.isTouched && field.state.meta.errors.length
+                        ? (field.state.meta.errors[0] as string)
+                        : undefined
+                    }
+                  />
+                </div>
+              )}
+            />
+
+            {/* Display Order input */}
+            <form.Field
+              name="displayOrder"
+              validators={{
+                onChange: ({ value }) =>
+                  value < 1 ? "Order must be at least 1" : undefined,
+              }}
+              children={(field) => (
+                <div>
+                  <label className="text-[14px] font-semibold text-c-50">
+                    Display Order (Rank)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="E.g. 1 for most popular"
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(Number(e.target.value))}
                     errorMsg={
                       field.state.meta.isTouched && field.state.meta.errors.length
                         ? (field.state.meta.errors[0] as string)

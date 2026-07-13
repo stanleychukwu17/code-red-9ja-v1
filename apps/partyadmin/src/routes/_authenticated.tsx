@@ -22,7 +22,11 @@ import {
 } from "@tanstack/react-router";
 
 import { APP_URL } from "#/lib/config";
-import { logoutUser, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
+import {
+  logoutUser,
+  checkIfRefreshTokenInCookie,
+  getUserDetailsCookie,
+} from "#/lib/server/auth/auth";
 import { useAuth } from "#/hooks/useAppContext";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
@@ -42,23 +46,29 @@ export const Route = createFileRoute("/_authenticated")({
     }
   },
   component: AuthenticatedRoutes,
-  errorComponent: ({ error }) => <div className="text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="text-destructive">{error.message}</div>
+  ),
 });
 
 function AuthenticatedRoutes() {
   const [mounted, setMounted] = useState(false);
-  const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext() as any;
+  const { userDetails, sitePreference: initialSitePreference } =
+    Route.useRouteContext() as any;
 
   //redux site state
   const dispatch = useAppDispatch();
   const reduxSitePreference = useAppSelector((state) => state.site);
-  const currentSitePreference = reduxSitePreference?.sideBarState ? reduxSitePreference : initialSitePreference;
+  const currentSitePreference = reduxSitePreference?.sideBarState
+    ? reduxSitePreference
+    : initialSitePreference;
   const isExpanded = currentSitePreference?.sideBarState !== "collapsed";
 
   //party shortname
   const params = useParams({ strict: false });
   const { party } = useAuth();
-  const partyShortName = party?.shortName || (params as any).partyShortName || "party";
+  const partyShortName =
+    party?.shortName || (params as any).partyShortName || "party";
 
   //sidebar items
   const sidebarItems: AppSidebarItem[] = [
@@ -100,7 +110,9 @@ function AuthenticatedRoutes() {
   ];
 
   // handles the mounting of the component
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // handles the user logging out
   const handleLogout = async () => {
@@ -130,8 +142,8 @@ function AuthenticatedRoutes() {
         items={sidebarItems}
         onLogout={handleLogout}
         onSidebarStateChange={handleSidebarStateChange}
+        homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
       />
-      homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
       <Outlet />
     </motion.div>
   );

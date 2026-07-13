@@ -3,6 +3,7 @@ import { useRouteContext } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { getPartyById } from "#/lib/server/parties";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
+import { getSupervisorAssignments } from "#/lib/server/supervisor_assignments";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
   selectSelectedElection,
@@ -68,6 +69,7 @@ export interface UserDetails {
   school_name?: string;
   bank_account_number?: string;
   bank_code?: string;
+  vin?: string;
   voters_card_image?: string;
   address?: string;
   party?: {
@@ -85,11 +87,14 @@ export interface UserDetails {
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
-  
+
   // Try getting user from Router context (SSR or pre-hydration) and Redux (active client session)
   const routerContext = useRouteContext({ strict: false }) as any;
-  const reduxUser = useAppSelector((state) => state.auth.user) as UserDetails | null;
-  const user = reduxUser || (routerContext?.userDetails as UserDetails | null) || null;
+  const reduxUser = useAppSelector(
+    (state) => state.auth.user,
+  ) as UserDetails | null;
+  const user =
+    reduxUser || (routerContext?.userDetails as UserDetails | null) || null;
 
   const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);
   const selectedElection = useAppSelector(selectSelectedElection);
@@ -143,11 +148,14 @@ export const useAuth = () => {
   // 2. Fetch Assignments details
   const fetchAssignments = useServerFn(getPollingUnitAssignments);
   const { data: assignmentsData } = useQuery({
-    queryKey: ["pollingAgentAssignments", user?.id],
-    enabled: !!user?.id,
+    queryKey: ["pollingAgentAssignments", user?.id, selectedElectionGroup?.id],
+    enabled: !!user?.id && !!selectedElectionGroup?.id,
     queryFn: async () => {
       const res = await fetchAssignments({
-        data: { user_id: user?.id },
+        data: {
+          user_id: user?.id,
+          election_group_id: selectedElectionGroup?.id,
+        },
       });
       if (!res?.success || !res.data?.assignments) return [];
       return res.data.assignments;
@@ -155,11 +163,44 @@ export const useAuth = () => {
   });
 
   const selectedAssignment =
-    selectedElectionGroup && assignmentsData
-      ? assignmentsData.find(
-          (a: any) => a.election_group_id === selectedElectionGroup?.id,
-        )
-      : null;
+    assignmentsData && assignmentsData.length > 0 ? assignmentsData[0] : null;
+
+  // 3. Fetch Supervisor Assignments
+  const fetchSupervisorAssignments = useServerFn(getSupervisorAssignments);
+  const { data: supervisorAssignmentsData } = useQuery({
+    queryKey: ["supervisorAssignments", user?.id, selectedElectionGroup?.id],
+    enabled: !!user?.id && !!selectedElectionGroup?.id,
+    queryFn: async () => {
+      const res = await fetchSupervisorAssignments({
+        data: {
+          user_id: user?.id,
+          election_group_id: selectedElectionGroup?.id,
+        },
+      });
+      if (!res?.success || !res.data?.assignments) return null;
+      return res.data.assignments;
+    },
+  });
+
+  let selectedSupervisorAssignment = null;
+  if (supervisorAssignmentsData) {
+    if (supervisorAssignmentsData.state_supervisor) {
+      selectedSupervisorAssignment = {
+        type: "state",
+        data: supervisorAssignmentsData.state_supervisor,
+      };
+    } else if (supervisorAssignmentsData.lga_supervisor) {
+      selectedSupervisorAssignment = {
+        type: "lga",
+        data: supervisorAssignmentsData.lga_supervisor,
+      };
+    } else if (supervisorAssignmentsData.ward_supervisor) {
+      selectedSupervisorAssignment = {
+        type: "ward",
+        data: supervisorAssignmentsData.ward_supervisor,
+      };
+    }
+  }
 
   const pollingUnitId =
     selectedAssignment?.polling_unit_id ?? user?.polling_unit_id ?? null;
@@ -175,6 +216,7 @@ export const useAuth = () => {
     selectedElectionGroup,
     selectedElection,
     selectedAssignment,
+    selectedSupervisorAssignment,
     pollingUnitId,
     setSelectedElectionGroup: (group: any | null) => {
       dispatch(setSelectedElectionGroupAction(group));

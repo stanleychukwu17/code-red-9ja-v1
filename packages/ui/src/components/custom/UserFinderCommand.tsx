@@ -161,6 +161,7 @@ export function UserFinderCommand({
                       return (
                         <CommandItem
                           key={user.id}
+                          value={user.id.toString()}
                           onSelect={() => handleToggleSelect(user)}
                         >
                           <div className="flex items-center gap-3.5 md:gap-5 w-full">

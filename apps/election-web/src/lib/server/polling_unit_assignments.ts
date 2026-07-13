@@ -18,13 +18,16 @@ function getAuthHeaders() {
 }
 
 export const getPollingUnitAssignments = createServerFn({ method: "GET" })
-  .inputValidator((data: { user_id?: string | number } | undefined) => data)
+  .inputValidator((data: { user_id?: string | number; election_group_id?: string | number } | undefined) => data)
   .handler(async ({ data }) => {
     try {
       const user_id = data?.user_id;
+      const election_group_id = data?.election_group_id;
       const params = new URLSearchParams();
       if (user_id) params.append("user_id", String(user_id));
-      const url = `${API_URL.pollingUnitAssignments}${user_id ? `?${params.toString()}` : ""}`;
+      if (election_group_id) params.append("election_group_id", String(election_group_id));
+      const qs = params.toString();
+      const url = `${API_URL.pollingUnitAssignments}${qs ? `?${qs}` : ""}`;
       const response = await fetch(url, {
         headers: getAuthHeaders(),
       });

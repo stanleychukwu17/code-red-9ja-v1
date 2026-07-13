@@ -33,6 +33,7 @@ export const PartyElectionInstanceDropdown = ({
           candidateId,
         },
       });
+      console.log({ res });
       if (!res.success) {
         throw new Error(res.message || "Failed to update candidate");
       }
@@ -44,6 +45,7 @@ export const PartyElectionInstanceDropdown = ({
   });
 
   const handleFieldCandidate = (selectedUsers: any[]) => {
+    console.log({ selectedUsers });
     if (selectedUsers.length > 0) {
       mutation.mutate(selectedUsers[0].id);
     }

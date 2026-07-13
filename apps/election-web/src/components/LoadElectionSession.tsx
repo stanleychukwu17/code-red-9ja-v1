@@ -23,7 +23,7 @@ export default function LoadElectionSession() {
     queryKey: ["election-groups"],
     queryFn: () => fetchGroups({ data: { limit: 50 } }),
   });
-  const groups = groupsData?.election_groups || [];
+  const groups = groupsData?.data?.election_groups || [];
 
   // Auto-select highest ranked group with closest date if none selected
   useEffect(() => {
@@ -41,9 +41,6 @@ export default function LoadElectionSession() {
       if (validGroups.length === 0) validGroups = groups;
 
       validGroups.sort((a: any, b: any) => {
-        const dateA = new Date(a.election_date || 0).getTime();
-        const dateB = new Date(b.election_date || 0).getTime();
-        if (dateA !== dateB) return dateA - dateB;
         return b.rank - a.rank;
       });
 
@@ -58,7 +55,7 @@ export default function LoadElectionSession() {
     queryFn: () => fetchElections({ data: selectedElectionGroup?.id }),
     enabled: !!selectedElectionGroup?.id,
   });
-  const elections = electionsData?.elections || [];
+  const elections = electionsData?.data?.elections || [];
 
   // Auto-select highest ranked election if none selected or if group changed
   useEffect(() => {

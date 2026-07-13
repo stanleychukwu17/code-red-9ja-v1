@@ -12,7 +12,7 @@ import (
 )
 
 const getPollingUnitFinalResult = `-- name: GetPollingUnitFinalResult :one
-SELECT id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, matching_submissions_count, total_submissions_count, created_at, updated_at FROM polling_unit_final_results
+SELECT id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live, matching_submissions_count, total_submissions_count, created_at, updated_at FROM polling_unit_final_results
 WHERE election_id = $1 AND polling_unit_id = $2
 `
 
@@ -41,6 +41,7 @@ func (q *Queries) GetPollingUnitFinalResult(ctx context.Context, arg GetPollingU
 		&i.ValidVotes,
 		&i.RejectedVotes,
 		&i.CandidateResults,
+		&i.CandidateResultsLive,
 		&i.MatchingSubmissionsCount,
 		&i.TotalSubmissionsCount,
 		&i.CreatedAt,
@@ -194,6 +195,66 @@ func (q *Queries) ListPollingUnitFinalResults(ctx context.Context, arg ListPolli
 	return items, nil
 }
 
+const refreshPollingUnitLiveResults = `-- name: RefreshPollingUnitLiveResults :exec
+WITH live_counts AS (
+  SELECT 
+    p.short_name AS party_short_name,
+    COUNT(ev.id)::int AS vote_count
+  FROM election_votes ev
+  JOIN parties p ON ev.party_id = p.id
+  WHERE ev.election_id = $1 AND ev.polling_unit_id = $2
+  GROUP BY p.short_name
+),
+live_json AS (
+  SELECT COALESCE(
+    jsonb_agg(
+      jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)
+    ), '[]'::jsonb
+  ) as candidate_results_live
+  FROM live_counts
+)
+INSERT INTO polling_unit_final_results (
+  election_id, election_group_id, polling_unit_id,
+  state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id,
+  candidate_results_live, candidate_results
+) VALUES (
+  $1, $3, $2,
+  $4, $5, $6, $7, $8, $9,
+  (SELECT candidate_results_live FROM live_json),
+  '[]'::jsonb
+)
+ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
+  candidate_results_live = EXCLUDED.candidate_results_live,
+  updated_at = NOW()
+`
+
+type RefreshPollingUnitLiveResultsParams struct {
+	ElectionID            int64       `json:"election_id"`
+	PollingUnitID         int32       `json:"polling_unit_id"`
+	ElectionGroupID       int64       `json:"election_group_id"`
+	StateID               pgtype.Int2 `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4 `json:"lga_id"`
+	WardID                pgtype.Int4 `json:"ward_id"`
+}
+
+func (q *Queries) RefreshPollingUnitLiveResults(ctx context.Context, arg RefreshPollingUnitLiveResultsParams) error {
+	_, err := q.db.Exec(ctx, refreshPollingUnitLiveResults,
+		arg.ElectionID,
+		arg.PollingUnitID,
+		arg.ElectionGroupID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+		arg.LgaID,
+		arg.WardID,
+	)
+	return err
+}
+
 const rollupElectionFinalResults = `-- name: RollupElectionFinalResults :exec
 WITH agg AS (
     SELECT 
@@ -221,21 +282,40 @@ cand_json AS (
         COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results
     FROM cand_agg
     GROUP BY election_id
+),
+cand_live_agg AS (
+    SELECT 
+        p.election_id,
+        (c.value->>'party_short_name')::text as party_short_name,
+        SUM((c.value->>'vote_count')::int) as vote_count
+    FROM state_final_result p, 
+         jsonb_array_elements(p.candidate_results_live) as c(value)
+    GROUP BY p.election_id, c.value->>'party_short_name'
+),
+cand_live_json AS (
+    SELECT 
+        election_id,
+        COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results_live
+    FROM cand_live_agg
+    GROUP BY election_id
 )
 INSERT INTO election_final_result (
     election_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     states_counted, total_states,
-    candidate_results
+        candidate_results_live,
+candidate_results
 )
 SELECT 
     a.election_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.states_counted,
-    (SELECT COUNT(*) FROM c_states) as total_states,
-    cj.candidate_results
+    (SELECT COUNT(*) FROM c_states) as total_states,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+
+    COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a
-JOIN cand_json cj ON a.election_id = cj.election_id
+LEFT JOIN cand_json cj ON a.election_id = cj.election_id
+LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id
 ON CONFLICT (election_id)
 DO UPDATE SET
     accredited_voters = EXCLUDED.accredited_voters,
@@ -245,6 +325,7 @@ DO UPDATE SET
     states_counted = EXCLUDED.states_counted,
     total_states = EXCLUDED.total_states,
     candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW()
 `
 
@@ -282,21 +363,41 @@ cand_json AS (
         COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results
     FROM cand_agg
     GROUP BY election_id, federal_constituency_id
+),
+cand_live_agg AS (
+    SELECT 
+        p.election_id, l.federal_constituency_id,
+        (c.value->>'party_short_name')::text as party_short_name,
+        SUM((c.value->>'vote_count')::int) as vote_count
+    FROM lga_final_result p
+    JOIN lgas l ON p.lga_id = l.id,
+         jsonb_array_elements(p.candidate_results_live) as c(value)
+    GROUP BY p.election_id, l.federal_constituency_id, c.value->>'party_short_name'
+),
+cand_live_json AS (
+    SELECT 
+        election_id, federal_constituency_id,
+        COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results_live
+    FROM cand_live_agg
+    GROUP BY election_id, federal_constituency_id
 )
 INSERT INTO federal_constituency_final_result (
     election_id, federal_constituency_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     lgas_counted, total_lgas,
-    candidate_results
+        candidate_results_live,
+candidate_results
 )
 SELECT 
     a.election_id, a.federal_constituency_id, a.state_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.lgas_counted,
-    (SELECT COUNT(*) FROM lgas WHERE federal_constituency_id = a.federal_constituency_id) as total_lgas,
-    cj.candidate_results
+    (SELECT COUNT(*) FROM lgas WHERE federal_constituency_id = a.federal_constituency_id) as total_lgas,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+
+    COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a
-JOIN cand_json cj ON a.election_id = cj.election_id AND a.federal_constituency_id = cj.federal_constituency_id
+LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.federal_constituency_id = cj.federal_constituency_id
+LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.federal_constituency_id = clj.federal_constituency_id
 ON CONFLICT (election_id, federal_constituency_id)
 DO UPDATE SET
     accredited_voters = EXCLUDED.accredited_voters,
@@ -306,6 +407,7 @@ DO UPDATE SET
     lgas_counted = EXCLUDED.lgas_counted,
     total_lgas = EXCLUDED.total_lgas,
     candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW()
 `
 
@@ -341,21 +443,40 @@ cand_json AS (
         COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results
     FROM cand_agg
     GROUP BY election_id, lga_id
+),
+cand_live_agg AS (
+    SELECT 
+        p.election_id, p.lga_id,
+        (c.value->>'party_short_name')::text as party_short_name,
+        SUM((c.value->>'vote_count')::int) as vote_count
+    FROM ward_final_result p, 
+         jsonb_array_elements(p.candidate_results_live) as c(value)
+    GROUP BY p.election_id, p.lga_id, c.value->>'party_short_name'
+),
+cand_live_json AS (
+    SELECT 
+        election_id, lga_id,
+        COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results_live
+    FROM cand_live_agg
+    GROUP BY election_id, lga_id
 )
 INSERT INTO lga_final_result (
     election_id, lga_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     wards_counted, total_wards,
-    candidate_results
+        candidate_results_live,
+candidate_results
 )
 SELECT 
     a.election_id, a.lga_id, a.state_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.wards_counted,
-    (SELECT COUNT(*) FROM wards WHERE lga_id = a.lga_id) as total_wards,
-    cj.candidate_results
+    (SELECT COUNT(*) FROM wards WHERE lga_id = a.lga_id) as total_wards,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+
+    COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a
-JOIN cand_json cj ON a.election_id = cj.election_id AND a.lga_id = cj.lga_id
+LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.lga_id = cj.lga_id
+LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.lga_id = clj.lga_id
 ON CONFLICT (election_id, lga_id)
 DO UPDATE SET
     accredited_voters = EXCLUDED.accredited_voters,
@@ -365,6 +486,7 @@ DO UPDATE SET
     wards_counted = EXCLUDED.wards_counted,
     total_wards = EXCLUDED.total_wards,
     candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW()
 `
 
@@ -402,21 +524,41 @@ cand_json AS (
         COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results
     FROM cand_agg
     GROUP BY election_id, senatorial_district_id
+),
+cand_live_agg AS (
+    SELECT 
+        p.election_id, l.senatorial_district_id,
+        (c.value->>'party_short_name')::text as party_short_name,
+        SUM((c.value->>'vote_count')::int) as vote_count
+    FROM lga_final_result p
+    JOIN lgas l ON p.lga_id = l.id,
+         jsonb_array_elements(p.candidate_results_live) as c(value)
+    GROUP BY p.election_id, l.senatorial_district_id, c.value->>'party_short_name'
+),
+cand_live_json AS (
+    SELECT 
+        election_id, senatorial_district_id,
+        COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results_live
+    FROM cand_live_agg
+    GROUP BY election_id, senatorial_district_id
 )
 INSERT INTO senatorial_district_final_result (
     election_id, senatorial_district_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     lgas_counted, total_lgas,
-    candidate_results
+        candidate_results_live,
+candidate_results
 )
 SELECT 
     a.election_id, a.senatorial_district_id, a.state_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.lgas_counted,
-    (SELECT COUNT(*) FROM lgas WHERE senatorial_district_id = a.senatorial_district_id) as total_lgas,
-    cj.candidate_results
+    (SELECT COUNT(*) FROM lgas WHERE senatorial_district_id = a.senatorial_district_id) as total_lgas,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+
+    COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a
-JOIN cand_json cj ON a.election_id = cj.election_id AND a.senatorial_district_id = cj.senatorial_district_id
+LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.senatorial_district_id = cj.senatorial_district_id
+LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.senatorial_district_id = clj.senatorial_district_id
 ON CONFLICT (election_id, senatorial_district_id)
 DO UPDATE SET
     accredited_voters = EXCLUDED.accredited_voters,
@@ -426,6 +568,7 @@ DO UPDATE SET
     lgas_counted = EXCLUDED.lgas_counted,
     total_lgas = EXCLUDED.total_lgas,
     candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW()
 `
 
@@ -463,21 +606,41 @@ cand_json AS (
         COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results
     FROM cand_agg
     GROUP BY election_id, state_constituency_id
+),
+cand_live_agg AS (
+    SELECT 
+        p.election_id, s.id as state_constituency_id,
+        (c.value->>'party_short_name')::text as party_short_name,
+        SUM((c.value->>'vote_count')::int) as vote_count
+    FROM lga_final_result p
+    JOIN state_assembly_constituencies s ON p.lga_id = s.lga_id,
+         jsonb_array_elements(p.candidate_results_live) as c(value)
+    GROUP BY p.election_id, s.id, c.value->>'party_short_name'
+),
+cand_live_json AS (
+    SELECT 
+        election_id, state_constituency_id,
+        COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results_live
+    FROM cand_live_agg
+    GROUP BY election_id, state_constituency_id
 )
 INSERT INTO state_constituency_final_result (
     election_id, state_constituency_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     wards_counted, total_wards,
-    candidate_results
+        candidate_results_live,
+candidate_results
 )
 SELECT 
     a.election_id, a.state_constituency_id, a.state_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.wards_counted,
-    (SELECT COUNT(w.id) FROM wards w JOIN state_assembly_constituencies s2 ON w.lga_id = s2.lga_id WHERE s2.id = a.state_constituency_id) as total_wards,
-    cj.candidate_results
+    (SELECT COUNT(w.id) FROM wards w JOIN state_assembly_constituencies s2 ON w.lga_id = s2.lga_id WHERE s2.id = a.state_constituency_id) as total_wards,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+
+    COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a
-JOIN cand_json cj ON a.election_id = cj.election_id AND a.state_constituency_id = cj.state_constituency_id
+LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.state_constituency_id = cj.state_constituency_id
+LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.state_constituency_id = clj.state_constituency_id
 ON CONFLICT (election_id, state_constituency_id)
 DO UPDATE SET
     accredited_voters = EXCLUDED.accredited_voters,
@@ -487,6 +650,7 @@ DO UPDATE SET
     wards_counted = EXCLUDED.wards_counted,
     total_wards = EXCLUDED.total_wards,
     candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW()
 `
 
@@ -522,21 +686,40 @@ cand_json AS (
         COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results
     FROM cand_agg
     GROUP BY election_id, state_id
+),
+cand_live_agg AS (
+    SELECT 
+        p.election_id, p.state_id,
+        (c.value->>'party_short_name')::text as party_short_name,
+        SUM((c.value->>'vote_count')::int) as vote_count
+    FROM lga_final_result p, 
+         jsonb_array_elements(p.candidate_results_live) as c(value)
+    GROUP BY p.election_id, p.state_id, c.value->>'party_short_name'
+),
+cand_live_json AS (
+    SELECT 
+        election_id, state_id,
+        COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results_live
+    FROM cand_live_agg
+    GROUP BY election_id, state_id
 )
 INSERT INTO state_final_result (
     election_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     lgas_counted, total_lgas,
-    candidate_results
+        candidate_results_live,
+candidate_results
 )
 SELECT 
     a.election_id, a.state_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.lgas_counted,
-    (SELECT COUNT(*) FROM lgas WHERE state_id = a.state_id) as total_lgas,
-    cj.candidate_results
+    (SELECT COUNT(*) FROM lgas WHERE state_id = a.state_id) as total_lgas,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+
+    COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a
-JOIN cand_json cj ON a.election_id = cj.election_id AND a.state_id = cj.state_id
+LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.state_id = cj.state_id
+LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.state_id = clj.state_id
 ON CONFLICT (election_id, state_id)
 DO UPDATE SET
     accredited_voters = EXCLUDED.accredited_voters,
@@ -546,6 +729,7 @@ DO UPDATE SET
     lgas_counted = EXCLUDED.lgas_counted,
     total_lgas = EXCLUDED.total_lgas,
     candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW()
 `
 
@@ -581,21 +765,40 @@ cand_json AS (
         COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results
     FROM cand_agg
     GROUP BY election_id, ward_id
+),
+cand_live_agg AS (
+    SELECT 
+        p.election_id, p.ward_id,
+        (c.value->>'party_short_name')::text as party_short_name,
+        SUM((c.value->>'vote_count')::int) as vote_count
+    FROM polling_unit_final_results p, 
+         jsonb_array_elements(p.candidate_results_live) as c(value)
+    GROUP BY p.election_id, p.ward_id, c.value->>'party_short_name'
+),
+cand_live_json AS (
+    SELECT 
+        election_id, ward_id,
+        COALESCE(jsonb_agg(jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)), '[]'::jsonb) as candidate_results_live
+    FROM cand_live_agg
+    GROUP BY election_id, ward_id
 )
 INSERT INTO ward_final_result (
     election_id, ward_id, lga_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     polling_units_counted, total_polling_units,
-    candidate_results
+        candidate_results_live,
+candidate_results
 )
 SELECT 
     a.election_id, a.ward_id, a.lga_id, a.state_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.polling_units_counted,
-    (SELECT COUNT(*) FROM polling_units WHERE ward_id = a.ward_id) as total_polling_units,
-    cj.candidate_results
+    (SELECT COUNT(*) FROM polling_units WHERE ward_id = a.ward_id) as total_polling_units,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+
+    COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a
-JOIN cand_json cj ON a.election_id = cj.election_id AND a.ward_id = cj.ward_id
+LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.ward_id = cj.ward_id
+LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.ward_id = clj.ward_id
 ON CONFLICT (election_id, ward_id)
 DO UPDATE SET
     accredited_voters = EXCLUDED.accredited_voters,
@@ -605,6 +808,7 @@ DO UPDATE SET
     polling_units_counted = EXCLUDED.polling_units_counted,
     total_polling_units = EXCLUDED.total_polling_units,
     candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW()
 `
 
@@ -791,10 +995,11 @@ INSERT INTO polling_unit_final_results (
   valid_votes,
   rejected_votes,
   candidate_results,
+  candidate_results_live,
   matching_submissions_count,
   total_submissions_count
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
 )
 ON CONFLICT (election_id, polling_unit_id)
 DO UPDATE SET
@@ -810,10 +1015,12 @@ DO UPDATE SET
   valid_votes = EXCLUDED.valid_votes,
   rejected_votes = EXCLUDED.rejected_votes,
   candidate_results = EXCLUDED.candidate_results,
+    candidate_results_live = EXCLUDED.candidate_results_live,
+  candidate_results_live = EXCLUDED.candidate_results_live,
   matching_submissions_count = EXCLUDED.matching_submissions_count,
   total_submissions_count = EXCLUDED.total_submissions_count,
   updated_at = NOW()
-RETURNING id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, matching_submissions_count, total_submissions_count, created_at, updated_at
+RETURNING id, election_id, election_group_id, polling_unit_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, polling_unit_result_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live, matching_submissions_count, total_submissions_count, created_at, updated_at
 `
 
 type UpsertPollingUnitFinalResultParams struct {
@@ -832,6 +1039,7 @@ type UpsertPollingUnitFinalResultParams struct {
 	ValidVotes               int32       `json:"valid_votes"`
 	RejectedVotes            int32       `json:"rejected_votes"`
 	CandidateResults         []byte      `json:"candidate_results"`
+	CandidateResultsLive     []byte      `json:"candidate_results_live"`
 	MatchingSubmissionsCount int32       `json:"matching_submissions_count"`
 	TotalSubmissionsCount    int32       `json:"total_submissions_count"`
 }
@@ -853,6 +1061,7 @@ func (q *Queries) UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPo
 		arg.ValidVotes,
 		arg.RejectedVotes,
 		arg.CandidateResults,
+		arg.CandidateResultsLive,
 		arg.MatchingSubmissionsCount,
 		arg.TotalSubmissionsCount,
 	)
@@ -874,6 +1083,7 @@ func (q *Queries) UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPo
 		&i.ValidVotes,
 		&i.RejectedVotes,
 		&i.CandidateResults,
+		&i.CandidateResultsLive,
 		&i.MatchingSubmissionsCount,
 		&i.TotalSubmissionsCount,
 		&i.CreatedAt,

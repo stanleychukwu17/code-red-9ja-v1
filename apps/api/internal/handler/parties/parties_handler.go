@@ -18,11 +18,11 @@ import (
 )
 
 type PartiesService interface {
-	CreateParty(ctx context.Context, shortName, name, logo string) (queries.Party, error)
+	CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error)
 	GetPartyByID(ctx context.Context, id int64) (queries.Party, error)
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
 	ListParties(ctx context.Context) ([]queries.Party, error)
-	UpdateParty(ctx context.Context, id int64, shortName, name, logo string) (queries.Party, error)
+	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	// Wallet methods
 	GetPartyWallet(ctx context.Context, partyID int64) (queries.PartyWallet, error)
@@ -91,15 +91,17 @@ func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir str
 }
 
 type CreatePartyRequest struct {
-	ShortName string `json:"short_name"`
-	Name      string `json:"name"`
-	Logo      string `json:"logo"`
+	ShortName    string `json:"short_name"`
+	Name         string `json:"name"`
+	Logo         string `json:"logo"`
+	DisplayOrder int32  `json:"display_order"`
 }
 
 type UpdatePartyRequest struct {
 	ShortName string `json:"short_name"`
-	Name      string `json:"name"`
-	Logo      string `json:"logo"`
+	Name         string `json:"name"`
+	Logo         string `json:"logo"`
+	DisplayOrder int32  `json:"display_order"`
 }
 
 // CreateParty godoc
@@ -127,7 +129,7 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo)
+	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create party: "+err.Error())
 		return
@@ -144,8 +146,10 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 // @Tags         Parties
 // @Accept       json
 // @Produce      json
-// @Param        limit  query int    false "Limit (default 20, max 100)"
-// @Param        cursor query string false "Cursor (ID of last record)"
+// @Param        limit    query int    false "Limit (default 20, max 100)"
+// @Param        cursor   query string false "Cursor (ID of last record)"
+// @Param        order_by query string false "Order by field (default: display_order, enum: display_order, name, short_name)"
+// @Param        order    query string false "Order direction (default: ASC, enum: ASC, DESC)"
 // @Success      200  {object} map[string]interface{} "Parties fetched successfully"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties [get]
@@ -158,14 +162,16 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orderBy, orderDir := parseSortParams(r, "short_name", "ASC")
+	orderBy, orderDir := parseSortParams(r, "display_order", "ASC")
 
 	sort.SliceStable(parties, func(i, j int) bool {
 		var less bool
 		if orderBy == "name" {
 			less = parties[i].Name < parties[j].Name
-		} else {
+		} else if orderBy == "short_name" {
 			less = parties[i].ShortName < parties[j].ShortName
+		} else {
+			less = parties[i].DisplayOrder < parties[j].DisplayOrder
 		}
 		if orderDir == "DESC" {
 			return !less
@@ -282,7 +288,7 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updatedParty, err := h.partiesService.UpdateParty(r.Context(), id, req.ShortName, req.Name, req.Logo)
+	updatedParty, err := h.partiesService.UpdateParty(r.Context(), id, req.ShortName, req.Name, req.Logo, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
 		return

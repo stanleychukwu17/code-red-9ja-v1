@@ -44,11 +44,12 @@ func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client
 
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
-func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string) (queries.Party, error) {
+func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 		ShortName: shortName,
 		Name:      name,
 		Logo:      logo,
+		DisplayOrder: displayOrder,
 	})
 	if err != nil {
 		return queries.Party{}, err
@@ -179,12 +180,13 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, erro
 }
 
 // UpdateParty modifies the short name, name, and logo of an existing party.
-func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string) (queries.Party, error) {
+func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
 		ID:        id,
 		ShortName: shortName,
 		Name:      name,
 		Logo:      logo,
+		DisplayOrder: displayOrder,
 	})
 	return party, err
 }

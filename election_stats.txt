@@ -1,0 +1,124 @@
+election_polling_units
+- election_group_id
+- polling_unit_id
+- state_id
+- lga_id
+- ward_id
+- constituency_id
+- federal_constituency_id
+- senatorial_district_id
+
+- unique_final_results_expected: e.g if this polling unit is elligble to have voters vote on 3 election instances in this election group then this value would be 3
+
+- total_agents_in_attendance_count: total agents in attendance
+- total_reports_count: total reports
+- total_updates_count: total updates
+- average_election_started_at: average time election starts in pu
+- average_election_ended_at: average time election stops in pu
+- total_agents_count: total pu agents
+- election_practice_test_readiness_percentage: average election practice test readiness percentage across all PUs
+- total_final_results_uploaded_count: total results uploaded for this polling unit
+- total_unique_final_results_uploaded_count: e.g if 3 agents upload result for same election.id for this election group and polling unit, that counts as 1
+- live_voters_reffered_by_agent_count: total live voters reffered by agents across all PUs
+
+election_polling_units.parties JSONB
+- party_id
+- agents_in_attendance_count
+- average_arrival_time
+- election_started_at
+- election_ended_at
+- updates_count
+- reports_count
+- agents_count
+- final_results_uploaded_count: total result uploads by polling agents for all elections eligible to only that polling unit
+- unique_final_results_uploaded_count: total unique final results uploaded by polling agents for all elections eligible to only that polling unit (if 3 agents upload result for same election.id for a polling unit, that counts as 1)
+- last_update_given_at
+- average_update_time_interval_in_seconds
+- election_practice_test_readiness_percentage
+- live_voters_reffered_by_agent_count
+
+--------------------------------------------
+
+election_wards
+- election_group_id
+- ward_id
+- lga_id
+- state_id
+
+election_state_constituencies
+- election_group_id
+- state_constituency_id
+- state_id
+- ...
+
+election_lgas
+- election_group_id
+- lga_id
+- state_id
+- ...
+
+election_federal_constituencies
+- election_group_id
+- federal_constituency_id
+- state_id
+- ...
+
+election_senatorial_districts
+- election_group_id
+- senatorial_district_id
+- state_id
+- ...
+
+election_states
+- election_group_id
+- state_id
+- ...
+
+
+election_wards | election_state_constituencies | election_lgas | election_states | election_senatorial_districts | election_federal_constituencies | election_states
+
+- total_unique_final_results_expected: total unique results (a polling unit may hav)
+
+- pu_total_agents_in_attendance_count: total agents in attendance
+- pu_total_reports_count: total reports
+- pu_total_updates_count: total updates
+- pu_average_election_started_at: average time election starts in pu
+- pu_average_election_ended_at: average time election stops in pu
+- pu_total_agents_count: total pu agents
+- pu_total_final_results_uploaded_count: total pu final result uploads
+- pu_total_unique_final_results_uploaded_count: total unique final result uploads
+- pu_election_practice_test_readiness_percentage: average election practice test readiness percentage across all PUs
+- pu_live_voters_reffered_by_agent_count: total live voters reffered by agents across all PUs
+
+// this focuses on totalling polling units rather than the polling unit fields
+- total_pu_with_reports: total pu with 1 or more reports
+- total_pu_with_updates: total pu with 1 or more updates
+- total_pu_with_agents_in_attendance: total pu with 1 or more agents in attendance
+- total_pu_where_election_has_started: total pu where election has started
+- total_pu_where_election_has_ended: total pu where election has ended
+- total_pu_unique_final_results_uploaded_count: total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
+- total_pu_where_agents_reffered_live_voters: total pu where agents have reffered live voters
+
+election_wards.parties JSONB | election_state_constituencies.parties JSONB | election_lgas.parties JSONB | election_states.parties JSONB | election_senatorial_districts.parties JSONB | election_federal_constituencies.parties JSONB  | election_states.parties JSONB
+- party_id
+- pu_total_agents_in_attendance_count: total pu agents in attendance 
+- pu_average_arrival_time: average arrival time of pu agents
+- pu_average_election_started_at: average time election starts in pu
+- pu_average_election_ended_at: average time election stops in pu
+- pu_total_updates_count: total pu updates
+- pu_total_reports_count: total pu reports
+- pu_total_agents_count: total pu agents
+- pu_total_final_results_uploaded_count: 
+- pu_total_unique_final_results_uploaded_count: 
+- pu_average_update_time_interval_in_seconds:  average time interval between agent updates in seconds
+- pu_election_practice_test_readiness_percentage: average election practice test readiness percentage across all PUs
+- pu_live_voters_reffered_by_agent_count: total live voters reffered by agents across all PUs
+
+// this focuses on totalling polling units rather than the polling unit fields
+- total_pu_with_reports: total pu with 1 or more reports
+- total_pu_with_updates: total pu with 1 or more updates
+- total_pu_with_agents_in_attendance: total pu with 1 or more agents in attendance
+- total_pu_where_election_has_started: total pu where election has started
+- total_pu_where_election_has_ended: total pu where election has ended
+- total_pu_unique_final_results_uploaded_count: total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
+- total_pu_where_agents_reffered_live_voters: total pu where agents have reffered live voters

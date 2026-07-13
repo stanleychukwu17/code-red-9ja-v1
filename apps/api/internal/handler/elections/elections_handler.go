@@ -30,6 +30,11 @@ type ElectionsService interface {
 	GetElectionCandidates(ctx context.Context, electionID int64) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int64, candidates []elections.CandidateInput) error
 	FieldPartyCandidate(ctx context.Context, electionID int64, fakeID int64, candidateID int64) error
+	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
+	CreateDidNotVoteReason(ctx context.Context, arg queries.CreateDidNotVoteReasonParams) (queries.DidNotVoteReason, error)
+	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int64) ([]elections.ElectionWithCandidates, error)
+	SubmitElectionVotes(ctx context.Context, userID int64, electionGroupID int64, pollingUnitID int64, votes []elections.VoteInput, vin string, votersCardImage string) error
+	GetUserElectionGroupVoteStatus(ctx context.Context, userID, electionGroupID int64) (elections.UserVoteStatus, error)
 }
 
 type Handler struct {

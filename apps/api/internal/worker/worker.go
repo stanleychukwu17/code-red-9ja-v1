@@ -60,13 +60,16 @@ func (processor *RedisTaskProcessor) Start() error {
 
 	// Register cron rollup jobs with staggered schedules to spread DB load.
 	// Each scope's zenith rollup also updates election_candidates.votes_count.
-	processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
-	processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
-	processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
-	processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
-	processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
-	processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
-	processor.cron.AddFunc("*/11 * * * *", processor.ProcessRollupElection)           // nationwide (zenith for presidential)
+	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
+	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
+	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
+	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
+	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
+	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
+	processor.cron.AddFunc("*/11 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
+
+	// Geographic Stats pre-aggregation for dashboards (runs every 15 mins)
+	processor.cron.AddFunc("*/15 * * * *", processor.ProcessRefreshAllElectionStats)
 
 	processor.cron.Start()
 	slog.Info("cron rollup scheduler started")

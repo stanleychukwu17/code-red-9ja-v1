@@ -10,25 +10,32 @@ import (
 )
 
 const createParty = `-- name: CreateParty :one
-INSERT INTO parties (short_name, name, logo)
-VALUES ($1, $2, $3)
-RETURNING id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+INSERT INTO parties (short_name, name, logo, display_order)
+VALUES ($1, $2, $3, $4)
+RETURNING id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type CreatePartyParams struct {
-	ShortName string `json:"short_name"`
-	Name      string `json:"name"`
-	Logo      string `json:"logo"`
+	ShortName    string `json:"short_name"`
+	Name         string `json:"name"`
+	Logo         string `json:"logo"`
+	DisplayOrder int32  `json:"display_order"`
 }
 
 func (q *Queries) CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error) {
-	row := q.db.QueryRow(ctx, createParty, arg.ShortName, arg.Name, arg.Logo)
+	row := q.db.QueryRow(ctx, createParty,
+		arg.ShortName,
+		arg.Name,
+		arg.Logo,
+		arg.DisplayOrder,
+	)
 	var i Party
 	err := row.Scan(
 		&i.ID,
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
 		&i.DiscountPercentage,
@@ -73,7 +80,7 @@ func (q *Queries) GetPartyBasicInfo(ctx context.Context, id int64) (GetPartyBasi
 }
 
 const getPartyByID = `-- name: GetPartyByID :one
-SELECT id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties WHERE id = $1
+SELECT id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties WHERE id = $1
 `
 
 func (q *Queries) GetPartyByID(ctx context.Context, id int64) (Party, error) {
@@ -84,6 +91,7 @@ func (q *Queries) GetPartyByID(ctx context.Context, id int64) (Party, error) {
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
 		&i.DiscountPercentage,
@@ -96,7 +104,7 @@ func (q *Queries) GetPartyByID(ctx context.Context, id int64) (Party, error) {
 }
 
 const getPartyByShortName = `-- name: GetPartyByShortName :one
-SELECT id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties WHERE short_name = $1
+SELECT id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties WHERE short_name = $1
 `
 
 func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Party, error) {
@@ -107,6 +115,7 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
 		&i.DiscountPercentage,
@@ -119,8 +128,8 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 }
 
 const listParties = `-- name: ListParties :many
-SELECT id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties
-ORDER BY id ASC
+SELECT id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties
+ORDER BY display_order ASC, name ASC
 `
 
 func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
@@ -137,6 +146,7 @@ func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
 			&i.ShortName,
 			&i.Name,
 			&i.Logo,
+			&i.DisplayOrder,
 			&i.Status,
 			&i.Slots,
 			&i.DiscountPercentage,
@@ -157,16 +167,17 @@ func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
 
 const updateParty = `-- name: UpdateParty :one
 UPDATE parties
-SET short_name = $1, name = $2, logo = $3, updated_at = NOW()
-WHERE id = $4
-RETURNING id, short_name, name, logo, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+SET short_name = $1, name = $2, logo = $3, display_order = $4, updated_at = NOW()
+WHERE id = $5
+RETURNING id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type UpdatePartyParams struct {
-	ShortName string `json:"short_name"`
-	Name      string `json:"name"`
-	Logo      string `json:"logo"`
-	ID        int64  `json:"id"`
+	ShortName    string `json:"short_name"`
+	Name         string `json:"name"`
+	Logo         string `json:"logo"`
+	DisplayOrder int32  `json:"display_order"`
+	ID           int64  `json:"id"`
 }
 
 func (q *Queries) UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error) {
@@ -174,6 +185,7 @@ func (q *Queries) UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party
 		arg.ShortName,
 		arg.Name,
 		arg.Logo,
+		arg.DisplayOrder,
 		arg.ID,
 	)
 	var i Party
@@ -182,6 +194,7 @@ func (q *Queries) UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
 		&i.DiscountPercentage,

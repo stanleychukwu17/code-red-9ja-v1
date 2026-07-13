@@ -52,7 +52,11 @@ export const API_URL = {
 
   getCities: (stateId: number) => `${api}/states/${stateId}/cities`,
 
-  getSenatorialDistricts: (stateId?: number, limit?: number, cursor?: string | number,) => {
+  getSenatorialDistricts: (
+    stateId?: number,
+    limit?: number,
+    cursor?: string | number,
+  ) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
     if (limit) params.append("limit", String(limit));
@@ -61,7 +65,12 @@ export const API_URL = {
     return `${api}/senatorial-districts${qs ? `?${qs}` : ""}`;
   },
 
-  getFederalConstituencies: (stateId?: number, senatorialDistrictId?: number, limit?: number, cursor?: string | number,) => {
+  getFederalConstituencies: (
+    stateId?: number,
+    senatorialDistrictId?: number,
+    limit?: number,
+    cursor?: string | number,
+  ) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
     if (senatorialDistrictId)
@@ -72,7 +81,12 @@ export const API_URL = {
     return `${api}/federal-constituencies${qs ? `?${qs}` : ""}`;
   },
 
-  getStateAssemblyConstituencies: (stateId?: number, federalConstituencyId?: number, limit?: number, cursor?: string | number) => {
+  getStateAssemblyConstituencies: (
+    stateId?: number,
+    federalConstituencyId?: number,
+    limit?: number,
+    cursor?: string | number,
+  ) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
     if (federalConstituencyId)
@@ -92,7 +106,12 @@ export const API_URL = {
     return `${api}/lgas${qs ? `?${qs}` : ""}`;
   },
 
-  getWards: (localGovernmentId?: number, stateId?: number, limit?: number, cursor?: string | number) => {
+  getWards: (
+    localGovernmentId?: number,
+    stateId?: number,
+    limit?: number,
+    cursor?: string | number,
+  ) => {
     const params = new URLSearchParams();
     if (localGovernmentId) params.append("lga_id", String(localGovernmentId));
     if (stateId) params.append("state_id", String(stateId));
@@ -102,7 +121,13 @@ export const API_URL = {
     return `${api}/wards${qs ? `?${qs}` : ""}`;
   },
 
-  getPollingUnits: (wardId?: number, localGovernmentId?: number, stateId?: number, limit?: number, cursor?: string | number) => {
+  getPollingUnits: (
+    wardId?: number,
+    localGovernmentId?: number,
+    stateId?: number,
+    limit?: number,
+    cursor?: string | number,
+  ) => {
     const params = new URLSearchParams();
     if (wardId) params.append("ward_id", String(wardId));
     if (localGovernmentId) params.append("lga_id", String(localGovernmentId));
@@ -129,13 +154,16 @@ export const API_URL = {
   stateById: (id: string | number) => `${api}/states/${id}`,
 
   senatorialDistricts: `${api}/senatorial-districts`,
-  senatorialDistrictById: (id: string | number) => `${api}/senatorial-districts/${id}`,
+  senatorialDistrictById: (id: string | number) =>
+    `${api}/senatorial-districts/${id}`,
 
   federalConstituencies: `${api}/federal-constituencies`,
-  federalConstituencyById: (id: string | number) => `${api}/federal-constituencies/${id}`,
+  federalConstituencyById: (id: string | number) =>
+    `${api}/federal-constituencies/${id}`,
 
   stateAssemblyConstituencies: `${api}/state-assembly-constituencies`,
-  stateAssemblyConstituencyById: (id: string | number) => `${api}/state-assembly-constituencies/${id}`,
+  stateAssemblyConstituencyById: (id: string | number) =>
+    `${api}/state-assembly-constituencies/${id}`,
 
   wards: `${api}/wards`,
   wardById: (id: string | number) => `${api}/wards/${id}`,
@@ -146,11 +174,15 @@ export const API_URL = {
 
   electionGroups: `${api}/election-groups`,
   electionGroupById: (id: string | number) => `${api}/election-groups/${id}`,
-  electionGroupElections: (id: string | number) => `${api}/election-groups/${id}/elections`,
+  electionGroupElections: (id: string | number) =>
+    `${api}/election-groups/${id}/elections`,
 
   elections: `${api}/elections`,
+  nonVotingReasons: `${api}/elections/non-voting-reasons`,
+  didNotVote: `${api}/elections/did-not-vote`,
   electionById: (id: string | number) => `${api}/elections/${id}`,
-  electionCandidates: (id: string | number) => `${api}/elections/${id}/candidates`,
+  electionCandidates: (id: string | number) =>
+    `${api}/elections/${id}/candidates`,
 
   electionsNationwide: `${api}/elections/nationwide`,
   electionsState: `${api}/elections/state`,
@@ -165,21 +197,25 @@ export const API_URL = {
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
 
   users: `${api}/users`,
-  pollingAgentApplications: `${api}/polling-agent-applications`,
-  pollingAgentRecommendations: `${api}/polling-agent-applications/recommendations`,
+  pollingAgentApplications: `${api}/party-applications`,
+  pollingAgentRecommendations: `${api}/party-applications/recommendations`,
 
   approveApplication: (id: string | number) =>
     `${api}/party-applications/${id}/approve`,
   rejectApplication: (id: string | number) =>
     `${api}/party-applications/${id}/reject`,
   cancelApplication: (id: string | number) =>
-    `${api}/polling-agent-applications/${id}/cancel`,
+    `${api}/party-applications/${id}/cancel`,
 
   pollingUnitAssignments: `${api}/polling-unit-assignments`,
   updateAssignmentTracking: (id: string | number) =>
     `${api}/polling-unit-assignments/${id}/tracking`,
 
+  supervisorAssignments: `${api}/supervisor-assignments`,
+
   pollingUnitResults: `${api}/polling-unit-results`,
-  pollingUnitResultById: (id: string | number) => `${api}/polling-unit-results/${id}`,
-  voteOnResult: (id: string | number) => `${api}/polling-unit-results/${id}/vote`,
+  pollingUnitResultById: (id: string | number) =>
+    `${api}/polling-unit-results/${id}`,
+  voteOnResult: (id: string | number) =>
+    `${api}/polling-unit-results/${id}/vote`,
 };
