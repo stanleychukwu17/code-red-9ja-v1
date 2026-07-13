@@ -421,10 +421,10 @@ definitions:
         type: string
       polling_unit_id:
         type: integer
-      role:
-        type: string
-      role_level:
-        type: string
+      roles:
+        items:
+          type: string
+        type: array
       school_name:
         type: string
       username:

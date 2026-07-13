@@ -8266,11 +8266,11 @@ const docTemplate = `{
                 "polling_unit_id": {
                     "type": "integer"
                 },
-                "role": {
-                    "type": "string"
-                },
-                "role_level": {
-                    "type": "string"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "school_name": {
                     "type": "string"
