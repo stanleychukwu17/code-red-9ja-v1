@@ -11,14 +11,14 @@ import (
 	"strings"
 	"time"
 
+	monnifyclient "free9ja/api/internal/service/monnify"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	monnifyclient "free9ja/api/internal/service/monnify"
 )
 
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
-	GetUserByID(ctx context.Context, id int64) (queries.User, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
@@ -241,20 +241,20 @@ func mapUserToResponse(u queries.User, role string, roleLevel string) UserRespon
 	}
 
 	return UserResponse{
-		ID:             u.ID,
-		FakeID:         u.FakeID.Int64,
-		Email:          email,
-		Avatar:         avatar,
-		Phone:          phone,
-		Username:       username,
-		LastName:       lastName,
-		FirstName:      firstName,
-		MiddleName:     middleName,
-		Gender:         gender,
-		DateOfBirth:    dateOfBirth,
-		CurrentCountry: u.CurrentCountry,
-		CurrentState:   u.CurrentState,
-		CurrentCity:    cityID,
+		ID:                u.ID,
+		FakeID:            u.FakeID.Int64,
+		Email:             email,
+		Avatar:            avatar,
+		Phone:             phone,
+		Username:          username,
+		LastName:          lastName,
+		FirstName:         firstName,
+		MiddleName:        middleName,
+		Gender:            gender,
+		DateOfBirth:       dateOfBirth,
+		CurrentCountry:    u.CurrentCountry,
+		CurrentState:      u.CurrentState,
+		CurrentCity:       cityID,
 		CurrentLga:        lgaID,
 		CurrentWard:       wardID,
 		StateOfOrigin:     stateOfOrigin,
@@ -412,9 +412,9 @@ type PaginationMeta struct {
 }
 
 type GetUsersResponse struct {
-	Success bool           `json:"success"`
-	Message string         `json:"message"`
-	Data    GetUsersData   `json:"data"`
+	Success bool            `json:"success"`
+	Message string          `json:"message"`
+	Data    GetUsersData    `json:"data"`
 	Meta    *PaginationMeta `json:"meta,omitempty"`
 }
 
@@ -567,7 +567,7 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.usersService.GetUserByID(r.Context(), id)
+	user, err := h.usersService.GetUserByFakeID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
@@ -587,8 +587,6 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
 			return
 		}
-
-
 
 		// Party admin can only delete users belonging to their own party
 		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {
@@ -635,7 +633,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.usersService.GetUserByID(r.Context(), id)
+	user, err := h.usersService.GetUserByFakeID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
@@ -671,8 +669,6 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
 			return
 		}
-
-
 
 		// Party admin can only edit users belonging to their own party
 		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {

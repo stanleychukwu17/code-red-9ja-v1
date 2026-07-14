@@ -1439,7 +1439,7 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 	return nil
 }
 
-func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int64, fakeID int64, candidateID int64) error {
+func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int64, partyID int64, candidateID int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -1447,17 +1447,6 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 	defer tx.Rollback(ctx)
 
 	txQueries := s.queries.WithTx(tx)
-
-	// Look up the user's party_id using their fakeID
-	user, err := txQueries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
-	if err != nil {
-		return fmt.Errorf("user not found: %w", err)
-	}
-
-	if !user.PartyID.Valid {
-		return fmt.Errorf("user is not associated with a party")
-	}
-	partyID := user.PartyID.Int64
 
 	// 1. Delete any existing candidate of this party on the election
 	err = txQueries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{

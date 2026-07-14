@@ -29,8 +29,9 @@ type MessagingService interface {
 	SendWhatsAppOTP(phone, otp string) error
 }
 
-type UserWalletService interface {
+type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 }
 
 type PartyService interface {
@@ -41,7 +42,7 @@ type AuthService struct {
 	queries          *queries.Queries
 	rdb              *redis.Client
 	messagingService MessagingService
-	walletService    UserWalletService
+	usersService     UsersService
 	partyService     PartyService
 	jwtSecret        string
 	jwtAccessExp     time.Duration
@@ -52,7 +53,7 @@ func NewAuthService(
 	q *queries.Queries,
 	rdb *redis.Client,
 	messagingService MessagingService,
-	walletService UserWalletService,
+	usersService UsersService,
 	partyService PartyService,
 	jwtSecret string,
 	jwtAccessExp time.Duration,
@@ -62,7 +63,7 @@ func NewAuthService(
 		queries:          q,
 		rdb:              rdb,
 		messagingService: messagingService,
-		walletService:    walletService,
+		usersService:     usersService,
 		partyService:     partyService,
 		jwtSecret:        jwtSecret,
 		jwtAccessExp:     jwtAccessExp,
@@ -761,20 +762,23 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 
 	// fetch user details using the user fake_id, because the details does not currently exist in redis,
 	// it will fetch the details and save it into redis
-	_, _ = s.GetUserDetailsByFakeID(ctx, fake_id)
+	registeredUser, userErr := s.GetUserDetailsByFakeID(ctx, fake_id)
 
 	// delete onboarding state from redis as it is now completed
 	s.rdb.Del(ctx, redisKey)
 
+	// TODO: this creating of user wallet should be in done in a background job or queue instead of a go routine
 	// Create user wallet (best effort, non-blocking)
-	if s.walletService != nil {
-		if registeredUser, err := s.queries.GetUserByID(context.Background(), user_id); err == nil {
+	if s.usersService != nil {
+		if userErr == nil {
 			go func() {
 				bgCtx := context.Background()
-				if _, walletErr := s.walletService.CreateUserWallet(bgCtx, registeredUser); walletErr != nil {
+				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser); walletErr != nil {
 					slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
 				}
 			}()
+		} else {
+			slog.Error("failed to fetch user details to create wallet", "user_id", user_id, "err", userErr)
 		}
 	}
 
@@ -1059,31 +1063,8 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 }
 
 // GetUserDetailsByFakeID fetches all user details using the user fake_id.
-// It checks Redis first, if not found, it fetches from the DB and caches it in Redis.
 func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
-	// Check Redis
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	userInfoJSON, err := s.rdb.Get(ctx, userInfoKey).Result()
-	if err == nil {
-		var user queries.User
-		if err := json.Unmarshal([]byte(userInfoJSON), &user); err == nil {
-			return user, nil
-		}
-	}
-
-	// Fetch from DB if not in Redis
-	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
-	if err != nil {
-		return queries.User{}, fmt.Errorf("user not found: %w", err)
-	}
-
-	// Cache it in Redis
-	userJSON, err := json.Marshal(user)
-	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour)
-	}
-
-	return user, nil
+	return s.usersService.GetUserByFakeID(ctx, fakeID)
 }
 
 // UpdateCachedUserInfo refreshes the cached user information in Redis.
@@ -1230,7 +1211,6 @@ func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID strin
 
 	return nil
 }
-
 
 // RegisterCandidatePlaceholder creates a new candidate user in the system with placeholder status
 func (s *AuthService) RegisterCandidatePlaceholder(

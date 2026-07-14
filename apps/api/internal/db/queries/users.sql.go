@@ -347,58 +347,6 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 	return i, err
 }
 
-const getUserByID = `-- name: GetUserByID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
-WHERE id = $1 LIMIT 1
-`
-
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByID, id)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.FakeID,
-		&i.Email,
-		&i.Avatar,
-		&i.Phone,
-		&i.Username,
-		&i.PasswordHash,
-		&i.LastName,
-		&i.FirstName,
-		&i.MiddleName,
-		&i.Gender,
-		&i.DateOfBirth,
-		&i.WhatsappPhone,
-		&i.DataPhone,
-		&i.EducationalStatus,
-		&i.HighestDegree,
-		&i.GraduationYear,
-		&i.SchoolName,
-		&i.CurrentCountry,
-		&i.CurrentState,
-		&i.CurrentLga,
-		&i.CurrentWard,
-		&i.CurrentCity,
-		&i.Address,
-		&i.StateOfOrigin,
-		&i.Vin,
-		&i.VotersCardImage,
-		&i.BankAccountNumber,
-		&i.BankCode,
-		&i.NinVerified,
-		&i.PhoneVerified,
-		&i.EmailVerified,
-		&i.AccountStatus,
-		&i.PartyID,
-		&i.PollingUnitID,
-		&i.ReferralCode,
-		&i.ReferredByCode,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
 const getUserNINByUserID = `-- name: GetUserNINByUserID :one
 SELECT id, user_id, nin FROM users_nin
 WHERE user_id = $1 LIMIT 1

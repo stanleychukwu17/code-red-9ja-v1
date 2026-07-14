@@ -29,7 +29,7 @@ type ElectionsService interface {
 	DeleteElection(ctx context.Context, id int64) error
 	GetElectionCandidates(ctx context.Context, electionID int64) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int64, candidates []elections.CandidateInput) error
-	FieldPartyCandidate(ctx context.Context, electionID int64, fakeID int64, candidateID int64) error
+	FieldPartyCandidate(ctx context.Context, electionID int64, partyID int64, candidateID int64) error
 	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
 	CreateDidNotVoteReason(ctx context.Context, arg queries.CreateDidNotVoteReasonParams) (queries.DidNotVoteReason, error)
 	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int64) ([]elections.ElectionWithCandidates, error)
@@ -37,15 +37,21 @@ type ElectionsService interface {
 	GetUserElectionGroupVoteStatus(ctx context.Context, userID, electionGroupID int64) (elections.UserVoteStatus, error)
 }
 
-type Handler struct {
-	service ElectionsService
-	utils   *utils.Utils
+type UsersService interface {
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 }
 
-func NewHandler(service ElectionsService, utils *utils.Utils) *Handler {
+type Handler struct {
+	service      ElectionsService
+	usersService UsersService
+	utils        *utils.Utils
+}
+
+func NewHandler(service ElectionsService, usersService UsersService, utils *utils.Utils) *Handler {
 	return &Handler{
-		service: service,
-		utils:   utils,
+		service:      service,
+		usersService: usersService,
+		utils:        utils,
 	}
 }
 
@@ -771,7 +777,17 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = h.service.FieldPartyCandidate(r.Context(), id, claims.FakeID, req.CandidateID)
+	user, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
+		return
+	}
+	if !user.PartyID.Valid {
+		h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
+		return
+	}
+
+	err = h.service.FieldPartyCandidate(r.Context(), id, user.PartyID.Int64, req.CandidateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return

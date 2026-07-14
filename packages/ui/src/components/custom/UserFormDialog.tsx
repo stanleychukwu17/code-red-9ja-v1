@@ -407,7 +407,7 @@ export function UserFormDialog({
       if (mode === "update") {
         res = await updateUser({
           data: {
-            id: user.id,
+            id: user.fake_id,
             email: values.email.trim(),
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),

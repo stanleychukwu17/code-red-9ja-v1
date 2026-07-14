@@ -2,10 +2,12 @@ package usersservice
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -39,12 +41,30 @@ func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber st
 	return s.monnify.ValidateBankAccount(ctx, accountNumber, bankCode)
 }
 
-func (s *UsersService) GetUserByID(ctx context.Context, id int64) (queries.User, error) {
-	return s.queries.GetUserByID(ctx, id)
-}
-
 func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
-	return s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	// Check Redis
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+	userInfoJSON, err := s.rdb.Get(ctx, userInfoKey).Result()
+	if err == nil {
+		var user queries.User
+		if err := json.Unmarshal([]byte(userInfoJSON), &user); err == nil {
+			return user, nil
+		}
+	}
+
+	// Fetch from DB if not in Redis
+	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		return queries.User{}, fmt.Errorf("user not found: %w", err)
+	}
+
+	// Cache it in Redis
+	userJSON, err := json.Marshal(user)
+	if err == nil {
+		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour) // 5 years expires
+	}
+
+	return user, nil
 }
 
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {

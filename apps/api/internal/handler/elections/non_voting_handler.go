@@ -50,9 +50,20 @@ func (h *Handler) CreateDidNotVoteReason(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Fetch the user using the fake ID (hits Redis cache)
+	user, err := h.usersService.GetUserByFakeID(ctx, claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
+		return
+	}
+
 	arg := queries.CreateDidNotVoteReasonParams{
-		UserID:          claims.UserID,
+		UserID:          user.ID, // Or claims.UserID, but this ensures consistency
 		ElectionGroupID: req.ElectionGroupID,
+		StateID:         pgtype.Int2{Int16: user.CurrentState, Valid: true},
+		LgaID:           user.CurrentLga,
+		WardID:          user.CurrentWard,
+		PollingUnitID:   user.PollingUnitID,
 	}
 
 	if req.NonVotingReasonID != nil {

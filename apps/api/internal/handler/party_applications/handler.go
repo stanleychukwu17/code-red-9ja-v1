@@ -27,7 +27,6 @@ type PartyApplicationsService interface {
 }
 
 type UsersService interface {
-	GetUserByID(ctx context.Context, id int64) (queries.User, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 }

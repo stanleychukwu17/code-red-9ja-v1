@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db/queries"
 	"time"
-
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func (s *ElectionsService) GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error) {
@@ -34,16 +32,6 @@ func (s *ElectionsService) CreateDidNotVoteReason(ctx context.Context, arg queri
 	if now.After(egDate) {
 		return queries.DidNotVoteReason{}, fmt.Errorf("voting for this election has ended")
 	}
-
-	user, err := qtx.GetUserByID(ctx, arg.UserID)
-	if err != nil {
-		return queries.DidNotVoteReason{}, err
-	}
-
-	arg.StateID = pgtype.Int2{Int16: user.CurrentState, Valid: true}
-	arg.LgaID = user.CurrentLga
-	arg.WardID = user.CurrentWard
-	arg.PollingUnitID = user.PollingUnitID
 
 	// Delete existing votes and reasons for this user and election group to allow scope changes and editing
 	err = qtx.DeleteUserVotesByElectionGroup(ctx, queries.DeleteUserVotesByElectionGroupParams{

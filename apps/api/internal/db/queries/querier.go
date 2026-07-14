@@ -125,7 +125,6 @@ type Querier interface {
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
 	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
-	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)

@@ -24,7 +24,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await deleteUser({ data: data.id });
+      const res = await deleteUser({ data: data.fake_id });
       if (!res.success) {
         throw new Error(res.message || "Failed to delete user");
       }

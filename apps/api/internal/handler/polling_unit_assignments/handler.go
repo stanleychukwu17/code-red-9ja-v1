@@ -22,7 +22,6 @@ type PollingUnitAssignmentsService interface {
 }
 
 type UsersService interface {
-	GetUserByID(ctx context.Context, id int64) (queries.User, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 }
@@ -42,7 +41,7 @@ func NewHandler(service PollingUnitAssignmentsService, usersService UsersService
 }
 
 type CreateAssignmentRequest struct {
-	UserID          int64  `json:"user_id"`
+	FakeID          int64  `json:"fake_id"`
 	PollingUnitID   int32  `json:"polling_unit_id"`
 	ElectionGroupID int64  `json:"election_group_id"`
 	PartyID         int64  `json:"party_id"`
@@ -82,8 +81,8 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.UserID <= 0 || req.PollingUnitID <= 0 || req.ElectionGroupID <= 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "user_id, polling_unit_id, and election_group_id are required")
+	if req.FakeID <= 0 || req.PollingUnitID <= 0 || req.ElectionGroupID <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "fake_id, polling_unit_id, and election_group_id are required")
 		return
 	}
 
@@ -121,7 +120,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify target agent exists and belongs to the correct party if it is a party admin assignment
-	targetUser, err := h.usersService.GetUserByID(r.Context(), req.UserID)
+	targetUser, err := h.usersService.GetUserByFakeID(r.Context(), req.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Target user not found")
 		return
@@ -139,7 +138,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		roleType = "polling_agent"
 	}
 
-	assignment, err := h.service.AssignAgent(r.Context(), req.UserID, req.ElectionGroupID, finalPartyID, requester.ID, req.PollingUnitID, roleType)
+	assignment, err := h.service.AssignAgent(r.Context(), targetUser.ID, req.ElectionGroupID, finalPartyID, requester.ID, req.PollingUnitID, roleType)
 	if err != nil {
 		errStr := err.Error()
 		if strings.Contains(errStr, "uq_agent_per_election_day") {
