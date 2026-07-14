@@ -343,8 +343,6 @@ func (q *Queries) ListUsersWithoutWallet(ctx context.Context) ([]User, error) {
 			&i.NinVerified,
 			&i.PhoneVerified,
 			&i.EmailVerified,
-			&i.Role,
-			&i.RoleLevel,
 			&i.AccountStatus,
 			&i.PartyID,
 			&i.PollingUnitID,

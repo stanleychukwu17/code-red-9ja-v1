@@ -40,49 +40,6 @@ definitions:
       success:
         type: boolean
     type: object
-  authhandler.AdminRegisterData:
-    properties:
-      id:
-        type: integer
-    type: object
-  authhandler.AdminRegisterRequest:
-    properties:
-      avatar:
-        type: string
-      email:
-        type: string
-      first_name:
-        maxLength: 30
-        minLength: 2
-        type: string
-      last_name:
-        maxLength: 30
-        minLength: 2
-        type: string
-      password:
-        maxLength: 72
-        minLength: 5
-        type: string
-      phone:
-        type: string
-      username:
-        maxLength: 30
-        minLength: 2
-        type: string
-    required:
-    - password
-    - phone
-    - username
-    type: object
-  authhandler.AdminRegisterResponse:
-    properties:
-      data:
-        $ref: '#/definitions/authhandler.AdminRegisterData'
-      message:
-        type: string
-      success:
-        type: boolean
-    type: object
   authhandler.ChangePasswordByEmailRequest:
     properties:
       email:
@@ -159,6 +116,14 @@ definitions:
       refreshToken:
         type: string
     type: object
+  authhandler.MakeUserSuperAdminRequest:
+    properties:
+      name:
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
   authhandler.PartyLoginRequest:
     properties:
       identifier:
@@ -227,12 +192,12 @@ definitions:
       role:
         enum:
         - admin
-        - partymember
+        - partyadmin
         - user
         type: string
       role_level:
         enum:
-        - superadmin
+        - super_admin
         - admin
         - member
         - placeholder
@@ -421,10 +386,10 @@ definitions:
         type: string
       polling_unit_id:
         type: integer
-      role:
-        type: string
-      role_level:
-        type: string
+      roles:
+        items:
+          type: string
+        type: array
       school_name:
         type: string
       username:
@@ -1694,38 +1659,6 @@ paths:
       summary: Login admin user
       tags:
       - Auth
-  /auth/admin/register:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new admin account
-      parameters:
-      - description: Admin registration details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/authhandler.AdminRegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/authhandler.AdminRegisterResponse'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Register a new admin user
-      tags:
-      - Auth
   /auth/change-password:
     post:
       consumes:
@@ -2103,6 +2036,40 @@ paths:
             additionalProperties: true
             type: object
       summary: Seed testing users
+      tags:
+      - Auth
+  /auth/superadmin:
+    post:
+      consumes:
+      - application/json
+      description: Promotes a user to superadmin if their username is in the pre-approved
+        list
+      parameters:
+      - description: Superadmin promotion details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.MakeUserSuperAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Make a user superadmin
       tags:
       - Auth
   /auth/verify_security_questions:
@@ -5703,7 +5670,7 @@ paths:
       description: Fetches the list of all registered users with role filtering and
         cursor-based pagination
       parameters:
-      - description: Role (admin, partymember, user)
+      - description: Role (admin, partyadmin, user)
         in: query
         name: role
         type: string

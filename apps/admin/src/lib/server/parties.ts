@@ -1,26 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
 import { API_URL } from "../config";
-
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
+import { apiFetch } from "./fetch";
 
 export const getParties = createServerFn({ method: "GET" })
   .handler(async () => {
     try {
-      const response = await fetch(API_URL.parties);
+      const response = await apiFetch(API_URL.parties);
       const resData = await response.json();
       return resData; // Envelope: { success: true, message: "...", data: { parties: [...] } }
     } catch (error) {
@@ -32,7 +17,7 @@ export const getPartyById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.partyById(id));
+      const response = await apiFetch(API_URL.partyById(id));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -44,9 +29,11 @@ export const createParty = createServerFn({ method: "POST" })
   .inputValidator((data: { short_name: string; name: string; logo: string; display_order?: number }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.parties, {
+      const response = await apiFetch(API_URL.parties, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -60,9 +47,11 @@ export const updateParty = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string | number; short_name: string; name: string; logo: string; display_order?: number }) => data)
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await fetch(API_URL.partyById(id), {
+      const response = await apiFetch(API_URL.partyById(id), {
         method: "PUT",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
       const resData = await response.json();
@@ -76,9 +65,8 @@ export const deleteParty = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.partyById(id), {
+      const response = await apiFetch(API_URL.partyById(id), {
         method: "DELETE",
-        headers: getAuthHeaders(),
       });
       const resData = await response.json();
       return resData;
@@ -91,9 +79,11 @@ export const getPresignedUploadURL = createServerFn({ method: "POST" })
   .inputValidator((data: { original_name: string; mime_type: string; file_size: number; folder?: string; is_public?: boolean }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.uploadUrl, {
+      const response = await apiFetch(API_URL.uploadUrl, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -107,9 +97,8 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string | number; success: boolean }) => data)
   .handler(async ({ data: { id, success } }) => {
     try {
-      const response = await fetch(`${API_URL.confirmUpload(id)}?success=${success}`, {
+      const response = await apiFetch(`${API_URL.confirmUpload(id)}?success=${success}`, {
         method: "POST",
-        headers: getAuthHeaders(),
       });
       const resData = await response.json();
       return resData;

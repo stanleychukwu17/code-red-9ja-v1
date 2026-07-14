@@ -1,22 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] =
-      `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 export const getApplications = createServerFn({ method: "GET" })
   .inputValidator(
@@ -36,9 +21,7 @@ export const getApplications = createServerFn({ method: "GET" })
       if (cursor) params.append("cursor", String(cursor));
       if (user_id) params.append("user_id", String(user_id));
       const url = `${API_URL.pollingAgentApplications}?${params.toString()}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -62,9 +45,11 @@ export const approveApplication = createServerFn({ method: "POST" })
       if (data.pollingUnitID !== undefined) {
         body.polling_unit_id = data.pollingUnitID;
       }
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
       const resData = await response.json();
@@ -82,9 +67,11 @@ export const rejectApplication = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const url = API_URL.rejectApplication(data.id);
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           reason: data.reason,
         }),
@@ -104,10 +91,9 @@ export const cancelApplication = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const url = API_URL.cancelApplication(data.id);
-      const response = await fetch(url, {
+      const response = await apiFetch(url, {
         method: "POST",
-        headers: getAuthHeaders(),
-      });
+        });
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -132,9 +118,7 @@ export const getPollingUnits = createServerFn({ method: "GET" })
       const qs = params.toString();
 
       const url = `${API_URL.pollingUnits}${qs ? `?${qs}` : ""}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -157,9 +141,7 @@ export const getLGAs = createServerFn({ method: "GET" })
       const qs = params.toString();
 
       const url = `${API_URL.getLGAs}${qs ? `?${qs}` : ""}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -183,9 +165,7 @@ export const getWards = createServerFn({ method: "GET" })
       const qs = params.toString();
 
       const url = `${API_URL.getWards}${qs ? `?${qs}` : ""}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -215,9 +195,7 @@ export const getPollingUnitRecommendations = createServerFn({ method: "GET" })
         params.append("polling_unit_id", String(data.pollingUnitID));
 
       const url = `${API_URL.pollingAgentRecommendations}?${params.toString()}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -257,9 +235,11 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.pollingAgentApplications, {
+      const response = await apiFetch(API_URL.pollingAgentApplications, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const rawText = await response.text();

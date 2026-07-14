@@ -15,6 +15,7 @@ type Querier interface {
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
 	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
+	AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
@@ -112,6 +113,7 @@ type Querier interface {
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
 	GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPollingUnitsWithAgentCountsParams) ([]GetPollingUnitsWithAgentCountsRow, error)
+	GetRoleByCode(ctx context.Context, code string) (Role, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (SenatorialDistrict, error)
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]SenatorialDistrict, error)
 	GetStateAssemblyConstituencies(ctx context.Context, arg GetStateAssemblyConstituenciesParams) ([]StateAssemblyConstituency, error)
@@ -126,6 +128,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id int64) (User, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
+	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
 	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
 	GetUserVotesByElectionGroup(ctx context.Context, arg GetUserVotesByElectionGroupParams) ([]GetUserVotesByElectionGroupRow, error)
 	GetUserWalletByAccountReference(ctx context.Context, accountReference string) (UserWallet, error)

@@ -26,9 +26,13 @@ const (
 
 	// STRING: "jwt:user_login_locked:<userFakeID>" is the Redis "string" key used to lock token generation.
 	RedisJwtUserLoginLocked = "jwt:user_login_locked:"
+	//--END--
 
+	//--START-- for user
 	// STRING: user:info:<userFakeID> is the Redis "string" key used to store and retrieve user info.
 	RedisUserInfo = "user:info:"
+	// STRING: user:roles:<userFakeID> is the Redis "string" key used to store and retrieve user roles.
+	RedisUserRoles = "user:roles:"
 	//--END--
 
 	//--START-- for countries and states
@@ -48,7 +52,7 @@ const (
 	//--END--
 
 	//--START-- for parties
-	RedisPartyInfo = "parties:info:"
+	RedisPartyInfo      = "parties:info:"
 	RedisPartyBasicInfo = "parties:basic_info:"
 	//--END--
 

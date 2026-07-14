@@ -1,4 +1,5 @@
 ﻿import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
 
 type PaginationInput = {
@@ -16,7 +17,7 @@ export const getStatesWithResults = createServerFn({ method: "GET" })
       params.append("election_id", String(data.electionId));
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionResultsStates}?${params.toString()}`,
       );
       return response.json();
@@ -36,7 +37,7 @@ export const getSenatorialDistrictsWithResults = createServerFn({ method: "GET" 
       params.append("state_id", String(data.stateId));
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionResultsSenatorialDistricts}?${params.toString()}`,
       );
       return response.json();
@@ -56,7 +57,7 @@ export const getFederalConstituenciesWithResults = createServerFn({ method: "GET
       params.append("senatorial_district_id", String(data.senatorialDistrictId));
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionResultsFederalConstituencies}?${params.toString()}`,
       );
       return response.json();
@@ -76,7 +77,7 @@ export const getLGAsWithResults = createServerFn({ method: "GET" })
       params.append("federal_constituency_id", String(data.federalConstituencyId));
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionResultsLGAs}?${params.toString()}`,
       );
       return response.json();
@@ -97,7 +98,7 @@ export const getWardsWithResults = createServerFn({ method: "GET" })
       if (data.stateAssemblyConstituencyId) params.append("state_assembly_constituency_id", String(data.stateAssemblyConstituencyId));
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionResultsWards}?${params.toString()}`,
       );
       return response.json();
@@ -117,7 +118,7 @@ export const getPollingUnitsWithResults = createServerFn({ method: "GET" })
       params.append("ward_id", String(data.wardId));
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", String(data.cursor));
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionResultsPollingUnits}?${params.toString()}`,
       );
       return response.json();

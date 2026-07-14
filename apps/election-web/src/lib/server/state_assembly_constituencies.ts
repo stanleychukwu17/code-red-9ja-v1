@@ -1,22 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] =
-      `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 export const createStateAssemblyConstituency = createServerFn({
   method: "POST",
@@ -32,9 +17,11 @@ export const createStateAssemblyConstituency = createServerFn({
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.stateAssemblyConstituencies, {
+      const response = await apiFetch(API_URL.stateAssemblyConstituencies, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -64,9 +51,11 @@ export const updateStateAssemblyConstituency = createServerFn({
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await fetch(API_URL.stateAssemblyConstituencyById(id), {
+      const response = await apiFetch(API_URL.stateAssemblyConstituencyById(id), {
         method: "PUT",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
       const resData = await response.json();
@@ -87,10 +76,9 @@ export const deleteStateAssemblyConstituency = createServerFn({
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.stateAssemblyConstituencyById(id), {
+      const response = await apiFetch(API_URL.stateAssemblyConstituencyById(id), {
         method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+        });
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -109,7 +97,7 @@ export const getStateAssemblyConstituencyById = createServerFn({
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.stateAssemblyConstituencyById(id));
+      const response = await apiFetch(API_URL.stateAssemblyConstituencyById(id));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -132,7 +120,7 @@ export const getStateAssemblyConstituencies = createServerFn()
   .handler(
     async ({ data: { stateId, federalConstituencyId, limit, cursor } }) => {
       try {
-        const response = await fetch(
+        const response = await apiFetch(
           API_URL.getStateAssemblyConstituencies(
             stateId,
             federalConstituencyId,

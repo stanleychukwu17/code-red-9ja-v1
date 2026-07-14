@@ -1,20 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
-
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] =
-      `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-  return headers;
-}
 
 export type CandidateResultInput = {
   party_short_name: string;
@@ -38,10 +24,11 @@ export const submitPollingUnitResult = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const headers = getAuthHeaders();
-      const response = await fetch(API_URL.pollingUnitResults, {
+      const response = await apiFetch(API_URL.pollingUnitResults, {
         method: "POST",
-        headers,
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -85,7 +72,7 @@ export const getPollingUnitResults = createServerFn({ method: "GET" })
       if (data?.limit) params.append("limit", String(data.limit));
       const qs = params.toString();
       const url = `${API_URL.pollingUnitResults}${qs ? `?${qs}` : ""}`;
-      const response = await fetch(url, { headers: getAuthHeaders() });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error: any) {
@@ -102,9 +89,8 @@ export const getFinalResult = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.pollingUnitResults}/final?election_id=${data.election_id}&polling_unit_id=${data.polling_unit_id}`,
-        { headers: getAuthHeaders() },
       );
       const resData = await response.json();
       return resData;

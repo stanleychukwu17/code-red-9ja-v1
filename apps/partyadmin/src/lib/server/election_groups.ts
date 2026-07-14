@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
 export const getElectionGroups = createServerFn({ method: "GET" })
@@ -8,7 +9,7 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
       const partyId = data?.partyId || "";
-      const response = await fetch(`${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}&party_id=${partyId}`);
+      const response = await apiFetch(`${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}&party_id=${partyId}`);
       const resData = await response.json();
       return resData;
     } catch (error) {

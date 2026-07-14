@@ -69,7 +69,7 @@
     "bank_code": null,
     "nin_verified": "false",
     "phone_verified": "false",
-    "role": "partymember",
+    "role": "partyadmin",
     "role_level": "admin",
     "account_status": "placeholder",
     "party_id": 17
@@ -98,7 +98,7 @@
     "bank_code": null,
     "nin_verified": "false",
     "phone_verified": "false",
-    "role": "partymember",
+    "role": "partyadmin",
     "role_level": "member",
     "account_status": "placeholder",
     "party_id": 17
@@ -127,7 +127,7 @@
     "bank_code": null,
     "nin_verified": "false",
     "phone_verified": "false",
-    "role": "partymember",
+    "role": "partyadmin",
     "role_level": "member",
     "account_status": "placeholder",
     "party_id": 7
@@ -156,7 +156,7 @@
     "bank_code": null,
     "nin_verified": "false",
     "phone_verified": "false",
-    "role": "partymember",
+    "role": "partyadmin",
     "role_level": "member",
     "account_status": "placeholder",
     "party_id": 17
@@ -185,7 +185,7 @@
     "bank_code": "033",
     "nin_verified": "false",
     "phone_verified": "false",
-    "role": "partymember",
+    "role": "partyadmin",
     "role_level": "pollingagent",
     "account_status": "placeholder",
     "party_id": 17

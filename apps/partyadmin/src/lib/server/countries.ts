@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
 
 
@@ -9,7 +10,7 @@ import { API_URL } from "../config";
 */
 export const getAllCountries = createServerFn().handler(async () => {
   try {
-    const response = await fetch(API_URL.getAllCountries);
+    const response = await apiFetch(API_URL.getAllCountries);
     const data = await response.json();
     return data;
   } catch (error) {
@@ -21,7 +22,7 @@ export const getStates = createServerFn()
   .inputValidator((data: { countryId: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { countryId, limit, cursor } }) => {
     try {
-      const response = await fetch(API_URL.getStates(countryId, limit, cursor));
+      const response = await apiFetch(API_URL.getStates(countryId, limit, cursor));
       const data = await response.json();
       return data;
     } catch (error) {
@@ -34,7 +35,7 @@ export const getCities = createServerFn()
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
       const url = `${API_URL.getCities(stateId)}?limit=${limit || 50}&cursor=${cursor || ""}`;
-      const response = await fetch(url);
+      const response = await apiFetch(url);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -51,7 +52,7 @@ export const getSenatorialDistricts = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
 
-      const response = await fetch(`${API_URL.getSenatorialDistricts}?${params.toString()}`);
+      const response = await apiFetch(`${API_URL.getSenatorialDistricts}?${params.toString()}`);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -69,7 +70,7 @@ export const getFederalConstituencies = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
 
-      const response = await fetch(`${API_URL.getFederalConstituencies}?${params.toString()}`);
+      const response = await apiFetch(`${API_URL.getFederalConstituencies}?${params.toString()}`);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -86,7 +87,7 @@ export const getStateConstituencies = createServerFn()
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
 
-      const response = await fetch(`${API_URL.getStateConstituencies}?${params.toString()}`);
+      const response = await apiFetch(`${API_URL.getStateConstituencies}?${params.toString()}`);
       const resData = await response.json();
       return resData;
     } catch (error) {

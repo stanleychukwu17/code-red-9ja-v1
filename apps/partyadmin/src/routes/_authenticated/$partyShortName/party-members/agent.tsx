@@ -5,11 +5,11 @@ import {
   PageSearchLayer,
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
-import { PartyMembersTable } from "#/components/Tables";
+import { PartyAdminsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
-import { getPartyMembersTabs, getAgentPartyMembers } from "./-data";
-import { PartyMembersActions } from "#/components/party-members/PartyMembersActions";
+import { getPartyAdminsTabs, getAgentPartyAdmins } from "./-data";
+import { PartyAdminsActions } from "#/components/party-members/PartyAdminsActions";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 
 // Server Functions
@@ -32,27 +32,27 @@ function RouteComponent() {
       <PageHeader
         title="Party members"
         activeTab="agent"
-        tabs={getPartyMembersTabs(partyShortName)}
+        tabs={getPartyAdminsTabs(partyShortName)}
       />
       <PageSearchLayer
         ariaLabel="Search party members"
         placeholder="Search"
         rightComponent={
           <>
-            <PartyMembersActions showElectionFilter />
+            <PartyAdminsActions showElectionFilter />
             <AddButton onClick={() => setIsFormOpen(true)} />
           </>
         }
       />
 
-      <PartyMembersTable
+      <PartyAdminsTable
         columns={[
           "Party member",
           "Political office",
           "Party office",
           "Joined at",
         ]}
-        items={getAgentPartyMembers(partyShortName)}
+        items={getAgentPartyAdmins(partyShortName)}
       />
 
       <UserFormDialog

@@ -47,6 +47,23 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	return s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
 }
 
+func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
+	return s.queries.GetUserRoles(ctx, userID)
+}
+
+func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error {
+	role, err := s.queries.GetRoleByCode(ctx, code)
+	if err != nil {
+		return err
+	}
+	return s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
+		UserID:            userID,
+		RoleID:            role.ID,
+		RoleCode:          role.Code,
+		WhoAssignedUserID: whoAssigned,
+	})
+}
+
 func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error {
 	err := s.queries.UpdateUserProfile(ctx, queries.UpdateUserProfileParams{
 		ID:             id,
@@ -85,7 +102,7 @@ func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) e
 	return nil
 }
 
-func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, role, roleLevel string, partyID int64, email string) error {
+func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int64, email string) error {
 	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
 		ID:             id,
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
@@ -96,8 +113,6 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
-		Role:           pgtype.Text{String: role, Valid: role != ""},
-		RoleLevel:      pgtype.Text{String: roleLevel, Valid: roleLevel != ""},
 		PartyID:        pgtype.Int8{Int64: partyID, Valid: partyID != 0},
 		Email:          pgtype.Text{String: email, Valid: email != ""},
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},

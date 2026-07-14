@@ -1,9 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/party-members")({
-  component: PartyMembersRoute,
+  component: PartyAdminsRoute,
 });
 
-function PartyMembersRoute() {
+function PartyAdminsRoute() {
   return <Outlet />;
 }

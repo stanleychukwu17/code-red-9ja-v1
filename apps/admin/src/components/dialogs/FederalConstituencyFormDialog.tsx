@@ -216,11 +216,7 @@ export function FederalConstituencyFormDialog({
                 }}
                 children={(field) => (
                   <SelectSenatorialDistrict
-                    selectedId={
-                      field.state.value !== undefined
-                        ? String(field.state.value)
-                        : undefined
-                    }
+                    selectedId={field.state.value}
                     stateId={selectedStateId}
                     disabled={!selectedStateId}
                     update={(item) => {

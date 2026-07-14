@@ -193,8 +193,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.ForgotPassword, authHandler.ForgotPassword)                   // Forgot password endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)     // Change password by email endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.AdminRegister, authHandler.AdminRegister)                     // Admin register endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, authHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
 	mainRouter.Post("/api/v1/auth/seed", authHandler.SeedUsers)                                      // Seed users endpoint
 
 	// Banks
@@ -436,14 +436,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
 	})
 
-	// Party-admin routes: authenticated users with role=partymember AND roleLevel=admin
+	// Party-admin routes: authenticated users with role=partyadmin AND roleLevel=admin
 	mainRouter.Group(func(r chi.Router) {
 		jwtSecret := ""
 		if cfg != nil {
 			jwtSecret = cfg.JWTSecret
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
-		r.Use(apimiddleware.RequireRoleAndLevel("partymember", "admin"))
+		r.Use(apimiddleware.RequireRole("partyadmin"))
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)

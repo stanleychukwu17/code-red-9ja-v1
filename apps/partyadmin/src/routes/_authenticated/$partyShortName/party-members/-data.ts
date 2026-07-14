@@ -1,8 +1,8 @@
 import type { PageHeaderTabProps } from "@repo/ui/components/custom/AdminLayouts";
-import type { PartyMemberType } from "#/components/tiles/party-member-tile";
+import type { PartyAdminType } from "#/components/tiles/party-member-tile";
 import { APP_URL } from "#/lib/config";
 
-export const getPartyMembersTabs = (
+export const getPartyAdminsTabs = (
   partyShortName: string,
 ): PageHeaderTabProps[] => [
   { id: "all", label: "Members", href: APP_URL.partyRoutes.members(partyShortName) },
@@ -13,9 +13,9 @@ export const getPartyMembersTabs = (
   },
 ];
 
-export const getAllPartyMembers = (
+export const getAllPartyAdmins = (
   partyShortName: string,
-): PartyMemberType[] => [
+): PartyAdminType[] => [
   {
     name: "Charles Ogenna",
     avatar:
@@ -52,7 +52,7 @@ export const getAllPartyMembers = (
     name: "Charles Ogenna",
     avatar:
       "https://images.unsplash.com/photo-1507591064344-4c6ce005b128?w=200&h=200&fit=crop",
-    partyOffice: `${partyShortName.toUpperCase()} Party Member`,
+    partyOffice: `${partyShortName.toUpperCase()} Party Admin`,
     dateLabel: "July 9, 2026",
     role: "-",
   },
@@ -60,15 +60,15 @@ export const getAllPartyMembers = (
     name: "Charles Ogenna",
     avatar:
       "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop",
-    partyOffice: `${partyShortName.toUpperCase()} Party Member`,
+    partyOffice: `${partyShortName.toUpperCase()} Party Admin`,
     dateLabel: "July 9, 2026",
     role: "-",
   },
 ];
 
-export const getAgentPartyMembers = (
+export const getAgentPartyAdmins = (
   partyShortName: string,
-): PartyMemberType[] => [
+): PartyAdminType[] => [
   {
     name: "Charles Ogenna",
     avatar:
@@ -87,9 +87,9 @@ export const getAgentPartyMembers = (
   },
 ];
 
-export const getAdminPartyMembers = (
+export const getAdminPartyAdmins = (
   partyShortName: string,
-): PartyMemberType[] => [
+): PartyAdminType[] => [
   {
     name: "Charles Ogenna",
     avatar:

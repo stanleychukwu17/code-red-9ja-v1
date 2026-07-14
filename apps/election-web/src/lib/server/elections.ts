@@ -1,22 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] =
-      `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 export const getElections = createServerFn({ method: "GET" })
   .inputValidator(
@@ -26,9 +11,7 @@ export const getElections = createServerFn({ method: "GET" })
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-      const response = await fetch(
-        `${API_URL.elections}?limit=${limit}&cursor=${cursor}`,
-      );
+      const response = await apiFetch(`${API_URL.elections}?limit=${limit}&cursor=${cursor}`);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -40,7 +23,7 @@ export const getElectionById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.electionById(id));
+      const response = await apiFetch(API_URL.electionById(id));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -66,9 +49,11 @@ export const createElection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.elections, {
+      const response = await apiFetch(API_URL.elections, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -100,9 +85,11 @@ export const updateElection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await fetch(API_URL.electionById(id), {
+      const response = await apiFetch(API_URL.electionById(id), {
         method: "PUT",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
       const resData = await response.json();
@@ -119,10 +106,9 @@ export const deleteElection = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.electionById(id), {
+      const response = await apiFetch(API_URL.electionById(id), {
         method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+        });
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -144,9 +130,11 @@ export const createNationwideElection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.electionsNationwide, {
+      const response = await apiFetch(API_URL.electionsNationwide, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -171,9 +159,11 @@ export const createStateElection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.electionsState, {
+      const response = await apiFetch(API_URL.electionsState, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -200,9 +190,11 @@ export const createSenatorialDistrictElection = createServerFn({
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.electionsSenatorialDistrict, {
+      const response = await apiFetch(API_URL.electionsSenatorialDistrict, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -230,9 +222,11 @@ export const createFederalConstituencyElection = createServerFn({
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.electionsFederalConstituency, {
+      const response = await apiFetch(API_URL.electionsFederalConstituency, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -260,9 +254,11 @@ export const createStateConstituencyElection = createServerFn({
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.electionsStateConstituency, {
+      const response = await apiFetch(API_URL.electionsStateConstituency, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -288,9 +284,11 @@ export const createLgaElection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.electionsLga, {
+      const response = await apiFetch(API_URL.electionsLga, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -314,9 +312,11 @@ export const createWardElection = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.electionsWard, {
+      const response = await apiFetch(API_URL.electionsWard, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -341,12 +341,7 @@ export const getElectionCandidates = createServerFn({ method: "GET" })
     try {
       const limit = data.limit || 20;
       const cursor = data.cursor || "";
-      const response = await fetch(
-        `${API_URL.electionCandidates(data.electionId)}?limit=${limit}&cursor=${cursor}`,
-        {
-          headers: getAuthHeaders(),
-        },
-      );
+      const response = await apiFetch(`${API_URL.electionCandidates(data.electionId)}?limit=${limit}&cursor=${cursor}`);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -362,9 +357,7 @@ export const getElectionsByGroup = createServerFn({ method: "GET" })
   .inputValidator((groupId: string | number) => groupId)
   .handler(async ({ data: groupId }) => {
     try {
-      const response = await fetch(API_URL.electionGroupElections(groupId), {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(API_URL.electionGroupElections(groupId));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -381,51 +374,12 @@ export const syncElectionCandidates = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(
-        API_URL.electionCandidates(data.electionId),
-        {
-          method: "POST",
-          headers: getAuthHeaders(),
-          body: JSON.stringify({ candidate_ids: data.candidateIds }),
-        },
-      );
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to sync candidates: " + (error as Error).message,
-      };
-    }
-  });
-
-export const getEligibleElections = createServerFn({ method: "GET" })
-  .inputValidator(
-    (data: { electionGroupId: number; pollingUnitId: number }) => data,
-  )
-  .handler(async ({ data: { electionGroupId, pollingUnitId } }) => {
-    try {
-      const response = await fetch(
-        `${API_URL.elections}/eligible?election_group_id=${electionGroupId}&polling_unit_id=${pollingUnitId}`,
-        {
-          headers: getAuthHeaders(),
-        },
-      );
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch eligible elections" };
-    }
-  });
-
-export const submitVotes = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
-  .handler(async ({ data }) => {
-    try {
-      const response = await fetch(`${API_URL.elections}/votes`, {
+      const response = await apiFetch(API_URL.electionCandidates(data.electionId), {
         method: "POST",
-        headers: getAuthHeaders(),
-        body: JSON.stringify(data),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ candidate_ids: data.candidateIds }),
       });
       const resData = await response.json();
       if (!response.ok) {

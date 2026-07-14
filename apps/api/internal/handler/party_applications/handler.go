@@ -29,6 +29,7 @@ type PartyApplicationsService interface {
 type UsersService interface {
 	GetUserByID(ctx context.Context, id int64) (queries.User, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 }
 
 type Handler struct {
@@ -214,10 +215,19 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce visibility scoping
-	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
+	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	isPlatformAdmin := false
+	isPartyAdmin := false
+	for _, r := range roles {
+		if r.Code == "admin" {
+			isPlatformAdmin = true
+		}
+		if r.Code == "partyadmin" {
+			isPartyAdmin = true
+		}
+	}
 	var filterUserID int64
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			// A regular user can only view their own applications
 			filterUserID = requester.ID
@@ -327,9 +337,18 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce visibility restriction
-	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
+	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	isPlatformAdmin := false
+	isPartyAdmin := false
+	for _, r := range roles {
+		if r.Code == "admin" {
+			isPlatformAdmin = true
+		}
+		if r.Code == "partyadmin" {
+			isPartyAdmin = true
+		}
+	}
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin || !requester.PartyID.Valid || app.PartyID != requester.PartyID.Int64 {
 			h.utils.RespondError(w, http.StatusForbidden, "Permission denied")
 			return
@@ -396,10 +415,18 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce role levels
-	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
+	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	isPlatformAdmin := false
+	isPartyAdmin := false
+	for _, r := range roles {
+		if r.Code == "admin" {
+			isPlatformAdmin = true
+		}
+		if r.Code == "partyadmin" {
+			isPartyAdmin = true
+		}
+	}
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can approve applications")
 			return
@@ -499,10 +526,18 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce role levels
-	isPlatformAdmin := requester.Role.Valid && requester.Role.String == "admin"
+	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	isPlatformAdmin := false
+	isPartyAdmin := false
+	for _, r := range roles {
+		if r.Code == "admin" {
+			isPlatformAdmin = true
+		}
+		if r.Code == "partyadmin" {
+			isPartyAdmin = true
+		}
+	}
 	if !isPlatformAdmin {
-		isPartyAdmin := requester.Role.Valid && requester.Role.String == "partymember" && requester.RoleLevel.Valid && requester.RoleLevel.String == "admin"
 		if !isPartyAdmin {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can reject applications")
 			return

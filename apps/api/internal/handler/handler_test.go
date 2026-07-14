@@ -14,7 +14,7 @@ import (
 
 func TestHealth(t *testing.T) {
 	// Initialize the router
-	r := router.New(nil, nil, nil)
+	r := router.New(nil, nil, nil, nil)
 
 	// Create a request to pass to our router.
 	req, err := http.NewRequest("GET", utils.ApiUrls.Health, nil)
@@ -40,7 +40,7 @@ func TestHealth(t *testing.T) {
 
 func TestRoot(t *testing.T) {
 	// Initialize the router
-	r := router.New(nil, nil, nil)
+	r := router.New(nil, nil, nil, nil)
 
 	// Create a request to pass to our router.
 	// Note: The root route is under /api/v1/

@@ -1,26 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 export const getParties = createServerFn({ method: "POST" })
   .handler(async () => {
     try {
-      const response = await fetch(API_URL.parties);
+      const response = await apiFetch(API_URL.parties);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -32,9 +18,7 @@ export const getParty = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(`${API_URL.parties}/${id}`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(`${API_URL.parties}/${id}`);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -46,9 +30,11 @@ export const getPresignedUploadURL = createServerFn({ method: "POST" })
   .inputValidator((data: { original_name: string; mime_type: string; file_size: number; folder?: string; is_public?: boolean }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.uploadUrl, {
+      const response = await apiFetch(API_URL.uploadUrl, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -62,10 +48,9 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string | number; success: boolean }) => data)
   .handler(async ({ data: { id, success } }) => {
     try {
-      const response = await fetch(`${API_URL.confirmUpload(id)}?success=${success}`, {
+      const response = await apiFetch(`${API_URL.confirmUpload(id)}?success=${success}`, {
         method: "POST",
-        headers: getAuthHeaders(),
-      });
+        });
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -77,9 +62,7 @@ export const getPartyWallet = createServerFn({ method: "POST" })
   .inputValidator((partyID: string | number) => partyID)
   .handler(async ({ data: partyID }) => {
      try {
-       const response = await fetch(`${API_URL.parties}/${partyID}/wallet`, {
-         headers: getAuthHeaders(),
-       });
+       const response = await apiFetch(`${API_URL.parties}/${partyID}/wallet`);
        const resData = await response.json();
        return resData;
      } catch (error) {
@@ -96,9 +79,7 @@ export const getPartyWalletTransactions = createServerFn({ method: "POST" })
       if (offset !== undefined) params.append("offset", String(offset));
       const qs = params.toString();
       const url = `${API_URL.parties}/${partyID}/wallet/transactions${qs ? `?${qs}` : ""}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(url);
       if (!response.ok) {
         const text = await response.text();
         console.error(`[getPartyWalletTransactions] ${response.status} ${response.statusText} — URL: ${url} — Body: ${text}`);
@@ -122,9 +103,11 @@ export const withdrawFromPartyWallet = createServerFn({ method: "POST" })
   }) => data)
   .handler(async ({ data: { partyID, ...body } }) => {
     try {
-      const response = await fetch(`${API_URL.parties}/${partyID}/wallet/withdraw`, {
+      const response = await apiFetch(`${API_URL.parties}/${partyID}/wallet/withdraw`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
       const resData = await response.json();
@@ -138,9 +121,7 @@ export const getPartySlotPrice = createServerFn({ method: "POST" })
   .inputValidator((partyID: string | number) => partyID)
   .handler(async ({ data: partyID }) => {
     try {
-      const response = await fetch(`${API_URL.parties}/${partyID}/slots/price`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(`${API_URL.parties}/${partyID}/slots/price`);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -152,9 +133,11 @@ export const buyPartySlots = createServerFn({ method: "POST" })
   .inputValidator((data: { partyID: string | number; quantity: number }) => data)
   .handler(async ({ data: { partyID, quantity } }) => {
     try {
-      const response = await fetch(`${API_URL.parties}/${partyID}/slots/buy`, {
+      const response = await apiFetch(`${API_URL.parties}/${partyID}/slots/buy`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ quantity }),
       });
       const resData = await response.json();
@@ -168,9 +151,11 @@ export const depositPartyAllowance = createServerFn({ method: "POST" })
   .inputValidator((data: { partyID: string | number; amountKobo: number }) => data)
   .handler(async ({ data: { partyID, amountKobo } }) => {
     try {
-      const response = await fetch(`${API_URL.parties}/${partyID}/allowances/deposit`, {
+      const response = await apiFetch(`${API_URL.parties}/${partyID}/allowances/deposit`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ amount_kobo: amountKobo }),
       });
       const resData = await response.json();
@@ -184,9 +169,11 @@ export const updatePartyStateAllowances = createServerFn({ method: "POST" })
   .inputValidator((data: { partyID: string | number; allowances: Record<string, number> }) => data)
   .handler(async ({ data: { partyID, allowances } }) => {
     try {
-      const response = await fetch(`${API_URL.parties}/${partyID}/allowances/settings`, {
+      const response = await apiFetch(`${API_URL.parties}/${partyID}/allowances/settings`, {
         method: "PUT",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(allowances),
       });
       const resData = await response.json();
@@ -200,9 +187,11 @@ export const fundPartyWalletTest = createServerFn({ method: "POST" })
   .inputValidator((data: { partyID: string | number; amountKobo: number }) => data)
   .handler(async ({ data: { partyID, amountKobo } }) => {
     try {
-      const response = await fetch(`${API_URL.parties}/${partyID}/wallet/deposit-test`, {
+      const response = await apiFetch(`${API_URL.parties}/${partyID}/wallet/deposit-test`, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ amount_kobo: amountKobo }),
       });
       const resData = await response.json();

@@ -1,21 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 export const getPollingUnitAssignments = createServerFn({ method: "GET" })
   .inputValidator((data: { user_id?: string | number; election_group_id?: string | number } | undefined) => data)
@@ -28,9 +14,7 @@ export const getPollingUnitAssignments = createServerFn({ method: "GET" })
       if (election_group_id) params.append("election_group_id", String(election_group_id));
       const qs = params.toString();
       const url = `${API_URL.pollingUnitAssignments}${qs ? `?${qs}` : ""}`;
-      const response = await fetch(url, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -55,9 +39,11 @@ export const updateAssignmentTracking = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const { id, ...trackingData } = data;
-      const response = await fetch(API_URL.updateAssignmentTracking(id), {
+      const response = await apiFetch(API_URL.updateAssignmentTracking(id), {
         method: "PATCH",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(trackingData),
       });
       const resData = await response.json();

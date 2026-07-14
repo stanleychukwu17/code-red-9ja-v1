@@ -15,6 +15,8 @@ import {
 } from "@repo/ui/components/select";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
+import store from "#/redux/store";
+import { updateCountryState } from "#/redux/slice/countrySlice";
 import {
   loginUser,
   checkIfRefreshTokenInCookie,
@@ -58,10 +60,22 @@ export const Route = createFileRoute("/auth/login")({
       description: "Log in to your Free9ja Admin account",
     }),
   loader: async () => {
+    if (typeof window !== "undefined") {
+      const state = store.getState();
+      if (state.country.countries && state.country.countries.length > 0) {
+        return { countries: state.country.countries };
+      }
+    }
+
     const countries = (await getAllCountries()) as countriesType;
     if (!countries.success) {
       throw new Error(countries.message || "Failed to load countries");
     }
+
+    if (typeof window !== "undefined") {
+      store.dispatch(updateCountryState({ countries: countries.data.countries }));
+    }
+
     return { countries: countries.data.countries };
   },
   component: LoginComponent,

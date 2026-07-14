@@ -6,7 +6,7 @@ import {
   TileRow,
 } from "@repo/ui/components/tiles";
 
-export type PartyMemberType = {
+export type PartyAdminType = {
   name: string;
   avatar: string;
   partyOffice: string;
@@ -15,7 +15,7 @@ export type PartyMemberType = {
   office?: string;
 };
 
-export function PartyMemberTableHeader({ columns }: { columns: string[] }) {
+export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
   const [memberCol, roleCol, officeCol, dateCol] = columns;
 
   return (
@@ -40,7 +40,7 @@ export function PartyMemberTableHeader({ columns }: { columns: string[] }) {
   );
 }
 
-export function PartyMemberTableTile({ data }: { data: PartyMemberType }) {
+export function PartyAdminTableTile({ data }: { data: PartyAdminType }) {
   return (
     <TileRow>
       <TileLeft>

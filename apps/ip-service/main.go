@@ -111,7 +111,7 @@ func isRateLimited(ctx context.Context, ip string) (bool, error) {
 // 4. Augment the response with geographic location data if the GeoIP service is available.
 func ipHandler(w http.ResponseWriter, r *http.Request) {
 	ip := getIP(r)
-	slog.Info("Request received", "ip", ip, "method", r.Method, "path", r.URL.Path, "user_agent", r.UserAgent())
+	slog.Info("IP detection request received", "ip", ip, "method", r.Method, "path", r.URL.Path, "user_agent", r.UserAgent())
 
 	// Perform rate limiting check
 	limited, err := isRateLimited(r.Context(), ip)

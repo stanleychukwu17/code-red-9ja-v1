@@ -1,21 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
 import { API_URL } from "../config";
-
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
+import { apiFetch } from "./fetch";
 
 export const createState = createServerFn({ method: "POST" })
   .inputValidator(
@@ -29,9 +14,11 @@ export const createState = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.states, {
+      const response = await apiFetch(API_URL.states, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
@@ -54,9 +41,11 @@ export const updateState = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await fetch(API_URL.stateById(id), {
+      const response = await apiFetch(API_URL.stateById(id), {
         method: "PUT",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
       const resData = await response.json();
@@ -70,9 +59,8 @@ export const deleteState = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.stateById(id), {
+      const response = await apiFetch(API_URL.stateById(id), {
         method: "DELETE",
-        headers: getAuthHeaders(),
       });
       const resData = await response.json();
       return resData;
@@ -85,7 +73,7 @@ export const getStateById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.stateById(id));
+      const response = await apiFetch(API_URL.stateById(id));
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -97,7 +85,7 @@ export const getStates = createServerFn()
   .inputValidator((data: { countryId: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { countryId, limit, cursor } }) => {
     try {
-      const response = await fetch(API_URL.getStates(countryId, limit, cursor));
+      const response = await apiFetch(API_URL.getStates(countryId, limit, cursor));
       const data = await response.json();
       return data;
     } catch (error) {

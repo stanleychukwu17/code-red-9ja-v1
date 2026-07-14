@@ -1,22 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] =
-      `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 // Fetch all states with their state_final_result for a given election
 export const getStateFinalResults = createServerFn({ method: "GET" })
@@ -38,9 +23,8 @@ export const getStateFinalResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", data.cursor);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.stateFinalResults}?${params.toString()}`,
-        { headers: getAuthHeaders() },
       );
       return await response.json();
     } catch (error) {
@@ -76,9 +60,8 @@ export const getSenatorialDistrictFinalResults = createServerFn({
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", data.cursor);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.senatorialDistrictFinalResults}?${params.toString()}`,
-        { headers: getAuthHeaders() },
       );
       return await response.json();
     } catch (error) {
@@ -121,9 +104,8 @@ export const getFederalConstituencyFinalResults = createServerFn({
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", data.cursor);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.federalConstituencyFinalResults}?${params.toString()}`,
-        { headers: getAuthHeaders() },
       );
       return await response.json();
     } catch (error) {
@@ -170,9 +152,8 @@ export const getLGAFinalResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", data.cursor);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.lgaFinalResults}?${params.toString()}`,
-        { headers: getAuthHeaders() },
       );
       return await response.json();
     } catch (error) {
@@ -220,9 +201,8 @@ export const getWardFinalResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", String(data.limit));
       if (data.cursor) params.append("cursor", data.cursor);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.wardFinalResults}?${params.toString()}`,
-        { headers: getAuthHeaders() },
       );
       return await response.json();
     } catch (error) {

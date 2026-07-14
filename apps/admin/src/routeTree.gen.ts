@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthSuperadminRouteImport } from './routes/auth/superadmin'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
@@ -40,6 +41,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthSuperadminRoute = AuthSuperadminRouteImport.update({
+  id: '/auth/superadmin',
+  path: '/auth/superadmin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
@@ -167,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
+  '/auth/superadmin': typeof AuthSuperadminRoute
   '/bodies/federal-constituencies': typeof AuthenticatedBodiesFederalConstituenciesRoute
   '/bodies/lgas': typeof AuthenticatedBodiesLgasRoute
   '/bodies/polling-units': typeof AuthenticatedBodiesPollingUnitsRoute
@@ -190,6 +197,7 @@ export interface FileRoutesByTo {
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
+  '/auth/superadmin': typeof AuthSuperadminRoute
   '/bodies/federal-constituencies': typeof AuthenticatedBodiesFederalConstituenciesRoute
   '/bodies/lgas': typeof AuthenticatedBodiesLgasRoute
   '/bodies/polling-units': typeof AuthenticatedBodiesPollingUnitsRoute
@@ -216,6 +224,7 @@ export interface FileRoutesById {
   '/_authenticated/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
+  '/auth/superadmin': typeof AuthSuperadminRoute
   '/_authenticated/bodies/federal-constituencies': typeof AuthenticatedBodiesFederalConstituenciesRoute
   '/_authenticated/bodies/lgas': typeof AuthenticatedBodiesLgasRoute
   '/_authenticated/bodies/polling-units': typeof AuthenticatedBodiesPollingUnitsRoute
@@ -242,6 +251,7 @@ export interface FileRouteTypes {
     | '/elections'
     | '/users'
     | '/auth/login'
+    | '/auth/superadmin'
     | '/bodies/federal-constituencies'
     | '/bodies/lgas'
     | '/bodies/polling-units'
@@ -265,6 +275,7 @@ export interface FileRouteTypes {
     | '/bodies'
     | '/users'
     | '/auth/login'
+    | '/auth/superadmin'
     | '/bodies/federal-constituencies'
     | '/bodies/lgas'
     | '/bodies/polling-units'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/_authenticated/elections'
     | '/_authenticated/users'
     | '/auth/login'
+    | '/auth/superadmin'
     | '/_authenticated/bodies/federal-constituencies'
     | '/_authenticated/bodies/lgas'
     | '/_authenticated/bodies/polling-units'
@@ -313,6 +325,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthSuperadminRoute: typeof AuthSuperadminRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -329,6 +342,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/superadmin': {
+      id: '/auth/superadmin'
+      path: '/auth/superadmin'
+      fullPath: '/auth/superadmin'
+      preLoaderRoute: typeof AuthSuperadminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/login': {
@@ -568,6 +588,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
+  AuthSuperadminRoute: AuthSuperadminRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,14 +1,14 @@
 // import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
 // import { API_URL } from "../config";
-// import { getCookie } from "@tanstack/react-start/server";
-
+// 
 // export const checkServerHealth = createServerFn({ method: "GET" })
 //   .handler(async () => {
 //     try {
 //       const accessToken = getCookie('access_token');
 //       const refreshToken = getCookie('refresh_token');
       
-//       const response = await fetch(API_URL.health, {
+//       const response = await apiFetch(API_URL.health, {
 //         method: "GET",
 //         headers: {
 //           "Content-Type": "application/json",

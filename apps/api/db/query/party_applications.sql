@@ -25,15 +25,13 @@ SET
   current_city = $9,
   bank_account_number = $10,
   bank_code = $11,
-  role = $12,
-  role_level = $13,
-  whatsapp_phone = $14,
-  data_phone = $15,
-  educational_status = $16,
-  highest_degree = $17,
-  graduation_year = $18,
-  school_name = $19,
-  current_ward = $20,
+  whatsapp_phone = $12,
+  data_phone = $13,
+  educational_status = $14,
+  highest_degree = $15,
+  graduation_year = $16,
+  school_name = $17,
+  current_ward = $18,
   phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
   phone_verified = CASE WHEN NULLIF(sqlc.arg(phone)::varchar, '') IS NOT NULL AND NULLIF(sqlc.arg(phone)::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
   polling_unit_id = sqlc.arg(polling_unit_id),
@@ -138,12 +136,12 @@ WHERE id = sqlc.arg(id)
 RETURNING *;
 
 -- name: UpdateUserRoleForPartyApp :one
-UPDATE users
-SET
-  role_level = $2,
-  role = 'partymember',
-  updated_at = NOW()
-WHERE id = $1
+WITH inserted AS (
+  INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
+  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'partyadmin'
+  ON CONFLICT (user_id, role_id) DO NOTHING
+)
+UPDATE users SET updated_at = NOW() WHERE users.id = $1
 RETURNING *;
 
 -- name: GetPollingUnitsWithAgentCounts :many

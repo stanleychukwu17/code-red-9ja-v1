@@ -36,16 +36,16 @@ export interface UserResult {
 
 const ROLE_OPTIONS = [
   { label: "Admin", value: "admin" },
-  { label: "Party Member", value: "partymember" },
+  { label: "Party Admin", value: "partyadmin" },
   { label: "User", value: "user" },
 ];
 
 const ROLE_LEVEL_OPTIONS: Record<string, { label: string; value: string }[]> = {
   admin: [
-    { label: "Super Admin", value: "superadmin" },
+    { label: "Super Admin", value: "super_admin" },
     { label: "Admin", value: "admin" },
   ],
-  partymember: [
+  partyadmin: [
     { label: "Admin", value: "admin" },
     { label: "Member", value: "member" },
     { label: "Placeholder", value: "placeholder" },
@@ -61,7 +61,7 @@ function SelectRole({
   onChange,
 }: {
   value: string;
-  onChange: (val: "admin" | "partymember" | "user") => void;
+  onChange: (val: "admin" | "partyadmin" | "user") => void;
 }) {
   const [open, setOpen] = React.useState(false);
   const selected = ROLE_OPTIONS.find((o) => o.value === value);
@@ -160,7 +160,7 @@ export interface UserFormDialogProps {
   partyId?: number;
   partyShortName?: string;
   // Optional default role & level
-  defaultRole?: "admin" | "partymember" | "user";
+  defaultRole?: "admin" | "partyadmin" | "user";
   defaultRoleLevel?: string;
   // Injected server functions/APIs:
   getAllCountries: () => Promise<any>;
@@ -225,7 +225,7 @@ export function UserFormDialog({
       partyId: undefined as number | undefined,
       email: "",
       password: "",
-      role: "user" as "user" | "partymember" | "admin",
+      role: "user" as "user" | "partyadmin" | "admin",
       roleLevel: "user" as string,
     },
     onSubmit: async ({ value }) => {
@@ -262,7 +262,7 @@ export function UserFormDialog({
       const isPartyLocked =
         partyId !== undefined || partyShortName !== undefined;
       const initialRole =
-        defaultRole || (isPartyLocked ? "partymember" : "user");
+        defaultRole || (isPartyLocked ? "partyadmin" : "user");
       const initialRoleLevel =
         defaultRoleLevel || (isPartyLocked ? "member" : "user");
 
@@ -287,7 +287,7 @@ export function UserFormDialog({
         form.setFieldValue("password", "");
         form.setFieldValue(
           "role",
-          defaultRole || (isPartyLocked ? "partymember" : user.role || "user"),
+          defaultRole || (isPartyLocked ? "partyadmin" : user.role || "user"),
         );
         form.setFieldValue("roleLevel", user.role_level || initialRoleLevel);
         setAvatarUrl(user.avatar || "");
@@ -394,7 +394,7 @@ export function UserFormDialog({
       if (!values.originCountryId)
         throw new Error("Country of origin is required");
       if (!values.originStateId) throw new Error("State of origin is required");
-      if (values.role === "partymember" && !values.partyId)
+      if (values.role === "partyadmin" && !values.partyId)
         throw new Error("Party is required");
       if (mode !== "update" && !values.password)
         throw new Error("Password is required");
@@ -807,7 +807,7 @@ export function UserFormDialog({
                             field.handleChange(val);
                             let defaultLevel = "user";
                             if (val === "admin") defaultLevel = "admin";
-                            if (val === "partymember") defaultLevel = "member";
+                            if (val === "partyadmin") defaultLevel = "member";
                             form.setFieldValue("roleLevel", defaultLevel);
                           }}
                         />
@@ -847,7 +847,7 @@ export function UserFormDialog({
                     name="partyId"
                     validators={{
                       onChange: ({ value }) =>
-                        role === "partymember" && !value
+                        role === "partyadmin" && !value
                           ? "Party is required"
                           : undefined,
                     }}
