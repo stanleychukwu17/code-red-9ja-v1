@@ -185,8 +185,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.ForgotPassword, authHandler.ForgotPassword)                   // Forgot password endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)     // Change password by email endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.AdminRegister, authHandler.AdminRegister)                     // Admin register endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, authHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
 	mainRouter.Post("/api/v1/auth/seed", authHandler.SeedUsers)                                      // Seed users endpoint
 
 	// Banks

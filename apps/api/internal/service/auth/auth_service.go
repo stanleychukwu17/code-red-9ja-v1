@@ -167,7 +167,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 
 	// Fetch the user's assigned roles from the database
-	userRoles, err := s.queries.GetUserRoles(ctx, user.ID)
+	userRoles, err := s.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		return LoginResult{}, errors.New("failed to fetch user roles")
 	}
@@ -177,6 +177,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	for _, ur := range userRoles {
 		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
+	fmt.Println("userRoleCodes", userRoleCodes)
 
 	// Role Validation
 	if len(allowedRoles) > 0 {
@@ -184,6 +185,8 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		hasRole := false
 		for _, allowedRole := range allowedRoles {
 			for _, code := range userRoleCodes {
+				fmt.Println("allowedRole", allowedRole)
+				fmt.Println("code", code)
 				if code == allowedRole {
 					hasRole = true
 					break // Stop checking once a matching role is found
@@ -768,7 +771,7 @@ func CleanUsername(input string) (string, error) {
 	// The pattern is split into two parts:
 	// - The start and end of the string are checked for alphanumeric characters.
 	// - The middle part is checked for alphanumeric characters and dots or underscores.
-	validPattern := regexp.MustCompile(`^[a-z][a-z0-9_]{1,28}[a-z0-9]$`)
+	validPattern := regexp.MustCompile(`^[a-z][a-z0-9._]{1,28}[a-z0-9]$`)
 	if !validPattern.MatchString(clean) {
 		return "", errors.New("username can only contain letters, numbers, and underscores")
 	}
@@ -848,9 +851,7 @@ func (s *AuthService) CheckCountry(ctx context.Context, country_id int16) (queri
 	// get country details from db
 	country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
 	if country_dts.ID > 0 {
-		// save to redis
-		country_data, _ := json.Marshal(country_dts)
-		s.rdb.Set(ctx, redisCountryKey, country_data, 5*365*24*time.Hour) // expires in 5years
+		s.rdb.Set(ctx, redisCountryKey, country_data, 0)
 		return country_dts, nil
 	}
 
@@ -1047,7 +1048,7 @@ func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) 
 	// Cache it in Redis
 	userJSON, err := json.Marshal(user)
 	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, 0)
+		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour)
 	}
 
 	return user, nil
@@ -1069,7 +1070,7 @@ func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) er
 	// Marshal and update Redis
 	userJSON, err := json.Marshal(user)
 	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, 0) // 0 means no expiration, or however GetUserDetailsByFakeID caches it
+		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour)
 	}
 
 	return err
@@ -1198,99 +1199,6 @@ func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID strin
 	return nil
 }
 
-// RegisterAdmin creates a new admin user in the system
-func (s *AuthService) RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (RegisterResult, error) {
-	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// cleans up the username
-	username = strings.TrimSpace(strings.ToLower(username))
-	username, err = CleanUsername(username)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// email checks
-	email = strings.TrimSpace(strings.ToLower(email))
-	if email != "" && s.CheckEmail(ctx, email) {
-		return RegisterResult{}, errors.New("email already exists")
-	}
-
-	// phone checks
-	if s.CheckPhone(ctx, phone) {
-		return RegisterResult{}, errors.New("phone already exists")
-	}
-
-	// Default country/state to 1 (Nigeria/Lagos or similar first entries)
-	countryID := int16(1)
-	stateID := int16(1)
-
-	params := queries.CreateUserParams{
-		Email:          pgtype.Text{String: email, Valid: email != ""},
-		Phone:          pgtype.Text{String: phone, Valid: phone != ""},
-		Username:       pgtype.Text{String: username, Valid: true},
-		PasswordHash:   string(hashedPassword),
-		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
-		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
-		Gender:         pgtype.Text{String: "male", Valid: true},
-		DateOfBirth:    pgtype.Date{Time: time.Now().AddDate(-30, 0, 0), Valid: true}, // Default 30 years old
-		CurrentCountry: countryID,
-		CurrentState:   stateID,
-	}
-
-	// creates the user's new account in our database
-	user_id, err := s.queries.CreateUser(ctx, params)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// generate a fake_id using the user_id and update the user fake_id
-	fake_id := utils.GenerateFakeID(user_id)
-	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: user_id, FakeID: pgtype.Int8{Int64: fake_id, Valid: true}})
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// Update account_status to active
-	err = s.queries.UpdateUserStatus(ctx, queries.UpdateUserStatusParams{
-		ID:            user_id,
-		AccountStatus: pgtype.Text{String: "active", Valid: true},
-	})
-	if err == nil {
-		_ = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
-			UserID: user_id,
-			Code:   "admin",
-		})
-	}
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	if avatar != "" {
-		err = s.queries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
-			ID:     user_id,
-			Avatar: pgtype.Text{String: avatar, Valid: true},
-		})
-		if err != nil {
-			return RegisterResult{}, err
-		}
-	}
-
-	// save some of the user details to our db & also to redis(using pipeline)
-	// For admin, we don't have NIN, so pass empty string
-	err = s.SaveSomeUserRegistrationDetails(ctx, username, email, phone, "", user_id, fake_id)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// fetch user details to cache it in Redis
-	_, _ = s.GetUserDetailsByFakeID(ctx, fake_id)
-
-	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
-}
 
 // RegisterCandidatePlaceholder creates a new candidate user in the system with placeholder status
 func (s *AuthService) RegisterCandidatePlaceholder(
@@ -1336,10 +1244,15 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		return RegisterResult{}, err
 	}
 	if role != "" {
-		_ = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
-			UserID: userID,
-			Code:   role,
-		})
+		dbRole, rErr := s.queries.GetRoleByCode(ctx, role)
+		if rErr == nil {
+			_ = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
+				UserID:            userID,
+				RoleID:            dbRole.ID,
+				RoleCode:          dbRole.Code,
+				WhoAssignedUserID: 0,
+			})
+		}
 	}
 
 	// generate a fake_id using the user_id and update the user fake_id
@@ -1364,6 +1277,127 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 // ListAdmins fetches all administrative users from the database
 func (s *AuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
 	return s.queries.ListAdmins(ctx)
+}
+
+// MakeUserSuperAdmin promotes a specific user to the superadmin role.
+func (s *AuthService) MakeUserSuperAdmin(ctx context.Context, username string) error {
+	allowed := map[string]bool{
+		"stanley": true, "stanley_chukwu": true, "stanleychukwu": true,
+		"daniel": true, "daniel_chukwu": true, "danielchukwu": true,
+	}
+
+	if !allowed[username] {
+		return fmt.Errorf("username not authorized for superadmin promotion")
+	}
+
+	redisKey := fmt.Sprintf("%s%s", db.RedisUsernameFakeID, username)
+	val, err := s.rdb.Get(ctx, redisKey).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return fmt.Errorf("user not found in registry")
+		}
+		return fmt.Errorf("redis error: %w", err)
+	}
+
+	fakeID, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid fake id in redis: %w", err)
+	}
+
+	user, err := s.GetUserDetailsByFakeID(ctx, fakeID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user details: %w", err)
+	}
+
+	return s.CheckAndAssignRole(ctx, user.ID, "super_admin", 0)
+}
+
+// GetUserRoles fetches user roles from Redis cache, falling back to DB and caching if missed.
+func (s *AuthService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+
+	// first redis to see if the roles have been cached
+	rolesJSON, err := s.rdb.Get(ctx, userRolesKey).Result()
+	if err == nil {
+		var roles []queries.GetUserRolesRow
+		if err := json.Unmarshal([]byte(rolesJSON), &roles); err == nil {
+			return roles, nil
+		}
+	}
+
+	// Fetch from DB if not in Redis
+	roles, err := s.queries.GetUserRoles(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache it in Redis
+	rolesJSONBytes, err := json.Marshal(roles)
+	if err == nil {
+		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, 5*365*24*time.Hour) // expires in 5years
+	}
+
+	return roles, nil
+}
+
+// UpdateCachedUserRoles refreshes the cached user roles in Redis.
+// This function should be called anytime a user's roles changes
+func (s *AuthService) UpdateCachedUserRoles(ctx context.Context, userID int64) error {
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+
+	// Fetch fresh roles from DB
+	roles, err := s.queries.GetUserRoles(ctx, userID)
+	if err != nil {
+		// If the roles can't be fetched, remove the cache anyway to avoid stale data
+		s.rdb.Del(ctx, userRolesKey)
+		return fmt.Errorf("user roles not found for cache update: %w", err)
+	}
+
+	// Marshal and update Redis
+	rolesJSON, err := json.Marshal(roles)
+	if err == nil {
+		s.rdb.Set(ctx, userRolesKey, rolesJSON, 5*365*24*time.Hour) // expires in 5years
+	}
+
+	return err
+}
+
+// CheckAndAssignRole checks if a user already has a specific role, and if not, assigns it.
+func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error {
+	// 1. Get user roles (with cache check)
+	roles, err := s.GetUserRoles(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user roles: %w", err)
+	}
+
+	// 2. Check if the user already has the role
+	for _, r := range roles {
+		if r.Code == roleCode {
+			// Already has the role, no need to assign again
+			return nil
+		}
+	}
+
+	// 3. Get the role ID from db
+	role, err := s.queries.GetRoleByCode(ctx, roleCode)
+	if err != nil {
+		return fmt.Errorf("failed to fetch role %s: %w", roleCode, err)
+	}
+
+	// 4. Assign the role in DB
+	err = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
+		UserID:            userID,
+		RoleID:            role.ID,
+		RoleCode:          role.Code,
+		WhoAssignedUserID: whoAssigned,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
+	}
+
+	// 5. Update cached roles
+	_ = s.UpdateCachedUserRoles(ctx, userID)
+	return nil
 }
 
 type SeedUserRequest struct {

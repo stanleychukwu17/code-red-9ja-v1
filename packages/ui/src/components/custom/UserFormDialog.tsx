@@ -42,7 +42,7 @@ const ROLE_OPTIONS = [
 
 const ROLE_LEVEL_OPTIONS: Record<string, { label: string; value: string }[]> = {
   admin: [
-    { label: "Super Admin", value: "superadmin" },
+    { label: "Super Admin", value: "super_admin" },
     { label: "Admin", value: "admin" },
   ],
   partyadmin: [

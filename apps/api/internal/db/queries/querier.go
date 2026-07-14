@@ -94,6 +94,7 @@ type Querier interface {
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
 	GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPollingUnitsWithAgentCountsParams) ([]GetPollingUnitsWithAgentCountsRow, error)
+	GetRoleByCode(ctx context.Context, code string) (Role, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (SenatorialDistrict, error)
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]SenatorialDistrict, error)
 	GetStateAssemblyConstituencies(ctx context.Context, arg GetStateAssemblyConstituenciesParams) ([]StateAssemblyConstituency, error)

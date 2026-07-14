@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
 
 /**
@@ -8,7 +9,7 @@ import { API_URL } from "../config";
  */
 export const getAllCountries = createServerFn().handler(async () => {
   try {
-    const response = await fetch(API_URL.getAllCountries);
+    const response = await apiFetch(API_URL.getAllCountries);
     const data = await response.json();
     return data;
   } catch (error) {
@@ -21,7 +22,7 @@ export const getCities = createServerFn()
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
       const url = `${API_URL.getCities(stateId)}?limit=${limit || 50}&cursor=${cursor || ""}`;
-      const response = await fetch(url);
+      const response = await apiFetch(url);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -33,7 +34,7 @@ export const getLGAs = createServerFn()
   .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
-      const response = await fetch(API_URL.getLGAs(stateId, limit, cursor));
+      const response = await apiFetch(API_URL.getLGAs(stateId, limit, cursor));
       const data = await response.json();
       return data;
     } catch (error) {

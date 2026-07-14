@@ -12,32 +12,58 @@ import (
 )
 
 const assignUserRole = `-- name: AssignUserRole :exec
-INSERT INTO user_roles (user_id, role_id)
-SELECT $1, id FROM roles WHERE code = $2
-ON CONFLICT DO NOTHING
+INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
+VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
+ON CONFLICT (user_id, role_id) DO NOTHING
 `
 
 type AssignUserRoleParams struct {
-	UserID int64  `json:"user_id"`
-	Code   string `json:"code"`
+	UserID            int64  `json:"user_id"`
+	RoleID            int16  `json:"role_id"`
+	RoleCode          string `json:"role_code"`
+	WhoAssignedUserID int64  `json:"who_assigned_user_id"`
 }
 
 func (q *Queries) AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error {
-	_, err := q.db.Exec(ctx, assignUserRole, arg.UserID, arg.Code)
+	_, err := q.db.Exec(ctx, assignUserRole,
+		arg.UserID,
+		arg.RoleID,
+		arg.RoleCode,
+		arg.WhoAssignedUserID,
+	)
 	return err
 }
 
+const getRoleByCode = `-- name: GetRoleByCode :one
+SELECT id, code, name, description
+FROM roles
+WHERE code = $1
+`
+
+func (q *Queries) GetRoleByCode(ctx context.Context, code string) (Role, error) {
+	row := q.db.QueryRow(ctx, getRoleByCode, code)
+	var i Role
+	err := row.Scan(
+		&i.ID,
+		&i.Code,
+		&i.Name,
+		&i.Description,
+	)
+	return i, err
+}
+
 const getUserRoles = `-- name: GetUserRoles :many
-SELECT r.code, r.name, r.description
-FROM roles r
-JOIN user_roles ur ON r.id = ur.role_id
-WHERE ur.user_id = $1
+SELECT user_id, role_id, role_code AS code, date_assigned, who_assigned_user_id AS who_assigned
+FROM user_roles
+WHERE user_id = $1
 `
 
 type GetUserRolesRow struct {
-	Code        string      `json:"code"`
-	Name        string      `json:"name"`
-	Description pgtype.Text `json:"description"`
+	UserID       int64              `json:"user_id"`
+	RoleID       int16              `json:"role_id"`
+	Code         string             `json:"code"`
+	DateAssigned pgtype.Timestamptz `json:"date_assigned"`
+	WhoAssigned  int64              `json:"who_assigned"`
 }
 
 func (q *Queries) GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error) {
@@ -49,7 +75,13 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID int64) ([]GetUserRole
 	var items []GetUserRolesRow
 	for rows.Next() {
 		var i GetUserRolesRow
-		if err := rows.Scan(&i.Code, &i.Name, &i.Description); err != nil {
+		if err := rows.Scan(
+			&i.UserID,
+			&i.RoleID,
+			&i.Code,
+			&i.DateAssigned,
+			&i.WhoAssigned,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -21,7 +21,7 @@ type UsersService interface {
 	GetUserByID(ctx context.Context, id int64) (queries.User, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
-	AssignUserRole(ctx context.Context, userID int64, code string) error
+	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
 	ListUsers(ctx context.Context) ([]queries.User, error)
 	DeleteUser(ctx context.Context, id int64, fakeID int64) error
@@ -724,7 +724,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		req.Email,
 	)
 	if err == nil && req.Role != "" {
-		_ = h.usersService.AssignUserRole(r.Context(), user.ID, req.Role)
+		_ = h.usersService.AssignUserRole(r.Context(), user.ID, req.Role, claims.UserID)
 	}
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update user: "+err.Error())

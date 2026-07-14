@@ -196,54 +196,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/admin/register": {
-            "post": {
-                "description": "Creates a new admin account",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Register a new admin user",
-                "parameters": [
-                    {
-                        "description": "Admin registration details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.AdminRegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.AdminRegisterResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/change-password": {
             "post": {
                 "description": "Resets a user's password using their email address and a new password, invalidating active sessions",
@@ -798,6 +750,55 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Failed to seed users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/superadmin": {
+            "post": {
+                "description": "Promotes a user to superadmin if their username is in the pre-approved list",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Make a user superadmin",
+                "parameters": [
+                    {
+                        "description": "Superadmin promotion details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.MakeUserSuperAdminRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -7737,67 +7738,6 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.AdminRegisterData": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "authhandler.AdminRegisterRequest": {
-            "type": "object",
-            "required": [
-                "password",
-                "phone",
-                "username"
-            ],
-            "properties": {
-                "avatar": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "last_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                }
-            }
-        },
-        "authhandler.AdminRegisterResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/authhandler.AdminRegisterData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
         "authhandler.ChangePasswordByEmailRequest": {
             "type": "object",
             "required": [
@@ -7903,6 +7843,18 @@ const docTemplate = `{
             "properties": {
                 "refreshToken": {
                     "type": "string"
+                }
+            }
+        },
+        "authhandler.MakeUserSuperAdminRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 3
                 }
             }
         },
@@ -8018,7 +7970,7 @@ const docTemplate = `{
                 "role_level": {
                     "type": "string",
                     "enum": [
-                        "superadmin",
+                        "super_admin",
                         "admin",
                         "member",
                         "placeholder",

@@ -1,21 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
@@ -30,9 +16,7 @@ export const getUsersList = createServerFn({ method: "GET" })
       if (data?.party_id) params.append("party_id", String(data.party_id));
       const qs = params.toString();
 
-      const response = await fetch(`${API_URL.users}${qs ? `?${qs}` : ""}`, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -61,9 +45,11 @@ export const updateUser = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await fetch(API_URL.adminUserById(id), {
+      const response = await apiFetch(API_URL.adminUserById(id), {
         method: "PUT",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
       const resData = await response.json();
@@ -77,10 +63,9 @@ export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await fetch(API_URL.adminUserById(id), {
+      const response = await apiFetch(API_URL.adminUserById(id), {
         method: "DELETE",
-        headers: getAuthHeaders(),
-      });
+        });
       const resData = await response.json();
       return resData;
     } catch (error) {

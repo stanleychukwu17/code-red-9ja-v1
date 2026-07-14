@@ -137,9 +137,9 @@ RETURNING *;
 
 -- name: UpdateUserRoleForPartyApp :one
 WITH inserted AS (
-  INSERT INTO user_roles (user_id, role_id)
-  SELECT $1, r.id FROM roles r WHERE r.code = 'partyadmin'
-  ON CONFLICT DO NOTHING
+  INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
+  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'partyadmin'
+  ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
 RETURNING *;

@@ -51,10 +51,16 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]querie
 	return s.queries.GetUserRoles(ctx, userID)
 }
 
-func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code string) error {
+func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error {
+	role, err := s.queries.GetRoleByCode(ctx, code)
+	if err != nil {
+		return err
+	}
 	return s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
-		UserID: userID,
-		Code:   code,
+		UserID:            userID,
+		RoleID:            role.ID,
+		RoleCode:          role.Code,
+		WhoAssignedUserID: whoAssigned,
 	})
 }
 

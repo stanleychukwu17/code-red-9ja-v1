@@ -1,22 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] =
-      `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 type ListPollingUnitUpdatesInput = {
   electionGroupId?: number;
@@ -78,10 +63,9 @@ export const getPollingUnitUpdates = createServerFn({
 
       const url = `${API_URL.pollingUnitUpdates}?${queryParams.toString()}`;
 
-      const res = await fetch(url, {
+      const res = await apiFetch(url, {
         method: "GET",
-        headers: getAuthHeaders(),
-      });
+        });
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));

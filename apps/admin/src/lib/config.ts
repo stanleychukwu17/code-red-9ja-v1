@@ -33,6 +33,7 @@ export const API_URL = {
     refresh: `${api}/auth/refresh`,
     logout: `${api}/auth/logout`,
     registerCandidate: `${api}/auth/register-candidate`,
+    superadmin: `${api}/auth/superadmin`,
   },
   getAllCountries: `${api}/countries`,
   getStates: (countryId: number, limit?: number, cursor?: string | number) => {

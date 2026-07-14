@@ -556,8 +556,11 @@ type User struct {
 }
 
 type UserRole struct {
-	UserID int64 `json:"user_id"`
-	RoleID int16 `json:"role_id"`
+	UserID            int64              `json:"user_id"`
+	RoleID            int16              `json:"role_id"`
+	RoleCode          string             `json:"role_code"`
+	DateAssigned      pgtype.Timestamptz `json:"date_assigned"`
+	WhoAssignedUserID int64              `json:"who_assigned_user_id"`
 }
 
 type UserSecurityQuestion struct {

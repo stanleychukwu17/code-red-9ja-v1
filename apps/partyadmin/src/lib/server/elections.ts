@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
 const getVal = (val: any) => {
@@ -44,7 +45,7 @@ export const getElections = createServerFn({ method: "GET" })
           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.elections}?limit=${limit}&cursor=${cursor}`,
       );
       const resData = await response.json();
@@ -59,7 +60,7 @@ export const getElections = createServerFn({ method: "GET" })
           elections.map(async (election: any) => {
             try {
               const candidatesUrl = `${API_URL.elections}/${election.id}/candidates`;
-              const candResp = await fetch(candidatesUrl, { headers });
+              const candResp = await apiFetch(candidatesUrl, { headers });
               if (candResp.ok) {
                 const candData = await candResp.json();
                 if (
@@ -120,7 +121,7 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.elections}/${electionId}/field-candidate`,
         {
           method: "POST",
@@ -156,7 +157,7 @@ export const getElectionCandidates = createServerFn({ method: "GET" })
           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.elections}/${data.electionId}/candidates?limit=${limit}&cursor=${cursor}`,
         {
           headers,
@@ -232,7 +233,7 @@ export const getPollingUnitUpdates = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", data.limit.toString());
       if (data.cursor !== undefined) params.append("cursor", data.cursor.toString());
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.pollingUnitUpdates}?${params.toString()}`,
         {
           headers,
@@ -306,7 +307,7 @@ export const getPollingUnitFinalResults = createServerFn({ method: "GET" })
       if (data.limit) params.append("limit", data.limit.toString());
       if (data.cursor !== undefined) params.append("cursor", data.cursor.toString());
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.pollingUnitFinalResults}?${params.toString()}`,
         {
           headers,
@@ -342,7 +343,7 @@ export const getElectionsByGroup = createServerFn({ method: "GET" })
           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionGroups}/${groupId}/elections`,
         {
           headers,

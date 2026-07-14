@@ -13,9 +13,9 @@ type AuthURLMap struct {
 	Refresh                 string
 	VerifySecurityQuestions string
 	AdminLogin              string
-	AdminRegister           string
 	PartyLogin              string
 	ChangePasswordByEmail   string
+	SuperAdmin              string
 }
 
 type BodiesURLMap struct {
@@ -60,9 +60,9 @@ var ApiUrls = URLMap{
 		Refresh:                 "/api/v1/auth/refresh",
 		VerifySecurityQuestions: "/api/v1/auth/verify_security_questions",
 		AdminLogin:              "/api/v1/auth/admin/login",
-		AdminRegister:           "/api/v1/auth/admin/register",
 		PartyLogin:              "/api/v1/auth/partyapp/login",
 		ChangePasswordByEmail:   "/api/v1/auth/change_password_by_email",
+		SuperAdmin:              "/api/v1/auth/superadmin",
 	},
 	Bodies: BodiesURLMap{
 		GetAll:                         "/api/v1/countries",

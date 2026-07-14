@@ -249,11 +249,7 @@ export function LgaFormDialog({
                 }}
                 children={(field) => (
                   <SelectSenatorialDistrict
-                    selectedId={
-                      field.state.value !== undefined
-                        ? String(field.state.value)
-                        : undefined
-                    }
+                    selectedId={field.state.value}
                     stateId={stateId}
                     disabled={!stateId}
                     update={(item) => {
@@ -278,11 +274,7 @@ export function LgaFormDialog({
                 }}
                 children={(field) => (
                   <SelectFederalConstituency
-                    selectedId={
-                      field.state.value !== undefined
-                        ? String(field.state.value)
-                        : undefined
-                    }
+                    selectedId={field.state.value}
                     stateId={stateId}
                     senatorialDistrictId={senatorialDistrictId}
                     disabled={!stateId}

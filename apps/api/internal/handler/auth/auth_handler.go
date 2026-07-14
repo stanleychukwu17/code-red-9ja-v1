@@ -27,12 +27,12 @@ type AuthService interface {
 	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
 	ChangePasswordByEmail(ctx context.Context, email, newPassword string) error
 	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
-	RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (auth.RegisterResult, error)
 	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 
 	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) ([]int64, error)
+	MakeUserSuperAdmin(ctx context.Context, username string) error
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -531,51 +531,6 @@ func (h *Handler) ChangePasswordByEmail(w http.ResponseWriter, r *http.Request) 
 	h.utils.RespondSuccess(w, http.StatusOK, "Password changed successfully", nil)
 }
 
-// AdminRegisterRequest represents the simplified payload for registering a new admin account
-type AdminRegisterRequest struct {
-	Email     string `json:"email" validate:"omitempty,email"`
-	Phone     string `json:"phone" validate:"required,e164"`
-	Username  string `json:"username" validate:"required,min=2,max=30"`
-	Password  string `json:"password" validate:"required,min=5,max=72"`
-	FirstName string `json:"first_name" validate:"omitempty,min=2,max=30"`
-	LastName  string `json:"last_name" validate:"omitempty,min=2,max=30"`
-	Avatar    string `json:"avatar" validate:"omitempty"`
-}
-
-// @Summary Register a new admin user
-// @Description Creates a new admin account
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body AdminRegisterRequest true "Admin registration details"
-// @Success 201 {object} AdminRegisterResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /auth/admin/register [post]
-func (h *Handler) AdminRegister(w http.ResponseWriter, r *http.Request) {
-	var req AdminRegisterRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	result, err := h.authService.RegisterAdmin(r.Context(), req.Email, req.Phone, req.Username, req.Password, req.FirstName, req.LastName, req.Avatar)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create admin: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusCreated, "Admin registered successfully", map[string]interface{}{
-		"id": result.UserID,
-	})
-}
-
 // AdminLoginRequest represents the simplified payload for admin login
 type AdminLoginRequest struct {
 	Identifier     string `json:"identifier" validate:"required,min=2,max=50"`
@@ -607,7 +562,7 @@ func (h *Handler) AdminLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "admin")
+	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "admin", "super_admin")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return
@@ -664,18 +619,6 @@ func (h *Handler) PartyLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// AdminRegisterResponse represents the Swagger response structure for admin registration
-type AdminRegisterResponse struct {
-	Success bool              `json:"success"`
-	Message string            `json:"message"`
-	Data    AdminRegisterData `json:"data"`
-}
-
-// AdminRegisterData represents the inner response payload for admin registration
-type AdminRegisterData struct {
-	ID int64 `json:"id"`
-}
-
 // AdminLoginResponse represents the Swagger response structure for admin login
 type AdminLoginResponse struct {
 	Success bool           `json:"success"`
@@ -706,7 +649,7 @@ type RegisterCandidatePlaceholderRequest struct {
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
 	Role           string `json:"role" validate:"required,oneof=admin partyadmin user"`
-	RoleLevel      string `json:"role_level" validate:"required,oneof=superadmin admin member placeholder pollingagent user"`
+	RoleLevel      string `json:"role_level" validate:"required,oneof=super_admin admin member placeholder pollingagent user"`
 }
 
 // @Summary Register a new candidate user with placeholder status
@@ -775,7 +718,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 	isValidCombo := false
 	switch req.Role {
 	case "admin":
-		if req.RoleLevel == "superadmin" || req.RoleLevel == "admin" {
+		if req.RoleLevel == "super_admin" || req.RoleLevel == "admin" {
 			isValidCombo = true
 		}
 	case "partyadmin":
@@ -868,4 +811,41 @@ func (h *Handler) SeedUsers(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Users seeded successfully", map[string]interface{}{
 		"ids": ids,
 	})
+}
+
+// MakeUserSuperAdminRequest represents the request to promote a user
+type MakeUserSuperAdminRequest struct {
+	Name string `json:"name" validate:"required,min=3"`
+}
+
+// @Summary Make a user superadmin
+// @Description Promotes a user to superadmin if their username is in the pre-approved list
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body MakeUserSuperAdminRequest true "Superadmin promotion details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/superadmin [post]
+func (h *Handler) MakeUserSuperAdmin(w http.ResponseWriter, r *http.Request) {
+	var req MakeUserSuperAdminRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
+		return
+	}
+
+	err := h.authService.MakeUserSuperAdmin(r.Context(), req.Name)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to make superadmin: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "User successfully promoted to superadmin", nil)
 }

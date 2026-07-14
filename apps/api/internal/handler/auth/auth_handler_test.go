@@ -84,11 +84,6 @@ func (m *MockAuthService) ForgotPassword(ctx context.Context, changePasswordID s
 	return args.Error(0)
 }
 
-func (m *MockAuthService) RegisterAdmin(ctx context.Context, email, phone, username, password, firstName, lastName, avatar string) (authservice.RegisterResult, error) {
-	args := m.Called(ctx, email, phone, username, password, firstName, lastName, avatar)
-	return args.Get(0).(authservice.RegisterResult), args.Error(1)
-}
-
 func (m *MockAuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
 	args := m.Called(ctx)
 	if args.Get(0) == nil {
@@ -118,6 +113,11 @@ func (m *MockAuthService) SeedUsers(ctx context.Context, users []authservice.See
 		return nil, args.Error(1)
 	}
 	return args.Get(0).([]int64), args.Error(1)
+}
+
+func (m *MockAuthService) MakeUserSuperAdmin(ctx context.Context, username string) error {
+	args := m.Called(ctx, username)
+	return args.Error(0)
 }
 
 // TestRegister tests the Register method of the AuthHandler
@@ -323,41 +323,6 @@ func TestRegister(t *testing.T) {
 	})
 }
 
-// TestAdminRegister tests the AdminRegister method of the AuthHandler
-func TestAdminRegister(t *testing.T) {
-	utilsInstance := utils.NewUtils(nil)
-
-	t.Run("successful admin registration", func(t *testing.T) {
-		mockService := new(MockAuthService)
-		handler := authhandler.NewHandler(mockService, utilsInstance)
-
-		reqBody := authhandler.AdminRegisterRequest{
-			Email:     "admin@example.com",
-			Phone:     "+2348012345678",
-			Username:  "superadmin",
-			Password:  "password123",
-			FirstName: "Super",
-			LastName:  "Admin",
-		}
-
-		body, _ := json.Marshal(reqBody)
-		req, _ := http.NewRequest("POST", "/api/v1/auth/admin/register", bytes.NewBuffer(body))
-		rr := httptest.NewRecorder()
-
-		mockService.On("RegisterAdmin", mock.Anything, reqBody.Email, reqBody.Phone, reqBody.Username, reqBody.Password, reqBody.FirstName, reqBody.LastName, reqBody.Avatar).Return(authservice.RegisterResult{UserID: 1, FakeID: 12345}, nil)
-
-		handler.AdminRegister(rr, req)
-
-		require.Equal(t, http.StatusCreated, rr.Code)
-		var response map[string]any
-		err := json.Unmarshal(rr.Body.Bytes(), &response)
-		require.NoError(t, err)
-		require.Equal(t, "Admin registered successfully", response["message"])
-		data := response["data"].(map[string]any)
-		require.NotNil(t, data["id"])
-	})
-}
-
 // TestAdminLogin tests the AdminLogin method of the AuthHandler
 func TestAdminLogin(t *testing.T) {
 	utilsInstance := utils.NewUtils(nil)
@@ -376,7 +341,7 @@ func TestAdminLogin(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/auth/admin/login", bytes.NewBuffer(body))
 		rr := httptest.NewRecorder()
 
-		mockService.On("Login", mock.Anything, reqBody.IdentifierType, reqBody.Identifier, reqBody.Password, "", []string{"admin"}).Return(authservice.LoginResult{
+		mockService.On("Login", mock.Anything, reqBody.IdentifierType, reqBody.Identifier, reqBody.Password, "", []string{"admin", "superadmin"}).Return(authservice.LoginResult{
 			AccessToken:  "access-token",
 			RefreshToken: "refresh-token",
 			User: authservice.LoginUser{

@@ -577,9 +577,9 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 
 const updateUserRoleForPartyApp = `-- name: UpdateUserRoleForPartyApp :one
 WITH inserted AS (
-  INSERT INTO user_roles (user_id, role_id)
-  SELECT $1, r.id FROM roles r WHERE r.code = 'partyadmin'
-  ON CONFLICT DO NOTHING
+  INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
+  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'partyadmin'
+  ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
 RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, created_at, updated_at

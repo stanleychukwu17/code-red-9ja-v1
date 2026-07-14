@@ -15,6 +15,8 @@ import (
 	"free9ja/api/internal/utils"
 	"free9ja/api/test"
 
+	"reflect"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
@@ -44,7 +46,7 @@ func TestRegister(t *testing.T) {
 	requestBody := authhandler.RegisterRequest{
 		Email:          "johnDoe@example.com",
 		Phone:          "+2348012345678",
-		Username:       "johnDoe",
+		Username:       "johndoe",
 		Nin:            "12345678901",
 		Question1:      1,
 		Answer1:        "dog",
@@ -64,6 +66,8 @@ func TestRegister(t *testing.T) {
 	url := fmt.Sprintf("http://localhost:%s%s", cfg.Port, utils.ApiUrls.Auth.Register)
 
 	t.Run("successful registration", func(t *testing.T) {
+		field, _ := reflect.TypeOf(authhandler.RegisterRequest{}).FieldByName("Username")
+		t.Logf("Username tag value at runtime: %s", field.Tag.Get("validate"))
 		response, respBody := test.SendRequest(t, "POST", url, requestBody)
 
 		require.Equal(t, response.StatusCode, http.StatusCreated, "expected status code %d, got %d", http.StatusCreated, response.StatusCode)
@@ -81,7 +85,7 @@ func TestRegister(t *testing.T) {
 	t.Run("duplicate email", func(t *testing.T) {
 		// Change only the username so it doesn't trigger the username check first
 		req := requestBody
-		req.Username = "johnDoe2"
+		req.Username = "johndoe2"
 
 		response, respBody := test.SendRequest(t, "POST", url, req)
 		require.Equal(t, response.StatusCode, http.StatusInternalServerError)
@@ -91,7 +95,7 @@ func TestRegister(t *testing.T) {
 	t.Run("duplicate phone number", func(t *testing.T) {
 		// Change username and email
 		req := requestBody
-		req.Username = "johnDoe3"
+		req.Username = "johndoe3"
 		req.Email = "johnDoe3@example.com"
 
 		response, respBody := test.SendRequest(t, "POST", url, req)
@@ -102,7 +106,7 @@ func TestRegister(t *testing.T) {
 	t.Run("duplicate nin", func(t *testing.T) {
 		// Change username, email, and phone
 		req := requestBody
-		req.Username = "johnDoe4"
+		req.Username = "johndoe4"
 		req.Email = "johnDoe4@example.com"
 		req.Phone = "+2348012345679"
 
@@ -113,7 +117,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid country", func(t *testing.T) {
 		req := requestBody
-		req.Username = "johnDoe5"
+		req.Username = "johndoe5"
 		req.Email = "johnDoe5@example.com"
 		req.Phone = "+2348012345680"
 		req.CurrentCountry = 9999                                            // Invalid country
@@ -126,7 +130,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid state", func(t *testing.T) {
 		req := requestBody
-		req.Username = "johnDoe6"
+		req.Username = "johndoe6"
 		req.Email = "johnDoe6@example.com"
 		req.Phone = "+2348012345681"
 		req.CurrentState = 9999                                              // Invalid state
@@ -139,7 +143,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid city", func(t *testing.T) {
 		req := requestBody
-		req.Username = "johnDoe7"
+		req.Username = "johndoe7"
 		req.Email = "johnDoe7@example.com"
 		req.Phone = "+2348012345682"
 		req.CurrentCity = 111111111                                          // Invalid city
@@ -152,7 +156,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid phone number", func(t *testing.T) {
 		req := requestBody
-		req.Username = "johnDoe8"
+		req.Username = "johndoe8"
 		req.Email = "johnDoe8@example.com"
 		req.Phone = "+18012345678"                                           // Invalid phone number
 		req.Nin = fmt.Sprintf("%011d", rand.Int63n(90000000000)+10000000000) // Random 11 digit nin
@@ -164,7 +168,7 @@ func TestRegister(t *testing.T) {
 
 	t.Run("underage user", func(t *testing.T) {
 		req := requestBody
-		req.Username = "johnDoe9"
+		req.Username = "johndoe9"
 		req.Email = "johnDoe9@example.com"
 		req.Phone = "+2348012345683"
 		// Set birth date to something recent (e.g., 10 years ago)
@@ -185,7 +189,7 @@ func TestCleanUsername(t *testing.T) {
 		expected string
 		wantErr  bool
 	}{
-		{"valid username", "JohnDoe", "johnDoe", false},
+		{"valid username", "JohnDoe", "johndoe", false},
 		{"valid with dot", "john.doe", "john.doe", false},
 		{"valid with underscore", "john_doe", "john_doe", false},
 		{"valid alphanumeric", "j0hn123", "j0hn123", false},
@@ -197,7 +201,7 @@ func TestCleanUsername(t *testing.T) {
 		{"consecutive underscores", "john__doe", "", true},
 		{"mixed consecutive symbols", "john._doe", "", true},
 		{"invalid characters", "john@doe", "", true},
-		{"whitespace trim", "  johnDoe  ", "johnDoe", false},
+		{"whitespace trim", "  johnDoe  ", "johndoe", false},
 	}
 
 	for _, tt := range tests {
@@ -254,7 +258,7 @@ func TestCheckPhone(t *testing.T) {
 	defer app.Server.Shutdown(ctx)
 
 	q := queries.New(app.DB)
-	s := authservice.NewAuthService(q, app.RDB, &mockMessagingService{}, nil, "jwt_test_string", 15*time.Minute, 168*time.Hour)
+	s := authservice.NewAuthService(q, app.RDB, &mockMessagingService{}, nil, nil, "jwt_test_string", 15*time.Minute, 168*time.Hour)
 
 	phone := "+2348011111111"
 

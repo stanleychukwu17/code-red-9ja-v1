@@ -33,11 +33,14 @@ export const Route = createFileRoute("/_authenticated")({
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
+
+    console.log(user)
+
     if (res.status != "success") {
       throw redirect({ to: APP_URL.auth.login });
     }
 
-    if (user?.role != "admin") {
+    if (!user?.roles?.includes("admin") && !user?.roles?.includes("super_admin")) {
       throw new Error("You do not have access to this platform.");
     }
   },

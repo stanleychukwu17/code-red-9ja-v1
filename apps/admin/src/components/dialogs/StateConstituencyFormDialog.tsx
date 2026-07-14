@@ -241,11 +241,7 @@ export function StateConstituencyFormDialog({
                 }}
                 children={(field) => (
                   <SelectSenatorialDistrict
-                    selectedId={
-                      field.state.value !== undefined
-                        ? String(field.state.value)
-                        : undefined
-                    }
+                    selectedId={field.state.value}
                     stateId={selectedStateId}
                     disabled={!selectedStateId}
                     update={(item) => {
@@ -271,11 +267,7 @@ export function StateConstituencyFormDialog({
                 }}
                 children={(field) => (
                   <SelectFederalConstituency
-                    selectedId={
-                      field.state.value !== undefined
-                        ? String(field.state.value)
-                        : undefined
-                    }
+                    selectedId={field.state.value}
                     stateId={selectedStateId}
                     senatorialDistrictId={selectedDistrictId}
                     disabled={!selectedStateId}

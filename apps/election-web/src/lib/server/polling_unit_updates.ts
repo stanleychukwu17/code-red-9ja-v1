@@ -1,22 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
-import axios from "axios";
+import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
-
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
 
 export const createPollingUnitUpdate = createServerFn({ method: "POST" })
   .inputValidator(
@@ -33,17 +17,15 @@ export const createPollingUnitUpdate = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const headers = getAuthHeaders();
-      const res = await axios.post(
-        API_URL.pollingUnitUpdates,
-        data,
-        { headers },
-      );
-      return res.data;
+      const response = await apiFetch(API_URL.pollingUnitUpdates, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      return await response.json();
     } catch (error: any) {
-      if (error.response?.data) {
-        return error.response.data;
-      }
       return { success: false, message: error.message };
     }
   });
