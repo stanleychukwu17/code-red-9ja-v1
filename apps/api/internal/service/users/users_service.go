@@ -68,7 +68,30 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 }
 
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
-	return s.queries.GetUserRoles(ctx, userID)
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+
+	// first redis to see if the roles have been cached
+	rolesJSON, err := s.rdb.Get(ctx, userRolesKey).Result()
+	if err == nil {
+		var roles []queries.GetUserRolesRow
+		if err := json.Unmarshal([]byte(rolesJSON), &roles); err == nil {
+			return roles, nil
+		}
+	}
+
+	// Fetch from DB if not in Redis
+	roles, err := s.queries.GetUserRoles(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache it in Redis
+	rolesJSONBytes, err := json.Marshal(roles)
+	if err == nil {
+		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, 5*365*24*time.Hour) // expires in 5years
+	}
+
+	return roles, nil
 }
 
 func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error {
@@ -76,12 +99,21 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code st
 	if err != nil {
 		return err
 	}
-	return s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
+	err = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
 		UserID:            userID,
 		RoleID:            role.ID,
 		RoleCode:          role.Code,
 		WhoAssignedUserID: whoAssigned,
 	})
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the cache
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+	s.rdb.Del(ctx, userRolesKey)
+	
+	return nil
 }
 
 func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error {

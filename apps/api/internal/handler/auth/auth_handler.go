@@ -8,6 +8,7 @@ import (
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -798,6 +799,11 @@ func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 // @Router /auth/seed [post]
 // SeedUsers handles batch registration of testing users from seed data
 func (h *Handler) SeedUsers(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("ENV") == "production" {
+		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
+		return
+	}
+
 	var req []auth.SeedUserRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())

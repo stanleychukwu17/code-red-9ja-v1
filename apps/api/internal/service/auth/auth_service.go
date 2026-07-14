@@ -32,6 +32,8 @@ type MessagingService interface {
 type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
+	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
 }
 
 type PartyService interface {
@@ -169,7 +171,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 
 	// Fetch the user's assigned roles from the database
-	userRoles, err := s.GetUserRoles(ctx, user.ID)
+	userRoles, err := s.usersService.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		return LoginResult{}, errors.New("failed to fetch user roles")
 	}
@@ -365,7 +367,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	if user.PartyID.Valid {
 		userPartyID = user.PartyID.Int64
 	}
-	userRoles, _ := s.queries.GetUserRoles(ctx, user.ID)
+	userRoles, _ := s.usersService.GetUserRoles(ctx, user.ID)
 	var userRoleCodes []string
 	for _, ur := range userRoles {
 		userRoleCodes = append(userRoleCodes, ur.Code)
@@ -632,14 +634,18 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, errors.New("onboarding details not found")
 	}
 
+	// Parse the onboarding data retrieved from Redis
 	var onboardingDts RedisOnboardingData
 	if err := json.Unmarshal([]byte(onboardingJSON), &onboardingDts); err != nil {
 		return RegisterResult{}, errors.New("invalid onboarding data format")
 	}
 
+	// Verify the provided onboarding ID matches the data in Redis
 	if onboardingDts.ID != onboardingID {
 		return RegisterResult{}, errors.New("invalid onboarding details")
 	}
+
+	// Ensure the user hasn't already completed the onboarding process
 	if onboardingDts.Completed == "yes" {
 		return RegisterResult{}, errors.New("user has already been onboarded")
 	}
@@ -1256,15 +1262,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		return RegisterResult{}, err
 	}
 	if role != "" {
-		dbRole, rErr := s.queries.GetRoleByCode(ctx, role)
-		if rErr == nil {
-			_ = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
-				UserID:            userID,
-				RoleID:            dbRole.ID,
-				RoleCode:          dbRole.Code,
-				WhoAssignedUserID: 0,
-			})
-		}
+		_ = s.usersService.AssignUserRole(ctx, userID, role, 0)
 	}
 
 	// generate a fake_id using the user_id and update the user fake_id
@@ -1324,60 +1322,10 @@ func (s *AuthService) MakeUserSuperAdmin(ctx context.Context, username string) e
 	return s.CheckAndAssignRole(ctx, user.ID, "super_admin", 0)
 }
 
-// GetUserRoles fetches user roles from Redis cache, falling back to DB and caching if missed.
-func (s *AuthService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
-	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
-
-	// first redis to see if the roles have been cached
-	rolesJSON, err := s.rdb.Get(ctx, userRolesKey).Result()
-	if err == nil {
-		var roles []queries.GetUserRolesRow
-		if err := json.Unmarshal([]byte(rolesJSON), &roles); err == nil {
-			return roles, nil
-		}
-	}
-
-	// Fetch from DB if not in Redis
-	roles, err := s.queries.GetUserRoles(ctx, userID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Cache it in Redis
-	rolesJSONBytes, err := json.Marshal(roles)
-	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, 5*365*24*time.Hour) // expires in 5years
-	}
-
-	return roles, nil
-}
-
-// UpdateCachedUserRoles refreshes the cached user roles in Redis.
-// This function should be called anytime a user's roles changes
-func (s *AuthService) UpdateCachedUserRoles(ctx context.Context, userID int64) error {
-	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
-
-	// Fetch fresh roles from DB
-	roles, err := s.queries.GetUserRoles(ctx, userID)
-	if err != nil {
-		// If the roles can't be fetched, remove the cache anyway to avoid stale data
-		s.rdb.Del(ctx, userRolesKey)
-		return fmt.Errorf("user roles not found for cache update: %w", err)
-	}
-
-	// Marshal and update Redis
-	rolesJSON, err := json.Marshal(roles)
-	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSON, 5*365*24*time.Hour) // expires in 5years
-	}
-
-	return err
-}
-
 // CheckAndAssignRole checks if a user already has a specific role, and if not, assigns it.
 func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error {
 	// 1. Get user roles (with cache check)
-	roles, err := s.GetUserRoles(ctx, userID)
+	roles, err := s.usersService.GetUserRoles(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch user roles: %w", err)
 	}
@@ -1390,25 +1338,12 @@ func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, role
 		}
 	}
 
-	// 3. Get the role ID from db
-	role, err := s.queries.GetRoleByCode(ctx, roleCode)
-	if err != nil {
-		return fmt.Errorf("failed to fetch role %s: %w", roleCode, err)
-	}
-
-	// 4. Assign the role in DB
-	err = s.queries.AssignUserRole(ctx, queries.AssignUserRoleParams{
-		UserID:            userID,
-		RoleID:            role.ID,
-		RoleCode:          role.Code,
-		WhoAssignedUserID: whoAssigned,
-	})
+	// 3. Assign the role in DB (UsersService handles caching)
+	err = s.usersService.AssignUserRole(ctx, userID, roleCode, whoAssigned)
 	if err != nil {
 		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
 	}
 
-	// 5. Update cached roles
-	_ = s.UpdateCachedUserRoles(ctx, userID)
 	return nil
 }
 
