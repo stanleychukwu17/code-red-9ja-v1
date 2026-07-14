@@ -64,6 +64,20 @@ func (u *Utils) RespondSuccess(w http.ResponseWriter, statusCode int, message st
 	u.RespondJSON(w, statusCode, res)
 }
 
+// SuccessResponse represents a generic success response structure for API documentation.
+type SuccessResponse struct {
+	Success bool                   `json:"success" example:"true"`
+	Message string                 `json:"message" example:"Operation successful"`
+	Data    map[string]interface{} `json:"data,omitempty"`
+}
+
+// ErrorResponse represents a generic error response structure for API documentation.
+type ErrorResponse struct {
+	Success bool        `json:"success" example:"false"`
+	Message string      `json:"message" example:"Error message description"`
+	Data    interface{} `json:"data"`
+}
+
 type PostgresTestConfig struct {
 	Host string
 	Port string
