@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 
@@ -34,17 +35,7 @@ func (s *UsersService) CreateUserWallet(ctx context.Context, user queries.User) 
 	}
 
 	name := fmt.Sprintf("User %d", user.ID)
-	fullName := ""
-	if user.FirstName.Valid && user.FirstName.String != "" {
-		fullName = user.FirstName.String
-	}
-	if user.LastName.Valid && user.LastName.String != "" {
-		if fullName != "" {
-			fullName += " "
-		}
-		fullName += user.LastName.String
-	}
-	if fullName != "" {
+	if fullName := strings.TrimSpace(fmt.Sprintf("%s %s", user.FirstName.String, user.LastName.String)); fullName != "" {
 		name = fullName
 	}
 
