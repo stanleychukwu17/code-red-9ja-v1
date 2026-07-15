@@ -28,7 +28,7 @@ INSERT INTO party_applications (
 
 type CreateApplicationParams struct {
 	UserID          int64       `json:"user_id"`
-	PartyID         int64       `json:"party_id"`
+	PartyID         int16       `json:"party_id"`
 	ElectionGroupID int64       `json:"election_group_id"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
@@ -192,7 +192,6 @@ SELECT
   u.phone,
   u.username,
   u.avatar,
-  u.vin,
   u.voters_card_image,
   u.current_country,
   u.current_state,
@@ -202,10 +201,13 @@ SELECT
   u.bank_code,
   u.whatsapp_phone,
   u.data_phone,
-  u.educational_status,
-  u.highest_degree,
-  u.graduation_year,
-  u.school_name,
+  up.educational_status,
+  up.highest_degree,
+  up.graduation_year,
+  up.school_name,
+  up.religion,
+  up.marital_status,
+  up.education_level,
   u.current_ward,
   eg.name AS election_group_name,
   eg.election_date,
@@ -229,6 +231,7 @@ SELECT
   )::integer AS agents_count
 FROM party_applications pa
 JOIN users u ON pa.user_id = u.id
+LEFT JOIN user_profiles up ON u.id = up.user_id
 JOIN election_groups eg ON pa.election_group_id = eg.id
 JOIN parties p ON pa.party_id = p.id
 LEFT JOIN c_states st ON u.current_state = st.id
@@ -257,7 +260,7 @@ type ListApplicationsParams struct {
 type ListApplicationsRow struct {
 	ID                int64              `json:"id"`
 	UserID            int64              `json:"user_id"`
-	PartyID           int64              `json:"party_id"`
+	PartyID           int16              `json:"party_id"`
 	ElectionGroupID   int64              `json:"election_group_id"`
 	PollingUnitID     pgtype.Int4        `json:"polling_unit_id"`
 	Status            string             `json:"status"`
@@ -270,7 +273,6 @@ type ListApplicationsRow struct {
 	Phone             pgtype.Text        `json:"phone"`
 	Username          pgtype.Text        `json:"username"`
 	Avatar            pgtype.Text        `json:"avatar"`
-	Vin               pgtype.Text        `json:"vin"`
 	VotersCardImage   pgtype.Text        `json:"voters_card_image"`
 	CurrentCountry    int16              `json:"current_country"`
 	CurrentState      int16              `json:"current_state"`
@@ -284,6 +286,9 @@ type ListApplicationsRow struct {
 	HighestDegree     pgtype.Text        `json:"highest_degree"`
 	GraduationYear    pgtype.Text        `json:"graduation_year"`
 	SchoolName        pgtype.Text        `json:"school_name"`
+	Religion          pgtype.Text        `json:"religion"`
+	MaritalStatus     pgtype.Text        `json:"marital_status"`
+	EducationLevel    pgtype.Text        `json:"education_level"`
 	CurrentWard       pgtype.Int4        `json:"current_ward"`
 	ElectionGroupName string             `json:"election_group_name"`
 	ElectionDate      pgtype.Date        `json:"election_date"`
@@ -330,7 +335,6 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.Phone,
 			&i.Username,
 			&i.Avatar,
-			&i.Vin,
 			&i.VotersCardImage,
 			&i.CurrentCountry,
 			&i.CurrentState,
@@ -344,6 +348,9 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.HighestDegree,
 			&i.GraduationYear,
 			&i.SchoolName,
+			&i.Religion,
+			&i.MaritalStatus,
+			&i.EducationLevel,
 			&i.CurrentWard,
 			&i.ElectionGroupName,
 			&i.ElectionDate,
@@ -460,35 +467,29 @@ UPDATE users
 SET
   party_id = $2,
   avatar = COALESCE($3, avatar),
-  vin = $4,
-  voters_card_image = $5,
-  current_country = $6,
-  current_state = $7,
-  current_lga = $8,
-  current_city = $9,
-  bank_account_number = $10,
-  bank_code = $11,
-  whatsapp_phone = $12,
-  data_phone = $13,
-  educational_status = $14,
-  highest_degree = $15,
-  graduation_year = $16,
-  school_name = $17,
-  current_ward = $18,
-  phone = COALESCE(NULLIF($19::varchar, ''), phone),
-  phone_verified = CASE WHEN NULLIF($19::varchar, '') IS NOT NULL AND NULLIF($19::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
-  polling_unit_id = $20,
-  address = COALESCE(NULLIF($21::varchar, ''), address),
+  voters_card_image = $4,
+  current_country = $5,
+  current_state = $6,
+  current_lga = $7,
+  current_city = $8,
+  bank_account_number = $9,
+  bank_code = $10,
+  whatsapp_phone = $11,
+  data_phone = $12,
+  current_ward = $13,
+  phone = COALESCE(NULLIF($14::varchar, ''), phone),
+  phone_verified = CASE WHEN NULLIF($14::varchar, '') IS NOT NULL AND NULLIF($14::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
+  polling_unit_id = $15,
+  address = COALESCE(NULLIF($16::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
 	ID                int64       `json:"id"`
-	PartyID           pgtype.Int8 `json:"party_id"`
+	PartyID           pgtype.Int2 `json:"party_id"`
 	Avatar            pgtype.Text `json:"avatar"`
-	Vin               pgtype.Text `json:"vin"`
 	VotersCardImage   pgtype.Text `json:"voters_card_image"`
 	CurrentCountry    int16       `json:"current_country"`
 	CurrentState      int16       `json:"current_state"`
@@ -498,13 +499,9 @@ type UpdateUserAgentDetailsParams struct {
 	BankCode          pgtype.Text `json:"bank_code"`
 	WhatsappPhone     pgtype.Text `json:"whatsapp_phone"`
 	DataPhone         pgtype.Text `json:"data_phone"`
-	EducationalStatus pgtype.Text `json:"educational_status"`
-	HighestDegree     pgtype.Text `json:"highest_degree"`
-	GraduationYear    pgtype.Text `json:"graduation_year"`
-	SchoolName        pgtype.Text `json:"school_name"`
 	CurrentWard       pgtype.Int4 `json:"current_ward"`
 	Phone             string      `json:"phone"`
-	PollingUnitID     pgtype.Int8 `json:"polling_unit_id"`
+	PollingUnitID     pgtype.Int4 `json:"polling_unit_id"`
 	Address           string      `json:"address"`
 }
 
@@ -513,7 +510,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.ID,
 		arg.PartyID,
 		arg.Avatar,
-		arg.Vin,
 		arg.VotersCardImage,
 		arg.CurrentCountry,
 		arg.CurrentState,
@@ -523,10 +519,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.BankCode,
 		arg.WhatsappPhone,
 		arg.DataPhone,
-		arg.EducationalStatus,
-		arg.HighestDegree,
-		arg.GraduationYear,
-		arg.SchoolName,
 		arg.CurrentWard,
 		arg.Phone,
 		arg.PollingUnitID,
@@ -548,29 +540,20 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.DateOfBirth,
 		&i.WhatsappPhone,
 		&i.DataPhone,
-		&i.EducationalStatus,
-		&i.HighestDegree,
-		&i.GraduationYear,
-		&i.SchoolName,
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentLga,
 		&i.CurrentWard,
 		&i.CurrentCity,
-		&i.Address,
 		&i.StateOfOrigin,
-		&i.Vin,
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
 		&i.BankCode,
-		&i.NinVerified,
-		&i.PhoneVerified,
-		&i.EmailVerified,
-		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,
 		&i.ReferredByCode,
+		&i.AccountStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -584,7 +567,7 @@ WITH inserted AS (
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
@@ -605,29 +588,20 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User
 		&i.DateOfBirth,
 		&i.WhatsappPhone,
 		&i.DataPhone,
-		&i.EducationalStatus,
-		&i.HighestDegree,
-		&i.GraduationYear,
-		&i.SchoolName,
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentLga,
 		&i.CurrentWard,
 		&i.CurrentCity,
-		&i.Address,
 		&i.StateOfOrigin,
-		&i.Vin,
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
 		&i.BankCode,
-		&i.NinVerified,
-		&i.PhoneVerified,
-		&i.EmailVerified,
-		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,
 		&i.ReferredByCode,
+		&i.AccountStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

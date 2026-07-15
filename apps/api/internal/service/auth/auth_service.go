@@ -34,10 +34,11 @@ type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
+	GetUserProfile(ctx context.Context, userID int64) (queries.UserProfile, error)
 }
 
 type PartyService interface {
-	GetPartyBasicInfo(ctx context.Context, partyID int64) *queries.GetPartyBasicInfoRow
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow
 }
 
 type AuthService struct {
@@ -87,8 +88,8 @@ type LoginUser struct {
 	Phone             string                        `json:"phone"`
 	Roles             []string                      `json:"roles"`
 	AccountStatus     string                        `json:"account_status"`
-	PartyID           int64                         `json:"party_id,omitempty"`
-	PollingUnitID     int64                         `json:"polling_unit_id,omitempty"`
+	PartyID           int16                         `json:"party_id,omitempty"`
+	PollingUnitID     int32                         `json:"polling_unit_id,omitempty"`
 	CurrentCountry    int16                         `json:"current_country"`
 	CurrentState      int16                         `json:"current_state"`
 	CurrentLga        int32                         `json:"current_lga"`
@@ -104,7 +105,9 @@ type LoginUser struct {
 	BankAccountNumber string                        `json:"bank_account_number"`
 	BankCode          string                        `json:"bank_code"`
 	VotersCardImage   string                        `json:"voters_card_image"`
-	Vin               string                        `json:"vin"`
+	Religion          string                        `json:"religion"`
+	MaritalStatus     string                        `json:"marital_status"`
+	EducationLevel    string                        `json:"education_level"`
 	Party             *queries.GetPartyBasicInfoRow `json:"party,omitempty"`
 }
 type LoginResult struct {
@@ -230,9 +233,9 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 	jsonSessionData, _ := json.Marshal(sessionData)
 
-	var partyID int64
+	var partyID int16
 	if user.PartyID.Valid {
-		partyID = user.PartyID.Int64
+		partyID = user.PartyID.Int16
 	}
 
 	// Generate Access Token and Refresh Token
@@ -276,7 +279,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
 	}
 
-	return LoginResult{
+	loginResult := LoginResult{
 		AccessToken:  accessToken,
 		RefreshToken: randStr.RandomString,
 		User: LoginUser{
@@ -293,26 +296,32 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			Roles:             userRoleCodes,
 			AccountStatus:     user.AccountStatus.String,
 			PartyID:           partyID,
-			PollingUnitID:     user.PollingUnitID.Int64,
+			PollingUnitID:     user.PollingUnitID.Int32,
 			CurrentCountry:    user.CurrentCountry,
 			CurrentState:      user.CurrentState,
 			CurrentLga:        user.CurrentLga.Int32,
 			CurrentWard:       user.CurrentWard.Int32,
 			CurrentCity:       user.CurrentCity.Int32,
-			Address:           user.Address.String,
 			WhatsappPhone:     user.WhatsappPhone.String,
 			DataPhone:         user.DataPhone.String,
-			EducationalStatus: user.EducationalStatus.String,
-			HighestDegree:     user.HighestDegree.String,
-			GraduationYear:    user.GraduationYear.String,
-			SchoolName:        user.SchoolName.String,
 			BankAccountNumber: user.BankAccountNumber.String,
 			BankCode:          user.BankCode.String,
 			VotersCardImage:   user.VotersCardImage.String,
-			Vin:               user.Vin.String,
 			Party:             partyObj,
 		},
-	}, nil
+	}
+
+	profile, _ := s.usersService.GetUserProfile(ctx, user.ID)
+	loginResult.User.EducationalStatus = profile.EducationalStatus.String
+	loginResult.User.HighestDegree = profile.HighestDegree.String
+	loginResult.User.GraduationYear = profile.GraduationYear.String
+	loginResult.User.SchoolName = profile.SchoolName.String
+	loginResult.User.Religion = profile.Religion.String
+	loginResult.User.MaritalStatus = profile.MaritalStatus.String
+	loginResult.User.EducationLevel = profile.EducationLevel.String
+	loginResult.User.Address = profile.Address.String
+
+	return loginResult, nil
 }
 
 type RefreshResult struct {
@@ -361,11 +370,11 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	username := user.Username.String
 	var partyObj *queries.GetPartyBasicInfoRow
 	if user.PartyID.Valid {
-		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int64)
+		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
 	}
-	var userPartyID int64
+	var userPartyID int16
 	if user.PartyID.Valid {
-		userPartyID = user.PartyID.Int64
+		userPartyID = user.PartyID.Int16
 	}
 	userRoles, _ := s.usersService.GetUserRoles(ctx, user.ID)
 	var userRoleCodes []string
@@ -386,25 +395,29 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Roles:             userRoleCodes,
 		AccountStatus:     user.AccountStatus.String,
 		PartyID:           userPartyID,
-		PollingUnitID:     user.PollingUnitID.Int64,
+		PollingUnitID:     user.PollingUnitID.Int32,
 		CurrentCountry:    user.CurrentCountry,
 		CurrentState:      user.CurrentState,
 		CurrentLga:        user.CurrentLga.Int32,
 		CurrentWard:       user.CurrentWard.Int32,
 		CurrentCity:       user.CurrentCity.Int32,
-		Address:           user.Address.String,
 		WhatsappPhone:     user.WhatsappPhone.String,
 		DataPhone:         user.DataPhone.String,
-		EducationalStatus: user.EducationalStatus.String,
-		HighestDegree:     user.HighestDegree.String,
-		GraduationYear:    user.GraduationYear.String,
-		SchoolName:        user.SchoolName.String,
 		BankAccountNumber: user.BankAccountNumber.String,
 		BankCode:          user.BankCode.String,
 		VotersCardImage:   user.VotersCardImage.String,
-		Vin:               user.Vin.String,
 		Party:             partyObj,
 	}
+
+	profile, _ := s.usersService.GetUserProfile(ctx, user.ID)
+	userDetails.EducationalStatus = profile.EducationalStatus.String
+	userDetails.HighestDegree = profile.HighestDegree.String
+	userDetails.GraduationYear = profile.GraduationYear.String
+	userDetails.SchoolName = profile.SchoolName.String
+	userDetails.Religion = profile.Religion.String
+	userDetails.MaritalStatus = profile.MaritalStatus.String
+	userDetails.EducationLevel = profile.EducationLevel.String
+	userDetails.Address = profile.Address.String
 
 	// Parse the RFC3339 string back into a time.Time
 	parsedTime, err := time.Parse(time.RFC3339, timeAdded)
@@ -459,9 +472,9 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	//convert to json
 	jsonSessionData, _ := json.Marshal(sessionData)
 
-	var partyID int64
+	var partyID int16
 	if user.PartyID.Valid {
-		partyID = user.PartyID.Int64
+		partyID = user.PartyID.Int16
 	}
 
 	// Generate a new Access Token
@@ -887,13 +900,16 @@ func (s *AuthService) CheckCountry(ctx context.Context, country_id int16) (queri
 	if err == nil {
 		var country_dts queries.GetCountryByIDRow
 		json.Unmarshal([]byte(country_data), &country_dts)
-		return country_dts, nil
+		if country_dts.ID > 0 {
+			return country_dts, nil
+		}
 	}
 
 	// get country details from db
 	country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
 	if country_dts.ID > 0 {
-		s.rdb.Set(ctx, redisCountryKey, country_data, 0)
+		jsonBytes, _ := json.Marshal(country_dts)
+		s.rdb.Set(ctx, redisCountryKey, jsonBytes, 0)
 		return country_dts, nil
 	}
 
@@ -1252,7 +1268,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: currentCity, Valid: currentCity != 0},
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
-		PartyID:        pgtype.Int8{Int64: partyID, Valid: partyID != 0},
+		PartyID:        pgtype.Int2{Int16: int16(partyID), Valid: partyID != 0},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
 	}
 
@@ -1360,12 +1376,12 @@ type SeedUserRequest struct {
 	MiddleName        *string `json:"middle_name"`
 	Gender            string  `json:"gender"`
 	DateOfBirth       string  `json:"date_of_birth"`
+	Religion          string  `json:"religion"`
 	CurrentCountry    int16   `json:"current_country"`
 	CurrentState      int16   `json:"current_state"`
 	CurrentLga        *int32  `json:"current_lga"`
 	CurrentCity       *int32  `json:"current_city"`
 	StateOfOrigin     *int16  `json:"state_of_origin"`
-	Vin               *string `json:"vin"`
 	VotersCardImage   *string `json:"voters_card_image"`
 	BankAccountNumber *string `json:"bank_account_number"`
 	BankCode          *string `json:"bank_code"`
@@ -1375,6 +1391,14 @@ type SeedUserRequest struct {
 	RoleLevel         string  `json:"role_level"`
 	AccountStatus     string  `json:"account_status"`
 	PartyID           *int64  `json:"party_id"`
+	EducationalStatus string  `json:"educational_status"`
+	HighestDegree     string  `json:"highest_degree"`
+	GraduationYear    string  `json:"graduation_year"`
+	SchoolName        string  `json:"school_name"`
+	MaritalStatus     string  `json:"marital_status"`
+	EducationLevel    string  `json:"education_level"`
+	HomeAddress       string  `json:"home_address"`
+	OccupationID      *int16  `json:"occupation_id"`
 }
 
 func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([]int64, error) {
@@ -1386,16 +1410,16 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			return nil, err
 		}
 
-		dob, err := time.Parse("2006-01-02", u.DateOfBirth)
+		dob, err := time.Parse(time.RFC3339, u.DateOfBirth)
 		if err != nil {
 			return nil, fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
 		}
 
 		// Prepare params
-		var emailVal, avatarVal, phoneVal, usernameVal, middleNameVal, genderVal, vinVal, votersCardVal, bankNoVal, bankCodeVal pgtype.Text
+		var emailVal, avatarVal, phoneVal, usernameVal, middleNameVal, genderVal, votersCardVal, bankNoVal, bankCodeVal pgtype.Text
 		var currentLgaVal, currentCityVal pgtype.Int4
 		var stateOfOriginVal pgtype.Int2
-		var partyIDVal pgtype.Int8
+		var partyIDVal pgtype.Int2
 
 		if u.Email != "" {
 			emailVal = pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
@@ -1424,9 +1448,11 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 		if u.StateOfOrigin != nil && *u.StateOfOrigin != 0 {
 			stateOfOriginVal = pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
 		}
-		if u.Vin != nil && *u.Vin != "" {
-			vinVal = pgtype.Text{String: *u.Vin, Valid: true}
+		var occupationIDVal pgtype.Int2
+		if u.OccupationID != nil && *u.OccupationID != 0 {
+			occupationIDVal = pgtype.Int2{Int16: *u.OccupationID, Valid: true}
 		}
+
 		if u.VotersCardImage != nil && *u.VotersCardImage != "" {
 			votersCardVal = pgtype.Text{String: *u.VotersCardImage, Valid: true}
 		}
@@ -1437,7 +1463,7 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			bankCodeVal = pgtype.Text{String: *u.BankCode, Valid: true}
 		}
 		if u.PartyID != nil && *u.PartyID != 0 {
-			partyIDVal = pgtype.Int8{Int64: *u.PartyID, Valid: true}
+			partyIDVal = pgtype.Int2{Int16: int16(*u.PartyID), Valid: true}
 		}
 
 		params := queries.SeedUserParams{
@@ -1457,12 +1483,9 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			CurrentLga:        currentLgaVal,
 			CurrentCity:       currentCityVal,
 			StateOfOrigin:     stateOfOriginVal,
-			Vin:               vinVal,
 			VotersCardImage:   votersCardVal,
 			BankAccountNumber: bankNoVal,
 			BankCode:          bankCodeVal,
-			NinVerified:       pgtype.Text{String: u.NinVerified, Valid: u.NinVerified != ""},
-			PhoneVerified:     pgtype.Text{String: u.PhoneVerified, Valid: u.PhoneVerified != ""},
 			AccountStatus:     pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
 			PartyID:           partyIDVal,
 		}
@@ -1470,6 +1493,33 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 		id, err := s.queries.SeedUser(ctx, params)
 		if err != nil {
 			return nil, fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+		}
+
+		_, err = s.queries.CreateUserProfile(ctx, queries.CreateUserProfileParams{
+			UserID:            id,
+			OccupationID:      occupationIDVal,
+			EducationalStatus: pgtype.Text{String: u.EducationalStatus, Valid: u.EducationalStatus != ""},
+			HighestDegree:     pgtype.Text{String: u.HighestDegree, Valid: u.HighestDegree != ""},
+			GraduationYear:    pgtype.Text{String: u.GraduationYear, Valid: u.GraduationYear != ""},
+			SchoolName:        pgtype.Text{String: u.SchoolName, Valid: u.SchoolName != ""},
+			Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
+			MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
+			EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
+			Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
+		}
+
+		_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
+			UserID:             id,
+			NinVerified:        pgtype.Bool{Bool: u.NinVerified == "true", Valid: true},
+			PhoneVerified:      pgtype.Bool{Bool: u.PhoneVerified == "true", Valid: true},
+			EmailVerified:      pgtype.Bool{Bool: false, Valid: true}, // Default since not in struct
+			VotersCardVerified: pgtype.Bool{Bool: false, Valid: true}, // Default since not in struct
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
 		}
 
 		// Save details to Redis cache

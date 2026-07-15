@@ -1,7 +1,7 @@
 -- +goose Up
 CREATE TABLE party_election_groups (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  party_id BIGINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
+  party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   polling_agents_coverage JSONB NOT NULL DEFAULT '{}'::jsonb,
   elections_contesting INT NOT NULL DEFAULT 0,

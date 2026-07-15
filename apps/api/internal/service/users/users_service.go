@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"errors"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
@@ -142,6 +144,10 @@ func (s *UsersService) ListUsers(ctx context.Context) ([]queries.User, error) {
 	return s.queries.ListUsers(ctx)
 }
 
+func (s *UsersService) GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error) {
+	return s.queries.GetUserVerification(ctx, userID)
+}
+
 func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) error {
 	err := s.queries.DeleteUser(ctx, id)
 	if err != nil {
@@ -154,7 +160,7 @@ func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) e
 	return nil
 }
 
-func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int64, email string) error {
+func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int16, email string) error {
 	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
 		ID:             id,
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
@@ -165,7 +171,7 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
-		PartyID:        pgtype.Int8{Int64: partyID, Valid: partyID != 0},
+		PartyID:        pgtype.Int2{Int16: int16(partyID), Valid: partyID != 0},
 		Email:          pgtype.Text{String: email, Valid: email != ""},
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
 	})
@@ -176,5 +182,56 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 	// Invalidate the cache
 	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
 	s.rdb.Del(ctx, userInfoKey)
+	return nil
+}
+
+func (s *UsersService) GetUserProfile(ctx context.Context, userID int64) (queries.UserProfile, error) {
+	// Check Redis
+	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserProfile, userID)
+	profileJSON, err := s.rdb.Get(ctx, userProfileKey).Result()
+	if err == nil {
+		var profile queries.UserProfile
+		if err := json.Unmarshal([]byte(profileJSON), &profile); err == nil {
+			return profile, nil
+		}
+	}
+
+	// Fetch from DB if not in Redis
+	profile, err := s.queries.GetUserProfile(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// Return empty profile for new users instead of failing
+			return queries.UserProfile{UserID: userID}, nil
+		}
+		return queries.UserProfile{}, fmt.Errorf("user profile not found: %w", err)
+	}
+
+	// Cache it in Redis
+	profileJSONBytes, err := json.Marshal(profile)
+	if err == nil {
+		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, 5*365*24*time.Hour)
+	}
+
+	return profile, nil
+}
+
+func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel string) error {
+	err := s.queries.UpdateUserProfileDetails(ctx, queries.UpdateUserProfileDetailsParams{
+		UserID:            userID,
+		EducationalStatus: pgtype.Text{String: educationalStatus, Valid: educationalStatus != ""},
+		HighestDegree:     pgtype.Text{String: highestDegree, Valid: highestDegree != ""},
+		GraduationYear:    pgtype.Text{String: graduationYear, Valid: graduationYear != ""},
+		SchoolName:        pgtype.Text{String: schoolName, Valid: schoolName != ""},
+		Religion:          pgtype.Text{String: religion, Valid: religion != ""},
+		MaritalStatus:     pgtype.Text{String: maritalStatus, Valid: maritalStatus != ""},
+		EducationLevel:    pgtype.Text{String: educationLevel, Valid: educationLevel != ""},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Invalidate cache
+	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserProfile, userID)
+	s.rdb.Del(ctx, userProfileKey)
 	return nil
 }

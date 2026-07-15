@@ -70,7 +70,7 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		PollingUnitID:   req.PollingUnitID,
 		ElectionGroupID: req.ElectionGroupID,
 		AssignmentID:    req.AssignmentID,
-		PartyID:         req.PartyID,
+		PartyID:         func() *int16 { if req.PartyID == nil { return nil }; p := int16(*req.PartyID); return &p }(),
 		Message:         req.Message,
 		MediaUrls:       req.MediaUrls,
 		IsReport:        req.IsReport,
@@ -197,9 +197,9 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 	// Enforce role-based access
 	isPlatformAdmin := claims.HasRole("admin")
 	if !isPlatformAdmin {
-		if claims.PartyID > 0 {
+		if int64(claims.PartyID) > 0 {
 			// Force filter to user's party
-			params.PartyID = pgtype.Int8{Int64: claims.PartyID, Valid: true}
+			params.PartyID = pgtype.Int8{Int64: int64(claims.PartyID), Valid: true}
 		}
 	}
 

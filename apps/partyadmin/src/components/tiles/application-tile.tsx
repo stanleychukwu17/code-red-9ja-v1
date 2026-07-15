@@ -31,7 +31,6 @@ export type ApplicationType = {
   phone?: any;
   username?: any;
   avatar?: any;
-  vin?: any;
   voters_card_image?: any;
   current_country?: number;
   current_state?: number;
@@ -198,7 +197,7 @@ export function ApplicationTableTile({
   const partyLogo = getPgString(data.party_logo);
   const partyShortName = data.party_short_name || "NDC";
 
-  const voterId = data.voterId || getPgString(data.vin);
+  const voterId = data.voterId || "";
   const phone = getPgString(data.phone);
 
   let decisionLabel = data.decisionLabel || "Accept";

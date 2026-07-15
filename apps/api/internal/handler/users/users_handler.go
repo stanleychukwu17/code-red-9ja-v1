@@ -22,10 +22,12 @@ type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
+	GetUserProfile(ctx context.Context, userID int64) (queries.UserProfile, error)
+	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
 	ListUsers(ctx context.Context) ([]queries.User, error)
 	DeleteUser(ctx context.Context, id int64, fakeID int64) error
-	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int64, email string) error
+	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int16, email string) error
 
 	GetBanks(ctx context.Context) ([]monnifyclient.Bank, error)
 	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
@@ -125,8 +127,10 @@ type UserResponse struct {
 	CurrentLga        int32  `json:"current_lga"`
 	CurrentWard       int32  `json:"current_ward"`
 	StateOfOrigin     int16  `json:"state_of_origin"`
-	NinVerified       string `json:"nin_verified"`
-	PhoneVerified     string `json:"phone_verified"`
+	NinVerified       bool   `json:"nin_verified"`
+	PhoneVerified     bool   `json:"phone_verified"`
+	EmailVerified     bool   `json:"email_verified"`
+	VotersCardVerified bool  `json:"voters_card_verified"`
 	Role              string `json:"role"`
 	RoleLevel         string `json:"role_level"`
 	AccountStatus     string `json:"account_status"`
@@ -144,13 +148,18 @@ type UserResponse struct {
 	BankCode          string `json:"bank_code"`
 	VotersCardImage   string `json:"voters_card_image"`
 	Address           string `json:"address"`
+	Religion          string `json:"religion"`
+	MaritalStatus     string `json:"marital_status"`
+	EducationLevel    string `json:"education_level"`
 }
 
-func mapUserToResponse(u queries.User, role string, roleLevel string) UserResponse {
+func mapUserToResponse(u queries.User, p *queries.UserProfile, v *queries.UserVerification, role string, roleLevel string) UserResponse {
 	var email, avatar, phone, username, lastName, firstName, middleName, gender string
-	var dateOfBirth, ninVerified, phoneVerified, accountStatus string
+	var dateOfBirth, accountStatus string
+	var ninVerified, phoneVerified, emailVerified, votersCardVerified bool
 	var whatsappPhone, dataPhone, educationalStatus, highestDegree, graduationYear, schoolName string
 	var bankAccountNumber, bankCode, votersCardImage, address string
+	var religion, maritalStatus, educationLevel string
 	var partyID, pollingUnitID int64
 	var cityID, lgaID, wardID int32
 	var stateOfOrigin int16
@@ -182,17 +191,25 @@ func mapUserToResponse(u queries.User, role string, roleLevel string) UserRespon
 	if u.DateOfBirth.Valid {
 		dateOfBirth = u.DateOfBirth.Time.Format("2006-01-02")
 	}
-	if u.NinVerified.Valid {
-		ninVerified = u.NinVerified.String
-	}
-	if u.PhoneVerified.Valid {
-		phoneVerified = u.PhoneVerified.String
+	if v != nil {
+		if v.NinVerified.Valid {
+			ninVerified = v.NinVerified.Bool
+		}
+		if v.PhoneVerified.Valid {
+			phoneVerified = v.PhoneVerified.Bool
+		}
+		if v.EmailVerified.Valid {
+			emailVerified = v.EmailVerified.Bool
+		}
+		if v.VotersCardVerified.Valid {
+			votersCardVerified = v.VotersCardVerified.Bool
+		}
 	}
 	if u.AccountStatus.Valid {
 		accountStatus = u.AccountStatus.String
 	}
 	if u.PartyID.Valid {
-		partyID = u.PartyID.Int64
+		partyID = int64(u.PartyID.Int16)
 	}
 	if u.CurrentCity.Valid {
 		cityID = u.CurrentCity.Int32
@@ -201,7 +218,7 @@ func mapUserToResponse(u queries.User, role string, roleLevel string) UserRespon
 		stateOfOrigin = u.StateOfOrigin.Int16
 	}
 	if u.PollingUnitID.Valid {
-		pollingUnitID = u.PollingUnitID.Int64
+		pollingUnitID = int64(u.PollingUnitID.Int32)
 	}
 	if u.CurrentLga.Valid {
 		lgaID = u.CurrentLga.Int32
@@ -215,17 +232,31 @@ func mapUserToResponse(u queries.User, role string, roleLevel string) UserRespon
 	if u.DataPhone.Valid {
 		dataPhone = u.DataPhone.String
 	}
-	if u.EducationalStatus.Valid {
-		educationalStatus = u.EducationalStatus.String
-	}
-	if u.HighestDegree.Valid {
-		highestDegree = u.HighestDegree.String
-	}
-	if u.GraduationYear.Valid {
-		graduationYear = u.GraduationYear.String
-	}
-	if u.SchoolName.Valid {
-		schoolName = u.SchoolName.String
+	if p != nil {
+		if p.EducationalStatus.Valid {
+			educationalStatus = p.EducationalStatus.String
+		}
+		if p.HighestDegree.Valid {
+			highestDegree = p.HighestDegree.String
+		}
+		if p.GraduationYear.Valid {
+			graduationYear = p.GraduationYear.String
+		}
+		if p.SchoolName.Valid {
+			schoolName = p.SchoolName.String
+		}
+		if p.Religion.Valid {
+			religion = p.Religion.String
+		}
+		if p.MaritalStatus.Valid {
+			maritalStatus = p.MaritalStatus.String
+		}
+		if p.EducationLevel.Valid {
+			educationLevel = p.EducationLevel.String
+		}
+		if p.Address.Valid {
+			address = p.Address.String
+		}
 	}
 	if u.BankAccountNumber.Valid {
 		bankAccountNumber = u.BankAccountNumber.String
@@ -235,9 +266,6 @@ func mapUserToResponse(u queries.User, role string, roleLevel string) UserRespon
 	}
 	if u.VotersCardImage.Valid {
 		votersCardImage = u.VotersCardImage.String
-	}
-	if u.Address.Valid {
-		address = u.Address.String
 	}
 
 	return UserResponse{
@@ -260,6 +288,8 @@ func mapUserToResponse(u queries.User, role string, roleLevel string) UserRespon
 		StateOfOrigin:     stateOfOrigin,
 		NinVerified:       ninVerified,
 		PhoneVerified:     phoneVerified,
+		EmailVerified:     emailVerified,
+		VotersCardVerified: votersCardVerified,
 		Role:              role,
 		RoleLevel:         roleLevel,
 		AccountStatus:     accountStatus,
@@ -277,6 +307,9 @@ func mapUserToResponse(u queries.User, role string, roleLevel string) UserRespon
 		BankCode:          bankCode,
 		VotersCardImage:   votersCardImage,
 		Address:           address,
+		Religion:          religion,
+		MaritalStatus:     maritalStatus,
+		EducationLevel:    educationLevel,
 	}
 }
 
@@ -310,8 +343,11 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 		roleCode = uRoles[0].Code
 	}
 
+	profile, _ := h.usersService.GetUserProfile(r.Context(), user.ID)
+
+	verification, _ := h.usersService.GetUserVerification(r.Context(), user.ID)
 	h.utils.RespondSuccess(w, http.StatusOK, "User profile retrieved successfully", map[string]interface{}{
-		"user": mapUserToResponse(user, roleCode, ""),
+		"user": mapUserToResponse(user, &profile, &verification, roleCode, ""),
 	})
 }
 
@@ -448,7 +484,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if currentUser.PartyID.Valid {
-			partyID = currentUser.PartyID.Int64
+			partyID = int64(currentUser.PartyID.Int16)
 		} else {
 			// A party member user without a party assigned should see no users
 			partyID = -1
@@ -483,7 +519,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		if partyID == -1 {
 			continue
 		}
-		if partyID > 0 && (!u.PartyID.Valid || u.PartyID.Int64 != partyID) {
+		if partyID > 0 && (!u.PartyID.Valid || int64(u.PartyID.Int16) != partyID) {
 			continue
 		}
 		filteredUsers = append(filteredUsers, u)
@@ -524,7 +560,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		if len(uRoles) > 0 {
 			roleCode = uRoles[0].Code
 		}
-		responses[i] = mapUserToResponse(u, roleCode, "")
+		responses[i] = mapUserToResponse(u, nil, nil, roleCode, "")
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
@@ -589,7 +625,7 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Party admin can only delete users belonging to their own party
-		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {
+		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int16 != currUser.PartyID.Int16 {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only delete members of your own party")
 			return
 		}
@@ -671,13 +707,13 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Party admin can only edit users belonging to their own party
-		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int64 != currUser.PartyID.Int64 {
+		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int16 != currUser.PartyID.Int16 {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only edit members of your own party")
 			return
 		}
 
 		// Party admin cannot change a user's party to another party
-		if req.PartyID != currUser.PartyID.Int64 {
+		if req.PartyID != int64(currUser.PartyID.Int16) {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only assign members to your own party")
 			return
 		}
@@ -716,7 +752,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		req.CurrentState,
 		req.CurrentCity,
 		req.StateOfOrigin,
-		req.PartyID,
+		int16(req.PartyID),
 		req.Email,
 	)
 	if err == nil && req.Role != "" {

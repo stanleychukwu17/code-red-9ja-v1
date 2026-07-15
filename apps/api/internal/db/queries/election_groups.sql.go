@@ -173,7 +173,7 @@ type ListElectionGroupsWithPartyStatsRow struct {
 	ElectionsContesting   int32              `json:"elections_contesting"`
 }
 
-func (q *Queries) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int64) ([]ListElectionGroupsWithPartyStatsRow, error) {
+func (q *Queries) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]ListElectionGroupsWithPartyStatsRow, error) {
 	rows, err := q.db.Query(ctx, listElectionGroupsWithPartyStats, partyID)
 	if err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_co
 `
 
 type UpsertPartyElectionGroupCoverageParams struct {
-	PartyID         int64  `json:"party_id"`
+	PartyID         int16  `json:"party_id"`
 	ElectionGroupID int64  `json:"election_group_id"`
 	Column3         []byte `json:"column_3"`
 }
@@ -292,7 +292,7 @@ RETURNING id, party_id, election_group_id, polling_agents_coverage, elections_co
 `
 
 type UpsertPartyElectionGroupStatsParams struct {
-	PartyID             int64  `json:"party_id"`
+	PartyID             int16  `json:"party_id"`
 	ElectionGroupID     int64  `json:"election_group_id"`
 	Column3             []byte `json:"column_3"`
 	ElectionsContesting int32  `json:"elections_contesting"`

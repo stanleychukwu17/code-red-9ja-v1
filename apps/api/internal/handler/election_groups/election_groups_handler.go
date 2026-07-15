@@ -21,8 +21,8 @@ type ElectionGroupsService interface {
 	ListElectionGroups(ctx context.Context) ([]queries.ElectionGroup, error)
 	UpdateElectionGroup(ctx context.Context, id int64, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error)
 	DeleteElectionGroup(ctx context.Context, id int64) error
-	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int64) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
-	UpsertPartyElectionGroupStats(ctx context.Context, partyID, electionGroupID int64, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
+	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error)
+	UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int64, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error)
 	ListGroupElections(ctx context.Context, electionGroupID int64) ([]queries.ListElectionsDetailedByGroupIDRow, error)
 }
 
@@ -160,7 +160,7 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 
 	var responseGroups []ElectionGroupResponse
 	if partyID > 0 {
-		rows, err := h.service.ListElectionGroupsWithPartyStats(r.Context(), partyID)
+		rows, err := h.service.ListElectionGroupsWithPartyStats(r.Context(), int16(partyID))
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch election groups with party stats: "+err.Error())
 			return
@@ -415,7 +415,7 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), req.PartyID, electionGroupID, req.PollingAgentsCoverage, req.ElectionsContesting)
+	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), int16(req.PartyID), electionGroupID, req.PollingAgentsCoverage, req.ElectionsContesting)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to upsert party election group stats: "+err.Error())
 		return

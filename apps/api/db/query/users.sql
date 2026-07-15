@@ -102,10 +102,10 @@ WHERE id = $1;
 INSERT INTO users (
   fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
-  state_of_origin, vin, voters_card_image, bank_account_number, bank_code,
-  nin_verified, phone_verified, account_status, party_id
+  state_of_origin, voters_card_image, bank_account_number, bank_code,
+  account_status, party_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 RETURNING id;
 
 
@@ -131,5 +131,53 @@ WHERE user_id = $1 LIMIT 1;
 
 -- name: UpdateUserVotersCard :exec
 UPDATE users
-SET vin = $2, voters_card_image = $3, updated_at = NOW()
+SET voters_card_image = $2, updated_at = NOW()
 WHERE id = $1;
+
+-- name: GetUserProfile :one
+SELECT * FROM user_profiles
+WHERE user_id = $1 LIMIT 1;
+
+-- name: CreateUserProfile :one
+INSERT INTO user_profiles (
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING user_id;
+
+-- name: UpdateUserProfileDetails :exec
+INSERT INTO user_profiles (
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (user_id) DO UPDATE
+SET occupation_id = EXCLUDED.occupation_id,
+    educational_status = EXCLUDED.educational_status,
+    highest_degree = EXCLUDED.highest_degree,
+    graduation_year = EXCLUDED.graduation_year,
+    school_name = EXCLUDED.school_name,
+    religion = EXCLUDED.religion,
+    marital_status = EXCLUDED.marital_status,
+    education_level = EXCLUDED.education_level,
+    address = EXCLUDED.address,
+    updated_at = NOW();
+
+-- name: UpdateUserAgentProfile :exec
+INSERT INTO user_profiles (
+  user_id, educational_status, highest_degree, graduation_year, school_name, address
+) VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id) DO UPDATE
+SET educational_status = EXCLUDED.educational_status,
+    highest_degree = EXCLUDED.highest_degree,
+    graduation_year = EXCLUDED.graduation_year,
+    school_name = EXCLUDED.school_name,
+    address = EXCLUDED.address,
+    updated_at = NOW();
+
+-- name: CreateUserVerification :one
+INSERT INTO user_verifications (
+  user_id, nin_verified, phone_verified, email_verified, voters_card_verified
+) VALUES ($1, $2, $3, $4, $5)
+RETURNING user_id;
+
+-- name: GetUserVerification :one
+SELECT * FROM user_verifications
+WHERE user_id = $1 LIMIT 1;

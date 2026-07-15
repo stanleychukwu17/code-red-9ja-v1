@@ -69,7 +69,6 @@ export interface UserDetails {
   school_name?: string;
   bank_account_number?: string;
   bank_code?: string;
-  vin?: string;
   voters_card_image?: string;
   address?: string;
   party?: {

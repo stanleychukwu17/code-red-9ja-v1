@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 
 	"github.com/jackc/pgx/v5"
@@ -28,11 +29,10 @@ func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *Serv
 
 type SubmitApplicationInput struct {
 	UserID            int64
-	PartyID           int64
+	PartyID           int16
 	ElectionGroupIDs  []int64
 	PollingUnitID     int32
 	Avatar            string
-	Vin               string
 	VotersCardImage   string
 	CurrentCountry    int16
 	CurrentState      int16
@@ -73,32 +73,38 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	txQueries := s.queries.WithTx(tx)
 
 	// Update user agent details
-	_, err = txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
+	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:                input.UserID,
-		PartyID:           pgtype.Int8{Int64: input.PartyID, Valid: true},
+		PartyID:           pgtype.Int2{Int16: int16(int16(input.PartyID)), Valid: true},
 		Avatar:            pgtype.Text{String: input.Avatar, Valid: input.Avatar != ""},
-		Vin:               pgtype.Text{String: input.Vin, Valid: input.Vin != ""},
 		VotersCardImage:   pgtype.Text{String: input.VotersCardImage, Valid: input.VotersCardImage != ""},
 		CurrentCountry:    input.CurrentCountry,
 		CurrentState:      int16(input.CurrentState),
 		CurrentLga:        pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
-		CurrentWard:       pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
 		CurrentCity:       pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
 		BankAccountNumber: pgtype.Text{String: input.BankAccountNumber, Valid: input.BankAccountNumber != ""},
 		BankCode:          pgtype.Text{String: input.BankCode, Valid: input.BankCode != ""},
-
 		WhatsappPhone:     pgtype.Text{String: input.WhatsappPhone, Valid: input.WhatsappPhone != ""},
 		DataPhone:         pgtype.Text{String: input.DataPhone, Valid: input.DataPhone != ""},
+		CurrentWard:       pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
+		Phone:             input.Phone,
+		PollingUnitID:     pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
+		Address:           input.Address,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to update user details: %w", err)
+	}
+
+	// Update profile details
+	err = txQueries.UpdateUserAgentProfile(ctx, queries.UpdateUserAgentProfileParams{
+		UserID:            input.UserID,
 		EducationalStatus: pgtype.Text{String: input.EducationalStatus, Valid: input.EducationalStatus != ""},
 		HighestDegree:     pgtype.Text{String: input.HighestDegree, Valid: input.HighestDegree != ""},
 		GraduationYear:    pgtype.Text{String: input.GraduationYear, Valid: input.GraduationYear != ""},
 		SchoolName:        pgtype.Text{String: input.SchoolName, Valid: input.SchoolName != ""},
-		Phone:             input.Phone,
-		Address:           input.Address,
-		PollingUnitID:     pgtype.Int8{Int64: int64(input.PollingUnitID), Valid: input.PollingUnitID > 0},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to update user details: %w", err)
+		return nil, fmt.Errorf("failed to update user profile: %w", err)
 	}
 
 	apps := make([]queries.PartyApplication, 0, len(input.ElectionGroupIDs))
@@ -106,7 +112,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		// Create application
 		app, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
 			UserID:          input.UserID,
-			PartyID:         input.PartyID,
+			PartyID:         int16(input.PartyID),
 			ElectionGroupID: egID,
 			PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
 			StateID:         pgtype.Int2{Int16: int16(input.CurrentState), Valid: input.CurrentState > 0},
@@ -123,6 +129,12 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Invalidate caches
+	if user.FakeID.Valid {
+		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserInfo, user.FakeID.Int64))
+	}
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserProfile, input.UserID))
+
 	return apps, nil
 }
 
@@ -130,18 +142,18 @@ func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.Par
 	return s.queries.GetApplicationByID(ctx, id)
 }
 
-func (s *Service) ListApplications(ctx context.Context, userID, partyID, electionGroupID int64, status string, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
+func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
 	return s.queries.ListApplications(ctx, queries.ListApplicationsParams{
 		UserID:          userID,
 		LimitVal:        limit,
 		Cursor:          cursor,
-		PartyID:         partyID,
+		PartyID:         int64(partyID),
 		ElectionGroupID: electionGroupID,
 		Status:          status,
 	})
 }
 
-func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID, electionGroupID int64, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
+func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int16, electionGroupID int64, lgaID, wardID, pollingUnitID int32) ([]queries.GetPollingUnitsWithAgentCountsRow, error) {
 	var finalRows []queries.GetPollingUnitsWithAgentCountsRow
 
 	// 1. Fetch the applicant's specific polling unit directly (position 1).
@@ -189,7 +201,7 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID, el
 
 	// 3. Fetch lowest-agent-count units in the same ward (positions 2 & 3).
 	wardRows, err := s.queries.GetPollingUnitsWithAgentCounts(ctx, queries.GetPollingUnitsWithAgentCountsParams{
-		PartyID:         partyID,
+		PartyID:         int64(partyID),
 		ElectionGroupID: electionGroupID,
 		LgaID:           wardScopeLgaID,
 		WardID:          wardScopeWardID,

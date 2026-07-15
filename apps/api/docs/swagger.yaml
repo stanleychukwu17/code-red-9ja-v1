@@ -361,6 +361,8 @@ definitions:
         type: string
       date_of_birth:
         type: string
+      education_level:
+        type: string
       educational_status:
         type: string
       email:
@@ -379,6 +381,8 @@ definitions:
         type: integer
       last_name:
         type: string
+      marital_status:
+        type: string
       middle_name:
         type: string
       party:
@@ -389,6 +393,8 @@ definitions:
         type: string
       polling_unit_id:
         type: integer
+      religion:
+        type: string
       roles:
         items:
           type: string
@@ -396,8 +402,6 @@ definitions:
       school_name:
         type: string
       username:
-        type: string
-      vin:
         type: string
       voters_card_image:
         type: string
@@ -424,6 +428,10 @@ definitions:
         type: integer
       date_of_birth:
         type: string
+      education_level:
+        type: string
+      educational_status:
+        type: string
       email:
         type: string
       fake_id:
@@ -432,9 +440,17 @@ definitions:
         type: string
       gender:
         type: string
+      graduation_year:
+        type: string
+      highest_degree:
+        type: string
+      home_address:
+        type: string
       id:
         type: integer
       last_name:
+        type: string
+      marital_status:
         type: string
       middle_name:
         type: string
@@ -448,15 +464,17 @@ definitions:
         type: string
       phone_verified:
         type: string
+      religion:
+        type: string
       role:
         type: string
       role_level:
         type: string
+      school_name:
+        type: string
       state_of_origin:
         type: integer
       username:
-        type: string
-      vin:
         type: string
       voters_card_image:
         type: string
@@ -956,8 +974,6 @@ definitions:
         type: integer
       school_name:
         type: string
-      vin:
-        type: string
       voters_card_image:
         type: string
       whatsapp_phone:
@@ -1149,14 +1165,14 @@ definitions:
     properties:
       election_group_id:
         type: integer
+      fake_id:
+        type: integer
       party_id:
         type: integer
       polling_unit_id:
         type: integer
       role_type:
         type: string
-      user_id:
-        type: integer
     type: object
   puassignmentshandler.UpdateAssignmentTrackingRequest:
     properties:
@@ -1460,10 +1476,14 @@ definitions:
         type: string
       date_of_birth:
         type: string
+      education_level:
+        type: string
       educational_status:
         type: string
       email:
         type: string
+      email_verified:
+        type: boolean
       fake_id:
         type: integer
       first_name:
@@ -1478,18 +1498,22 @@ definitions:
         type: integer
       last_name:
         type: string
+      marital_status:
+        type: string
       middle_name:
         type: string
       nin_verified:
-        type: string
+        type: boolean
       party_id:
         type: integer
       phone:
         type: string
       phone_verified:
-        type: string
+        type: boolean
       polling_unit_id:
         type: integer
+      religion:
+        type: string
       role:
         type: string
       role_level:
@@ -1504,6 +1528,8 @@ definitions:
         type: string
       voters_card_image:
         type: string
+      voters_card_verified:
+        type: boolean
       whatsapp_phone:
         type: string
     type: object

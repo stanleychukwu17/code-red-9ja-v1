@@ -8615,6 +8615,9 @@ const docTemplate = `{
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
                 "educational_status": {
                     "type": "string"
                 },
@@ -8642,6 +8645,9 @@ const docTemplate = `{
                 "last_name": {
                     "type": "string"
                 },
+                "marital_status": {
+                    "type": "string"
+                },
                 "middle_name": {
                     "type": "string"
                 },
@@ -8657,6 +8663,9 @@ const docTemplate = `{
                 "polling_unit_id": {
                     "type": "integer"
                 },
+                "religion": {
+                    "type": "string"
+                },
                 "roles": {
                     "type": "array",
                     "items": {
@@ -8667,9 +8676,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                },
-                "vin": {
                     "type": "string"
                 },
                 "voters_card_image": {
@@ -8710,6 +8716,12 @@ const docTemplate = `{
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
+                "educational_status": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -8722,10 +8734,22 @@ const docTemplate = `{
                 "gender": {
                     "type": "string"
                 },
+                "graduation_year": {
+                    "type": "string"
+                },
+                "highest_degree": {
+                    "type": "string"
+                },
+                "home_address": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "last_name": {
+                    "type": "string"
+                },
+                "marital_status": {
                     "type": "string"
                 },
                 "middle_name": {
@@ -8746,19 +8770,22 @@ const docTemplate = `{
                 "phone_verified": {
                     "type": "string"
                 },
+                "religion": {
+                    "type": "string"
+                },
                 "role": {
                     "type": "string"
                 },
                 "role_level": {
                     "type": "string"
                 },
+                "school_name": {
+                    "type": "string"
+                },
                 "state_of_origin": {
                     "type": "integer"
                 },
                 "username": {
-                    "type": "string"
-                },
-                "vin": {
                     "type": "string"
                 },
                 "voters_card_image": {
@@ -9528,9 +9555,6 @@ const docTemplate = `{
                 "school_name": {
                     "type": "string"
                 },
-                "vin": {
-                    "type": "string"
-                },
                 "voters_card_image": {
                     "type": "string"
                 },
@@ -9822,6 +9846,9 @@ const docTemplate = `{
                 "election_group_id": {
                     "type": "integer"
                 },
+                "fake_id": {
+                    "type": "integer"
+                },
                 "party_id": {
                     "type": "integer"
                 },
@@ -9830,9 +9857,6 @@ const docTemplate = `{
                 },
                 "role_type": {
                     "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -10296,11 +10320,17 @@ const docTemplate = `{
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
                 "educational_status": {
                     "type": "string"
                 },
                 "email": {
                     "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
                 },
                 "fake_id": {
                     "type": "integer"
@@ -10323,11 +10353,14 @@ const docTemplate = `{
                 "last_name": {
                     "type": "string"
                 },
+                "marital_status": {
+                    "type": "string"
+                },
                 "middle_name": {
                     "type": "string"
                 },
                 "nin_verified": {
-                    "type": "string"
+                    "type": "boolean"
                 },
                 "party_id": {
                     "type": "integer"
@@ -10336,10 +10369,13 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone_verified": {
-                    "type": "string"
+                    "type": "boolean"
                 },
                 "polling_unit_id": {
                     "type": "integer"
+                },
+                "religion": {
+                    "type": "string"
                 },
                 "role": {
                     "type": "string"
@@ -10361,6 +10397,9 @@ const docTemplate = `{
                 },
                 "voters_card_image": {
                     "type": "string"
+                },
+                "voters_card_verified": {
+                    "type": "boolean"
                 },
                 "whatsapp_phone": {
                     "type": "string"

@@ -20,7 +20,7 @@ WHERE id = $1
 
 type UpdateUserPartyParams struct {
 	ID      int64       `json:"id"`
-	PartyID pgtype.Int8 `json:"party_id"`
+	PartyID pgtype.Int2 `json:"party_id"`
 }
 
 func (q *Queries) UpdateUserParty(ctx context.Context, arg UpdateUserPartyParams) error {

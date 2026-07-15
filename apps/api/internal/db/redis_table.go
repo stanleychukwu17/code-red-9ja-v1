@@ -33,6 +33,8 @@ const (
 	RedisUserInfo = "user:info:"
 	// STRING: user:roles:<userFakeID> is the Redis "string" key used to store and retrieve user roles.
 	RedisUserRoles = "user:roles:"
+	// STRING: user:profile:<userID> is the Redis "string" key used to store and retrieve user profiles.
+	RedisUserProfile = "user:profile:"
 	//--END--
 
 	//--START-- for countries and states

@@ -51,7 +51,7 @@ const deleteParty = `-- name: DeleteParty :exec
 DELETE FROM parties WHERE id = $1
 `
 
-func (q *Queries) DeleteParty(ctx context.Context, id int64) error {
+func (q *Queries) DeleteParty(ctx context.Context, id int16) error {
 	_, err := q.db.Exec(ctx, deleteParty, id)
 	return err
 }
@@ -61,13 +61,13 @@ SELECT id, short_name, name, logo FROM parties WHERE id = $1 LIMIT 1
 `
 
 type GetPartyBasicInfoRow struct {
-	ID        int64  `json:"id"`
+	ID        int16  `json:"id"`
 	ShortName string `json:"short_name"`
 	Name      string `json:"name"`
 	Logo      string `json:"logo"`
 }
 
-func (q *Queries) GetPartyBasicInfo(ctx context.Context, id int64) (GetPartyBasicInfoRow, error) {
+func (q *Queries) GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasicInfoRow, error) {
 	row := q.db.QueryRow(ctx, getPartyBasicInfo, id)
 	var i GetPartyBasicInfoRow
 	err := row.Scan(
@@ -83,7 +83,7 @@ const getPartyByID = `-- name: GetPartyByID :one
 SELECT id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties WHERE id = $1
 `
 
-func (q *Queries) GetPartyByID(ctx context.Context, id int64) (Party, error) {
+func (q *Queries) GetPartyByID(ctx context.Context, id int16) (Party, error) {
 	row := q.db.QueryRow(ctx, getPartyByID, id)
 	var i Party
 	err := row.Scan(
@@ -177,7 +177,7 @@ type UpdatePartyParams struct {
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
 	DisplayOrder int32  `json:"display_order"`
-	ID           int64  `json:"id"`
+	ID           int16  `json:"id"`
 }
 
 func (q *Queries) UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error) {

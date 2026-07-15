@@ -15,6 +15,7 @@ import (
 	"free9ja/api/internal/utils"
 	"free9ja/api/test"
 
+	"encoding/json"
 	"reflect"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,10 +43,10 @@ func TestRegister(t *testing.T) {
 	app := test.TestNewApp(t, ctx, cfg)
 	defer app.Server.Shutdown(ctx)
 
-	// Create a RegisterRequest with valid data
 	requestBody := authhandler.RegisterRequest{
 		Email:          "johnDoe@example.com",
 		Phone:          "+2348012345678",
+		OnboardingID:   "onboarding123",
 		Username:       "johndoe",
 		Nin:            "12345678901",
 		Question1:      1,
@@ -62,6 +63,15 @@ func TestRegister(t *testing.T) {
 		CurrentCity:    153369,
 	}
 
+	onboardingJSON, _ := json.Marshal(map[string]interface{}{
+		"id":         "onboarding123",
+		"phone":      "+2348012345678",
+		"email":      "johnDoe@example.com",
+		"country_id": 161,
+		"completed":  "no",
+	})
+	app.RDB.Set(ctx, "register:onboarding:+2348012345678", onboardingJSON, 0)
+
 	// create a dynamic url using the config.Port, then attach the registration path
 	url := fmt.Sprintf("http://localhost:%s%s", cfg.Port, utils.ApiUrls.Auth.Register)
 
@@ -70,7 +80,7 @@ func TestRegister(t *testing.T) {
 		t.Logf("Username tag value at runtime: %s", field.Tag.Get("validate"))
 		response, respBody := test.SendRequest(t, "POST", url, requestBody)
 
-		require.Equal(t, response.StatusCode, http.StatusCreated, "expected status code %d, got %d", http.StatusCreated, response.StatusCode)
+		require.Equal(t, response.StatusCode, http.StatusCreated, "expected status code %d, got %d. Body: %s", http.StatusCreated, response.StatusCode, string(respBody))
 		require.Contains(t, string(respBody), "User registered successfully")
 		require.Contains(t, string(respBody), "UserID")
 	})

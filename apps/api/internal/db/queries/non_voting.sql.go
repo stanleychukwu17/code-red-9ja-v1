@@ -34,7 +34,7 @@ type CreateDidNotVoteReasonParams struct {
 	StateID           pgtype.Int2 `json:"state_id"`
 	LgaID             pgtype.Int4 `json:"lga_id"`
 	WardID            pgtype.Int4 `json:"ward_id"`
-	PollingUnitID     pgtype.Int8 `json:"polling_unit_id"`
+	PollingUnitID     pgtype.Int4 `json:"polling_unit_id"`
 }
 
 func (q *Queries) CreateDidNotVoteReason(ctx context.Context, arg CreateDidNotVoteReasonParams) (DidNotVoteReason, error) {

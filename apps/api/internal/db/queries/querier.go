@@ -41,7 +41,9 @@ type Querier interface {
 	CreateStateSupervisor(ctx context.Context, arg CreateStateSupervisorParams) (StateElectionSupervisor, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error)
+	CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (int64, error)
 	CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error)
+	CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) (int64, error)
 	CreateUserWallet(ctx context.Context, arg CreateUserWalletParams) (UserWallet, error)
 	CreateUserWalletTransaction(ctx context.Context, arg CreateUserWalletTransactionParams) (UserWalletTransaction, error)
 	CreateWalletTransaction(ctx context.Context, arg CreateWalletTransactionParams) (PartyWalletTransaction, error)
@@ -60,7 +62,7 @@ type Querier interface {
 	DeleteFederalConstituency(ctx context.Context, id int32) error
 	DeleteLGA(ctx context.Context, id int32) error
 	DeleteOffice(ctx context.Context, id int64) error
-	DeleteParty(ctx context.Context, id int64) error
+	DeleteParty(ctx context.Context, id int16) error
 	DeletePollingUnit(ctx context.Context, id int32) error
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	DeleteState(ctx context.Context, id int16) error
@@ -101,13 +103,13 @@ type Querier interface {
 	GetNonVotingReasons(ctx context.Context) ([]NonVotingReason, error)
 	GetOfficeByID(ctx context.Context, id int64) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
-	GetPartyBasicInfo(ctx context.Context, id int64) (GetPartyBasicInfoRow, error)
-	GetPartyByID(ctx context.Context, id int64) (Party, error)
+	GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasicInfoRow, error)
+	GetPartyByID(ctx context.Context, id int16) (Party, error)
 	GetPartyByShortName(ctx context.Context, shortName string) (Party, error)
 	GetPartyElectionGroupCoverageDistribution(ctx context.Context, arg GetPartyElectionGroupCoverageDistributionParams) ([]GetPartyElectionGroupCoverageDistributionRow, error)
 	GetPartyWalletByAccountReference(ctx context.Context, accountReference string) (PartyWallet, error)
 	GetPartyWalletByID(ctx context.Context, id int64) (PartyWallet, error)
-	GetPartyWalletByPartyID(ctx context.Context, partyID int64) (PartyWallet, error)
+	GetPartyWalletByPartyID(ctx context.Context, partyID int16) (PartyWallet, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit, error)
 	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (PollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
@@ -127,8 +129,10 @@ type Querier interface {
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
+	GetUserProfile(ctx context.Context, userID int64) (UserProfile, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
 	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
+	GetUserVerification(ctx context.Context, userID int64) (UserVerification, error)
 	GetUserVotesByElectionGroup(ctx context.Context, arg GetUserVotesByElectionGroupParams) ([]GetUserVotesByElectionGroupRow, error)
 	GetUserWalletByAccountReference(ctx context.Context, accountReference string) (UserWallet, error)
 	GetUserWalletByID(ctx context.Context, id int64) (UserWallet, error)
@@ -155,7 +159,7 @@ type Querier interface {
 	ListElectionCandidatesDetailedByElectionID(ctx context.Context, electionID int64) ([]ListElectionCandidatesDetailedByElectionIDRow, error)
 	ListElectionFederalConstituencyStatsByGroup(ctx context.Context, arg ListElectionFederalConstituencyStatsByGroupParams) ([]ElectionFederalConstituency, error)
 	ListElectionGroups(ctx context.Context) ([]ElectionGroup, error)
-	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int64) ([]ListElectionGroupsWithPartyStatsRow, error)
+	ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]ListElectionGroupsWithPartyStatsRow, error)
 	ListElectionInstances(ctx context.Context) ([]Election, error)
 	ListElectionLGAStatsByGroup(ctx context.Context, arg ListElectionLGAStatsByGroupParams) ([]ElectionLga, error)
 	ListElectionPollingUnitStatsByGroup(ctx context.Context, arg ListElectionPollingUnitStatsByGroupParams) ([]ElectionPollingUnit, error)
@@ -256,11 +260,13 @@ type Querier interface {
 	UpdateStateAssemblyConstituency(ctx context.Context, arg UpdateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
 	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
 	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error)
+	UpdateUserAgentProfile(ctx context.Context, arg UpdateUserAgentProfileParams) error
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 	UpdateUserParty(ctx context.Context, arg UpdateUserPartyParams) error
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
+	UpdateUserProfileDetails(ctx context.Context, arg UpdateUserProfileDetailsParams) error
 	UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error)
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error

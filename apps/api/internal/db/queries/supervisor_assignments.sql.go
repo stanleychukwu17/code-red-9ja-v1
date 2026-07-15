@@ -31,7 +31,7 @@ type CreateLgaSupervisorParams struct {
 	StateID         int16       `json:"state_id"`
 	LgaID           int32       `json:"lga_id"`
 	ElectionGroupID int64       `json:"election_group_id"`
-	PartyID         int64       `json:"party_id"`
+	PartyID         int16       `json:"party_id"`
 	RoleType        pgtype.Text `json:"role_type"`
 	AssignedBy      pgtype.Int8 `json:"assigned_by"`
 }
@@ -82,7 +82,7 @@ type CreateStateSupervisorParams struct {
 	UserID          int64       `json:"user_id"`
 	StateID         int16       `json:"state_id"`
 	ElectionGroupID int64       `json:"election_group_id"`
-	PartyID         int64       `json:"party_id"`
+	PartyID         int16       `json:"party_id"`
 	RoleType        pgtype.Text `json:"role_type"`
 	AssignedBy      pgtype.Int8 `json:"assigned_by"`
 }
@@ -135,7 +135,7 @@ type CreateWardSupervisorParams struct {
 	LgaID           int32       `json:"lga_id"`
 	WardID          int32       `json:"ward_id"`
 	ElectionGroupID int64       `json:"election_group_id"`
-	PartyID         int64       `json:"party_id"`
+	PartyID         int16       `json:"party_id"`
 	RoleType        pgtype.Text `json:"role_type"`
 	AssignedBy      pgtype.Int8 `json:"assigned_by"`
 }

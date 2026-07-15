@@ -21,7 +21,7 @@ RETURNING id, short_name, name, logo, display_order, status, slots, discount_per
 
 type AddPartySlotsParams struct {
 	Slots int32 `json:"slots"`
-	ID    int64 `json:"id"`
+	ID    int16 `json:"id"`
 }
 
 func (q *Queries) AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error) {
@@ -54,7 +54,7 @@ RETURNING id, short_name, name, logo, display_order, status, slots, discount_per
 
 type DeductPartySlotsParams struct {
 	Slots int32 `json:"slots"`
-	ID    int64 `json:"id"`
+	ID    int16 `json:"id"`
 }
 
 func (q *Queries) DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (Party, error) {
@@ -104,7 +104,7 @@ RETURNING id, short_name, name, logo, display_order, status, slots, discount_per
 
 type UpdatePartyDiscountParams struct {
 	DiscountPercentage pgtype.Numeric `json:"discount_percentage"`
-	ID                 int64          `json:"id"`
+	ID                 int16          `json:"id"`
 }
 
 func (q *Queries) UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error) {

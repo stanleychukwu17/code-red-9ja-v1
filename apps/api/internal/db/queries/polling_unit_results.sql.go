@@ -168,7 +168,7 @@ WHERE party_id = $1 AND election_group_id = $2
 `
 
 type IncrementPartyElectionGroupResultCountParams struct {
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 }
 
@@ -309,7 +309,7 @@ type SubmitPollingUnitResultParams struct {
 	ElectionGroupID       int64       `json:"election_group_id"`
 	PollingUnitID         int32       `json:"polling_unit_id"`
 	SubmittedBy           int64       `json:"submitted_by"`
-	PartyID               pgtype.Int8 `json:"party_id"`
+	PartyID               pgtype.Int2 `json:"party_id"`
 	StateID               pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`

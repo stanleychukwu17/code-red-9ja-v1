@@ -8609,6 +8609,9 @@
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
                 "educational_status": {
                     "type": "string"
                 },
@@ -8636,6 +8639,9 @@
                 "last_name": {
                     "type": "string"
                 },
+                "marital_status": {
+                    "type": "string"
+                },
                 "middle_name": {
                     "type": "string"
                 },
@@ -8651,6 +8657,9 @@
                 "polling_unit_id": {
                     "type": "integer"
                 },
+                "religion": {
+                    "type": "string"
+                },
                 "roles": {
                     "type": "array",
                     "items": {
@@ -8661,9 +8670,6 @@
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                },
-                "vin": {
                     "type": "string"
                 },
                 "voters_card_image": {
@@ -8704,6 +8710,12 @@
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
+                "educational_status": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -8716,10 +8728,22 @@
                 "gender": {
                     "type": "string"
                 },
+                "graduation_year": {
+                    "type": "string"
+                },
+                "highest_degree": {
+                    "type": "string"
+                },
+                "home_address": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "last_name": {
+                    "type": "string"
+                },
+                "marital_status": {
                     "type": "string"
                 },
                 "middle_name": {
@@ -8740,19 +8764,22 @@
                 "phone_verified": {
                     "type": "string"
                 },
+                "religion": {
+                    "type": "string"
+                },
                 "role": {
                     "type": "string"
                 },
                 "role_level": {
                     "type": "string"
                 },
+                "school_name": {
+                    "type": "string"
+                },
                 "state_of_origin": {
                     "type": "integer"
                 },
                 "username": {
-                    "type": "string"
-                },
-                "vin": {
                     "type": "string"
                 },
                 "voters_card_image": {
@@ -9522,9 +9549,6 @@
                 "school_name": {
                     "type": "string"
                 },
-                "vin": {
-                    "type": "string"
-                },
                 "voters_card_image": {
                     "type": "string"
                 },
@@ -9816,6 +9840,9 @@
                 "election_group_id": {
                     "type": "integer"
                 },
+                "fake_id": {
+                    "type": "integer"
+                },
                 "party_id": {
                     "type": "integer"
                 },
@@ -9824,9 +9851,6 @@
                 },
                 "role_type": {
                     "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -10290,11 +10314,17 @@
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
                 "educational_status": {
                     "type": "string"
                 },
                 "email": {
                     "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
                 },
                 "fake_id": {
                     "type": "integer"
@@ -10317,11 +10347,14 @@
                 "last_name": {
                     "type": "string"
                 },
+                "marital_status": {
+                    "type": "string"
+                },
                 "middle_name": {
                     "type": "string"
                 },
                 "nin_verified": {
-                    "type": "string"
+                    "type": "boolean"
                 },
                 "party_id": {
                     "type": "integer"
@@ -10330,10 +10363,13 @@
                     "type": "string"
                 },
                 "phone_verified": {
-                    "type": "string"
+                    "type": "boolean"
                 },
                 "polling_unit_id": {
                     "type": "integer"
+                },
+                "religion": {
+                    "type": "string"
                 },
                 "role": {
                     "type": "string"
@@ -10355,6 +10391,9 @@
                 },
                 "voters_card_image": {
                     "type": "string"
+                },
+                "voters_card_verified": {
+                    "type": "boolean"
                 },
                 "whatsapp_phone": {
                     "type": "string"

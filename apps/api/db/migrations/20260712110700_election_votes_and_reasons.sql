@@ -31,7 +31,7 @@ CREATE TABLE did_not_vote_reasons (
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
-  polling_unit_id BIGINT REFERENCES polling_units(id) ON DELETE SET NULL,
+  polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
@@ -45,12 +45,12 @@ CREATE TABLE election_votes (
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
-  polling_unit_id BIGINT REFERENCES polling_units(id) ON DELETE SET NULL,
+  polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
   
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   election_group_id BIGINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   election_id BIGINT NOT NULL REFERENCES elections(id) ON DELETE CASCADE,
-  party_id BIGINT NOT NULL REFERENCES parties(id) ON DELETE RESTRICT,
+  party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE RESTRICT,
   
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

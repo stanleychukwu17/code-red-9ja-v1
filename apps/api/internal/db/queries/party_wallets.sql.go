@@ -18,7 +18,7 @@ RETURNING id, party_id, account_reference, account_numbers, balance_kobo, curren
 `
 
 type CreatePartyWalletParams struct {
-	PartyID          int64  `json:"party_id"`
+	PartyID          int16  `json:"party_id"`
 	AccountReference string `json:"account_reference"`
 	AccountNumbers   []byte `json:"account_numbers"`
 }
@@ -210,7 +210,7 @@ const getPartyWalletByPartyID = `-- name: GetPartyWalletByPartyID :one
 SELECT id, party_id, account_reference, account_numbers, balance_kobo, currency_code, status, created_at, updated_at FROM party_wallets WHERE party_id = $1
 `
 
-func (q *Queries) GetPartyWalletByPartyID(ctx context.Context, partyID int64) (PartyWallet, error) {
+func (q *Queries) GetPartyWalletByPartyID(ctx context.Context, partyID int16) (PartyWallet, error) {
 	row := q.db.QueryRow(ctx, getPartyWalletByPartyID, partyID)
 	var i PartyWallet
 	err := row.Scan(

@@ -20,7 +20,7 @@ RETURNING id, election_id, candidate_id, party_id, party_short_name, votes_count
 type CreateElectionCandidateParams struct {
 	ElectionID     int64  `json:"election_id"`
 	CandidateID    int64  `json:"candidate_id"`
-	PartyID        int64  `json:"party_id"`
+	PartyID        int16  `json:"party_id"`
 	PartyShortName string `json:"party_short_name"`
 }
 
@@ -128,7 +128,7 @@ AND candidate_id IN (SELECT users.id FROM users WHERE users.party_id = $2)
 
 type DeleteElectionCandidateForPartyParams struct {
 	ElectionID int64       `json:"election_id"`
-	PartyID    pgtype.Int8 `json:"party_id"`
+	PartyID    pgtype.Int2 `json:"party_id"`
 }
 
 func (q *Queries) DeleteElectionCandidateForParty(ctx context.Context, arg DeleteElectionCandidateForPartyParams) error {
@@ -259,7 +259,7 @@ type ListElectionCandidatesDetailedByElectionIDRow struct {
 	FirstName      pgtype.Text `json:"first_name"`
 	LastName       pgtype.Text `json:"last_name"`
 	Avatar         pgtype.Text `json:"avatar"`
-	PartyID        pgtype.Int8 `json:"party_id"`
+	PartyID        pgtype.Int2 `json:"party_id"`
 	PartyShortName pgtype.Text `json:"party_short_name"`
 	PartyLogo      pgtype.Text `json:"party_logo"`
 }

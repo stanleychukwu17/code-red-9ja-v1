@@ -28,7 +28,7 @@ func NewHandler(s *pu_results.Service, u *utils.Utils) *Handler {
 
 type SubmitResultRequest struct {
 	AssignmentID        *int64 `json:"assignment_id,omitempty"`
-	PartyID             *int64 `json:"party_id,omitempty"`
+	PartyID             *int16 `json:"party_id,omitempty"`
 	ElectionID          int64  `json:"election_id"`
 	ElectionGroupID     int64  `json:"election_group_id"`
 	PollingUnitID       int32  `json:"polling_unit_id"`
@@ -80,7 +80,7 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Derive party_id from JWT if not explicitly provided and caller is a party member
-	var partyID *int64
+	var partyID *int16
 	if claims.PartyID > 0 {
 		pid := claims.PartyID
 		partyID = &pid
@@ -227,8 +227,8 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce role-based scoping: non-admins can only see their party's results
-	if !claims.HasRole("admin") && claims.PartyID > 0 {
-		params.PartyID = pgtype.Int8{Int64: claims.PartyID, Valid: true}
+	if !claims.HasRole("admin") && int64(claims.PartyID) > 0 {
+		params.PartyID = pgtype.Int8{Int64: int64(claims.PartyID), Valid: true}
 	}
 
 	// Cursor pagination

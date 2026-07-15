@@ -47,11 +47,11 @@ type CreateElectionVoteParams struct {
 	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
 	LgaID                 pgtype.Int4 `json:"lga_id"`
 	WardID                pgtype.Int4 `json:"ward_id"`
-	PollingUnitID         pgtype.Int8 `json:"polling_unit_id"`
+	PollingUnitID         pgtype.Int4 `json:"polling_unit_id"`
 	UserID                int64       `json:"user_id"`
 	ElectionGroupID       int64       `json:"election_group_id"`
 	ElectionID            int64       `json:"election_id"`
-	PartyID               int64       `json:"party_id"`
+	PartyID               int16       `json:"party_id"`
 }
 
 func (q *Queries) CreateElectionVote(ctx context.Context, arg CreateElectionVoteParams) (ElectionVote, error) {

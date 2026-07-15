@@ -22,7 +22,7 @@ func NewService(q *queries.Queries, rdb *redis.Client) *Service {
 	}
 }
 
-func (s *Service) AssignAgent(ctx context.Context, userID, electionGroupID, partyID, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
+func (s *Service) AssignAgent(ctx context.Context, userID, electionGroupID int64, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
 	var assignedByVal pgtype.Int8
 	if assignedBy > 0 {
 		assignedByVal = pgtype.Int8{Int64: assignedBy, Valid: true}
@@ -42,12 +42,12 @@ func (s *Service) GetAssignmentByID(ctx context.Context, id int64) (queries.GetA
 	return s.queries.GetAssignmentByID(ctx, id)
 }
 
-func (s *Service) ListAssignments(ctx context.Context, electionGroupID, partyID, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error) {
+func (s *Service) ListAssignments(ctx context.Context, electionGroupID int64, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error) {
 	return s.queries.ListAssignments(ctx, queries.ListAssignmentsParams{
 		Limit:           limit,
 		Offset:          offset,
 		ElectionGroupID: electionGroupID,
-		PartyID:         partyID,
+		PartyID:         int64(partyID),
 		PollingUnitID:   pollingUnitID,
 		UserID:          userID,
 	})

@@ -19,7 +19,7 @@ RETURNING id, short_name, name, logo, display_order, status, slots, discount_per
 
 type DepositPartyAllowanceParams struct {
 	AllowanceBalanceKobo int64 `json:"allowance_balance_kobo"`
-	ID                   int64 `json:"id"`
+	ID                   int16 `json:"id"`
 }
 
 func (q *Queries) DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error) {
@@ -52,7 +52,7 @@ RETURNING id, short_name, name, logo, display_order, status, slots, discount_per
 
 type UpdatePartyStateAllowancesParams struct {
 	StateAllowances []byte `json:"state_allowances"`
-	ID              int64  `json:"id"`
+	ID              int16  `json:"id"`
 }
 
 func (q *Queries) UpdatePartyStateAllowances(ctx context.Context, arg UpdatePartyStateAllowancesParams) (Party, error) {
