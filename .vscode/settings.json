@@ -72,6 +72,7 @@
     "tfstate",
     "usershandler",
     "usersservice",
+    "Videographer",
     "VITE",
     "wardshandler",
     "wardsservice"
