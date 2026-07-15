@@ -13,33 +13,33 @@ CREATE TABLE users (
   first_name VARCHAR(30),
   middle_name VARCHAR(30),
   gender VARCHAR(10) CHECK (gender IN ('male', 'female')),
-  
   date_of_birth DATE,
 
   whatsapp_phone VARCHAR(25),
   data_phone VARCHAR(25),
-  educational_status VARCHAR(20) CHECK (educational_status IN ('graduate', 'student', 'none')),
-  highest_degree VARCHAR(100),
-  graduation_year VARCHAR(4),
-  school_name VARCHAR(255),
-  
+
   current_country SMALLINT REFERENCES c_countries(id) NOT NULL,
   current_state SMALLINT REFERENCES c_states(id) NOT NULL,
   current_lga INTEGER REFERENCES lgas(id) ON DELETE SET NULL,
   current_ward INTEGER REFERENCES wards(id) ON DELETE SET NULL,
   current_city INT REFERENCES c_cities(id),
-  address VARCHAR(255),
 
   state_of_origin SMALLINT REFERENCES c_states(id),
 
-  vin VARCHAR(50) UNIQUE,
   voters_card_image VARCHAR(255),
   bank_account_number VARCHAR(50),
   bank_code VARCHAR(20),
 
-  nin_verified VARCHAR(5) CHECK (nin_verified IN ('true', 'false')) DEFAULT 'false',
-  phone_verified VARCHAR(5) CHECK (phone_verified IN ('true', 'false')) DEFAULT 'false',
-  email_verified VARCHAR(5) CHECK (email_verified IN ('true', 'false')) DEFAULT 'false',
+  party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
+  polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
+
+  -- Referral system
+  -- referral_code format: {FIRSTNAME}{2-digit suffix} e.g. "DANIEL40"
+  -- Generated server-side at user registration time, unique per user
+  referral_code VARCHAR(30) UNIQUE,
+  -- The referral code of whoever referred this user (e.g. an agent)
+  -- Stored as plain text so it survives referrer account deletions
+  referred_by_code VARCHAR(30),
 
   account_status VARCHAR(30)
     CHECK (account_status IN (
@@ -52,17 +52,6 @@ CREATE TABLE users (
       'deleted'
     ))
     DEFAULT 'just_registered',
-
-  party_id BIGINT REFERENCES parties(id) ON DELETE SET NULL,
-  polling_unit_id BIGINT REFERENCES polling_units(id) ON DELETE SET NULL,
-
-  -- Referral system
-  -- referral_code format: {FIRSTNAME}{2-digit suffix} e.g. "DANIEL40"
-  -- Generated server-side at user registration time, unique per user
-  referral_code VARCHAR(30) UNIQUE,
-  -- The referral code of whoever referred this user (e.g. an agent)
-  -- Stored as plain text so it survives referrer account deletions
-  referred_by_code VARCHAR(30),
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -96,9 +85,39 @@ CREATE TABLE user_security_questions (
   answer2 VARCHAR(255) NOT NULL
 );
 
+CREATE TABLE user_profiles (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  occupation_id SMALLINT REFERENCES occupations(id) ON DELETE SET NULL,
+  educational_status VARCHAR(20) CHECK (educational_status IN ('graduate', 'student', 'none')),
+  highest_degree VARCHAR(100),
+  graduation_year VARCHAR(4),
+  school_name VARCHAR(255),
+  religion VARCHAR(20) CHECK (religion IN ('christianity', 'islam', 'traditional', 'other')),
+  marital_status VARCHAR(20) CHECK (marital_status IN ('single', 'married', 'divorced', 'widowed')),
+  education_level VARCHAR(20) CHECK (education_level IN ('none', 'primary', 'secondary', 'bachelors', 'masters', 'phd')),
+  address VARCHAR(255),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE user_verifications (
+  user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  nin_verified BOOLEAN DEFAULT false,
+  phone_verified BOOLEAN DEFAULT false,
+  email_verified BOOLEAN DEFAULT false,
+  voters_card_verified BOOLEAN DEFAULT false,
+  email_verification_token VARCHAR(255) DEFAULT NULL,
+  email_last_reminded_at TIMESTAMPTZ,
+  phone_last_reminded_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 ALTER TABLE users ALTER COLUMN id RESTART WITH 8;
 
 -- +goose Down
+DROP TABLE IF EXISTS user_verifications;
+DROP TABLE IF EXISTS user_profiles;
 DROP TABLE IF EXISTS user_security_questions;
 DROP TABLE IF EXISTS users_phone_numbers;
 DROP TABLE IF EXISTS users_nin;
