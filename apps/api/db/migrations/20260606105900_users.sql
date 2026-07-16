@@ -5,7 +5,7 @@ CREATE TABLE users (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   fake_id BIGINT UNIQUE,
   email VARCHAR(255) UNIQUE,
-  avatar VARCHAR(255) UNIQUE,
+  avatar VARCHAR(255),
   phone VARCHAR(25) UNIQUE,
   username VARCHAR(30) UNIQUE,
   password_hash VARCHAR(100) NOT NULL,
@@ -57,9 +57,13 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_users_party_id ON users(party_id);
+CREATE INDEX idx_users_polling_unit_id ON users(polling_unit_id);
+CREATE INDEX idx_users_account_status ON users(account_status);
+
 -- USERS NIN TABLE
 CREATE TABLE users_nin (
-  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id BIGINT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   nin VARCHAR(12) UNIQUE NOT NULL
 );

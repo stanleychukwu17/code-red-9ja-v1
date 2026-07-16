@@ -872,7 +872,7 @@ type UserWalletTransaction struct {
 }
 
 type UsersNin struct {
-	ID     int32  `json:"id"`
+	ID     int64  `json:"id"`
 	UserID int64  `json:"user_id"`
 	Nin    string `json:"nin"`
 }

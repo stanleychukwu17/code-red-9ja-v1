@@ -131,13 +131,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		identifier = strings.TrimSpace(strings.ToLower(identifier))
 		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
 		if fakeIDStr == "" {
-			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
-			if err == nil && dbUser.FakeID.Valid {
-				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)
-				_ = s.SaveSomeUserRegistrationDetails(ctx, dbUser.Username.String, dbUser.Email.String, dbUser.Phone.String, "", dbUser.ID, dbUser.FakeID.Int64)
-			} else {
-				return LoginResult{}, errors.New("invalid email, this record not found")
-			}
+			return LoginResult{}, errors.New("invalid email or password")
 		}
 
 	case "username":
@@ -1364,41 +1358,28 @@ func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, role
 }
 
 type SeedUserRequest struct {
-	ID                int64   `json:"id"`
-	FakeID            int64   `json:"fake_id"`
-	Email             string  `json:"email"`
-	Avatar            string  `json:"avatar"`
-	Phone             *string `json:"phone"`
-	Username          *string `json:"username"`
-	Password          string  `json:"password"`
-	LastName          string  `json:"last_name"`
-	FirstName         string  `json:"first_name"`
-	MiddleName        *string `json:"middle_name"`
-	Gender            string  `json:"gender"`
-	DateOfBirth       string  `json:"date_of_birth"`
-	Religion          string  `json:"religion"`
-	CurrentCountry    int16   `json:"current_country"`
-	CurrentState      int16   `json:"current_state"`
-	CurrentLga        *int32  `json:"current_lga"`
-	CurrentCity       *int32  `json:"current_city"`
-	StateOfOrigin     *int16  `json:"state_of_origin"`
-	VotersCardImage   *string `json:"voters_card_image"`
-	BankAccountNumber *string `json:"bank_account_number"`
-	BankCode          *string `json:"bank_code"`
-	NinVerified       string  `json:"nin_verified"`
-	PhoneVerified     string  `json:"phone_verified"`
-	Role              string  `json:"role"`
-	RoleLevel         string  `json:"role_level"`
-	AccountStatus     string  `json:"account_status"`
-	PartyID           *int64  `json:"party_id"`
-	EducationalStatus string  `json:"educational_status"`
-	HighestDegree     string  `json:"highest_degree"`
-	GraduationYear    string  `json:"graduation_year"`
-	SchoolName        string  `json:"school_name"`
-	MaritalStatus     string  `json:"marital_status"`
-	EducationLevel    string  `json:"education_level"`
-	HomeAddress       string  `json:"home_address"`
-	OccupationID      *int16  `json:"occupation_id"`
+	ID             int64   `json:"id"`
+	FakeID         int64   `json:"fake_id"`
+	Email          string  `json:"email"`
+	Avatar         string  `json:"avatar"`
+	Phone          *string `json:"phone"`
+	Username       *string `json:"username"`
+	Password       string  `json:"password"`
+	LastName       string  `json:"last_name"`
+	FirstName      string  `json:"first_name"`
+	MiddleName     *string `json:"middle_name"`
+	Gender         string  `json:"gender"`
+	DateOfBirth    string  `json:"date_of_birth"`
+	Religion       string  `json:"religion"`
+	CurrentCountry int16   `json:"current_country"`
+	CurrentState   int16   `json:"current_state"`
+	CurrentLga     *int32  `json:"current_lga"`
+	CurrentCity    *int32  `json:"current_city"`
+	StateOfOrigin  *int16  `json:"state_of_origin"`
+	MaritalStatus  string  `json:"marital_status"`
+	EducationLevel string  `json:"education_level"`
+	HomeAddress    string  `json:"home_address"`
+	OccupationID   *int16  `json:"occupation_id"`
 }
 
 func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([]int64, error) {
@@ -1410,16 +1391,15 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			return nil, err
 		}
 
-		dob, err := time.Parse(time.RFC3339, u.DateOfBirth)
+		dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
 		if err != nil {
 			return nil, fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
 		}
 
 		// Prepare params
-		var emailVal, avatarVal, phoneVal, usernameVal, middleNameVal, genderVal, votersCardVal, bankNoVal, bankCodeVal pgtype.Text
+		var emailVal, avatarVal, phoneVal, usernameVal, middleNameVal, genderVal pgtype.Text
 		var currentLgaVal, currentCityVal pgtype.Int4
 		var stateOfOriginVal pgtype.Int2
-		var partyIDVal pgtype.Int2
 
 		if u.Email != "" {
 			emailVal = pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
@@ -1453,19 +1433,6 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			occupationIDVal = pgtype.Int2{Int16: *u.OccupationID, Valid: true}
 		}
 
-		if u.VotersCardImage != nil && *u.VotersCardImage != "" {
-			votersCardVal = pgtype.Text{String: *u.VotersCardImage, Valid: true}
-		}
-		if u.BankAccountNumber != nil && *u.BankAccountNumber != "" {
-			bankNoVal = pgtype.Text{String: *u.BankAccountNumber, Valid: true}
-		}
-		if u.BankCode != nil && *u.BankCode != "" {
-			bankCodeVal = pgtype.Text{String: *u.BankCode, Valid: true}
-		}
-		if u.PartyID != nil && *u.PartyID != 0 {
-			partyIDVal = pgtype.Int2{Int16: int16(*u.PartyID), Valid: true}
-		}
-
 		params := queries.SeedUserParams{
 			FakeID:            pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
 			Email:             emailVal,
@@ -1483,11 +1450,11 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			CurrentLga:        currentLgaVal,
 			CurrentCity:       currentCityVal,
 			StateOfOrigin:     stateOfOriginVal,
-			VotersCardImage:   votersCardVal,
-			BankAccountNumber: bankNoVal,
-			BankCode:          bankCodeVal,
-			AccountStatus:     pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
-			PartyID:           partyIDVal,
+			VotersCardImage:   pgtype.Text{},
+			BankAccountNumber: pgtype.Text{},
+			BankCode:          pgtype.Text{},
+			AccountStatus:     pgtype.Text{},
+			PartyID:           pgtype.Int2{},
 		}
 
 		id, err := s.queries.SeedUser(ctx, params)
@@ -1498,10 +1465,10 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 		_, err = s.queries.CreateUserProfile(ctx, queries.CreateUserProfileParams{
 			UserID:            id,
 			OccupationID:      occupationIDVal,
-			EducationalStatus: pgtype.Text{String: u.EducationalStatus, Valid: u.EducationalStatus != ""},
-			HighestDegree:     pgtype.Text{String: u.HighestDegree, Valid: u.HighestDegree != ""},
-			GraduationYear:    pgtype.Text{String: u.GraduationYear, Valid: u.GraduationYear != ""},
-			SchoolName:        pgtype.Text{String: u.SchoolName, Valid: u.SchoolName != ""},
+			EducationalStatus: pgtype.Text{},
+			HighestDegree:     pgtype.Text{},
+			GraduationYear:    pgtype.Text{},
+			SchoolName:        pgtype.Text{},
 			Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
 			MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
 			EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
@@ -1513,10 +1480,10 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 
 		_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
 			UserID:             id,
-			NinVerified:        pgtype.Bool{Bool: u.NinVerified == "true", Valid: true},
-			PhoneVerified:      pgtype.Bool{Bool: u.PhoneVerified == "true", Valid: true},
-			EmailVerified:      pgtype.Bool{Bool: false, Valid: true}, // Default since not in struct
-			VotersCardVerified: pgtype.Bool{Bool: false, Valid: true}, // Default since not in struct
+			NinVerified:        pgtype.Bool{Bool: false, Valid: true},
+			PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
+			EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
+			VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)

@@ -197,9 +197,9 @@ type CreateUserNINParams struct {
 	Nin    string `json:"nin"`
 }
 
-func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error) {
+func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error) {
 	row := q.db.QueryRow(ctx, createUserNIN, arg.UserID, arg.Nin)
-	var id int32
+	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
@@ -307,49 +307,6 @@ WHERE id = $1
 func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	_, err := q.db.Exec(ctx, deleteUser, id)
 	return err
-}
-
-const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
-WHERE email = $1 LIMIT 1
-`
-
-func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
-	err := row.Scan(
-		&i.ID,
-		&i.FakeID,
-		&i.Email,
-		&i.Avatar,
-		&i.Phone,
-		&i.Username,
-		&i.PasswordHash,
-		&i.LastName,
-		&i.FirstName,
-		&i.MiddleName,
-		&i.Gender,
-		&i.DateOfBirth,
-		&i.WhatsappPhone,
-		&i.DataPhone,
-		&i.CurrentCountry,
-		&i.CurrentState,
-		&i.CurrentLga,
-		&i.CurrentWard,
-		&i.CurrentCity,
-		&i.StateOfOrigin,
-		&i.VotersCardImage,
-		&i.BankAccountNumber,
-		&i.BankCode,
-		&i.PartyID,
-		&i.PollingUnitID,
-		&i.ReferralCode,
-		&i.ReferredByCode,
-		&i.AccountStatus,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
@@ -539,12 +496,38 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
-ORDER BY id DESC
+SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.whatsapp_phone, u.data_phone, u.current_country, u.current_state, u.current_lga, u.current_ward, u.current_city, u.state_of_origin, u.voters_card_image, u.bank_account_number, u.bank_code, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_code, u.account_status, u.created_at, u.updated_at FROM users u
+WHERE 
+  ($1::bigint IS NULL OR u.id < $1::bigint)
+  AND ($2::smallint IS NULL OR u.party_id = $2::smallint)
+  AND ($3::text IS NULL OR EXISTS (
+      -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
+      -- if a user somehow has multiple roles (or just to keep the base query simple).
+      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = $3::text
+  ))
+ORDER BY u.id DESC
+LIMIT $4::int
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.Query(ctx, listUsers)
+type ListUsersParams struct {
+	Cursor   pgtype.Int8 `json:"cursor"`
+	PartyID  pgtype.Int2 `json:"party_id"`
+	RoleCode pgtype.Text `json:"role_code"`
+	LimitNum int32       `json:"limit_num"`
+}
+
+// ListUsers fetches a paginated list of users with optional filtering.
+// We use sqlc.narg() (nullable argument) to make filters optional:
+// If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL'
+// condition becomes true, effectively skipping that filter.
+// This allows us to use a single dynamic query instead of writing multiple separate queries.
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+	rows, err := q.db.Query(ctx, listUsers,
+		arg.Cursor,
+		arg.PartyID,
+		arg.RoleCode,
+		arg.LimitNum,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -44,10 +44,6 @@ WHERE fake_id = $1;
 SELECT * FROM users
 WHERE fake_id = $1 LIMIT 1;
 
--- name: GetUserByEmail :one
-SELECT * FROM users
-WHERE email = $1 LIMIT 1;
-
 -- name: CreateUserSecurityQuestions :one
 INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -91,8 +87,22 @@ WHERE id = $1;
 
 
 -- name: ListUsers :many
-SELECT * FROM users
-ORDER BY id DESC;
+-- ListUsers fetches a paginated list of users with optional filtering.
+-- We use sqlc.narg() (nullable argument) to make filters optional:
+-- If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL' 
+-- condition becomes true, effectively skipping that filter.
+-- This allows us to use a single dynamic query instead of writing multiple separate queries.
+SELECT u.* FROM users u
+WHERE 
+  (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
+  AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)
+  AND (sqlc.narg('role_code')::text IS NULL OR EXISTS (
+      -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
+      -- if a user somehow has multiple roles (or just to keep the base query simple).
+      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = sqlc.narg('role_code')::text
+  ))
+ORDER BY u.id DESC
+LIMIT sqlc.arg('limit_num')::int;
 
 -- name: DeleteUser :exec
 DELETE FROM users

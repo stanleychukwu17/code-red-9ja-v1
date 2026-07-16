@@ -140,8 +140,8 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 	return nil
 }
 
-func (s *UsersService) ListUsers(ctx context.Context) ([]queries.User, error) {
-	return s.queries.ListUsers(ctx)
+func (s *UsersService) ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.User, error) {
+	return s.queries.ListUsers(ctx, arg)
 }
 
 func (s *UsersService) GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error) {

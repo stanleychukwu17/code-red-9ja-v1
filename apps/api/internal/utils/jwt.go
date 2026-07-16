@@ -32,6 +32,16 @@ func (c *JWTClaims) HasRole(role string) bool {
 	return false
 }
 
+// HasAnyRole checks if the claims contain any of the specified roles
+func (c *JWTClaims) HasAnyRole(roles ...string) bool {
+	for _, role := range roles {
+		if c.HasRole(role) {
+			return true
+		}
+	}
+	return false
+}
+
 // GenerateToken creates a signed JWT with the given claims, secret, and duration.
 func GenerateToken(userID int64, fakeID int64, username string, roles []string, secret string, duration time.Duration, partyID ...int16) (string, error) {
 	var pid int16

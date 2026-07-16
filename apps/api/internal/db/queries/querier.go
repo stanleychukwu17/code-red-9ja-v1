@@ -40,7 +40,7 @@ type Querier interface {
 	CreateStateAssemblyConstituency(ctx context.Context, arg CreateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
 	CreateStateSupervisor(ctx context.Context, arg CreateStateSupervisorParams) (StateElectionSupervisor, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
-	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error)
+	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error)
 	CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (int64, error)
 	CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error)
 	CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) (int64, error)
@@ -125,7 +125,6 @@ type Querier interface {
 	GetStateSupervisorByElectionGroup(ctx context.Context, arg GetStateSupervisorByElectionGroupParams) (StateElectionSupervisor, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error)
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
-	GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
@@ -176,7 +175,12 @@ type Querier interface {
 	ListPollingUnitResults(ctx context.Context, arg ListPollingUnitResultsParams) ([]PollingUnitResult, error)
 	ListPollingUnitUpdates(ctx context.Context, arg ListPollingUnitUpdatesParams) ([]ListPollingUnitUpdatesRow, error)
 	ListUserWalletTransactions(ctx context.Context, arg ListUserWalletTransactionsParams) ([]UserWalletTransaction, error)
-	ListUsers(ctx context.Context) ([]User, error)
+	// ListUsers fetches a paginated list of users with optional filtering.
+	// We use sqlc.narg() (nullable argument) to make filters optional:
+	// If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL'
+	// condition becomes true, effectively skipping that filter.
+	// This allows us to use a single dynamic query instead of writing multiple separate queries.
+	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 	ListUsersWithoutWallet(ctx context.Context) ([]User, error)
 	ListWalletTransactions(ctx context.Context, arg ListWalletTransactionsParams) ([]PartyWalletTransaction, error)
 	MarkFileDeleted(ctx context.Context, id int64) (File, error)

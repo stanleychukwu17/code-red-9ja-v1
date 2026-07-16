@@ -8689,16 +8689,7 @@ const docTemplate = `{
         "authservice.SeedUserRequest": {
             "type": "object",
             "properties": {
-                "account_status": {
-                    "type": "string"
-                },
                 "avatar": {
-                    "type": "string"
-                },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
                     "type": "string"
                 },
                 "current_city": {
@@ -8719,9 +8710,6 @@ const docTemplate = `{
                 "education_level": {
                     "type": "string"
                 },
-                "educational_status": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -8732,12 +8720,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "gender": {
-                    "type": "string"
-                },
-                "graduation_year": {
-                    "type": "string"
-                },
-                "highest_degree": {
                     "type": "string"
                 },
                 "home_address": {
@@ -8755,10 +8737,7 @@ const docTemplate = `{
                 "middle_name": {
                     "type": "string"
                 },
-                "nin_verified": {
-                    "type": "string"
-                },
-                "party_id": {
+                "occupation_id": {
                     "type": "integer"
                 },
                 "password": {
@@ -8767,28 +8746,13 @@ const docTemplate = `{
                 "phone": {
                     "type": "string"
                 },
-                "phone_verified": {
-                    "type": "string"
-                },
                 "religion": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "role_level": {
-                    "type": "string"
-                },
-                "school_name": {
                     "type": "string"
                 },
                 "state_of_origin": {
                     "type": "integer"
                 },
                 "username": {
-                    "type": "string"
-                },
-                "voters_card_image": {
                     "type": "string"
                 }
             }

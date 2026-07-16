@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
 import { apiFetch } from "./fetch";
 
+// Returns users from the API based on the provided data
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
     (data: { role?: string; limit?: number; cursor?: string | number; party_id?: number } | undefined) => data,
@@ -15,6 +16,9 @@ export const getUsersList = createServerFn({ method: "GET" })
       if (data?.party_id) params.append("party_id", String(data.party_id));
       const qs = params.toString();
 
+
+      console.log({ data }, `${API_URL.users}${qs ? `?${qs}` : ""}`)
+
       const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
       const resData = await response.json();
       return resData;
@@ -23,6 +27,7 @@ export const getUsersList = createServerFn({ method: "GET" })
     }
   });
 
+// Updates a user in the API based on the provided data
 export const updateUser = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -58,6 +63,7 @@ export const updateUser = createServerFn({ method: "POST" })
     }
   });
 
+// Deletes a user from the API based on the provided ID
 export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {

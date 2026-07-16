@@ -3,6 +3,7 @@ package usershandler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/utils"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // UsersService interface defines the methods needed from the users service
@@ -25,7 +27,7 @@ type UsersService interface {
 	GetUserProfile(ctx context.Context, userID int64) (queries.UserProfile, error)
 	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
-	ListUsers(ctx context.Context) ([]queries.User, error)
+	ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.User, error)
 	DeleteUser(ctx context.Context, id int64, fakeID int64) error
 	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int16, email string) error
 
@@ -110,47 +112,47 @@ func (h *Handler) ValidateBankAccount(w http.ResponseWriter, r *http.Request) {
 
 // UserResponse represents the sanitized user profile details returned to the frontend
 type UserResponse struct {
-	ID                int64  `json:"id"`
-	FakeID            int64  `json:"fake_id"`
-	Email             string `json:"email"`
-	Avatar            string `json:"avatar"`
-	Phone             string `json:"phone"`
-	Username          string `json:"username"`
-	LastName          string `json:"last_name"`
-	FirstName         string `json:"first_name"`
-	MiddleName        string `json:"middle_name"`
-	Gender            string `json:"gender"`
-	DateOfBirth       string `json:"date_of_birth"`
-	CurrentCountry    int16  `json:"current_country"`
-	CurrentState      int16  `json:"current_state"`
-	CurrentCity       int32  `json:"current_city"`
-	CurrentLga        int32  `json:"current_lga"`
-	CurrentWard       int32  `json:"current_ward"`
-	StateOfOrigin     int16  `json:"state_of_origin"`
-	NinVerified       bool   `json:"nin_verified"`
-	PhoneVerified     bool   `json:"phone_verified"`
-	EmailVerified     bool   `json:"email_verified"`
-	VotersCardVerified bool  `json:"voters_card_verified"`
-	Role              string `json:"role"`
-	RoleLevel         string `json:"role_level"`
-	AccountStatus     string `json:"account_status"`
-	PartyID           int64  `json:"party_id,omitempty"`
-	PollingUnitID     int64  `json:"polling_unit_id,omitempty"`
-	CreatedAt         string `json:"created_at"`
-	UpdatedAt         string `json:"updated_at"`
-	WhatsappPhone     string `json:"whatsapp_phone"`
-	DataPhone         string `json:"data_phone"`
-	EducationalStatus string `json:"educational_status"`
-	HighestDegree     string `json:"highest_degree"`
-	GraduationYear    string `json:"graduation_year"`
-	SchoolName        string `json:"school_name"`
-	BankAccountNumber string `json:"bank_account_number"`
-	BankCode          string `json:"bank_code"`
-	VotersCardImage   string `json:"voters_card_image"`
-	Address           string `json:"address"`
-	Religion          string `json:"religion"`
-	MaritalStatus     string `json:"marital_status"`
-	EducationLevel    string `json:"education_level"`
+	ID                 int64  `json:"id"`
+	FakeID             int64  `json:"fake_id"`
+	Email              string `json:"email"`
+	Avatar             string `json:"avatar"`
+	Phone              string `json:"phone"`
+	Username           string `json:"username"`
+	LastName           string `json:"last_name"`
+	FirstName          string `json:"first_name"`
+	MiddleName         string `json:"middle_name"`
+	Gender             string `json:"gender"`
+	DateOfBirth        string `json:"date_of_birth"`
+	CurrentCountry     int16  `json:"current_country"`
+	CurrentState       int16  `json:"current_state"`
+	CurrentCity        int32  `json:"current_city"`
+	CurrentLga         int32  `json:"current_lga"`
+	CurrentWard        int32  `json:"current_ward"`
+	StateOfOrigin      int16  `json:"state_of_origin"`
+	NinVerified        bool   `json:"nin_verified"`
+	PhoneVerified      bool   `json:"phone_verified"`
+	EmailVerified      bool   `json:"email_verified"`
+	VotersCardVerified bool   `json:"voters_card_verified"`
+	Role               string `json:"role"`
+	RoleLevel          string `json:"role_level"`
+	AccountStatus      string `json:"account_status"`
+	PartyID            int64  `json:"party_id,omitempty"`
+	PollingUnitID      int64  `json:"polling_unit_id,omitempty"`
+	CreatedAt          string `json:"created_at"`
+	UpdatedAt          string `json:"updated_at"`
+	WhatsappPhone      string `json:"whatsapp_phone"`
+	DataPhone          string `json:"data_phone"`
+	EducationalStatus  string `json:"educational_status"`
+	HighestDegree      string `json:"highest_degree"`
+	GraduationYear     string `json:"graduation_year"`
+	SchoolName         string `json:"school_name"`
+	BankAccountNumber  string `json:"bank_account_number"`
+	BankCode           string `json:"bank_code"`
+	VotersCardImage    string `json:"voters_card_image"`
+	Address            string `json:"address"`
+	Religion           string `json:"religion"`
+	MaritalStatus      string `json:"marital_status"`
+	EducationLevel     string `json:"education_level"`
 }
 
 func mapUserToResponse(u queries.User, p *queries.UserProfile, v *queries.UserVerification, role string, roleLevel string) UserResponse {
@@ -269,47 +271,47 @@ func mapUserToResponse(u queries.User, p *queries.UserProfile, v *queries.UserVe
 	}
 
 	return UserResponse{
-		ID:                u.ID,
-		FakeID:            u.FakeID.Int64,
-		Email:             email,
-		Avatar:            avatar,
-		Phone:             phone,
-		Username:          username,
-		LastName:          lastName,
-		FirstName:         firstName,
-		MiddleName:        middleName,
-		Gender:            gender,
-		DateOfBirth:       dateOfBirth,
-		CurrentCountry:    u.CurrentCountry,
-		CurrentState:      u.CurrentState,
-		CurrentCity:       cityID,
-		CurrentLga:        lgaID,
-		CurrentWard:       wardID,
-		StateOfOrigin:     stateOfOrigin,
-		NinVerified:       ninVerified,
-		PhoneVerified:     phoneVerified,
-		EmailVerified:     emailVerified,
+		ID:                 u.ID,
+		FakeID:             u.FakeID.Int64,
+		Email:              email,
+		Avatar:             avatar,
+		Phone:              phone,
+		Username:           username,
+		LastName:           lastName,
+		FirstName:          firstName,
+		MiddleName:         middleName,
+		Gender:             gender,
+		DateOfBirth:        dateOfBirth,
+		CurrentCountry:     u.CurrentCountry,
+		CurrentState:       u.CurrentState,
+		CurrentCity:        cityID,
+		CurrentLga:         lgaID,
+		CurrentWard:        wardID,
+		StateOfOrigin:      stateOfOrigin,
+		NinVerified:        ninVerified,
+		PhoneVerified:      phoneVerified,
+		EmailVerified:      emailVerified,
 		VotersCardVerified: votersCardVerified,
-		Role:              role,
-		RoleLevel:         roleLevel,
-		AccountStatus:     accountStatus,
-		PartyID:           partyID,
-		PollingUnitID:     pollingUnitID,
-		CreatedAt:         u.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt:         u.UpdatedAt.Time.Format(time.RFC3339),
-		WhatsappPhone:     whatsappPhone,
-		DataPhone:         dataPhone,
-		EducationalStatus: educationalStatus,
-		HighestDegree:     highestDegree,
-		GraduationYear:    graduationYear,
-		SchoolName:        schoolName,
-		BankAccountNumber: bankAccountNumber,
-		BankCode:          bankCode,
-		VotersCardImage:   votersCardImage,
-		Address:           address,
-		Religion:          religion,
-		MaritalStatus:     maritalStatus,
-		EducationLevel:    educationLevel,
+		Role:               role,
+		RoleLevel:          roleLevel,
+		AccountStatus:      accountStatus,
+		PartyID:            partyID,
+		PollingUnitID:      pollingUnitID,
+		CreatedAt:          u.CreatedAt.Time.Format(time.RFC3339),
+		UpdatedAt:          u.UpdatedAt.Time.Format(time.RFC3339),
+		WhatsappPhone:      whatsappPhone,
+		DataPhone:          dataPhone,
+		EducationalStatus:  educationalStatus,
+		HighestDegree:      highestDegree,
+		GraduationYear:     graduationYear,
+		SchoolName:         schoolName,
+		BankAccountNumber:  bankAccountNumber,
+		BankCode:           bankCode,
+		VotersCardImage:    votersCardImage,
+		Address:            address,
+		Religion:           religion,
+		MaritalStatus:      maritalStatus,
+		EducationLevel:     educationLevel,
 	}
 }
 
@@ -421,24 +423,35 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Profile updated successfully", nil)
 }
 
+// parsePaginationParams extracts and validates pagination parameters from the HTTP request query string.
+// It returns a limit (number of items to return) and a cursor (the starting point for the next page).
 func parsePaginationParams(r *http.Request) (int, int64) {
-	limit := 20
+	limit := 20 // Set a default limit of 20 items per page
+
+	// Check if a "limit" query parameter was provided in the URL
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-			if l > 100 {
+		// Attempt to parse the limit string into an integer. Ensure it's a positive number.
+		if limitNum, err := strconv.Atoi(limitStr); err == nil && limitNum > 0 {
+			if limitNum > 100 {
 				limit = 100
 			} else {
-				limit = l
+				limit = limitNum
 			}
 		}
 	}
 
+	// Initialize the cursor variable, which defaults to 0 (indicating the first page or starting point)
 	var cursor int64
+	// Check if a "cursor" query parameter was provided in the URL
 	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
+		// Attempt to parse the cursor string into a 64-bit integer
 		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
+			// Use the parsed cursor value
 			cursor = c
 		}
 	}
+
+	// Return the final resolved limit and cursor values
 	return limit, cursor
 }
 
@@ -471,13 +484,38 @@ type GetUsersData struct {
 // @Security     BearerAuth
 // @Router       /users [get]
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
+	// 1. Parse URL query parameters for filtering and pagination
 	role := r.URL.Query().Get("role")
 	partyIDStr := r.URL.Query().Get("party_id")
 	limit, cursor := parsePaginationParams(r)
 
+	if role == "user" {
+		role = ""
+	}
+
+	fmt.Println("role", role)
+	fmt.Println("partyIDStr", partyIDStr)
+	fmt.Println("limit", limit)
+	fmt.Println("cursor", cursor)
+
 	var partyID int64
+	// 2. Retrieve JWT claims from the request context
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if ok && claims != nil && claims.HasRole("partyadmin") {
+
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// 3. Verify that the user has at least one of the required administrative roles
+	if !claims.HasAnyRole("super_admin", "admin", "partyadmin", "super_party_admin") {
+		h.utils.RespondError(w, http.StatusForbidden, "You do not have permission to view this resource")
+		return
+	}
+
+	// 4. Determine Data Isolation (Party Admin vs Super Admin)
+	if claims.HasAnyRole("partyadmin", "super_party_admin") {
+		// If the user is a party admin, restrict their view to their own party's users
 		currentUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch user details: "+err.Error())
@@ -486,71 +524,44 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		if currentUser.PartyID.Valid {
 			partyID = int64(currentUser.PartyID.Int16)
 		} else {
-			// A party member user without a party assigned should see no users
-			partyID = -1
+			h.utils.RespondError(w, http.StatusForbidden, "You must be assigned to a party to view users")
+			return
 		}
 	} else if partyIDStr != "" {
+		// For super_admin/admin: allow filtering by a specific party if provided in the URL
 		if pid, err := strconv.ParseInt(partyIDStr, 10, 64); err == nil {
 			partyID = pid
 		}
 	}
 
-	users, err := h.usersService.ListUsers(r.Context())
+	// 5. Build query parameters
+	arg := queries.ListUsersParams{
+		LimitNum: int32(limit),
+	}
+	if cursor > 0 {
+		arg.Cursor = pgtype.Int8{Int64: cursor, Valid: true}
+	}
+	if partyID > 0 {
+		arg.PartyID = pgtype.Int2{Int16: int16(partyID), Valid: true}
+	}
+	if role != "" {
+		arg.RoleCode = pgtype.Text{String: role, Valid: true}
+	}
+
+	// 6. Fetch paginated and filtered users from the database
+	paginatedUsers, err := h.usersService.ListUsers(r.Context(), arg)
+	fmt.Println("paginatedUsers", paginatedUsers, "arg", arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch users: "+err.Error())
 		return
 	}
 
-	var filteredUsers []queries.User
-	for _, u := range users {
-		if role != "" {
-			uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
-			hasRole := false
-			for _, ur := range uRoles {
-				if ur.Code == role {
-					hasRole = true
-					break
-				}
-			}
-			if !hasRole {
-				continue
-			}
-		}
-		if partyID == -1 {
-			continue
-		}
-		if partyID > 0 && (!u.PartyID.Valid || int64(u.PartyID.Int16) != partyID) {
-			continue
-		}
-		filteredUsers = append(filteredUsers, u)
-	}
-
-	startIndex := 0
-	if cursor > 0 {
-		for i, u := range filteredUsers {
-			if u.ID == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	var paginatedUsers []queries.User
 	hasMore := false
 	nextCursor := ""
 
-	if startIndex < len(filteredUsers) {
-		endIndex := startIndex + limit
-		if endIndex >= len(filteredUsers) {
-			endIndex = len(filteredUsers)
-			paginatedUsers = filteredUsers[startIndex:endIndex]
-		} else {
-			paginatedUsers = filteredUsers[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(paginatedUsers[len(paginatedUsers)-1].ID, 10)
-		}
-	} else {
-		paginatedUsers = []queries.User{}
+	if len(paginatedUsers) == limit && len(paginatedUsers) > 0 {
+		hasMore = true
+		nextCursor = strconv.FormatInt(paginatedUsers[len(paginatedUsers)-1].ID, 10)
 	}
 
 	responses := make([]UserResponse, len(paginatedUsers))
