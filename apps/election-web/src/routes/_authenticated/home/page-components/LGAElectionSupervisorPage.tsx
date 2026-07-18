@@ -1,4 +1,6 @@
 import { useAuth } from "#/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { getSingleLgaStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
 import {
   LeaderboardCardWrapper,
@@ -32,8 +34,10 @@ export function LGAElectionSupervisorPage() {
   const {
     selectedElectionGroup,
     selectedElection,
-    selectedAssignment: currentPollingUnitAssignment,
+    selectedSupervisorAssignment,
   } = useAuth();
+
+  const currentAssignment = selectedSupervisorAssignment?.data;
 
   const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
@@ -62,68 +66,87 @@ export function LGAElectionSupervisorPage() {
     }
   }
 
+  const { data: statsRes } = useQuery({
+    queryKey: [
+      "lgaStats",
+      selectedElectionGroup?.id,
+      currentAssignment?.lga_id,
+      currentAssignment?.party_id,
+    ],
+    queryFn: () =>
+      getSingleLgaStats({
+        data: {
+          election_group_id: selectedElectionGroup!.id,
+          lga_id: currentAssignment!.lga_id!,
+          party_id: currentAssignment!.party_id!,
+        },
+      }),
+    enabled:
+      !!selectedElectionGroup?.id &&
+      !!currentAssignment?.lga_id &&
+      !!currentAssignment?.party_id,
+  });
+
+  const partyStats = statsRes?.data?.party_stats || {};
+  const targets = statsRes?.data?.targets || {};
+
   const readiness = [
     {
-      title: "LGA supervisor coverage",
-      rightText: "5",
-      rightText2: "/ 7",
-      isCompleted: true,
-    },
-    {
       title: "Ward supervisor coverage",
-      rightText: "17",
-      rightText2: "/ 220",
-      isCompleted: true,
+      rightText: `${partyStats.unique_ward_supervisors_count || 0}`,
+      rightText2: `/ ${targets.wards_count || 0}`,
+      isCompleted:
+        (partyStats.unique_ward_supervisors_count || 0) >=
+        (targets.wards_count || 0),
     },
     {
       title: "Polling agents coverage",
-      rightText: "982",
-      rightText2: "/ 4,321",
-      isCompleted: true,
+      rightText: `${partyStats.unique_pu_agents_count || 0}`,
+      rightText2: `/ ${targets.polling_units_count || 0}`,
+      isCompleted:
+        (partyStats.unique_pu_agents_count || 0) >=
+        (targets.polling_units_count || 0),
     },
     {
       title: "Election day practice test",
-      rightText: "1,230",
-      rightText2: "/ 4,321",
-      isCompleted: true,
+      rightText: `${partyStats.pu_election_practice_test_readiness_percentage || 0}%`,
+      rightText2: "",
+      isCompleted:
+        (partyStats.pu_election_practice_test_readiness_percentage || 0) == 100,
     },
   ];
 
   const objectives = [
     {
       title: "Agents that are at their PU",
-      rightText: "982",
-      rightText2: "/ 4,321",
-      isCompleted: true,
-    },
-    {
-      title: "Avg. Agent arrival time",
-      rightText: "982",
-      rightText2: "/ 4,321",
-      isCompleted: false,
+      rightText: `${partyStats.pu_agents_in_attendance_count || 0}`,
+      rightText2: `/ ${partyStats.pu_agents_count || 0}`,
+      isCompleted:
+        (partyStats.pu_agents_in_attendance_count || 0) >=
+        (partyStats.pu_agents_count || 1),
     },
     {
       title: "PU election have started in",
-      rightText: "982",
-      rightText2: "/ 4,321",
+      rightText: `${partyStats.total_pu_where_election_has_started || 0}`,
+      rightText2: `/ ${targets.polling_units_count || 0}`,
       isCompleted: false,
     },
     {
       title: "Agent Updates",
-      rightText: "982",
-      rightText2: "/ 4,321",
+      rightText: `${partyStats.updates_count || 0}`,
+      rightText2: "",
       isCompleted: false,
     },
     {
       title: "Agent Reports",
-      rightText: "982",
-      rightText2: "/ 4,321",
+      rightText: `${partyStats.reports_count || 0}`,
+      rightText2: "",
       isCompleted: false,
     },
     {
       title: "Results uploaded",
-      rightText: "0",
-      rightText2: "/ 4,321",
+      rightText: `${partyStats.pu_final_results_uploaded_count || 0}`,
+      rightText2: `/ ${targets.polling_units_count || 0}`,
       isCompleted: false,
     },
   ];
@@ -189,16 +212,16 @@ export function LGAElectionSupervisorPage() {
         </CarouselContent>
       </Carousel>
       <CarouselDotContent>
-        <CarouselDot active={carouselIndex === 2} />
-        <CarouselDot active={carouselIndex === 1} />
         <CarouselDot active={carouselIndex === 0} />
+        <CarouselDot active={carouselIndex === 1} />
+        <CarouselDot active={carouselIndex === 2} />
       </CarouselDotContent>
 
       <HomeBody>
-        {daysLeft !== 0 && <ApplicationsCard />}
-        {daysLeft !== 0 && <PracticeTestCard />}
+        {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
+        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
-        {daysLeft === 0 && !currentPollingUnitAssignment?.arrived_at && (
+        {daysLeft === 0 && !currentAssignment?.arrived_at && (
           <SupervisorStartDutyCard
             onReadyClick={() => {
               setShowNoInfo(false);

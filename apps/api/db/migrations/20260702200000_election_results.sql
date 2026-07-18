@@ -60,15 +60,9 @@ CREATE TABLE polling_unit_results (
   updated_at               TIMESTAMPTZ DEFAULT NOW()
 );
 
--- One result per election per polling unit from a specific party agent
-CREATE UNIQUE INDEX uq_result_party_submission
-  ON polling_unit_results (election_id, polling_unit_id, party_id)
-  WHERE party_id IS NOT NULL;
-
--- One result per election per polling unit from a specific general user (no party affiliation)
-CREATE UNIQUE INDEX uq_result_user_submission
-  ON polling_unit_results (election_id, polling_unit_id, submitted_by)
-  WHERE party_id IS NULL;
+-- One result per election per polling unit from a specific user
+CREATE UNIQUE INDEX uq_result_submission
+  ON polling_unit_results (election_id, polling_unit_id, submitted_by);
 
 -- Indexes for common query patterns
 CREATE INDEX idx_pu_results_election       ON polling_unit_results(election_id);
@@ -80,15 +74,6 @@ CREATE INDEX idx_pu_results_state          ON polling_unit_results(state_id);
 CREATE INDEX idx_pu_results_lga            ON polling_unit_results(lga_id);
 CREATE INDEX idx_pu_results_status         ON polling_unit_results(status);
 
--- ============================================================
--- Additions to existing tables
--- ============================================================
-
--- Track result-submission progress on each agent assignment
-ALTER TABLE polling_unit_assignments
-  ADD COLUMN results_submitted_count INT          NOT NULL DEFAULT 0,
-  ADD COLUMN results_status          VARCHAR(30)  NOT NULL DEFAULT 'pending'
-    CHECK (results_status IN ('pending', 'partial', 'complete'));
 
 -- Add a lifecycle status to elections so the API knows when to accept result submissions
 ALTER TABLE elections

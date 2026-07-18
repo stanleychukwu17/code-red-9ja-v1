@@ -1015,7 +1015,6 @@ DO UPDATE SET
   valid_votes = EXCLUDED.valid_votes,
   rejected_votes = EXCLUDED.rejected_votes,
   candidate_results = EXCLUDED.candidate_results,
-    candidate_results_live = EXCLUDED.candidate_results_live,
   candidate_results_live = EXCLUDED.candidate_results_live,
   matching_submissions_count = EXCLUDED.matching_submissions_count,
   total_submissions_count = EXCLUDED.total_submissions_count,

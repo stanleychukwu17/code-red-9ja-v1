@@ -25,7 +25,7 @@ interface PostInputAreaProps {
 export function PostInputArea({
   reportText,
   setReportText,
-  placeholder = "Give situation report",
+  placeholder = "What's happening at your polling unit?",
   selectedTags,
   removeTag,
   mediaFiles,
@@ -45,7 +45,7 @@ export function PostInputArea({
           value={reportText}
           onChange={(e) => setReportText(e.target.value)}
           className={cn(
-            "text-xl font-medium",
+            "text-lg font-medium p-0",
             isReport && "text-red placeholder:text-red/50",
           )}
           placeholder={placeholder}

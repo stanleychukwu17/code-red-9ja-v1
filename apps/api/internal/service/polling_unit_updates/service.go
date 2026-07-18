@@ -3,6 +3,7 @@ package polling_unit_updates
 import (
 	"context"
 	"errors"
+	"fmt"
 	"free9ja/api/internal/db/queries"
 	"time"
 
@@ -69,7 +70,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 	// Fetch ElectionGroup and check date
 	electionGroup, err := qtx.GetElectionGroupByID(ctx, input.ElectionGroupID)
 	if err != nil {
-		return queries.PollingUnitUpdate{}, errors.New("invalid election group")
+		return queries.PollingUnitUpdate{}, fmt.Errorf("invalid election group: %w", err)
 	}
 	if electionGroup.ElectionDate.Valid {
 		now := time.Now().UTC()
@@ -156,6 +157,17 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 			ElectionGroupID: input.ElectionGroupID,
 			ReportsCount:    reportsInc,
 			UpdatesCount:    updatesInc,
+		})
+		if err != nil {
+			return queries.PollingUnitUpdate{}, err
+		}
+
+		err = qtx.IncrementElectionGroupPUPartyMetrics(ctx, queries.IncrementElectionGroupPUPartyMetricsParams{
+			ElectionGroupID: input.ElectionGroupID,
+			PollingUnitID:   input.PollingUnitID,
+			PartyID:         *input.PartyID,
+			ReportsDelta:    reportsInc,
+			UpdatesDelta:    updatesInc,
 		})
 		if err != nil {
 			return queries.PollingUnitUpdate{}, err

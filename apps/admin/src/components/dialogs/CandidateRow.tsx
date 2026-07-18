@@ -34,7 +34,7 @@ export function CandidateRow({
   return (
     <div className="h-12 flex items-center justify-between transition">
       <div className="flex items-center gap-3">
-        <div className="size-9 rounded-full bg-[#f0f0f0] border border-[#e0e0e0] flex items-center justify-center text-xs font-semibold text-c-70 shrink-0 overflow-hidden">
+        <div className="size-10 rounded-full bg-[#f0f0f0] border border-[#e0e0e0] flex items-center justify-center text-xs font-semibold text-c-70 shrink-0 overflow-hidden">
           {candidate.avatar_url ? (
             <img
               src={candidate.avatar_url}

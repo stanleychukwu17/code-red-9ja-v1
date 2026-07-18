@@ -1,6 +1,7 @@
 package electionstatshandler
 
 import (
+	"encoding/json"
 	"free9ja/api/internal/db/queries"
 	electionstats "free9ja/api/internal/service/election_stats"
 	"free9ja/api/internal/utils"
@@ -65,7 +66,7 @@ func (h *Handler) GetPollingUnitStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	arg := queries.ListElectionPollingUnitStatsByGroupParams{
+	arg := queries.ListElectionGroupPollingUnitStatsByGroupParams{
 		ElectionGroupID: groupID,
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
@@ -78,7 +79,7 @@ func (h *Handler) GetPollingUnitStats(w http.ResponseWriter, r *http.Request) {
 		arg.WardID = pgtype.Int4{Int32: wardID, Valid: true}
 	}
 
-	stats, err := h.service.ListElectionPollingUnitStatsByGroup(r.Context(), arg)
+	stats, err := h.service.ListElectionGroupPollingUnitStatsByGroup(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -103,7 +104,7 @@ func (h *Handler) GetWardStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	arg := queries.ListElectionWardStatsByGroupParams{
+	arg := queries.ListElectionGroupWardStatsByGroupParams{
 		ElectionGroupID: groupID,
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
@@ -113,7 +114,7 @@ func (h *Handler) GetWardStats(w http.ResponseWriter, r *http.Request) {
 		arg.LgaID = pgtype.Int4{Int32: lgaID, Valid: true}
 	}
 
-	stats, err := h.service.ListElectionWardStatsByGroup(r.Context(), arg)
+	stats, err := h.service.ListElectionGroupWardStatsByGroup(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -138,7 +139,7 @@ func (h *Handler) GetLGAStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	arg := queries.ListElectionLGAStatsByGroupParams{
+	arg := queries.ListElectionGroupLGAStatsByGroupParams{
 		ElectionGroupID: groupID,
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
@@ -148,7 +149,7 @@ func (h *Handler) GetLGAStats(w http.ResponseWriter, r *http.Request) {
 		arg.SenatorialDistrictID = pgtype.Int4{Int32: sdID, Valid: true}
 	}
 
-	stats, err := h.service.ListElectionLGAStatsByGroup(r.Context(), arg)
+	stats, err := h.service.ListElectionGroupLGAStatsByGroup(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -172,14 +173,14 @@ func (h *Handler) GetStateConstituencyStats(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	arg := queries.ListElectionStateConstituencyStatsByGroupParams{
+	arg := queries.ListElectionGroupStateConstituencyStatsByGroupParams{
 		ElectionGroupID: groupID,
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
 	}
 
-	stats, err := h.service.ListElectionStateConstituencyStatsByGroup(r.Context(), arg)
+	stats, err := h.service.ListElectionGroupStateConstituencyStatsByGroup(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -204,7 +205,7 @@ func (h *Handler) GetFederalConstituencyStats(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	arg := queries.ListElectionFederalConstituencyStatsByGroupParams{
+	arg := queries.ListElectionGroupFederalConstituencyStatsByGroupParams{
 		ElectionGroupID: groupID,
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
@@ -214,7 +215,7 @@ func (h *Handler) GetFederalConstituencyStats(w http.ResponseWriter, r *http.Req
 		arg.SenatorialDistrictID = pgtype.Int4{Int32: sdID, Valid: true}
 	}
 
-	stats, err := h.service.ListElectionFederalConstituencyStatsByGroup(r.Context(), arg)
+	stats, err := h.service.ListElectionGroupFederalConstituencyStatsByGroup(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -238,14 +239,14 @@ func (h *Handler) GetSenatorialDistrictStats(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	arg := queries.ListElectionSenatorialDistrictStatsByGroupParams{
+	arg := queries.ListElectionGroupSenatorialDistrictStatsByGroupParams{
 		ElectionGroupID: groupID,
 	}
 	if stateID, ok := parseOptionalInt16(r, "state_id"); ok {
 		arg.StateID = pgtype.Int2{Int16: stateID, Valid: true}
 	}
 
-	stats, err := h.service.ListElectionSenatorialDistrictStatsByGroup(r.Context(), arg)
+	stats, err := h.service.ListElectionGroupSenatorialDistrictStatsByGroup(r.Context(), arg)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
@@ -268,10 +269,162 @@ func (h *Handler) GetStateStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stats, err := h.service.ListElectionStateStatsByGroup(r.Context(), groupID)
+	stats, err := h.service.ListElectionGroupStateStatsByGroup(r.Context(), groupID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 		return
 	}
+	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
+}
+
+// extractPartyStats parses a JSONB array of party stats and returns the object for the given party ID.
+func extractPartyStats(parties []byte, targetPartyID int32) map[string]interface{} {
+	if len(parties) == 0 {
+		return nil
+	}
+	var partySlice []map[string]interface{}
+	if err := json.Unmarshal(parties, &partySlice); err != nil {
+		return nil
+	}
+	for _, p := range partySlice {
+		if pid, ok := p["party_id"].(float64); ok && int32(pid) == targetPartyID {
+			return p
+		}
+	}
+	return nil
+}
+
+// GetSingleStateStats godoc
+// @Summary      Get state stats for a single geographic unit and optionally a single party
+// @Description  Fetches pre-aggregated election statistics for a single state unit, extracting a single party from the parties JSONB array if party_id is provided.
+// @Tags         ElectionStats
+// @Produce      json
+// @Param        id        path  int  true  "Election Group ID"
+// @Param        state_id  path  int  true  "State ID"
+// @Param        party_id  query int  false "Party ID filter"
+// @Success      200  {object} map[string]interface{}
+// @Router       /election-groups/{id}/stats/states/{state_id} [get]
+func (h *Handler) GetSingleStateStats(w http.ResponseWriter, r *http.Request) {
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		return
+	}
+	stateID, err := strconv.ParseInt(chi.URLParam(r, "state_id"), 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid state ID")
+		return
+	}
+
+	arg := queries.GetElectionGroupStateStatsParams{
+		ElectionGroupID: groupID,
+		StateID:         int16(stateID),
+	}
+	stats, err := h.service.GetElectionGroupStateStats(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
+		return
+	}
+
+	partyID, hasPartyID := parseOptionalInt(r, "party_id")
+	if hasPartyID {
+		partyStats := extractPartyStats(stats.Parties, partyID)
+		h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
+			"party_stats": partyStats,
+			"targets":     stats,
+		})
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
+}
+
+// GetSingleLGAStats godoc
+// @Summary      Get LGA stats for a single geographic unit and optionally a single party
+// @Description  Fetches pre-aggregated election statistics for a single LGA unit, extracting a single party from the parties JSONB array if party_id is provided.
+// @Tags         ElectionStats
+// @Produce      json
+// @Param        id        path  int  true  "Election Group ID"
+// @Param        lga_id    path  int  true  "LGA ID"
+// @Param        party_id  query int  false "Party ID filter"
+// @Success      200  {object} map[string]interface{}
+// @Router       /election-groups/{id}/stats/lgas/{lga_id} [get]
+func (h *Handler) GetSingleLGAStats(w http.ResponseWriter, r *http.Request) {
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		return
+	}
+	lgaID, err := strconv.ParseInt(chi.URLParam(r, "lga_id"), 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid LGA ID")
+		return
+	}
+
+	arg := queries.GetElectionGroupLGAStatsParams{
+		ElectionGroupID: groupID,
+		LgaID:           int32(lgaID),
+	}
+	stats, err := h.service.GetElectionGroupLGAStats(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
+		return
+	}
+
+	partyID, hasPartyID := parseOptionalInt(r, "party_id")
+	if hasPartyID {
+		partyStats := extractPartyStats(stats.Parties, partyID)
+		h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
+			"party_stats": partyStats,
+			"targets":     stats,
+		})
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
+}
+
+// GetSingleWardStats godoc
+// @Summary      Get ward stats for a single geographic unit and optionally a single party
+// @Description  Fetches pre-aggregated election statistics for a single ward unit, extracting a single party from the parties JSONB array if party_id is provided.
+// @Tags         ElectionStats
+// @Produce      json
+// @Param        id        path  int  true  "Election Group ID"
+// @Param        ward_id   path  int  true  "Ward ID"
+// @Param        party_id  query int  false "Party ID filter"
+// @Success      200  {object} map[string]interface{}
+// @Router       /election-groups/{id}/stats/wards/{ward_id} [get]
+func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		return
+	}
+	wardID, err := strconv.ParseInt(chi.URLParam(r, "ward_id"), 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid Ward ID")
+		return
+	}
+
+	arg := queries.GetElectionGroupWardStatsParams{
+		ElectionGroupID: groupID,
+		WardID:          int32(wardID),
+	}
+	stats, err := h.service.GetElectionGroupWardStats(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
+		return
+	}
+
+	partyID, hasPartyID := parseOptionalInt(r, "party_id")
+	if hasPartyID {
+		partyStats := extractPartyStats(stats.Parties, partyID)
+		h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
+			"party_stats": partyStats,
+			"targets":     stats,
+		})
+		return
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
 }

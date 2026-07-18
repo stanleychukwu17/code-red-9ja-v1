@@ -8,13 +8,14 @@ import {
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { WardsTable } from "#/components/Tables";
-import type { WardType } from "#/components/Tables";
 import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getWards } from "#/lib/server/wards";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
+import type { WardType } from "#/components/tiles/ward-tile";
 
 export const Route = createFileRoute("/_authenticated/bodies/wards")({
   head: () => getPageHeader({ title: "Bodies - Wards" }),
@@ -57,16 +58,7 @@ function RouteComponent() {
 
   const wards: WardType[] = data
     ? data.pages.flatMap((page) =>
-      (page.data?.wards || []).map(
-        (w: {
-          id: number;
-          name: string;
-          abbreviation?: string;
-          lga_id: number;
-          lga_name: string;
-          state_id: number;
-          state_name: string;
-        }) => ({
+        (page.data?.wards || []).map((w: any) => ({
           id: w.id,
           name: w.name,
           abbreviation: w.abbreviation ?? "",
@@ -74,9 +66,9 @@ function RouteComponent() {
           lga_name: w.lga_name,
           state_id: w.state_id,
           state_name: w.state_name,
-        }),
-      ),
-    )
+          polling_units_count: w.polling_units_count,
+        })),
+      )
     : [];
 
   return (
@@ -86,6 +78,7 @@ function RouteComponent() {
         rightComponent={
           <>
             <FilterButton />
+            <BodiesDropdown />
             <AddButton {...dialogProps} />
           </>
         }

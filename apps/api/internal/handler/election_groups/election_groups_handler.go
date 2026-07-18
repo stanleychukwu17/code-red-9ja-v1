@@ -212,12 +212,14 @@ func (h *Handler) ListElectionGroups(w http.ResponseWriter, r *http.Request) {
 		responseGroups = filteredGroups
 	}
 
-	orderBy, orderDir := parseSortParams(r, "name", "ASC")
+	orderBy, orderDir := parseSortParams(r, "rank", "ASC")
 
 	sort.SliceStable(responseGroups, func(i, j int) bool {
 		var less bool
 		if orderBy == "name" {
 			less = responseGroups[i].Name < responseGroups[j].Name
+		} else if orderBy == "rank" {
+			less = responseGroups[i].Rank < responseGroups[j].Rank
 		} else {
 			less = responseGroups[i].ID < responseGroups[j].ID
 		}

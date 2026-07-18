@@ -1,4 +1,5 @@
 import { Button } from "@repo/ui/components/button";
+import { cn } from "@repo/ui/lib/utils";
 import { X } from "lucide-react";
 
 interface PostHeaderProps {
@@ -32,7 +33,11 @@ export function PostHeader({
       {isInputMode && (
         <Button
           variant={isReport ? "default" : "secondary"}
-          className={`px-6 rounded-full ${isReport ? "bg-red hover:bg-red/90 text-white" : ""}`}
+          size="sm"
+          className={cn(
+            "px-6 rounded-full h-8",
+            isReport && "bg-red hover:bg-red/90 text-white",
+          )}
           onClick={onPost}
           disabled={isDisabled || isSubmitting}
         >

@@ -66,7 +66,7 @@ LIMIT sqlc.arg('limit');
 SELECT *
 FROM polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2
-AND status NOT IN ('nullified', 'disputed');
+AND status NOT IN ('nullified');
 
 -- name: UpdateResultStatus :one
 UPDATE polling_unit_results

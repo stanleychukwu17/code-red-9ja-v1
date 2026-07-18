@@ -92,3 +92,17 @@ export const getStates = createServerFn()
       return { status: "failed", error: "Failed to fetch states from API, Maybe the backend server is currently down" };
     }
   });
+
+export const recalculateBodies = createServerFn({ method: "POST" })
+  .handler(async () => {
+    try {
+      const response = await fetch(API_URL.recalculateBodies, {
+        method: "POST",
+        headers: getAuthHeaders(),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to recalculate bodies: " + (error as Error).message };
+    }
+  });

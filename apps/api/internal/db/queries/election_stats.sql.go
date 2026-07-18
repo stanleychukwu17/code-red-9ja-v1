@@ -11,19 +11,677 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const getElectionFederalConstituencyStats = `-- name: GetElectionFederalConstituencyStats :one
-SELECT id, election_group_id, federal_constituency_id, state_id, senatorial_district_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_federal_constituencies
-WHERE election_group_id = $1 AND federal_constituency_id = $2
+const adjustElectionGroupFederalConstituencyLGASupervisorCounts = `-- name: AdjustElectionGroupFederalConstituencyLGASupervisorCounts :exec
+UPDATE election_group_federal_constituencies
+SET
+  lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
+  unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{lga_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_lga_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_lga_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'lga_supervisors_count', GREATEST(0, $1::int),
+      'unique_lga_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id       = $4::bigint
+  AND federal_constituency_id = $5::int
 `
 
-type GetElectionFederalConstituencyStatsParams struct {
+type AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams struct {
+	Delta                 int32 `json:"delta"`
+	UniqueDelta           int32 `json:"unique_delta"`
+	PartyID               int64 `json:"party_id"`
 	ElectionGroupID       int64 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
 
-func (q *Queries) GetElectionFederalConstituencyStats(ctx context.Context, arg GetElectionFederalConstituencyStatsParams) (ElectionFederalConstituency, error) {
-	row := q.db.QueryRow(ctx, getElectionFederalConstituencyStats, arg.ElectionGroupID, arg.FederalConstituencyID)
-	var i ElectionFederalConstituency
+func (q *Queries) AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupFederalConstituencyLGASupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.FederalConstituencyID,
+	)
+	return err
+}
+
+const adjustElectionGroupFederalConstituencyWardSupervisorCounts = `-- name: AdjustElectionGroupFederalConstituencyWardSupervisorCounts :exec
+UPDATE election_group_federal_constituencies
+SET
+  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
+  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{ward_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_ward_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_ward_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'ward_supervisors_count', GREATEST(0, $1::int),
+      'unique_ward_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id       = $4::bigint
+  AND federal_constituency_id = $5::int
+`
+
+type AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams struct {
+	Delta                 int32 `json:"delta"`
+	UniqueDelta           int32 `json:"unique_delta"`
+	PartyID               int64 `json:"party_id"`
+	ElectionGroupID       int64 `json:"election_group_id"`
+	FederalConstituencyID int32 `json:"federal_constituency_id"`
+}
+
+func (q *Queries) AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupFederalConstituencyWardSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.FederalConstituencyID,
+	)
+	return err
+}
+
+const adjustElectionGroupLGAWardSupervisorCounts = `-- name: AdjustElectionGroupLGAWardSupervisorCounts :exec
+
+UPDATE election_group_lgas
+SET
+  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
+  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{ward_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_ward_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_ward_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'ward_supervisors_count', GREATEST(0, $1::int),
+      'unique_ward_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND lga_id            = $5::int
+`
+
+type AdjustElectionGroupLGAWardSupervisorCountsParams struct {
+	Delta           int32 `json:"delta"`
+	UniqueDelta     int32 `json:"unique_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	LgaID           int32 `json:"lga_id"`
+}
+
+// ============================================================
+// SUPERVISOR COUNT INCREMENTS / DECREMENTS
+// Called from Go after creating/removing supervisor records.
+// delta = +1 (assign) or -1 (remove).
+// ============================================================
+// Adjusts ward_supervisors_count on election_group_lgas.
+func (q *Queries) AdjustElectionGroupLGAWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupLGAWardSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupLGAWardSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.LgaID,
+	)
+	return err
+}
+
+const adjustElectionGroupNationalLGASupervisorCounts = `-- name: AdjustElectionGroupNationalLGASupervisorCounts :exec
+UPDATE election_groups
+SET
+  lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
+  unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{lga_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_lga_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_lga_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'lga_supervisors_count', GREATEST(0, $1::int),
+      'unique_lga_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE id = $4::bigint
+`
+
+type AdjustElectionGroupNationalLGASupervisorCountsParams struct {
+	Delta           int32 `json:"delta"`
+	UniqueDelta     int32 `json:"unique_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+func (q *Queries) AdjustElectionGroupNationalLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalLGASupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupNationalLGASupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+	)
+	return err
+}
+
+const adjustElectionGroupNationalStateSupervisorCounts = `-- name: AdjustElectionGroupNationalStateSupervisorCounts :exec
+UPDATE election_groups
+SET
+  state_supervisors_count        = GREATEST(0, state_supervisors_count + $1::int),
+  unique_state_supervisors_count = GREATEST(0, unique_state_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{state_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'state_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_state_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_state_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'state_supervisors_count', GREATEST(0, $1::int),
+      'unique_state_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE id = $4::bigint
+`
+
+type AdjustElectionGroupNationalStateSupervisorCountsParams struct {
+	Delta           int32 `json:"delta"`
+	UniqueDelta     int32 `json:"unique_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+func (q *Queries) AdjustElectionGroupNationalStateSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalStateSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupNationalStateSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+	)
+	return err
+}
+
+const adjustElectionGroupNationalWardSupervisorCounts = `-- name: AdjustElectionGroupNationalWardSupervisorCounts :exec
+UPDATE election_groups
+SET
+  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
+  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{ward_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_ward_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_ward_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'ward_supervisors_count', GREATEST(0, $1::int),
+      'unique_ward_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE id = $4::bigint
+`
+
+type AdjustElectionGroupNationalWardSupervisorCountsParams struct {
+	Delta           int32 `json:"delta"`
+	UniqueDelta     int32 `json:"unique_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+func (q *Queries) AdjustElectionGroupNationalWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalWardSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupNationalWardSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+	)
+	return err
+}
+
+const adjustElectionGroupSenatorialDistrictLGASupervisorCounts = `-- name: AdjustElectionGroupSenatorialDistrictLGASupervisorCounts :exec
+UPDATE election_group_senatorial_districts
+SET
+  lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
+  unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{lga_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_lga_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_lga_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'lga_supervisors_count', GREATEST(0, $1::int),
+      'unique_lga_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id      = $4::bigint
+  AND senatorial_district_id = $5::int
+`
+
+type AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams struct {
+	Delta                int32 `json:"delta"`
+	UniqueDelta          int32 `json:"unique_delta"`
+	PartyID              int64 `json:"party_id"`
+	ElectionGroupID      int64 `json:"election_group_id"`
+	SenatorialDistrictID int32 `json:"senatorial_district_id"`
+}
+
+func (q *Queries) AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupSenatorialDistrictLGASupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.SenatorialDistrictID,
+	)
+	return err
+}
+
+const adjustElectionGroupSenatorialDistrictWardSupervisorCounts = `-- name: AdjustElectionGroupSenatorialDistrictWardSupervisorCounts :exec
+UPDATE election_group_senatorial_districts
+SET
+  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
+  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{ward_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_ward_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_ward_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'ward_supervisors_count', GREATEST(0, $1::int),
+      'unique_ward_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id      = $4::bigint
+  AND senatorial_district_id = $5::int
+`
+
+type AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams struct {
+	Delta                int32 `json:"delta"`
+	UniqueDelta          int32 `json:"unique_delta"`
+	PartyID              int64 `json:"party_id"`
+	ElectionGroupID      int64 `json:"election_group_id"`
+	SenatorialDistrictID int32 `json:"senatorial_district_id"`
+}
+
+func (q *Queries) AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupSenatorialDistrictWardSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.SenatorialDistrictID,
+	)
+	return err
+}
+
+const adjustElectionGroupStateConstituencyWardSupervisorCounts = `-- name: AdjustElectionGroupStateConstituencyWardSupervisorCounts :exec
+UPDATE election_group_state_constituencies
+SET
+  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
+  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{ward_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_ward_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_ward_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'ward_supervisors_count', GREATEST(0, $1::int),
+      'unique_ward_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id     = $4::bigint
+  AND state_constituency_id = $5::int
+`
+
+type AdjustElectionGroupStateConstituencyWardSupervisorCountsParams struct {
+	Delta               int32 `json:"delta"`
+	UniqueDelta         int32 `json:"unique_delta"`
+	PartyID             int64 `json:"party_id"`
+	ElectionGroupID     int64 `json:"election_group_id"`
+	StateConstituencyID int32 `json:"state_constituency_id"`
+}
+
+func (q *Queries) AdjustElectionGroupStateConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateConstituencyWardSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupStateConstituencyWardSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.StateConstituencyID,
+	)
+	return err
+}
+
+const adjustElectionGroupStateLGASupervisorCounts = `-- name: AdjustElectionGroupStateLGASupervisorCounts :exec
+UPDATE election_group_states
+SET
+  lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
+  unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{lga_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_lga_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_lga_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'lga_supervisors_count', GREATEST(0, $1::int),
+      'unique_lga_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND state_id          = $5::smallint
+`
+
+type AdjustElectionGroupStateLGASupervisorCountsParams struct {
+	Delta           int32 `json:"delta"`
+	UniqueDelta     int32 `json:"unique_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	StateID         int16 `json:"state_id"`
+}
+
+func (q *Queries) AdjustElectionGroupStateLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateLGASupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupStateLGASupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.StateID,
+	)
+	return err
+}
+
+const adjustElectionGroupStateWardSupervisorCounts = `-- name: AdjustElectionGroupStateWardSupervisorCounts :exec
+UPDATE election_group_states
+SET
+  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
+  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{ward_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_ward_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_ward_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'ward_supervisors_count', GREATEST(0, $1::int),
+      'unique_ward_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND state_id          = $5::smallint
+`
+
+type AdjustElectionGroupStateWardSupervisorCountsParams struct {
+	Delta           int32 `json:"delta"`
+	UniqueDelta     int32 `json:"unique_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	StateID         int16 `json:"state_id"`
+}
+
+func (q *Queries) AdjustElectionGroupStateWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateWardSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupStateWardSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.StateID,
+	)
+	return err
+}
+
+const adjustElectionGroupWardWardSupervisorCounts = `-- name: AdjustElectionGroupWardWardSupervisorCounts :exec
+UPDATE election_group_wards
+SET
+  ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
+  unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{ward_supervisors_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisors_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_ward_supervisors_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_ward_supervisors_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'ward_supervisors_count', GREATEST(0, $1::int),
+      'unique_ward_supervisors_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND ward_id           = $5::int
+`
+
+type AdjustElectionGroupWardWardSupervisorCountsParams struct {
+	Delta           int32 `json:"delta"`
+	UniqueDelta     int32 `json:"unique_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	WardID          int32 `json:"ward_id"`
+}
+
+func (q *Queries) AdjustElectionGroupWardWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupWardWardSupervisorCountsParams) error {
+	_, err := q.db.Exec(ctx, adjustElectionGroupWardWardSupervisorCounts,
+		arg.Delta,
+		arg.UniqueDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.WardID,
+	)
+	return err
+}
+
+const getElectionGroupFederalConstituencyStats = `-- name: GetElectionGroupFederalConstituencyStats :one
+SELECT id, election_group_id, federal_constituency_id, state_id, senatorial_district_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_federal_constituencies
+WHERE election_group_id = $1 AND federal_constituency_id = $2
+`
+
+type GetElectionGroupFederalConstituencyStatsParams struct {
+	ElectionGroupID       int64 `json:"election_group_id"`
+	FederalConstituencyID int32 `json:"federal_constituency_id"`
+}
+
+func (q *Queries) GetElectionGroupFederalConstituencyStats(ctx context.Context, arg GetElectionGroupFederalConstituencyStatsParams) (ElectionGroupFederalConstituency, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupFederalConstituencyStats, arg.ElectionGroupID, arg.FederalConstituencyID)
+	var i ElectionGroupFederalConstituency
 	err := row.Scan(
 		&i.ID,
 		&i.ElectionGroupID,
@@ -31,15 +689,16 @@ func (q *Queries) GetElectionFederalConstituencyStats(ctx context.Context, arg G
 		&i.StateID,
 		&i.SenatorialDistrictID,
 		&i.UniqueFinalResultsExpected,
-		&i.PuTotalAgentsCount,
-		&i.PuTotalAgentsInAttendanceCount,
-		&i.PuTotalReportsCount,
-		&i.PuTotalUpdatesCount,
+		&i.PuAgentsCount,
+		&i.UniquePuAgentsCount,
+		&i.PuAgentsInAttendanceCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
 		&i.PuAverageElectionStartedAt,
 		&i.PuAverageElectionEndedAt,
 		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuTotalFinalResultsUploadedCount,
-		&i.PuTotalUniqueFinalResultsUploadedCount,
+		&i.PuFinalResultsUploadedCount,
+		&i.UniquePuFinalResultsUploadedCount,
 		&i.PuLiveVotersReferredByAgentCount,
 		&i.TotalPuWithReports,
 		&i.TotalPuWithUpdates,
@@ -48,6 +707,14 @@ func (q *Queries) GetElectionFederalConstituencyStats(ctx context.Context, arg G
 		&i.TotalPuWhereElectionHasEnded,
 		&i.TotalPuUniqueFinalResultsUploaded,
 		&i.TotalPuWhereAgentsReferredLiveVoters,
+		&i.LgaSupervisorsCount,
+		&i.UniqueLgaSupervisorsCount,
+		&i.WardSupervisorsCount,
+		&i.UniqueWardSupervisorsCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 		&i.Parties,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -55,19 +722,19 @@ func (q *Queries) GetElectionFederalConstituencyStats(ctx context.Context, arg G
 	return i, err
 }
 
-const getElectionLGAStats = `-- name: GetElectionLGAStats :one
-SELECT id, election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_lgas
+const getElectionGroupLGAStats = `-- name: GetElectionGroupLGAStats :one
+SELECT id, election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_lgas
 WHERE election_group_id = $1 AND lga_id = $2
 `
 
-type GetElectionLGAStatsParams struct {
+type GetElectionGroupLGAStatsParams struct {
 	ElectionGroupID int64 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
 
-func (q *Queries) GetElectionLGAStats(ctx context.Context, arg GetElectionLGAStatsParams) (ElectionLga, error) {
-	row := q.db.QueryRow(ctx, getElectionLGAStats, arg.ElectionGroupID, arg.LgaID)
-	var i ElectionLga
+func (q *Queries) GetElectionGroupLGAStats(ctx context.Context, arg GetElectionGroupLGAStatsParams) (ElectionGroupLga, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupLGAStats, arg.ElectionGroupID, arg.LgaID)
+	var i ElectionGroupLga
 	err := row.Scan(
 		&i.ID,
 		&i.ElectionGroupID,
@@ -76,15 +743,16 @@ func (q *Queries) GetElectionLGAStats(ctx context.Context, arg GetElectionLGASta
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.UniqueFinalResultsExpected,
-		&i.PuTotalAgentsCount,
-		&i.PuTotalAgentsInAttendanceCount,
-		&i.PuTotalReportsCount,
-		&i.PuTotalUpdatesCount,
+		&i.PuAgentsCount,
+		&i.UniquePuAgentsCount,
+		&i.PuAgentsInAttendanceCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
 		&i.PuAverageElectionStartedAt,
 		&i.PuAverageElectionEndedAt,
 		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuTotalFinalResultsUploadedCount,
-		&i.PuTotalUniqueFinalResultsUploadedCount,
+		&i.PuFinalResultsUploadedCount,
+		&i.UniquePuFinalResultsUploadedCount,
 		&i.PuLiveVotersReferredByAgentCount,
 		&i.TotalPuWithReports,
 		&i.TotalPuWithUpdates,
@@ -93,6 +761,13 @@ func (q *Queries) GetElectionLGAStats(ctx context.Context, arg GetElectionLGASta
 		&i.TotalPuWhereElectionHasEnded,
 		&i.TotalPuUniqueFinalResultsUploaded,
 		&i.TotalPuWhereAgentsReferredLiveVoters,
+		&i.LgaSupervisorsCount,
+		&i.UniqueLgaSupervisorsCount,
+		&i.WardSupervisorsCount,
+		&i.UniqueWardSupervisorsCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 		&i.Parties,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -100,13 +775,62 @@ func (q *Queries) GetElectionLGAStats(ctx context.Context, arg GetElectionLGASta
 	return i, err
 }
 
-const getElectionPollingUnitStats = `-- name: GetElectionPollingUnitStats :one
+const getElectionGroupPollingUnitGeoIDs = `-- name: GetElectionGroupPollingUnitGeoIDs :one
 
-SELECT id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, state_constituency_id, federal_constituency_id, senatorial_district_id, unique_final_results_expected, total_agents_count, total_agents_in_attendance_count, total_reports_count, total_updates_count, average_election_started_at, average_election_ended_at, election_practice_test_readiness_percentage, total_final_results_uploaded_count, total_unique_final_results_uploaded_count, live_voters_referred_by_agent_count, parties, created_at, updated_at FROM election_polling_units
+SELECT
+  ward_id,
+  lga_id,
+  state_id,
+  state_constituency_id,
+  federal_constituency_id,
+  senatorial_district_id
+FROM election_group_polling_units
+WHERE election_group_id = $1::bigint
+  AND polling_unit_id   = $2::int
+`
+
+type GetElectionGroupPollingUnitGeoIDsParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	PollingUnitID   int32 `json:"polling_unit_id"`
+}
+
+type GetElectionGroupPollingUnitGeoIDsRow struct {
+	WardID                pgtype.Int4 `json:"ward_id"`
+	LgaID                 pgtype.Int4 `json:"lga_id"`
+	StateID               pgtype.Int2 `json:"state_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+}
+
+// =====================================================
+// EVENT-DRIVEN CASCADE: RefreshSingle* queries
+// Each query targets exactly one geographic unit so
+// the cascading worker chain only touches the rows
+// that actually changed, instead of full table scans.
+// =====================================================
+// Returns the geographic IDs for a single PU row (used by the cascade to know what to enqueue next).
+func (q *Queries) GetElectionGroupPollingUnitGeoIDs(ctx context.Context, arg GetElectionGroupPollingUnitGeoIDsParams) (GetElectionGroupPollingUnitGeoIDsRow, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupPollingUnitGeoIDs, arg.ElectionGroupID, arg.PollingUnitID)
+	var i GetElectionGroupPollingUnitGeoIDsRow
+	err := row.Scan(
+		&i.WardID,
+		&i.LgaID,
+		&i.StateID,
+		&i.StateConstituencyID,
+		&i.FederalConstituencyID,
+		&i.SenatorialDistrictID,
+	)
+	return i, err
+}
+
+const getElectionGroupPollingUnitStats = `-- name: GetElectionGroupPollingUnitStats :one
+
+SELECT id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, state_constituency_id, federal_constituency_id, senatorial_district_id, unique_final_results_expected, total_agents_count, total_agents_in_attendance_count, total_reports_count, total_updates_count, average_election_started_at, average_election_ended_at, election_practice_test_readiness_percentage, total_final_results_uploaded_count, total_unique_final_results_uploaded_count, live_voters_referred_by_agent_count, parties, created_at, updated_at FROM election_group_polling_units
 WHERE election_group_id = $1 AND polling_unit_id = $2
 `
 
-type GetElectionPollingUnitStatsParams struct {
+type GetElectionGroupPollingUnitStatsParams struct {
 	ElectionGroupID int64 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
@@ -114,9 +838,9 @@ type GetElectionPollingUnitStatsParams struct {
 // =====================================================
 // READ QUERIES
 // =====================================================
-func (q *Queries) GetElectionPollingUnitStats(ctx context.Context, arg GetElectionPollingUnitStatsParams) (ElectionPollingUnit, error) {
-	row := q.db.QueryRow(ctx, getElectionPollingUnitStats, arg.ElectionGroupID, arg.PollingUnitID)
-	var i ElectionPollingUnit
+func (q *Queries) GetElectionGroupPollingUnitStats(ctx context.Context, arg GetElectionGroupPollingUnitStatsParams) (ElectionGroupPollingUnit, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupPollingUnitStats, arg.ElectionGroupID, arg.PollingUnitID)
+	var i ElectionGroupPollingUnit
 	err := row.Scan(
 		&i.ID,
 		&i.ElectionGroupID,
@@ -145,34 +869,35 @@ func (q *Queries) GetElectionPollingUnitStats(ctx context.Context, arg GetElecti
 	return i, err
 }
 
-const getElectionSenatorialDistrictStats = `-- name: GetElectionSenatorialDistrictStats :one
-SELECT id, election_group_id, senatorial_district_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_senatorial_districts
+const getElectionGroupSenatorialDistrictStats = `-- name: GetElectionGroupSenatorialDistrictStats :one
+SELECT id, election_group_id, senatorial_district_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_senatorial_districts
 WHERE election_group_id = $1 AND senatorial_district_id = $2
 `
 
-type GetElectionSenatorialDistrictStatsParams struct {
+type GetElectionGroupSenatorialDistrictStatsParams struct {
 	ElectionGroupID      int64 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
 
-func (q *Queries) GetElectionSenatorialDistrictStats(ctx context.Context, arg GetElectionSenatorialDistrictStatsParams) (ElectionSenatorialDistrict, error) {
-	row := q.db.QueryRow(ctx, getElectionSenatorialDistrictStats, arg.ElectionGroupID, arg.SenatorialDistrictID)
-	var i ElectionSenatorialDistrict
+func (q *Queries) GetElectionGroupSenatorialDistrictStats(ctx context.Context, arg GetElectionGroupSenatorialDistrictStatsParams) (ElectionGroupSenatorialDistrict, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupSenatorialDistrictStats, arg.ElectionGroupID, arg.SenatorialDistrictID)
+	var i ElectionGroupSenatorialDistrict
 	err := row.Scan(
 		&i.ID,
 		&i.ElectionGroupID,
 		&i.SenatorialDistrictID,
 		&i.StateID,
 		&i.UniqueFinalResultsExpected,
-		&i.PuTotalAgentsCount,
-		&i.PuTotalAgentsInAttendanceCount,
-		&i.PuTotalReportsCount,
-		&i.PuTotalUpdatesCount,
+		&i.PuAgentsCount,
+		&i.UniquePuAgentsCount,
+		&i.PuAgentsInAttendanceCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
 		&i.PuAverageElectionStartedAt,
 		&i.PuAverageElectionEndedAt,
 		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuTotalFinalResultsUploadedCount,
-		&i.PuTotalUniqueFinalResultsUploadedCount,
+		&i.PuFinalResultsUploadedCount,
+		&i.UniquePuFinalResultsUploadedCount,
 		&i.PuLiveVotersReferredByAgentCount,
 		&i.TotalPuWithReports,
 		&i.TotalPuWithUpdates,
@@ -181,6 +906,15 @@ func (q *Queries) GetElectionSenatorialDistrictStats(ctx context.Context, arg Ge
 		&i.TotalPuWhereElectionHasEnded,
 		&i.TotalPuUniqueFinalResultsUploaded,
 		&i.TotalPuWhereAgentsReferredLiveVoters,
+		&i.LgaSupervisorsCount,
+		&i.UniqueLgaSupervisorsCount,
+		&i.WardSupervisorsCount,
+		&i.UniqueWardSupervisorsCount,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 		&i.Parties,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -188,34 +922,35 @@ func (q *Queries) GetElectionSenatorialDistrictStats(ctx context.Context, arg Ge
 	return i, err
 }
 
-const getElectionStateConstituencyStats = `-- name: GetElectionStateConstituencyStats :one
-SELECT id, election_group_id, state_constituency_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_state_constituencies
+const getElectionGroupStateConstituencyStats = `-- name: GetElectionGroupStateConstituencyStats :one
+SELECT id, election_group_id, state_constituency_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, ward_supervisors_count, unique_ward_supervisors_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_state_constituencies
 WHERE election_group_id = $1 AND state_constituency_id = $2
 `
 
-type GetElectionStateConstituencyStatsParams struct {
+type GetElectionGroupStateConstituencyStatsParams struct {
 	ElectionGroupID     int64 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
 
-func (q *Queries) GetElectionStateConstituencyStats(ctx context.Context, arg GetElectionStateConstituencyStatsParams) (ElectionStateConstituency, error) {
-	row := q.db.QueryRow(ctx, getElectionStateConstituencyStats, arg.ElectionGroupID, arg.StateConstituencyID)
-	var i ElectionStateConstituency
+func (q *Queries) GetElectionGroupStateConstituencyStats(ctx context.Context, arg GetElectionGroupStateConstituencyStatsParams) (ElectionGroupStateConstituency, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupStateConstituencyStats, arg.ElectionGroupID, arg.StateConstituencyID)
+	var i ElectionGroupStateConstituency
 	err := row.Scan(
 		&i.ID,
 		&i.ElectionGroupID,
 		&i.StateConstituencyID,
 		&i.StateID,
 		&i.UniqueFinalResultsExpected,
-		&i.PuTotalAgentsCount,
-		&i.PuTotalAgentsInAttendanceCount,
-		&i.PuTotalReportsCount,
-		&i.PuTotalUpdatesCount,
+		&i.PuAgentsCount,
+		&i.UniquePuAgentsCount,
+		&i.PuAgentsInAttendanceCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
 		&i.PuAverageElectionStartedAt,
 		&i.PuAverageElectionEndedAt,
 		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuTotalFinalResultsUploadedCount,
-		&i.PuTotalUniqueFinalResultsUploadedCount,
+		&i.PuFinalResultsUploadedCount,
+		&i.UniquePuFinalResultsUploadedCount,
 		&i.PuLiveVotersReferredByAgentCount,
 		&i.TotalPuWithReports,
 		&i.TotalPuWithUpdates,
@@ -224,6 +959,10 @@ func (q *Queries) GetElectionStateConstituencyStats(ctx context.Context, arg Get
 		&i.TotalPuWhereElectionHasEnded,
 		&i.TotalPuUniqueFinalResultsUploaded,
 		&i.TotalPuWhereAgentsReferredLiveVoters,
+		&i.WardSupervisorsCount,
+		&i.UniqueWardSupervisorsCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 		&i.Parties,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -231,33 +970,34 @@ func (q *Queries) GetElectionStateConstituencyStats(ctx context.Context, arg Get
 	return i, err
 }
 
-const getElectionStateStats = `-- name: GetElectionStateStats :one
-SELECT id, election_group_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_states
+const getElectionGroupStateStats = `-- name: GetElectionGroupStateStats :one
+SELECT id, election_group_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_states
 WHERE election_group_id = $1 AND state_id = $2
 `
 
-type GetElectionStateStatsParams struct {
+type GetElectionGroupStateStatsParams struct {
 	ElectionGroupID int64 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
 
-func (q *Queries) GetElectionStateStats(ctx context.Context, arg GetElectionStateStatsParams) (ElectionState, error) {
-	row := q.db.QueryRow(ctx, getElectionStateStats, arg.ElectionGroupID, arg.StateID)
-	var i ElectionState
+func (q *Queries) GetElectionGroupStateStats(ctx context.Context, arg GetElectionGroupStateStatsParams) (ElectionGroupState, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupStateStats, arg.ElectionGroupID, arg.StateID)
+	var i ElectionGroupState
 	err := row.Scan(
 		&i.ID,
 		&i.ElectionGroupID,
 		&i.StateID,
 		&i.UniqueFinalResultsExpected,
-		&i.PuTotalAgentsCount,
-		&i.PuTotalAgentsInAttendanceCount,
-		&i.PuTotalReportsCount,
-		&i.PuTotalUpdatesCount,
+		&i.PuAgentsCount,
+		&i.UniquePuAgentsCount,
+		&i.PuAgentsInAttendanceCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
 		&i.PuAverageElectionStartedAt,
 		&i.PuAverageElectionEndedAt,
 		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuTotalFinalResultsUploadedCount,
-		&i.PuTotalUniqueFinalResultsUploadedCount,
+		&i.PuFinalResultsUploadedCount,
+		&i.UniquePuFinalResultsUploadedCount,
 		&i.PuLiveVotersReferredByAgentCount,
 		&i.TotalPuWithReports,
 		&i.TotalPuWithUpdates,
@@ -266,6 +1006,18 @@ func (q *Queries) GetElectionStateStats(ctx context.Context, arg GetElectionStat
 		&i.TotalPuWhereElectionHasEnded,
 		&i.TotalPuUniqueFinalResultsUploaded,
 		&i.TotalPuWhereAgentsReferredLiveVoters,
+		&i.StateSupervisorsCount,
+		&i.UniqueStateSupervisorsCount,
+		&i.LgaSupervisorsCount,
+		&i.UniqueLgaSupervisorsCount,
+		&i.WardSupervisorsCount,
+		&i.UniqueWardSupervisorsCount,
+		&i.SenatorialDistrictsCount,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 		&i.Parties,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -273,19 +1025,19 @@ func (q *Queries) GetElectionStateStats(ctx context.Context, arg GetElectionStat
 	return i, err
 }
 
-const getElectionWardStats = `-- name: GetElectionWardStats :one
-SELECT id, election_group_id, ward_id, lga_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_wards
+const getElectionGroupWardStats = `-- name: GetElectionGroupWardStats :one
+SELECT id, election_group_id, ward_id, lga_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, ward_supervisors_count, unique_ward_supervisors_count, parties, polling_units_count, created_at, updated_at FROM election_group_wards
 WHERE election_group_id = $1 AND ward_id = $2
 `
 
-type GetElectionWardStatsParams struct {
+type GetElectionGroupWardStatsParams struct {
 	ElectionGroupID int64 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }
 
-func (q *Queries) GetElectionWardStats(ctx context.Context, arg GetElectionWardStatsParams) (ElectionWard, error) {
-	row := q.db.QueryRow(ctx, getElectionWardStats, arg.ElectionGroupID, arg.WardID)
-	var i ElectionWard
+func (q *Queries) GetElectionGroupWardStats(ctx context.Context, arg GetElectionGroupWardStatsParams) (ElectionGroupWard, error) {
+	row := q.db.QueryRow(ctx, getElectionGroupWardStats, arg.ElectionGroupID, arg.WardID)
+	var i ElectionGroupWard
 	err := row.Scan(
 		&i.ID,
 		&i.ElectionGroupID,
@@ -293,15 +1045,16 @@ func (q *Queries) GetElectionWardStats(ctx context.Context, arg GetElectionWardS
 		&i.LgaID,
 		&i.StateID,
 		&i.UniqueFinalResultsExpected,
-		&i.PuTotalAgentsCount,
-		&i.PuTotalAgentsInAttendanceCount,
-		&i.PuTotalReportsCount,
-		&i.PuTotalUpdatesCount,
+		&i.PuAgentsCount,
+		&i.UniquePuAgentsCount,
+		&i.PuAgentsInAttendanceCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
 		&i.PuAverageElectionStartedAt,
 		&i.PuAverageElectionEndedAt,
 		&i.PuElectionPracticeTestReadinessPercentage,
-		&i.PuTotalFinalResultsUploadedCount,
-		&i.PuTotalUniqueFinalResultsUploadedCount,
+		&i.PuFinalResultsUploadedCount,
+		&i.UniquePuFinalResultsUploadedCount,
 		&i.PuLiveVotersReferredByAgentCount,
 		&i.TotalPuWithReports,
 		&i.TotalPuWithUpdates,
@@ -310,36 +1063,208 @@ func (q *Queries) GetElectionWardStats(ctx context.Context, arg GetElectionWardS
 		&i.TotalPuWhereElectionHasEnded,
 		&i.TotalPuUniqueFinalResultsUploaded,
 		&i.TotalPuWhereAgentsReferredLiveVoters,
+		&i.WardSupervisorsCount,
+		&i.UniqueWardSupervisorsCount,
 		&i.Parties,
+		&i.PollingUnitsCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const listElectionFederalConstituencyStatsByGroup = `-- name: ListElectionFederalConstituencyStatsByGroup :many
-SELECT id, election_group_id, federal_constituency_id, state_id, senatorial_district_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_federal_constituencies
+const getLGASupervisorCount = `-- name: GetLGASupervisorCount :one
+SELECT COUNT(*)::int AS supervisor_count
+FROM lga_election_supervisors
+WHERE election_group_id = $1::bigint
+  AND lga_id            = $2::int
+  AND party_id          = $3::bigint
+`
+
+type GetLGASupervisorCountParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	LgaID           int32 `json:"lga_id"`
+	PartyID         int64 `json:"party_id"`
+}
+
+// Returns the current count of LGA supervisors for a party in a given lga+election group.
+func (q *Queries) GetLGASupervisorCount(ctx context.Context, arg GetLGASupervisorCountParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getLGASupervisorCount, arg.ElectionGroupID, arg.LgaID, arg.PartyID)
+	var supervisor_count int32
+	err := row.Scan(&supervisor_count)
+	return supervisor_count, err
+}
+
+const getPUPartyAgentsCount = `-- name: GetPUPartyAgentsCount :one
+
+SELECT COALESCE(
+  (
+    SELECT (elem->>'agents_count')::int
+    FROM jsonb_array_elements(parties) AS elem
+    WHERE (elem->>'party_id')::bigint = $1::bigint
+    LIMIT 1
+  ),
+  0
+)::int AS agents_count
+FROM election_group_polling_units
+WHERE election_group_id = $2::bigint
+  AND polling_unit_id   = $3::int
+`
+
+type GetPUPartyAgentsCountParams struct {
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	PollingUnitID   int32 `json:"polling_unit_id"`
+}
+
+// ============================================================
+// QUERY: get current party agents_count in a PU for a given party
+// Used by Go before calling the upsert to compute unique_pu_delta.
+// Returns the current agents_count for the party in this PU,
+// or 0 if no entry exists yet.
+// ============================================================
+func (q *Queries) GetPUPartyAgentsCount(ctx context.Context, arg GetPUPartyAgentsCountParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getPUPartyAgentsCount, arg.PartyID, arg.ElectionGroupID, arg.PollingUnitID)
+	var agents_count int32
+	err := row.Scan(&agents_count)
+	return agents_count, err
+}
+
+const getStateSupervisorCount = `-- name: GetStateSupervisorCount :one
+SELECT COUNT(*)::int AS supervisor_count
+FROM state_election_supervisors
+WHERE election_group_id = $1::bigint
+  AND state_id          = $2::smallint
+  AND party_id          = $3::bigint
+`
+
+type GetStateSupervisorCountParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	StateID         int16 `json:"state_id"`
+	PartyID         int64 `json:"party_id"`
+}
+
+// Returns the current count of state supervisors for a party in a given state+election group.
+func (q *Queries) GetStateSupervisorCount(ctx context.Context, arg GetStateSupervisorCountParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getStateSupervisorCount, arg.ElectionGroupID, arg.StateID, arg.PartyID)
+	var supervisor_count int32
+	err := row.Scan(&supervisor_count)
+	return supervisor_count, err
+}
+
+const getWardSupervisorCount = `-- name: GetWardSupervisorCount :one
+SELECT COUNT(*)::int AS supervisor_count
+FROM ward_election_supervisors
+WHERE election_group_id = $1::bigint
+  AND ward_id           = $2::int
+  AND party_id          = $3::bigint
+`
+
+type GetWardSupervisorCountParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	WardID          int32 `json:"ward_id"`
+	PartyID         int64 `json:"party_id"`
+}
+
+// Returns the current count of ward supervisors for a party in a given ward+election group.
+// Used to determine unique_delta when assigning/removing a ward supervisor.
+func (q *Queries) GetWardSupervisorCount(ctx context.Context, arg GetWardSupervisorCountParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getWardSupervisorCount, arg.ElectionGroupID, arg.WardID, arg.PartyID)
+	var supervisor_count int32
+	err := row.Scan(&supervisor_count)
+	return supervisor_count, err
+}
+
+const incrementElectionGroupPUPartyMetrics = `-- name: IncrementElectionGroupPUPartyMetrics :exec
+UPDATE election_group_polling_units
+SET
+  total_reports_count = total_reports_count + $1::int,
+  total_updates_count = total_updates_count + $2::int,
+  parties = (
+    SELECT jsonb_agg(
+      CASE
+        WHEN (elem->>'party_id')::bigint = $3::bigint
+        THEN jsonb_set(
+               jsonb_set(
+                 jsonb_set(
+                   jsonb_set(
+                     elem,
+                     '{reports_count}',
+                     to_jsonb(COALESCE((elem->>'reports_count')::int, 0) + $1::int)
+                   ),
+                   '{updates_count}',
+                   to_jsonb(COALESCE((elem->>'updates_count')::int, 0) + $2::int)
+                 ),
+                 '{last_update_given_at}',
+                 to_jsonb(NOW()::text)
+               ),
+               '{average_update_time_interval_in_seconds}',
+               to_jsonb(
+                 CASE
+                   WHEN (elem->>'last_update_given_at') IS NULL THEN 0.0
+                   ELSE (
+                     (COALESCE((elem->>'average_update_time_interval_in_seconds')::numeric, 0.0) * (COALESCE((elem->>'updates_count')::numeric, 0) + COALESCE((elem->>'reports_count')::numeric, 0)))
+                     + EXTRACT(EPOCH FROM (NOW() - (elem->>'last_update_given_at')::timestamptz))
+                   ) / (COALESCE((elem->>'updates_count')::numeric, 0) + COALESCE((elem->>'reports_count')::numeric, 0) + 1.0)
+                 END
+               )
+             )
+        ELSE elem
+      END
+    )
+    FROM jsonb_array_elements(parties) AS elem
+  ),
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND polling_unit_id   = $5::int
+  AND parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+`
+
+type IncrementElectionGroupPUPartyMetricsParams struct {
+	ReportsDelta    int32 `json:"reports_delta"`
+	UpdatesDelta    int32 `json:"updates_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	PollingUnitID   int32 `json:"polling_unit_id"`
+}
+
+// Increments metrics in election_group_polling_units when a polling unit update/report is submitted.
+// $1 = election_group_id, $2 = polling_unit_id, $3 = party_id
+// $4 = reports_delta (+1 or 0), $5 = updates_delta (+1 or 0)
+func (q *Queries) IncrementElectionGroupPUPartyMetrics(ctx context.Context, arg IncrementElectionGroupPUPartyMetricsParams) error {
+	_, err := q.db.Exec(ctx, incrementElectionGroupPUPartyMetrics,
+		arg.ReportsDelta,
+		arg.UpdatesDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.PollingUnitID,
+	)
+	return err
+}
+
+const listElectionGroupFederalConstituencyStatsByGroup = `-- name: ListElectionGroupFederalConstituencyStatsByGroup :many
+SELECT id, election_group_id, federal_constituency_id, state_id, senatorial_district_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_federal_constituencies
 WHERE election_group_id = $1
   AND ($2::smallint IS NULL OR state_id = $2)
   AND ($3::int IS NULL OR senatorial_district_id = $3)
 ORDER BY federal_constituency_id
 `
 
-type ListElectionFederalConstituencyStatsByGroupParams struct {
+type ListElectionGroupFederalConstituencyStatsByGroupParams struct {
 	ElectionGroupID      int64       `json:"election_group_id"`
 	StateID              pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID pgtype.Int4 `json:"senatorial_district_id"`
 }
 
-func (q *Queries) ListElectionFederalConstituencyStatsByGroup(ctx context.Context, arg ListElectionFederalConstituencyStatsByGroupParams) ([]ElectionFederalConstituency, error) {
-	rows, err := q.db.Query(ctx, listElectionFederalConstituencyStatsByGroup, arg.ElectionGroupID, arg.StateID, arg.SenatorialDistrictID)
+func (q *Queries) ListElectionGroupFederalConstituencyStatsByGroup(ctx context.Context, arg ListElectionGroupFederalConstituencyStatsByGroupParams) ([]ElectionGroupFederalConstituency, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupFederalConstituencyStatsByGroup, arg.ElectionGroupID, arg.StateID, arg.SenatorialDistrictID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ElectionFederalConstituency
+	var items []ElectionGroupFederalConstituency
 	for rows.Next() {
-		var i ElectionFederalConstituency
+		var i ElectionGroupFederalConstituency
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionGroupID,
@@ -347,15 +1272,16 @@ func (q *Queries) ListElectionFederalConstituencyStatsByGroup(ctx context.Contex
 			&i.StateID,
 			&i.SenatorialDistrictID,
 			&i.UniqueFinalResultsExpected,
-			&i.PuTotalAgentsCount,
-			&i.PuTotalAgentsInAttendanceCount,
-			&i.PuTotalReportsCount,
-			&i.PuTotalUpdatesCount,
+			&i.PuAgentsCount,
+			&i.UniquePuAgentsCount,
+			&i.PuAgentsInAttendanceCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
 			&i.PuAverageElectionStartedAt,
 			&i.PuAverageElectionEndedAt,
 			&i.PuElectionPracticeTestReadinessPercentage,
-			&i.PuTotalFinalResultsUploadedCount,
-			&i.PuTotalUniqueFinalResultsUploadedCount,
+			&i.PuFinalResultsUploadedCount,
+			&i.UniquePuFinalResultsUploadedCount,
 			&i.PuLiveVotersReferredByAgentCount,
 			&i.TotalPuWithReports,
 			&i.TotalPuWithUpdates,
@@ -364,6 +1290,14 @@ func (q *Queries) ListElectionFederalConstituencyStatsByGroup(ctx context.Contex
 			&i.TotalPuWhereElectionHasEnded,
 			&i.TotalPuUniqueFinalResultsUploaded,
 			&i.TotalPuWhereAgentsReferredLiveVoters,
+			&i.LgaSupervisorsCount,
+			&i.UniqueLgaSupervisorsCount,
+			&i.WardSupervisorsCount,
+			&i.UniqueWardSupervisorsCount,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 			&i.Parties,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -378,29 +1312,29 @@ func (q *Queries) ListElectionFederalConstituencyStatsByGroup(ctx context.Contex
 	return items, nil
 }
 
-const listElectionLGAStatsByGroup = `-- name: ListElectionLGAStatsByGroup :many
-SELECT id, election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_lgas
+const listElectionGroupLGAStatsByGroup = `-- name: ListElectionGroupLGAStatsByGroup :many
+SELECT id, election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_lgas
 WHERE election_group_id = $1
   AND ($2::smallint IS NULL OR state_id = $2)
   AND ($3::int IS NULL OR senatorial_district_id = $3)
 ORDER BY lga_id
 `
 
-type ListElectionLGAStatsByGroupParams struct {
+type ListElectionGroupLGAStatsByGroupParams struct {
 	ElectionGroupID      int64       `json:"election_group_id"`
 	StateID              pgtype.Int2 `json:"state_id"`
 	SenatorialDistrictID pgtype.Int4 `json:"senatorial_district_id"`
 }
 
-func (q *Queries) ListElectionLGAStatsByGroup(ctx context.Context, arg ListElectionLGAStatsByGroupParams) ([]ElectionLga, error) {
-	rows, err := q.db.Query(ctx, listElectionLGAStatsByGroup, arg.ElectionGroupID, arg.StateID, arg.SenatorialDistrictID)
+func (q *Queries) ListElectionGroupLGAStatsByGroup(ctx context.Context, arg ListElectionGroupLGAStatsByGroupParams) ([]ElectionGroupLga, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupLGAStatsByGroup, arg.ElectionGroupID, arg.StateID, arg.SenatorialDistrictID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ElectionLga
+	var items []ElectionGroupLga
 	for rows.Next() {
-		var i ElectionLga
+		var i ElectionGroupLga
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionGroupID,
@@ -409,15 +1343,16 @@ func (q *Queries) ListElectionLGAStatsByGroup(ctx context.Context, arg ListElect
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.UniqueFinalResultsExpected,
-			&i.PuTotalAgentsCount,
-			&i.PuTotalAgentsInAttendanceCount,
-			&i.PuTotalReportsCount,
-			&i.PuTotalUpdatesCount,
+			&i.PuAgentsCount,
+			&i.UniquePuAgentsCount,
+			&i.PuAgentsInAttendanceCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
 			&i.PuAverageElectionStartedAt,
 			&i.PuAverageElectionEndedAt,
 			&i.PuElectionPracticeTestReadinessPercentage,
-			&i.PuTotalFinalResultsUploadedCount,
-			&i.PuTotalUniqueFinalResultsUploadedCount,
+			&i.PuFinalResultsUploadedCount,
+			&i.UniquePuFinalResultsUploadedCount,
 			&i.PuLiveVotersReferredByAgentCount,
 			&i.TotalPuWithReports,
 			&i.TotalPuWithUpdates,
@@ -426,6 +1361,13 @@ func (q *Queries) ListElectionLGAStatsByGroup(ctx context.Context, arg ListElect
 			&i.TotalPuWhereElectionHasEnded,
 			&i.TotalPuUniqueFinalResultsUploaded,
 			&i.TotalPuWhereAgentsReferredLiveVoters,
+			&i.LgaSupervisorsCount,
+			&i.UniqueLgaSupervisorsCount,
+			&i.WardSupervisorsCount,
+			&i.UniqueWardSupervisorsCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 			&i.Parties,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -440,8 +1382,8 @@ func (q *Queries) ListElectionLGAStatsByGroup(ctx context.Context, arg ListElect
 	return items, nil
 }
 
-const listElectionPollingUnitStatsByGroup = `-- name: ListElectionPollingUnitStatsByGroup :many
-SELECT id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, state_constituency_id, federal_constituency_id, senatorial_district_id, unique_final_results_expected, total_agents_count, total_agents_in_attendance_count, total_reports_count, total_updates_count, average_election_started_at, average_election_ended_at, election_practice_test_readiness_percentage, total_final_results_uploaded_count, total_unique_final_results_uploaded_count, live_voters_referred_by_agent_count, parties, created_at, updated_at FROM election_polling_units
+const listElectionGroupPollingUnitStatsByGroup = `-- name: ListElectionGroupPollingUnitStatsByGroup :many
+SELECT id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, state_constituency_id, federal_constituency_id, senatorial_district_id, unique_final_results_expected, total_agents_count, total_agents_in_attendance_count, total_reports_count, total_updates_count, average_election_started_at, average_election_ended_at, election_practice_test_readiness_percentage, total_final_results_uploaded_count, total_unique_final_results_uploaded_count, live_voters_referred_by_agent_count, parties, created_at, updated_at FROM election_group_polling_units
 WHERE election_group_id = $1
   AND ($2::int IS NULL OR ward_id = $2)
   AND ($3::int IS NULL OR lga_id = $3)
@@ -449,15 +1391,15 @@ WHERE election_group_id = $1
 ORDER BY polling_unit_id
 `
 
-type ListElectionPollingUnitStatsByGroupParams struct {
+type ListElectionGroupPollingUnitStatsByGroupParams struct {
 	ElectionGroupID int64       `json:"election_group_id"`
 	WardID          pgtype.Int4 `json:"ward_id"`
 	LgaID           pgtype.Int4 `json:"lga_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
 
-func (q *Queries) ListElectionPollingUnitStatsByGroup(ctx context.Context, arg ListElectionPollingUnitStatsByGroupParams) ([]ElectionPollingUnit, error) {
-	rows, err := q.db.Query(ctx, listElectionPollingUnitStatsByGroup,
+func (q *Queries) ListElectionGroupPollingUnitStatsByGroup(ctx context.Context, arg ListElectionGroupPollingUnitStatsByGroupParams) ([]ElectionGroupPollingUnit, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupPollingUnitStatsByGroup,
 		arg.ElectionGroupID,
 		arg.WardID,
 		arg.LgaID,
@@ -467,9 +1409,9 @@ func (q *Queries) ListElectionPollingUnitStatsByGroup(ctx context.Context, arg L
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ElectionPollingUnit
+	var items []ElectionGroupPollingUnit
 	for rows.Next() {
-		var i ElectionPollingUnit
+		var i ElectionGroupPollingUnit
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionGroupID,
@@ -505,42 +1447,43 @@ func (q *Queries) ListElectionPollingUnitStatsByGroup(ctx context.Context, arg L
 	return items, nil
 }
 
-const listElectionSenatorialDistrictStatsByGroup = `-- name: ListElectionSenatorialDistrictStatsByGroup :many
-SELECT id, election_group_id, senatorial_district_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_senatorial_districts
+const listElectionGroupSenatorialDistrictStatsByGroup = `-- name: ListElectionGroupSenatorialDistrictStatsByGroup :many
+SELECT id, election_group_id, senatorial_district_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_senatorial_districts
 WHERE election_group_id = $1
   AND ($2::smallint IS NULL OR state_id = $2)
 ORDER BY senatorial_district_id
 `
 
-type ListElectionSenatorialDistrictStatsByGroupParams struct {
+type ListElectionGroupSenatorialDistrictStatsByGroupParams struct {
 	ElectionGroupID int64       `json:"election_group_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
 
-func (q *Queries) ListElectionSenatorialDistrictStatsByGroup(ctx context.Context, arg ListElectionSenatorialDistrictStatsByGroupParams) ([]ElectionSenatorialDistrict, error) {
-	rows, err := q.db.Query(ctx, listElectionSenatorialDistrictStatsByGroup, arg.ElectionGroupID, arg.StateID)
+func (q *Queries) ListElectionGroupSenatorialDistrictStatsByGroup(ctx context.Context, arg ListElectionGroupSenatorialDistrictStatsByGroupParams) ([]ElectionGroupSenatorialDistrict, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupSenatorialDistrictStatsByGroup, arg.ElectionGroupID, arg.StateID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ElectionSenatorialDistrict
+	var items []ElectionGroupSenatorialDistrict
 	for rows.Next() {
-		var i ElectionSenatorialDistrict
+		var i ElectionGroupSenatorialDistrict
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionGroupID,
 			&i.SenatorialDistrictID,
 			&i.StateID,
 			&i.UniqueFinalResultsExpected,
-			&i.PuTotalAgentsCount,
-			&i.PuTotalAgentsInAttendanceCount,
-			&i.PuTotalReportsCount,
-			&i.PuTotalUpdatesCount,
+			&i.PuAgentsCount,
+			&i.UniquePuAgentsCount,
+			&i.PuAgentsInAttendanceCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
 			&i.PuAverageElectionStartedAt,
 			&i.PuAverageElectionEndedAt,
 			&i.PuElectionPracticeTestReadinessPercentage,
-			&i.PuTotalFinalResultsUploadedCount,
-			&i.PuTotalUniqueFinalResultsUploadedCount,
+			&i.PuFinalResultsUploadedCount,
+			&i.UniquePuFinalResultsUploadedCount,
 			&i.PuLiveVotersReferredByAgentCount,
 			&i.TotalPuWithReports,
 			&i.TotalPuWithUpdates,
@@ -549,6 +1492,15 @@ func (q *Queries) ListElectionSenatorialDistrictStatsByGroup(ctx context.Context
 			&i.TotalPuWhereElectionHasEnded,
 			&i.TotalPuUniqueFinalResultsUploaded,
 			&i.TotalPuWhereAgentsReferredLiveVoters,
+			&i.LgaSupervisorsCount,
+			&i.UniqueLgaSupervisorsCount,
+			&i.WardSupervisorsCount,
+			&i.UniqueWardSupervisorsCount,
+			&i.FederalConstituenciesCount,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 			&i.Parties,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -563,42 +1515,43 @@ func (q *Queries) ListElectionSenatorialDistrictStatsByGroup(ctx context.Context
 	return items, nil
 }
 
-const listElectionStateConstituencyStatsByGroup = `-- name: ListElectionStateConstituencyStatsByGroup :many
-SELECT id, election_group_id, state_constituency_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_state_constituencies
+const listElectionGroupStateConstituencyStatsByGroup = `-- name: ListElectionGroupStateConstituencyStatsByGroup :many
+SELECT id, election_group_id, state_constituency_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, ward_supervisors_count, unique_ward_supervisors_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_state_constituencies
 WHERE election_group_id = $1
   AND ($2::smallint IS NULL OR state_id = $2)
 ORDER BY state_constituency_id
 `
 
-type ListElectionStateConstituencyStatsByGroupParams struct {
+type ListElectionGroupStateConstituencyStatsByGroupParams struct {
 	ElectionGroupID int64       `json:"election_group_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
 
-func (q *Queries) ListElectionStateConstituencyStatsByGroup(ctx context.Context, arg ListElectionStateConstituencyStatsByGroupParams) ([]ElectionStateConstituency, error) {
-	rows, err := q.db.Query(ctx, listElectionStateConstituencyStatsByGroup, arg.ElectionGroupID, arg.StateID)
+func (q *Queries) ListElectionGroupStateConstituencyStatsByGroup(ctx context.Context, arg ListElectionGroupStateConstituencyStatsByGroupParams) ([]ElectionGroupStateConstituency, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupStateConstituencyStatsByGroup, arg.ElectionGroupID, arg.StateID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ElectionStateConstituency
+	var items []ElectionGroupStateConstituency
 	for rows.Next() {
-		var i ElectionStateConstituency
+		var i ElectionGroupStateConstituency
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionGroupID,
 			&i.StateConstituencyID,
 			&i.StateID,
 			&i.UniqueFinalResultsExpected,
-			&i.PuTotalAgentsCount,
-			&i.PuTotalAgentsInAttendanceCount,
-			&i.PuTotalReportsCount,
-			&i.PuTotalUpdatesCount,
+			&i.PuAgentsCount,
+			&i.UniquePuAgentsCount,
+			&i.PuAgentsInAttendanceCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
 			&i.PuAverageElectionStartedAt,
 			&i.PuAverageElectionEndedAt,
 			&i.PuElectionPracticeTestReadinessPercentage,
-			&i.PuTotalFinalResultsUploadedCount,
-			&i.PuTotalUniqueFinalResultsUploadedCount,
+			&i.PuFinalResultsUploadedCount,
+			&i.UniquePuFinalResultsUploadedCount,
 			&i.PuLiveVotersReferredByAgentCount,
 			&i.TotalPuWithReports,
 			&i.TotalPuWithUpdates,
@@ -607,6 +1560,10 @@ func (q *Queries) ListElectionStateConstituencyStatsByGroup(ctx context.Context,
 			&i.TotalPuWhereElectionHasEnded,
 			&i.TotalPuUniqueFinalResultsUploaded,
 			&i.TotalPuWhereAgentsReferredLiveVoters,
+			&i.WardSupervisorsCount,
+			&i.UniqueWardSupervisorsCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 			&i.Parties,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -621,35 +1578,36 @@ func (q *Queries) ListElectionStateConstituencyStatsByGroup(ctx context.Context,
 	return items, nil
 }
 
-const listElectionStateStatsByGroup = `-- name: ListElectionStateStatsByGroup :many
-SELECT id, election_group_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_states
+const listElectionGroupStateStatsByGroup = `-- name: ListElectionGroupStateStatsByGroup :many
+SELECT id, election_group_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, state_supervisors_count, unique_state_supervisors_count, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_states
 WHERE election_group_id = $1
 ORDER BY state_id
 `
 
-func (q *Queries) ListElectionStateStatsByGroup(ctx context.Context, electionGroupID int64) ([]ElectionState, error) {
-	rows, err := q.db.Query(ctx, listElectionStateStatsByGroup, electionGroupID)
+func (q *Queries) ListElectionGroupStateStatsByGroup(ctx context.Context, electionGroupID int64) ([]ElectionGroupState, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupStateStatsByGroup, electionGroupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ElectionState
+	var items []ElectionGroupState
 	for rows.Next() {
-		var i ElectionState
+		var i ElectionGroupState
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionGroupID,
 			&i.StateID,
 			&i.UniqueFinalResultsExpected,
-			&i.PuTotalAgentsCount,
-			&i.PuTotalAgentsInAttendanceCount,
-			&i.PuTotalReportsCount,
-			&i.PuTotalUpdatesCount,
+			&i.PuAgentsCount,
+			&i.UniquePuAgentsCount,
+			&i.PuAgentsInAttendanceCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
 			&i.PuAverageElectionStartedAt,
 			&i.PuAverageElectionEndedAt,
 			&i.PuElectionPracticeTestReadinessPercentage,
-			&i.PuTotalFinalResultsUploadedCount,
-			&i.PuTotalUniqueFinalResultsUploadedCount,
+			&i.PuFinalResultsUploadedCount,
+			&i.UniquePuFinalResultsUploadedCount,
 			&i.PuLiveVotersReferredByAgentCount,
 			&i.TotalPuWithReports,
 			&i.TotalPuWithUpdates,
@@ -658,6 +1616,18 @@ func (q *Queries) ListElectionStateStatsByGroup(ctx context.Context, electionGro
 			&i.TotalPuWhereElectionHasEnded,
 			&i.TotalPuUniqueFinalResultsUploaded,
 			&i.TotalPuWhereAgentsReferredLiveVoters,
+			&i.StateSupervisorsCount,
+			&i.UniqueStateSupervisorsCount,
+			&i.LgaSupervisorsCount,
+			&i.UniqueLgaSupervisorsCount,
+			&i.WardSupervisorsCount,
+			&i.UniqueWardSupervisorsCount,
+			&i.SenatorialDistrictsCount,
+			&i.FederalConstituenciesCount,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 			&i.Parties,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -672,29 +1642,29 @@ func (q *Queries) ListElectionStateStatsByGroup(ctx context.Context, electionGro
 	return items, nil
 }
 
-const listElectionWardStatsByGroup = `-- name: ListElectionWardStatsByGroup :many
-SELECT id, election_group_id, ward_id, lga_id, state_id, unique_final_results_expected, pu_total_agents_count, pu_total_agents_in_attendance_count, pu_total_reports_count, pu_total_updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, parties, created_at, updated_at FROM election_wards
+const listElectionGroupWardStatsByGroup = `-- name: ListElectionGroupWardStatsByGroup :many
+SELECT id, election_group_id, ward_id, lga_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, reports_count, updates_count, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, ward_supervisors_count, unique_ward_supervisors_count, parties, polling_units_count, created_at, updated_at FROM election_group_wards
 WHERE election_group_id = $1
   AND ($2::int IS NULL OR lga_id = $2)
   AND ($3::smallint IS NULL OR state_id = $3)
 ORDER BY ward_id
 `
 
-type ListElectionWardStatsByGroupParams struct {
+type ListElectionGroupWardStatsByGroupParams struct {
 	ElectionGroupID int64       `json:"election_group_id"`
 	LgaID           pgtype.Int4 `json:"lga_id"`
 	StateID         pgtype.Int2 `json:"state_id"`
 }
 
-func (q *Queries) ListElectionWardStatsByGroup(ctx context.Context, arg ListElectionWardStatsByGroupParams) ([]ElectionWard, error) {
-	rows, err := q.db.Query(ctx, listElectionWardStatsByGroup, arg.ElectionGroupID, arg.LgaID, arg.StateID)
+func (q *Queries) ListElectionGroupWardStatsByGroup(ctx context.Context, arg ListElectionGroupWardStatsByGroupParams) ([]ElectionGroupWard, error) {
+	rows, err := q.db.Query(ctx, listElectionGroupWardStatsByGroup, arg.ElectionGroupID, arg.LgaID, arg.StateID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ElectionWard
+	var items []ElectionGroupWard
 	for rows.Next() {
-		var i ElectionWard
+		var i ElectionGroupWard
 		if err := rows.Scan(
 			&i.ID,
 			&i.ElectionGroupID,
@@ -702,15 +1672,16 @@ func (q *Queries) ListElectionWardStatsByGroup(ctx context.Context, arg ListElec
 			&i.LgaID,
 			&i.StateID,
 			&i.UniqueFinalResultsExpected,
-			&i.PuTotalAgentsCount,
-			&i.PuTotalAgentsInAttendanceCount,
-			&i.PuTotalReportsCount,
-			&i.PuTotalUpdatesCount,
+			&i.PuAgentsCount,
+			&i.UniquePuAgentsCount,
+			&i.PuAgentsInAttendanceCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
 			&i.PuAverageElectionStartedAt,
 			&i.PuAverageElectionEndedAt,
 			&i.PuElectionPracticeTestReadinessPercentage,
-			&i.PuTotalFinalResultsUploadedCount,
-			&i.PuTotalUniqueFinalResultsUploadedCount,
+			&i.PuFinalResultsUploadedCount,
+			&i.UniquePuFinalResultsUploadedCount,
 			&i.PuLiveVotersReferredByAgentCount,
 			&i.TotalPuWithReports,
 			&i.TotalPuWithUpdates,
@@ -719,7 +1690,10 @@ func (q *Queries) ListElectionWardStatsByGroup(ctx context.Context, arg ListElec
 			&i.TotalPuWhereElectionHasEnded,
 			&i.TotalPuUniqueFinalResultsUploaded,
 			&i.TotalPuWhereAgentsReferredLiveVoters,
+			&i.WardSupervisorsCount,
+			&i.UniqueWardSupervisorsCount,
 			&i.Parties,
+			&i.PollingUnitsCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -733,20 +1707,21 @@ func (q *Queries) ListElectionWardStatsByGroup(ctx context.Context, arg ListElec
 	return items, nil
 }
 
-const refreshAllElectionFederalConstituencyStats = `-- name: RefreshAllElectionFederalConstituencyStats :exec
+const refreshAllElectionGroupFederalConstituencyStats = `-- name: RefreshAllElectionGroupFederalConstituencyStats :exec
 WITH src_agg AS (
   SELECT
     election_group_id, federal_constituency_id, state_id,
     SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(pu_total_agents_count)                       AS pu_total_agents_count,
-    SUM(pu_total_agents_in_attendance_count)         AS pu_total_agents_in_attendance_count,
-    SUM(pu_total_reports_count)                      AS pu_total_reports_count,
-    SUM(pu_total_updates_count)                      AS pu_total_updates_count,
-    AVG(pu_average_election_started_at)              AS pu_average_election_started_at,
-    AVG(pu_average_election_ended_at)                AS pu_average_election_ended_at,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
     COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
-    SUM(pu_total_final_results_uploaded_count)       AS pu_total_final_results_uploaded_count,
-    SUM(pu_total_unique_final_results_uploaded_count) AS pu_total_unique_final_results_uploaded_count,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
     SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
     SUM(total_pu_with_reports)                       AS total_pu_with_reports,
     SUM(total_pu_with_updates)                       AS total_pu_with_updates,
@@ -755,7 +1730,7 @@ WITH src_agg AS (
     SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
     SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
-  FROM election_lgas
+  FROM election_group_lgas
   WHERE federal_constituency_id IS NOT NULL
   GROUP BY election_group_id, federal_constituency_id, state_id
 ),
@@ -763,12 +1738,13 @@ party_expanded AS (
   SELECT
     s.election_group_id, s.federal_constituency_id,
     (p.value->>'party_id')::bigint                                    AS party_id,
-    (p.value->>'pu_total_agents_in_attendance_count')::int             AS agents_in_attendance_count,
-    (p.value->>'pu_total_agents_count')::int                           AS agents_count,
-    (p.value->>'pu_total_updates_count')::int                          AS updates_count,
-    (p.value->>'pu_total_reports_count')::int                          AS reports_count,
-    (p.value->>'pu_total_final_results_uploaded_count')::int           AS final_results_uploaded_count,
-    (p.value->>'pu_total_unique_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
     (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
     (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
     (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
@@ -777,21 +1753,22 @@ party_expanded AS (
     (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
     (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
     (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
-    (p.value->>'total_pu_unique_final_results_uploaded_count')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
     (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
-  FROM election_lgas s,
+  FROM election_group_lgas s,
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.federal_constituency_id IS NOT NULL
 ),
 party_agg AS (
   SELECT
     election_group_id, federal_constituency_id, party_id,
-    SUM(agents_in_attendance_count)        AS pu_total_agents_in_attendance_count,
-    SUM(agents_count)                      AS pu_total_agents_count,
-    SUM(updates_count)                     AS pu_total_updates_count,
-    SUM(reports_count)                     AS pu_total_reports_count,
-    SUM(final_results_uploaded_count)      AS pu_total_final_results_uploaded_count,
-    SUM(unique_results_uploaded_count)     AS pu_total_unique_final_results_uploaded_count,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
     COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
     COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
     SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
@@ -800,7 +1777,7 @@ party_agg AS (
     SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
     SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
     SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
-    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded_count,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
   FROM party_expanded
   GROUP BY election_group_id, federal_constituency_id, party_id
@@ -810,15 +1787,16 @@ party_json AS (
     election_group_id, federal_constituency_id,
     COALESCE(jsonb_agg(jsonb_build_object(
       'party_id',                              party_id,
-      'pu_total_agents_in_attendance_count',   pu_total_agents_in_attendance_count,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
       'pu_average_arrival_time',               NULL,
       'pu_average_election_started_at',        NULL,
       'pu_average_election_ended_at',          NULL,
-      'pu_total_updates_count',                pu_total_updates_count,
-      'pu_total_reports_count',                pu_total_reports_count,
-      'pu_total_agents_count',                 pu_total_agents_count,
-      'pu_total_final_results_uploaded_count', pu_total_final_results_uploaded_count,
-      'pu_total_unique_final_results_uploaded_count', pu_total_unique_final_results_uploaded_count,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
       'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
       'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
@@ -827,20 +1805,20 @@ party_json AS (
       'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
       'total_pu_where_election_has_started',   total_pu_where_election_has_started,
       'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
-      'total_pu_unique_final_results_uploaded_count', total_pu_unique_final_results_uploaded_count,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
       'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
     )), '[]'::jsonb) AS parties
   FROM party_agg
   GROUP BY election_group_id, federal_constituency_id
 )
-INSERT INTO election_federal_constituencies (
+INSERT INTO election_group_federal_constituencies (
   election_group_id, federal_constituency_id, state_id,
   unique_final_results_expected,
-  pu_total_agents_count, pu_total_agents_in_attendance_count,
-  pu_total_reports_count, pu_total_updates_count,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
   pu_average_election_started_at, pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count,
   total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started, total_pu_where_election_has_ended,
@@ -850,11 +1828,11 @@ INSERT INTO election_federal_constituencies (
 SELECT
   a.election_group_id, a.federal_constituency_id, a.state_id,
   a.unique_final_results_expected,
-  a.pu_total_agents_count, a.pu_total_agents_in_attendance_count,
-  a.pu_total_reports_count, a.pu_total_updates_count,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
   a.pu_average_election_started_at, a.pu_average_election_ended_at,
   a.pu_election_practice_test_readiness_percentage,
-  a.pu_total_final_results_uploaded_count, a.pu_total_unique_final_results_uploaded_count,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
   a.pu_live_voters_referred_by_agent_count,
   a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
   a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
@@ -864,15 +1842,16 @@ FROM src_agg a
 LEFT JOIN party_json pj USING (election_group_id, federal_constituency_id)
 ON CONFLICT (election_group_id, federal_constituency_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
-  pu_total_agents_count = EXCLUDED.pu_total_agents_count,
-  pu_total_agents_in_attendance_count = EXCLUDED.pu_total_agents_in_attendance_count,
-  pu_total_reports_count = EXCLUDED.pu_total_reports_count,
-  pu_total_updates_count = EXCLUDED.pu_total_updates_count,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
   pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
   pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count = EXCLUDED.pu_total_final_results_uploaded_count,
-  pu_total_unique_final_results_uploaded_count = EXCLUDED.pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
   total_pu_with_reports = EXCLUDED.total_pu_with_reports,
   total_pu_with_updates = EXCLUDED.total_pu_with_updates,
@@ -885,26 +1864,27 @@ ON CONFLICT (election_group_id, federal_constituency_id) DO UPDATE SET
   updated_at = NOW()
 `
 
-// Aggregates from election_lgas grouped by federal_constituency_id.
-func (q *Queries) RefreshAllElectionFederalConstituencyStats(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, refreshAllElectionFederalConstituencyStats)
+// Aggregates from election_group_lgas grouped by federal_constituency_id.
+func (q *Queries) RefreshAllElectionGroupFederalConstituencyStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupFederalConstituencyStats)
 	return err
 }
 
-const refreshAllElectionLGAStats = `-- name: RefreshAllElectionLGAStats :exec
+const refreshAllElectionGroupGlobalStats = `-- name: RefreshAllElectionGroupGlobalStats :exec
 WITH src_agg AS (
   SELECT
-    election_group_id, lga_id, state_id,
+    election_group_id,
     SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(pu_total_agents_count)                       AS pu_total_agents_count,
-    SUM(pu_total_agents_in_attendance_count)         AS pu_total_agents_in_attendance_count,
-    SUM(pu_total_reports_count)                      AS pu_total_reports_count,
-    SUM(pu_total_updates_count)                      AS pu_total_updates_count,
-    AVG(pu_average_election_started_at)              AS pu_average_election_started_at,
-    AVG(pu_average_election_ended_at)                AS pu_average_election_ended_at,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
     COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
-    SUM(pu_total_final_results_uploaded_count)       AS pu_total_final_results_uploaded_count,
-    SUM(pu_total_unique_final_results_uploaded_count) AS pu_total_unique_final_results_uploaded_count,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
     SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
     SUM(total_pu_with_reports)                       AS total_pu_with_reports,
     SUM(total_pu_with_updates)                       AS total_pu_with_updates,
@@ -913,20 +1893,20 @@ WITH src_agg AS (
     SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
     SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
-  FROM election_wards
-  WHERE lga_id IS NOT NULL
-  GROUP BY election_group_id, lga_id, state_id
+  FROM election_group_states
+  GROUP BY election_group_id
 ),
 party_expanded AS (
   SELECT
-    s.election_group_id, s.lga_id,
+    s.election_group_id,
     (p.value->>'party_id')::bigint                                    AS party_id,
-    (p.value->>'pu_total_agents_in_attendance_count')::int             AS agents_in_attendance_count,
-    (p.value->>'pu_total_agents_count')::int                           AS agents_count,
-    (p.value->>'pu_total_updates_count')::int                          AS updates_count,
-    (p.value->>'pu_total_reports_count')::int                          AS reports_count,
-    (p.value->>'pu_total_final_results_uploaded_count')::int           AS final_results_uploaded_count,
-    (p.value->>'pu_total_unique_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
     (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
     (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
     (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
@@ -935,21 +1915,21 @@ party_expanded AS (
     (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
     (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
     (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
-    (p.value->>'total_pu_unique_final_results_uploaded_count')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
     (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
-  FROM election_wards s,
+  FROM election_group_states s,
        jsonb_array_elements(s.parties) AS p(value)
-  WHERE s.lga_id IS NOT NULL
 ),
 party_agg AS (
   SELECT
-    election_group_id, lga_id, party_id,
-    SUM(agents_in_attendance_count)        AS pu_total_agents_in_attendance_count,
-    SUM(agents_count)                      AS pu_total_agents_count,
-    SUM(updates_count)                     AS pu_total_updates_count,
-    SUM(reports_count)                     AS pu_total_reports_count,
-    SUM(final_results_uploaded_count)      AS pu_total_final_results_uploaded_count,
-    SUM(unique_results_uploaded_count)     AS pu_total_unique_final_results_uploaded_count,
+    election_group_id, party_id,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
     COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
     COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
     SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
@@ -958,7 +1938,145 @@ party_agg AS (
     SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
     SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
     SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
-    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded_count,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
+  FROM party_expanded
+  GROUP BY election_group_id, party_id
+),
+party_json AS (
+  SELECT
+    election_group_id,
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'party_id',                              party_id,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
+      'pu_average_arrival_time',               NULL,
+      'pu_average_election_started_at',        NULL,
+      'pu_average_election_ended_at',          NULL,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+      'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
+      'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
+      'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
+      'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
+      'total_pu_with_reports',                 total_pu_with_reports,
+      'total_pu_with_updates',                 total_pu_with_updates,
+      'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
+      'total_pu_where_election_has_started',   total_pu_where_election_has_started,
+      'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
+      'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
+    )), '[]'::jsonb) AS parties
+  FROM party_agg
+  GROUP BY election_group_id
+)
+UPDATE election_groups
+SET
+  unique_final_results_expected = COALESCE(s.unique_final_results_expected, 0),
+  pu_agents_count = COALESCE(s.pu_agents_count, 0),
+  unique_pu_agents_count = COALESCE(s.unique_pu_agents_count, 0),
+  pu_agents_in_attendance_count = COALESCE(s.pu_agents_in_attendance_count, 0),
+  reports_count = COALESCE(s.reports_count, 0),
+  updates_count = COALESCE(s.updates_count, 0),
+  pu_average_election_started_at = s.pu_average_election_started_at,
+  pu_average_election_ended_at = s.pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage = COALESCE(s.pu_election_practice_test_readiness_percentage, 0),
+  pu_final_results_uploaded_count = COALESCE(s.pu_final_results_uploaded_count, 0),
+  unique_pu_final_results_uploaded_count = COALESCE(s.unique_pu_final_results_uploaded_count, 0),
+  pu_live_voters_referred_by_agent_count = COALESCE(s.pu_live_voters_referred_by_agent_count, 0),
+  total_pu_with_reports = COALESCE(s.total_pu_with_reports, 0),
+  total_pu_with_updates = COALESCE(s.total_pu_with_updates, 0),
+  total_pu_with_agents_in_attendance = COALESCE(s.total_pu_with_agents_in_attendance, 0),
+  total_pu_where_election_has_started = COALESCE(s.total_pu_where_election_has_started, 0),
+  total_pu_where_election_has_ended = COALESCE(s.total_pu_where_election_has_ended, 0),
+  total_pu_unique_final_results_uploaded = COALESCE(s.total_pu_unique_final_results_uploaded, 0),
+  total_pu_where_agents_referred_live_voters = COALESCE(s.total_pu_where_agents_referred_live_voters, 0),
+  parties = COALESCE(pj.parties, '[]'::jsonb),
+  updated_at = NOW()
+FROM src_agg s
+LEFT JOIN party_json pj ON s.election_group_id = pj.election_group_id
+WHERE election_groups.id = s.election_group_id
+`
+
+// Aggregates from election_group_states up to election_groups.
+func (q *Queries) RefreshAllElectionGroupGlobalStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupGlobalStats)
+	return err
+}
+
+const refreshAllElectionGroupLGAStats = `-- name: RefreshAllElectionGroupLGAStats :exec
+WITH src_agg AS (
+  SELECT
+    election_group_id, lga_id, state_id,
+    SUM(unique_final_results_expected)               AS unique_final_results_expected,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
+    COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
+    SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)                       AS total_pu_with_reports,
+    SUM(total_pu_with_updates)                       AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance)          AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started)         AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
+  FROM election_group_wards
+  WHERE lga_id IS NOT NULL
+  GROUP BY election_group_id, lga_id, state_id
+),
+party_expanded AS (
+  SELECT
+    s.election_group_id, s.lga_id,
+    (p.value->>'party_id')::bigint                                    AS party_id,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
+    (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
+    (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
+    (p.value->>'total_pu_with_reports')::int                           AS total_pu_with_reports,
+    (p.value->>'total_pu_with_updates')::int                           AS total_pu_with_updates,
+    (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
+    (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
+    (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
+  FROM election_group_wards s,
+       jsonb_array_elements(s.parties) AS p(value)
+  WHERE s.lga_id IS NOT NULL
+),
+party_agg AS (
+  SELECT
+    election_group_id, lga_id, party_id,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
+    COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
+    COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
+    SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)             AS total_pu_with_reports,
+    SUM(total_pu_with_updates)             AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
   FROM party_expanded
   GROUP BY election_group_id, lga_id, party_id
@@ -968,15 +2086,16 @@ party_json AS (
     election_group_id, lga_id,
     COALESCE(jsonb_agg(jsonb_build_object(
       'party_id',                              party_id,
-      'pu_total_agents_in_attendance_count',   pu_total_agents_in_attendance_count,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
       'pu_average_arrival_time',               NULL,
       'pu_average_election_started_at',        NULL,
       'pu_average_election_ended_at',          NULL,
-      'pu_total_updates_count',                pu_total_updates_count,
-      'pu_total_reports_count',                pu_total_reports_count,
-      'pu_total_agents_count',                 pu_total_agents_count,
-      'pu_total_final_results_uploaded_count', pu_total_final_results_uploaded_count,
-      'pu_total_unique_final_results_uploaded_count', pu_total_unique_final_results_uploaded_count,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
       'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
       'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
@@ -985,20 +2104,20 @@ party_json AS (
       'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
       'total_pu_where_election_has_started',   total_pu_where_election_has_started,
       'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
-      'total_pu_unique_final_results_uploaded_count', total_pu_unique_final_results_uploaded_count,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
       'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
     )), '[]'::jsonb) AS parties
   FROM party_agg
   GROUP BY election_group_id, lga_id
 )
-INSERT INTO election_lgas (
+INSERT INTO election_group_lgas (
   election_group_id, lga_id, state_id,
   unique_final_results_expected,
-  pu_total_agents_count, pu_total_agents_in_attendance_count,
-  pu_total_reports_count, pu_total_updates_count,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
   pu_average_election_started_at, pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count,
   total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started, total_pu_where_election_has_ended,
@@ -1008,11 +2127,11 @@ INSERT INTO election_lgas (
 SELECT
   a.election_group_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
-  a.pu_total_agents_count, a.pu_total_agents_in_attendance_count,
-  a.pu_total_reports_count, a.pu_total_updates_count,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
   a.pu_average_election_started_at, a.pu_average_election_ended_at,
   a.pu_election_practice_test_readiness_percentage,
-  a.pu_total_final_results_uploaded_count, a.pu_total_unique_final_results_uploaded_count,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
   a.pu_live_voters_referred_by_agent_count,
   a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
   a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
@@ -1022,15 +2141,16 @@ FROM src_agg a
 LEFT JOIN party_json pj USING (election_group_id, lga_id)
 ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
-  pu_total_agents_count = EXCLUDED.pu_total_agents_count,
-  pu_total_agents_in_attendance_count = EXCLUDED.pu_total_agents_in_attendance_count,
-  pu_total_reports_count = EXCLUDED.pu_total_reports_count,
-  pu_total_updates_count = EXCLUDED.pu_total_updates_count,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
   pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
   pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count = EXCLUDED.pu_total_final_results_uploaded_count,
-  pu_total_unique_final_results_uploaded_count = EXCLUDED.pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
   total_pu_with_reports = EXCLUDED.total_pu_with_reports,
   total_pu_with_updates = EXCLUDED.total_pu_with_updates,
@@ -1043,13 +2163,13 @@ ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
   updated_at = NOW()
 `
 
-// Aggregates from election_wards grouped by lga_id.
-func (q *Queries) RefreshAllElectionLGAStats(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, refreshAllElectionLGAStats)
+// Aggregates from election_group_wards grouped by lga_id.
+func (q *Queries) RefreshAllElectionGroupLGAStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupLGAStats)
 	return err
 }
 
-const refreshAllElectionPollingUnitStats = `-- name: RefreshAllElectionPollingUnitStats :exec
+const refreshAllElectionGroupPollingUnitStats = `-- name: RefreshAllElectionGroupPollingUnitStats :exec
 WITH
 assignments AS (
   SELECT
@@ -1076,8 +2196,8 @@ overall_agg AS (
     COUNT(*) FILTER (WHERE arrived_at IS NOT NULL)        AS total_agents_in_attendance_count,
     SUM(reports_count)                                    AS total_reports_count,
     SUM(updates_count)                                    AS total_updates_count,
-    AVG(election_started_at)                              AS average_election_started_at,
-    AVG(election_ended_at)                                AS average_election_ended_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM election_started_at)))                              AS average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM election_ended_at)))                                AS average_election_ended_at,
     COALESCE(AVG(election_practice_test_readiness_percentage), 0) AS election_practice_test_readiness_percentage
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
@@ -1135,9 +2255,9 @@ party_overall AS (
     election_group_id, polling_unit_id, party_id,
     COUNT(*)                                              AS agents_count,
     COUNT(*) FILTER (WHERE arrived_at IS NOT NULL)        AS agents_in_attendance_count,
-    AVG(arrived_at)                                       AS average_arrival_time,
-    AVG(election_started_at)                              AS election_started_at,
-    AVG(election_ended_at)                                AS election_ended_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM arrived_at)))                                       AS average_arrival_time,
+    to_timestamp(AVG(EXTRACT(epoch FROM election_started_at)))                              AS election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM election_ended_at)))                                AS election_ended_at,
     SUM(updates_count)                                    AS updates_count,
     SUM(reports_count)                                    AS reports_count,
     MAX(last_update_at)                                   AS last_update_given_at,
@@ -1209,7 +2329,7 @@ party_json AS (
   LEFT JOIN party_referral_counts prc USING (election_group_id, polling_unit_id, party_id)
   GROUP BY po.election_group_id, po.polling_unit_id
 )
-INSERT INTO election_polling_units (
+INSERT INTO election_group_polling_units (
   election_group_id, polling_unit_id,
   state_id, lga_id, ward_id, state_constituency_id, federal_constituency_id, senatorial_district_id,
   unique_final_results_expected,
@@ -1292,25 +2412,26 @@ ON CONFLICT (election_group_id, polling_unit_id) DO UPDATE SET
 // -------------------------------------------------------
 // 8. Final upsert
 // -------------------------------------------------------
-func (q *Queries) RefreshAllElectionPollingUnitStats(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, refreshAllElectionPollingUnitStats)
+func (q *Queries) RefreshAllElectionGroupPollingUnitStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupPollingUnitStats)
 	return err
 }
 
-const refreshAllElectionSenatorialDistrictStats = `-- name: RefreshAllElectionSenatorialDistrictStats :exec
+const refreshAllElectionGroupSenatorialDistrictStats = `-- name: RefreshAllElectionGroupSenatorialDistrictStats :exec
 WITH src_agg AS (
   SELECT
     election_group_id, senatorial_district_id, state_id,
     SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(pu_total_agents_count)                       AS pu_total_agents_count,
-    SUM(pu_total_agents_in_attendance_count)         AS pu_total_agents_in_attendance_count,
-    SUM(pu_total_reports_count)                      AS pu_total_reports_count,
-    SUM(pu_total_updates_count)                      AS pu_total_updates_count,
-    AVG(pu_average_election_started_at)              AS pu_average_election_started_at,
-    AVG(pu_average_election_ended_at)                AS pu_average_election_ended_at,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
     COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
-    SUM(pu_total_final_results_uploaded_count)       AS pu_total_final_results_uploaded_count,
-    SUM(pu_total_unique_final_results_uploaded_count) AS pu_total_unique_final_results_uploaded_count,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
     SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
     SUM(total_pu_with_reports)                       AS total_pu_with_reports,
     SUM(total_pu_with_updates)                       AS total_pu_with_updates,
@@ -1319,7 +2440,7 @@ WITH src_agg AS (
     SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
     SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
-  FROM election_lgas
+  FROM election_group_lgas
   WHERE senatorial_district_id IS NOT NULL
   GROUP BY election_group_id, senatorial_district_id, state_id
 ),
@@ -1327,12 +2448,13 @@ party_expanded AS (
   SELECT
     s.election_group_id, s.senatorial_district_id,
     (p.value->>'party_id')::bigint                                    AS party_id,
-    (p.value->>'pu_total_agents_in_attendance_count')::int             AS agents_in_attendance_count,
-    (p.value->>'pu_total_agents_count')::int                           AS agents_count,
-    (p.value->>'pu_total_updates_count')::int                          AS updates_count,
-    (p.value->>'pu_total_reports_count')::int                          AS reports_count,
-    (p.value->>'pu_total_final_results_uploaded_count')::int           AS final_results_uploaded_count,
-    (p.value->>'pu_total_unique_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
     (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
     (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
     (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
@@ -1341,21 +2463,22 @@ party_expanded AS (
     (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
     (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
     (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
-    (p.value->>'total_pu_unique_final_results_uploaded_count')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
     (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
-  FROM election_lgas s,
+  FROM election_group_lgas s,
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.senatorial_district_id IS NOT NULL
 ),
 party_agg AS (
   SELECT
     election_group_id, senatorial_district_id, party_id,
-    SUM(agents_in_attendance_count)        AS pu_total_agents_in_attendance_count,
-    SUM(agents_count)                      AS pu_total_agents_count,
-    SUM(updates_count)                     AS pu_total_updates_count,
-    SUM(reports_count)                     AS pu_total_reports_count,
-    SUM(final_results_uploaded_count)      AS pu_total_final_results_uploaded_count,
-    SUM(unique_results_uploaded_count)     AS pu_total_unique_final_results_uploaded_count,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
     COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
     COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
     SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
@@ -1364,7 +2487,7 @@ party_agg AS (
     SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
     SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
     SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
-    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded_count,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
   FROM party_expanded
   GROUP BY election_group_id, senatorial_district_id, party_id
@@ -1374,15 +2497,16 @@ party_json AS (
     election_group_id, senatorial_district_id,
     COALESCE(jsonb_agg(jsonb_build_object(
       'party_id',                              party_id,
-      'pu_total_agents_in_attendance_count',   pu_total_agents_in_attendance_count,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
       'pu_average_arrival_time',               NULL,
       'pu_average_election_started_at',        NULL,
       'pu_average_election_ended_at',          NULL,
-      'pu_total_updates_count',                pu_total_updates_count,
-      'pu_total_reports_count',                pu_total_reports_count,
-      'pu_total_agents_count',                 pu_total_agents_count,
-      'pu_total_final_results_uploaded_count', pu_total_final_results_uploaded_count,
-      'pu_total_unique_final_results_uploaded_count', pu_total_unique_final_results_uploaded_count,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
       'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
       'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
@@ -1391,20 +2515,20 @@ party_json AS (
       'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
       'total_pu_where_election_has_started',   total_pu_where_election_has_started,
       'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
-      'total_pu_unique_final_results_uploaded_count', total_pu_unique_final_results_uploaded_count,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
       'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
     )), '[]'::jsonb) AS parties
   FROM party_agg
   GROUP BY election_group_id, senatorial_district_id
 )
-INSERT INTO election_senatorial_districts (
+INSERT INTO election_group_senatorial_districts (
   election_group_id, senatorial_district_id, state_id,
   unique_final_results_expected,
-  pu_total_agents_count, pu_total_agents_in_attendance_count,
-  pu_total_reports_count, pu_total_updates_count,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
   pu_average_election_started_at, pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count,
   total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started, total_pu_where_election_has_ended,
@@ -1414,11 +2538,11 @@ INSERT INTO election_senatorial_districts (
 SELECT
   a.election_group_id, a.senatorial_district_id, a.state_id,
   a.unique_final_results_expected,
-  a.pu_total_agents_count, a.pu_total_agents_in_attendance_count,
-  a.pu_total_reports_count, a.pu_total_updates_count,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
   a.pu_average_election_started_at, a.pu_average_election_ended_at,
   a.pu_election_practice_test_readiness_percentage,
-  a.pu_total_final_results_uploaded_count, a.pu_total_unique_final_results_uploaded_count,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
   a.pu_live_voters_referred_by_agent_count,
   a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
   a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
@@ -1428,15 +2552,16 @@ FROM src_agg a
 LEFT JOIN party_json pj USING (election_group_id, senatorial_district_id)
 ON CONFLICT (election_group_id, senatorial_district_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
-  pu_total_agents_count = EXCLUDED.pu_total_agents_count,
-  pu_total_agents_in_attendance_count = EXCLUDED.pu_total_agents_in_attendance_count,
-  pu_total_reports_count = EXCLUDED.pu_total_reports_count,
-  pu_total_updates_count = EXCLUDED.pu_total_updates_count,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
   pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
   pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count = EXCLUDED.pu_total_final_results_uploaded_count,
-  pu_total_unique_final_results_uploaded_count = EXCLUDED.pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
   total_pu_with_reports = EXCLUDED.total_pu_with_reports,
   total_pu_with_updates = EXCLUDED.total_pu_with_updates,
@@ -1449,35 +2574,36 @@ ON CONFLICT (election_group_id, senatorial_district_id) DO UPDATE SET
   updated_at = NOW()
 `
 
-// Aggregates from election_lgas grouped by senatorial_district_id.
-func (q *Queries) RefreshAllElectionSenatorialDistrictStats(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, refreshAllElectionSenatorialDistrictStats)
+// Aggregates from election_group_lgas grouped by senatorial_district_id.
+func (q *Queries) RefreshAllElectionGroupSenatorialDistrictStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupSenatorialDistrictStats)
 	return err
 }
 
-const refreshAllElectionStateConstituencyStats = `-- name: RefreshAllElectionStateConstituencyStats :exec
+const refreshAllElectionGroupStateConstituencyStats = `-- name: RefreshAllElectionGroupStateConstituencyStats :exec
 WITH src_agg AS (
   SELECT
     election_group_id, state_constituency_id, state_id,
     SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(pu_total_agents_count)                       AS pu_total_agents_count,
-    SUM(pu_total_agents_in_attendance_count)         AS pu_total_agents_in_attendance_count,
-    SUM(pu_total_reports_count)                      AS pu_total_reports_count,
-    SUM(pu_total_updates_count)                      AS pu_total_updates_count,
-    AVG(pu_average_election_started_at)              AS pu_average_election_started_at,
-    AVG(pu_average_election_ended_at)                AS pu_average_election_ended_at,
-    COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
-    SUM(pu_total_final_results_uploaded_count)       AS pu_total_final_results_uploaded_count,
-    SUM(pu_total_unique_final_results_uploaded_count) AS pu_total_unique_final_results_uploaded_count,
-    SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
-    SUM(total_pu_with_reports)                       AS total_pu_with_reports,
-    SUM(total_pu_with_updates)                       AS total_pu_with_updates,
-    SUM(total_pu_with_agents_in_attendance)          AS total_pu_with_agents_in_attendance,
-    SUM(total_pu_where_election_has_started)         AS total_pu_where_election_has_started,
-    SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
-    SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
-    SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
-  FROM election_polling_units
+    SUM(total_agents_count)                          AS pu_agents_count,
+    COUNT(*) FILTER (WHERE total_agents_count > 0)   AS unique_pu_agents_count,
+    SUM(total_agents_in_attendance_count)            AS pu_agents_in_attendance_count,
+    SUM(total_reports_count)                         AS reports_count,
+    SUM(total_updates_count)                         AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_started_at)))                 AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_ended_at)))                   AS pu_average_election_ended_at,
+    COALESCE(AVG(election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
+    SUM(total_final_results_uploaded_count)          AS pu_final_results_uploaded_count,
+    SUM(total_unique_final_results_uploaded_count)   AS unique_pu_final_results_uploaded_count,
+    SUM(live_voters_referred_by_agent_count)         AS pu_live_voters_referred_by_agent_count,
+    COUNT(*) FILTER (WHERE total_reports_count > 0)               AS total_pu_with_reports,
+    COUNT(*) FILTER (WHERE total_updates_count > 0)               AS total_pu_with_updates,
+    COUNT(*) FILTER (WHERE total_agents_in_attendance_count > 0)  AS total_pu_with_agents_in_attendance,
+    COUNT(*) FILTER (WHERE average_election_started_at IS NOT NULL) AS total_pu_where_election_has_started,
+    COUNT(*) FILTER (WHERE average_election_ended_at IS NOT NULL)   AS total_pu_where_election_has_ended,
+    COUNT(*) FILTER (WHERE total_unique_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
+    COUNT(*) FILTER (WHERE live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
+  FROM election_group_polling_units
   WHERE state_constituency_id IS NOT NULL
   GROUP BY election_group_id, state_constituency_id, state_id
 ),
@@ -1485,12 +2611,13 @@ party_expanded AS (
   SELECT
     s.election_group_id, s.state_constituency_id,
     (p.value->>'party_id')::bigint                                    AS party_id,
-    (p.value->>'pu_total_agents_in_attendance_count')::int             AS agents_in_attendance_count,
-    (p.value->>'pu_total_agents_count')::int                           AS agents_count,
-    (p.value->>'pu_total_updates_count')::int                          AS updates_count,
-    (p.value->>'pu_total_reports_count')::int                          AS reports_count,
-    (p.value->>'pu_total_final_results_uploaded_count')::int           AS final_results_uploaded_count,
-    (p.value->>'pu_total_unique_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
     (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
     (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
     (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
@@ -1499,21 +2626,22 @@ party_expanded AS (
     (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
     (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
     (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
-    (p.value->>'total_pu_unique_final_results_uploaded_count')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
     (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
-  FROM election_polling_units s,
+  FROM election_group_polling_units s,
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.state_constituency_id IS NOT NULL
 ),
 party_agg AS (
   SELECT
     election_group_id, state_constituency_id, party_id,
-    SUM(agents_in_attendance_count)        AS pu_total_agents_in_attendance_count,
-    SUM(agents_count)                      AS pu_total_agents_count,
-    SUM(updates_count)                     AS pu_total_updates_count,
-    SUM(reports_count)                     AS pu_total_reports_count,
-    SUM(final_results_uploaded_count)      AS pu_total_final_results_uploaded_count,
-    SUM(unique_results_uploaded_count)     AS pu_total_unique_final_results_uploaded_count,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
     COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
     COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
     SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
@@ -1522,7 +2650,7 @@ party_agg AS (
     SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
     SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
     SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
-    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded_count,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
   FROM party_expanded
   GROUP BY election_group_id, state_constituency_id, party_id
@@ -1532,15 +2660,16 @@ party_json AS (
     election_group_id, state_constituency_id,
     COALESCE(jsonb_agg(jsonb_build_object(
       'party_id',                              party_id,
-      'pu_total_agents_in_attendance_count',   pu_total_agents_in_attendance_count,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
       'pu_average_arrival_time',               NULL,
       'pu_average_election_started_at',        NULL,
       'pu_average_election_ended_at',          NULL,
-      'pu_total_updates_count',                pu_total_updates_count,
-      'pu_total_reports_count',                pu_total_reports_count,
-      'pu_total_agents_count',                 pu_total_agents_count,
-      'pu_total_final_results_uploaded_count', pu_total_final_results_uploaded_count,
-      'pu_total_unique_final_results_uploaded_count', pu_total_unique_final_results_uploaded_count,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
       'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
       'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
@@ -1549,20 +2678,20 @@ party_json AS (
       'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
       'total_pu_where_election_has_started',   total_pu_where_election_has_started,
       'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
-      'total_pu_unique_final_results_uploaded_count', total_pu_unique_final_results_uploaded_count,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
       'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
     )), '[]'::jsonb) AS parties
   FROM party_agg
   GROUP BY election_group_id, state_constituency_id
 )
-INSERT INTO election_state_constituencies (
+INSERT INTO election_group_state_constituencies (
   election_group_id, state_constituency_id, state_id,
   unique_final_results_expected,
-  pu_total_agents_count, pu_total_agents_in_attendance_count,
-  pu_total_reports_count, pu_total_updates_count,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
   pu_average_election_started_at, pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count,
   total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started, total_pu_where_election_has_ended,
@@ -1572,11 +2701,11 @@ INSERT INTO election_state_constituencies (
 SELECT
   a.election_group_id, a.state_constituency_id, a.state_id,
   a.unique_final_results_expected,
-  a.pu_total_agents_count, a.pu_total_agents_in_attendance_count,
-  a.pu_total_reports_count, a.pu_total_updates_count,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
   a.pu_average_election_started_at, a.pu_average_election_ended_at,
   a.pu_election_practice_test_readiness_percentage,
-  a.pu_total_final_results_uploaded_count, a.pu_total_unique_final_results_uploaded_count,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
   a.pu_live_voters_referred_by_agent_count,
   a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
   a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
@@ -1586,15 +2715,16 @@ FROM src_agg a
 LEFT JOIN party_json pj USING (election_group_id, state_constituency_id)
 ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
-  pu_total_agents_count = EXCLUDED.pu_total_agents_count,
-  pu_total_agents_in_attendance_count = EXCLUDED.pu_total_agents_in_attendance_count,
-  pu_total_reports_count = EXCLUDED.pu_total_reports_count,
-  pu_total_updates_count = EXCLUDED.pu_total_updates_count,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
   pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
   pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count = EXCLUDED.pu_total_final_results_uploaded_count,
-  pu_total_unique_final_results_uploaded_count = EXCLUDED.pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
   total_pu_with_reports = EXCLUDED.total_pu_with_reports,
   total_pu_with_updates = EXCLUDED.total_pu_with_updates,
@@ -1607,26 +2737,27 @@ ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
   updated_at = NOW()
 `
 
-// Aggregates from election_polling_units grouped by state_constituency_id.
-func (q *Queries) RefreshAllElectionStateConstituencyStats(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, refreshAllElectionStateConstituencyStats)
+// Aggregates from election_group_polling_units grouped by state_constituency_id.
+func (q *Queries) RefreshAllElectionGroupStateConstituencyStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupStateConstituencyStats)
 	return err
 }
 
-const refreshAllElectionStateStats = `-- name: RefreshAllElectionStateStats :exec
+const refreshAllElectionGroupStateStats = `-- name: RefreshAllElectionGroupStateStats :exec
 WITH src_agg AS (
   SELECT
     election_group_id, state_id,
     SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(pu_total_agents_count)                       AS pu_total_agents_count,
-    SUM(pu_total_agents_in_attendance_count)         AS pu_total_agents_in_attendance_count,
-    SUM(pu_total_reports_count)                      AS pu_total_reports_count,
-    SUM(pu_total_updates_count)                      AS pu_total_updates_count,
-    AVG(pu_average_election_started_at)              AS pu_average_election_started_at,
-    AVG(pu_average_election_ended_at)                AS pu_average_election_ended_at,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
     COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
-    SUM(pu_total_final_results_uploaded_count)       AS pu_total_final_results_uploaded_count,
-    SUM(pu_total_unique_final_results_uploaded_count) AS pu_total_unique_final_results_uploaded_count,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
     SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
     SUM(total_pu_with_reports)                       AS total_pu_with_reports,
     SUM(total_pu_with_updates)                       AS total_pu_with_updates,
@@ -1635,7 +2766,7 @@ WITH src_agg AS (
     SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
     SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
-  FROM election_lgas
+  FROM election_group_lgas
   WHERE state_id IS NOT NULL
   GROUP BY election_group_id, state_id
 ),
@@ -1643,12 +2774,13 @@ party_expanded AS (
   SELECT
     s.election_group_id, s.state_id,
     (p.value->>'party_id')::bigint                                    AS party_id,
-    (p.value->>'pu_total_agents_in_attendance_count')::int             AS agents_in_attendance_count,
-    (p.value->>'pu_total_agents_count')::int                           AS agents_count,
-    (p.value->>'pu_total_updates_count')::int                          AS updates_count,
-    (p.value->>'pu_total_reports_count')::int                          AS reports_count,
-    (p.value->>'pu_total_final_results_uploaded_count')::int           AS final_results_uploaded_count,
-    (p.value->>'pu_total_unique_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
     (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
     (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
     (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
@@ -1657,21 +2789,22 @@ party_expanded AS (
     (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
     (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
     (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
-    (p.value->>'total_pu_unique_final_results_uploaded_count')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
     (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
-  FROM election_lgas s,
+  FROM election_group_lgas s,
        jsonb_array_elements(s.parties) AS p(value)
   WHERE s.state_id IS NOT NULL
 ),
 party_agg AS (
   SELECT
     election_group_id, state_id, party_id,
-    SUM(agents_in_attendance_count)        AS pu_total_agents_in_attendance_count,
-    SUM(agents_count)                      AS pu_total_agents_count,
-    SUM(updates_count)                     AS pu_total_updates_count,
-    SUM(reports_count)                     AS pu_total_reports_count,
-    SUM(final_results_uploaded_count)      AS pu_total_final_results_uploaded_count,
-    SUM(unique_results_uploaded_count)     AS pu_total_unique_final_results_uploaded_count,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
     COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
     COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
     SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
@@ -1680,7 +2813,7 @@ party_agg AS (
     SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
     SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
     SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
-    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded_count,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
     SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
   FROM party_expanded
   GROUP BY election_group_id, state_id, party_id
@@ -1690,15 +2823,16 @@ party_json AS (
     election_group_id, state_id,
     COALESCE(jsonb_agg(jsonb_build_object(
       'party_id',                              party_id,
-      'pu_total_agents_in_attendance_count',   pu_total_agents_in_attendance_count,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
       'pu_average_arrival_time',               NULL,
       'pu_average_election_started_at',        NULL,
       'pu_average_election_ended_at',          NULL,
-      'pu_total_updates_count',                pu_total_updates_count,
-      'pu_total_reports_count',                pu_total_reports_count,
-      'pu_total_agents_count',                 pu_total_agents_count,
-      'pu_total_final_results_uploaded_count', pu_total_final_results_uploaded_count,
-      'pu_total_unique_final_results_uploaded_count', pu_total_unique_final_results_uploaded_count,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
       'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
       'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
@@ -1707,20 +2841,20 @@ party_json AS (
       'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
       'total_pu_where_election_has_started',   total_pu_where_election_has_started,
       'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
-      'total_pu_unique_final_results_uploaded_count', total_pu_unique_final_results_uploaded_count,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
       'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
     )), '[]'::jsonb) AS parties
   FROM party_agg
   GROUP BY election_group_id, state_id
 )
-INSERT INTO election_states (
+INSERT INTO election_group_states (
   election_group_id, state_id,
   unique_final_results_expected,
-  pu_total_agents_count, pu_total_agents_in_attendance_count,
-  pu_total_reports_count, pu_total_updates_count,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
   pu_average_election_started_at, pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count,
   total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started, total_pu_where_election_has_ended,
@@ -1730,11 +2864,11 @@ INSERT INTO election_states (
 SELECT
   a.election_group_id, a.state_id,
   a.unique_final_results_expected,
-  a.pu_total_agents_count, a.pu_total_agents_in_attendance_count,
-  a.pu_total_reports_count, a.pu_total_updates_count,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
   a.pu_average_election_started_at, a.pu_average_election_ended_at,
   a.pu_election_practice_test_readiness_percentage,
-  a.pu_total_final_results_uploaded_count, a.pu_total_unique_final_results_uploaded_count,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
   a.pu_live_voters_referred_by_agent_count,
   a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
   a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
@@ -1744,15 +2878,16 @@ FROM src_agg a
 LEFT JOIN party_json pj USING (election_group_id, state_id)
 ON CONFLICT (election_group_id, state_id) DO UPDATE SET
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
-  pu_total_agents_count = EXCLUDED.pu_total_agents_count,
-  pu_total_agents_in_attendance_count = EXCLUDED.pu_total_agents_in_attendance_count,
-  pu_total_reports_count = EXCLUDED.pu_total_reports_count,
-  pu_total_updates_count = EXCLUDED.pu_total_updates_count,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
   pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
   pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count = EXCLUDED.pu_total_final_results_uploaded_count,
-  pu_total_unique_final_results_uploaded_count = EXCLUDED.pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
   total_pu_with_reports = EXCLUDED.total_pu_with_reports,
   total_pu_with_updates = EXCLUDED.total_pu_with_updates,
@@ -1765,26 +2900,27 @@ ON CONFLICT (election_group_id, state_id) DO UPDATE SET
   updated_at = NOW()
 `
 
-// Aggregates from election_lgas grouped by state_id.
-func (q *Queries) RefreshAllElectionStateStats(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, refreshAllElectionStateStats)
+// Aggregates from election_group_lgas grouped by state_id.
+func (q *Queries) RefreshAllElectionGroupStateStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupStateStats)
 	return err
 }
 
-const refreshAllElectionWardStats = `-- name: RefreshAllElectionWardStats :exec
+const refreshAllElectionGroupWardStats = `-- name: RefreshAllElectionGroupWardStats :exec
 WITH epu_agg AS (
   SELECT
     election_group_id, ward_id, lga_id, state_id,
     SUM(unique_final_results_expected)               AS unique_final_results_expected,
-    SUM(total_agents_count)                          AS pu_total_agents_count,
-    SUM(total_agents_in_attendance_count)            AS pu_total_agents_in_attendance_count,
-    SUM(total_reports_count)                         AS pu_total_reports_count,
-    SUM(total_updates_count)                         AS pu_total_updates_count,
-    AVG(average_election_started_at)                 AS pu_average_election_started_at,
-    AVG(average_election_ended_at)                   AS pu_average_election_ended_at,
+    SUM(total_agents_count)                          AS pu_agents_count,
+      COUNT(*) FILTER (WHERE total_agents_count > 0)   AS unique_pu_agents_count,
+    SUM(total_agents_in_attendance_count)            AS pu_agents_in_attendance_count,
+    SUM(total_reports_count)                         AS reports_count,
+    SUM(total_updates_count)                         AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_started_at)))                 AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_ended_at)))                   AS pu_average_election_ended_at,
     COALESCE(AVG(election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
-    SUM(total_final_results_uploaded_count)          AS pu_total_final_results_uploaded_count,
-    SUM(total_unique_final_results_uploaded_count)   AS pu_total_unique_final_results_uploaded_count,
+    SUM(total_final_results_uploaded_count)          AS pu_final_results_uploaded_count,
+    SUM(total_unique_final_results_uploaded_count)   AS unique_pu_final_results_uploaded_count,
     SUM(live_voters_referred_by_agent_count)         AS pu_live_voters_referred_by_agent_count,
     COUNT(*) FILTER (WHERE total_reports_count > 0)               AS total_pu_with_reports,
     COUNT(*) FILTER (WHERE total_updates_count > 0)               AS total_pu_with_updates,
@@ -1793,7 +2929,7 @@ WITH epu_agg AS (
     COUNT(*) FILTER (WHERE average_election_ended_at IS NOT NULL)   AS total_pu_where_election_has_ended,
     COUNT(*) FILTER (WHERE total_unique_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
     COUNT(*) FILTER (WHERE live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
-  FROM election_polling_units
+  FROM election_group_polling_units
   GROUP BY election_group_id, ward_id, lga_id, state_id
 ),
 party_expanded AS (
@@ -1815,19 +2951,21 @@ party_expanded AS (
     epu.average_election_started_at IS NOT NULL AS election_started,
     epu.average_election_ended_at IS NOT NULL   AS election_ended,
     epu.total_unique_final_results_uploaded_count > 0 AS has_results,
-    epu.live_voters_referred_by_agent_count > 0 AS has_referrals
-  FROM election_polling_units epu,
+    epu.live_voters_referred_by_agent_count > 0 AS has_referrals,
+      (p.value->>'agents_count')::int > 0            AS has_agents
+  FROM election_group_polling_units epu,
        jsonb_array_elements(epu.parties) AS p(value)
 ),
 party_agg AS (
   SELECT
     election_group_id, ward_id, party_id,
-    SUM(agents_in_attendance_count)        AS pu_total_agents_in_attendance_count,
-    SUM(agents_count)                      AS pu_total_agents_count,
-    SUM(updates_count)                     AS pu_total_updates_count,
-    SUM(reports_count)                     AS pu_total_reports_count,
-    SUM(final_results_uploaded_count)      AS pu_total_final_results_uploaded_count,
-    SUM(unique_final_results_uploaded_count) AS pu_total_unique_final_results_uploaded_count,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    COUNT(*) FILTER (WHERE has_agents)     AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
     SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
     COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
     COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
@@ -1836,7 +2974,7 @@ party_agg AS (
     COUNT(*) FILTER (WHERE has_attendance)  AS total_pu_with_agents_in_attendance,
     COUNT(*) FILTER (WHERE election_started) AS total_pu_where_election_has_started,
     COUNT(*) FILTER (WHERE election_ended)   AS total_pu_where_election_has_ended,
-    COUNT(*) FILTER (WHERE has_results)      AS total_pu_unique_final_results_uploaded_count,
+    COUNT(*) FILTER (WHERE has_results)      AS total_pu_unique_final_results_uploaded,
     COUNT(*) FILTER (WHERE has_referrals)    AS total_pu_where_agents_referred_live_voters
   FROM party_expanded
   GROUP BY election_group_id, ward_id, party_id
@@ -1846,15 +2984,16 @@ party_json AS (
     election_group_id, ward_id,
     COALESCE(jsonb_agg(jsonb_build_object(
       'party_id',                              party_id,
-      'pu_total_agents_in_attendance_count',   pu_total_agents_in_attendance_count,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
       'pu_average_arrival_time',               NULL,
       'pu_average_election_started_at',        NULL,
       'pu_average_election_ended_at',          NULL,
-      'pu_total_updates_count',                pu_total_updates_count,
-      'pu_total_reports_count',                pu_total_reports_count,
-      'pu_total_agents_count',                 pu_total_agents_count,
-      'pu_total_final_results_uploaded_count', pu_total_final_results_uploaded_count,
-      'pu_total_unique_final_results_uploaded_count', pu_total_unique_final_results_uploaded_count,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
       'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
       'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
       'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
@@ -1863,20 +3002,20 @@ party_json AS (
       'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
       'total_pu_where_election_has_started',   total_pu_where_election_has_started,
       'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
-      'total_pu_unique_final_results_uploaded_count', total_pu_unique_final_results_uploaded_count,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
       'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
     )), '[]'::jsonb) AS parties
   FROM party_agg
   GROUP BY election_group_id, ward_id
 )
-INSERT INTO election_wards (
+INSERT INTO election_group_wards (
   election_group_id, ward_id, lga_id, state_id,
   unique_final_results_expected,
-  pu_total_agents_count, pu_total_agents_in_attendance_count,
-  pu_total_reports_count, pu_total_updates_count,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
   pu_average_election_started_at, pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count, pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count,
   total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
   total_pu_where_election_has_started, total_pu_where_election_has_ended,
@@ -1886,11 +3025,11 @@ INSERT INTO election_wards (
 SELECT
   a.election_group_id, a.ward_id, a.lga_id, a.state_id,
   a.unique_final_results_expected,
-  a.pu_total_agents_count, a.pu_total_agents_in_attendance_count,
-  a.pu_total_reports_count, a.pu_total_updates_count,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
   a.pu_average_election_started_at, a.pu_average_election_ended_at,
   a.pu_election_practice_test_readiness_percentage,
-  a.pu_total_final_results_uploaded_count, a.pu_total_unique_final_results_uploaded_count,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
   a.pu_live_voters_referred_by_agent_count,
   a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
   a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
@@ -1902,15 +3041,16 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   lga_id = EXCLUDED.lga_id,
   state_id = EXCLUDED.state_id,
   unique_final_results_expected = EXCLUDED.unique_final_results_expected,
-  pu_total_agents_count = EXCLUDED.pu_total_agents_count,
-  pu_total_agents_in_attendance_count = EXCLUDED.pu_total_agents_in_attendance_count,
-  pu_total_reports_count = EXCLUDED.pu_total_reports_count,
-  pu_total_updates_count = EXCLUDED.pu_total_updates_count,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+    unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
   pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
   pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
   pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
-  pu_total_final_results_uploaded_count = EXCLUDED.pu_total_final_results_uploaded_count,
-  pu_total_unique_final_results_uploaded_count = EXCLUDED.pu_total_unique_final_results_uploaded_count,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
   pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
   total_pu_with_reports = EXCLUDED.total_pu_with_reports,
   total_pu_with_updates = EXCLUDED.total_pu_with_updates,
@@ -1923,9 +3063,1750 @@ ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
   updated_at = NOW()
 `
 
-// Aggregates from election_polling_units (one level up from PUs).
+// Aggregates from election_group_polling_units (one level up from PUs).
 // Expand per-party JSONB from all PUs in each ward
-func (q *Queries) RefreshAllElectionWardStats(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, refreshAllElectionWardStats)
+func (q *Queries) RefreshAllElectionGroupWardStats(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, refreshAllElectionGroupWardStats)
+	return err
+}
+
+const refreshSingleElectionGroupGlobalStats = `-- name: RefreshSingleElectionGroupGlobalStats :exec
+WITH src_agg AS (
+  SELECT
+    election_group_id,
+    SUM(unique_final_results_expected)               AS unique_final_results_expected,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
+    COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
+    SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)                       AS total_pu_with_reports,
+    SUM(total_pu_with_updates)                       AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance)          AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started)         AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
+  FROM election_group_states
+  WHERE election_group_id = $1::bigint
+  GROUP BY election_group_id
+),
+party_expanded AS (
+  SELECT
+    s.election_group_id,
+    (p.value->>'party_id')::bigint                                    AS party_id,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
+    (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
+    (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
+    (p.value->>'total_pu_with_reports')::int                           AS total_pu_with_reports,
+    (p.value->>'total_pu_with_updates')::int                           AS total_pu_with_updates,
+    (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
+    (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
+    (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
+  FROM election_group_states s,
+       jsonb_array_elements(s.parties) AS p(value)
+  WHERE s.election_group_id = $1::bigint
+),
+party_agg AS (
+  SELECT
+    election_group_id, party_id,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
+    COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
+    COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
+    SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)             AS total_pu_with_reports,
+    SUM(total_pu_with_updates)             AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
+  FROM party_expanded
+  GROUP BY election_group_id, party_id
+),
+party_json AS (
+  SELECT
+    election_group_id,
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'party_id',                              party_id,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
+      'pu_average_arrival_time',               NULL,
+      'pu_average_election_started_at',        NULL,
+      'pu_average_election_ended_at',          NULL,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+      'unique_pu_agents_count',          unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
+      'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
+      'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
+      'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
+      'total_pu_with_reports',                 total_pu_with_reports,
+      'total_pu_with_updates',                 total_pu_with_updates,
+      'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
+      'total_pu_where_election_has_started',   total_pu_where_election_has_started,
+      'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
+      'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
+    )), '[]'::jsonb) AS parties
+  FROM party_agg
+  GROUP BY election_group_id
+)
+UPDATE election_groups
+SET
+  unique_final_results_expected = COALESCE(s.unique_final_results_expected, 0),
+  pu_agents_count = COALESCE(s.pu_agents_count, 0),
+  unique_pu_agents_count = COALESCE(s.unique_pu_agents_count, 0),
+  pu_agents_in_attendance_count = COALESCE(s.pu_agents_in_attendance_count, 0),
+  reports_count = COALESCE(s.reports_count, 0),
+  updates_count = COALESCE(s.updates_count, 0),
+  pu_average_election_started_at = s.pu_average_election_started_at,
+  pu_average_election_ended_at = s.pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage = COALESCE(s.pu_election_practice_test_readiness_percentage, 0),
+  pu_final_results_uploaded_count = COALESCE(s.pu_final_results_uploaded_count, 0),
+  unique_pu_final_results_uploaded_count = COALESCE(s.unique_pu_final_results_uploaded_count, 0),
+  pu_live_voters_referred_by_agent_count = COALESCE(s.pu_live_voters_referred_by_agent_count, 0),
+  total_pu_with_reports = COALESCE(s.total_pu_with_reports, 0),
+  total_pu_with_updates = COALESCE(s.total_pu_with_updates, 0),
+  total_pu_with_agents_in_attendance = COALESCE(s.total_pu_with_agents_in_attendance, 0),
+  total_pu_where_election_has_started = COALESCE(s.total_pu_where_election_has_started, 0),
+  total_pu_where_election_has_ended = COALESCE(s.total_pu_where_election_has_ended, 0),
+  total_pu_unique_final_results_uploaded = COALESCE(s.total_pu_unique_final_results_uploaded, 0),
+  total_pu_where_agents_referred_live_voters = COALESCE(s.total_pu_where_agents_referred_live_voters, 0),
+  parties = COALESCE(pj.parties, '[]'::jsonb),
+  updated_at = NOW()
+FROM src_agg s
+LEFT JOIN party_json pj ON s.election_group_id = pj.election_group_id
+WHERE election_groups.id = s.election_group_id
+`
+
+// Aggregates from election_group_states for a single election group.
+func (q *Queries) RefreshSingleElectionGroupGlobalStats(ctx context.Context, electionGroupID int64) error {
+	_, err := q.db.Exec(ctx, refreshSingleElectionGroupGlobalStats, electionGroupID)
+	return err
+}
+
+const refreshSingleElectionGroupLGAStats = `-- name: RefreshSingleElectionGroupLGAStats :exec
+WITH src_agg AS (
+  SELECT
+    election_group_id, lga_id, state_id,
+    SUM(unique_final_results_expected)               AS unique_final_results_expected,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
+    COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
+    SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)                       AS total_pu_with_reports,
+    SUM(total_pu_with_updates)                       AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance)          AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started)         AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
+  FROM election_group_wards
+  WHERE election_group_id = $1::bigint
+    AND lga_id = $2::int
+  GROUP BY election_group_id, lga_id, state_id
+),
+party_expanded AS (
+  SELECT
+    s.election_group_id, s.lga_id,
+    (p.value->>'party_id')::bigint                                    AS party_id,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
+    (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
+    (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
+    (p.value->>'total_pu_with_reports')::int                           AS total_pu_with_reports,
+    (p.value->>'total_pu_with_updates')::int                           AS total_pu_with_updates,
+    (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
+    (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
+    (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
+  FROM election_group_wards s,
+       jsonb_array_elements(s.parties) AS p(value)
+  WHERE s.election_group_id = $1::bigint
+    AND s.lga_id = $2::int
+),
+party_agg AS (
+  SELECT
+    election_group_id, lga_id, party_id,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
+    COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
+    COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
+    SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)             AS total_pu_with_reports,
+    SUM(total_pu_with_updates)             AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
+  FROM party_expanded
+  GROUP BY election_group_id, lga_id, party_id
+),
+party_json AS (
+  SELECT
+    election_group_id, lga_id,
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'party_id',                              party_id,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
+      'pu_average_arrival_time',               NULL,
+      'pu_average_election_started_at',        NULL,
+      'pu_average_election_ended_at',          NULL,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
+      'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
+      'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
+      'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
+      'total_pu_with_reports',                 total_pu_with_reports,
+      'total_pu_with_updates',                 total_pu_with_updates,
+      'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
+      'total_pu_where_election_has_started',   total_pu_where_election_has_started,
+      'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
+      'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
+    )), '[]'::jsonb) AS parties
+  FROM party_agg
+  GROUP BY election_group_id, lga_id
+)
+INSERT INTO election_group_lgas (
+  election_group_id, lga_id, state_id,
+  unique_final_results_expected,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
+  pu_average_election_started_at, pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started, total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
+  parties
+)
+SELECT
+  a.election_group_id, a.lga_id, a.state_id,
+  a.unique_final_results_expected,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
+  a.pu_average_election_started_at, a.pu_average_election_ended_at,
+  a.pu_election_practice_test_readiness_percentage,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
+  a.pu_live_voters_referred_by_agent_count,
+  a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
+  a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
+  a.total_pu_unique_final_results_uploaded, a.total_pu_where_agents_referred_live_voters,
+  COALESCE(pj.parties, '[]'::jsonb)
+FROM src_agg a
+LEFT JOIN party_json pj USING (election_group_id, lga_id)
+ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
+  state_id = EXCLUDED.state_id,
+  unique_final_results_expected = EXCLUDED.unique_final_results_expected,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
+  pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
+  pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports = EXCLUDED.total_pu_with_reports,
+  total_pu_with_updates = EXCLUDED.total_pu_with_updates,
+  total_pu_with_agents_in_attendance = EXCLUDED.total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
+  total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  parties = EXCLUDED.parties,
+  updated_at = NOW()
+`
+
+type RefreshSingleElectionGroupLGAStatsParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	LgaID           int32 `json:"lga_id"`
+}
+
+// Aggregates from election_group_wards for a single LGA.
+func (q *Queries) RefreshSingleElectionGroupLGAStats(ctx context.Context, arg RefreshSingleElectionGroupLGAStatsParams) error {
+	_, err := q.db.Exec(ctx, refreshSingleElectionGroupLGAStats, arg.ElectionGroupID, arg.LgaID)
+	return err
+}
+
+const refreshSingleElectionGroupPollingUnitStats = `-- name: RefreshSingleElectionGroupPollingUnitStats :exec
+WITH assignments AS (
+  SELECT
+    election_group_id,
+    polling_unit_id,
+    arrived_at,
+    election_started_at,
+    election_ended_at,
+    election_practice_test_readiness_percentage,
+    reports_count,
+    updates_count,
+    results_submitted_count,
+    live_voters_referred_count,
+    party_id
+  FROM polling_unit_assignments
+  WHERE polling_unit_assignments.election_group_id = $1 AND polling_unit_assignments.polling_unit_id = $2
+),
+assignment_agg AS (
+  SELECT
+    election_group_id,
+    polling_unit_id,
+    COUNT(*)                                              AS total_agents_count,
+    COUNT(*) FILTER (WHERE arrived_at IS NOT NULL)        AS total_agents_in_attendance_count,
+    SUM(reports_count)                                    AS total_reports_count,
+    SUM(updates_count)                                    AS total_updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM election_started_at)))                              AS average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM election_ended_at)))                                AS average_election_ended_at,
+    COALESCE(AVG(election_practice_test_readiness_percentage), 0) AS election_practice_test_readiness_percentage
+  FROM assignments
+  GROUP BY election_group_id, polling_unit_id
+),
+result_agg AS (
+  SELECT
+    election_group_id,
+    polling_unit_id,
+    COUNT(*)                   AS total_final_results_uploaded_count,
+    COUNT(DISTINCT election_id) AS total_unique_final_results_uploaded_count
+  FROM polling_unit_results
+  WHERE polling_unit_results.election_group_id = $1 AND polling_unit_results.polling_unit_id = $2
+  GROUP BY election_group_id, polling_unit_id
+),
+referral_codes AS (
+  SELECT
+    election_group_id,
+    polling_unit_id,
+    SUM(live_voters_referred_count) AS live_voters_referred_by_agent_count
+  FROM assignments
+  GROUP BY election_group_id, polling_unit_id
+),
+party_expanded AS (
+  SELECT
+    a.election_group_id,
+    a.polling_unit_id,
+    a.party_id,
+    COUNT(*) AS agents_count,
+    COUNT(*) FILTER (WHERE a.arrived_at IS NOT NULL) AS agents_in_attendance_count,
+    SUM(a.updates_count) AS updates_count,
+    SUM(a.reports_count) AS reports_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM a.arrived_at))) AS average_arrival_time,
+    to_timestamp(AVG(EXTRACT(epoch FROM a.election_started_at))) AS average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM a.election_ended_at))) AS average_election_ended_at,
+    COALESCE(AVG(a.election_practice_test_readiness_percentage), 0) AS readiness_pct,
+    SUM(a.live_voters_referred_count) AS referrals
+  FROM assignments a
+  GROUP BY a.election_group_id, a.polling_unit_id, a.party_id
+),
+party_results AS (
+  SELECT
+    r.election_group_id,
+    r.polling_unit_id,
+    r.party_id,
+    COUNT(*) AS final_results_uploaded_count,
+    COUNT(DISTINCT r.election_id) AS unique_final_results_uploaded_count
+  FROM polling_unit_results r
+  WHERE r.election_group_id = $1 AND r.polling_unit_id = $2
+  GROUP BY r.election_group_id, r.polling_unit_id, r.party_id
+),
+party_intervals AS (
+  SELECT
+    sub.election_group_id,
+    sub.polling_unit_id,
+    sub.party_id,
+    AVG(gap_seconds) AS avg_interval_seconds
+  FROM (
+    SELECT
+      pu.election_group_id,
+      pu.polling_unit_id,
+      a2.party_id,
+      EXTRACT(EPOCH FROM (pu.created_at - LAG(pu.created_at) OVER (PARTITION BY pu.election_group_id, pu.polling_unit_id, pu.user_id ORDER BY pu.created_at))) AS gap_seconds
+    FROM polling_unit_updates pu
+    JOIN polling_unit_assignments a2 ON pu.election_group_id = a2.election_group_id
+                                    AND pu.polling_unit_id = a2.polling_unit_id
+                                    AND pu.user_id = a2.user_id
+    WHERE pu.election_group_id = $1 AND pu.polling_unit_id = $2
+  ) sub
+  WHERE gap_seconds > 0
+  GROUP BY sub.election_group_id, sub.polling_unit_id, sub.party_id
+),
+party_json AS (
+  SELECT
+    pe.election_group_id,
+    pe.polling_unit_id,
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'party_id',                              pe.party_id,
+      'agents_in_attendance_count',            pe.agents_in_attendance_count,
+      'agents_count',                          pe.agents_count,
+      'updates_count',                         pe.updates_count,
+      'reports_count',                         pe.reports_count,
+      'average_arrival_time',                  pe.average_arrival_time,
+      'average_election_started_at',           pe.average_election_started_at,
+      'average_election_ended_at',             pe.average_election_ended_at,
+      'final_results_uploaded_count',          COALESCE(pr.final_results_uploaded_count, 0),
+      'unique_final_results_uploaded_count',   COALESCE(pr.unique_final_results_uploaded_count, 0),
+      'average_update_time_interval_in_seconds', COALESCE(pi.avg_interval_seconds, 0),
+      'election_practice_test_readiness_percentage', pe.readiness_pct,
+      'live_voters_referred_by_agent_count',   pe.referrals
+    )), '[]'::jsonb) AS parties
+  FROM party_expanded pe
+  LEFT JOIN party_results pr ON pe.election_group_id = pr.election_group_id AND pe.polling_unit_id = pr.polling_unit_id AND pe.party_id = pr.party_id
+  LEFT JOIN party_intervals pi ON pe.election_group_id = pi.election_group_id AND pe.polling_unit_id = pi.polling_unit_id AND pe.party_id = pi.party_id
+  GROUP BY pe.election_group_id, pe.polling_unit_id
+)
+UPDATE election_group_polling_units
+SET
+  total_agents_count = COALESCE(aa.total_agents_count, 0),
+  total_agents_in_attendance_count = COALESCE(aa.total_agents_in_attendance_count, 0),
+  total_reports_count = COALESCE(aa.total_reports_count, 0),
+  total_updates_count = COALESCE(aa.total_updates_count, 0),
+  average_election_started_at = aa.average_election_started_at,
+  average_election_ended_at = aa.average_election_ended_at,
+  election_practice_test_readiness_percentage = COALESCE(aa.election_practice_test_readiness_percentage, 0),
+  total_final_results_uploaded_count = COALESCE(ra.total_final_results_uploaded_count, 0),
+  total_unique_final_results_uploaded_count = COALESCE(ra.total_unique_final_results_uploaded_count, 0),
+  live_voters_referred_by_agent_count = COALESCE(rc.live_voters_referred_by_agent_count, 0),
+  parties = COALESCE(pj.parties, '[]'::jsonb),
+  updated_at = NOW()
+FROM assignment_agg aa
+LEFT JOIN result_agg ra ON aa.election_group_id = ra.election_group_id AND aa.polling_unit_id = ra.polling_unit_id
+LEFT JOIN referral_codes rc ON aa.election_group_id = rc.election_group_id AND aa.polling_unit_id = rc.polling_unit_id
+LEFT JOIN party_json pj ON aa.election_group_id = pj.election_group_id AND aa.polling_unit_id = pj.polling_unit_id
+WHERE election_group_polling_units.election_group_id = aa.election_group_id
+  AND election_group_polling_units.polling_unit_id = aa.polling_unit_id
+`
+
+type RefreshSingleElectionGroupPollingUnitStatsParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	PollingUnitID   int32 `json:"polling_unit_id"`
+}
+
+// Aggregates from polling_unit_assignments, results, and updates for a single PU
+func (q *Queries) RefreshSingleElectionGroupPollingUnitStats(ctx context.Context, arg RefreshSingleElectionGroupPollingUnitStatsParams) error {
+	_, err := q.db.Exec(ctx, refreshSingleElectionGroupPollingUnitStats, arg.ElectionGroupID, arg.PollingUnitID)
+	return err
+}
+
+const refreshSingleElectionGroupStateConstituencyStats = `-- name: RefreshSingleElectionGroupStateConstituencyStats :exec
+WITH src_agg AS (
+  SELECT
+    election_group_id, state_constituency_id, state_id,
+    SUM(unique_final_results_expected)               AS unique_final_results_expected,
+    SUM(total_agents_count)                          AS pu_agents_count,
+    COUNT(*) FILTER (WHERE total_agents_count > 0)   AS unique_pu_agents_count,
+    SUM(total_agents_in_attendance_count)            AS pu_agents_in_attendance_count,
+    SUM(total_reports_count)                         AS reports_count,
+    SUM(total_updates_count)                         AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_started_at)))                 AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_ended_at)))                   AS pu_average_election_ended_at,
+    COALESCE(AVG(election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
+    SUM(total_final_results_uploaded_count)          AS pu_final_results_uploaded_count,
+    SUM(total_unique_final_results_uploaded_count)   AS unique_pu_final_results_uploaded_count,
+    SUM(live_voters_referred_by_agent_count)         AS pu_live_voters_referred_by_agent_count,
+    COUNT(*) FILTER (WHERE total_reports_count > 0)               AS total_pu_with_reports,
+    COUNT(*) FILTER (WHERE total_updates_count > 0)               AS total_pu_with_updates,
+    COUNT(*) FILTER (WHERE total_agents_in_attendance_count > 0)  AS total_pu_with_agents_in_attendance,
+    COUNT(*) FILTER (WHERE average_election_started_at IS NOT NULL) AS total_pu_where_election_has_started,
+    COUNT(*) FILTER (WHERE average_election_ended_at IS NOT NULL)   AS total_pu_where_election_has_ended,
+    COUNT(*) FILTER (WHERE total_unique_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
+    COUNT(*) FILTER (WHERE live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
+  FROM election_group_polling_units
+  WHERE election_group_id = $1::bigint
+    AND state_constituency_id = $2::int
+  GROUP BY election_group_id, state_constituency_id, state_id
+),
+party_expanded AS (
+  SELECT
+    s.election_group_id, s.state_constituency_id,
+    (p.value->>'party_id')::bigint                                    AS party_id,
+    (p.value->>'agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'agents_count')::int                           AS agents_count,
+    (p.value->>'agents_count')::int > 0                       AS has_agents,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
+    (p.value->>'election_practice_test_readiness_percentage')::float AS readiness_pct,
+    (p.value->>'live_voters_referred_by_agent_count')::int          AS referrals,
+    s.total_reports_count > 0               AS has_reports,
+    s.total_updates_count > 0               AS has_updates,
+    s.total_agents_in_attendance_count > 0  AS has_attendance,
+    s.average_election_started_at IS NOT NULL AS election_started,
+    s.average_election_ended_at IS NOT NULL   AS election_ended,
+    s.total_unique_final_results_uploaded_count > 0 AS has_results,
+    s.live_voters_referred_by_agent_count > 0 AS has_referrals
+  FROM election_group_polling_units s,
+       jsonb_array_elements(s.parties) AS p(value)
+  WHERE s.election_group_id = $1::bigint
+    AND s.state_constituency_id = $2::int
+),
+party_agg AS (
+  SELECT
+    election_group_id, state_constituency_id, party_id,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    COUNT(*) FILTER (WHERE has_agents)     AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
+    COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
+    COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
+    SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
+    COUNT(*) FILTER (WHERE has_reports)     AS total_pu_with_reports,
+    COUNT(*) FILTER (WHERE has_updates)     AS total_pu_with_updates,
+    COUNT(*) FILTER (WHERE has_attendance)  AS total_pu_with_agents_in_attendance,
+    COUNT(*) FILTER (WHERE election_started) AS total_pu_where_election_has_started,
+    COUNT(*) FILTER (WHERE election_ended)   AS total_pu_where_election_has_ended,
+    COUNT(*) FILTER (WHERE has_results)      AS total_pu_unique_final_results_uploaded,
+    COUNT(*) FILTER (WHERE has_referrals)    AS total_pu_where_agents_referred_live_voters
+  FROM party_expanded
+  GROUP BY election_group_id, state_constituency_id, party_id
+),
+party_json AS (
+  SELECT
+    election_group_id, state_constituency_id,
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'party_id',                              party_id,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
+      'pu_average_arrival_time',               NULL,
+      'pu_average_election_started_at',        NULL,
+      'pu_average_election_ended_at',          NULL,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+      'unique_pu_agents_count',          unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
+      'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
+      'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
+      'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
+      'total_pu_with_reports',                 total_pu_with_reports,
+      'total_pu_with_updates',                 total_pu_with_updates,
+      'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
+      'total_pu_where_election_has_started',   total_pu_where_election_has_started,
+      'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
+      'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
+    )), '[]'::jsonb) AS parties
+  FROM party_agg
+  GROUP BY election_group_id, state_constituency_id
+)
+INSERT INTO election_group_state_constituencies (
+  election_group_id, state_constituency_id, state_id,
+  unique_final_results_expected,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
+  pu_average_election_started_at, pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started, total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
+  parties
+)
+SELECT
+  a.election_group_id, a.state_constituency_id, a.state_id,
+  a.unique_final_results_expected,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
+  a.pu_average_election_started_at, a.pu_average_election_ended_at,
+  a.pu_election_practice_test_readiness_percentage,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
+  a.pu_live_voters_referred_by_agent_count,
+  a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
+  a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
+  a.total_pu_unique_final_results_uploaded, a.total_pu_where_agents_referred_live_voters,
+  COALESCE(pj.parties, '[]'::jsonb)
+FROM src_agg a
+LEFT JOIN party_json pj USING (election_group_id, state_constituency_id)
+ON CONFLICT (election_group_id, state_constituency_id) DO UPDATE SET
+  state_id = EXCLUDED.state_id,
+  unique_final_results_expected = EXCLUDED.unique_final_results_expected,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
+  pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
+  pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports = EXCLUDED.total_pu_with_reports,
+  total_pu_with_updates = EXCLUDED.total_pu_with_updates,
+  total_pu_with_agents_in_attendance = EXCLUDED.total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
+  total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  parties = EXCLUDED.parties,
+  updated_at = NOW()
+`
+
+type RefreshSingleElectionGroupStateConstituencyStatsParams struct {
+	ElectionGroupID     int64 `json:"election_group_id"`
+	StateConstituencyID int32 `json:"state_constituency_id"`
+}
+
+// Aggregates from election_group_polling_units for a single state constituency.
+func (q *Queries) RefreshSingleElectionGroupStateConstituencyStats(ctx context.Context, arg RefreshSingleElectionGroupStateConstituencyStatsParams) error {
+	_, err := q.db.Exec(ctx, refreshSingleElectionGroupStateConstituencyStats, arg.ElectionGroupID, arg.StateConstituencyID)
+	return err
+}
+
+const refreshSingleElectionGroupStateStats = `-- name: RefreshSingleElectionGroupStateStats :exec
+WITH src_agg AS (
+  SELECT
+    election_group_id, state_id,
+    SUM(unique_final_results_expected)               AS unique_final_results_expected,
+    SUM(pu_agents_count)                       AS pu_agents_count,
+    SUM(unique_pu_agents_count)                AS unique_pu_agents_count,
+    SUM(pu_agents_in_attendance_count)         AS pu_agents_in_attendance_count,
+    SUM(reports_count)                      AS reports_count,
+    SUM(updates_count)                      AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_started_at)))              AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM pu_average_election_ended_at)))                AS pu_average_election_ended_at,
+    COALESCE(AVG(pu_election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
+    SUM(pu_final_results_uploaded_count)       AS pu_final_results_uploaded_count,
+    SUM(unique_pu_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
+    SUM(pu_live_voters_referred_by_agent_count)      AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)                       AS total_pu_with_reports,
+    SUM(total_pu_with_updates)                       AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance)          AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started)         AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)           AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_final_results_uploaded)      AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_where_agents_referred_live_voters)  AS total_pu_where_agents_referred_live_voters
+  FROM election_group_lgas
+  WHERE election_group_id = $1::bigint
+    AND state_id = $2::smallint
+  GROUP BY election_group_id, state_id
+),
+party_expanded AS (
+  SELECT
+    s.election_group_id, s.state_id,
+    (p.value->>'party_id')::bigint                                    AS party_id,
+    (p.value->>'pu_agents_in_attendance_count')::int             AS agents_in_attendance_count,
+    (p.value->>'pu_agents_count')::int                           AS agents_count,
+    (p.value->>'unique_pu_agents_count')::int                    AS unique_agents_count,
+    (p.value->>'updates_count')::int                          AS updates_count,
+    (p.value->>'reports_count')::int                          AS reports_count,
+    (p.value->>'pu_final_results_uploaded_count')::int           AS final_results_uploaded_count,
+    (p.value->>'unique_pu_final_results_uploaded_count')::int    AS unique_results_uploaded_count,
+    (p.value->>'pu_average_update_time_interval_in_seconds')::float    AS avg_interval_seconds,
+    (p.value->>'pu_election_practice_test_readiness_percentage')::float AS readiness_pct,
+    (p.value->>'pu_live_voters_referred_by_agent_count')::int          AS referrals,
+    (p.value->>'total_pu_with_reports')::int                           AS total_pu_with_reports,
+    (p.value->>'total_pu_with_updates')::int                           AS total_pu_with_updates,
+    (p.value->>'total_pu_with_agents_in_attendance')::int              AS total_pu_with_agents_in_attendance,
+    (p.value->>'total_pu_where_election_has_started')::int             AS total_pu_where_election_has_started,
+    (p.value->>'total_pu_where_election_has_ended')::int               AS total_pu_where_election_has_ended,
+    (p.value->>'total_pu_unique_final_results_uploaded')::int    AS total_pu_unique_results_uploaded,
+    (p.value->>'total_pu_where_agents_referred_live_voters')::int      AS total_pu_referrals
+  FROM election_group_lgas s,
+       jsonb_array_elements(s.parties) AS p(value)
+  WHERE s.election_group_id = $1::bigint
+    AND s.state_id = $2::smallint
+),
+party_agg AS (
+  SELECT
+    election_group_id, state_id, party_id,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    SUM(unique_agents_count)               AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_results_uploaded_count)     AS unique_pu_final_results_uploaded_count,
+    COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
+    COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
+    SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
+    SUM(total_pu_with_reports)             AS total_pu_with_reports,
+    SUM(total_pu_with_updates)             AS total_pu_with_updates,
+    SUM(total_pu_with_agents_in_attendance) AS total_pu_with_agents_in_attendance,
+    SUM(total_pu_where_election_has_started) AS total_pu_where_election_has_started,
+    SUM(total_pu_where_election_has_ended)   AS total_pu_where_election_has_ended,
+    SUM(total_pu_unique_results_uploaded)    AS total_pu_unique_final_results_uploaded,
+    SUM(total_pu_referrals)                  AS total_pu_where_agents_referred_live_voters
+  FROM party_expanded
+  GROUP BY election_group_id, state_id, party_id
+),
+party_json AS (
+  SELECT
+    election_group_id, state_id,
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'party_id',                              party_id,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
+      'pu_average_arrival_time',               NULL,
+      'pu_average_election_started_at',        NULL,
+      'pu_average_election_ended_at',          NULL,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+      'unique_pu_agents_count',          unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
+      'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
+      'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
+      'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
+      'total_pu_with_reports',                 total_pu_with_reports,
+      'total_pu_with_updates',                 total_pu_with_updates,
+      'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
+      'total_pu_where_election_has_started',   total_pu_where_election_has_started,
+      'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
+      'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
+    )), '[]'::jsonb) AS parties
+  FROM party_agg
+  GROUP BY election_group_id, state_id
+)
+INSERT INTO election_group_states (
+  election_group_id, state_id,
+  unique_final_results_expected,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
+  pu_average_election_started_at, pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started, total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
+  parties
+)
+SELECT
+  a.election_group_id, a.state_id,
+  a.unique_final_results_expected,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
+  a.pu_average_election_started_at, a.pu_average_election_ended_at,
+  a.pu_election_practice_test_readiness_percentage,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
+  a.pu_live_voters_referred_by_agent_count,
+  a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
+  a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
+  a.total_pu_unique_final_results_uploaded, a.total_pu_where_agents_referred_live_voters,
+  COALESCE(pj.parties, '[]'::jsonb)
+FROM src_agg a
+LEFT JOIN party_json pj USING (election_group_id, state_id)
+ON CONFLICT (election_group_id, state_id) DO UPDATE SET
+  unique_final_results_expected = EXCLUDED.unique_final_results_expected,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
+  pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
+  pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports = EXCLUDED.total_pu_with_reports,
+  total_pu_with_updates = EXCLUDED.total_pu_with_updates,
+  total_pu_with_agents_in_attendance = EXCLUDED.total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
+  total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  parties = EXCLUDED.parties,
+  updated_at = NOW()
+`
+
+type RefreshSingleElectionGroupStateStatsParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	StateID         int16 `json:"state_id"`
+}
+
+// Aggregates from election_group_lgas for a single state.
+func (q *Queries) RefreshSingleElectionGroupStateStats(ctx context.Context, arg RefreshSingleElectionGroupStateStatsParams) error {
+	_, err := q.db.Exec(ctx, refreshSingleElectionGroupStateStats, arg.ElectionGroupID, arg.StateID)
+	return err
+}
+
+const refreshSingleElectionGroupWardStats = `-- name: RefreshSingleElectionGroupWardStats :exec
+WITH epu_agg AS (
+  SELECT
+    election_group_id, ward_id, lga_id, state_id,
+    SUM(unique_final_results_expected)               AS unique_final_results_expected,
+    SUM(total_agents_count)                          AS pu_agents_count,
+      COUNT(*) FILTER (WHERE total_agents_count > 0)   AS unique_pu_agents_count,
+    SUM(total_agents_in_attendance_count)            AS pu_agents_in_attendance_count,
+    SUM(total_reports_count)                         AS reports_count,
+    SUM(total_updates_count)                         AS updates_count,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_started_at)))                 AS pu_average_election_started_at,
+    to_timestamp(AVG(EXTRACT(epoch FROM average_election_ended_at)))                   AS pu_average_election_ended_at,
+    COALESCE(AVG(election_practice_test_readiness_percentage), 0) AS pu_election_practice_test_readiness_percentage,
+    SUM(total_final_results_uploaded_count)          AS pu_final_results_uploaded_count,
+    SUM(total_unique_final_results_uploaded_count)   AS unique_pu_final_results_uploaded_count,
+    SUM(live_voters_referred_by_agent_count)         AS pu_live_voters_referred_by_agent_count,
+    COUNT(*) FILTER (WHERE total_reports_count > 0)               AS total_pu_with_reports,
+    COUNT(*) FILTER (WHERE total_updates_count > 0)               AS total_pu_with_updates,
+    COUNT(*) FILTER (WHERE total_agents_in_attendance_count > 0)  AS total_pu_with_agents_in_attendance,
+    COUNT(*) FILTER (WHERE average_election_started_at IS NOT NULL) AS total_pu_where_election_has_started,
+    COUNT(*) FILTER (WHERE average_election_ended_at IS NOT NULL)   AS total_pu_where_election_has_ended,
+    COUNT(*) FILTER (WHERE total_unique_final_results_uploaded_count > 0) AS total_pu_unique_final_results_uploaded,
+    COUNT(*) FILTER (WHERE live_voters_referred_by_agent_count > 0) AS total_pu_where_agents_referred_live_voters
+  FROM election_group_polling_units
+  WHERE election_group_id = $1::bigint
+    AND ward_id = $2::int
+  GROUP BY election_group_id, ward_id, lga_id, state_id
+),
+party_expanded AS (
+  SELECT
+    epu.election_group_id, epu.ward_id,
+    (p.value->>'party_id')::bigint                                    AS party_id,
+    (p.value->>'agents_in_attendance_count')::int                     AS agents_in_attendance_count,
+    (p.value->>'agents_count')::int                                   AS agents_count,
+    (p.value->>'updates_count')::int                                  AS updates_count,
+    (p.value->>'reports_count')::int                                  AS reports_count,
+    (p.value->>'final_results_uploaded_count')::int                   AS final_results_uploaded_count,
+    (p.value->>'unique_final_results_uploaded_count')::int            AS unique_final_results_uploaded_count,
+    (p.value->>'average_update_time_interval_in_seconds')::float      AS avg_interval_seconds,
+    (p.value->>'election_practice_test_readiness_percentage')::float  AS readiness_pct,
+    (p.value->>'live_voters_referred_by_agent_count')::int            AS referrals,
+    epu.total_reports_count > 0                AS has_reports,
+    epu.total_updates_count > 0               AS has_updates,
+    epu.total_agents_in_attendance_count > 0  AS has_attendance,
+    epu.average_election_started_at IS NOT NULL AS election_started,
+    epu.average_election_ended_at IS NOT NULL   AS election_ended,
+    epu.total_unique_final_results_uploaded_count > 0 AS has_results,
+    epu.live_voters_referred_by_agent_count > 0 AS has_referrals,
+    (p.value->>'agents_count')::int > 0            AS has_agents
+  FROM election_group_polling_units epu,
+       jsonb_array_elements(epu.parties) AS p(value)
+  WHERE epu.election_group_id = $1::bigint
+    AND epu.ward_id = $2::int
+),
+party_agg AS (
+  SELECT
+    election_group_id, ward_id, party_id,
+    SUM(agents_in_attendance_count)        AS pu_agents_in_attendance_count,
+    SUM(agents_count)                      AS pu_agents_count,
+    COUNT(*) FILTER (WHERE has_agents)     AS unique_pu_agents_count,
+    SUM(updates_count)                     AS updates_count,
+    SUM(reports_count)                     AS reports_count,
+    SUM(final_results_uploaded_count)      AS pu_final_results_uploaded_count,
+    SUM(unique_final_results_uploaded_count) AS unique_pu_final_results_uploaded_count,
+    SUM(referrals)                         AS pu_live_voters_referred_by_agent_count,
+    COALESCE(AVG(avg_interval_seconds), 0) AS pu_average_update_time_interval_in_seconds,
+    COALESCE(AVG(readiness_pct), 0)        AS pu_election_practice_test_readiness_percentage,
+    COUNT(*) FILTER (WHERE has_reports)     AS total_pu_with_reports,
+    COUNT(*) FILTER (WHERE has_updates)     AS total_pu_with_updates,
+    COUNT(*) FILTER (WHERE has_attendance)  AS total_pu_with_agents_in_attendance,
+    COUNT(*) FILTER (WHERE election_started) AS total_pu_where_election_has_started,
+    COUNT(*) FILTER (WHERE election_ended)   AS total_pu_where_election_has_ended,
+    COUNT(*) FILTER (WHERE has_results)      AS total_pu_unique_final_results_uploaded,
+    COUNT(*) FILTER (WHERE has_referrals)    AS total_pu_where_agents_referred_live_voters
+  FROM party_expanded
+  GROUP BY election_group_id, ward_id, party_id
+),
+party_json AS (
+  SELECT
+    election_group_id, ward_id,
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'party_id',                              party_id,
+      'pu_agents_in_attendance_count',   pu_agents_in_attendance_count,
+      'pu_average_arrival_time',               NULL,
+      'pu_average_election_started_at',        NULL,
+      'pu_average_election_ended_at',          NULL,
+      'updates_count',                updates_count,
+      'reports_count',                reports_count,
+      'pu_agents_count',                 pu_agents_count,
+        'unique_pu_agents_count', unique_pu_agents_count,
+      'pu_final_results_uploaded_count', pu_final_results_uploaded_count,
+      'unique_pu_final_results_uploaded_count', unique_pu_final_results_uploaded_count,
+      'pu_average_update_time_interval_in_seconds', pu_average_update_time_interval_in_seconds,
+      'pu_election_practice_test_readiness_percentage', pu_election_practice_test_readiness_percentage,
+      'pu_live_voters_referred_by_agent_count', pu_live_voters_referred_by_agent_count,
+      'total_pu_with_reports',                 total_pu_with_reports,
+      'total_pu_with_updates',                 total_pu_with_updates,
+      'total_pu_with_agents_in_attendance',    total_pu_with_agents_in_attendance,
+      'total_pu_where_election_has_started',   total_pu_where_election_has_started,
+      'total_pu_where_election_has_ended',     total_pu_where_election_has_ended,
+      'total_pu_unique_final_results_uploaded', total_pu_unique_final_results_uploaded,
+      'total_pu_where_agents_referred_live_voters', total_pu_where_agents_referred_live_voters
+    )), '[]'::jsonb) AS parties
+  FROM party_agg
+  GROUP BY election_group_id, ward_id
+)
+INSERT INTO election_group_wards (
+  election_group_id, ward_id, lga_id, state_id,
+  unique_final_results_expected,
+  pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count,
+  reports_count, updates_count,
+  pu_average_election_started_at, pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started, total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters,
+  parties
+)
+SELECT
+  a.election_group_id, a.ward_id, a.lga_id, a.state_id,
+  a.unique_final_results_expected,
+  a.pu_agents_count, a.unique_pu_agents_count, a.pu_agents_in_attendance_count,
+  a.reports_count, a.updates_count,
+  a.pu_average_election_started_at, a.pu_average_election_ended_at,
+  a.pu_election_practice_test_readiness_percentage,
+  a.pu_final_results_uploaded_count, a.unique_pu_final_results_uploaded_count,
+  a.pu_live_voters_referred_by_agent_count,
+  a.total_pu_with_reports, a.total_pu_with_updates, a.total_pu_with_agents_in_attendance,
+  a.total_pu_where_election_has_started, a.total_pu_where_election_has_ended,
+  a.total_pu_unique_final_results_uploaded, a.total_pu_where_agents_referred_live_voters,
+  COALESCE(pj.parties, '[]'::jsonb)
+FROM epu_agg a
+LEFT JOIN party_json pj USING (election_group_id, ward_id)
+ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
+  lga_id = EXCLUDED.lga_id,
+  state_id = EXCLUDED.state_id,
+  unique_final_results_expected = EXCLUDED.unique_final_results_expected,
+  pu_agents_count = EXCLUDED.pu_agents_count,
+  unique_pu_agents_count = EXCLUDED.unique_pu_agents_count,
+  pu_agents_in_attendance_count = EXCLUDED.pu_agents_in_attendance_count,
+  reports_count = EXCLUDED.reports_count,
+  updates_count = EXCLUDED.updates_count,
+  pu_average_election_started_at = EXCLUDED.pu_average_election_started_at,
+  pu_average_election_ended_at = EXCLUDED.pu_average_election_ended_at,
+  pu_election_practice_test_readiness_percentage = EXCLUDED.pu_election_practice_test_readiness_percentage,
+  pu_final_results_uploaded_count = EXCLUDED.pu_final_results_uploaded_count,
+  unique_pu_final_results_uploaded_count = EXCLUDED.unique_pu_final_results_uploaded_count,
+  pu_live_voters_referred_by_agent_count = EXCLUDED.pu_live_voters_referred_by_agent_count,
+  total_pu_with_reports = EXCLUDED.total_pu_with_reports,
+  total_pu_with_updates = EXCLUDED.total_pu_with_updates,
+  total_pu_with_agents_in_attendance = EXCLUDED.total_pu_with_agents_in_attendance,
+  total_pu_where_election_has_started = EXCLUDED.total_pu_where_election_has_started,
+  total_pu_where_election_has_ended = EXCLUDED.total_pu_where_election_has_ended,
+  total_pu_unique_final_results_uploaded = EXCLUDED.total_pu_unique_final_results_uploaded,
+  total_pu_where_agents_referred_live_voters = EXCLUDED.total_pu_where_agents_referred_live_voters,
+  parties = EXCLUDED.parties,
+  updated_at = NOW()
+`
+
+type RefreshSingleElectionGroupWardStatsParams struct {
+	ElectionGroupID int64 `json:"election_group_id"`
+	WardID          int32 `json:"ward_id"`
+}
+
+// Aggregates from election_group_polling_units for a single ward.
+func (q *Queries) RefreshSingleElectionGroupWardStats(ctx context.Context, arg RefreshSingleElectionGroupWardStatsParams) error {
+	_, err := q.db.Exec(ctx, refreshSingleElectionGroupWardStats, arg.ElectionGroupID, arg.WardID)
+	return err
+}
+
+const seedElectionGroupFederalConstituencyStats = `-- name: SeedElectionGroupFederalConstituencyStats :exec
+INSERT INTO election_group_federal_constituencies (
+  election_group_id, federal_constituency_id, state_id, senatorial_district_id,
+  lgas_count, state_constituencies_count, wards_count, polling_units_count
+)
+SELECT DISTINCT $1::bigint, fc.id, fc.state_id, fc.senatorial_district_id,
+  fc.lgas_count, fc.state_constituencies_count, fc.wards_count, fc.polling_units_count
+FROM federal_constituencies fc
+JOIN elections e ON e.election_group_id = $1
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state'               AND e.state_id = fc.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = fc.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = fc.id)
+    OR (e.scope = 'lga'                 AND EXISTS (
+          SELECT 1 FROM lgas l
+          WHERE l.id = e.lga_id AND l.federal_constituency_id = fc.id))
+    OR (e.scope = 'state-constituency' AND e.state_id = fc.state_id)
+    OR (e.scope = 'ward'               AND e.state_id = fc.state_id)
+  )
+ON CONFLICT (election_group_id, federal_constituency_id) DO NOTHING
+`
+
+// Inserts one zeroed row per federal constituency in-scope for this election group.
+func (q *Queries) SeedElectionGroupFederalConstituencyStats(ctx context.Context, dollar_1 int64) error {
+	_, err := q.db.Exec(ctx, seedElectionGroupFederalConstituencyStats, dollar_1)
+	return err
+}
+
+const seedElectionGroupLGAStats = `-- name: SeedElectionGroupLGAStats :exec
+INSERT INTO election_group_lgas (
+  election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
+  state_constituencies_count, wards_count, polling_units_count
+)
+SELECT DISTINCT $1::bigint, l.id, l.state_id, l.senatorial_district_id, l.federal_constituency_id,
+  l.state_constituencies_count, l.wards_count, l.polling_units_count
+FROM lgas l
+JOIN elections e ON e.election_group_id = $1
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state'               AND e.state_id = l.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = l.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = l.federal_constituency_id)
+    OR (e.scope = 'lga'                 AND e.lga_id = l.id)
+    OR (e.scope = 'state-constituency'  AND e.state_id = l.state_id)
+    OR (e.scope = 'ward'                AND e.state_id = l.state_id)
+  )
+ON CONFLICT (election_group_id, lga_id) DO NOTHING
+`
+
+// Inserts one zeroed row per LGA in-scope for this election group.
+func (q *Queries) SeedElectionGroupLGAStats(ctx context.Context, dollar_1 int64) error {
+	_, err := q.db.Exec(ctx, seedElectionGroupLGAStats, dollar_1)
+	return err
+}
+
+const seedElectionGroupSenatorialDistrictStats = `-- name: SeedElectionGroupSenatorialDistrictStats :exec
+INSERT INTO election_group_senatorial_districts (
+  election_group_id, senatorial_district_id, state_id,
+  federal_constituencies_count, lgas_count,
+  state_constituencies_count, wards_count, polling_units_count
+)
+SELECT DISTINCT $1::bigint, sd.id, sd.state_id,
+  sd.federal_constituencies_count, sd.lgas_count,
+  sd.state_constituencies_count, sd.wards_count, sd.polling_units_count
+FROM senatorial_districts sd
+JOIN elections e ON e.election_group_id = $1
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state'               AND e.state_id = sd.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = sd.id)
+    OR (e.scope = 'federal-constituency' AND EXISTS (
+          SELECT 1 FROM federal_constituencies fc
+          WHERE fc.id = e.federal_constituency_id AND fc.senatorial_district_id = sd.id))
+    OR (e.scope = 'lga'                 AND EXISTS (
+          SELECT 1 FROM lgas l
+          WHERE l.id = e.lga_id AND l.senatorial_district_id = sd.id))
+    OR (e.scope = 'state-constituency' AND e.state_id = sd.state_id)
+    OR (e.scope = 'ward'               AND e.state_id = sd.state_id)
+  )
+ON CONFLICT (election_group_id, senatorial_district_id) DO NOTHING
+`
+
+// Inserts one zeroed row per senatorial district in-scope for this election group.
+func (q *Queries) SeedElectionGroupSenatorialDistrictStats(ctx context.Context, dollar_1 int64) error {
+	_, err := q.db.Exec(ctx, seedElectionGroupSenatorialDistrictStats, dollar_1)
+	return err
+}
+
+const seedElectionGroupStateConstituencyStats = `-- name: SeedElectionGroupStateConstituencyStats :exec
+INSERT INTO election_group_state_constituencies (
+  election_group_id, state_constituency_id, state_id,
+  wards_count, polling_units_count
+)
+SELECT DISTINCT $1::bigint, sc.id, sc.state_id,
+  sc.wards_count, sc.polling_units_count
+FROM state_assembly_constituencies sc
+JOIN elections e ON e.election_group_id = $1
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state'              AND e.state_id = sc.state_id)
+    OR (e.scope = 'senatorial-district' AND e.state_id = sc.state_id)
+    OR (e.scope = 'federal-constituency' AND e.state_id = sc.state_id)
+    OR (e.scope = 'lga'                AND e.state_id = sc.state_id)
+    OR (e.scope = 'state-constituency' AND e.state_constituency_id = sc.id)
+    OR (e.scope = 'ward'               AND e.state_id = sc.state_id)
+  )
+ON CONFLICT (election_group_id, state_constituency_id) DO NOTHING
+`
+
+// Inserts one zeroed row per state constituency in-scope for this election group.
+func (q *Queries) SeedElectionGroupStateConstituencyStats(ctx context.Context, dollar_1 int64) error {
+	_, err := q.db.Exec(ctx, seedElectionGroupStateConstituencyStats, dollar_1)
+	return err
+}
+
+const seedElectionGroupStateStats = `-- name: SeedElectionGroupStateStats :exec
+
+INSERT INTO election_group_states (
+  election_group_id, state_id,
+  senatorial_districts_count, federal_constituencies_count, lgas_count,
+  state_constituencies_count, wards_count, polling_units_count
+)
+SELECT DISTINCT $1::bigint, s.id,
+  s.senatorial_districts_count, s.federal_constituencies_count, s.lgas_count,
+  s.state_constituencies_count, s.wards_count, s.polling_units_count
+FROM c_states s
+JOIN elections e ON e.election_group_id = $1
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state'               AND e.state_id = s.id)
+    OR (e.scope = 'senatorial-district' AND e.state_id = s.id)
+    OR (e.scope = 'federal-constituency' AND e.state_id = s.id)
+    OR (e.scope = 'lga'                 AND e.state_id = s.id)
+    OR (e.scope = 'state-constituency'  AND e.state_id = s.id)
+    OR (e.scope = 'ward'                AND e.state_id = s.id)
+  )
+ON CONFLICT (election_group_id, state_id) DO NOTHING
+`
+
+// ============================================================
+// SEED QUERIES
+// Called once when an election group is created. Inserts zeroed
+// stat rows for all geographies that are in-scope for the group.
+// Uses ON CONFLICT DO NOTHING so re-running is safe (idempotent).
+// election_group_polling_units is excluded — those are seeded
+// lazily by the RefreshAllElectionGroupPollingUnitStats cron.
+// ============================================================
+// Inserts one zeroed row per state that is in-scope for this election group.
+// For a 'nationwide' election that means all 37 states.
+// For a scoped election (e.g. state/senatorial-district/etc.) only the
+// relevant state(s) are inserted.
+func (q *Queries) SeedElectionGroupStateStats(ctx context.Context, dollar_1 int64) error {
+	_, err := q.db.Exec(ctx, seedElectionGroupStateStats, dollar_1)
+	return err
+}
+
+const seedElectionGroupWardStats = `-- name: SeedElectionGroupWardStats :exec
+INSERT INTO election_group_wards (
+  election_group_id, ward_id, lga_id, state_id,
+  polling_units_count
+)
+SELECT DISTINCT $1::bigint, w.id, w.lga_id, l.state_id,
+  w.polling_units_count
+FROM wards w
+JOIN lgas l ON l.id = w.lga_id
+JOIN elections e ON e.election_group_id = $1
+  AND (
+    e.scope = 'nationwide'
+    OR (e.scope = 'state'               AND e.state_id = l.state_id)
+    OR (e.scope = 'senatorial-district' AND e.senatorial_district_id = l.senatorial_district_id)
+    OR (e.scope = 'federal-constituency' AND e.federal_constituency_id = l.federal_constituency_id)
+    OR (e.scope = 'lga'                 AND e.lga_id = w.lga_id)
+    OR (e.scope = 'state-constituency'  AND e.state_constituency_id = w.state_assembly_constituency_id)
+    OR (e.scope = 'ward'                AND e.ward_id = w.id)
+  )
+ON CONFLICT (election_group_id, ward_id) DO NOTHING
+`
+
+// Inserts one zeroed row per ward in-scope for this election group.
+func (q *Queries) SeedElectionGroupWardStats(ctx context.Context, dollar_1 int64) error {
+	_, err := q.db.Exec(ctx, seedElectionGroupWardStats, dollar_1)
+	return err
+}
+
+const upsertElectionGroupFederalConstituencyPartyEntry = `-- name: UpsertElectionGroupFederalConstituencyPartyEntry :exec
+UPDATE election_group_federal_constituencies
+SET
+  pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
+  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{pu_agents_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'pu_agents_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_pu_agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_pu_agents_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) AS elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id',                                         $3::bigint,
+      'pu_agents_count',                                  GREATEST(0, $1::int),
+      'unique_pu_agents_count',                           GREATEST(0, $2::int),
+      'pu_agents_in_attendance_count',                    0,
+      'updates_count',                                    0,
+      'reports_count',                                    0,
+      'pu_average_arrival_time',                          NULL,
+      'pu_average_election_started_at',                   NULL,
+      'pu_average_election_ended_at',                     NULL,
+      'pu_final_results_uploaded_count',                  0,
+      'unique_pu_final_results_uploaded_count',           0,
+      'pu_average_update_time_interval_in_seconds',       0,
+      'pu_election_practice_test_readiness_percentage',   0,
+      'pu_live_voters_referred_by_agent_count',           0,
+      'total_pu_with_reports',                            0,
+      'total_pu_with_updates',                            0,
+      'total_pu_with_agents_in_attendance',               0,
+      'total_pu_where_election_has_started',              0,
+      'total_pu_where_election_has_ended',                0,
+      'total_pu_unique_final_results_uploaded',           0,
+      'total_pu_where_agents_referred_live_voters',       0
+    )::jsonb
+  END,
+  updated_at = NOW()
+WHERE election_group_id       = $4::bigint
+  AND federal_constituency_id = $5::int
+`
+
+type UpsertElectionGroupFederalConstituencyPartyEntryParams struct {
+	AgentsDelta           int32 `json:"agents_delta"`
+	UniquePuDelta         int32 `json:"unique_pu_delta"`
+	PartyID               int64 `json:"party_id"`
+	ElectionGroupID       int64 `json:"election_group_id"`
+	FederalConstituencyID int32 `json:"federal_constituency_id"`
+}
+
+// Upserts party entry in election_group_federal_constituencies.parties.
+func (q *Queries) UpsertElectionGroupFederalConstituencyPartyEntry(ctx context.Context, arg UpsertElectionGroupFederalConstituencyPartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupFederalConstituencyPartyEntry,
+		arg.AgentsDelta,
+		arg.UniquePuDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.FederalConstituencyID,
+	)
+	return err
+}
+
+const upsertElectionGroupLGAPartyEntry = `-- name: UpsertElectionGroupLGAPartyEntry :exec
+UPDATE election_group_lgas
+SET
+  pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
+  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{pu_agents_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'pu_agents_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_pu_agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_pu_agents_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) AS elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id',                                         $3::bigint,
+      'pu_agents_count',                                  GREATEST(0, $1::int),
+      'unique_pu_agents_count',                           GREATEST(0, $2::int),
+      'pu_agents_in_attendance_count',                    0,
+      'updates_count',                                    0,
+      'reports_count',                                    0,
+      'pu_average_arrival_time',                          NULL,
+      'pu_average_election_started_at',                   NULL,
+      'pu_average_election_ended_at',                     NULL,
+      'pu_final_results_uploaded_count',                  0,
+      'unique_pu_final_results_uploaded_count',           0,
+      'pu_average_update_time_interval_in_seconds',       0,
+      'pu_election_practice_test_readiness_percentage',   0,
+      'pu_live_voters_referred_by_agent_count',           0,
+      'total_pu_with_reports',                            0,
+      'total_pu_with_updates',                            0,
+      'total_pu_with_agents_in_attendance',               0,
+      'total_pu_where_election_has_started',              0,
+      'total_pu_where_election_has_ended',                0,
+      'total_pu_unique_final_results_uploaded',           0,
+      'total_pu_where_agents_referred_live_voters',       0
+    )::jsonb
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND lga_id            = $5::int
+`
+
+type UpsertElectionGroupLGAPartyEntryParams struct {
+	AgentsDelta     int32 `json:"agents_delta"`
+	UniquePuDelta   int32 `json:"unique_pu_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	LgaID           int32 `json:"lga_id"`
+}
+
+// Upserts party entry in election_group_lgas.parties.
+// $1=election_group_id, $2=lga_id, $3=party_id, $4=agents_delta, $5=unique_pu_delta
+func (q *Queries) UpsertElectionGroupLGAPartyEntry(ctx context.Context, arg UpsertElectionGroupLGAPartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupLGAPartyEntry,
+		arg.AgentsDelta,
+		arg.UniquePuDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.LgaID,
+	)
+	return err
+}
+
+const upsertElectionGroupNationalPartyEntry = `-- name: UpsertElectionGroupNationalPartyEntry :exec
+UPDATE election_groups
+SET
+  pu_agents_count = GREATEST(0, pu_agents_count + $1::int),
+  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{pu_agents_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'pu_agents_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_pu_agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_pu_agents_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id', $3::bigint,
+      'pu_agents_count', GREATEST(0, $1::int),
+      'unique_pu_agents_count', GREATEST(0, $2::int)
+    )
+  END,
+  updated_at = NOW()
+WHERE id = $4::bigint
+`
+
+type UpsertElectionGroupNationalPartyEntryParams struct {
+	AgentsDelta     int32 `json:"agents_delta"`
+	UniquePuDelta   int32 `json:"unique_pu_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+// Upserts the party entry inside election_groups.parties.
+func (q *Queries) UpsertElectionGroupNationalPartyEntry(ctx context.Context, arg UpsertElectionGroupNationalPartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupNationalPartyEntry,
+		arg.AgentsDelta,
+		arg.UniquePuDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+	)
+	return err
+}
+
+const upsertElectionGroupPUPartyEntry = `-- name: UpsertElectionGroupPUPartyEntry :exec
+
+UPDATE election_group_polling_units
+SET
+  total_agents_count = GREATEST(0, total_agents_count + $1::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $2::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $2::bigint
+          THEN jsonb_set(
+                 elem,
+                 '{agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'agents_count')::int, 0) + $1::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) AS elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id',                                $2::bigint,
+      'agents_count',                            GREATEST(0, $1::int),
+      'agents_in_attendance_count',              0,
+      'average_arrival_time',                    NULL,
+      'election_started_at',                     NULL,
+      'election_ended_at',                       NULL,
+      'updates_count',                           0,
+      'reports_count',                           0,
+      'final_results_uploaded_count',            0,
+      'unique_final_results_uploaded_count',     0,
+      'last_update_given_at',                    NULL,
+      'average_update_time_interval_in_seconds', 0,
+      'election_practice_test_readiness_percentage', 0,
+      'live_voters_referred_by_agent_count',     0
+    )::jsonb
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $3::bigint
+  AND polling_unit_id   = $4::int
+`
+
+type UpsertElectionGroupPUPartyEntryParams struct {
+	Delta           int32 `json:"delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	PollingUnitID   int32 `json:"polling_unit_id"`
+}
+
+// ============================================================
+// INCREMENTAL PARTY ENTRY UPSERTS
+// Called from Go (ApproveApplication) after a polling agent is
+// assigned. These keep agents_count and unique_pu_agents_count
+// in the parties JSONB accurate pre-election without a full cron
+// refresh.
+//
+// Pattern: if the party_id already exists in the JSONB array,
+//
+//	increment agents_count and (if first agent in this PU for
+//	this party) increment unique_pu_agents_count.
+//
+// If party_id does not exist, append a new object.
+// ============================================================
+// Upserts the party entry inside election_group_polling_units.parties.
+// $1 = election_group_id (bigint)
+// $2 = polling_unit_id   (int)
+// $3 = party_id          (bigint)
+// $4 = delta             (int, +1 for assign, -1 for remove)
+func (q *Queries) UpsertElectionGroupPUPartyEntry(ctx context.Context, arg UpsertElectionGroupPUPartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupPUPartyEntry,
+		arg.Delta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.PollingUnitID,
+	)
+	return err
+}
+
+const upsertElectionGroupSenatorialDistrictPartyEntry = `-- name: UpsertElectionGroupSenatorialDistrictPartyEntry :exec
+UPDATE election_group_senatorial_districts
+SET
+  pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
+  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{pu_agents_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'pu_agents_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_pu_agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_pu_agents_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) AS elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id',                                         $3::bigint,
+      'pu_agents_count',                                  GREATEST(0, $1::int),
+      'unique_pu_agents_count',                           GREATEST(0, $2::int),
+      'pu_agents_in_attendance_count',                    0,
+      'updates_count',                                    0,
+      'reports_count',                                    0,
+      'pu_average_arrival_time',                          NULL,
+      'pu_average_election_started_at',                   NULL,
+      'pu_average_election_ended_at',                     NULL,
+      'pu_final_results_uploaded_count',                  0,
+      'unique_pu_final_results_uploaded_count',           0,
+      'pu_average_update_time_interval_in_seconds',       0,
+      'pu_election_practice_test_readiness_percentage',   0,
+      'pu_live_voters_referred_by_agent_count',           0,
+      'total_pu_with_reports',                            0,
+      'total_pu_with_updates',                            0,
+      'total_pu_with_agents_in_attendance',               0,
+      'total_pu_where_election_has_started',              0,
+      'total_pu_where_election_has_ended',                0,
+      'total_pu_unique_final_results_uploaded',           0,
+      'total_pu_where_agents_referred_live_voters',       0
+    )::jsonb
+  END,
+  updated_at = NOW()
+WHERE election_group_id      = $4::bigint
+  AND senatorial_district_id = $5::int
+`
+
+type UpsertElectionGroupSenatorialDistrictPartyEntryParams struct {
+	AgentsDelta          int32 `json:"agents_delta"`
+	UniquePuDelta        int32 `json:"unique_pu_delta"`
+	PartyID              int64 `json:"party_id"`
+	ElectionGroupID      int64 `json:"election_group_id"`
+	SenatorialDistrictID int32 `json:"senatorial_district_id"`
+}
+
+// Upserts party entry in election_group_senatorial_districts.parties.
+func (q *Queries) UpsertElectionGroupSenatorialDistrictPartyEntry(ctx context.Context, arg UpsertElectionGroupSenatorialDistrictPartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupSenatorialDistrictPartyEntry,
+		arg.AgentsDelta,
+		arg.UniquePuDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.SenatorialDistrictID,
+	)
+	return err
+}
+
+const upsertElectionGroupStateConstituencyPartyEntry = `-- name: UpsertElectionGroupStateConstituencyPartyEntry :exec
+UPDATE election_group_state_constituencies
+SET
+  pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
+  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{pu_agents_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'pu_agents_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_pu_agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_pu_agents_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) AS elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id',                                         $3::bigint,
+      'pu_agents_count',                                  GREATEST(0, $1::int),
+      'unique_pu_agents_count',                           GREATEST(0, $2::int),
+      'pu_agents_in_attendance_count',                    0,
+      'updates_count',                                    0,
+      'reports_count',                                    0,
+      'pu_average_arrival_time',                          NULL,
+      'pu_average_election_started_at',                   NULL,
+      'pu_average_election_ended_at',                     NULL,
+      'pu_final_results_uploaded_count',                  0,
+      'unique_pu_final_results_uploaded_count',           0,
+      'pu_average_update_time_interval_in_seconds',       0,
+      'pu_election_practice_test_readiness_percentage',   0,
+      'pu_live_voters_referred_by_agent_count',           0,
+      'total_pu_with_reports',                            0,
+      'total_pu_with_updates',                            0,
+      'total_pu_with_agents_in_attendance',               0,
+      'total_pu_where_election_has_started',              0,
+      'total_pu_where_election_has_ended',                0,
+      'total_pu_unique_final_results_uploaded',           0,
+      'total_pu_where_agents_referred_live_voters',       0
+    )::jsonb
+  END,
+  updated_at = NOW()
+WHERE election_group_id       = $4::bigint
+  AND state_constituency_id   = $5::int
+`
+
+type UpsertElectionGroupStateConstituencyPartyEntryParams struct {
+	AgentsDelta         int32 `json:"agents_delta"`
+	UniquePuDelta       int32 `json:"unique_pu_delta"`
+	PartyID             int64 `json:"party_id"`
+	ElectionGroupID     int64 `json:"election_group_id"`
+	StateConstituencyID int32 `json:"state_constituency_id"`
+}
+
+// Upserts party entry in election_group_state_constituencies.parties.
+func (q *Queries) UpsertElectionGroupStateConstituencyPartyEntry(ctx context.Context, arg UpsertElectionGroupStateConstituencyPartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupStateConstituencyPartyEntry,
+		arg.AgentsDelta,
+		arg.UniquePuDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.StateConstituencyID,
+	)
+	return err
+}
+
+const upsertElectionGroupStatePartyEntry = `-- name: UpsertElectionGroupStatePartyEntry :exec
+UPDATE election_group_states
+SET
+  pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
+  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{pu_agents_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'pu_agents_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_pu_agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_pu_agents_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) AS elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id',                                         $3::bigint,
+      'pu_agents_count',                                  GREATEST(0, $1::int),
+      'unique_pu_agents_count',                           GREATEST(0, $2::int),
+      'pu_agents_in_attendance_count',                    0,
+      'updates_count',                                    0,
+      'reports_count',                                    0,
+      'pu_average_arrival_time',                          NULL,
+      'pu_average_election_started_at',                   NULL,
+      'pu_average_election_ended_at',                     NULL,
+      'pu_final_results_uploaded_count',                  0,
+      'unique_pu_final_results_uploaded_count',           0,
+      'pu_average_update_time_interval_in_seconds',       0,
+      'pu_election_practice_test_readiness_percentage',   0,
+      'pu_live_voters_referred_by_agent_count',           0,
+      'total_pu_with_reports',                            0,
+      'total_pu_with_updates',                            0,
+      'total_pu_with_agents_in_attendance',               0,
+      'total_pu_where_election_has_started',              0,
+      'total_pu_where_election_has_ended',                0,
+      'total_pu_unique_final_results_uploaded',           0,
+      'total_pu_where_agents_referred_live_voters',       0
+    )::jsonb
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND state_id          = $5::smallint
+`
+
+type UpsertElectionGroupStatePartyEntryParams struct {
+	AgentsDelta     int32 `json:"agents_delta"`
+	UniquePuDelta   int32 `json:"unique_pu_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	StateID         int16 `json:"state_id"`
+}
+
+// Upserts party entry in election_group_states.parties.
+func (q *Queries) UpsertElectionGroupStatePartyEntry(ctx context.Context, arg UpsertElectionGroupStatePartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupStatePartyEntry,
+		arg.AgentsDelta,
+		arg.UniquePuDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.StateID,
+	)
+	return err
+}
+
+const upsertElectionGroupWardPartyEntry = `-- name: UpsertElectionGroupWardPartyEntry :exec
+UPDATE election_group_wards
+SET
+  pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
+  unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
+  parties = CASE
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = $3::bigint
+          THEN jsonb_set(
+                 jsonb_set(
+                   elem,
+                   '{pu_agents_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'pu_agents_count')::int, 0) + $1::int))
+                 ),
+                 '{unique_pu_agents_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'unique_pu_agents_count')::int, 0) + $2::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(parties) AS elem
+    )
+    ELSE parties || jsonb_build_object(
+      'party_id',                                         $3::bigint,
+      'pu_agents_count',                                  GREATEST(0, $1::int),
+      'unique_pu_agents_count',                           GREATEST(0, $2::int),
+      'pu_agents_in_attendance_count',                    0,
+      'updates_count',                                    0,
+      'reports_count',                                    0,
+      'pu_average_arrival_time',                          NULL,
+      'pu_average_election_started_at',                   NULL,
+      'pu_average_election_ended_at',                     NULL,
+      'pu_final_results_uploaded_count',                  0,
+      'unique_pu_final_results_uploaded_count',           0,
+      'pu_average_update_time_interval_in_seconds',       0,
+      'pu_election_practice_test_readiness_percentage',   0,
+      'pu_live_voters_referred_by_agent_count',           0,
+      'total_pu_with_reports',                            0,
+      'total_pu_with_updates',                            0,
+      'total_pu_with_agents_in_attendance',               0,
+      'total_pu_where_election_has_started',              0,
+      'total_pu_where_election_has_ended',                0,
+      'total_pu_unique_final_results_uploaded',           0,
+      'total_pu_where_agents_referred_live_voters',       0
+    )::jsonb
+  END,
+  updated_at = NOW()
+WHERE election_group_id = $4::bigint
+  AND ward_id           = $5::int
+`
+
+type UpsertElectionGroupWardPartyEntryParams struct {
+	AgentsDelta     int32 `json:"agents_delta"`
+	UniquePuDelta   int32 `json:"unique_pu_delta"`
+	PartyID         int64 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	WardID          int32 `json:"ward_id"`
+}
+
+// Upserts party entry in election_group_wards.parties.
+// $1 = election_group_id, $2 = ward_id, $3 = party_id, $4 = agents_delta (+1 or -1)
+// $5 = unique_pu_delta (+1, 0 or -1): whether to also adjust unique_pu_agents_count
+func (q *Queries) UpsertElectionGroupWardPartyEntry(ctx context.Context, arg UpsertElectionGroupWardPartyEntryParams) error {
+	_, err := q.db.Exec(ctx, upsertElectionGroupWardPartyEntry,
+		arg.AgentsDelta,
+		arg.UniquePuDelta,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.WardID,
+	)
 	return err
 }

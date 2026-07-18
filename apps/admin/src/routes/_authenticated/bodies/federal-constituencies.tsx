@@ -8,13 +8,14 @@ import {
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { FederalConstituenciesTable } from "#/components/Tables";
-import type { FederalConstituencyType } from "#/components/Tables";
 import { BODIES_TABS } from "./-data";
 import { useEffect } from "react";
 import { getFederalConstituencies } from "#/lib/server/federal_constituencies";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
+import type { FederalConstituencyType } from "#/components/tiles/federal-constituency-tile";
 
 export const Route = createFileRoute(
   "/_authenticated/bodies/federal-constituencies",
@@ -26,31 +27,28 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const { dialogProps, renderDialogs } = useBodiesDialogs();
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ["federal-constituencies"],
-    queryFn: async ({ pageParam }) => {
-      const res = await getFederalConstituencies({
-        data: { limit: 20, cursor: pageParam },
-      });
-      if (res && res.success && res.data) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to fetch federal constituencies");
-    },
-    initialPageParam: "",
-    getNextPageParam: (lastPage) => {
-      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-        return lastPage.meta.next_cursor || "";
-      }
-      return undefined;
-    },
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["federal_constituencies"],
+      queryFn: async ({ pageParam }) => {
+        const res = await getFederalConstituencies({
+          data: { limit: 20, cursor: pageParam },
+        });
+        if (res && res.success && res.data) {
+          return res;
+        }
+        throw new Error(
+          res?.message || "Failed to fetch federal constituencies",
+        );
+      },
+      initialPageParam: "",
+      getNextPageParam: (lastPage) => {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+          return lastPage.meta.next_cursor || "";
+        }
+        return undefined;
+      },
+    });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
@@ -64,22 +62,19 @@ function RouteComponent() {
 
   const constituencies: FederalConstituencyType[] = data
     ? data.pages.flatMap((page) =>
-      (page.data?.constituencies || []).map((c: {
-        id: number;
-        name: string;
-        state_id: number;
-        state_name: string;
-        senatorial_district_id: number;
-        senatorial_district_name: string;
-      }) => ({
-        id: c.id,
-        name: c.name,
-        state_id: c.state_id,
-        state_name: c.state_name,
-        senatorial_district_id: c.senatorial_district_id,
-        senatorial_district_name: c.senatorial_district_name,
-      }))
-    )
+        (page.data?.constituencies || []).map((constituency: any) => ({
+          id: constituency.id,
+          name: constituency.name,
+          state_id: constituency.state_id,
+          state_name: constituency.state_name,
+          senatorial_district_id: constituency.senatorial_district_id,
+          senatorial_district_name: constituency.senatorial_district_name,
+          lgas_count: constituency.lgas_count,
+          state_constituencies_count: constituency.state_constituencies_count,
+          wards_count: constituency.wards_count,
+          polling_units_count: constituency.polling_units_count,
+        })),
+      )
     : [];
 
   return (
@@ -93,6 +88,7 @@ function RouteComponent() {
         rightComponent={
           <>
             <FilterButton />
+            <BodiesDropdown />
             <AddButton {...dialogProps} />
           </>
         }
@@ -100,7 +96,7 @@ function RouteComponent() {
 
       {isLoading && constituencies.length === 0 ? (
         <div className="py-12 text-center text-c-50 text-[15px]">
-          Loading constituencies...
+          Loading federal constituencies...
         </div>
       ) : (
         <FederalConstituenciesTable items={constituencies} />
@@ -111,10 +107,11 @@ function RouteComponent() {
           ref={sentinelRef}
           className="py-6 flex items-center justify-center text-c-50 text-[14px]"
         >
-          {isFetchingNextPage ? "Loading more constituencies..." : "Scroll down to load more"}
+          {isFetchingNextPage
+            ? "Loading more federal constituencies..."
+            : "Scroll down to load more"}
         </div>
       )}
-
       {renderDialogs()}
     </Layout>
   );

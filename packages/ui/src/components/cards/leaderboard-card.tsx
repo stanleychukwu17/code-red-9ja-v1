@@ -91,7 +91,7 @@ export function ObjectiveTile({
 }: {
   isCompleted: boolean;
   title: string;
-  rightText: string;
+  rightText?: string;
   rightText2?: string;
   onClick: () => void;
 }) {
@@ -112,7 +112,7 @@ export function ObjectiveTile({
     >
       <TodoIcon />
       <p className="text-white w-full">{title}</p>
-      <p className="text-white shrink-0">{rightText}</p>
+      {rightText && <p className="text-white shrink-0">{rightText}</p>}
       {rightText2 && <p className="text-white/50 shrink-0">{rightText2}</p>}
     </div>
   );

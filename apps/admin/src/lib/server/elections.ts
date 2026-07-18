@@ -3,12 +3,25 @@ import { API_URL } from "../config";
 import { apiFetch } from "./fetch";
 
 export const getElections = createServerFn({ method: "GET" })
-  .inputValidator((data: { limit?: number; cursor?: string | number } | undefined) => data)
+  .inputValidator(
+    (
+      data:
+        | {
+            limit?: number;
+            cursor?: string | number;
+            orderBy?: string;
+            order?: string;
+          }
+        | undefined,
+    ) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-      const response = await apiFetch(`${API_URL.elections}?limit=${limit}&cursor=${cursor}`);
+      const response = await apiFetch(
+        `${API_URL.elections}?limit=${limit}&cursor=${cursor}`,
+      );
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -29,19 +42,21 @@ export const getElectionById = createServerFn({ method: "GET" })
   });
 
 export const createElection = createServerFn({ method: "POST" })
-  .inputValidator((data: {
-    name: string;
-    candidates_count: number;
-    election_date: string;
-    election_group_id: number;
-    office_id: number;
-    state_id?: number | null;
-    senatorial_district_id?: number | null;
-    federal_constituency_id?: number | null;
-    state_constituency_id?: number | null;
-    lga_id?: number | null;
-    ward_id?: number | null;
-  }) => data)
+  .inputValidator(
+    (data: {
+      name: string;
+      candidates_count: number;
+      election_date: string;
+      election_group_id: number;
+      office_id: number;
+      state_id?: number | null;
+      senatorial_district_id?: number | null;
+      federal_constituency_id?: number | null;
+      state_constituency_id?: number | null;
+      lga_id?: number | null;
+      ward_id?: number | null;
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.elections, {
@@ -54,25 +69,30 @@ export const createElection = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create election: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to create election: " + (error as Error).message,
+      };
     }
   });
 
 export const updateElection = createServerFn({ method: "POST" })
-  .inputValidator((data: {
-    id: string | number;
-    name: string;
-    candidates_count: number;
-    election_date: string;
-    election_group_id: number;
-    office_id: number;
-    state_id?: number | null;
-    senatorial_district_id?: number | null;
-    federal_constituency_id?: number | null;
-    state_constituency_id?: number | null;
-    lga_id?: number | null;
-    ward_id?: number | null;
-  }) => data)
+  .inputValidator(
+    (data: {
+      id: string | number;
+      name: string;
+      candidates_count: number;
+      election_date: string;
+      election_group_id: number;
+      office_id: number;
+      state_id?: number | null;
+      senatorial_district_id?: number | null;
+      federal_constituency_id?: number | null;
+      state_constituency_id?: number | null;
+      lga_id?: number | null;
+      ward_id?: number | null;
+    }) => data,
+  )
   .handler(async ({ data: { id, ...body } }) => {
     try {
       const response = await apiFetch(API_URL.electionById(id), {
@@ -85,7 +105,10 @@ export const updateElection = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to update election: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to update election: " + (error as Error).message,
+      };
     }
   });
 
@@ -99,12 +122,26 @@ export const deleteElection = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to delete election: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to delete election: " + (error as Error).message,
+      };
     }
   });
 
 export const createNationwideElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; candidates: { candidate_id: number; party_id: number; party_short_name: string }[] }) => data)
+  .inputValidator(
+    (data: {
+      office_id: number;
+      election_date: string;
+      election_group_id?: number;
+      candidates: {
+        candidate_id: number;
+        party_id: number;
+        party_short_name: string;
+      }[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionsNationwide, {
@@ -117,12 +154,23 @@ export const createNationwideElection = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create nationwide election: " + (error as Error).message };
+      return {
+        success: false,
+        message:
+          "Failed to create nationwide election: " + (error as Error).message,
+      };
     }
   });
 
 export const createStateElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; state_ids: number[] }) => data)
+  .inputValidator(
+    (data: {
+      office_id: number;
+      election_date: string;
+      election_group_id?: number;
+      state_ids: number[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionsState, {
@@ -135,12 +183,25 @@ export const createStateElection = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create state elections: " + (error as Error).message };
+      return {
+        success: false,
+        message:
+          "Failed to create state elections: " + (error as Error).message,
+      };
     }
   });
 
-export const createSenatorialDistrictElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; senatorial_district_ids: number[] }) => data)
+export const createSenatorialDistrictElection = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: {
+      office_id: number;
+      election_date: string;
+      election_group_id?: number;
+      senatorial_district_ids: number[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionsSenatorialDistrict, {
@@ -153,12 +214,26 @@ export const createSenatorialDistrictElection = createServerFn({ method: "POST" 
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create senatorial district elections: " + (error as Error).message };
+      return {
+        success: false,
+        message:
+          "Failed to create senatorial district elections: " +
+          (error as Error).message,
+      };
     }
   });
 
-export const createFederalConstituencyElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; federal_constituency_ids: number[] }) => data)
+export const createFederalConstituencyElection = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: {
+      office_id: number;
+      election_date: string;
+      election_group_id?: number;
+      federal_constituency_ids: number[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionsFederalConstituency, {
@@ -171,12 +246,26 @@ export const createFederalConstituencyElection = createServerFn({ method: "POST"
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create federal constituency elections: " + (error as Error).message };
+      return {
+        success: false,
+        message:
+          "Failed to create federal constituency elections: " +
+          (error as Error).message,
+      };
     }
   });
 
-export const createStateConstituencyElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; state_constituency_ids: number[] }) => data)
+export const createStateConstituencyElection = createServerFn({
+  method: "POST",
+})
+  .inputValidator(
+    (data: {
+      office_id: number;
+      election_date: string;
+      election_group_id?: number;
+      state_constituency_ids: number[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionsStateConstituency, {
@@ -189,12 +278,24 @@ export const createStateConstituencyElection = createServerFn({ method: "POST" }
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create state constituency elections: " + (error as Error).message };
+      return {
+        success: false,
+        message:
+          "Failed to create state constituency elections: " +
+          (error as Error).message,
+      };
     }
   });
 
 export const createLgaElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; lga_ids: number[] }) => data)
+  .inputValidator(
+    (data: {
+      office_id: number;
+      election_date: string;
+      election_group_id?: number;
+      lga_ids: number[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionsLga, {
@@ -207,12 +308,22 @@ export const createLgaElection = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create LGA elections: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to create LGA elections: " + (error as Error).message,
+      };
     }
   });
 
 export const createWardElection = createServerFn({ method: "POST" })
-  .inputValidator((data: { office_id: number; election_date: string; election_group_id?: number; ward_ids: number[] }) => data)
+  .inputValidator(
+    (data: {
+      office_id: number;
+      election_date: string;
+      election_group_id?: number;
+      ward_ids: number[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionsWard, {
@@ -225,7 +336,10 @@ export const createWardElection = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create Ward elections: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to create Ward elections: " + (error as Error).message,
+      };
     }
   });
 
@@ -237,25 +351,43 @@ export const getElectionCandidates = createServerFn({ method: "GET" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to fetch election candidates: " + (error as Error).message };
+      return {
+        success: false,
+        message:
+          "Failed to fetch election candidates: " + (error as Error).message,
+      };
     }
   });
 
 export const syncElectionCandidates = createServerFn({ method: "POST" })
-  .inputValidator((data: { electionId: string | number; candidates: { candidate_id: number; party_id: number; party_short_name: string }[] }) => data)
+  .inputValidator(
+    (data: {
+      electionId: string | number;
+      candidates: {
+        candidate_id: number;
+        party_id: number;
+        party_short_name: string;
+      }[];
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.electionCandidates(data.electionId), {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await apiFetch(
+        API_URL.electionCandidates(data.electionId),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ candidates: data.candidates }),
         },
-        body: JSON.stringify({ candidates: data.candidates }),
-      });
+      );
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to sync candidates: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to sync candidates: " + (error as Error).message,
+      };
     }
   });
-

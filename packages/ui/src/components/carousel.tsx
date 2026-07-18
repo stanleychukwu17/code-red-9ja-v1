@@ -239,7 +239,7 @@ function CarouselDotContent({ children }: { children: React.ReactNode }) {
 function CarouselDot({ active }: { active: boolean }) {
   return (
     <div
-      className={`size-1.5 rounded-full transition-colors ${active ? "bg-c-20" : "bg-c-70"}`}
+      className={`size-1.5 rounded-full transition-colors ${active ? "bg-c-70" : "bg-c-20"}`}
     />
   );
 }

@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS wards (
     state_id INTEGER NOT NULL,
     state_name VARCHAR(255) NOT NULL,
     state_assembly_constituency_id INTEGER,
-    state_assembly_constituency_name VARCHAR(255)
+    state_assembly_constituency_name VARCHAR(255),
+    status VARCHAR(50) DEFAULT 'active',
+    polling_units_count INTEGER DEFAULT 0
 );
 
 INSERT INTO wards (id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name) VALUES

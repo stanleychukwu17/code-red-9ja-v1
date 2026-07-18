@@ -102,7 +102,7 @@ func (q *Queries) DeleteUserVotesByElectionGroup(ctx context.Context, arg Delete
 }
 
 const getEligibleElectionsForPollingUnit = `-- name: GetEligibleElectionsForPollingUnit :many
-SELECT e.id, e.name, e.rank, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.election_date, e.election_group_id, e.election_group_name, e.office_id, e.office_name, e.scope, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.created_at, e.updated_at, e.status
+SELECT e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.rank, e.election_date, e.election_group_name, e.office_name, e.scope, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.created_at, e.updated_at, e.status
 FROM elections e
 JOIN polling_units pu ON pu.id = $2
 JOIN wards w ON w.id = pu.ward_id
@@ -136,24 +136,24 @@ func (q *Queries) GetEligibleElectionsForPollingUnit(ctx context.Context, arg Ge
 		var i Election
 		if err := rows.Scan(
 			&i.ID,
-			&i.Name,
-			&i.Rank,
-			&i.CandidatesCount,
-			&i.ReportsCount,
-			&i.UpdatesCount,
-			&i.ResultsSubmittedCount,
-			&i.ElectionDate,
 			&i.ElectionGroupID,
-			&i.ElectionGroupName,
-			&i.OfficeID,
-			&i.OfficeName,
-			&i.Scope,
 			&i.StateID,
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.StateConstituencyID,
 			&i.LgaID,
 			&i.WardID,
+			&i.OfficeID,
+			&i.Name,
+			&i.Rank,
+			&i.ElectionDate,
+			&i.ElectionGroupName,
+			&i.OfficeName,
+			&i.Scope,
+			&i.CandidatesCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
+			&i.ResultsSubmittedCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,

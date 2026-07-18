@@ -111,8 +111,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	wardsService := wardsservice.NewWardsService(q, rdb)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	officesService := officesservice.NewOfficesService(q, rdb)
-	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb)
-	electionsService := electionsservice.NewElectionsService(q, pool, rdb)
+	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
+	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor)
 	pollingUnitAssignmentsService := puassignments.NewService(q, rdb)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool)
@@ -120,7 +120,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	utilsInstance := utils.NewUtils(pool)
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
-	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance)
+	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, utilsInstance)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, q, utilsInstance)
@@ -134,10 +134,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
 	usersHandler := usershandler.NewHandler(usersService, utilsInstance)
-	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, utilsInstance)
+	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
-	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance)
-	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance)
+	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
+	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
@@ -232,6 +232,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/parties/wallets/provision-missing", partiesHandler.ProvisionMissingPartyWallets)
 	mainRouter.Post("/api/v1/users/wallets/provision-missing", usersHandler.ProvisionMissingUserWallets)
 
+	// bodies national metrics (public)
+	mainRouter.Get("/api/v1/bodies/metrics", bodiesHandler.GetNationalMetrics)
+
 	// states public routes
 	mainRouter.Get("/api/v1/states/{id}", statesHandler.GetState)
 
@@ -282,6 +285,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		})
 
 		r.Get("/api/v1/admin/users", authHandler.ListAdmins)
+		r.Post("/api/v1/bodies/recalculate", bodiesHandler.RecalculateBodyMetrics)
 
 		// political parties admin mutations
 		r.Post("/api/v1/parties", partiesHandler.CreateParty)
@@ -394,6 +398,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies", electionStatsHandler.GetFederalConstituencyStats)
 		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
+		
+		// Single unit dedicated endpoints
+		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}", electionStatsHandler.GetSingleStateStats)
+		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}", electionStatsHandler.GetSingleLGAStats)
+		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}", electionStatsHandler.GetSingleWardStats)
 
 		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesHandler.WithdrawFromPartyWallet)

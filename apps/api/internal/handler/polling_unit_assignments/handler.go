@@ -6,6 +6,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,16 +28,18 @@ type UsersService interface {
 }
 
 type Handler struct {
-	service      PollingUnitAssignmentsService
-	usersService UsersService
-	utils        *utils.Utils
+	service         PollingUnitAssignmentsService
+	usersService    UsersService
+	utils           *utils.Utils
+	taskDistributor worker.TaskDistributor
 }
 
-func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, utils *utils.Utils) *Handler {
+func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, utils *utils.Utils, taskDistributor worker.TaskDistributor) *Handler {
 	return &Handler{
-		service:      service,
-		usersService: usersService,
-		utils:        utils,
+		service:         service,
+		usersService:    usersService,
+		utils:           utils,
+		taskDistributor: taskDistributor,
 	}
 }
 
@@ -439,6 +442,19 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update tracking: "+err.Error())
 		return
 	}
+
+	// Enqueue debounced polling unit stats refresh
+	go func() {
+		payload := &worker.RefreshPollingUnitStatsPayload{
+			Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
+				ElectionGroupID: assignment.ElectionGroupID,
+				PollingUnitID:   assignment.PollingUnitID,
+			},
+		}
+		if err := h.taskDistributor.DistributeTaskRefreshPollingUnitStats(context.Background(), payload); err != nil {
+			// Log error but don't fail the request
+		}
+	}()
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment tracking updated successfully", map[string]interface{}{
 		"assignment": updated,

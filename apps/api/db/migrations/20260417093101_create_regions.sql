@@ -32,7 +32,13 @@ CREATE TABLE c_states (
   country_id SMALLINT NOT NULL,
   country_code VARCHAR(5) NOT NULL,
   latitude DECIMAL(10, 8) NOT NULL CHECK (latitude BETWEEN -90 AND 90),
-  longitude DECIMAL(11, 8) NOT NULL CHECK (longitude BETWEEN -180 AND 180)
+  longitude DECIMAL(11, 8) NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+  senatorial_districts_count INTEGER DEFAULT 0,
+  federal_constituencies_count INTEGER DEFAULT 0,
+  lgas_count INTEGER DEFAULT 0,
+  state_constituencies_count INTEGER DEFAULT 0,
+  wards_count INTEGER DEFAULT 0,
+  polling_units_count INTEGER DEFAULT 0
 );
 
 CREATE TABLE c_cities (

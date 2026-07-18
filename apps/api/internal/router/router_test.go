@@ -35,7 +35,7 @@ func TestNewRouter(t *testing.T) {
 	}
 	defer rdb.Close()
 
-	// Initialize router
+	// Initialize router (passing nil for TaskDistributor in tests)
 	r := router.New(cfg, pool, rdb, nil)
 
 	req := httptest.NewRequest(http.MethodGet, utils.ApiUrls.Health, nil)

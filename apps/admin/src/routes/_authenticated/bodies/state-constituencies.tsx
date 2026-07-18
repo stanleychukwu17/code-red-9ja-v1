@@ -26,31 +26,28 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const { dialogProps, renderDialogs } = useBodiesDialogs();
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ["state-constituencies"],
-    queryFn: async ({ pageParam }) => {
-      const res = await getStateAssemblyConstituencies({
-        data: { limit: 20, cursor: pageParam },
-      });
-      if (res && res.success && res.data) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to fetch state assembly constituencies");
-    },
-    initialPageParam: "",
-    getNextPageParam: (lastPage) => {
-      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-        return lastPage.meta.next_cursor || "";
-      }
-      return undefined;
-    },
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useInfiniteQuery({
+      queryKey: ["state-constituencies"],
+      queryFn: async ({ pageParam }) => {
+        const res = await getStateAssemblyConstituencies({
+          data: { limit: 20, cursor: pageParam },
+        });
+        if (res && res.success && res.data) {
+          return res;
+        }
+        throw new Error(
+          res?.message || "Failed to fetch state assembly constituencies",
+        );
+      },
+      initialPageParam: "",
+      getNextPageParam: (lastPage) => {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+          return lastPage.meta.next_cursor || "";
+        }
+        return undefined;
+      },
+    });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
@@ -64,30 +61,36 @@ function RouteComponent() {
 
   const constituencies: StateConstituencyType[] = data
     ? data.pages.flatMap((page) =>
-      (page.data?.constituencies || []).map((c: {
-        id: number;
-        name: string;
-        lga_id: number;
-        lga_name: string;
-        state_id: number;
-        state_name: string;
-        senatorial_district_id: number;
-        senatorial_district_name: string;
-        federal_constituency_id: number;
-        federal_constituency_name: string;
-      }) => ({
-        id: c.id,
-        name: c.name,
-        lga_id: c.lga_id,
-        lga_name: c.lga_name,
-        state_id: c.state_id,
-        state_name: c.state_name,
-        senatorial_district_id: c.senatorial_district_id,
-        senatorial_district_name: c.senatorial_district_name,
-        federal_constituency_id: c.federal_constituency_id,
-        federal_constituency_name: c.federal_constituency_name,
-      }))
-    )
+        (page.data?.constituencies || []).map(
+          (c: {
+            id: number;
+            name: string;
+            lga_id: number;
+            lga_name: string;
+            state_id: number;
+            state_name: string;
+            senatorial_district_id: number;
+            senatorial_district_name: string;
+            federal_constituency_id: number;
+            federal_constituency_name: string;
+            wards_count: number;
+            polling_units_count: number;
+          }) => ({
+            id: c.id,
+            name: c.name,
+            lga_id: c.lga_id,
+            lga_name: c.lga_name,
+            state_id: c.state_id,
+            state_name: c.state_name,
+            senatorial_district_id: c.senatorial_district_id,
+            senatorial_district_name: c.senatorial_district_name,
+            federal_constituency_id: c.federal_constituency_id,
+            federal_constituency_name: c.federal_constituency_name,
+            wards_count: c.wards_count,
+            polling_units_count: c.polling_units_count,
+          }),
+        ),
+      )
     : [];
 
   return (
@@ -119,7 +122,9 @@ function RouteComponent() {
           ref={sentinelRef}
           className="py-6 flex items-center justify-center text-c-50 text-[14px]"
         >
-          {isFetchingNextPage ? "Loading more constituencies..." : "Scroll down to load more"}
+          {isFetchingNextPage
+            ? "Loading more constituencies..."
+            : "Scroll down to load more"}
         </div>
       )}
 

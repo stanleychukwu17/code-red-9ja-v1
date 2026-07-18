@@ -119,12 +119,12 @@ export function UserFinderCommand({
           className="flex-1 flex flex-col bg-transparent overflow-hidden h-full"
           shouldFilter={false}
         >
-          <DialogPadding className="py-5 space-y-3">
+          <DialogPadding className="py-5 flex flex-col gap-3 flex-1 min-h-0">
             <IconInput
               placeholder={placeholder}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-12"
+              className="h-12 shrink-0"
             />
 
             {selectMode === "multiple" && selectedUsers.length > 0 && (
@@ -142,7 +142,7 @@ export function UserFinderCommand({
               </div>
             )}
 
-            <CommandList className="flex-1 overflow-y-auto min-h-[250px] max-h-none pointer-events-auto">
+            <CommandList className="flex-1 overflow-y-auto min-h-[250px] max-h-[70vh] pointer-events-auto pb-10">
               {isLoading ? (
                 <div className="py-12 flex justify-center items-center">
                   <Loader2 className="size-8 text-[#00cf79] animate-spin" />

@@ -32,7 +32,7 @@ function RouteComponent() {
       queryKey: ["election-groups"],
       queryFn: async ({ pageParam }) => {
         const res = await getElectionGroups({
-          data: { limit: 20, cursor: pageParam as string },
+          data: { limit: 20, cursor: pageParam as string, orderBy: "rank", order: "ASC" },
         });
         if (res && res.success && res.data) {
           return res;

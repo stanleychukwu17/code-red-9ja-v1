@@ -25,16 +25,11 @@ export function WardTableHeader() {
         <span className="font-semibold text-c-80">Ward</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[80px] text-center">PUs</span>
-        <span className="text-c-50 text-[14px] w-[130px] text-center hidden md:block">
-          State Con.
-        </span>
-        <span className="text-c-50 text-[14px] w-[120px] text-center hidden sm:block">
+        <span className="text-c-50 text-[14px] w-[120px]">PUs</span>
+        <span className="text-c-50 text-[14px] w-[160px] hidden sm:block">
           LGA
         </span>
-        <span className="text-c-50 text-[14px] w-[100px] text-center">
-          State
-        </span>
+        <span className="text-c-50 text-[14px] w-[140px]">State</span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
     </TileHeader>
@@ -50,16 +45,13 @@ export function WardTableTile({ data }: { data: WardType }) {
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[80px] text-center">
+        <span className="text-[15px] text-c-70 w-[120px]">
           {data.polling_units_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[130px] text-center hidden md:block">
-          {data.state_constituency_name ?? "-"}
-        </span>
-        <span className="text-[15px] text-c-70 w-[120px] text-center hidden sm:block">
+        <span className="text-[15px] text-c-70 w-[160px] hidden sm:block">
           {data.lga_name}
         </span>
-        <span className="text-[15px] text-c-70 w-[100px] text-center">
+        <span className="text-[15px] text-c-70 w-[140px]">
           {data.state_name}
         </span>
         <WardDropdown data={data} className="ml-2" />

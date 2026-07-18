@@ -58,19 +58,68 @@ export function PollingAgentPage() {
   }, [carouselApi]);
 
   let daysLeft: number | undefined = undefined;
+  let diffDays: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
     const d = new Date(selectedElectionGroup.election_date);
     d.setHours(0, 0, 0, 0);
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     const diffTime = d.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays >= 0) {
       daysLeft = diffDays;
     }
   }
 
+  const showObjectives = diffDays === undefined || diffDays <= 0;
+  const showReadiness = diffDays === undefined || diffDays !== 0;
+
   const objectives = [
+    {
+      title: "Go to your polling unit & click I've arrived",
+      isCompleted: !!currentPollingUnitAssignment?.arrived_at,
+    },
+    {
+      title: "Enter time when election started",
+      isCompleted: !!currentPollingUnitAssignment?.election_started_at,
+    },
+    {
+      title: "Give updates every 30minutes (7AM - 5PM)",
+      isCompleted: !!(
+        currentPollingUnitAssignment?.interval_updates &&
+        Object.keys(currentPollingUnitAssignment.interval_updates).length > 0
+      ),
+    },
+    {
+      title: "Report any issue",
+      isCompleted: !!(
+        currentPollingUnitAssignment?.reports_count &&
+        currentPollingUnitAssignment.reports_count > 0
+      ),
+    },
+    {
+      title: "Upload final vote result",
+      isCompleted: !!(
+        currentPollingUnitAssignment?.results_submitted_count &&
+        currentPollingUnitAssignment.results_submitted_count > 0 &&
+        currentPollingUnitAssignment.results_submitted_count >= (currentPollingUnitAssignment.results_expected_to_submit_count || 1)
+      ),
+    },
+    {
+      title: "Enter time when election ended",
+      isCompleted: !!currentPollingUnitAssignment?.election_ended_at,
+    },
+    {
+      title:
+        "Get voters at your polling unit to register on free9ja, indicate who they voted for. (1)",
+      isCompleted: !!(
+        currentPollingUnitAssignment?.live_voters_referred_count &&
+        currentPollingUnitAssignment.live_voters_referred_count > 0
+      ),
+    },
+  ];
+
+  const readiness = [
     {
       title: "Take election day practice test 1",
       rightText: "Jul 20",
@@ -94,43 +143,62 @@ export function PollingAgentPage() {
       <HomeHeader2 title="Objectives" rightText="20%" />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
-          <CarouselItem>
-            <LeaderboardCardWrapper className="mx-2.5">
-              {objectives.map((item) => (
-                <ObjectiveTile
-                  key={item.title}
-                  isCompleted={item.isCompleted}
-                  title={item.title}
-                  rightText={item.rightText}
-                  onClick={() => navigate({ to: "/report" })}
-                />
-              ))}
-              <div className="mb-2 mt-2 px-4">
-                <Button
-                  type="button"
-                  size="extra-large"
-                  onClick={() => navigate({ to: "/report" })}
-                  className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
-                >
-                  <ReportIcon className="w-5 h-5 shrink-0" />
-                  Report
-                </Button>
-              </div>
-            </LeaderboardCardWrapper>
-          </CarouselItem>
+          {showObjectives && (
+            <CarouselItem>
+              <LeaderboardCardWrapper className="mx-2.5">
+                {objectives.map((item) => (
+                  <ObjectiveTile
+                    key={item.title}
+                    isCompleted={item.isCompleted}
+                    title={item.title}
+                    onClick={() => navigate({ to: "/report" })}
+                  />
+                ))}
+                <div className="mb-2 mt-2 px-4">
+                  <Button
+                    type="button"
+                    size="extra-large"
+                    onClick={() => navigate({ to: "/report" })}
+                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                  >
+                    <ReportIcon className="w-5 h-5 shrink-0" />
+                    Report
+                  </Button>
+                </div>
+              </LeaderboardCardWrapper>
+            </CarouselItem>
+          )}
+          {showReadiness && (
+            <CarouselItem>
+              <LeaderboardCardWrapper className="mx-2.5">
+                {readiness.map((item) => (
+                  <ObjectiveTile
+                    key={item.title}
+                    isCompleted={item.isCompleted}
+                    title={item.title}
+                    rightText={item.rightText}
+                    onClick={() => navigate({ to: "/report" })}
+                  />
+                ))}
+              </LeaderboardCardWrapper>
+            </CarouselItem>
+          )}
           <CarouselItem>
             <CandidatesLeaderboard electionId={selectedElection?.id} />
           </CarouselItem>
         </CarouselContent>
       </Carousel>
       <CarouselDotContent>
-        <CarouselDot active={carouselIndex === 1} />
-        <CarouselDot active={carouselIndex === 0} />
+        {Array.from({
+          length: (showObjectives ? 1 : 0) + (showReadiness ? 1 : 0) + 1,
+        }).map((_, i) => (
+          <CarouselDot key={i} active={carouselIndex === i} />
+        ))}
       </CarouselDotContent>
 
       <HomeBody>
-        {daysLeft !== 0 && <ApplicationsCard />}
-        {daysLeft !== 0 && <PracticeTestCard />}
+        {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
+        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
         {daysLeft === 0 &&
           currentPollingUnitAssignment &&

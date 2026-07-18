@@ -14,7 +14,7 @@ export type StateType = {
   latitude: number;
   longitude: number;
   lgas_count?: number;
-  districts_count?: number;
+  senatorial_districts_count?: number;
   federal_constituencies_count?: number;
   state_constituencies_count?: number;
   wards_count?: number;
@@ -28,19 +28,19 @@ export function StateTableHeader() {
         <span className="font-semibold text-c-80">State</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[90px] text-center hidden md:block">
+        <span className="text-c-50 text-[14px] w-[90px] hidden md:block">
           LGAs
         </span>
-        <span className="text-c-50 text-[14px] w-[90px] text-center hidden md:block">
+        <span className="text-c-50 text-[14px] w-[90px] hidden md:block">
           Districts
         </span>
-        <span className="text-c-50 text-[14px] w-[90px] text-center hidden lg:block">
+        <span className="text-c-50 text-[14px] w-[90px] hidden lg:block">
           Federal Con.
         </span>
-        <span className="text-c-50 text-[14px] w-[90px] text-center hidden lg:block">
+        <span className="text-c-50 text-[14px] w-[90px] hidden lg:block">
           State Con.
         </span>
-        <span className="text-c-50 text-[14px] w-[90px] text-center hidden sm:block">
+        <span className="text-c-50 text-[14px] w-[90px] hidden sm:block">
           Wards
         </span>
         <span className="text-c-50 text-[14px] w-[90px] text-center">PUs</span>
@@ -59,22 +59,22 @@ export function StateTableTile({ data }: { data: StateType }) {
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[90px] text-center hidden md:block">
+        <span className="text-[15px] text-c-70 w-[90px] hidden md:block">
           {data.lgas_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[90px] text-center hidden md:block">
-          {data.districts_count ?? "-"}
+        <span className="text-[15px] text-c-70 w-[90px] hidden md:block">
+          {data.senatorial_districts_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[90px] text-center hidden lg:block">
+        <span className="text-[15px] text-c-70 w-[90px] hidden lg:block">
           {data.federal_constituencies_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[90px] text-center hidden lg:block">
+        <span className="text-[15px] text-c-70 w-[90px] hidden lg:block">
           {data.state_constituencies_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[90px] text-center hidden sm:block">
+        <span className="text-[15px] text-c-70 w-[90px] hidden sm:block">
           {data.wards_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-80 w-[90px] text-center font-semibold">
+        <span className="text-[15px] text-c-80 w-[90px] font-semibold">
           {data.polling_units_count ?? "-"}
         </span>
         <StateDropdown data={data} className="ml-2" />

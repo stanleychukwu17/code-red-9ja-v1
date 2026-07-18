@@ -99,8 +99,8 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 
 	// Initialize worker
 	q := queries.New(pool)
-	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb)
 	distributor := worker.NewRedisTaskDistributor(redisOpt)
+	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor)
 
 	// Initialize router
 	r := router.New(cfg, pool, rdb, distributor)

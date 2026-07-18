@@ -452,8 +452,22 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		errStr := err.Error()
+		if strings.Contains(errStr, "cancelled_past_election") {
+			h.utils.RespondSuccess(w, http.StatusOK, "Application cancelled: Please apply for an upcoming election (not in the past)", map[string]interface{}{
+				"application": updatedApp,
+			})
+			return
+		}
+		if strings.Contains(errStr, "has already passed") {
+			h.utils.RespondError(w, http.StatusBadRequest, errStr)
+			return
+		}
 		if strings.Contains(errStr, "already processed") {
 			h.utils.RespondError(w, http.StatusConflict, "Application has already been processed")
+			return
+		}
+		if strings.Contains(errStr, "insufficient slots") {
+			h.utils.RespondError(w, http.StatusPaymentRequired, errStr)
 			return
 		}
 		if strings.Contains(errStr, "uq_agent_per_election_day") {

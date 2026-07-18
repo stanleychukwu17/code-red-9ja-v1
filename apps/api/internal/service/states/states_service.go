@@ -99,9 +99,9 @@ func (s *StatesService) DeleteState(ctx context.Context, id int16) error {
 	return nil
 }
 
-func (s *StatesService) GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.GetStatesByCountryIDRow, error) {
+func (s *StatesService) GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error) {
 	type StatesResponse struct {
-		States []queries.GetStatesByCountryIDRow `json:"states"`
+		States []queries.CState `json:"states"`
 	}
 
 	redisKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, countryID)

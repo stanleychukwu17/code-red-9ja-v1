@@ -95,10 +95,7 @@ export function ElectionInstancesTable({
 
       <div>
         {items.map((data) => (
-          <ElectionInstanceTableTile
-            key={data.id}
-            data={data}
-          />
+          <ElectionInstanceTableTile key={data.id} data={data} />
         ))}
       </div>
     </div>
@@ -120,6 +117,7 @@ export function OfficesTable({ items }: { items: OfficeType[] }) {
 }
 
 export function StatesTable({ items }: { items: StateType[] }) {
+  console.log("STATES:", items);
   return (
     <div>
       <StateTableHeader />
@@ -138,7 +136,7 @@ export function DistrictsTable({ items }: { items: DistrictType[] }) {
       <DistrictTableHeader />
       <div>
         {items.map((data, index) => (
-          <DistrictTableTile key={`${data.title}-${index}`} data={data} />
+          <DistrictTableTile key={`${data.name}-${index}`} data={data} />
         ))}
       </div>
     </div>
@@ -150,6 +148,7 @@ export function FederalConstituenciesTable({
 }: {
   items: FederalConstituencyType[];
 }) {
+  console.log({ FED: items });
   return (
     <div>
       <FederalConstituencyTableHeader />
@@ -167,6 +166,8 @@ export function StateConstituenciesTable({
 }: {
   items: StateConstituencyType[];
 }) {
+  console.log({ STATE: items });
+
   return (
     <div>
       <StateConstituencyTableHeader />
@@ -247,10 +248,7 @@ export function PartiesTable({ items }: { items: PartyType[] }) {
       <PartyTableHeader />
       <div>
         {items.map((data) => (
-          <PartyTableTile
-            key={data.id || data.short_name}
-            data={data}
-          />
+          <PartyTableTile key={data.id || data.short_name} data={data} />
         ))}
       </div>
     </div>

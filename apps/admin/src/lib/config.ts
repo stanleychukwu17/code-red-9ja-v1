@@ -159,4 +159,5 @@ export const API_URL = {
   adminUsers: `${api}/admin/users`,
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
   users: `${api}/users`,
+  recalculateBodies: `${api}/bodies/recalculate`,
 };

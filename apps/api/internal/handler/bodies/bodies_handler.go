@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 type BodiesService interface {
@@ -27,13 +28,15 @@ type Handler struct {
 	bodiesService BodiesService
 	queries       *queries.Queries
 	utils         *utils.Utils
+	rdb           *redis.Client
 }
 
-func NewHandler(bodiesService BodiesService, q *queries.Queries, utils *utils.Utils) *Handler {
+func NewHandler(bodiesService BodiesService, q *queries.Queries, utils *utils.Utils, rdb *redis.Client) *Handler {
 	return &Handler{
 		bodiesService: bodiesService,
 		queries:       q,
 		utils:         utils,
+		rdb:           rdb,
 	}
 }
 
@@ -389,3 +392,66 @@ func (h *Handler) DeleteLGA(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "LGA deleted successfully", nil)
 }
 
+func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	if err := h.queries.RecalculateWardMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate ward metrics: "+err.Error())
+		return
+	}
+
+	if err := h.queries.RecalculateStateAssemblyConstituencyMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state assembly constituency metrics: "+err.Error())
+		return
+	}
+
+	if err := h.queries.RecalculateLGAMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate LGA metrics: "+err.Error())
+		return
+	}
+
+	if err := h.queries.RecalculateFederalConstituencyMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate federal constituency metrics: "+err.Error())
+		return
+	}
+
+	if err := h.queries.RecalculateSenatorialDistrictMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate senatorial district metrics: "+err.Error())
+		return
+	}
+
+	if err := h.queries.RecalculateStateMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state metrics: "+err.Error())
+		return
+	}
+
+	if err := h.queries.RecalculateNationalMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate national metrics: "+err.Error())
+		return
+	}
+
+	// Invalidate cache for bodies and countries instead of the entire Redis database
+	prefixes := []string{"bodies:*", "countries:*"}
+	for _, prefix := range prefixes {
+		iter := h.rdb.Scan(ctx, 0, prefix, 0).Iterator()
+		for iter.Next(ctx) {
+			h.rdb.Del(ctx, iter.Val())
+		}
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Successfully recalculated all body metrics", nil)
+}
+
+func (h *Handler) GetNationalMetrics(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	metrics, err := h.queries.GetNationalMetrics(ctx)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch national metrics: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Successfully fetched national metrics", map[string]interface{}{
+		"metrics": metrics,
+	})
+}

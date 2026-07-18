@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/worker"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -12,16 +13,18 @@ import (
 )
 
 type ElectionsService struct {
-	queries *queries.Queries
-	pool    *pgxpool.Pool
-	rdb     *redis.Client
+	queries         *queries.Queries
+	pool            *pgxpool.Pool
+	rdb             *redis.Client
+	taskDistributor worker.TaskDistributor
 }
 
-func NewElectionsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *ElectionsService {
+func NewElectionsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, taskDistributor worker.TaskDistributor) *ElectionsService {
 	return &ElectionsService{
-		queries: q,
-		pool:    pool,
-		rdb:     rdb,
+		queries:         q,
+		pool:            pool,
+		rdb:             rdb,
+		taskDistributor: taskDistributor,
 	}
 }
 
@@ -1621,24 +1624,24 @@ func (s *ElectionsService) SubmitElectionVotes(
 		return fmt.Errorf("invalid ward: %w", err)
 	}
 
-	// Refresh live vote counts and trigger rollups
+	// Enqueue background debounced task to refresh live vote counts
 	for _, v := range votes {
-		err = qtx.RefreshPollingUnitLiveResults(ctx, queries.RefreshPollingUnitLiveResultsParams{
-			ElectionID:            v.ElectionID,
-			PollingUnitID:         int32(pollingUnitID),
-			ElectionGroupID:       electionGroupID,
-			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-			SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
-			FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
-			StateConstituencyID:   ward.StateAssemblyConstituencyID,
-			LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
-			WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
+		err = s.taskDistributor.DistributeTaskAggregateLiveVotes(ctx, &worker.AggregateLiveVotesPayload{
+			Params: queries.RefreshPollingUnitLiveResultsParams{
+				ElectionID:            v.ElectionID,
+				PollingUnitID:         int32(pollingUnitID),
+				ElectionGroupID:       electionGroupID,
+				StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+				SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
+				FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
+				StateConstituencyID:   ward.StateAssemblyConstituencyID,
+				LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
+				WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
+			},
 		})
 		if err != nil {
-			return fmt.Errorf("failed to refresh live results for election %d: %w", v.ElectionID, err)
+			return fmt.Errorf("failed to enqueue live results refresh for election %d: %w", v.ElectionID, err)
 		}
-
-
 	}
 
 	return tx.Commit(ctx)

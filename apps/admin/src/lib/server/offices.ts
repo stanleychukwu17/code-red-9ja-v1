@@ -3,12 +3,25 @@ import { API_URL } from "../config";
 import { apiFetch } from "./fetch";
 
 export const getOffices = createServerFn({ method: "GET" })
-  .inputValidator((data: { limit?: number; cursor?: string | number } | undefined) => data)
+  .inputValidator(
+    (
+      data:
+        | {
+            limit?: number;
+            cursor?: string | number;
+            orderBy?: string;
+            order?: string;
+          }
+        | undefined,
+    ) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-      const response = await apiFetch(`${API_URL.offices}?limit=${limit}&cursor=${cursor}`);
+      const response = await apiFetch(
+        `${API_URL.offices}?limit=${limit}&cursor=${cursor}`,
+      );
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -29,7 +42,10 @@ export const getOfficeById = createServerFn({ method: "GET" })
   });
 
 export const createOffice = createServerFn({ method: "POST" })
-  .inputValidator((data: { name: string; election: string; scope: string; rank: number }) => data)
+  .inputValidator(
+    (data: { name: string; election: string; scope: string; rank: number }) =>
+      data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.offices, {
@@ -42,12 +58,23 @@ export const createOffice = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create office: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to create office: " + (error as Error).message,
+      };
     }
   });
 
 export const updateOffice = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string | number; name: string; election: string; scope: string; rank: number }) => data)
+  .inputValidator(
+    (data: {
+      id: string | number;
+      name: string;
+      election: string;
+      scope: string;
+      rank: number;
+    }) => data,
+  )
   .handler(async ({ data: { id, ...body } }) => {
     try {
       const response = await apiFetch(API_URL.officeById(id), {
@@ -60,7 +87,10 @@ export const updateOffice = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to update office: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to update office: " + (error as Error).message,
+      };
     }
   });
 
@@ -74,6 +104,9 @@ export const deleteOffice = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to delete office: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to delete office: " + (error as Error).message,
+      };
     }
   });

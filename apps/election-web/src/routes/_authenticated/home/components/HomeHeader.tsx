@@ -20,10 +20,10 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
   const {
     user,
     selectedElectionGroup,
+    selectedElection,
     setSelectedElectionGroup,
     setSelectedElection,
   } = useAuth();
-  console.log({ selectedElectionGroup });
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
@@ -42,6 +42,7 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
             fetchElectionsByGroup={fetchElectionsByGroup}
             selectedId={selectedElectionGroup?.id}
             update={(group) => setSelectedElectionGroup(group)}
+            partyId={user?.party?.id ?? user?.party_id}
             onElectionSelect={(group: ElectionGroup, election: Election) => {
               setSelectedElectionGroup(group);
               setSelectedElection(election);

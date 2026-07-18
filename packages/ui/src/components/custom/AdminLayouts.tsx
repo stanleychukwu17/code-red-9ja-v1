@@ -1,7 +1,7 @@
 import { IconInput } from "@repo/ui/components/input";
 import { cn } from "../../lib/utils";
 import { Link } from "@tanstack/react-router";
-import { SlidersHorizontal } from "lucide-react";
+import { Ellipsis, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import PlusIcon from "../../icons/plus-icon";
 
@@ -42,15 +42,18 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
 export function FilterButton() {
   return (
-    <button className="flex h-10 items-center gap-3 rounded-[12px] border border-[#dfdfdf] bg-white px-4 text-[16px] text-[#3b3b3b] transition hover:bg-[#fafafa]">
-      <SlidersHorizontal className="size-4 text-[#7e7e7e]" />
-      <span>Filter</span>
-      <span className="ml-1 text-c-50">0</span>
-    </button>
+    <Button
+      size="icon-xl"
+      variant="outline"
+      className="size-10 p-0 flex items-center justify-center rounded-full transition hover:[&_svg]:text-c-90"
+    >
+      <SlidersHorizontal className="size-5 text-c-70" />
+    </Button>
   );
 }
 
 import { useState, useRef, useEffect } from "react";
+import { Button } from "../button";
 
 export function AddButton({
   onClick,

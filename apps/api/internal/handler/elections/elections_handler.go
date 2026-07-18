@@ -8,7 +8,9 @@ import (
 	elections "free9ja/api/internal/service/elections"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -467,11 +469,29 @@ func (h *Handler) CreateWardElection(w http.ResponseWriter, r *http.Request) {
 // @Router       /elections [get]
 func (h *Handler) ListElections(w http.ResponseWriter, r *http.Request) {
 	limit, cursor := parsePaginationParams(r)
+	orderBy := r.URL.Query().Get("orderBy")
+	if orderBy == "" {
+		orderBy = "rank"
+	}
+	order := strings.ToUpper(r.URL.Query().Get("order"))
+	if order != "DESC" {
+		order = "ASC"
+	}
 
 	elections, err := h.service.ListElections(r.Context())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch elections: "+err.Error())
 		return
+	}
+
+	// In-memory sort based on orderBy and order
+	if orderBy == "rank" {
+		sort.SliceStable(elections, func(i, j int) bool {
+			if order == "ASC" {
+				return elections[i].Rank < elections[j].Rank
+			}
+			return elections[i].Rank > elections[j].Rank
+		})
 	}
 
 	startIndex := 0

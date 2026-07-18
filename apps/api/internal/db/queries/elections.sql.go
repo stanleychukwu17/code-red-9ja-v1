@@ -53,7 +53,7 @@ INSERT INTO elections (
   state_constituency_id, lga_id, ward_id
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, name, rank, candidates_count, reports_count, updates_count, results_submitted_count, election_date, election_group_id, election_group_name, office_id, office_name, scope, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, created_at, updated_at, status
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status
 `
 
 type CreateElectionInstanceParams struct {
@@ -95,24 +95,24 @@ func (q *Queries) CreateElectionInstance(ctx context.Context, arg CreateElection
 	var i Election
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
-		&i.Rank,
-		&i.CandidatesCount,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.ElectionDate,
 		&i.ElectionGroupID,
-		&i.ElectionGroupName,
-		&i.OfficeID,
-		&i.OfficeName,
-		&i.Scope,
 		&i.StateID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.OfficeID,
+		&i.Name,
+		&i.Rank,
+		&i.ElectionDate,
+		&i.ElectionGroupName,
+		&i.OfficeName,
+		&i.Scope,
+		&i.CandidatesCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -166,7 +166,7 @@ func (q *Queries) GetElectionCandidatesCount(ctx context.Context, electionID int
 }
 
 const getElectionInstanceByID = `-- name: GetElectionInstanceByID :one
-SELECT id, name, rank, candidates_count, reports_count, updates_count, results_submitted_count, election_date, election_group_id, election_group_name, office_id, office_name, scope, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, created_at, updated_at, status FROM elections WHERE id = $1
+SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status FROM elections WHERE id = $1
 `
 
 func (q *Queries) GetElectionInstanceByID(ctx context.Context, id int64) (Election, error) {
@@ -174,24 +174,24 @@ func (q *Queries) GetElectionInstanceByID(ctx context.Context, id int64) (Electi
 	var i Election
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
-		&i.Rank,
-		&i.CandidatesCount,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.ElectionDate,
 		&i.ElectionGroupID,
-		&i.ElectionGroupName,
-		&i.OfficeID,
-		&i.OfficeName,
-		&i.Scope,
 		&i.StateID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.OfficeID,
+		&i.Name,
+		&i.Rank,
+		&i.ElectionDate,
+		&i.ElectionGroupName,
+		&i.OfficeName,
+		&i.Scope,
+		&i.CandidatesCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,
@@ -296,7 +296,7 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 }
 
 const listElectionInstances = `-- name: ListElectionInstances :many
-SELECT id, name, rank, candidates_count, reports_count, updates_count, results_submitted_count, election_date, election_group_id, election_group_name, office_id, office_name, scope, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, created_at, updated_at, status FROM elections
+SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status FROM elections
 ORDER BY election_date DESC, id DESC
 `
 
@@ -311,24 +311,24 @@ func (q *Queries) ListElectionInstances(ctx context.Context) ([]Election, error)
 		var i Election
 		if err := rows.Scan(
 			&i.ID,
-			&i.Name,
-			&i.Rank,
-			&i.CandidatesCount,
-			&i.ReportsCount,
-			&i.UpdatesCount,
-			&i.ResultsSubmittedCount,
-			&i.ElectionDate,
 			&i.ElectionGroupID,
-			&i.ElectionGroupName,
-			&i.OfficeID,
-			&i.OfficeName,
-			&i.Scope,
 			&i.StateID,
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.StateConstituencyID,
 			&i.LgaID,
 			&i.WardID,
+			&i.OfficeID,
+			&i.Name,
+			&i.Rank,
+			&i.ElectionDate,
+			&i.ElectionGroupName,
+			&i.OfficeName,
+			&i.Scope,
+			&i.CandidatesCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
+			&i.ResultsSubmittedCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -345,7 +345,7 @@ func (q *Queries) ListElectionInstances(ctx context.Context) ([]Election, error)
 
 const listElectionsDetailedByGroupID = `-- name: ListElectionsDetailedByGroupID :many
 SELECT 
-  e.id, e.name, e.rank, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.election_date, e.election_group_id, e.election_group_name, e.office_id, e.office_name, e.scope, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.created_at, e.updated_at, e.status,
+  e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.rank, e.election_date, e.election_group_name, e.office_name, e.scope, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.created_at, e.updated_at, e.status,
   o.election AS office_election,
   o.name AS office_name_full
 FROM elections e
@@ -355,24 +355,24 @@ WHERE e.election_group_id = $1
 
 type ListElectionsDetailedByGroupIDRow struct {
 	ID                    int64              `json:"id"`
-	Name                  string             `json:"name"`
-	Rank                  int32              `json:"rank"`
-	CandidatesCount       int32              `json:"candidates_count"`
-	ReportsCount          int32              `json:"reports_count"`
-	UpdatesCount          int32              `json:"updates_count"`
-	ResultsSubmittedCount int32              `json:"results_submitted_count"`
-	ElectionDate          pgtype.Date        `json:"election_date"`
 	ElectionGroupID       int64              `json:"election_group_id"`
-	ElectionGroupName     string             `json:"election_group_name"`
-	OfficeID              int64              `json:"office_id"`
-	OfficeName            string             `json:"office_name"`
-	Scope                 string             `json:"scope"`
 	StateID               pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
 	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
 	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
 	LgaID                 pgtype.Int4        `json:"lga_id"`
 	WardID                pgtype.Int4        `json:"ward_id"`
+	OfficeID              int64              `json:"office_id"`
+	Name                  string             `json:"name"`
+	Rank                  int32              `json:"rank"`
+	ElectionDate          pgtype.Date        `json:"election_date"`
+	ElectionGroupName     string             `json:"election_group_name"`
+	OfficeName            string             `json:"office_name"`
+	Scope                 string             `json:"scope"`
+	CandidatesCount       int32              `json:"candidates_count"`
+	ReportsCount          int32              `json:"reports_count"`
+	UpdatesCount          int32              `json:"updates_count"`
+	ResultsSubmittedCount int32              `json:"results_submitted_count"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 	Status                string             `json:"status"`
@@ -391,24 +391,24 @@ func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGr
 		var i ListElectionsDetailedByGroupIDRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.Name,
-			&i.Rank,
-			&i.CandidatesCount,
-			&i.ReportsCount,
-			&i.UpdatesCount,
-			&i.ResultsSubmittedCount,
-			&i.ElectionDate,
 			&i.ElectionGroupID,
-			&i.ElectionGroupName,
-			&i.OfficeID,
-			&i.OfficeName,
-			&i.Scope,
 			&i.StateID,
 			&i.SenatorialDistrictID,
 			&i.FederalConstituencyID,
 			&i.StateConstituencyID,
 			&i.LgaID,
 			&i.WardID,
+			&i.OfficeID,
+			&i.Name,
+			&i.Rank,
+			&i.ElectionDate,
+			&i.ElectionGroupName,
+			&i.OfficeName,
+			&i.Scope,
+			&i.CandidatesCount,
+			&i.ReportsCount,
+			&i.UpdatesCount,
+			&i.ResultsSubmittedCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.Status,
@@ -462,7 +462,7 @@ SET name = $1, rank = $2, candidates_count = $3, election_date = $4, election_gr
     state_id = $10, senatorial_district_id = $11, federal_constituency_id = $12,
     state_constituency_id = $13, lga_id = $14, ward_id = $15, updated_at = NOW()
 WHERE id = $16
-RETURNING id, name, rank, candidates_count, reports_count, updates_count, results_submitted_count, election_date, election_group_id, election_group_name, office_id, office_name, scope, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, created_at, updated_at, status
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status
 `
 
 type UpdateElectionInstanceParams struct {
@@ -506,24 +506,24 @@ func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElection
 	var i Election
 	err := row.Scan(
 		&i.ID,
-		&i.Name,
-		&i.Rank,
-		&i.CandidatesCount,
-		&i.ReportsCount,
-		&i.UpdatesCount,
-		&i.ResultsSubmittedCount,
-		&i.ElectionDate,
 		&i.ElectionGroupID,
-		&i.ElectionGroupName,
-		&i.OfficeID,
-		&i.OfficeName,
-		&i.Scope,
 		&i.StateID,
 		&i.SenatorialDistrictID,
 		&i.FederalConstituencyID,
 		&i.StateConstituencyID,
 		&i.LgaID,
 		&i.WardID,
+		&i.OfficeID,
+		&i.Name,
+		&i.Rank,
+		&i.ElectionDate,
+		&i.ElectionGroupName,
+		&i.OfficeName,
+		&i.Scope,
+		&i.CandidatesCount,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.Status,

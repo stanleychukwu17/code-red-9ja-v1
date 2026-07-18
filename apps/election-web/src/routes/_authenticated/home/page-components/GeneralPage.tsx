@@ -1,4 +1,5 @@
 import { useAuth } from "#/hooks/useAuth";
+import { getNationalMetrics } from "#/lib/server/national_metrics";
 import { Button } from "@repo/ui/components/button";
 import {
   LeaderboardCardWrapper,
@@ -13,17 +14,17 @@ import {
   type CarouselApi,
 } from "@repo/ui/components/carousel";
 import ReportIcon from "@repo/ui/icons/report-icon";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ApplicationsCard } from "../components/ApplicationsCard";
-import { ArrivalDrawer } from "../components/ArrivalDrawer";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
 import { CandidatesLeaderboard } from "../components/Leaderboard";
+import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
-import { PracticeTestCard } from "../components/PracticeTestCard";
 
 export function GeneralPage() {
   const navigate = useNavigate();
@@ -31,6 +32,16 @@ export function GeneralPage() {
 
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+
+  const { data: metricsResponse } = useQuery({
+    queryKey: ["national-metrics"],
+    queryFn: async () => {
+      const res = await getNationalMetrics();
+      if (!res.success) throw new Error(res.message);
+      return res.data;
+    },
+  });
+  const metrics = metricsResponse || null;
 
   useEffect(() => {
     if (!carouselApi) return;
@@ -112,7 +123,8 @@ export function GeneralPage() {
       </CarouselDotContent>
 
       <HomeBody>
-        {daysLeft !== 0 && <ApplicationsCard />}
+        {/* {daysLeft !== 0 && <ApplicationsCard />} */}
+        <ApplicationsCard />
         {daysLeft !== 0 && <PracticeTestCard />}
         {daysLeft === 0 && <DidYouVoteCard />}
         {daysLeft === 0 && <UploadResultCard />}

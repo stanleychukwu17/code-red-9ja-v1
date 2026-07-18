@@ -21,7 +21,7 @@ INSERT INTO polling_unit_assignments (
   assigned_by
 ) VALUES (
   $1, $2, $3, $4, $5, $6
-) RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, election_practice_test_readiness_percentage, created_at, updated_at, results_submitted_count, results_status
+) RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, created_at, updated_at
 `
 
 type CreateAssignmentParams struct {
@@ -60,11 +60,13 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		&i.LastUpdateAt,
 		&i.ReportsCount,
 		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
+		&i.ResultsExpectedToSubmitCount,
+		&i.LiveVotersReferredCount,
+		&i.IntervalUpdates,
 		&i.ElectionPracticeTestReadinessPercentage,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.ResultsSubmittedCount,
-		&i.ResultsStatus,
 	)
 	return i, err
 }

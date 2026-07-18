@@ -15,7 +15,7 @@ const getAllPollingUnitResultsByPU = `-- name: GetAllPollingUnitResultsByPU :man
 SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 FROM polling_unit_results
 WHERE election_id = $1 AND polling_unit_id = $2
-AND status NOT IN ('nullified', 'disputed')
+AND status NOT IN ('nullified')
 `
 
 type GetAllPollingUnitResultsByPUParams struct {

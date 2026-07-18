@@ -80,3 +80,17 @@ export const getLgaById = createServerFn({ method: "GET" })
       return { success: false, message: "Failed to fetch LGA details" };
     }
   });
+
+
+export const getLGAs = createServerFn()
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
+  .handler(async ({ data: { stateId, limit, cursor } }) => {
+    try {
+      const response = await fetch(API_URL.getLGAs(stateId, limit, cursor));
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return { status: 'failed', error: 'Failed to fetch LGAs from API, Maybe the backend server is currently down' };
+    }
+  });
+

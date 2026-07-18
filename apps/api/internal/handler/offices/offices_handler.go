@@ -6,7 +6,9 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -114,11 +116,36 @@ func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
 // @Router       /offices [get]
 func (h *Handler) ListOffices(w http.ResponseWriter, r *http.Request) {
 	limit, cursor := parsePaginationParams(r)
+	orderBy := r.URL.Query().Get("orderBy")
+	if orderBy == "" {
+		orderBy = "rank"
+	}
+	order := strings.ToUpper(r.URL.Query().Get("order"))
+	if order != "DESC" {
+		order = "ASC"
+	}
 
 	offices, err := h.service.ListOffices(r.Context())
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch offices: "+err.Error())
 		return
+	}
+
+	// In-memory sort based on orderBy and order
+	if orderBy == "rank" {
+		sort.SliceStable(offices, func(i, j int) bool {
+			if order == "ASC" {
+				return offices[i].Rank < offices[j].Rank
+			}
+			return offices[i].Rank > offices[j].Rank
+		})
+	} else if orderBy == "name" {
+		sort.SliceStable(offices, func(i, j int) bool {
+			if order == "ASC" {
+				return offices[i].Name < offices[j].Name
+			}
+			return offices[i].Name > offices[j].Name
+		})
 	}
 
 	startIndex := 0

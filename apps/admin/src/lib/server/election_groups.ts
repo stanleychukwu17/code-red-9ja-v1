@@ -3,16 +3,35 @@ import { API_URL } from "../config";
 import { apiFetch } from "./fetch";
 
 export const getElectionGroups = createServerFn({ method: "GET" })
-  .inputValidator((data: { limit?: number; cursor?: string | number } | undefined) => data)
+  .inputValidator(
+    (
+      data:
+        | {
+            limit?: number;
+            cursor?: string | number;
+            orderBy?: string;
+            order?: string;
+          }
+        | undefined,
+    ) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-      const response = await apiFetch(`${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}`);
+      const orderBy = data?.orderBy || "";
+      const order = data?.order || "";
+      let url = `${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}`;
+      if (orderBy) url += `&order_by=${orderBy}`;
+      if (order) url += `&order=${order}`;
+      const response = await fetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to fetch election groups from API" };
+      return {
+        success: false,
+        message: "Failed to fetch election groups from API",
+      };
     }
   });
 
@@ -24,12 +43,23 @@ export const getElectionGroupById = createServerFn({ method: "GET" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to fetch election group details" };
+      return {
+        success: false,
+        message: "Failed to fetch election group details",
+      };
     }
   });
 
 export const createElectionGroup = createServerFn({ method: "POST" })
-  .inputValidator((data: { name: string; rank: number; elections_count: number; states_count: number; election_date: string }) => data)
+  .inputValidator(
+    (data: {
+      name: string;
+      rank: number;
+      elections_count: number;
+      states_count: number;
+      election_date: string;
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.electionGroups, {
@@ -42,12 +72,24 @@ export const createElectionGroup = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create election group: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to create election group: " + (error as Error).message,
+      };
     }
   });
 
 export const updateElectionGroup = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string | number; name: string; rank: number; elections_count: number; states_count: number; election_date: string }) => data)
+  .inputValidator(
+    (data: {
+      id: string | number;
+      name: string;
+      rank: number;
+      elections_count: number;
+      states_count: number;
+      election_date: string;
+    }) => data,
+  )
   .handler(async ({ data: { id, ...body } }) => {
     try {
       const response = await apiFetch(API_URL.electionGroupById(id), {
@@ -60,7 +102,10 @@ export const updateElectionGroup = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to update election group: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to update election group: " + (error as Error).message,
+      };
     }
   });
 
@@ -74,6 +119,9 @@ export const deleteElectionGroup = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to delete election group: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to delete election group: " + (error as Error).message,
+      };
     }
   });

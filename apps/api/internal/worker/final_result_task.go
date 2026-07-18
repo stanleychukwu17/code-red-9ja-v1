@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"sort"
@@ -120,6 +121,7 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		ValidVotes:               r.ValidVotes,
 		RejectedVotes:            r.RejectedVotes,
 		CandidateResults:         r.CandidateResults,
+		CandidateResultsLive:     r.CandidateResults, // mirrors final results until live tracking diverges
 		MatchingSubmissionsCount: int32(winningGroup.Count),
 		TotalSubmissionsCount:    int32(len(results)),
 	})
@@ -139,6 +141,15 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 // TaskDistributor defines the interface for enqueueing tasks
 type TaskDistributor interface {
 	DistributeTaskCalculateFinalResult(ctx context.Context, payload *CalculateFinalResultPayload, opts ...asynq.Option) error
+	DistributeTaskSeedElectionGroupStats(ctx context.Context, payload *SeedElectionGroupStatsPayload, opts ...asynq.Option) error
+	DistributeTaskAggregateLiveVotes(ctx context.Context, payload *AggregateLiveVotesPayload, opts ...asynq.Option) error
+	DistributeTaskRefreshPollingUnitStats(ctx context.Context, payload *RefreshPollingUnitStatsPayload, opts ...asynq.Option) error
+	// Cascading stats refresh chain
+	DistributeTaskRefreshWardStats(ctx context.Context, payload *RefreshWardStatsPayload, opts ...asynq.Option) error
+	DistributeTaskRefreshLGAStats(ctx context.Context, payload *RefreshLGAStatsPayload, opts ...asynq.Option) error
+	DistributeTaskRefreshStateConstituencyStats(ctx context.Context, payload *RefreshStateConstituencyStatsPayload, opts ...asynq.Option) error
+	DistributeTaskRefreshStateStats(ctx context.Context, payload *RefreshStateStatsPayload, opts ...asynq.Option) error
+	DistributeTaskRefreshGlobalStats(ctx context.Context, payload *RefreshGlobalStatsPayload, opts ...asynq.Option) error
 }
 
 type RedisTaskDistributor struct {
@@ -175,14 +186,15 @@ func (distributor *RedisTaskDistributor) DistributeTaskCalculateFinalResult(ctx 
 	task := asynq.NewTask(TaskCalculateFinalResult, jsonPayload, opts...)
 
 	info, err := distributor.client.EnqueueContext(ctx, task)
-	if err != nil && err != asynq.ErrTaskIDConflict {
+	if err != nil {
+		// Both ErrTaskIDConflict (same TaskID already queued) and ErrDuplicateTask
+		// (from the Unique() option) are expected during the debounce window — not real errors.
+		if errors.Is(err, asynq.ErrTaskIDConflict) || errors.Is(err, asynq.ErrDuplicateTask) {
+			slog.Debug("final result task already queued, skipping duplicate",
+				"election_id", payload.ElectionID, "polling_unit_id", payload.PollingUnitID)
+			return nil
+		}
 		return fmt.Errorf("failed to enqueue task: %w", err)
-	}
-	if err == asynq.ErrTaskIDConflict {
-		// A task for this PU is already queued — debounce is working as expected.
-		slog.Debug("final result task already queued, skipping duplicate",
-			"election_id", payload.ElectionID, "polling_unit_id", payload.PollingUnitID)
-		return nil
 	}
 
 	slog.Info("enqueued task", "type", task.Type(), "queue", info.Queue, "max_retry", info.MaxRetry)

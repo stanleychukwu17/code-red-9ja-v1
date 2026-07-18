@@ -14,7 +14,7 @@ import (
 const createFederalConstituency = `-- name: CreateFederalConstituency :one
 INSERT INTO federal_constituencies (name, state_id, state_name, senatorial_district_id, senatorial_district_name)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, state_id, state_name, senatorial_district_id, senatorial_district_name
+RETURNING id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type CreateFederalConstituencyParams struct {
@@ -41,6 +41,10 @@ func (q *Queries) CreateFederalConstituency(ctx context.Context, arg CreateFeder
 		&i.StateName,
 		&i.SenatorialDistrictID,
 		&i.SenatorialDistrictName,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -48,7 +52,7 @@ func (q *Queries) CreateFederalConstituency(ctx context.Context, arg CreateFeder
 const createLGA = `-- name: CreateLGA :one
 INSERT INTO lgas (name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name
+RETURNING id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count
 `
 
 type CreateLGAParams struct {
@@ -84,6 +88,9 @@ func (q *Queries) CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, erro
 		&i.SenatorialDistrictName,
 		&i.FederalConstituencyID,
 		&i.FederalConstituencyName,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -91,7 +98,7 @@ func (q *Queries) CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, erro
 const createPollingUnit = `-- name: CreatePollingUnit :one
 INSERT INTO polling_units (name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-RETURNING id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id
+RETURNING id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status
 `
 
 type CreatePollingUnitParams struct {
@@ -154,6 +161,7 @@ func (q *Queries) CreatePollingUnit(ctx context.Context, arg CreatePollingUnitPa
 		&i.PreciseLocation,
 		&i.FormattedAddress,
 		&i.GooglePlaceID,
+		&i.Status,
 	)
 	return i, err
 }
@@ -161,7 +169,7 @@ func (q *Queries) CreatePollingUnit(ctx context.Context, arg CreatePollingUnitPa
 const createSenatorialDistrict = `-- name: CreateSenatorialDistrict :one
 INSERT INTO senatorial_districts (name, description, coalition_center, state_id, state_name)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, description, coalition_center, state_id, state_name
+RETURNING id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type CreateSenatorialDistrictParams struct {
@@ -188,6 +196,11 @@ func (q *Queries) CreateSenatorialDistrict(ctx context.Context, arg CreateSenato
 		&i.CoalitionCenter,
 		&i.StateID,
 		&i.StateName,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -195,7 +208,7 @@ func (q *Queries) CreateSenatorialDistrict(ctx context.Context, arg CreateSenato
 const createState = `-- name: CreateState :one
 INSERT INTO c_states (name, country_id, country_code, latitude, longitude)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, country_id, country_code, latitude, longitude
+RETURNING id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type CreateStateParams struct {
@@ -222,6 +235,12 @@ func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) (CStat
 		&i.CountryCode,
 		&i.Latitude,
 		&i.Longitude,
+		&i.SenatorialDistrictsCount,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -229,7 +248,7 @@ func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) (CStat
 const createStateAssemblyConstituency = `-- name: CreateStateAssemblyConstituency :one
 INSERT INTO state_assembly_constituencies (name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name
+RETURNING id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count
 `
 
 type CreateStateAssemblyConstituencyParams struct {
@@ -268,6 +287,8 @@ func (q *Queries) CreateStateAssemblyConstituency(ctx context.Context, arg Creat
 		&i.SenatorialDistrictName,
 		&i.FederalConstituencyID,
 		&i.FederalConstituencyName,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -275,7 +296,7 @@ func (q *Queries) CreateStateAssemblyConstituency(ctx context.Context, arg Creat
 const createWard = `-- name: CreateWard :one
 INSERT INTO wards (name, abbreviation, lga_id, lga_name, state_id, state_name)
 VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name
+RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count
 `
 
 type CreateWardParams struct {
@@ -307,6 +328,8 @@ func (q *Queries) CreateWard(ctx context.Context, arg CreateWardParams) (Ward, e
 		&i.StateName,
 		&i.StateAssemblyConstituencyID,
 		&i.StateAssemblyConstituencyName,
+		&i.Status,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -453,7 +476,7 @@ func (q *Queries) GetCountryByID(ctx context.Context, id int16) (GetCountryByIDR
 }
 
 const getFederalConstituencies = `-- name: GetFederalConstituencies :many
-SELECT id, name, state_id, state_name, senatorial_district_id, senatorial_district_name FROM federal_constituencies
+SELECT id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM federal_constituencies
 WHERE ($1::int = 0 OR state_id = $1) AND ($2::int = 0 OR senatorial_district_id = $2)
 ORDER BY name ASC
 `
@@ -479,6 +502,10 @@ func (q *Queries) GetFederalConstituencies(ctx context.Context, arg GetFederalCo
 			&i.StateName,
 			&i.SenatorialDistrictID,
 			&i.SenatorialDistrictName,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 		); err != nil {
 			return nil, err
 		}
@@ -491,7 +518,7 @@ func (q *Queries) GetFederalConstituencies(ctx context.Context, arg GetFederalCo
 }
 
 const getFederalConstituencyByID = `-- name: GetFederalConstituencyByID :one
-SELECT id, name, state_id, state_name, senatorial_district_id, senatorial_district_name FROM federal_constituencies
+SELECT id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM federal_constituencies
 WHERE id = $1 LIMIT 1
 `
 
@@ -505,12 +532,16 @@ func (q *Queries) GetFederalConstituencyByID(ctx context.Context, id int32) (Fed
 		&i.StateName,
 		&i.SenatorialDistrictID,
 		&i.SenatorialDistrictName,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
 
 const getLGAByID = `-- name: GetLGAByID :one
-SELECT id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name FROM lgas
+SELECT id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count FROM lgas
 WHERE id = $1 LIMIT 1
 `
 
@@ -527,12 +558,15 @@ func (q *Queries) GetLGAByID(ctx context.Context, id int32) (Lga, error) {
 		&i.SenatorialDistrictName,
 		&i.FederalConstituencyID,
 		&i.FederalConstituencyName,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
 
 const getLGAs = `-- name: GetLGAs :many
-SELECT id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name FROM lgas
+SELECT id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count FROM lgas
 WHERE ($1::int = 0 OR state_id = $1)
 ORDER BY name ASC
 `
@@ -556,6 +590,9 @@ func (q *Queries) GetLGAs(ctx context.Context, stateID int32) ([]Lga, error) {
 			&i.SenatorialDistrictName,
 			&i.FederalConstituencyID,
 			&i.FederalConstituencyName,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 		); err != nil {
 			return nil, err
 		}
@@ -567,8 +604,29 @@ func (q *Queries) GetLGAs(ctx context.Context, stateID int32) ([]Lga, error) {
 	return items, nil
 }
 
+const getNationalMetrics = `-- name: GetNationalMetrics :one
+SELECT id, states_count, senatorial_districts_count, federal_constituencies_count, state_constituencies_count, lgas_count, wards_count, polling_units_count, updated_at FROM national_metrics WHERE id = 1 LIMIT 1
+`
+
+func (q *Queries) GetNationalMetrics(ctx context.Context) (NationalMetric, error) {
+	row := q.db.QueryRow(ctx, getNationalMetrics)
+	var i NationalMetric
+	err := row.Scan(
+		&i.ID,
+		&i.StatesCount,
+		&i.SenatorialDistrictsCount,
+		&i.FederalConstituenciesCount,
+		&i.StateConstituenciesCount,
+		&i.LgasCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getPollingUnitByID = `-- name: GetPollingUnitByID :one
-SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id FROM polling_units
+SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
 WHERE id = $1 LIMIT 1
 `
 
@@ -594,12 +652,13 @@ func (q *Queries) GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit
 		&i.PreciseLocation,
 		&i.FormattedAddress,
 		&i.GooglePlaceID,
+		&i.Status,
 	)
 	return i, err
 }
 
 const getPollingUnits = `-- name: GetPollingUnits :many
-SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id FROM polling_units
+SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
 WHERE ($1::int = 0 OR ward_id = $1) AND ($2::int = 0 OR lga_id = $2) AND ($3::int = 0 OR state_id = $3)
 ORDER BY name ASC
 `
@@ -638,6 +697,7 @@ func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams
 			&i.PreciseLocation,
 			&i.FormattedAddress,
 			&i.GooglePlaceID,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -650,7 +710,7 @@ func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams
 }
 
 const getSenatorialDistrictByID = `-- name: GetSenatorialDistrictByID :one
-SELECT id, name, description, coalition_center, state_id, state_name FROM senatorial_districts
+SELECT id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM senatorial_districts
 WHERE id = $1 LIMIT 1
 `
 
@@ -664,12 +724,17 @@ func (q *Queries) GetSenatorialDistrictByID(ctx context.Context, id int32) (Sena
 		&i.CoalitionCenter,
 		&i.StateID,
 		&i.StateName,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
 
 const getSenatorialDistricts = `-- name: GetSenatorialDistricts :many
-SELECT id, name, description, coalition_center, state_id, state_name FROM senatorial_districts
+SELECT id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM senatorial_districts
 WHERE ($1::int = 0 OR state_id = $1)
 ORDER BY name ASC
 `
@@ -690,6 +755,11 @@ func (q *Queries) GetSenatorialDistricts(ctx context.Context, stateID int32) ([]
 			&i.CoalitionCenter,
 			&i.StateID,
 			&i.StateName,
+			&i.FederalConstituenciesCount,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 		); err != nil {
 			return nil, err
 		}
@@ -702,7 +772,7 @@ func (q *Queries) GetSenatorialDistricts(ctx context.Context, stateID int32) ([]
 }
 
 const getStateAssemblyConstituencies = `-- name: GetStateAssemblyConstituencies :many
-SELECT id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name FROM state_assembly_constituencies
+SELECT id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count FROM state_assembly_constituencies
 WHERE ($1::int = 0 OR state_id = $1) AND ($2::int = 0 OR federal_constituency_id = $2)
 ORDER BY name ASC
 `
@@ -732,6 +802,8 @@ func (q *Queries) GetStateAssemblyConstituencies(ctx context.Context, arg GetSta
 			&i.SenatorialDistrictName,
 			&i.FederalConstituencyID,
 			&i.FederalConstituencyName,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
 		); err != nil {
 			return nil, err
 		}
@@ -744,7 +816,7 @@ func (q *Queries) GetStateAssemblyConstituencies(ctx context.Context, arg GetSta
 }
 
 const getStateAssemblyConstituencyByID = `-- name: GetStateAssemblyConstituencyByID :one
-SELECT id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name FROM state_assembly_constituencies
+SELECT id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count FROM state_assembly_constituencies
 WHERE id = $1 LIMIT 1
 `
 
@@ -762,6 +834,8 @@ func (q *Queries) GetStateAssemblyConstituencyByID(ctx context.Context, id int32
 		&i.SenatorialDistrictName,
 		&i.FederalConstituencyID,
 		&i.FederalConstituencyName,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -789,7 +863,7 @@ func (q *Queries) GetStateByID(ctx context.Context, arg GetStateByIDParams) (Get
 }
 
 const getStateDetailsByID = `-- name: GetStateDetailsByID :one
-SELECT id, name, country_id, country_code, latitude, longitude FROM c_states
+SELECT id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
 WHERE id = $1 LIMIT 1
 `
 
@@ -803,31 +877,45 @@ func (q *Queries) GetStateDetailsByID(ctx context.Context, id int16) (CState, er
 		&i.CountryCode,
 		&i.Latitude,
 		&i.Longitude,
+		&i.SenatorialDistrictsCount,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
 
 const getStatesByCountryID = `-- name: GetStatesByCountryID :many
-SELECT id, name FROM c_states
+SELECT id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
 WHERE country_id = $1
 ORDER BY name ASC
 `
 
-type GetStatesByCountryIDRow struct {
-	ID   int16  `json:"id"`
-	Name string `json:"name"`
-}
-
-func (q *Queries) GetStatesByCountryID(ctx context.Context, countryID int16) ([]GetStatesByCountryIDRow, error) {
+func (q *Queries) GetStatesByCountryID(ctx context.Context, countryID int16) ([]CState, error) {
 	rows, err := q.db.Query(ctx, getStatesByCountryID, countryID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetStatesByCountryIDRow
+	var items []CState
 	for rows.Next() {
-		var i GetStatesByCountryIDRow
-		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+		var i CState
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CountryID,
+			&i.CountryCode,
+			&i.Latitude,
+			&i.Longitude,
+			&i.SenatorialDistrictsCount,
+			&i.FederalConstituenciesCount,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
+		); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -839,7 +927,7 @@ func (q *Queries) GetStatesByCountryID(ctx context.Context, countryID int16) ([]
 }
 
 const getWardByID = `-- name: GetWardByID :one
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name FROM wards
+SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count FROM wards
 WHERE id = $1 LIMIT 1
 `
 
@@ -856,12 +944,14 @@ func (q *Queries) GetWardByID(ctx context.Context, id int32) (Ward, error) {
 		&i.StateName,
 		&i.StateAssemblyConstituencyID,
 		&i.StateAssemblyConstituencyName,
+		&i.Status,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
 
 const getWards = `-- name: GetWards :many
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name FROM wards
+SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count FROM wards
 WHERE ($1::int = 0 OR lga_id = $1) AND ($2::int = 0 OR state_id = $2)
 ORDER BY name ASC
 `
@@ -890,6 +980,8 @@ func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, err
 			&i.StateName,
 			&i.StateAssemblyConstituencyID,
 			&i.StateAssemblyConstituencyName,
+			&i.Status,
+			&i.PollingUnitsCount,
 		); err != nil {
 			return nil, err
 		}
@@ -938,11 +1030,104 @@ func (q *Queries) ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 	return items, nil
 }
 
+const recalculateFederalConstituencyMetrics = `-- name: RecalculateFederalConstituencyMetrics :exec
+UPDATE federal_constituencies fc
+SET lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
+    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
+    wards_count = COALESCE((SELECT SUM(wards_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
+    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0)
+`
+
+func (q *Queries) RecalculateFederalConstituencyMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateFederalConstituencyMetrics)
+	return err
+}
+
+const recalculateLGAMetrics = `-- name: RecalculateLGAMetrics :exec
+UPDATE lgas l
+SET state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_assembly_constituencies sac WHERE sac.lga_id = l.id), 0),
+    wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.lga_id = l.id), 0),
+    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM wards w WHERE w.lga_id = l.id), 0)
+`
+
+func (q *Queries) RecalculateLGAMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateLGAMetrics)
+	return err
+}
+
+const recalculateNationalMetrics = `-- name: RecalculateNationalMetrics :exec
+UPDATE national_metrics
+SET states_count = (SELECT COUNT(*) FROM c_states),
+    senatorial_districts_count = (SELECT COUNT(*) FROM senatorial_districts),
+    federal_constituencies_count = (SELECT COUNT(*) FROM federal_constituencies),
+    state_constituencies_count = (SELECT COUNT(*) FROM state_assembly_constituencies),
+    lgas_count = (SELECT COUNT(*) FROM lgas),
+    wards_count = (SELECT COUNT(*) FROM wards),
+    polling_units_count = (SELECT COUNT(*) FROM polling_units),
+    updated_at = NOW()
+WHERE id = 1
+`
+
+func (q *Queries) RecalculateNationalMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateNationalMetrics)
+	return err
+}
+
+const recalculateSenatorialDistrictMetrics = `-- name: RecalculateSenatorialDistrictMetrics :exec
+UPDATE senatorial_districts sd
+SET federal_constituencies_count = COALESCE((SELECT COUNT(*) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
+    lgas_count = COALESCE((SELECT SUM(lgas_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
+    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
+    wards_count = COALESCE((SELECT SUM(wards_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
+    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0)
+`
+
+func (q *Queries) RecalculateSenatorialDistrictMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateSenatorialDistrictMetrics)
+	return err
+}
+
+const recalculateStateAssemblyConstituencyMetrics = `-- name: RecalculateStateAssemblyConstituencyMetrics :exec
+UPDATE state_assembly_constituencies sac
+SET wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.state_assembly_constituency_id = sac.id), 0),
+    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM wards w WHERE w.state_assembly_constituency_id = sac.id), 0)
+`
+
+func (q *Queries) RecalculateStateAssemblyConstituencyMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateStateAssemblyConstituencyMetrics)
+	return err
+}
+
+const recalculateStateMetrics = `-- name: RecalculateStateMetrics :exec
+UPDATE c_states s
+SET senatorial_districts_count = COALESCE((SELECT COUNT(*) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
+    federal_constituencies_count = COALESCE((SELECT SUM(federal_constituencies_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
+    lgas_count = COALESCE((SELECT SUM(lgas_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
+    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
+    wards_count = COALESCE((SELECT SUM(wards_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
+    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0)
+`
+
+func (q *Queries) RecalculateStateMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateStateMetrics)
+	return err
+}
+
+const recalculateWardMetrics = `-- name: RecalculateWardMetrics :exec
+UPDATE wards w
+SET polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.ward_id = w.id), 0)
+`
+
+func (q *Queries) RecalculateWardMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateWardMetrics)
+	return err
+}
+
 const updateFederalConstituency = `-- name: UpdateFederalConstituency :one
 UPDATE federal_constituencies
 SET name = $2, state_id = $3, state_name = $4, senatorial_district_id = $5, senatorial_district_name = $6
 WHERE id = $1
-RETURNING id, name, state_id, state_name, senatorial_district_id, senatorial_district_name
+RETURNING id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type UpdateFederalConstituencyParams struct {
@@ -971,6 +1156,10 @@ func (q *Queries) UpdateFederalConstituency(ctx context.Context, arg UpdateFeder
 		&i.StateName,
 		&i.SenatorialDistrictID,
 		&i.SenatorialDistrictName,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -979,7 +1168,7 @@ const updateLGA = `-- name: UpdateLGA :one
 UPDATE lgas
 SET name = $2, abbreviation = $3, state_id = $4, state_name = $5, senatorial_district_id = $6, senatorial_district_name = $7, federal_constituency_id = $8, federal_constituency_name = $9
 WHERE id = $1
-RETURNING id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name
+RETURNING id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count
 `
 
 type UpdateLGAParams struct {
@@ -1017,6 +1206,9 @@ func (q *Queries) UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, erro
 		&i.SenatorialDistrictName,
 		&i.FederalConstituencyID,
 		&i.FederalConstituencyName,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -1025,7 +1217,7 @@ const updatePollingUnit = `-- name: UpdatePollingUnit :one
 UPDATE polling_units
 SET name = $2, abbreviation = $3, units = $4, delimitation = $5, remark = $6, registration_area_id = $7, ward_id = $8, ward_name = $9, lga_id = $10, lga_name = $11, state_id = $12, state_name = $13, latitude = $14, longitude = $15, precise_location = $16, formatted_address = $17, google_place_id = $18
 WHERE id = $1
-RETURNING id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id
+RETURNING id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status
 `
 
 type UpdatePollingUnitParams struct {
@@ -1090,6 +1282,7 @@ func (q *Queries) UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitPa
 		&i.PreciseLocation,
 		&i.FormattedAddress,
 		&i.GooglePlaceID,
+		&i.Status,
 	)
 	return i, err
 }
@@ -1098,7 +1291,7 @@ const updateSenatorialDistrict = `-- name: UpdateSenatorialDistrict :one
 UPDATE senatorial_districts
 SET name = $2, description = $3, coalition_center = $4, state_id = $5, state_name = $6
 WHERE id = $1
-RETURNING id, name, description, coalition_center, state_id, state_name
+RETURNING id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type UpdateSenatorialDistrictParams struct {
@@ -1127,6 +1320,11 @@ func (q *Queries) UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenato
 		&i.CoalitionCenter,
 		&i.StateID,
 		&i.StateName,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -1135,7 +1333,7 @@ const updateState = `-- name: UpdateState :one
 UPDATE c_states
 SET name = $2, country_id = $3, country_code = $4, latitude = $5, longitude = $6
 WHERE id = $1
-RETURNING id, name, country_id, country_code, latitude, longitude
+RETURNING id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
 `
 
 type UpdateStateParams struct {
@@ -1164,6 +1362,12 @@ func (q *Queries) UpdateState(ctx context.Context, arg UpdateStateParams) (CStat
 		&i.CountryCode,
 		&i.Latitude,
 		&i.Longitude,
+		&i.SenatorialDistrictsCount,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -1172,7 +1376,7 @@ const updateStateAssemblyConstituency = `-- name: UpdateStateAssemblyConstituenc
 UPDATE state_assembly_constituencies
 SET name = $2, lga_id = $3, lga_name = $4, state_id = $5, state_name = $6, senatorial_district_id = $7, senatorial_district_name = $8, federal_constituency_id = $9, federal_constituency_name = $10
 WHERE id = $1
-RETURNING id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name
+RETURNING id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count
 `
 
 type UpdateStateAssemblyConstituencyParams struct {
@@ -1213,6 +1417,8 @@ func (q *Queries) UpdateStateAssemblyConstituency(ctx context.Context, arg Updat
 		&i.SenatorialDistrictName,
 		&i.FederalConstituencyID,
 		&i.FederalConstituencyName,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }
@@ -1221,7 +1427,7 @@ const updateWard = `-- name: UpdateWard :one
 UPDATE wards
 SET name = $2, abbreviation = $3, lga_id = $4, lga_name = $5, state_id = $6, state_name = $7
 WHERE id = $1
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name
+RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count
 `
 
 type UpdateWardParams struct {
@@ -1255,6 +1461,8 @@ func (q *Queries) UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, e
 		&i.StateName,
 		&i.StateAssemblyConstituencyID,
 		&i.StateAssemblyConstituencyName,
+		&i.Status,
+		&i.PollingUnitsCount,
 	)
 	return i, err
 }

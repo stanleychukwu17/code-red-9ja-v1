@@ -3,11 +3,60 @@ CREATE TABLE election_groups (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR(255) UNIQUE NOT NULL,
   rank INT NOT NULL,
+  
   elections_count INT NOT NULL DEFAULT 0,
   states_count INT NOT NULL DEFAULT 0,
+  senatorial_districts_count INT NOT NULL DEFAULT 0,
+  federal_constituencies_count INT NOT NULL DEFAULT 0,
+  lgas_count INT NOT NULL DEFAULT 0,
+  state_constituencies_count INT NOT NULL DEFAULT 0,
+  wards_count INT NOT NULL DEFAULT 0,
+  polling_units_count INT NOT NULL DEFAULT 0,
+  
+  state_supervisors_count INT NOT NULL DEFAULT 0,
+  unique_state_supervisors_count INT NOT NULL DEFAULT 0,
+  lga_supervisors_count INT NOT NULL DEFAULT 0,
+  unique_lga_supervisors_count INT NOT NULL DEFAULT 0,
+  ward_supervisors_count INT NOT NULL DEFAULT 0,
+  unique_ward_supervisors_count INT NOT NULL DEFAULT 0,
+  
   reports_count INT NOT NULL DEFAULT 0,
   updates_count INT NOT NULL DEFAULT 0,
   results_submitted_count INT NOT NULL DEFAULT 0,
+  
+  unique_final_results_expected INT NOT NULL DEFAULT 0,
+  pu_agents_count INT NOT NULL DEFAULT 0,
+  unique_pu_agents_count INT NOT NULL DEFAULT 0,
+  pu_agents_in_attendance_count INT NOT NULL DEFAULT 0,
+  
+  pu_average_election_started_at TIMESTAMPTZ,
+  pu_average_election_ended_at TIMESTAMPTZ,
+  pu_election_practice_test_readiness_percentage FLOAT NOT NULL DEFAULT 0,
+  pu_final_results_uploaded_count INT NOT NULL DEFAULT 0,
+  unique_pu_final_results_uploaded_count INT NOT NULL DEFAULT 0,
+  pu_average_update_time_interval_in_seconds FLOAT NOT NULL DEFAULT 0,
+  pu_live_voters_referred_by_agent_count INT NOT NULL DEFAULT 0,
+  
+  total_pu_with_reports INT NOT NULL DEFAULT 0,
+  total_pu_with_updates INT NOT NULL DEFAULT 0,
+  total_pu_with_agents_in_attendance INT NOT NULL DEFAULT 0,
+  total_pu_where_election_has_started INT NOT NULL DEFAULT 0,
+  total_pu_where_election_has_ended INT NOT NULL DEFAULT 0,
+  total_pu_unique_final_results_uploaded INT NOT NULL DEFAULT 0,
+  total_pu_where_agents_referred_live_voters INT NOT NULL DEFAULT 0,
+  
+  -- Per-party rollup. Array of objects, one per party:
+  -- {
+  --   ... same object shape as outlined by the comment in election_group_wards,
+  --   state_supervisors_count,
+  --   unique_state_supervisors_count,
+  --   lga_supervisors_count,
+  --   unique_lga_supervisors_count,
+  --   ward_supervisors_count,
+  --   unique_ward_supervisors_count,
+  -- }
+  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
+  
   election_date DATE NOT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -15,24 +64,27 @@ CREATE TABLE election_groups (
 
 CREATE TABLE elections (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  name VARCHAR(255) NOT NULL,
-  rank INT NOT NULL,
-  candidates_count INT NOT NULL DEFAULT 0,
-  reports_count INT NOT NULL DEFAULT 0,
-  updates_count INT NOT NULL DEFAULT 0,
-  results_submitted_count INT NOT NULL DEFAULT 0,
-  election_date DATE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
-  election_group_name VARCHAR(100) NOT NULL, -- 2027 presidential election
-  office_id BIGINT REFERENCES offices(id) ON DELETE RESTRICT NOT NULL,
-  office_name VARCHAR(100) NOT NULL, -- President, Governor
-  scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
   state_constituency_id INT REFERENCES state_assembly_constituencies(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
+  office_id BIGINT REFERENCES offices(id) ON DELETE RESTRICT NOT NULL,
+
+  name VARCHAR(255) NOT NULL,
+  rank INT NOT NULL,
+  election_date DATE NOT NULL,
+  election_group_name VARCHAR(100) NOT NULL, -- 2027 presidential election
+  office_name VARCHAR(100) NOT NULL, -- President, Governor
+  scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
+
+  candidates_count INT NOT NULL DEFAULT 0,
+  reports_count INT NOT NULL DEFAULT 0,
+  updates_count INT NOT NULL DEFAULT 0,
+  results_submitted_count INT NOT NULL DEFAULT 0,
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   CONSTRAINT chk_election_scope_location CHECK (

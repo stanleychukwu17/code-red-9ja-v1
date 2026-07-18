@@ -137,8 +137,23 @@ export const API_URL = {
     const qs = params.toString();
     return `${api}/polling-units${qs ? `?${qs}` : ""}`;
   },
+  
+  electionStats: {
+    singleStateStats: (id: number | string, stateId: number | string, partyId?: number | string) => {
+      const qs = partyId ? `?party_id=${partyId}` : "";
+      return `${api}/election-groups/${id}/stats/states/${stateId}${qs}`;
+    },
+    singleLGAStats: (id: number | string, lgaId: number | string, partyId?: number | string) => {
+      const qs = partyId ? `?party_id=${partyId}` : "";
+      return `${api}/election-groups/${id}/stats/lgas/${lgaId}${qs}`;
+    },
+    singleWardStats: (id: number | string, wardId: number | string, partyId?: number | string) => {
+      const qs = partyId ? `?party_id=${partyId}` : "";
+      return `${api}/election-groups/${id}/stats/wards/${wardId}${qs}`;
+    },
+  },
 
-  lgas: `${api}/lgas`,
+  uploadToR2: `${api}/upload`,
   lgaById: (id: string | number) => `${api}/lgas/${id}`,
 
   parties: `${api}/parties`,
@@ -218,4 +233,6 @@ export const API_URL = {
     `${api}/polling-unit-results/${id}`,
   voteOnResult: (id: string | number) =>
     `${api}/polling-unit-results/${id}/vote`,
+
+  nationalMetrics: `${api}/bodies/metrics`,
 };

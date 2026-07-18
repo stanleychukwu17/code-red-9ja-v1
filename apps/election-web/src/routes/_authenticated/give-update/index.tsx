@@ -1,12 +1,10 @@
-import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
-import { cn } from "@repo/ui/lib/utils";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { RewardCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
-import { Button } from "@repo/ui/components/button";
-import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
-import { PageHeader } from "#/components/Headers";
 import { StickyFooter } from "#/components/Footers";
+import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
+import { Button } from "@repo/ui/components/button";
+import { RewardCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
+import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/give-update/")({
   component: GiveUpdateIntro,

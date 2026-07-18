@@ -8,7 +8,10 @@ import {
   FilterButton,
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
-import { ElectionInstancesTable, type ElectionInstanceType } from "#/components/Tables";
+import {
+  ElectionInstancesTable,
+  type ElectionInstanceType,
+} from "#/components/Tables";
 import { NationwideElectionFormDialog } from "#/components/dialogs/NationwideElectionFormDialog";
 import { StateElectionFormDialog } from "#/components/dialogs/StateElectionFormDialog";
 import { SenatorialDistrictElectionFormDialog } from "#/components/dialogs/SenatorialDistrictElectionFormDialog";
@@ -26,8 +29,6 @@ export const Route = createFileRoute("/_authenticated/elections/instances")({
   component: RouteComponent,
 });
 
-
-
 function RouteComponent() {
   const [isNationwideOpen, setIsNationwideOpen] = useState(false);
   const [isStateOpen, setIsStateOpen] = useState(false);
@@ -42,7 +43,7 @@ function RouteComponent() {
       queryKey: ["elections"],
       queryFn: async ({ pageParam }) => {
         const res = await getElections({
-          data: { limit: 20, cursor: pageParam as string },
+          data: { limit: 20, cursor: pageParam as string, orderBy: "rank", order: "ASC" },
         });
         if (res && res.success && res.data) {
           return res;

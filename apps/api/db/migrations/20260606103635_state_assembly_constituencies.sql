@@ -9,7 +9,9 @@ CREATE TABLE IF NOT EXISTS state_assembly_constituencies (
     senatorial_district_id INTEGER NOT NULL,
     senatorial_district_name VARCHAR(255) NOT NULL,
     federal_constituency_id INTEGER NOT NULL,
-    federal_constituency_name VARCHAR(255) NOT NULL
+    federal_constituency_name VARCHAR(255) NOT NULL,
+    wards_count INTEGER DEFAULT 0,
+    polling_units_count INTEGER DEFAULT 0
 );
 
 INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name) VALUES

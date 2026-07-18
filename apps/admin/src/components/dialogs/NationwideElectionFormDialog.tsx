@@ -22,6 +22,8 @@ import { UserFormDialog } from "./UserFormDialog";
 import { ElectionGroupFormDialog } from "./ElectionGroupFormDialog";
 import { Label } from "@repo/ui/components/input";
 import { CandidateRow } from "./CandidateRow";
+import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
+import { getUsersList } from "#/lib/server/users";
 
 export function NationwideElectionFormDialog({
   open,
@@ -37,7 +39,8 @@ export function NationwideElectionFormDialog({
   const [isGroupDialogOpen, setIsGroupDialogOpen] = React.useState(false);
   const [isCandidateDialogOpen, setIsCandidateDialogOpen] =
     React.useState(false);
-  const [candidates, setCandidates] = React.useState<UserResult[]>([]);
+  const [isExistingDialogOpen, setIsExistingDialogOpen] = React.useState(false);
+  const [candidates, setCandidates] = React.useState<any[]>([]);
   const [selectedOfficeName, setSelectedOfficeName] = React.useState<
     string | null
   >(null);
@@ -123,12 +126,29 @@ export function NationwideElectionFormDialog({
     },
   });
 
-  const handleAddCandidateSuccess = (newCand: UserResult) => {
+  const handleAddNewCandidateSuccess = (newCand: UserResult) => {
     setCandidates((prev) => [...prev, newCand]);
   };
 
   const handleRemoveCandidate = (index: number) => {
     setCandidates((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleAddMultipleExistingCandidates = (selectedUsers: any[]) => {
+    setCandidates((prev) => {
+      const updated = [...prev];
+      selectedUsers.forEach((userItem) => {
+        if (!updated.some((c) => c.id === userItem.id)) {
+          updated.push({
+            id: userItem.id,
+            first_name: `${userItem.first_name} ${userItem.last_name}`,
+            avatar_url: userItem.avatar || undefined,
+            party_id: userItem.party_id || undefined,
+          });
+        }
+      });
+      return updated;
+    });
   };
 
   const handleUpdateCandidateParty = async (index: number, newParty: any) => {
@@ -224,21 +244,26 @@ export function NationwideElectionFormDialog({
                     Candidates
                   </span>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
                       type="button"
-                      className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[#1a1a1a] hover:bg-[#000] px-3.5 text-[14px] font-semibold text-white transition cursor-pointer"
+                      variant="black"
+                      size="lg"
+                      className="px-4"
+                      onClick={() => setIsExistingDialogOpen(true)}
                     >
                       <Plus className="size-4" />
                       <span>Existing</span>
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="black"
+                      size="lg"
+                      className="px-4"
                       onClick={() => setIsCandidateDialogOpen(true)}
-                      className="flex h-9 items-center gap-1.5 rounded-[10px] bg-[#1a1a1a] hover:bg-[#000] px-3.5 text-[14px] font-semibold text-white transition cursor-pointer"
                     >
                       <Plus className="size-4" />
                       <span>New</span>
-                    </button>
+                    </Button>
                   </div>
                 </div>
 
@@ -249,7 +274,7 @@ export function NationwideElectionFormDialog({
                     </span>
                   </div>
                 ) : (
-                  <div className="space-y-0 max-h-60 overflow-y-auto pr-1">
+                  <div className="space-y-2 max-h-60 overflow-y-auto p-1">
                     {candidates.map((cand, idx) => (
                       <CandidateRow
                         key={cand.id}
@@ -319,7 +344,24 @@ export function NationwideElectionFormDialog({
       <UserFormDialog
         open={isCandidateDialogOpen}
         onClose={() => setIsCandidateDialogOpen(false)}
-        onSuccess={handleAddCandidateSuccess}
+        onSuccess={handleAddNewCandidateSuccess}
+      />
+
+      <UserFinderCommand
+        open={isExistingDialogOpen}
+        onClose={() => setIsExistingDialogOpen(false)}
+        onAddUsers={handleAddMultipleExistingCandidates}
+        alreadySelectedIds={candidates.map((c) => c.id)}
+        fetchUsers={async () => {
+          const res = await getUsersList();
+          if (res && res.success && res.data?.users) {
+            return res.data.users;
+          }
+          return [];
+        }}
+        title="Search Candidates"
+        placeholder="Search candidates to add"
+        selectMode="multiple"
       />
     </>
   );

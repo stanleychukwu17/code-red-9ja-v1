@@ -18,6 +18,13 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   last_update_at TIMESTAMPTZ,
   reports_count INT NOT NULL DEFAULT 0,
   updates_count INT NOT NULL DEFAULT 0,
+  
+  -- Additional Results & Tracking Fields
+  results_submitted_count INT NOT NULL DEFAULT 0,
+  results_expected_to_submit_count INT NOT NULL DEFAULT 0,
+  live_voters_referred_count INT NOT NULL DEFAULT 0,
+  interval_updates JSONB DEFAULT '{}'::jsonb,
+
   -- Score from 0-100 reflecting how prepared this agent is based on practice test performance
   election_practice_test_readiness_percentage NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (election_practice_test_readiness_percentage BETWEEN 0 AND 100),
   

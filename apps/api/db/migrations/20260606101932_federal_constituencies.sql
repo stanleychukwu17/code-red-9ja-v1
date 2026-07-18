@@ -5,7 +5,11 @@ CREATE TABLE IF NOT EXISTS federal_constituencies (
     state_id INTEGER NOT NULL,
     state_name VARCHAR(255) NOT NULL,
     senatorial_district_id INTEGER NOT NULL,
-    senatorial_district_name VARCHAR(255) NOT NULL
+    senatorial_district_name VARCHAR(255) NOT NULL,
+    lgas_count INTEGER DEFAULT 0,
+    state_constituencies_count INTEGER DEFAULT 0,
+    wards_count INTEGER DEFAULT 0,
+    polling_units_count INTEGER DEFAULT 0
 );
 
 INSERT INTO federal_constituencies (id, name, state_id, state_name, senatorial_district_id, senatorial_district_name) VALUES

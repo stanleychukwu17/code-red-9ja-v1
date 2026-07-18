@@ -18,7 +18,7 @@ type StatesService interface {
 	GetStateByID(ctx context.Context, id int16) (queries.CState, error)
 	UpdateState(ctx context.Context, id int16, name string, countryID int16, countryCode string, latitude, longitude float64) (queries.CState, error)
 	DeleteState(ctx context.Context, id int16) error
-	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.GetStatesByCountryIDRow, error)
+	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
 }
 
 type Handler struct {
@@ -319,7 +319,7 @@ func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var paginatedStates []queries.GetStatesByCountryIDRow
+	var paginatedStates []queries.CState
 	hasMore := false
 	nextCursor := ""
 
@@ -334,7 +334,7 @@ func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
 			nextCursor = strconv.FormatInt(int64(paginatedStates[len(paginatedStates)-1].ID), 10)
 		}
 	} else {
-		paginatedStates = []queries.GetStatesByCountryIDRow{}
+		paginatedStates = []queries.CState{}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "States fetched successfully", map[string]interface{}{

@@ -10,18 +10,20 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	pu_results "free9ja/api/internal/service/polling_unit_results"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Handler struct {
-	service *pu_results.Service
-	utils   *utils.Utils
+	service         *pu_results.Service
+	utils           *utils.Utils
+	taskDistributor worker.TaskDistributor
 }
 
-func NewHandler(s *pu_results.Service, u *utils.Utils) *Handler {
-	return &Handler{service: s, utils: u}
+func NewHandler(s *pu_results.Service, u *utils.Utils, taskDistributor worker.TaskDistributor) *Handler {
+	return &Handler{service: s, utils: u, taskDistributor: taskDistributor}
 }
 
 // ── Request/Response types ─────────────────────────────────────────────────
@@ -104,6 +106,19 @@ func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to submit result: "+err.Error())
 		return
 	}
+
+	// Enqueue debounced polling unit stats refresh
+	go func() {
+		payload := &worker.RefreshPollingUnitStatsPayload{
+			Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
+				ElectionGroupID: req.ElectionGroupID,
+				PollingUnitID:   req.PollingUnitID,
+			},
+		}
+		if err := h.taskDistributor.DistributeTaskRefreshPollingUnitStats(r.Context(), payload); err != nil {
+			// Log error but don't fail the request
+		}
+	}()
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Result submitted successfully", map[string]interface{}{
 		"result": result,

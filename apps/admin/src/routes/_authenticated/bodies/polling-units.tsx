@@ -15,6 +15,7 @@ import { getPollingUnits } from "#/lib/server/polling_units";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
 
 export const Route = createFileRoute("/_authenticated/bodies/polling-units")({
   head: () => getPageHeader({ title: "Bodies - Polling Units" }),
@@ -110,6 +111,7 @@ function RouteComponent() {
         rightComponent={
           <>
             <FilterButton />
+            <BodiesDropdown />
             <AddButton {...dialogProps} />
           </>
         }

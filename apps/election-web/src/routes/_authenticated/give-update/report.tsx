@@ -1,28 +1,15 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { toast } from "sonner";
-import { X, Play, Image as ImageIcon, Plus } from "lucide-react";
-import { useState, useRef } from "react";
-import {
-  Drawer,
-  DrawerContent,
-  DrawerTrigger,
-  DrawerTitle,
-  DrawerHeader,
-} from "@repo/ui/components/drawer";
-import { Button } from "@repo/ui/components/button";
-import { StickyFooter } from "#/components/Footers";
 import { PageWrapper } from "#/components/Wrappers";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
 
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { useAuth } from "#/hooks/useAuth";
-import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
-import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
-import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
-import { VideoPreview } from "#/components/VideoPreview";
-import { Textarea } from "@repo/ui/components/input";
+import { PostFooter } from "#/components/PostFooter";
 import { PostHeader } from "#/components/PostHeader";
 import { PostInputArea } from "#/components/PostInputArea";
-import { PostFooter } from "#/components/PostFooter";
+import { useAuth } from "#/hooks/useAuth";
+import { confirmFileUpload, getPresignedUploadURL } from "#/lib/server/parties";
+import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
+import { useMutation } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/_authenticated/give-update/report")({
   component: GiveSituationReport,
@@ -30,7 +17,11 @@ export const Route = createFileRoute("/_authenticated/give-update/report")({
 
 function GiveSituationReport() {
   const navigate = useNavigate();
-  const { user, selectedElectionGroup, selectedAssignment: currentAssignment } = useAuth();
+  const {
+    user,
+    selectedElectionGroup,
+    selectedAssignment: currentAssignment,
+  } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -112,7 +103,9 @@ function GiveSituationReport() {
 
       if (selectedElectionGroup.election_date) {
         const today = new Date().toISOString().split("T")[0];
-        const electionDate = new Date(selectedElectionGroup.election_date).toISOString().split("T")[0];
+        const electionDate = new Date(selectedElectionGroup.election_date)
+          .toISOString()
+          .split("T")[0];
         if (today !== electionDate) {
           throw new Error("Updates can only be submitted on the election day.");
         }
