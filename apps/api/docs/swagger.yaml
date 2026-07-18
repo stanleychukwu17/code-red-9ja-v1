@@ -2360,14 +2360,6 @@ paths:
         name: countryID
         required: true
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -4072,20 +4064,12 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches LGAs with optional state_id filtering and cursor pagination
+      description: Fetches LGAs with optional state_id filtering
       parameters:
       - description: State ID to filter by
         in: query
         name: state_id
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -6658,21 +6642,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches all cities for a specific state by its ID with cursor pagination
+      description: Fetches all cities for a specific state by its ID
       parameters:
       - description: State ID
         in: path
         name: stateID
         required: true
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:

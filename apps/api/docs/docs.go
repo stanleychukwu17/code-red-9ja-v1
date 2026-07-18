@@ -1133,18 +1133,6 @@ const docTemplate = `{
                         "name": "countryID",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default 20, max 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cursor (ID of last record)",
-                        "name": "cursor",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -3620,7 +3608,7 @@ const docTemplate = `{
         },
         "/lgas": {
             "get": {
-                "description": "Fetches LGAs with optional state_id filtering and cursor pagination",
+                "description": "Fetches LGAs with optional state_id filtering",
                 "consumes": [
                     "application/json"
                 ],
@@ -3636,18 +3624,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "State ID to filter by",
                         "name": "state_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default 20, max 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cursor (ID of last record)",
-                        "name": "cursor",
                         "in": "query"
                     }
                 ],
@@ -7400,7 +7376,7 @@ const docTemplate = `{
         },
         "/states/{stateID}/cities": {
             "get": {
-                "description": "Fetches all cities for a specific state by its ID with cursor pagination",
+                "description": "Fetches all cities for a specific state by its ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -7418,18 +7394,6 @@ const docTemplate = `{
                         "name": "stateID",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default 20, max 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cursor (ID of last record)",
-                        "name": "cursor",
-                        "in": "query"
                     }
                 ],
                 "responses": {
