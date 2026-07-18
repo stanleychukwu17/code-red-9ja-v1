@@ -21,7 +21,7 @@ import (
 
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
@@ -106,7 +106,7 @@ type UserResponse struct {
 	EducationLevel     string   `json:"education_level"`
 }
 
-func mapUserToResponse(u queries.User, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles []queries.GetUserRolesRow) UserResponse {
+func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles []queries.GetUserRolesRow) UserResponse {
 	var email, avatar, phone, username, lastName, firstName, middleName, gender string
 	var dateOfBirth, accountStatus string
 	var ninVerified, phoneVerified, emailVerified, votersCardVerified bool

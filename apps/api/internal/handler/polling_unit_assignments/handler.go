@@ -22,7 +22,7 @@ type PollingUnitAssignmentsService interface {
 }
 
 type UsersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 }
 

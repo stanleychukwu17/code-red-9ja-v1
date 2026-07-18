@@ -43,12 +43,12 @@ func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber st
 	return s.monnify.ValidateBankAccount(ctx, accountNumber, bankCode)
 }
 
-func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
+func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
 	// Check Redis
 	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
 	userInfoJSON, err := s.rdb.Get(ctx, userInfoKey).Result()
 	if err == nil {
-		var user queries.User
+		var user queries.UserWithPlaces
 		if err := json.Unmarshal([]byte(userInfoJSON), &user); err == nil {
 			return user, nil
 		}
@@ -57,17 +57,16 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	// Fetch from DB if not in Redis
 	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
 	if err != nil {
-		return queries.User{}, fmt.Errorf("user not found: %w", err)
+		return queries.UserWithPlaces{}, fmt.Errorf("user not found: %w", err)
 	}
 
+	// attach the user countryName, stateName, cityName to the user info that will be cached in redis
 	var countryName, stateName, cityName string
-
 	if user.CurrentCountry > 0 {
 		if country, err := s.queries.GetCountryByID(ctx, user.CurrentCountry); err == nil {
 			countryName = country.Name
 		}
 	}
-
 	if user.CurrentState > 0 && user.CurrentCountry > 0 {
 		if state, err := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
 			ID:        user.CurrentState,
@@ -76,8 +75,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 			stateName = state.Name
 		}
 	}
-
-	if user.CurrentCity.Valid && user.CurrentState > 0 {
+	if user.CurrentCity.Valid && user.CurrentState > 0 && user.CurrentCity.Int32 > 0 {
 		if city, err := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
 			ID:      user.CurrentCity.Int32,
 			StateID: user.CurrentState,
@@ -87,12 +85,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	}
 
 	// Cache it in Redis
-	userWithPlaces := struct {
-		queries.User
-		CountryName string `json:"country_name"`
-		StateName   string `json:"state_name"`
-		CityName    string `json:"city_name"`
-	}{
+	userWithPlaces := queries.UserWithPlaces{
 		User:        user,
 		CountryName: countryName,
 		StateName:   stateName,
@@ -104,7 +97,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour) // 5 years expires
 	}
 
-	return user, nil
+	return userWithPlaces, nil
 }
 
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {

@@ -97,9 +97,9 @@ func (m *MockAuthService) RegisterCandidatePlaceholder(ctx context.Context, emai
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
-func (m *MockAuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
+func (m *MockAuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
 	args := m.Called(ctx, fakeID)
-	return args.Get(0).(queries.User), args.Error(1)
+	return args.Get(0).(queries.UserWithPlaces), args.Error(1)
 }
 
 func (m *MockAuthService) ChangePasswordByEmail(ctx context.Context, email, newPassword string) error {

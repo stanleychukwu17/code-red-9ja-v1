@@ -30,7 +30,7 @@ type AuthService interface {
 	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
 	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
-	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 
 	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) (string, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error

@@ -21,13 +21,14 @@ export type UserType = {
   current_country?: any;
   current_state?: any;
   current_city?: any;
+  country_name?: string;
+  state_name?: string;
   state_of_origin?: any;
-  party_id?: any;
   role?: any;
+  party_id?: any;
   email?: any;
   phone?: any;
   username?: any;
-  role_level?: string;
   created_at?: any;
   avatar_url?: string;
   name?: string;
@@ -84,7 +85,7 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
 
   const name = data.name || [firstName, lastName].filter(Boolean).join(" ") || username;
 
-  const rawRoleLevel = data.role_level || "user";
+  const rawRoleLevel = data.role || "user";
   const formattedRoleLevel =
     rawRoleLevel.charAt(0).toUpperCase() + rawRoleLevel.slice(1);
 
@@ -93,10 +94,9 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
 
   const avatar = data.avatar || data.avatar_url;
 
-  const city = getPgString(data.current_city);
-  const state = getPgString(data.current_state);
-  const country = getPgString(data.current_country);
-  const location = ["state", "country"].filter(Boolean).join(", ");
+  const state = getPgString(data.state_name);
+  const country = getPgString(data.country_name);
+  const location = [state, country].filter(Boolean).join(",- ");
 
   return (
     <TileRow className="py-10 border-b">

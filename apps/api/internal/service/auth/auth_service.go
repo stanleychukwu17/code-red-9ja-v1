@@ -31,7 +31,7 @@ type MessagingService interface {
 
 type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
@@ -130,7 +130,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	log := logger.FromContext(ctx).With("component", logger.ComponentAuthService)
 	identifier = strings.TrimSpace(strings.ToLower(identifier))
 
-	var user queries.User
 	var err error
 	var fakeIDStr string
 	var fakeID int64
@@ -171,7 +170,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 
 	// fetch the user details using the fakeID
 	fakeID, _ = strconv.ParseInt(fakeIDStr, 10, 64)
-	user, err = s.GetUserDetailsByFakeID(ctx, fakeID)
+	user, err := s.GetUserDetailsByFakeID(ctx, fakeID)
 	if err != nil {
 		return LoginResult{}, errors.New("invalid login details provided")
 	}
@@ -183,21 +182,18 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 
 	var userRoleCodes []string
-	// Extract just the role codes (e.g., "admin", "user") into a simple string slice for easier comparison
+	// Extract just the role codes (e.g., "admin", "super_admin", "party_admin", "super_party_admin" e.t.c) into a simple string slice for easier comparison
 	for _, ur := range userRoles {
 		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
-	fmt.Println("userRoleCodes", userRoleCodes)
 
 	// Role Validation
 	if len(allowedRoles) > 0 {
 		// Check if the user has at least one of the roles required to perform this action (allowedRoles)
 		hasRole := false
 		for _, allowedRole := range allowedRoles {
-			for _, code := range userRoleCodes {
-				fmt.Println("allowedRole", allowedRole)
-				fmt.Println("code", code)
-				if code == allowedRole {
+			for _, userRoleC := range userRoleCodes {
+				if userRoleC == allowedRole {
 					hasRole = true
 					break // Stop checking once a matching role is found
 				}
@@ -430,7 +426,6 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 
 	// Compare with current time
 	if time.Since(parsedTime) < 10*time.Minute {
-		// fmt.Println("TimeAdded is less than 10 minutes ago", parsedTime)
 		return RefreshResult{
 			User: userDetails,
 		}, nil
@@ -805,7 +800,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		if userErr == nil {
 			go func() {
 				bgCtx := context.Background()
-				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser); walletErr != nil {
+				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
 					slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
 				}
 			}()
@@ -1031,7 +1026,7 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 }
 
 // GetUserDetailsByFakeID fetches all user details using the user fake_id.
-func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
+func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
 	return s.usersService.GetUserByFakeID(ctx, fakeID)
 }
 
@@ -1336,34 +1331,36 @@ type SeedUserRequest struct {
 
 func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
 	for _, u := range users {
+		// check if email already exit, if yes, we can skip this user onto the next
+		if s.CheckEmail(ctx, u.Email) {
+			continue
+		}
+
 		// Hash password
 		hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return "", err
 		}
 
+		// parse date of birth
 		dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
 		if err != nil {
 			return "", fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
 		}
 
 		// Prepare params
-		var emailVal, avatarVal, phoneVal, usernameVal, middleNameVal, genderVal pgtype.Text
-		var currentLgaVal, currentCityVal pgtype.Int4
-		var stateOfOriginVal pgtype.Int2
-		var occupationIDVal pgtype.Int2
+		emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
+		avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
+		usernameVal := pgtype.Text{String: *u.Username, Valid: true}
+		middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
+		genderVal := pgtype.Text{String: u.Gender, Valid: true}
+		currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
+		currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
+		stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
+		occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
 
-		emailVal = pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
-		avatarVal = pgtype.Text{String: u.Avatar, Valid: true}
-		usernameVal = pgtype.Text{String: *u.Username, Valid: true}
-		middleNameVal = pgtype.Text{String: *u.MiddleName, Valid: true}
-		genderVal = pgtype.Text{String: u.Gender, Valid: true}
-		currentLgaVal = pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
-		currentCityVal = pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
-		stateOfOriginVal = pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
-		occupationIDVal = pgtype.Int2{Int16: *u.OccupationID, Valid: true}
-
-		//
+		// check if the user phone number is valid
+		var phoneVal pgtype.Text
 		var iso2 string
 		var phonecode string
 		var formattedPhone string
@@ -1374,6 +1371,7 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			if err != nil {
 				return "", fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
 			}
+
 			iso2 = country.Iso2
 			phonecode = country.Phonecode
 			formattedPhone, err = s.ValidatePhoneForCountry(rawPhoneInput, iso2)
