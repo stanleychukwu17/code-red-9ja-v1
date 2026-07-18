@@ -3,7 +3,7 @@ import { getAllCountries, getCities } from "#/lib/server/countries";
 import { getStates } from "#/lib/server/states";
 import { getParties, getPresignedUploadURL, confirmFileUpload, } from "#/lib/server/parties";
 import { registerCandidate } from "#/lib/server/auth/auth";
-import { updateUser, getUserPhoneNumbers, deleteUserPhoneNumber } from "#/lib/server/users";
+import { updateUser, getUserPhoneNumbers, deleteUserPhoneNumber, updateUserPhoneNumbers } from "#/lib/server/users";
 
 export type { UserResult };
 
@@ -26,8 +26,8 @@ export function UserFormDialog(
       updateUser={updateUser}
       loadUserPhoneNumber={getUserPhoneNumbers}
       deleteUserPhoneNumber={deleteUserPhoneNumber}
+      updateUserPhoneNumbers={updateUserPhoneNumbers}
     // updateUserMoreInfo={...} // TODO: implement and pass this API
-    // updateUserPhoneNumbers={...} // TODO: implement and pass this API
     // getOccupations={...} // TODO: implement and pass this API
     />
   );

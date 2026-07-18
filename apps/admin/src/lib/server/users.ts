@@ -63,7 +63,6 @@ export const getUserPhoneNumbers = createServerFn({ method: "GET" })
     try {
       const response = await apiFetch(API_URL.userPhoneNumbers(user_id));
       const resData = await response.json();
-      console.log(resData)
       return resData;
     } catch (error) {
       return { success: false, message: "Failed to fetch user phone numbers: " + (error as Error).message };
@@ -83,4 +82,22 @@ export const deleteUserPhoneNumber = createServerFn({ method: "POST" })
     } catch (error) {
       return { success: false, message: "Failed to delete phone number: " + (error as Error).message };
     }
+  });
+
+// Updates user phone numbers
+export const updateUserPhoneNumbers = createServerFn({ method: "POST" })
+  .inputValidator((data: { user_fid: string | number; phones: any[] }) => data)
+  .handler(async ({ data: { user_fid, phones } }) => {
+    console.log({ user_fid, phones })
+    // try {
+    //   const response = await apiFetch(API_URL.userPhoneNumbers(user_fid), {
+    //     method: "PUT",
+    //     headers: { "Content-Type": "application/json" },
+    //     body: JSON.stringify({ phones }),
+    //   });
+    //   const resData = await response.json();
+    //   return resData;
+    // } catch (error) {
+    //   return { success: false, message: "Failed to update phone numbers: " + (error as Error).message };
+    // }
   });

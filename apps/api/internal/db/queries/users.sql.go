@@ -184,6 +184,23 @@ func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberPa
 	return id, err
 }
 
+const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
+UPDATE users_phone_numbers
+SET on_whatsapp = $2, is_default = $3
+WHERE id = $1
+`
+
+type UpdatePhoneNumberParams struct {
+	ID         int64       `json:"id"`
+	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
+	IsDefault  pgtype.Bool `json:"is_default"`
+}
+
+func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
+	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.ID, arg.OnWhatsapp, arg.IsDefault)
+	return err
+}
+
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email, phone, username, password_hash, last_name,

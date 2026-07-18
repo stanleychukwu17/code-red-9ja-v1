@@ -749,10 +749,9 @@ export function UserFormDialog({
             updateUserPhoneNumbers={updateUserPhoneNumbers}
             deleteUserPhoneNumber={deleteUserPhoneNumber}
             loadUserPhoneNumber={loadUserPhoneNumber}
+            getAllCountries={getAllCountries}
             onClose={onClose}
-            onSuccess={() => {
-              onClose();
-            }}
+            onSuccess={() => { onClose(); }}
           />
         )}
       </DialogContent>
@@ -984,16 +983,26 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
 }
 
 
+type phoneType = {
+  id: string | number;
+  phone: string;
+  phonecode: string;
+  raw_input: string;
+  on_whatsapp: "yes" | "no";
+  is_default: boolean;
+}
 // The PhoneNumbersTab
-function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, loadUserPhoneNumber, onClose, onSuccess }: any) {
+function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, loadUserPhoneNumber, getAllCountries, onClose, onSuccess }: any) {
   const [error, setError] = React.useState<string | null>(null);
+  const [residentCountryPhoneCode, setResidentCountryPhoneCode] = React.useState<string | null>(null);
+  const userCountry = user.current_country;
 
   // Fetch phone numbers asynchronously when the tab mounts.
   // The query uses fake_id (or id as fallback) as the unique query key identifier.
-  const { data: loadedPhones, isLoading, refetch } = useQuery({
-    queryKey: ["user-phones", user?.fake_id],
+  const { data: userPhoneNumbers, isLoading, refetch } = useQuery({
+    queryKey: ["user-phonenumbers", user?.fake_id],
 
-    // query
+    // query function that fetches the number 
     queryFn: async () => {
       if (!loadUserPhoneNumber) return null;
       const res = await loadUserPhoneNumber({ data: { user_id: user?.fake_id } });
@@ -1004,18 +1013,44 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
     // Only run the query if the load function is provided and we have a valid user ID
     enabled: !!loadUserPhoneNumber && !!(user?.fake_id),
 
-    // disable refresh every time the tab is active
+    // disable refresh
     staleTime: Infinity,
   });
 
+  // Fetch all countries to be able to extract the user current country international phone code
+  const { data: loadedCountries, isLoading: isCountriesLoading } = useQuery({
+    queryKey: ["countries"],
+    queryFn: async () => {
+      if (!getAllCountries) return null;
+      const res = await getAllCountries();
+      return res;
+    },
+    enabled: !!getAllCountries,
+    staleTime: Infinity,
+  });
+
+  // Watch for loaded countries and the user's current country,
+  // then look up and store the corresponding international call code for the user country.
+  React.useEffect(() => {
+    const countries = loadedCountries?.data?.countries || [];
+
+    if (countries.length > 0) {
+      // search for the user current country info
+      const match = countries.find((c: any) => c.id == userCountry);
+      if (match && match.phonecode) {
+        setResidentCountryPhoneCode(match.phonecode);
+      }
+    }
+  }, [loadedCountries, userCountry]);
+
   // Determine the default initial state for the phone numbers array
-  const initialPhones = React.useMemo(() => {
+  const initialPhones: phoneType[] = React.useMemo(() => {
     // 1. Prioritize freshly fetched data from TanStack Query
-    if (loadedPhones && loadedPhones.length > 0) return loadedPhones;
+    if (userPhoneNumbers && userPhoneNumbers.length > 0) return userPhoneNumbers;
 
     // 2. Default to a single empty row template
-    return [{ id: 0, phone: "", on_whatsapp: "no", is_default: false }];
-  }, [loadedPhones, user?.phone_numbers]);
+    return [{ id: 0, phone: "", phonecode: "", raw_input: "", on_whatsapp: "no", is_default: false }];
+  }, [userPhoneNumbers]);
 
   // form management for phone numbers
   const form = useForm({
@@ -1023,12 +1058,14 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
       phones: initialPhones
     },
     onSubmit: async ({ value }) => {
-      saveMutation.mutate(value);
+      saveMutation.mutate(value.phones);
     },
   });
 
   // Remove phone number
   const handleRemovePhoneNumber = async (index: number, phoneObj: any, field: any) => {
+    console.log("delete number")
+    return;
     // If the phone object has a valid ID (> 0), it is already saved on the server.
     // We must call the backend API to physically delete it from the database.
     if (phoneObj.id && Number(phoneObj.id) > 0) {
@@ -1054,9 +1091,9 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
 
   // mutation for saving phone numbers back to the server
   const saveMutation = useMutation({
-    mutationFn: async (values: any) => {
+    mutationFn: async (values: phoneType[]) => {
       // Clean up the payload by omitting any empty rows the user didn't fill out
-      const validPhones = values.phones.filter((p: any) => p.phone.trim() !== "");
+      const validPhones = values.filter((p: phoneType) => p.raw_input?.trim() !== "");
       if (validPhones.length === 0) return { success: true };
 
       if (!updateUserPhoneNumbers) {
@@ -1065,7 +1102,7 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
 
       const res = await updateUserPhoneNumbers({
         data: {
-          user_id: user.fake_id || user.id,
+          user_fid: user.fake_id,
           phones: validPhones,
         },
       });
@@ -1084,10 +1121,10 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
   // Effect to synchronize the form state if the API query resolves after initial mount.
   // This safely updates the form without losing reactivity.
   React.useEffect(() => {
-    if (loadedPhones && loadedPhones.length > 0) {
-      form.setFieldValue("phones", loadedPhones);
+    if (userPhoneNumbers && userPhoneNumbers.length > 0) {
+      form.setFieldValue("phones", userPhoneNumbers);
     }
-  }, [loadedPhones, form]);
+  }, [userPhoneNumbers, form]);
 
   if (isLoading) {
     return (
@@ -1119,8 +1156,12 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
               name="phones"
               children={(field: any) => (
                 <div className="flex flex-col gap-3">
+
                   {field.state.value.map((phoneObj: any, index: number) => (
+                    // each of the phone number wrapper
                     <div key={index} data-id={phoneObj.id} className="flex flex-col gap-1.5 w-full">
+
+                      {/* Header - show only for the first phone number */}
                       {index === 0 && (
                         <div className="flex items-center gap-3 w-full px-1">
                           <label className="text-[14px] text-c-50 flex-1">Phone Number</label>
@@ -1130,23 +1171,28 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
                         </div>
                       )}
 
+                      {/* inputs */}
                       <div className="flex items-center gap-3 w-full">
                         {/* Prefix + Input container */}
                         <div className="flex items-center h-11 flex-1 rounded-[10px] border border-[#dfdfdf] bg-[#fdfdfd] focus-within:border-black transition overflow-hidden">
-                          <span className="px-3 text-[14px] text-gray-500 bg-gray-50 border-r border-[#dfdfdf] h-full flex items-center shrink-0">
-                            +234
+                          <span
+                            className="px-3 text-[14px] text-gray-500 bg-gray-50 border-r border-[#dfdfdf] h-full flex items-center shrink-0"
+                            style={{ cursor: !!phoneObj.id && Number(phoneObj.id) > 0 ? 'not-allowed' : 'default' }}
+                          >
+                            {phoneObj.phonecode ? `+${phoneObj.phonecode}` : `+${residentCountryPhoneCode}`}
                           </span>
                           <input
                             type="text"
                             placeholder="xxx xxx xxxx"
-                            value={phoneObj.phone ? phoneObj.phone.replace(/^\+234/, "") : ""}
+                            value={phoneObj.raw_input}
+                            disabled={!!phoneObj.id && Number(phoneObj.id) > 0}
                             onChange={(e) => {
                               const newPhones = [...field.state.value];
-                              let val = e.target.value.replace(/^\+234/, '');
-                              newPhones[index].phone = val ? `+234${val}` : "";
+                              newPhones[index].raw_input = e.target.value;
                               field.handleChange(newPhones);
                             }}
-                            className="flex-1 h-full px-3 text-[14px] text-black outline-none bg-transparent min-w-0"
+                            className="flex-1 h-full px-3 text-[14px] text-black outline-none bg-transparent min-w-0 disabled:cursor-"
+                            style={{ cursor: !!phoneObj.id && Number(phoneObj.id) > 0 ? 'not-allowed' : 'default' }}
                           />
                         </div>
 

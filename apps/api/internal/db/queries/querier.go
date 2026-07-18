@@ -34,6 +34,7 @@ type Querier interface {
 	CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error)
 	CreatePartyWallet(ctx context.Context, arg CreatePartyWalletParams) (PartyWallet, error)
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
+	UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error
 	CreatePollingUnit(ctx context.Context, arg CreatePollingUnitParams) (PollingUnit, error)
 	CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error)
 	CreateSenatorialDistrict(ctx context.Context, arg CreateSenatorialDistrictParams) (SenatorialDistrict, error)

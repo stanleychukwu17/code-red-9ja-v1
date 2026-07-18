@@ -293,6 +293,50 @@ func (s *UsersService) GetUserPhoneNumbersByUserID(ctx context.Context, userID i
 	return phoneNumbers, nil
 }
 
+type PhonePayload struct {
+	ID         int64  `json:"id"`
+	Phone      string `json:"phone"`
+	Phonecode  string `json:"phonecode"`
+	RawInput   string `json:"raw_input"`
+	OnWhatsapp string `json:"on_whatsapp"`
+	IsDefault  bool   `json:"is_default"`
+}
+
+func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64, phones []PhonePayload) error {
+	for _, p := range phones {
+		onWhatsapp := pgtype.Text{String: p.OnWhatsapp, Valid: p.OnWhatsapp != ""}
+		isDefault := pgtype.Bool{Bool: p.IsDefault, Valid: true}
+
+		if p.ID == 0 {
+			_, err := s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
+				UserID:    userID,
+				Phone:     fmt.Sprintf("+%s%s", p.Phonecode, p.RawInput),
+				Phonecode: p.Phonecode,
+				RawInput:  p.RawInput,
+				IsDefault: isDefault,
+			})
+			if err != nil {
+				return err
+			}
+		} else {
+			err := s.queries.UpdatePhoneNumber(ctx, queries.UpdatePhoneNumberParams{
+				ID:         p.ID,
+				OnWhatsapp: onWhatsapp,
+				IsDefault:  isDefault,
+			})
+			if err != nil {
+				return err
+			}
+		}
+	}
+	
+	// Invalidate cache
+	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
+	s.rdb.Del(ctx, userPhoneNumbersKey)
+
+	return nil
+}
+
 func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
 	return s.queries.DeleteUserPhoneNumber(ctx, id)
 }

@@ -21,6 +21,10 @@ import ProfileSolidIcon from "@repo/ui/icons/navbar/profile-solid-icon";
 import SearchIcon from "@repo/ui/icons/navbar/search-icon";
 import SearchSolidIcon from "@repo/ui/icons/navbar/search-solid-icon";
 import DashboardIcon from "@repo/ui/icons/navbar/dashboard-icon";
+import PartyIcon from "@repo/ui/icons/navbar/party-icon";
+import PartySolidIcon from "@repo/ui/icons/navbar/party-solid-icon";
+import CubeIcon from "@repo/ui/icons/navbar/cube-icon";
+import CubeSolidIcon from "@repo/ui/icons/navbar/cube-solid-icon";
 
 const ICON_CLASS = "size-4! md:size-6!";
 const APP_SIDEBAR_ITEMS = [
@@ -65,6 +69,20 @@ const APP_SIDEBAR_ITEMS = [
     icon: <ProfileIcon className={ICON_CLASS} />,
     selectedIcon: <ProfileSolidIcon className={ICON_CLASS} />,
     href: APP_URL.profile,
+  },
+  {
+    id: "party",
+    label: "My Party",
+    icon: <PartyIcon className={ICON_CLASS} />,
+    selectedIcon: <PartySolidIcon className={ICON_CLASS} />,
+    href: APP_URL.party("apc", "1"),
+  },
+  {
+    id: "parties",
+    label: "All Parties",
+    icon: <CubeIcon className={ICON_CLASS} />,
+    selectedIcon: <CubeSolidIcon className={ICON_CLASS} />,
+    href: APP_URL.parties,
   },
 ];
 

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PartiesRouteImport } from './routes/parties'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
@@ -29,7 +30,13 @@ import { Route as AuthenticatedAppUsersIndexRouteImport } from './routes/_authen
 import { Route as AuthenticatedPollingUnitPollingUnitIdRouteImport } from './routes/_authenticated/polling-unit/$pollingUnitId'
 import { Route as AuthenticatedStatesStateIdIndexRouteImport } from './routes/_authenticated/states/$stateId/index'
 import { Route as AuthenticatedFeedPostIdIndexRouteImport } from './routes/_authenticated/feed/$postId/index'
+import { Route as AuthenticatedPartyPartyNamePartyIdHomeRouteImport } from './routes/_authenticated/party.$partyName.$partyId.home'
 
+const PartiesRoute = PartiesRouteImport.update({
+  id: '/parties',
+  path: '/parties',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -139,9 +146,16 @@ const AuthenticatedFeedPostIdIndexRoute =
     path: '/feed/$postId/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedPartyPartyNamePartyIdHomeRoute =
+  AuthenticatedPartyPartyNamePartyIdHomeRouteImport.update({
+    id: '/party/$partyName/$partyId/home',
+    path: '/party/$partyName/$partyId/home',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
   '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -160,9 +174,11 @@ export interface FileRoutesByFullPath {
   '/states/': typeof AuthenticatedStatesIndexRoute
   '/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
   '/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
+  '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
   '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -181,11 +197,13 @@ export interface FileRoutesByTo {
   '/states': typeof AuthenticatedStatesIndexRoute
   '/feed/$postId': typeof AuthenticatedFeedPostIdIndexRoute
   '/states/$stateId': typeof AuthenticatedStatesStateIdIndexRoute
+  '/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/parties': typeof PartiesRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -204,11 +222,13 @@ export interface FileRoutesById {
   '/_authenticated/states/': typeof AuthenticatedStatesIndexRoute
   '/_authenticated/feed/$postId/': typeof AuthenticatedFeedPostIdIndexRoute
   '/_authenticated/states/$stateId/': typeof AuthenticatedStatesStateIdIndexRoute
+  '/_authenticated/party/$partyName/$partyId/home': typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/parties'
     | '/home'
     | '/auth/change-password'
     | '/auth/forgot-password'
@@ -227,9 +247,11 @@ export interface FileRouteTypes {
     | '/states/'
     | '/feed/$postId/'
     | '/states/$stateId/'
+    | '/party/$partyName/$partyId/home'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/parties'
     | '/home'
     | '/auth/change-password'
     | '/auth/forgot-password'
@@ -248,10 +270,12 @@ export interface FileRouteTypes {
     | '/states'
     | '/feed/$postId'
     | '/states/$stateId'
+    | '/party/$partyName/$partyId/home'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/parties'
     | '/_authenticated/home'
     | '/auth/change-password'
     | '/auth/forgot-password'
@@ -270,11 +294,13 @@ export interface FileRouteTypes {
     | '/_authenticated/states/'
     | '/_authenticated/feed/$postId/'
     | '/_authenticated/states/$stateId/'
+    | '/_authenticated/party/$partyName/$partyId/home'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  PartiesRoute: typeof PartiesRoute
   AuthChangePasswordRoute: typeof AuthChangePasswordRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -285,6 +311,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/parties': {
+      id: '/parties'
+      path: '/parties'
+      fullPath: '/parties'
+      preLoaderRoute: typeof PartiesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -425,6 +458,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedFeedPostIdIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/party/$partyName/$partyId/home': {
+      id: '/_authenticated/party/$partyName/$partyId/home'
+      path: '/party/$partyName/$partyId/home'
+      fullPath: '/party/$partyName/$partyId/home'
+      preLoaderRoute: typeof AuthenticatedPartyPartyNamePartyIdHomeRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -441,6 +481,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedStatesIndexRoute: typeof AuthenticatedStatesIndexRoute
   AuthenticatedFeedPostIdIndexRoute: typeof AuthenticatedFeedPostIdIndexRoute
   AuthenticatedStatesStateIdIndexRoute: typeof AuthenticatedStatesStateIdIndexRoute
+  AuthenticatedPartyPartyNamePartyIdHomeRoute: typeof AuthenticatedPartyPartyNamePartyIdHomeRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -457,6 +498,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedStatesIndexRoute: AuthenticatedStatesIndexRoute,
   AuthenticatedFeedPostIdIndexRoute: AuthenticatedFeedPostIdIndexRoute,
   AuthenticatedStatesStateIdIndexRoute: AuthenticatedStatesStateIdIndexRoute,
+  AuthenticatedPartyPartyNamePartyIdHomeRoute:
+    AuthenticatedPartyPartyNamePartyIdHomeRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -466,6 +509,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  PartiesRoute: PartiesRoute,
   AuthChangePasswordRoute: AuthChangePasswordRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,

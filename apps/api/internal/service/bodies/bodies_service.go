@@ -277,7 +277,7 @@ func (s *BodiesService) CheckCountry(ctx context.Context, country_id int16) (que
 }
 
 // function: check if the state is valid
-func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int16) (bool, error) {
+func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error) {
 	redisStateKey := fmt.Sprintf("%s%d", db.RedisEachState, state_id)
 
 	// get state details from redis
@@ -285,7 +285,9 @@ func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int
 	if err == nil {
 		var state_dts queries.GetStateByIDRow
 		json.Unmarshal([]byte(state_data), &state_dts)
-		return state_dts.ID > 0, nil
+		if state_dts.ID > 0 {
+			return state_dts, nil
+		}
 	}
 
 	// get state details from db
@@ -298,13 +300,13 @@ func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int
 		state_data, _ := json.Marshal(state_dts)
 		s.rdb.Set(ctx, redisStateKey, state_data, 5*365*24*time.Hour) // expires in 5years
 
-		return true, nil
+		return state_dts, nil
 	}
-	return false, fmt.Errorf("invalid state ID")
+	return queries.GetStateByIDRow{}, fmt.Errorf("invalid state ID")
 }
 
 // function: check if the city is valid
-func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id int32) (bool, error) {
+func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error) {
 	redisCityKey := fmt.Sprintf("%s%d", db.RedisEachCity, city_id)
 
 	// get city details from redis
@@ -312,7 +314,9 @@ func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id i
 	if err == nil {
 		var city_dts queries.GetCityByIDRow
 		json.Unmarshal([]byte(city_data), &city_dts)
-		return city_dts.ID > 0, nil
+		if city_dts.ID > 0 {
+			return city_dts, nil
+		}
 	}
 
 	// get city details from db
@@ -325,8 +329,8 @@ func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id i
 		city_data, _ := json.Marshal(city_dts)
 		s.rdb.Set(ctx, redisCityKey, city_data, 5*365*24*time.Hour) // expires in 5years
 
-		return true, nil
+		return city_dts, nil
 	}
 
-	return false, fmt.Errorf("invalid city ID")
+	return queries.GetCityByIDRow{}, fmt.Errorf("invalid city ID")
 }

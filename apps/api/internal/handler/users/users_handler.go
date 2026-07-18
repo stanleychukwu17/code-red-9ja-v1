@@ -44,20 +44,29 @@ type UsersService interface {
 	DeleteUserPhoneNumber(ctx context.Context, id int64) error
 }
 
+// BodiesService interface defines the methods needed from the bodies service
+type BodiesService interface {
+	CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error)
+	CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error)
+	CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error)
+}
+
 // Handler holds dependencies for the users handler
 type Handler struct {
-	usersService UsersService
-	auditService audit.AuditService
-	validate     *validator.Validate
-	utils        *utils.Utils
+	usersService  UsersService
+	auditService  audit.AuditService
+	bodiesService BodiesService
+	validate      *validator.Validate
+	utils         *utils.Utils
 }
 
 // NewHandler creates a new instance of the users handler
-func NewHandler(usersService UsersService, auditService audit.AuditService, utilsInstance *utils.Utils) *Handler {
+func NewHandler(usersService UsersService, auditService audit.AuditService, bodiesService BodiesService, utilsInstance *utils.Utils) *Handler {
 	return &Handler{
-		usersService: usersService,
-		auditService: auditService,
-		validate:     validator.New(),
+		usersService:  usersService,
+		auditService:  auditService,
+		bodiesService: bodiesService,
+		validate:      validator.New(),
 		utils:        utilsInstance,
 	}
 }
@@ -104,6 +113,9 @@ type UserResponse struct {
 	Religion           string   `json:"religion"`
 	MaritalStatus      string   `json:"marital_status"`
 	EducationLevel     string   `json:"education_level"`
+	CountryName        string   `json:"country_name,omitempty"`
+	StateName          string   `json:"state_name,omitempty"`
+	CityName           string   `json:"city_name,omitempty"`
 }
 
 func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles []queries.GetUserRolesRow) UserResponse {
@@ -595,7 +607,34 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	responses := make([]UserResponse, len(paginatedUsers))
 	for i, u := range paginatedUsers {
 		uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
-		responses[i] = mapListUserRowToResponse(u, uRoles)
+		
+		countryName := ""
+		stateName := ""
+		cityName := ""
+		
+		countryData, err := h.bodiesService.CheckCountry(r.Context(), u.CurrentCountry)
+		if err == nil {
+			countryName = countryData.Name
+		}
+		
+		stateData, err := h.bodiesService.CheckState(r.Context(), u.CurrentCountry, u.CurrentState)
+		if err == nil {
+			stateName = stateData.Name
+		}
+		
+		if u.CurrentCity.Int32 > 0 {
+			cityData, err := h.bodiesService.CheckCity(r.Context(), u.CurrentState, u.CurrentCity.Int32)
+			if err == nil {
+				cityName = cityData.Name
+			}
+		}
+		
+		res := mapListUserRowToResponse(u, uRoles)
+		res.CountryName = countryName
+		res.StateName = stateName
+		res.CityName = cityName
+		
+		responses[i] = res
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
@@ -871,6 +910,52 @@ func (h *Handler) GetUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Phone numbers retrieved successfully", map[string]interface{}{
 		"phone_numbers": phones,
 	})
+}
+
+type UpdateUserPhoneNumbersRequest struct {
+	Phones []usersservice.PhonePayload `json:"phones"`
+}
+
+// UpdateUserPhoneNumbers handles PUT /api/v1/admin/users/{id}/phones
+// @Summary      Update user phone numbers
+// @Description  Create or update phone numbers for a user
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        id   path      string  true  "User Fake ID"
+// @Param        body body      UpdateUserPhoneNumbersRequest true "Phones"
+// @Success      200  {object}  map[string]interface{}
+// @Failure      400  {object}  map[string]interface{}
+// @Failure      500  {object}  map[string]interface{}
+// @Security     BearerAuth
+// @Router       /admin/users/{id}/phones [put]
+func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	userFakeID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID format")
+		return
+	}
+
+	var req UpdateUserPhoneNumbersRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
+		return
+	}
+
+	user, err := h.usersService.GetUserByFakeID(r.Context(), userFakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	err = h.usersService.UpdateUserPhoneNumbers(r.Context(), user.ID, req.Phones)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update phone numbers: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Phone numbers updated successfully", nil)
 }
 
 // DeleteUserPhoneNumber handles DELETE /api/v1/admin/users/phones/{id}
