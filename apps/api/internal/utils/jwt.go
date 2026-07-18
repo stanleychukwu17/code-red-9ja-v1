@@ -18,7 +18,7 @@ type JWTClaims struct {
 	FakeID    int64    `json:"fake_id"`
 	Username  string   `json:"username"`
 	Roles     []string `json:"roles"`
-	PartyID   int64    `json:"party_id,omitempty"`
+	PartyID   int16    `json:"party_id,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -32,9 +32,19 @@ func (c *JWTClaims) HasRole(role string) bool {
 	return false
 }
 
+// HasAnyRole checks if the claims contain any of the specified roles
+func (c *JWTClaims) HasAnyRole(roles ...string) bool {
+	for _, role := range roles {
+		if c.HasRole(role) {
+			return true
+		}
+	}
+	return false
+}
+
 // GenerateToken creates a signed JWT with the given claims, secret, and duration.
-func GenerateToken(userID int64, fakeID int64, username string, roles []string, secret string, duration time.Duration, partyID ...int64) (string, error) {
-	var pid int64
+func GenerateToken(userID int64, fakeID int64, username string, roles []string, secret string, duration time.Duration, partyID ...int16) (string, error) {
+	var pid int16
 	if len(partyID) > 0 {
 		pid = partyID[0]
 	}

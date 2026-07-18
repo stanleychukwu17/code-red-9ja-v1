@@ -38,7 +38,7 @@ type CreatePollingUnitUpdateParams struct {
 	UserID                      int64       `json:"user_id"`
 	PollingUnitID               int32       `json:"polling_unit_id"`
 	ElectionGroupID             int64       `json:"election_group_id"`
-	PartyID                     pgtype.Int8 `json:"party_id"`
+	PartyID                     pgtype.Int2 `json:"party_id"`
 	StateID                     pgtype.Int2 `json:"state_id"`
 	LgaID                       pgtype.Int4 `json:"lga_id"`
 	WardID                      pgtype.Int4 `json:"ward_id"`
@@ -140,7 +140,7 @@ WHERE party_id = $1 AND election_group_id = $2
 `
 
 type IncrementPartyElectionGroupMetricsParams struct {
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	ReportsCount    int32 `json:"reports_count"`
 	UpdatesCount    int32 `json:"updates_count"`
@@ -234,7 +234,7 @@ type ListPollingUnitUpdatesRow struct {
 	UserID                      int64              `json:"user_id"`
 	PollingUnitID               int32              `json:"polling_unit_id"`
 	ElectionGroupID             int64              `json:"election_group_id"`
-	PartyID                     pgtype.Int8        `json:"party_id"`
+	PartyID                     pgtype.Int2        `json:"party_id"`
 	StateID                     pgtype.Int2        `json:"state_id"`
 	LgaID                       pgtype.Int4        `json:"lga_id"`
 	WardID                      pgtype.Int4        `json:"ward_id"`

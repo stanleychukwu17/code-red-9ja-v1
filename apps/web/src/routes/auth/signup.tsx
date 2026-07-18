@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
+import { useQuery } from "@tanstack/react-query";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { setOnboardingData, updateOnboardingData } from "@/redux/slice/authSlice";
 import { AuthWrapper } from "./_components/-auth-wrapper";
@@ -33,13 +34,6 @@ export const Route = createFileRoute("/auth/signup")({
     description: `Create your account to start enjoying premium content on ${APP_NAME}`,
   }),
 
-  // Load countries data
-  loader: async () => {
-    const countries = await getAllCountries() as countriesType;
-    if (!countries.success) throw new Error(countries.message);
-    return { countries: countries.data.countries };
-  },
-
   // Component to render
   component: RouteComponent,
 
@@ -52,7 +46,14 @@ function RouteComponent() {
   const dispatch = useAppDispatch();
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
-  const countries = Route.useLoaderData().countries as { id: number; name: string; iso2: string; phonecode: string }[];
+  
+  const { data: countriesRes } = useQuery({
+    queryKey: ['countries'],
+    queryFn: () => getAllCountries() as Promise<countriesType>,
+    staleTime: Infinity,
+  });
+  const countries = (countriesRes?.success ? countriesRes.data.countries : []) as { id: number; name: string; iso2: string; phonecode: string }[];
+  
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm({
@@ -77,9 +78,7 @@ function RouteComponent() {
         ...value,
         countryId: matchedCountry?.id,
         iso2: matchedCountry?.iso2,
-        phoneNumber: value.phoneNumber.startsWith("0")
-          ? `+${matchedCountry?.phonecode}${value.phoneNumber.slice(1)}`
-          : `+${matchedCountry?.phonecode}${value.phoneNumber}`,
+        phoneNumber: value.phoneNumber,
       };
 
       // update the onboarding data

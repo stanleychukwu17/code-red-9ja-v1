@@ -15,15 +15,15 @@ import (
 )
 
 type PollingUnitAssignmentsService interface {
-	AssignAgent(ctx context.Context, userID, electionGroupID, partyID, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error)
+	AssignAgent(ctx context.Context, userID, electionGroupID int64, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error)
 	GetAssignmentByID(ctx context.Context, id int64) (queries.GetAssignmentByIDRow, error)
-	ListAssignments(ctx context.Context, electionGroupID, partyID, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
+	ListAssignments(ctx context.Context, electionGroupID int64, partyID int16, userID int64, pollingUnitID int32, limit, offset int32) ([]queries.ListAssignmentsRow, error)
 	DeleteAssignment(ctx context.Context, id int64) error
 	UpdateAssignmentTracking(ctx context.Context, id int64, arrivedAt, arrivalVideoUrl, electionStartedAt, electionStartedVideoUrl, electionEndedAt, electionEndedVideoUrl *string) (queries.UpdateAssignmentTrackingRow, error)
 }
 
 type UsersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 }
 
@@ -119,7 +119,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Admin is not associated with a party")
 			return
 		}
-		finalPartyID = requester.PartyID.Int64
+		finalPartyID = int64(requester.PartyID.Int16)
 	}
 
 	// Verify target agent exists and belongs to the correct party if it is a party admin assignment
@@ -130,7 +130,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if !isPlatformAdmin {
-		if !targetUser.PartyID.Valid || targetUser.PartyID.Int64 != finalPartyID {
+		if !targetUser.PartyID.Valid || int64(targetUser.PartyID.Int16) != finalPartyID {
 			h.utils.RespondError(w, http.StatusForbidden, "Cannot assign a user from a different party")
 			return
 		}
@@ -141,7 +141,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		roleType = "polling_agent"
 	}
 
-	assignment, err := h.service.AssignAgent(r.Context(), targetUser.ID, req.ElectionGroupID, finalPartyID, requester.ID, req.PollingUnitID, roleType)
+	assignment, err := h.service.AssignAgent(r.Context(), targetUser.ID, req.ElectionGroupID, int16(finalPartyID), requester.ID, req.PollingUnitID, roleType)
 	if err != nil {
 		errStr := err.Error()
 		if strings.Contains(errStr, "uq_agent_per_election_day") {
@@ -234,10 +234,10 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		// Force the filter to only their own party
-		partyID = requester.PartyID.Int64
+		partyID = int64(requester.PartyID.Int16)
 	}
 
-	assignments, err := h.service.ListAssignments(r.Context(), electionGroupID, partyID, userID, pollingUnitID, limit, offset)
+	assignments, err := h.service.ListAssignments(r.Context(), electionGroupID, int16(partyID), userID, pollingUnitID, limit, offset)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list assignments: "+err.Error())
 		return
@@ -296,7 +296,7 @@ func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !isPlatformAdmin {
-		if !requester.PartyID.Valid || assignment.PartyID != requester.PartyID.Int64 {
+		if !requester.PartyID.Valid || assignment.PartyID != requester.PartyID.Int16 {
 			h.utils.RespondError(w, http.StatusForbidden, "Permission denied")
 			return
 		}
@@ -361,7 +361,7 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can delete assignments")
 			return
 		}
-		if !requester.PartyID.Valid || assignment.PartyID != requester.PartyID.Int64 {
+		if !requester.PartyID.Valid || assignment.PartyID != requester.PartyID.Int16 {
 			h.utils.RespondError(w, http.StatusForbidden, "Cannot delete assignment of a different party")
 			return
 		}

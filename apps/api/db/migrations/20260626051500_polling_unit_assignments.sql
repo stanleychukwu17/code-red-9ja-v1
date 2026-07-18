@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
-  party_id BIGINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
+  party_id SMALLINT REFERENCES parties(id) ON DELETE CASCADE NOT NULL,
   role_type VARCHAR(50) DEFAULT 'polling_agent' CHECK (role_type IN ('polling_agent', 'observer', 'collation_agent')),
   assigned_by BIGINT REFERENCES users(id) ON DELETE SET NULL,
   

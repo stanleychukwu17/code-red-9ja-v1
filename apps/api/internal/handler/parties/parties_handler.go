@@ -25,9 +25,9 @@ type PartiesService interface {
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	// Wallet methods
-	GetPartyWallet(ctx context.Context, partyID int64) (queries.PartyWallet, error)
-	GetPartyWalletTransactions(ctx context.Context, partyID int64, limit, offset int32) ([]queries.PartyWalletTransaction, error)
-	WithdrawFromWallet(ctx context.Context, partyID int64, amountKobo int64, transactionReference, bankAccountNumber, bankCode, narration string) (queries.PartyWalletTransaction, error)
+	GetPartyWallet(ctx context.Context, partyID int16) (queries.PartyWallet, error)
+	GetPartyWalletTransactions(ctx context.Context, partyID int16, limit, offset int32) ([]queries.PartyWalletTransaction, error)
+	WithdrawFromWallet(ctx context.Context, partyID int16, amountKobo int64, transactionReference, bankAccountNumber, bankCode, narration string) (queries.PartyWalletTransaction, error)
 	CreatePartyWallet(ctx context.Context, party queries.Party) (queries.PartyWallet, error)
 	GetWalletByAccountReference(ctx context.Context, accountReference string) (queries.PartyWallet, error)
 	ProvisionMissingWallets(ctx context.Context) (int, int, error)
@@ -35,12 +35,12 @@ type PartiesService interface {
 	// Slot methods
 	GetGlobalSlotPrice(ctx context.Context) (int64, error)
 	UpdateGlobalSlotPrice(ctx context.Context, priceKobo int64) (int64, error)
-	GetPartySlotPrice(ctx context.Context, partyID int64) (int64, error)
-	BuySlots(ctx context.Context, partyID int64, quantity int32) (queries.Party, error)
-	UpdatePartyDiscount(ctx context.Context, partyID int64, discountPercentage float64) (queries.Party, error)
+	GetPartySlotPrice(ctx context.Context, partyID int16) (int64, error)
+	BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, error)
+	UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error)
 	// Allowance methods
-	DepositAllowance(ctx context.Context, partyID int64, amountKobo int64) (queries.Party, error)
-	UpdateStateAllowances(ctx context.Context, partyID int64, allowancesJSON []byte) (queries.Party, error)
+	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
+	UpdateStateAllowances(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 }
 
 type Handler struct {
@@ -182,7 +182,7 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 	startIndex := 0
 	if cursor > 0 {
 		for i, p := range parties {
-			if p.ID == cursor {
+			if int64(p.ID) == cursor {
 				startIndex = i + 1
 				break
 			}
@@ -201,7 +201,7 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 		} else {
 			paginated = parties[startIndex:endIndex]
 			hasMore = true
-			nextCursor = strconv.FormatInt(paginated[len(paginated)-1].ID, 10)
+			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
 		}
 	} else {
 		paginated = []queries.Party{}
@@ -355,7 +355,7 @@ func (h *Handler) GetPartyWallet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wallet, err := h.partiesService.GetPartyWallet(r.Context(), id)
+	wallet, err := h.partiesService.GetPartyWallet(r.Context(), int16(id))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Wallet not found for this party")
 		return
@@ -408,7 +408,7 @@ func (h *Handler) ListPartyWalletTransactions(w http.ResponseWriter, r *http.Req
 
 	limit, offset := parsePaginationForWallet(r)
 
-	txns, err := h.partiesService.GetPartyWalletTransactions(r.Context(), id, int32(limit), int32(offset))
+	txns, err := h.partiesService.GetPartyWalletTransactions(r.Context(), int16(id), int32(limit), int32(offset))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Could not fetch transactions: "+err.Error())
 		return
@@ -473,7 +473,7 @@ func (h *Handler) WithdrawFromPartyWallet(w http.ResponseWriter, r *http.Request
 
 	txn, err := h.partiesService.WithdrawFromWallet(
 		r.Context(),
-		id,
+		int16(id),
 		req.AmountKobo,
 		txRef,
 		req.BankAccountNumber,
@@ -687,7 +687,7 @@ func (h *Handler) UpdatePartyDiscount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party, err := h.partiesService.UpdatePartyDiscount(r.Context(), partyID, req.DiscountPercentage)
+	party, err := h.partiesService.UpdatePartyDiscount(r.Context(), int16(partyID), req.DiscountPercentage)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update discount: "+err.Error())
 		return
@@ -715,7 +715,7 @@ func (h *Handler) GetPartySlotPrice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	price, err := h.partiesService.GetPartySlotPrice(r.Context(), partyID)
+	price, err := h.partiesService.GetPartySlotPrice(r.Context(), int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve slot price: "+err.Error())
 		return
@@ -761,7 +761,7 @@ func (h *Handler) BuySlots(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party, err := h.partiesService.BuySlots(r.Context(), partyID, req.Quantity)
+	party, err := h.partiesService.BuySlots(r.Context(), int16(partyID), req.Quantity)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -806,7 +806,7 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party, err := h.partiesService.DepositAllowance(r.Context(), partyID, req.AmountKobo)
+	party, err := h.partiesService.DepositAllowance(r.Context(), int16(partyID), req.AmountKobo)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -842,7 +842,7 @@ func (h *Handler) UpdateStateAllowances(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	party, err := h.partiesService.UpdateStateAllowances(r.Context(), partyID, bodyBytes)
+	party, err := h.partiesService.UpdateStateAllowances(r.Context(), int16(partyID), bodyBytes)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -883,7 +883,7 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wallet, err := h.partiesService.GetPartyWallet(r.Context(), partyID)
+	wallet, err := h.partiesService.GetPartyWallet(r.Context(), int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Wallet not found for party: "+err.Error())
 		return

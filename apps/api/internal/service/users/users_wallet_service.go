@@ -43,8 +43,6 @@ func (s *UsersService) CreateUserWallet(ctx context.Context, user queries.User) 
 	var userNin string
 	if dbNin, ninErr := s.queries.GetUserNINByUserID(ctx, user.ID); ninErr == nil && len(dbNin.Nin) == 11 {
 		userNin = dbNin.Nin
-	} else if user.NinVerified.Valid && len(user.NinVerified.String) == 11 {
-		userNin = user.NinVerified.String
 	}
 
 	// In sandbox/testing mode, if no valid 11-digit NIN is found, use a default dummy NIN

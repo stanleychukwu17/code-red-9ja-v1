@@ -31,16 +31,16 @@ type ElectionsService interface {
 	DeleteElection(ctx context.Context, id int64) error
 	GetElectionCandidates(ctx context.Context, electionID int64) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error)
 	SyncElectionCandidates(ctx context.Context, electionID int64, candidates []elections.CandidateInput) error
-	FieldPartyCandidate(ctx context.Context, electionID int64, partyID int64, candidateID int64) error
+	FieldPartyCandidate(ctx context.Context, electionID int64, partyID int16, candidateID int64) error
 	GetNonVotingReasons(ctx context.Context) ([]queries.NonVotingReason, error)
 	CreateDidNotVoteReason(ctx context.Context, arg queries.CreateDidNotVoteReasonParams) (queries.DidNotVoteReason, error)
-	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int64) ([]elections.ElectionWithCandidates, error)
-	SubmitElectionVotes(ctx context.Context, userID int64, electionGroupID int64, pollingUnitID int64, votes []elections.VoteInput, vin string, votersCardImage string) error
+	GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int32) ([]elections.ElectionWithCandidates, error)
+	SubmitElectionVotes(ctx context.Context, userID int64, electionGroupID int64, pollingUnitID int32, votes []elections.VoteInput, votersCardImage string) error
 	GetUserElectionGroupVoteStatus(ctx context.Context, userID, electionGroupID int64) (elections.UserVoteStatus, error)
 }
 
 type UsersService interface {
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 }
 
 type Handler struct {
@@ -235,7 +235,7 @@ func (h *Handler) CreateNationwideElection(w http.ResponseWriter, r *http.Reques
 	for i, c := range req.Candidates {
 		candidates[i] = elections.CandidateInput{
 			CandidateID:    c.CandidateID,
-			PartyID:        c.PartyID,
+			PartyID:        int16(c.PartyID),
 			PartyShortName: c.PartyShortName,
 		}
 	}
@@ -756,7 +756,7 @@ func (h *Handler) SyncElectionCandidates(w http.ResponseWriter, r *http.Request)
 	for i, c := range req.Candidates {
 		candidateInputs[i] = elections.CandidateInput{
 			CandidateID:    c.CandidateID,
-			PartyID:        c.PartyID,
+			PartyID:        int16(c.PartyID),
 			PartyShortName: c.PartyShortName,
 		}
 	}
@@ -807,7 +807,7 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.FieldPartyCandidate(r.Context(), id, user.PartyID.Int64, req.CandidateID)
+	err = h.service.FieldPartyCandidate(r.Context(), id, user.PartyID.Int16, req.CandidateID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to field candidate: "+err.Error())
 		return

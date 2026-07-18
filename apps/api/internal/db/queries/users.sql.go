@@ -38,7 +38,7 @@ type AdminUpdateUserParams struct {
 	CurrentCountry int16       `json:"current_country"`
 	CurrentState   int16       `json:"current_state"`
 	CurrentCity    pgtype.Int4 `json:"current_city"`
-	PartyID        pgtype.Int8 `json:"party_id"`
+	PartyID        pgtype.Int2 `json:"party_id"`
 	Email          pgtype.Text `json:"email"`
 	StateOfOrigin  pgtype.Int2 `json:"state_of_origin"`
 }
@@ -94,7 +94,7 @@ type CreateCandidatePlaceholderParams struct {
 	CurrentState   int16       `json:"current_state"`
 	CurrentCity    pgtype.Int4 `json:"current_city"`
 	StateOfOrigin  pgtype.Int2 `json:"state_of_origin"`
-	PartyID        pgtype.Int8 `json:"party_id"`
+	PartyID        pgtype.Int2 `json:"party_id"`
 	Avatar         pgtype.Text `json:"avatar"`
 }
 
@@ -119,22 +119,86 @@ func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCand
 	return id, err
 }
 
+const createMoreInfoAboutThisUser = `-- name: CreateMoreInfoAboutThisUser :one
+INSERT INTO user_more_infos (
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING user_id
+`
+
+type CreateMoreInfoAboutThisUserParams struct {
+	UserID            int64       `json:"user_id"`
+	OccupationID      pgtype.Int2 `json:"occupation_id"`
+	EducationalStatus pgtype.Text `json:"educational_status"`
+	HighestDegree     pgtype.Text `json:"highest_degree"`
+	GraduationYear    pgtype.Text `json:"graduation_year"`
+	SchoolName        pgtype.Text `json:"school_name"`
+	Religion          pgtype.Text `json:"religion"`
+	MaritalStatus     pgtype.Text `json:"marital_status"`
+	EducationLevel    pgtype.Text `json:"education_level"`
+	Address           pgtype.Text `json:"address"`
+}
+
+func (q *Queries) CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMoreInfoAboutThisUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createMoreInfoAboutThisUser,
+		arg.UserID,
+		arg.OccupationID,
+		arg.EducationalStatus,
+		arg.HighestDegree,
+		arg.GraduationYear,
+		arg.SchoolName,
+		arg.Religion,
+		arg.MaritalStatus,
+		arg.EducationLevel,
+		arg.Address,
+	)
+	var user_id int64
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const createPhoneNumber = `-- name: CreatePhoneNumber :one
-INSERT INTO users_phone_numbers (user_id, phone)
-VALUES ($1, $2)
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, is_default)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id
 `
 
 type CreatePhoneNumberParams struct {
-	UserID int64  `json:"user_id"`
-	Phone  string `json:"phone"`
+	UserID    int64       `json:"user_id"`
+	Phone     string      `json:"phone"`
+	Phonecode string      `json:"phonecode"`
+	RawInput  string      `json:"raw_input"`
+	IsDefault pgtype.Bool `json:"is_default"`
 }
 
 func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createPhoneNumber, arg.UserID, arg.Phone)
+	row := q.db.QueryRow(ctx, createPhoneNumber,
+		arg.UserID,
+		arg.Phone,
+		arg.Phonecode,
+		arg.RawInput,
+		arg.IsDefault,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
+UPDATE users_phone_numbers
+SET on_whatsapp = $2, is_default = $3
+WHERE id = $1
+`
+
+type UpdatePhoneNumberParams struct {
+	ID         int64       `json:"id"`
+	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
+	IsDefault  pgtype.Bool `json:"is_default"`
+}
+
+func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
+	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.ID, arg.OnWhatsapp, arg.IsDefault)
+	return err
 }
 
 const createUser = `-- name: CreateUser :one
@@ -197,9 +261,9 @@ type CreateUserNINParams struct {
 	Nin    string `json:"nin"`
 }
 
-func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int32, error) {
+func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error) {
 	row := q.db.QueryRow(ctx, createUserNIN, arg.UserID, arg.Nin)
-	var id int32
+	var id int64
 	err := row.Scan(&id)
 	return id, err
 }
@@ -233,6 +297,34 @@ func (q *Queries) CreateUserSecurityQuestions(ctx context.Context, arg CreateUse
 	return id, err
 }
 
+const createUserVerification = `-- name: CreateUserVerification :one
+INSERT INTO user_verifications (
+  user_id, nin_verified, phone_verified, email_verified, voters_card_verified
+) VALUES ($1, $2, $3, $4, $5)
+RETURNING user_id
+`
+
+type CreateUserVerificationParams struct {
+	UserID             int64       `json:"user_id"`
+	NinVerified        pgtype.Bool `json:"nin_verified"`
+	PhoneVerified      pgtype.Bool `json:"phone_verified"`
+	EmailVerified      pgtype.Bool `json:"email_verified"`
+	VotersCardVerified pgtype.Bool `json:"voters_card_verified"`
+}
+
+func (q *Queries) CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createUserVerification,
+		arg.UserID,
+		arg.NinVerified,
+		arg.PhoneVerified,
+		arg.EmailVerified,
+		arg.VotersCardVerified,
+	)
+	var user_id int64
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users
 WHERE id = $1
@@ -243,52 +335,36 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
-const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
-WHERE email = $1 LIMIT 1
+const deleteUserPhoneNumber = `-- name: DeleteUserPhoneNumber :exec
+UPDATE users_phone_numbers
+SET is_active = false
+WHERE id = $1
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, error) {
-	row := q.db.QueryRow(ctx, getUserByEmail, email)
-	var i User
+func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteUserPhoneNumber, id)
+	return err
+}
+
+const getMoreInfoAboutThisUser = `-- name: GetMoreInfoAboutThisUser :one
+SELECT user_id, occupation_id, educational_status, education_level, highest_degree, graduation_year, school_name, religion, marital_status, address, created_at, updated_at FROM user_more_infos
+WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error) {
+	row := q.db.QueryRow(ctx, getMoreInfoAboutThisUser, userID)
+	var i UserMoreInfo
 	err := row.Scan(
-		&i.ID,
-		&i.FakeID,
-		&i.Email,
-		&i.Avatar,
-		&i.Phone,
-		&i.Username,
-		&i.PasswordHash,
-		&i.LastName,
-		&i.FirstName,
-		&i.MiddleName,
-		&i.Gender,
-		&i.DateOfBirth,
-		&i.WhatsappPhone,
-		&i.DataPhone,
+		&i.UserID,
+		&i.OccupationID,
 		&i.EducationalStatus,
+		&i.EducationLevel,
 		&i.HighestDegree,
 		&i.GraduationYear,
 		&i.SchoolName,
-		&i.CurrentCountry,
-		&i.CurrentState,
-		&i.CurrentLga,
-		&i.CurrentWard,
-		&i.CurrentCity,
+		&i.Religion,
+		&i.MaritalStatus,
 		&i.Address,
-		&i.StateOfOrigin,
-		&i.Vin,
-		&i.VotersCardImage,
-		&i.BankAccountNumber,
-		&i.BankCode,
-		&i.NinVerified,
-		&i.PhoneVerified,
-		&i.EmailVerified,
-		&i.AccountStatus,
-		&i.PartyID,
-		&i.PollingUnitID,
-		&i.ReferralCode,
-		&i.ReferredByCode,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -296,7 +372,7 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (User, 
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -318,29 +394,20 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.DateOfBirth,
 		&i.WhatsappPhone,
 		&i.DataPhone,
-		&i.EducationalStatus,
-		&i.HighestDegree,
-		&i.GraduationYear,
-		&i.SchoolName,
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentLga,
 		&i.CurrentWard,
 		&i.CurrentCity,
-		&i.Address,
 		&i.StateOfOrigin,
-		&i.Vin,
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
 		&i.BankCode,
-		&i.NinVerified,
-		&i.PhoneVerified,
-		&i.EmailVerified,
-		&i.AccountStatus,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,
 		&i.ReferredByCode,
+		&i.AccountStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -359,6 +426,40 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (UsersNi
 	return i, err
 }
 
+const getUserPhoneNumbersByUserID = `-- name: GetUserPhoneNumbersByUserID :many
+SELECT id, user_id, phone, raw_input, phonecode, on_whatsapp, is_default, is_active FROM users_phone_numbers
+WHERE user_id = $1 AND is_active = true ORDER BY id DESC
+`
+
+func (q *Queries) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error) {
+	rows, err := q.db.Query(ctx, getUserPhoneNumbersByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UsersPhoneNumber
+	for rows.Next() {
+		var i UsersPhoneNumber
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Phone,
+			&i.RawInput,
+			&i.Phonecode,
+			&i.OnWhatsapp,
+			&i.IsDefault,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserSecurityQuestionsByNIN = `-- name: GetUserSecurityQuestionsByNIN :one
 SELECT id, user_fid, nin, question1, answer1, question2, answer2 FROM user_security_questions
 WHERE nin = $1 LIMIT 1
@@ -375,6 +476,29 @@ func (q *Queries) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string)
 		&i.Answer1,
 		&i.Question2,
 		&i.Answer2,
+	)
+	return i, err
+}
+
+const getUserVerification = `-- name: GetUserVerification :one
+SELECT user_id, nin_verified, phone_verified, email_verified, voters_card_verified, email_verification_token, email_last_reminded_at, phone_last_reminded_at, created_at, updated_at FROM user_verifications
+WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserVerification(ctx context.Context, userID int64) (UserVerification, error) {
+	row := q.db.QueryRow(ctx, getUserVerification, userID)
+	var i UserVerification
+	err := row.Scan(
+		&i.UserID,
+		&i.NinVerified,
+		&i.PhoneVerified,
+		&i.EmailVerified,
+		&i.VotersCardVerified,
+		&i.EmailVerificationToken,
+		&i.EmailLastRemindedAt,
+		&i.PhoneLastRemindedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -443,59 +567,83 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, educational_status, highest_degree, graduation_year, school_name, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, vin, voters_card_image, bank_account_number, bank_code, nin_verified, phone_verified, email_verified, account_status, party_id, polling_unit_id, referral_code, referred_by_code, created_at, updated_at FROM users
-ORDER BY id DESC
+SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.account_status, u.created_at FROM users u
+WHERE 
+  ($1::bigint IS NULL OR u.id < $1::bigint)
+  AND ($2::smallint IS NULL OR u.party_id = $2::smallint)
+  AND ($3::text[] IS NULL OR EXISTS (
+      -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
+      -- if a user somehow has multiple roles (or just to keep the base query simple).
+      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY($3::text[])
+  ))
+ORDER BY u.id DESC
+LIMIT $4::int
 `
 
-func (q *Queries) ListUsers(ctx context.Context) ([]User, error) {
-	rows, err := q.db.Query(ctx, listUsers)
+type ListUsersParams struct {
+	Cursor    pgtype.Int8 `json:"cursor"`
+	PartyID   pgtype.Int2 `json:"party_id"`
+	RoleCodes []string    `json:"role_codes"`
+	LimitNum  int32       `json:"limit_num"`
+}
+
+type ListUsersRow struct {
+	ID             int64              `json:"id"`
+	FakeID         pgtype.Int8        `json:"fake_id"`
+	Email          pgtype.Text        `json:"email"`
+	Username       pgtype.Text        `json:"username"`
+	Avatar         pgtype.Text        `json:"avatar"`
+	FirstName      pgtype.Text        `json:"first_name"`
+	LastName       pgtype.Text        `json:"last_name"`
+	MiddleName     pgtype.Text        `json:"middle_name"`
+	Gender         pgtype.Text        `json:"gender"`
+	DateOfBirth    pgtype.Date        `json:"date_of_birth"`
+	StateOfOrigin  pgtype.Int2        `json:"state_of_origin"`
+	CurrentCountry int16              `json:"current_country"`
+	CurrentState   int16              `json:"current_state"`
+	CurrentCity    pgtype.Int4        `json:"current_city"`
+	PartyID        pgtype.Int2        `json:"party_id"`
+	AccountStatus  pgtype.Text        `json:"account_status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+}
+
+// ListUsers fetches a paginated list of users with optional filtering.
+// We use sqlc.narg() (nullable argument) to make filters optional:
+// If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL'
+// condition becomes true, effectively skipping that filter.
+// This allows us to use a single dynamic query instead of writing multiple separate queries.
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
+	rows, err := q.db.Query(ctx, listUsers,
+		arg.Cursor,
+		arg.PartyID,
+		arg.RoleCodes,
+		arg.LimitNum,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersRow
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.FakeID,
 			&i.Email,
-			&i.Avatar,
-			&i.Phone,
 			&i.Username,
-			&i.PasswordHash,
-			&i.LastName,
+			&i.Avatar,
 			&i.FirstName,
+			&i.LastName,
 			&i.MiddleName,
 			&i.Gender,
 			&i.DateOfBirth,
-			&i.WhatsappPhone,
-			&i.DataPhone,
-			&i.EducationalStatus,
-			&i.HighestDegree,
-			&i.GraduationYear,
-			&i.SchoolName,
+			&i.StateOfOrigin,
 			&i.CurrentCountry,
 			&i.CurrentState,
-			&i.CurrentLga,
-			&i.CurrentWard,
 			&i.CurrentCity,
-			&i.Address,
-			&i.StateOfOrigin,
-			&i.Vin,
-			&i.VotersCardImage,
-			&i.BankAccountNumber,
-			&i.BankCode,
-			&i.NinVerified,
-			&i.PhoneVerified,
-			&i.EmailVerified,
-			&i.AccountStatus,
 			&i.PartyID,
-			&i.PollingUnitID,
-			&i.ReferralCode,
-			&i.ReferredByCode,
+			&i.AccountStatus,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -511,10 +659,10 @@ const seedUser = `-- name: SeedUser :one
 INSERT INTO users (
   fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
-  state_of_origin, vin, voters_card_image, bank_account_number, bank_code,
-  nin_verified, phone_verified, account_status, party_id
+  state_of_origin, voters_card_image, bank_account_number, bank_code,
+  account_status, party_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 RETURNING id
 `
 
@@ -535,14 +683,11 @@ type SeedUserParams struct {
 	CurrentLga        pgtype.Int4 `json:"current_lga"`
 	CurrentCity       pgtype.Int4 `json:"current_city"`
 	StateOfOrigin     pgtype.Int2 `json:"state_of_origin"`
-	Vin               pgtype.Text `json:"vin"`
 	VotersCardImage   pgtype.Text `json:"voters_card_image"`
 	BankAccountNumber pgtype.Text `json:"bank_account_number"`
 	BankCode          pgtype.Text `json:"bank_code"`
-	NinVerified       pgtype.Text `json:"nin_verified"`
-	PhoneVerified     pgtype.Text `json:"phone_verified"`
 	AccountStatus     pgtype.Text `json:"account_status"`
-	PartyID           pgtype.Int8 `json:"party_id"`
+	PartyID           pgtype.Int2 `json:"party_id"`
 }
 
 func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, error) {
@@ -563,18 +708,95 @@ func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, erro
 		arg.CurrentLga,
 		arg.CurrentCity,
 		arg.StateOfOrigin,
-		arg.Vin,
 		arg.VotersCardImage,
 		arg.BankAccountNumber,
 		arg.BankCode,
-		arg.NinVerified,
-		arg.PhoneVerified,
 		arg.AccountStatus,
 		arg.PartyID,
 	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const updateMoreInfoAboutThisUser = `-- name: UpdateMoreInfoAboutThisUser :exec
+INSERT INTO user_more_infos (
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (user_id) DO UPDATE
+SET occupation_id = EXCLUDED.occupation_id,
+    educational_status = EXCLUDED.educational_status,
+    highest_degree = EXCLUDED.highest_degree,
+    graduation_year = EXCLUDED.graduation_year,
+    school_name = EXCLUDED.school_name,
+    religion = EXCLUDED.religion,
+    marital_status = EXCLUDED.marital_status,
+    education_level = EXCLUDED.education_level,
+    address = EXCLUDED.address,
+    updated_at = NOW()
+`
+
+type UpdateMoreInfoAboutThisUserParams struct {
+	UserID            int64       `json:"user_id"`
+	OccupationID      pgtype.Int2 `json:"occupation_id"`
+	EducationalStatus pgtype.Text `json:"educational_status"`
+	HighestDegree     pgtype.Text `json:"highest_degree"`
+	GraduationYear    pgtype.Text `json:"graduation_year"`
+	SchoolName        pgtype.Text `json:"school_name"`
+	Religion          pgtype.Text `json:"religion"`
+	MaritalStatus     pgtype.Text `json:"marital_status"`
+	EducationLevel    pgtype.Text `json:"education_level"`
+	Address           pgtype.Text `json:"address"`
+}
+
+func (q *Queries) UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMoreInfoAboutThisUserParams) error {
+	_, err := q.db.Exec(ctx, updateMoreInfoAboutThisUser,
+		arg.UserID,
+		arg.OccupationID,
+		arg.EducationalStatus,
+		arg.HighestDegree,
+		arg.GraduationYear,
+		arg.SchoolName,
+		arg.Religion,
+		arg.MaritalStatus,
+		arg.EducationLevel,
+		arg.Address,
+	)
+	return err
+}
+
+const updateUserAgentMoreInfo = `-- name: UpdateUserAgentMoreInfo :exec
+INSERT INTO user_more_infos (
+  user_id, educational_status, highest_degree, graduation_year, school_name, address
+) VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (user_id) DO UPDATE
+SET educational_status = EXCLUDED.educational_status,
+    highest_degree = EXCLUDED.highest_degree,
+    graduation_year = EXCLUDED.graduation_year,
+    school_name = EXCLUDED.school_name,
+    address = EXCLUDED.address,
+    updated_at = NOW()
+`
+
+type UpdateUserAgentMoreInfoParams struct {
+	UserID            int64       `json:"user_id"`
+	EducationalStatus pgtype.Text `json:"educational_status"`
+	HighestDegree     pgtype.Text `json:"highest_degree"`
+	GraduationYear    pgtype.Text `json:"graduation_year"`
+	SchoolName        pgtype.Text `json:"school_name"`
+	Address           pgtype.Text `json:"address"`
+}
+
+func (q *Queries) UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error {
+	_, err := q.db.Exec(ctx, updateUserAgentMoreInfo,
+		arg.UserID,
+		arg.EducationalStatus,
+		arg.HighestDegree,
+		arg.GraduationYear,
+		arg.SchoolName,
+		arg.Address,
+	)
+	return err
 }
 
 const updateUserAvatar = `-- name: UpdateUserAvatar :exec
@@ -685,17 +907,16 @@ func (q *Queries) UpdateUserStatus(ctx context.Context, arg UpdateUserStatusPara
 
 const updateUserVotersCard = `-- name: UpdateUserVotersCard :exec
 UPDATE users
-SET vin = $2, voters_card_image = $3, updated_at = NOW()
+SET voters_card_image = $2, updated_at = NOW()
 WHERE id = $1
 `
 
 type UpdateUserVotersCardParams struct {
 	ID              int64       `json:"id"`
-	Vin             pgtype.Text `json:"vin"`
 	VotersCardImage pgtype.Text `json:"voters_card_image"`
 }
 
 func (q *Queries) UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error {
-	_, err := q.db.Exec(ctx, updateUserVotersCard, arg.ID, arg.Vin, arg.VotersCardImage)
+	_, err := q.db.Exec(ctx, updateUserVotersCard, arg.ID, arg.VotersCardImage)
 	return err
 }

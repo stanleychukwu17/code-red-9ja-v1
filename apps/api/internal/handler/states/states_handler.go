@@ -6,9 +6,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -18,7 +16,6 @@ type StatesService interface {
 	GetStateByID(ctx context.Context, id int16) (queries.CState, error)
 	UpdateState(ctx context.Context, id int16, name string, countryID int16, countryCode string, latitude, longitude float64) (queries.CState, error)
 	DeleteState(ctx context.Context, id int16) error
-	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
 }
 
 type Handler struct {
@@ -203,145 +200,4 @@ func (h *Handler) DeleteState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "State deleted successfully", nil)
-}
-
-type PaginationMeta struct {
-	NextCursor string `json:"next_cursor"`
-	HasMore    bool   `json:"has_more"`
-}
-
-type StateResponse struct {
-	ID   int16  `json:"id"`
-	Name string `json:"name"`
-}
-
-type GetStatesResponse struct {
-	Success bool            `json:"success"`
-	Message string          `json:"message"`
-	Data    GetStatesData   `json:"data"`
-	Meta    *PaginationMeta `json:"meta,omitempty"`
-}
-
-type GetStatesData struct {
-	States []StateResponse `json:"states"`
-}
-
-func parsePaginationParams(r *http.Request) (int, int64) {
-	return parsePaginationParamsWithMax(r, 100)
-}
-
-func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
-	limit := 20
-	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-			if l > maxLimit {
-				limit = maxLimit
-			} else {
-				limit = l
-			}
-		}
-	}
-
-	var cursor int64
-	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
-		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
-			cursor = c
-		}
-	}
-	return limit, cursor
-}
-
-func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
-	orderBy := r.URL.Query().Get("order_by")
-	if orderBy == "" {
-		orderBy = defaultOrderBy
-	}
-
-	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
-	if orderDir != "ASC" && orderDir != "DESC" {
-		orderDir = defaultOrderDir
-	}
-
-	return orderBy, orderDir
-}
-
-// GetStates godoc
-// @Summary      Get states by country ID
-// @Description  Fetches all states for a specific country by its ID with cursor pagination
-// @Tags         States
-// @Accept       json
-// @Produce      json
-// @Param        countryID  path      int     true   "Country ID"
-// @Param        limit      query     int     false  "Limit (default 20, max 100)"
-// @Param        cursor     query     string  false  "Cursor (ID of last record)"
-// @Success      200        {object}  GetStatesResponse
-// @Failure      400        {string}  invalid country ID
-// @Failure      500        {string}  failed to fetch states
-// @Router       /countries/{countryID}/states [get]
-func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
-	countryIDStr := chi.URLParam(r, "countryID")
-	countryID, err := strconv.ParseInt(countryIDStr, 10, 16)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid country ID: "+err.Error())
-		return
-	}
-
-	limit, cursor := parsePaginationParams(r)
-
-	states, err := h.statesService.GetStatesByCountryID(r.Context(), int16(countryID))
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch states: "+err.Error())
-		return
-	}
-
-	orderBy, orderDir := parseSortParams(r, "name", "ASC")
-
-	sort.SliceStable(states, func(i, j int) bool {
-		var less bool
-		if orderBy == "name" {
-			less = states[i].Name < states[j].Name
-		} else {
-			less = states[i].ID < states[j].ID
-		}
-		if orderDir == "DESC" {
-			return !less
-		}
-		return less
-	})
-
-	startIndex := 0
-	if cursor > 0 {
-		for i, s := range states {
-			if int64(s.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	var paginatedStates []queries.CState
-	hasMore := false
-	nextCursor := ""
-
-	if startIndex < len(states) {
-		endIndex := startIndex + limit
-		if endIndex >= len(states) {
-			endIndex = len(states)
-			paginatedStates = states[startIndex:endIndex]
-		} else {
-			paginatedStates = states[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginatedStates[len(paginatedStates)-1].ID), 10)
-		}
-	} else {
-		paginatedStates = []queries.CState{}
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "States fetched successfully", map[string]interface{}{
-		"states": paginatedStates,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
-		},
-	})
 }

@@ -33,6 +33,10 @@ const (
 	RedisUserInfo = "user:info:"
 	// STRING: user:roles:<userFakeID> is the Redis "string" key used to store and retrieve user roles.
 	RedisUserRoles = "user:roles:"
+	// STRING: user:more_info:<userID> is the Redis "string" key used to store and retrieve user more_info.
+	RedisUserMoreInfo = "user:more_info:"
+	// STRING: user:phone_numbers:<userID> is the Redis "string" key used to store and retrieve user phone numbers.
+	RedisUserPhoneNumbers = "user:phone_numbers:"
 	//--END--
 
 	//--START-- for countries and states
@@ -40,13 +44,10 @@ const (
 	RedisEachCountry = "countries:each_country:"
 	RedisEachState   = "countries:each_state:"
 	RedisEachCity    = "countries:each_city:"
-
 	// STRING: used to store and retrieve all countries and they details, the value is a JSON string of all countries.
 	RedisCountriesAll = "countries:all"
-
 	// STRING: "countries:states:<countryID>" is used to store and retrieve states of a country.
 	RedisStatesByCountry = "countries:states:"
-
 	// STRING: "countries:cities:<stateID>" is used to store and retrieve cities of a state.
 	RedisCitiesByState = "countries:cities:"
 	//--END--

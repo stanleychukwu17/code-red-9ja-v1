@@ -24,32 +24,34 @@ export const Route = createFileRoute("/_authenticated/users/admin")({
 function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-    refetch,
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch, } = useInfiniteQuery({
+    // Unique key for React Query cache
     queryKey: ["users", "admin"],
+
+    // Function to fetch a page of data using the cursor parameter
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
-        data: { role: "admin", limit: 20, cursor: pageParam },
+        data: { role: "admin,super_admin", limit: 20, cursor: pageParam },
       });
       if (res && res.success && res.data) {
         return res;
       }
       throw new Error(res?.message || "Failed to load admin users");
     },
+
+    // Starting cursor when fetching the first page
     initialPageParam: "",
+
+    // Determines if there is a next page and returns the cursor to fetch it
     getNextPageParam: (lastPage) => {
       if (lastPage && lastPage.meta && lastPage.meta.has_more) {
         return lastPage.meta.next_cursor || "";
       }
       return undefined;
     },
+
+    // Disable refetch when switching back to the tab
+    refetchOnWindowFocus: false,
   });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({

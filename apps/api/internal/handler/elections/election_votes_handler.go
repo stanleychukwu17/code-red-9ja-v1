@@ -60,7 +60,7 @@ func (h *Handler) GetEligibleElectionsForPollingUnit(w http.ResponseWriter, r *h
 		return
 	}
 
-	elections, err := h.service.GetEligibleElectionsForPollingUnit(ctx, electionGroupID, pollingUnitID)
+	elections, err := h.service.GetEligibleElectionsForPollingUnit(ctx, electionGroupID, int32(pollingUnitID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch eligible elections")
 		return
@@ -76,7 +76,6 @@ type SubmitElectionVotesRequest struct {
 	PollingUnitID   int64                        `json:"polling_unit_id"`
 	Votes           []electionsservice.VoteInput `json:"votes"`
 	VotersCardImage string                       `json:"voters_card_image"`
-	VotersCardNumber string                      `json:"voters_card_number"`
 }
 
 // SubmitElectionVotes saves the user's votes and updates PVC info.
@@ -107,7 +106,7 @@ func (h *Handler) SubmitElectionVotes(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err := h.service.SubmitElectionVotes(ctx, claims.UserID, req.ElectionGroupID, req.PollingUnitID, req.Votes, req.VotersCardNumber, req.VotersCardImage)
+	err := h.service.SubmitElectionVotes(ctx, claims.UserID, req.ElectionGroupID, int32(req.PollingUnitID), req.Votes, req.VotersCardImage)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to submit election votes: "+err.Error())
 		return

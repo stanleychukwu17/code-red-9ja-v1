@@ -225,7 +225,7 @@ const Step3 = ({
           const candidate = candidateByPartyId[party.id];
           const displayName = candidate
             ? `${candidate.first_name?.String ?? candidate.first_name ?? ""} ${candidate.last_name?.String ?? candidate.last_name ?? ""} (${party.short_name})`.trim() ||
-              party.short_name
+            party.short_name
             : party.short_name;
           const displayImage =
             (candidate?.avatar?.String ?? candidate?.avatar) || party.logo;
@@ -263,8 +263,6 @@ const Step3 = ({
 const Step4 = ({
   votersCardImage,
   setVotersCardImage,
-  votersCardNumber,
-  setVotersCardNumber,
 }: any) => {
   const handleFileUpload = async (file: File) => {
     // Basic file upload dummy function for now
@@ -318,14 +316,6 @@ const Step4 = ({
         <UploadVotersCardPlaceholder />
       )}
 
-      <div className="flex flex-col gap-2 mt-4">
-        <Label title="Voters Card Number / PVC Number" />
-        <Input
-          placeholder="Enter your voters card number"
-          value={votersCardNumber}
-          onChange={(e) => setVotersCardNumber(e.target.value)}
-        />
-      </div>
 
       <div className="mt-4">
         <p className="font-semibold text-sm mb-2">Example:</p>
@@ -356,7 +346,6 @@ export const VoteFlow = () => {
   // votes: Record<electionId, partyId>
   const [votes, setVotes] = useState<Record<number, number>>({});
   const [votersCardImage, setVotersCardImage] = useState(user?.voters_card_image || "");
-  const [votersCardNumber, setVotersCardNumber] = useState(user?.vin || "");
 
   const { data: elections, isLoading: electionsLoading } = useQuery({
     queryKey: [
@@ -389,7 +378,7 @@ export const VoteFlow = () => {
       const currentElection = elections[currentElectionIndex];
       return currentElection ? !votes[currentElection.id] : true;
     }
-    if (step === 4) return !votersCardImage || !votersCardNumber;
+    if (step === 4) return !votersCardImage;
     return false;
   })();
 
@@ -421,8 +410,8 @@ export const VoteFlow = () => {
         setStep(4);
       }
     } else if (step === 4) {
-      if (!votersCardImage || !votersCardNumber)
-        return toast.error("Please provide PVC image and number");
+      if (!votersCardImage)
+        return toast.error("Please provide PVC image");
 
       const votePayload = Object.entries(votes).map(
         ([electionId, partyId]) => ({
@@ -436,7 +425,6 @@ export const VoteFlow = () => {
         polling_unit_id: selectedPollingUnitId,
         votes: votePayload,
         voters_card_image: votersCardImage,
-        voters_card_number: votersCardNumber,
       });
     }
   };
@@ -492,8 +480,6 @@ export const VoteFlow = () => {
           <Step4
             votersCardImage={votersCardImage}
             setVotersCardImage={setVotersCardImage}
-            votersCardNumber={votersCardNumber}
-            setVotersCardNumber={setVotersCardNumber}
           />
         )}
       </div>

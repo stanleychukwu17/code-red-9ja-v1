@@ -1,5 +1,5 @@
 -- name: GetCountryByID :one
-SELECT id, name, iso2 FROM c_countries
+SELECT id, name, iso2, phonecode FROM c_countries
 WHERE id = $1 LIMIT 1;
 
 -- name: GetStateByID :one

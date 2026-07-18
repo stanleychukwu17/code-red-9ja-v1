@@ -201,7 +201,7 @@ func (h *Handler) CreateUserWalletHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	wallet, err := h.usersService.CreateUserWallet(r.Context(), user)
+	wallet, err := h.usersService.CreateUserWallet(r.Context(), user.User)
 	if err != nil {
 		if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 			h.utils.RespondError(w, http.StatusConflict, "This user already has a wallet")

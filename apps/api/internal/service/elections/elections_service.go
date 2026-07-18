@@ -230,7 +230,7 @@ func (s *ElectionsService) CreateElection(
 
 type CandidateInput struct {
 	CandidateID    int64
-	PartyID        int64
+	PartyID        int16
 	PartyShortName string
 }
 
@@ -333,7 +333,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		_, err := txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
 			ElectionID:     election.ID,
 			CandidateID:    cand.CandidateID,
-			PartyID:        cand.PartyID,
+			PartyID:        int16(cand.PartyID),
 			PartyShortName: cand.PartyShortName,
 		})
 		if err != nil {
@@ -1317,7 +1317,7 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 		_, err = txQueries.CreateElectionCandidate(ctx, queries.CreateElectionCandidateParams{
 			ElectionID:     electionID,
 			CandidateID:    cand.CandidateID,
-			PartyID:        cand.PartyID,
+			PartyID:        int16(cand.PartyID),
 			PartyShortName: cand.PartyShortName,
 		})
 		if err != nil {
@@ -1326,7 +1326,7 @@ func (s *ElectionsService) SyncElectionCandidates(ctx context.Context, electionI
 
 		err = txQueries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
 			ID:      cand.CandidateID,
-			PartyID: pgtype.Int8{Int64: cand.PartyID, Valid: cand.PartyID != 0},
+			PartyID: pgtype.Int2{Int16: int16(cand.PartyID), Valid: int16(cand.PartyID) != 0},
 		})
 		if err != nil {
 			return err
@@ -1442,7 +1442,7 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 	return nil
 }
 
-func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int64, partyID int64, candidateID int64) error {
+func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID int64, partyID int16, candidateID int64) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return err
@@ -1454,7 +1454,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 	// 1. Delete any existing candidate of this party on the election
 	err = txQueries.DeleteElectionCandidateForParty(ctx, queries.DeleteElectionCandidateForPartyParams{
 		ElectionID: electionID,
-		PartyID:    pgtype.Int8{Int64: partyID, Valid: true},
+		PartyID:    pgtype.Int2{Int16: int16(partyID), Valid: true},
 	})
 	if err != nil {
 		return err
@@ -1498,7 +1498,7 @@ func (s *ElectionsService) FieldPartyCandidate(ctx context.Context, electionID i
 
 type VoteInput struct {
 	ElectionID int64 `json:"election_id"`
-	PartyID    int64 `json:"party_id"`
+	PartyID    int16 `json:"party_id"`
 }
 
 // ElectionWithCandidates embeds a base Election and attaches its registered candidates.
@@ -1507,7 +1507,7 @@ type ElectionWithCandidates struct {
 	Candidates []queries.ListElectionCandidatesDetailedByElectionIDRow `json:"candidates"`
 }
 
-func (s *ElectionsService) GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int64) ([]ElectionWithCandidates, error) {
+func (s *ElectionsService) GetEligibleElectionsForPollingUnit(ctx context.Context, electionGroupID int64, pollingUnitID int32) ([]ElectionWithCandidates, error) {
 	elections, err := s.queries.GetEligibleElectionsForPollingUnit(ctx, queries.GetEligibleElectionsForPollingUnitParams{
 		ElectionGroupID: electionGroupID,
 		ID:              int32(pollingUnitID),
@@ -1535,9 +1535,8 @@ func (s *ElectionsService) SubmitElectionVotes(
 	ctx context.Context,
 	userID int64,
 	electionGroupID int64,
-	pollingUnitID int64,
+	pollingUnitID int32,
 	votes []VoteInput,
-	vin string,
 	votersCardImage string,
 ) error {
 	tx, err := s.pool.Begin(ctx)
@@ -1597,21 +1596,20 @@ func (s *ElectionsService) SubmitElectionVotes(
 			FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
 			LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
 			WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
-			PollingUnitID:         pgtype.Int8{Int64: pollingUnitID, Valid: true},
+			PollingUnitID:         pgtype.Int4{Int32: int32(pollingUnitID), Valid: true},
 			UserID:                userID,
 			ElectionGroupID:       electionGroupID,
 			ElectionID:            v.ElectionID,
-			PartyID:               v.PartyID,
+			PartyID:               int16(v.PartyID),
 		})
 		if err != nil {
-			return fmt.Errorf("failed to submit vote for election %d: %w", err)
+			return fmt.Errorf("failed to submit vote for election %d: %w", v.ElectionID, err)
 		}
 	}
 
 	// Update user's PVC details
 	err = qtx.UpdateUserVotersCard(ctx, queries.UpdateUserVotersCardParams{
 		ID:              userID,
-		Vin:             pgtype.Text{String: vin, Valid: vin != ""},
 		VotersCardImage: pgtype.Text{String: votersCardImage, Valid: votersCardImage != ""},
 	})
 	if err != nil {

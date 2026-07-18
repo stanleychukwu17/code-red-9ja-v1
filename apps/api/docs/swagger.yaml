@@ -287,6 +287,8 @@ definitions:
         minLength: 5
         type: string
       phone:
+        maxLength: 15
+        minLength: 5
         type: string
       question1:
         type: integer
@@ -361,6 +363,8 @@ definitions:
         type: string
       date_of_birth:
         type: string
+      education_level:
+        type: string
       educational_status:
         type: string
       email:
@@ -379,6 +383,8 @@ definitions:
         type: integer
       last_name:
         type: string
+      marital_status:
+        type: string
       middle_name:
         type: string
       party:
@@ -389,6 +395,8 @@ definitions:
         type: string
       polling_unit_id:
         type: integer
+      religion:
+        type: string
       roles:
         items:
           type: string
@@ -397,8 +405,6 @@ definitions:
         type: string
       username:
         type: string
-      vin:
-        type: string
       voters_card_image:
         type: string
       whatsapp_phone:
@@ -406,13 +412,7 @@ definitions:
     type: object
   authservice.SeedUserRequest:
     properties:
-      account_status:
-        type: string
       avatar:
-        type: string
-      bank_account_number:
-        type: string
-      bank_code:
         type: string
       current_city:
         type: integer
@@ -424,6 +424,8 @@ definitions:
         type: integer
       date_of_birth:
         type: string
+      education_level:
+        type: string
       email:
         type: string
       fake_id:
@@ -432,33 +434,27 @@ definitions:
         type: string
       gender:
         type: string
+      home_address:
+        type: string
       id:
         type: integer
       last_name:
         type: string
+      marital_status:
+        type: string
       middle_name:
         type: string
-      nin_verified:
-        type: string
-      party_id:
+      occupation_id:
         type: integer
       password:
         type: string
       phone:
         type: string
-      phone_verified:
-        type: string
-      role:
-        type: string
-      role_level:
+      religion:
         type: string
       state_of_origin:
         type: integer
       username:
-        type: string
-      vin:
-        type: string
-      voters_card_image:
         type: string
     type: object
   bodieshandler.CityResponse:
@@ -531,6 +527,24 @@ definitions:
       success:
         type: boolean
     type: object
+  bodieshandler.GetStatesData:
+    properties:
+      states:
+        items:
+          $ref: '#/definitions/bodieshandler.StateResponse'
+        type: array
+    type: object
+  bodieshandler.GetStatesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/bodieshandler.GetStatesData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/bodieshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
   bodieshandler.LGAResponse:
     properties:
       abbreviation:
@@ -549,6 +563,13 @@ definitions:
       has_more:
         type: boolean
       next_cursor:
+        type: string
+    type: object
+  bodieshandler.StateResponse:
+    properties:
+      id:
+        type: integer
+      name:
         type: string
     type: object
   electiongroupshandler.CreateElectionGroupRequest:
@@ -956,8 +977,6 @@ definitions:
         type: integer
       school_name:
         type: string
-      vin:
-        type: string
       voters_card_image:
         type: string
       whatsapp_phone:
@@ -1149,14 +1168,14 @@ definitions:
     properties:
       election_group_id:
         type: integer
+      fake_id:
+        type: integer
       party_id:
         type: integer
       polling_unit_id:
         type: integer
       role_type:
         type: string
-      user_id:
-        type: integer
     type: object
   puassignmentshandler.UpdateAssignmentTrackingRequest:
     properties:
@@ -1329,38 +1348,6 @@ definitions:
       name:
         type: string
     type: object
-  stateshandler.GetStatesData:
-    properties:
-      states:
-        items:
-          $ref: '#/definitions/stateshandler.StateResponse'
-        type: array
-    type: object
-  stateshandler.GetStatesResponse:
-    properties:
-      data:
-        $ref: '#/definitions/stateshandler.GetStatesData'
-      message:
-        type: string
-      meta:
-        $ref: '#/definitions/stateshandler.PaginationMeta'
-      success:
-        type: boolean
-    type: object
-  stateshandler.PaginationMeta:
-    properties:
-      has_more:
-        type: boolean
-      next_cursor:
-        type: string
-    type: object
-  stateshandler.StateResponse:
-    properties:
-      id:
-        type: integer
-      name:
-        type: string
-    type: object
   stateshandler.UpdateStateRequest:
     properties:
       country_code:
@@ -1460,10 +1447,14 @@ definitions:
         type: string
       date_of_birth:
         type: string
+      education_level:
+        type: string
       educational_status:
         type: string
       email:
         type: string
+      email_verified:
+        type: boolean
       fake_id:
         type: integer
       first_name:
@@ -1478,22 +1469,26 @@ definitions:
         type: integer
       last_name:
         type: string
+      marital_status:
+        type: string
       middle_name:
         type: string
       nin_verified:
-        type: string
+        type: boolean
       party_id:
         type: integer
       phone:
         type: string
       phone_verified:
-        type: string
+        type: boolean
       polling_unit_id:
         type: integer
-      role:
+      religion:
         type: string
-      role_level:
-        type: string
+      roles:
+        items:
+          type: string
+        type: array
       school_name:
         type: string
       state_of_origin:
@@ -1504,6 +1499,8 @@ definitions:
         type: string
       voters_card_image:
         type: string
+      voters_card_verified:
+        type: boolean
       whatsapp_phone:
         type: string
     type: object
@@ -1700,6 +1697,70 @@ paths:
       summary: Update global slot price
       tags:
       - Admin Settings
+  /admin/users/{id}/phones:
+    get:
+      description: Fetches the list of phone numbers for a user
+      parameters:
+      - description: User ID or Fake ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user phone numbers
+      tags:
+      - Users
+  /admin/users/phones/{id}:
+    delete:
+      description: Deletes a specific user phone number by its ID
+      parameters:
+      - description: Phone Number ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a user phone number
+      tags:
+      - Users
   /api/v1/supervisor-assignments:
     get:
       consumes:
@@ -2299,21 +2360,13 @@ paths:
         name: countryID
         required: true
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/stateshandler.GetStatesResponse'
+            $ref: '#/definitions/bodieshandler.GetStatesResponse'
         "400":
           description: Bad Request
           schema:
@@ -2324,7 +2377,7 @@ paths:
             type: string
       summary: Get states by country ID
       tags:
-      - States
+      - Bodies
   /election-groups:
     get:
       consumes:
@@ -4011,20 +4064,12 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches LGAs with optional state_id filtering and cursor pagination
+      description: Fetches LGAs with optional state_id filtering
       parameters:
       - description: State ID to filter by
         in: query
         name: state_id
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -6597,21 +6642,13 @@ paths:
     get:
       consumes:
       - application/json
-      description: Fetches all cities for a specific state by its ID with cursor pagination
+      description: Fetches all cities for a specific state by its ID
       parameters:
       - description: State ID
         in: path
         name: stateID
         required: true
         type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor (ID of last record)
-        in: query
-        name: cursor
-        type: string
       produces:
       - application/json
       responses:
@@ -6635,7 +6672,7 @@ paths:
       description: Fetches the list of all registered users with role filtering and
         cursor-based pagination
       parameters:
-      - description: Role (admin, partyadmin, user)
+      - description: Role (admin, party_admin, user)
         in: query
         name: role
         type: string

@@ -42,6 +42,7 @@ import (
 	webhookshandler "free9ja/api/internal/handler/webhooks"
 	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
+	"free9ja/api/internal/service/audit"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
@@ -85,7 +86,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		accessExp = cfg.JWTAccessExpiration
 		refreshExp = cfg.JWTRefreshExpiration
 	}
-	// Initialise Monnify client (nil-safe: wallet creation is skipped if unconfigured)
+	// Initializes Monnify client (nil-safe: wallet creation is skipped if un-configured)
 	var monnifyClient *monnifyservice.Client
 	if cfg != nil && cfg.Monnify.APIKey != "" && cfg.Monnify.SecretKey != "" {
 		monnifyClient = monnifyservice.New(monnifyservice.Config{
@@ -101,8 +102,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient)
 	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
-	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, jwtSecret, accessExp, refreshExp)
 	bodiesService := bodiesservice.NewBodiesService(q, rdb)
+	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
 
 	statesService := statesservice.NewStatesService(q, rdb)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
@@ -133,7 +134,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionStatsService := electionstats.NewElectionStatsService(q)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
-	usersHandler := usershandler.NewHandler(usersService, utilsInstance)
+	auditService := audit.NewAuditService(q)
+	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
@@ -142,7 +144,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 
-	// Initialise the R2 service (nil-safe: file endpoints return an error if unconfigured)
+	// Initialize the R2 service (nil-safe: file endpoints return an error if un-configured)
 	var filesHandler *fileshandler.Handler
 	var r2Svc *r2service.R2Service
 	var r2Err error
@@ -203,7 +205,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// political & geographic bodies
 	mainRouter.Get(utils.ApiUrls.Bodies.GetAll, bodiesHandler.GetCountries)
-	mainRouter.Get(utils.ApiUrls.Bodies.GetStates, statesHandler.GetStates)
+	mainRouter.Get(utils.ApiUrls.Bodies.GetStates, bodiesHandler.GetStates)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetCities, bodiesHandler.GetCities)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetSenatorialDistricts, senatorialDistrictsHandler.GetSenatorialDistricts)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetFederalConstituencies, federalConstituenciesHandler.GetFederalConstituencies)
@@ -378,6 +380,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)
 		r.Delete("/api/v1/admin/users/{id}", usersHandler.DeleteUser)
+		r.Get("/api/v1/admin/users/{id}/phones", usersHandler.GetUserPhoneNumbers)
+		r.Put("/api/v1/admin/users/{id}/phones", usersHandler.UpdateUserPhoneNumbers)
+		r.Delete("/api/v1/admin/users/phones/{id}", usersHandler.DeleteUserPhoneNumber)
 		r.Get("/api/v1/users/me/wallet", usersHandler.GetMyWallet)
 		r.Get("/api/v1/users/me/wallet/transactions", usersHandler.ListMyWalletTransactions)
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)
@@ -462,7 +467,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 }
 
 // fileRoute returns an http.HandlerFunc that is nil-safe: when the files handler
-// is not initialised (i.e. R2 credentials are absent) it responds with 503.
+// is not initialized (i.e. R2 credentials are absent) it responds with 503.
 func fileRoute(
 	u *utils.Utils,
 	h *fileshandler.Handler,

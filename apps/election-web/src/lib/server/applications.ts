@@ -214,7 +214,6 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
       election_group_ids: number[];
       polling_unit_id: number;
       avatar: string;
-      vin?: string;
       voters_card_image?: string;
       current_country: number;
       current_state: number;

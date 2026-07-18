@@ -31,13 +31,20 @@ type MessagingService interface {
 
 type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
-	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
+	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 }
 
 type PartyService interface {
-	GetPartyBasicInfo(ctx context.Context, partyID int64) *queries.GetPartyBasicInfoRow
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow
+}
+
+type BodiesService interface {
+	CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error)
+	CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error)
+	CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error)
 }
 
 type AuthService struct {
@@ -46,6 +53,7 @@ type AuthService struct {
 	messagingService MessagingService
 	usersService     UsersService
 	partyService     PartyService
+	bodiesService    BodiesService
 	jwtSecret        string
 	jwtAccessExp     time.Duration
 	jwtRefreshExp    time.Duration
@@ -57,6 +65,7 @@ func NewAuthService(
 	messagingService MessagingService,
 	usersService UsersService,
 	partyService PartyService,
+	bodiesService BodiesService,
 	jwtSecret string,
 	jwtAccessExp time.Duration,
 	jwtRefreshExp time.Duration,
@@ -67,6 +76,7 @@ func NewAuthService(
 		messagingService: messagingService,
 		usersService:     usersService,
 		partyService:     partyService,
+		bodiesService:    bodiesService,
 		jwtSecret:        jwtSecret,
 		jwtAccessExp:     jwtAccessExp,
 		jwtRefreshExp:    jwtRefreshExp,
@@ -87,8 +97,8 @@ type LoginUser struct {
 	Phone             string                        `json:"phone"`
 	Roles             []string                      `json:"roles"`
 	AccountStatus     string                        `json:"account_status"`
-	PartyID           int64                         `json:"party_id,omitempty"`
-	PollingUnitID     int64                         `json:"polling_unit_id,omitempty"`
+	PartyID           int16                         `json:"party_id,omitempty"`
+	PollingUnitID     int32                         `json:"polling_unit_id,omitempty"`
 	CurrentCountry    int16                         `json:"current_country"`
 	CurrentState      int16                         `json:"current_state"`
 	CurrentLga        int32                         `json:"current_lga"`
@@ -104,7 +114,9 @@ type LoginUser struct {
 	BankAccountNumber string                        `json:"bank_account_number"`
 	BankCode          string                        `json:"bank_code"`
 	VotersCardImage   string                        `json:"voters_card_image"`
-	Vin               string                        `json:"vin"`
+	Religion          string                        `json:"religion"`
+	MaritalStatus     string                        `json:"marital_status"`
+	EducationLevel    string                        `json:"education_level"`
 	Party             *queries.GetPartyBasicInfoRow `json:"party,omitempty"`
 }
 type LoginResult struct {
@@ -118,7 +130,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	log := logger.FromContext(ctx).With("component", logger.ComponentAuthService)
 	identifier = strings.TrimSpace(strings.ToLower(identifier))
 
-	var user queries.User
 	var err error
 	var fakeIDStr string
 	var fakeID int64
@@ -128,13 +139,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		identifier = strings.TrimSpace(strings.ToLower(identifier))
 		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
 		if fakeIDStr == "" {
-			dbUser, err := s.queries.GetUserByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
-			if err == nil && dbUser.FakeID.Valid {
-				fakeIDStr = strconv.FormatInt(dbUser.FakeID.Int64, 10)
-				_ = s.SaveSomeUserRegistrationDetails(ctx, dbUser.Username.String, dbUser.Email.String, dbUser.Phone.String, "", dbUser.ID, dbUser.FakeID.Int64)
-			} else {
-				return LoginResult{}, errors.New("invalid email, this record not found")
-			}
+			return LoginResult{}, errors.New("invalid email or password")
 		}
 
 	case "username":
@@ -165,7 +170,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 
 	// fetch the user details using the fakeID
 	fakeID, _ = strconv.ParseInt(fakeIDStr, 10, 64)
-	user, err = s.GetUserDetailsByFakeID(ctx, fakeID)
+	user, err := s.GetUserDetailsByFakeID(ctx, fakeID)
 	if err != nil {
 		return LoginResult{}, errors.New("invalid login details provided")
 	}
@@ -177,21 +182,18 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 
 	var userRoleCodes []string
-	// Extract just the role codes (e.g., "admin", "user") into a simple string slice for easier comparison
+	// Extract just the role codes (e.g., "admin", "super_admin", "party_admin", "super_party_admin" e.t.c) into a simple string slice for easier comparison
 	for _, ur := range userRoles {
 		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
-	fmt.Println("userRoleCodes", userRoleCodes)
 
 	// Role Validation
 	if len(allowedRoles) > 0 {
 		// Check if the user has at least one of the roles required to perform this action (allowedRoles)
 		hasRole := false
 		for _, allowedRole := range allowedRoles {
-			for _, code := range userRoleCodes {
-				fmt.Println("allowedRole", allowedRole)
-				fmt.Println("code", code)
-				if code == allowedRole {
+			for _, userRoleC := range userRoleCodes {
+				if userRoleC == allowedRole {
 					hasRole = true
 					break // Stop checking once a matching role is found
 				}
@@ -230,9 +232,9 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 	jsonSessionData, _ := json.Marshal(sessionData)
 
-	var partyID int64
+	var partyID int16
 	if user.PartyID.Valid {
-		partyID = user.PartyID.Int64
+		partyID = user.PartyID.Int16
 	}
 
 	// Generate Access Token and Refresh Token
@@ -276,7 +278,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
 	}
 
-	return LoginResult{
+	loginResult := LoginResult{
 		AccessToken:  accessToken,
 		RefreshToken: randStr.RandomString,
 		User: LoginUser{
@@ -293,26 +295,32 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			Roles:             userRoleCodes,
 			AccountStatus:     user.AccountStatus.String,
 			PartyID:           partyID,
-			PollingUnitID:     user.PollingUnitID.Int64,
+			PollingUnitID:     user.PollingUnitID.Int32,
 			CurrentCountry:    user.CurrentCountry,
 			CurrentState:      user.CurrentState,
 			CurrentLga:        user.CurrentLga.Int32,
 			CurrentWard:       user.CurrentWard.Int32,
 			CurrentCity:       user.CurrentCity.Int32,
-			Address:           user.Address.String,
 			WhatsappPhone:     user.WhatsappPhone.String,
 			DataPhone:         user.DataPhone.String,
-			EducationalStatus: user.EducationalStatus.String,
-			HighestDegree:     user.HighestDegree.String,
-			GraduationYear:    user.GraduationYear.String,
-			SchoolName:        user.SchoolName.String,
 			BankAccountNumber: user.BankAccountNumber.String,
 			BankCode:          user.BankCode.String,
 			VotersCardImage:   user.VotersCardImage.String,
-			Vin:               user.Vin.String,
 			Party:             partyObj,
 		},
-	}, nil
+	}
+
+	profile, _ := s.usersService.GetMoreInfoAboutThisUser(ctx, user.ID)
+	loginResult.User.EducationalStatus = profile.EducationalStatus.String
+	loginResult.User.HighestDegree = profile.HighestDegree.String
+	loginResult.User.GraduationYear = profile.GraduationYear.String
+	loginResult.User.SchoolName = profile.SchoolName.String
+	loginResult.User.Religion = profile.Religion.String
+	loginResult.User.MaritalStatus = profile.MaritalStatus.String
+	loginResult.User.EducationLevel = profile.EducationLevel.String
+	loginResult.User.Address = profile.Address.String
+
+	return loginResult, nil
 }
 
 type RefreshResult struct {
@@ -361,11 +369,11 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	username := user.Username.String
 	var partyObj *queries.GetPartyBasicInfoRow
 	if user.PartyID.Valid {
-		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int64)
+		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
 	}
-	var userPartyID int64
+	var userPartyID int16
 	if user.PartyID.Valid {
-		userPartyID = user.PartyID.Int64
+		userPartyID = user.PartyID.Int16
 	}
 	userRoles, _ := s.usersService.GetUserRoles(ctx, user.ID)
 	var userRoleCodes []string
@@ -386,25 +394,29 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Roles:             userRoleCodes,
 		AccountStatus:     user.AccountStatus.String,
 		PartyID:           userPartyID,
-		PollingUnitID:     user.PollingUnitID.Int64,
+		PollingUnitID:     user.PollingUnitID.Int32,
 		CurrentCountry:    user.CurrentCountry,
 		CurrentState:      user.CurrentState,
 		CurrentLga:        user.CurrentLga.Int32,
 		CurrentWard:       user.CurrentWard.Int32,
 		CurrentCity:       user.CurrentCity.Int32,
-		Address:           user.Address.String,
 		WhatsappPhone:     user.WhatsappPhone.String,
 		DataPhone:         user.DataPhone.String,
-		EducationalStatus: user.EducationalStatus.String,
-		HighestDegree:     user.HighestDegree.String,
-		GraduationYear:    user.GraduationYear.String,
-		SchoolName:        user.SchoolName.String,
 		BankAccountNumber: user.BankAccountNumber.String,
 		BankCode:          user.BankCode.String,
 		VotersCardImage:   user.VotersCardImage.String,
-		Vin:               user.Vin.String,
 		Party:             partyObj,
 	}
+
+	profile, _ := s.usersService.GetMoreInfoAboutThisUser(ctx, user.ID)
+	userDetails.EducationalStatus = profile.EducationalStatus.String
+	userDetails.HighestDegree = profile.HighestDegree.String
+	userDetails.GraduationYear = profile.GraduationYear.String
+	userDetails.SchoolName = profile.SchoolName.String
+	userDetails.Religion = profile.Religion.String
+	userDetails.MaritalStatus = profile.MaritalStatus.String
+	userDetails.EducationLevel = profile.EducationLevel.String
+	userDetails.Address = profile.Address.String
 
 	// Parse the RFC3339 string back into a time.Time
 	parsedTime, err := time.Parse(time.RFC3339, timeAdded)
@@ -414,7 +426,6 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 
 	// Compare with current time
 	if time.Since(parsedTime) < 10*time.Minute {
-		// fmt.Println("TimeAdded is less than 10 minutes ago", parsedTime)
 		return RefreshResult{
 			User: userDetails,
 		}, nil
@@ -459,9 +470,9 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	//convert to json
 	jsonSessionData, _ := json.Marshal(sessionData)
 
-	var partyID int64
+	var partyID int16
 	if user.PartyID.Valid {
-		partyID = user.PartyID.Int64
+		partyID = user.PartyID.Int16
 	}
 
 	// Generate a new Access Token
@@ -586,6 +597,7 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 type RedisOnboardingData struct {
 	ID        string `json:"id"`
 	Phone     string `json:"phone"`
+	E164      string `json:"e164"`
 	Email     string `json:"email"`
 	CountryID int16  `json:"country_id"`
 	Completed string `json:"completed"`
@@ -627,8 +639,33 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 	params.Username = pgtype.Text{String: username, Valid: true}
 
+	// country check
+	country_dts, err := s.bodiesService.CheckCountry(ctx, params.CurrentCountry)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+	// state check
+	_, err = s.bodiesService.CheckState(ctx, params.CurrentCountry, params.CurrentState)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+	// city check
+	if params.CurrentCity.Int32 > 0 {
+		_, err = s.bodiesService.CheckCity(ctx, params.CurrentState, params.CurrentCity.Int32)
+		if err != nil {
+			return RegisterResult{}, err
+		}
+	}
+
+	// check phone country validation
+	phone := params.Phone.String
+	formattedPhone, err := s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
 	// check if onboarding details exist in redis
-	redisKey := db.RedisRegisterOnboarding + params.Phone.String
+	redisKey := db.RedisRegisterOnboarding + formattedPhone
 	onboardingJSON, err := s.rdb.Get(ctx, redisKey).Result()
 	if err != nil {
 		return RegisterResult{}, errors.New("onboarding details not found")
@@ -664,7 +701,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// phone checks
-	phone_exist := s.CheckPhone(ctx, params.Phone.String)
+	phone_exist := s.CheckPhone(ctx, formattedPhone)
 	if phone_exist {
 		return RegisterResult{}, errors.New("phone already exists")
 	}
@@ -673,28 +710,6 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	nin_check := s.CheckNIN(ctx, nin)
 	if nin_check {
 		return RegisterResult{}, errors.New("nin already exists")
-	}
-
-	// country check
-	country_dts, err := s.CheckCountry(ctx, params.CurrentCountry)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-	// state check
-	_, err = s.CheckState(ctx, params.CurrentCountry, params.CurrentState)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-	// city check
-	_, err = s.CheckCity(ctx, params.CurrentState, params.CurrentCity.Int32)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// check phone country validation
-	_, err = s.ValidatePhoneForCountry(params.Phone.String, country_dts.Iso2)
-	if err != nil {
-		return RegisterResult{}, err
 	}
 
 	// Check date of birth: Ensure the user is at least 18 years old
@@ -748,7 +763,13 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// save some of the user details to our db & also to redis(using pipeline)
-	err = s.SaveSomeUserRegistrationDetails(ctx, username, email, params.Phone.String, nin, user_id, fake_id)
+	err = s.SaveSomeUserRegistrationDetails(ctx, username, email, nin, user_id, fake_id)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	// save the user phone number
+	err = s.SaveUserPhone(ctx, user_id, fake_id, formattedPhone, params.Phone.String, country_dts.Phonecode)
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -779,7 +800,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		if userErr == nil {
 			go func() {
 				bgCtx := context.Background()
-				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser); walletErr != nil {
+				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
 					slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
 				}
 			}()
@@ -857,7 +878,7 @@ func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 // 3. returns normalized E.164 format if valid
 func (s *AuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) {
 	// Parse number (second arg can be empty if phone is already in E.164)
-	num, err := phonenumbers.Parse(phone, "")
+	num, err := phonenumbers.Parse(phone, country_code)
 	if err != nil {
 		return "", fmt.Errorf("invalid phone format: %w", err)
 	}
@@ -878,85 +899,8 @@ func (s *AuthService) ValidatePhoneForCountry(phone, country_code string) (strin
 	return formatted, nil
 }
 
-// function: check if the user country is valid
-func (s *AuthService) CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error) {
-	redisCountryKey := fmt.Sprintf("%s%d", db.RedisEachCountry, country_id)
-
-	// attempt to get country details from redis
-	country_data, err := s.rdb.Get(ctx, redisCountryKey).Result()
-	if err == nil {
-		var country_dts queries.GetCountryByIDRow
-		json.Unmarshal([]byte(country_data), &country_dts)
-		return country_dts, nil
-	}
-
-	// get country details from db
-	country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
-	if country_dts.ID > 0 {
-		s.rdb.Set(ctx, redisCountryKey, country_data, 0)
-		return country_dts, nil
-	}
-
-	return queries.GetCountryByIDRow{}, errors.New("invalid country ID")
-}
-
-// function: check if the state is valid
-func (s *AuthService) CheckState(ctx context.Context, country_id, state_id int16) (bool, error) {
-	redisStateKey := fmt.Sprintf("%s%d", db.RedisEachState, state_id)
-
-	// get state details from redis
-	state_data, err := s.rdb.Get(ctx, redisStateKey).Result()
-	if err == nil {
-		var state_dts queries.GetStateByIDRow
-		json.Unmarshal([]byte(state_data), &state_dts)
-		return state_dts.ID > 0, nil
-	}
-
-	// get state details from db
-	state_dts, _ := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
-		ID:        state_id,
-		CountryID: country_id,
-	})
-	if state_dts.ID > 0 {
-		// save to redis
-		state_data, _ := json.Marshal(state_dts)
-		s.rdb.Set(ctx, redisStateKey, state_data, 5*365*24*time.Hour) // expires in 5years
-
-		return true, nil
-	}
-	return false, fmt.Errorf("invalid state ID")
-}
-
-// function: check if the city is valid
-func (s *AuthService) CheckCity(ctx context.Context, state_id int16, city_id int32) (bool, error) {
-	redisCityKey := fmt.Sprintf("%s%d", db.RedisEachCity, city_id)
-
-	// get city details from redis
-	city_data, err := s.rdb.Get(ctx, redisCityKey).Result()
-	if err == nil {
-		var city_dts queries.GetCityByIDRow
-		json.Unmarshal([]byte(city_data), &city_dts)
-		return city_dts.ID > 0, nil
-	}
-
-	// get city details from db
-	city_dts, _ := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
-		ID:      city_id,
-		StateID: state_id,
-	})
-	if city_dts.ID > 0 {
-		// save to redis
-		city_data, _ := json.Marshal(city_dts)
-		s.rdb.Set(ctx, redisCityKey, city_data, 5*365*24*time.Hour) // expires in 5years
-
-		return true, nil
-	}
-
-	return false, fmt.Errorf("invalid city ID")
-}
-
-// SaveSomeUserRegistrationDetails saves the user's registration details (username, email, phone, nin) to Redis & DB
-func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, phone, nin string, userID int64, fakeID int64) error {
+// SaveSomeUserRegistrationDetails saves the user's registration details (username, email, nin) to Redis & DB
+func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error {
 	// batch redis commands
 	pipe := s.rdb.TxPipeline()
 
@@ -965,9 +909,6 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 	}
 	if email != "" {
 		pipe.Set(ctx, db.RedisEmailFakeID+email, fakeID, 0)
-	}
-	if phone != "" {
-		pipe.Set(ctx, db.RedisPhoneFakeID+phone, fakeID, 0)
 	}
 	if nin != "" {
 		pipe.Set(ctx, db.RedisNINFakeID+nin, fakeID, 0)
@@ -979,13 +920,6 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 	}
 
 	// save to db
-	if phone != "" {
-		s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
-			Phone:  phone,
-			UserID: userID,
-		})
-	}
-
 	if nin != "" {
 		s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
 			Nin:    nin,
@@ -993,6 +927,28 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 		})
 	}
 
+	return nil
+}
+
+// SaveUserPhone saves the user's phone number to Redis & DB
+func (s *AuthService) SaveUserPhone(ctx context.Context, userID, fakeID int64, phoneE164, rawInput, phonecode string) error {
+	if phoneE164 != "" {
+		err := s.rdb.Set(ctx, db.RedisPhoneFakeID+phoneE164, fakeID, 0).Err()
+		if err != nil {
+			return err
+		}
+
+		_, err = s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
+			Phone:     phoneE164,
+			Phonecode: phonecode,
+			RawInput:  rawInput,
+			UserID:    userID,
+			IsDefault: pgtype.Bool{Bool: true, Valid: true},
+		})
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -1010,25 +966,25 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 		}
 	}
 
-	// phone checks
-	if s.CheckPhone(ctx, phone) {
-		return RegisterPhaseSignUpResult{}, errors.New("phone already exists")
-	}
-
 	// country check
-	country_dts, err := s.CheckCountry(ctx, countryID)
+	country_dts, err := s.bodiesService.CheckCountry(ctx, countryID)
 	if err != nil {
 		return RegisterPhaseSignUpResult{}, err
 	}
 
 	// check phone country validation
-	_, err = s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	e164, err := s.ValidatePhoneForCountry(phone, country_dts.Iso2)
 	if err != nil {
 		return RegisterPhaseSignUpResult{}, err
 	}
 
+	// phone checks
+	if s.CheckPhone(ctx, e164) {
+		return RegisterPhaseSignUpResult{}, errors.New("phone already exists")
+	}
+
 	// checks to see if this user already started onboarding
-	redisKey := db.RedisRegisterOnboarding + phone
+	redisKey := db.RedisRegisterOnboarding + e164
 	onboardingJSON, err := s.rdb.Get(ctx, redisKey).Result()
 	if err == nil {
 		var onboarding RedisOnboardingData
@@ -1054,6 +1010,7 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 	newOnboarding := RedisOnboardingData{
 		ID:        uuid.NewString(),
 		Phone:     phone,
+		E164:      e164,
 		Email:     email,
 		CountryID: countryID,
 		Completed: "no",
@@ -1069,7 +1026,7 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 }
 
 // GetUserDetailsByFakeID fetches all user details using the user fake_id.
-func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
+func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
 	return s.usersService.GetUserByFakeID(ctx, fakeID)
 }
 
@@ -1252,7 +1209,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: currentCity, Valid: currentCity != 0},
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
-		PartyID:        pgtype.Int8{Int64: partyID, Valid: partyID != 0},
+		PartyID:        pgtype.Int2{Int16: int16(partyID), Valid: partyID != 0},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
 	}
 
@@ -1273,7 +1230,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	}
 
 	// save some of the user details to our db & also to redis(using pipeline)
-	err = s.SaveSomeUserRegistrationDetails(ctx, "", email, "", "", userID, fakeID)
+	err = s.SaveSomeUserRegistrationDetails(ctx, "", email, "", userID, fakeID)
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -1348,96 +1305,80 @@ func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, role
 }
 
 type SeedUserRequest struct {
-	ID                int64   `json:"id"`
-	FakeID            int64   `json:"fake_id"`
-	Email             string  `json:"email"`
-	Avatar            string  `json:"avatar"`
-	Phone             *string `json:"phone"`
-	Username          *string `json:"username"`
-	Password          string  `json:"password"`
-	LastName          string  `json:"last_name"`
-	FirstName         string  `json:"first_name"`
-	MiddleName        *string `json:"middle_name"`
-	Gender            string  `json:"gender"`
-	DateOfBirth       string  `json:"date_of_birth"`
-	CurrentCountry    int16   `json:"current_country"`
-	CurrentState      int16   `json:"current_state"`
-	CurrentLga        *int32  `json:"current_lga"`
-	CurrentCity       *int32  `json:"current_city"`
-	StateOfOrigin     *int16  `json:"state_of_origin"`
-	Vin               *string `json:"vin"`
-	VotersCardImage   *string `json:"voters_card_image"`
-	BankAccountNumber *string `json:"bank_account_number"`
-	BankCode          *string `json:"bank_code"`
-	NinVerified       string  `json:"nin_verified"`
-	PhoneVerified     string  `json:"phone_verified"`
-	Role              string  `json:"role"`
-	RoleLevel         string  `json:"role_level"`
-	AccountStatus     string  `json:"account_status"`
-	PartyID           *int64  `json:"party_id"`
+	ID             int64   `json:"id"`
+	FakeID         int64   `json:"fake_id"`
+	Email          string  `json:"email"`
+	Avatar         string  `json:"avatar"`
+	Phone          *string `json:"phone"`
+	Username       *string `json:"username"`
+	Password       string  `json:"password"`
+	LastName       string  `json:"last_name"`
+	FirstName      string  `json:"first_name"`
+	MiddleName     *string `json:"middle_name"`
+	Gender         string  `json:"gender"`
+	DateOfBirth    string  `json:"date_of_birth"`
+	Religion       string  `json:"religion"`
+	CurrentCountry int16   `json:"current_country"`
+	CurrentState   int16   `json:"current_state"`
+	CurrentLga     *int32  `json:"current_lga"`
+	CurrentCity    *int32  `json:"current_city"`
+	StateOfOrigin  *int16  `json:"state_of_origin"`
+	MaritalStatus  string  `json:"marital_status"`
+	EducationLevel string  `json:"education_level"`
+	HomeAddress    string  `json:"home_address"`
+	OccupationID   *int16  `json:"occupation_id"`
 }
 
-func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([]int64, error) {
-	var createdIDs []int64
+func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
 	for _, u := range users {
+		// check if email already exit, if yes, we can skip this user onto the next
+		if s.CheckEmail(ctx, u.Email) {
+			continue
+		}
+
 		// Hash password
 		hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
-		dob, err := time.Parse("2006-01-02", u.DateOfBirth)
+		// parse date of birth
+		dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
 		if err != nil {
-			return nil, fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
+			return "", fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
 		}
 
 		// Prepare params
-		var emailVal, avatarVal, phoneVal, usernameVal, middleNameVal, genderVal, vinVal, votersCardVal, bankNoVal, bankCodeVal pgtype.Text
-		var currentLgaVal, currentCityVal pgtype.Int4
-		var stateOfOriginVal pgtype.Int2
-		var partyIDVal pgtype.Int8
+		emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
+		avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
+		usernameVal := pgtype.Text{String: *u.Username, Valid: true}
+		middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
+		genderVal := pgtype.Text{String: u.Gender, Valid: true}
+		currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
+		currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
+		stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
+		occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
 
-		if u.Email != "" {
-			emailVal = pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
-		}
-		if u.Avatar != "" {
-			avatarVal = pgtype.Text{String: u.Avatar, Valid: true}
-		}
+		// check if the user phone number is valid
+		var phoneVal pgtype.Text
+		var iso2 string
+		var phonecode string
+		var formattedPhone string
+		var rawPhoneInput string
 		if u.Phone != nil && *u.Phone != "" {
-			phoneVal = pgtype.Text{String: *u.Phone, Valid: true}
-		}
-		if u.Username != nil && *u.Username != "" {
-			usernameVal = pgtype.Text{String: *u.Username, Valid: true}
-		}
-		if u.MiddleName != nil && *u.MiddleName != "" {
-			middleNameVal = pgtype.Text{String: *u.MiddleName, Valid: true}
-		}
-		if u.Gender != "" {
-			genderVal = pgtype.Text{String: u.Gender, Valid: true}
-		}
-		if u.CurrentLga != nil && *u.CurrentLga != 0 {
-			currentLgaVal = pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
-		}
-		if u.CurrentCity != nil && *u.CurrentCity != 0 {
-			currentCityVal = pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
-		}
-		if u.StateOfOrigin != nil && *u.StateOfOrigin != 0 {
-			stateOfOriginVal = pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
-		}
-		if u.Vin != nil && *u.Vin != "" {
-			vinVal = pgtype.Text{String: *u.Vin, Valid: true}
-		}
-		if u.VotersCardImage != nil && *u.VotersCardImage != "" {
-			votersCardVal = pgtype.Text{String: *u.VotersCardImage, Valid: true}
-		}
-		if u.BankAccountNumber != nil && *u.BankAccountNumber != "" {
-			bankNoVal = pgtype.Text{String: *u.BankAccountNumber, Valid: true}
-		}
-		if u.BankCode != nil && *u.BankCode != "" {
-			bankCodeVal = pgtype.Text{String: *u.BankCode, Valid: true}
-		}
-		if u.PartyID != nil && *u.PartyID != 0 {
-			partyIDVal = pgtype.Int8{Int64: *u.PartyID, Valid: true}
+			rawPhoneInput = *u.Phone
+			country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
+			if err != nil {
+				return "", fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
+			}
+
+			iso2 = country.Iso2
+			phonecode = country.Phonecode
+			formattedPhone, err = s.ValidatePhoneForCountry(rawPhoneInput, iso2)
+			if err != nil {
+				return "", fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
+			}
+			phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
 		}
 
 		params := queries.SeedUserParams{
@@ -1457,19 +1398,43 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			CurrentLga:        currentLgaVal,
 			CurrentCity:       currentCityVal,
 			StateOfOrigin:     stateOfOriginVal,
-			Vin:               vinVal,
-			VotersCardImage:   votersCardVal,
-			BankAccountNumber: bankNoVal,
-			BankCode:          bankCodeVal,
-			NinVerified:       pgtype.Text{String: u.NinVerified, Valid: u.NinVerified != ""},
-			PhoneVerified:     pgtype.Text{String: u.PhoneVerified, Valid: u.PhoneVerified != ""},
-			AccountStatus:     pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
-			PartyID:           partyIDVal,
+			VotersCardImage:   pgtype.Text{},
+			BankAccountNumber: pgtype.Text{},
+			BankCode:          pgtype.Text{},
+			AccountStatus:     pgtype.Text{},
+			PartyID:           pgtype.Int2{},
 		}
 
 		id, err := s.queries.SeedUser(ctx, params)
 		if err != nil {
-			return nil, fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+			return "", fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+		}
+
+		_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
+			UserID:            id,
+			OccupationID:      occupationIDVal,
+			EducationalStatus: pgtype.Text{},
+			HighestDegree:     pgtype.Text{},
+			GraduationYear:    pgtype.Text{},
+			SchoolName:        pgtype.Text{},
+			Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
+			MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
+			EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
+			Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
+		}
+
+		_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
+			UserID:             id,
+			NinVerified:        pgtype.Bool{Bool: false, Valid: true},
+			PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
+			EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
+			VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
 		}
 
 		// Save details to Redis cache
@@ -1479,23 +1444,18 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) ([
 			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
 		}
 
-		emailStr := ""
-		if emailVal.Valid {
-			emailStr = emailVal.String
-		}
-		phoneStr := ""
-		if phoneVal.Valid {
-			phoneStr = phoneVal.String
-		}
-		usernameStr := ""
-		if usernameVal.Valid {
-			usernameStr = usernameVal.String
+		emailStr := emailVal.String
+		usernameStr := usernameVal.String
+		_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", id, fakeID)
+
+		// save the user phone number
+		if formattedPhone != "" {
+			_ = s.SaveUserPhone(ctx, id, fakeID, formattedPhone, rawPhoneInput, phonecode)
 		}
 
-		_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, phoneStr, "", id, fakeID)
+		// get and save the user details to cache in redis
 		_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
 
-		createdIDs = append(createdIDs, id)
 	}
-	return createdIDs, nil
+	return "Users seeded successfully", nil
 }

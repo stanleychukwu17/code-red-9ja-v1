@@ -16,8 +16,7 @@ import {
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState, clearOnboardingData } from "#/redux/slice/authSlice";
-import store from "#/redux/store";
-import { updateCountryState } from "#/redux/slice/countrySlice";
+import { useQuery } from "@tanstack/react-query";
 import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { FormError } from "./_components/-form-error";
 import { SuccessMessage } from "./_components/-success-message";
@@ -62,27 +61,10 @@ export const Route = createFileRoute("/auth/login")({
       description: `Log in to your ${APP_NAME} account to access your dashboard and manage your profile`,
     }),
 
-  // Load countries data
-  loader: async () => {
-    if (typeof window !== "undefined") {
-      const state = store.getState();
-      if (state.country.countries && state.country.countries.length > 0) {
-        return { countries: state.country.countries };
-      }
-    }
-
-    const countries = (await getAllCountries()) as countriesType;
-    if (!countries.success) throw new Error(countries.message);
-
-    if (typeof window !== "undefined") {
-      store.dispatch(updateCountryState({ countries: countries.data.countries }));
-    }
-
-    return { countries: countries.data.countries };
-  },
-
+  // page component
   component: RouteComponent,
 
+  // error component
   errorComponent: ({ error }) => (
     <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
   ),
@@ -91,16 +73,22 @@ export const Route = createFileRoute("/auth/login")({
 function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showRegistrationSuccess, setShowRegistrationSuccess] =
-    useState<boolean>(false);
-  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] =
-    useState<boolean>(false);
+  const [showRegistrationSuccess, setShowRegistrationSuccess] = useState<boolean>(false);
+  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] = useState<boolean>(false);
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
+  // fetch the countries
+  const { data: countriesRes } = useQuery({
+    queryKey: ['countries'],
+    queryFn: () => getAllCountries() as Promise<countriesType>,
+    staleTime: Infinity,
+  });
+  const countries = (countriesRes?.success ? countriesRes.data.countries : []) as { id: number; name: string; iso2: string; phonecode: string }[];
+
+  // login form
   const form = useForm({
     defaultValues: {
       country: "",
@@ -131,6 +119,7 @@ function RouteComponent() {
         const matchedCountry = countries.find(
           (c) => c.name.toLowerCase() === value.country.toLowerCase(),
         );
+
         if (matchedCountry) {
           payload.identifier = payload.identifier.startsWith("0")
             ? `+${matchedCountry.phonecode}${payload.identifier.slice(1)}`

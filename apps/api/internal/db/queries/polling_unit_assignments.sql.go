@@ -28,7 +28,7 @@ type CreateAssignmentParams struct {
 	UserID          int64       `json:"user_id"`
 	PollingUnitID   int32       `json:"polling_unit_id"`
 	ElectionGroupID int64       `json:"election_group_id"`
-	PartyID         int64       `json:"party_id"`
+	PartyID         int16       `json:"party_id"`
 	RoleType        pgtype.Text `json:"role_type"`
 	AssignedBy      pgtype.Int8 `json:"assigned_by"`
 }
@@ -123,7 +123,7 @@ type GetAssignmentByIDRow struct {
 	UserID                  int64              `json:"user_id"`
 	PollingUnitID           int32              `json:"polling_unit_id"`
 	ElectionGroupID         int64              `json:"election_group_id"`
-	PartyID                 int64              `json:"party_id"`
+	PartyID                 int16              `json:"party_id"`
 	RoleType                pgtype.Text        `json:"role_type"`
 	AssignedBy              pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`
@@ -200,7 +200,7 @@ ORDER BY gs.threshold
 `
 
 type GetPartyElectionGroupCoverageDistributionParams struct {
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 }
 
@@ -286,7 +286,7 @@ type ListAssignmentsRow struct {
 	UserID                  int64              `json:"user_id"`
 	PollingUnitID           int32              `json:"polling_unit_id"`
 	ElectionGroupID         int64              `json:"election_group_id"`
-	PartyID                 int64              `json:"party_id"`
+	PartyID                 int16              `json:"party_id"`
 	RoleType                pgtype.Text        `json:"role_type"`
 	AssignedBy              pgtype.Int8        `json:"assigned_by"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
@@ -397,7 +397,7 @@ type UpdateAssignmentTrackingRow struct {
 	UserID                  int64              `json:"user_id"`
 	PollingUnitID           int32              `json:"polling_unit_id"`
 	ElectionGroupID         int64              `json:"election_group_id"`
-	PartyID                 int64              `json:"party_id"`
+	PartyID                 int16              `json:"party_id"`
 	RoleType                pgtype.Text        `json:"role_type"`
 	AssignedBy              pgtype.Int8        `json:"assigned_by"`
 	ArrivedAt               pgtype.Timestamptz `json:"arrived_at"`

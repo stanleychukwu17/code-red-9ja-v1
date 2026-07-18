@@ -87,11 +87,11 @@ func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int6
 	return s.queries.DeleteElectionGroup(ctx, id)
 }
 
-func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int64) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
+func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
 	return s.queries.ListElectionGroupsWithPartyStats(ctx, partyID)
 }
 
-func (s *ElectionGroupsService) UpsertPartyElectionGroupStats(ctx context.Context, partyID, electionGroupID int64, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error) {
+func (s *ElectionGroupsService) UpsertPartyElectionGroupStats(ctx context.Context, partyID int16, electionGroupID int64, pollingAgentsCoverage []byte, electionsContesting int32) (queries.PartyElectionGroup, error) {
 	return s.queries.UpsertPartyElectionGroupStats(ctx, queries.UpsertPartyElectionGroupStatsParams{
 		PartyID:             partyID,
 		ElectionGroupID:     electionGroupID,

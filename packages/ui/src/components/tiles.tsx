@@ -8,7 +8,11 @@ import {
 } from "./dropdown-menu";
 import { Button } from "./button";
 
-export function TileHeader({ children }: { children: React.ReactNode }) {
+export type TileHeaderProps = {
+  children: React.ReactNode;
+};
+
+export function TileHeader({ children }: TileHeaderProps) {
   return (
     <div className="h-10 border-y border-border flex items-center justify-between gap-5 md:gap-20 px-3 text-[15px]">
       {children}
@@ -16,15 +20,12 @@ export function TileHeader({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function TileRow({
-  children,
-  className,
-  onClick,
-}: {
+export type TileRowProps = {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
-}) {
+};
+export function TileRow({ children, className, onClick }: TileRowProps) {
   return (
     <div
       onClick={onClick}
@@ -38,7 +39,10 @@ export function TileRow({
   );
 }
 
-export function TileLeft({ children }: { children: React.ReactNode }) {
+export type TileLeftProps = {
+  children: React.ReactNode;
+};
+export function TileLeft({ children }: TileLeftProps) {
   return (
     <div className="flex w-full min-w-0 items-center gap-4 px-0">
       {children}
@@ -46,25 +50,23 @@ export function TileLeft({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function TileRight({ children }: { children: React.ReactNode }) {
+export type TileRightProps = {
+  children: React.ReactNode;
+};
+export function TileRight({ children }: TileRightProps) {
   return (
     <div className="shrink-0 flex items-center gap-3 text-[15px] text-c-70">{children}</div>
   );
 }
 
-export const TileOptions = ({
-  dropdown,
-  className,
-  disabled,
-  open: controlledOpen,
-  onOpenChange: controlledOnOpenChange,
-}: {
+export type TileOptionsProps = {
   dropdown: ReactNode;
   className?: string;
   disabled?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-}) => {
+};
+export const TileOptions = ({ dropdown, className, disabled, open: controlledOpen, onOpenChange: controlledOnOpenChange }: TileOptionsProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;

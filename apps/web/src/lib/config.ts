@@ -18,6 +18,8 @@ export const APP_URL = {
   "notifications": "/notifications",
   "profile": "/profile",
   "search": "/search",
+  "party": (partyName: string, partyId: string) => `/party/${partyName}/${partyId}/home`,
+  "parties": "/parties",
 }
 
 const api = `${API_BASE}/api/v1`

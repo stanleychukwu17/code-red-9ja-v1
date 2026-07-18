@@ -15,7 +15,7 @@ CREATE TABLE polling_unit_results (
   election_group_id        BIGINT   REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id          INTEGER  REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   submitted_by             BIGINT   REFERENCES users(id) ON DELETE SET NULL NOT NULL,
-  party_id                 BIGINT   REFERENCES parties(id) ON DELETE SET NULL,  -- NULL for general users
+  party_id                 SMALLINT   REFERENCES parties(id) ON DELETE SET NULL,  -- NULL for general users
 
   -- Denormalized for fast geo-filtering (mirrors polling_unit_updates)
   state_id                 SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,

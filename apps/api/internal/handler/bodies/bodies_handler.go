@@ -6,9 +6,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
@@ -16,6 +14,7 @@ import (
 
 type BodiesService interface {
 	GetAllCountries(ctx context.Context) ([]queries.ListCountriesRow, error)
+	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.GetStatesByCountryIDRow, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]queries.GetCitiesByStateIDRow, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]queries.Lga, error)
 	CreateLGA(ctx context.Context, name string, abbreviation string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)
@@ -38,46 +37,6 @@ func NewHandler(bodiesService BodiesService, q *queries.Queries, utils *utils.Ut
 		utils:         utils,
 		rdb:           rdb,
 	}
-}
-
-
-func parsePaginationParams(r *http.Request) (int, int64) {
-	return parsePaginationParamsWithMax(r, 100)
-}
-
-func parsePaginationParamsWithMax(r *http.Request, maxLimit int) (int, int64) {
-	limit := 20
-	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
-			if l > maxLimit {
-				limit = maxLimit
-			} else {
-				limit = l
-			}
-		}
-	}
-
-	var cursor int64
-	if cursorStr := r.URL.Query().Get("cursor"); cursorStr != "" {
-		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil {
-			cursor = c
-		}
-	}
-	return limit, cursor
-}
-
-func parseSortParams(r *http.Request, defaultOrderBy string, defaultOrderDir string) (string, string) {
-	orderBy := r.URL.Query().Get("order_by")
-	if orderBy == "" {
-		orderBy = defaultOrderBy
-	}
-
-	orderDir := strings.ToUpper(r.URL.Query().Get("order"))
-	if orderDir != "ASC" && orderDir != "DESC" {
-		orderDir = defaultOrderDir
-	}
-
-	return orderBy, orderDir
 }
 
 func parseOptionalQueryInt(r *http.Request, param string) int32 {
@@ -113,15 +72,43 @@ func (h *Handler) GetCountries(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// GetStates godoc
+// @Summary      Get states by country ID
+// @Description  Fetches all states for a specific country by its ID with cursor pagination
+// @Tags         Bodies
+// @Accept       json
+// @Produce      json
+// @Param        countryID  path      int     true   "Country ID"
+// @Success      200        {object}  GetStatesResponse
+// @Failure      400        {string}  invalid country ID
+// @Failure      500        {string}  failed to fetch states
+// @Router       /countries/{countryID}/states [get]
+func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
+	countryIDStr := chi.URLParam(r, "countryID")
+	countryID, err := strconv.ParseInt(countryIDStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid country ID: "+err.Error())
+		return
+	}
+
+	states, err := h.bodiesService.GetStatesByCountryID(r.Context(), int16(countryID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch states: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "States fetched successfully", map[string]interface{}{
+		"states": states,
+	})
+}
+
 // GetCities godoc
 // @Summary      Get cities by state ID
-// @Description  Fetches all cities for a specific state by its ID with cursor pagination
+// @Description  Fetches all cities for a specific state by its ID
 // @Tags         Bodies
 // @Accept       json
 // @Produce      json
 // @Param        stateID    path      int     true   "State ID"
-// @Param        limit      query     int     false  "Limit (default 20, max 100)"
-// @Param        cursor     query     string  false  "Cursor (ID of last record)"
 // @Success      200        {object}  GetCitiesResponse
 // @Failure      400        {string}  invalid state ID
 // @Failure      500        {string}  failed to fetch cities
@@ -134,66 +121,29 @@ func (h *Handler) GetCities(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	limit, cursor := parsePaginationParams(r)
-
 	cities, err := h.bodiesService.GetCitiesByStateID(r.Context(), int16(stateID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch cities: "+err.Error())
 		return
 	}
 
-	startIndex := 0
-	if cursor > 0 {
-		for i, c := range cities {
-			if int64(c.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	var paginatedCities []queries.GetCitiesByStateIDRow
-	hasMore := false
-	nextCursor := ""
-
-	if startIndex < len(cities) {
-		endIndex := startIndex + limit
-		if endIndex >= len(cities) {
-			endIndex = len(cities)
-			paginatedCities = cities[startIndex:endIndex]
-		} else {
-			paginatedCities = cities[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginatedCities[len(paginatedCities)-1].ID), 10)
-		}
-	} else {
-		paginatedCities = []queries.GetCitiesByStateIDRow{}
-	}
-
 	h.utils.RespondSuccess(w, http.StatusOK, "Cities fetched successfully", map[string]interface{}{
-		"cities": paginatedCities,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
-		},
+		"cities": cities,
 	})
 }
 
 // GetLGAs godoc
 // @Summary      Get local government areas (LGAs)
-// @Description  Fetches LGAs with optional state_id filtering and cursor pagination
+// @Description  Fetches LGAs with optional state_id filtering
 // @Tags         Bodies
 // @Accept       json
 // @Produce      json
 // @Param        state_id   query     int     false  "State ID to filter by"
-// @Param        limit      query     int     false  "Limit (default 20, max 100)"
-// @Param        cursor     query     string  false  "Cursor (ID of last record)"
 // @Success      200        {object}  GetLGAsResponse
 // @Failure      500        {string}  failed to fetch lgas
 // @Router       /lgas [get]
 func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
 	stateID := parseOptionalQueryInt(r, "state_id")
-	limit, cursor := parsePaginationParamsWithMax(r, 1000)
 
 	lgas, err := h.bodiesService.GetLGAs(r.Context(), stateID)
 	if err != nil {
@@ -201,55 +151,8 @@ func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orderBy, orderDir := parseSortParams(r, "name", "ASC")
-
-	sort.SliceStable(lgas, func(i, j int) bool {
-		var less bool
-		if orderBy == "name" {
-			less = lgas[i].Name < lgas[j].Name
-		} else {
-			less = lgas[i].ID < lgas[j].ID
-		}
-		if orderDir == "DESC" {
-			return !less
-		}
-		return less
-	})
-
-	startIndex := 0
-	if cursor > 0 {
-		for i, l := range lgas {
-			if int64(l.ID) == cursor {
-				startIndex = i + 1
-				break
-			}
-		}
-	}
-
-	var paginated []queries.Lga
-	hasMore := false
-	nextCursor := ""
-
-	if startIndex < len(lgas) {
-		endIndex := startIndex + limit
-		if endIndex >= len(lgas) {
-			endIndex = len(lgas)
-			paginated = lgas[startIndex:endIndex]
-		} else {
-			paginated = lgas[startIndex:endIndex]
-			hasMore = true
-			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
-		}
-	} else {
-		paginated = []queries.Lga{}
-	}
-
 	h.utils.RespondSuccess(w, http.StatusOK, "LGAs fetched successfully", map[string]interface{}{
-		"lgas": paginated,
-		"meta": map[string]interface{}{
-			"next_cursor": nextCursor,
-			"has_more":    hasMore,
-		},
+		"lgas": lgas,
 	})
 }
 

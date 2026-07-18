@@ -1,6 +1,7 @@
 // lib/config.ts
 export const IP_SERVICE_URL = import.meta.env.VITE_IP_SERVICE_URL;
 export const APP_NAME = import.meta.env.VITE_APP_NAME;
+export const WEB_DNS = import.meta.env.VITE_WEB_URL;
 const API_BASE = import.meta.env.VITE_API_URL;
 
 export const APP_URL = {
@@ -23,6 +24,13 @@ export const APP_URL = {
   applications: "/applications",
   notifications: "/notifications",
 };
+
+const web = `${WEB_DNS}`
+export const WEB_URL = {
+  users: {
+    profile: (username: string) => `${web}/users/profile/${username}`
+  }
+}
 
 const api = `${API_BASE}/api/v1`;
 export const API_URL = {
@@ -157,7 +165,9 @@ export const API_URL = {
   electionsLga: `${api}/elections/lga`,
   electionsWard: `${api}/elections/ward`,
   adminUsers: `${api}/admin/users`,
-  adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
+  manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
+  userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
+  manageUserPhoneNumber: (id: string | number) => `${api}/admin/users/phones/${id}`,
   users: `${api}/users`,
   recalculateBodies: `${api}/bodies/recalculate`,
 };

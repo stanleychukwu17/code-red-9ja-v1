@@ -502,6 +502,9 @@ importers:
       '@tanstack/react-form':
         specifier: 1.28.6
         version: 1.28.6(@tanstack/react-start@1.167.16(react-dom@19.2.2(react@19.2.2))(react@19.2.2)(vite@7.3.1(@types/node@22.15.3)(jiti@2.6.1)(lightningcss@1.32.0)(terser@5.46.1)(tsx@4.21.0)(yaml@2.8.3)))(react-dom@19.2.2(react@19.2.2))(react@19.2.2)
+      '@tanstack/react-query':
+        specifier: 5.101.0
+        version: 5.101.0(react@19.2.2)
       '@tanstack/react-router':
         specifier: 1.168.10
         version: 1.168.10(react-dom@19.2.2(react@19.2.2))(react@19.2.2)

@@ -148,6 +148,104 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/users/phones/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a specific user phone number by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete a user phone number",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phone Number ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/phones": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches the list of phone numbers for a user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user phone numbers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID or Fake ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/supervisor-assignments": {
             "get": {
                 "description": "Get supervisor assignments for a user for a specific election group",
@@ -1025,7 +1123,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "States"
+                    "Bodies"
                 ],
                 "summary": "Get states by country ID",
                 "parameters": [
@@ -1035,25 +1133,13 @@ const docTemplate = `{
                         "name": "countryID",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default 20, max 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cursor (ID of last record)",
-                        "name": "cursor",
-                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.GetStatesResponse"
+                            "$ref": "#/definitions/bodieshandler.GetStatesResponse"
                         }
                     },
                     "400": {
@@ -3522,7 +3608,7 @@ const docTemplate = `{
         },
         "/lgas": {
             "get": {
-                "description": "Fetches LGAs with optional state_id filtering and cursor pagination",
+                "description": "Fetches LGAs with optional state_id filtering",
                 "consumes": [
                     "application/json"
                 ],
@@ -3538,18 +3624,6 @@ const docTemplate = `{
                         "type": "integer",
                         "description": "State ID to filter by",
                         "name": "state_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default 20, max 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cursor (ID of last record)",
-                        "name": "cursor",
                         "in": "query"
                     }
                 ],
@@ -7302,7 +7376,7 @@ const docTemplate = `{
         },
         "/states/{stateID}/cities": {
             "get": {
-                "description": "Fetches all cities for a specific state by its ID with cursor pagination",
+                "description": "Fetches all cities for a specific state by its ID",
                 "consumes": [
                     "application/json"
                 ],
@@ -7320,18 +7394,6 @@ const docTemplate = `{
                         "name": "stateID",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limit (default 20, max 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Cursor (ID of last record)",
-                        "name": "cursor",
-                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -7374,7 +7436,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Role (admin, partyadmin, user)",
+                        "description": "Role (admin, party_admin, user)",
                         "name": "role",
                         "in": "query"
                     },
@@ -8530,7 +8592,9 @@ const docTemplate = `{
                     "minLength": 5
                 },
                 "phone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 15,
+                    "minLength": 5
                 },
                 "question1": {
                     "type": "integer"
@@ -8615,6 +8679,9 @@ const docTemplate = `{
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
                 "educational_status": {
                     "type": "string"
                 },
@@ -8642,6 +8709,9 @@ const docTemplate = `{
                 "last_name": {
                     "type": "string"
                 },
+                "marital_status": {
+                    "type": "string"
+                },
                 "middle_name": {
                     "type": "string"
                 },
@@ -8657,6 +8727,9 @@ const docTemplate = `{
                 "polling_unit_id": {
                     "type": "integer"
                 },
+                "religion": {
+                    "type": "string"
+                },
                 "roles": {
                     "type": "array",
                     "items": {
@@ -8667,9 +8740,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                },
-                "vin": {
                     "type": "string"
                 },
                 "voters_card_image": {
@@ -8683,16 +8753,7 @@ const docTemplate = `{
         "authservice.SeedUserRequest": {
             "type": "object",
             "properties": {
-                "account_status": {
-                    "type": "string"
-                },
                 "avatar": {
-                    "type": "string"
-                },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
                     "type": "string"
                 },
                 "current_city": {
@@ -8710,6 +8771,9 @@ const docTemplate = `{
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -8722,19 +8786,22 @@ const docTemplate = `{
                 "gender": {
                     "type": "string"
                 },
+                "home_address": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },
                 "last_name": {
                     "type": "string"
                 },
+                "marital_status": {
+                    "type": "string"
+                },
                 "middle_name": {
                     "type": "string"
                 },
-                "nin_verified": {
-                    "type": "string"
-                },
-                "party_id": {
+                "occupation_id": {
                     "type": "integer"
                 },
                 "password": {
@@ -8743,25 +8810,13 @@ const docTemplate = `{
                 "phone": {
                     "type": "string"
                 },
-                "phone_verified": {
-                    "type": "string"
-                },
-                "role": {
-                    "type": "string"
-                },
-                "role_level": {
+                "religion": {
                     "type": "string"
                 },
                 "state_of_origin": {
                     "type": "integer"
                 },
                 "username": {
-                    "type": "string"
-                },
-                "vin": {
-                    "type": "string"
-                },
-                "voters_card_image": {
                     "type": "string"
                 }
             }
@@ -8875,6 +8930,34 @@ const docTemplate = `{
                 }
             }
         },
+        "bodieshandler.GetStatesData": {
+            "type": "object",
+            "properties": {
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bodieshandler.StateResponse"
+                    }
+                }
+            }
+        },
+        "bodieshandler.GetStatesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/bodieshandler.GetStatesData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "bodieshandler.LGAResponse": {
             "type": "object",
             "properties": {
@@ -8902,6 +8985,17 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "bodieshandler.StateResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -9528,9 +9622,6 @@ const docTemplate = `{
                 "school_name": {
                     "type": "string"
                 },
-                "vin": {
-                    "type": "string"
-                },
                 "voters_card_image": {
                     "type": "string"
                 },
@@ -9822,6 +9913,9 @@ const docTemplate = `{
                 "election_group_id": {
                     "type": "integer"
                 },
+                "fake_id": {
+                    "type": "integer"
+                },
                 "party_id": {
                     "type": "integer"
                 },
@@ -9830,9 +9924,6 @@ const docTemplate = `{
                 },
                 "role_type": {
                     "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -10100,56 +10191,6 @@ const docTemplate = `{
                 }
             }
         },
-        "stateshandler.GetStatesData": {
-            "type": "object",
-            "properties": {
-                "states": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/stateshandler.StateResponse"
-                    }
-                }
-            }
-        },
-        "stateshandler.GetStatesResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/stateshandler.GetStatesData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/stateshandler.PaginationMeta"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "stateshandler.PaginationMeta": {
-            "type": "object",
-            "properties": {
-                "has_more": {
-                    "type": "boolean"
-                },
-                "next_cursor": {
-                    "type": "string"
-                }
-            }
-        },
-        "stateshandler.StateResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
         "stateshandler.UpdateStateRequest": {
             "type": "object",
             "properties": {
@@ -10296,11 +10337,17 @@ const docTemplate = `{
                 "date_of_birth": {
                     "type": "string"
                 },
+                "education_level": {
+                    "type": "string"
+                },
                 "educational_status": {
                     "type": "string"
                 },
                 "email": {
                     "type": "string"
+                },
+                "email_verified": {
+                    "type": "boolean"
                 },
                 "fake_id": {
                     "type": "integer"
@@ -10323,11 +10370,14 @@ const docTemplate = `{
                 "last_name": {
                     "type": "string"
                 },
+                "marital_status": {
+                    "type": "string"
+                },
                 "middle_name": {
                     "type": "string"
                 },
                 "nin_verified": {
-                    "type": "string"
+                    "type": "boolean"
                 },
                 "party_id": {
                     "type": "integer"
@@ -10336,16 +10386,19 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "phone_verified": {
-                    "type": "string"
+                    "type": "boolean"
                 },
                 "polling_unit_id": {
                     "type": "integer"
                 },
-                "role": {
+                "religion": {
                     "type": "string"
                 },
-                "role_level": {
-                    "type": "string"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "school_name": {
                     "type": "string"
@@ -10361,6 +10414,9 @@ const docTemplate = `{
                 },
                 "voters_card_image": {
                     "type": "string"
+                },
+                "voters_card_verified": {
+                    "type": "boolean"
                 },
                 "whatsapp_phone": {
                     "type": "string"

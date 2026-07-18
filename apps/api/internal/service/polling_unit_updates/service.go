@@ -28,7 +28,7 @@ type CreateUpdateInput struct {
 	PollingUnitID   int32    `json:"polling_unit_id"`
 	ElectionGroupID int64    `json:"election_group_id"`
 	AssignmentID    *int64   `json:"assignment_id,omitempty"`
-	PartyID         *int64   `json:"party_id,omitempty"`
+	PartyID         *int16   `json:"party_id,omitempty"`
 	Message         string   `json:"message"`
 	MediaUrls       []string `json:"media_urls"`
 	IsReport        bool     `json:"is_report"`
@@ -84,9 +84,9 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		assignmentID = pgtype.Int8{Int64: *input.AssignmentID, Valid: true}
 	}
 
-	var partyID pgtype.Int8
+	var partyID pgtype.Int2
 	if input.PartyID != nil {
-		partyID = pgtype.Int8{Int64: *input.PartyID, Valid: true}
+		partyID = pgtype.Int2{Int16: int16(int16(*input.PartyID)), Valid: true}
 	}
 
 	// Insert the update
@@ -153,7 +153,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 
 	if input.PartyID != nil {
 		err = qtx.IncrementPartyElectionGroupMetrics(ctx, queries.IncrementPartyElectionGroupMetricsParams{
-			PartyID:         *input.PartyID,
+			PartyID:         int16(*input.PartyID),
 			ElectionGroupID: input.ElectionGroupID,
 			ReportsCount:    reportsInc,
 			UpdatesCount:    updatesInc,

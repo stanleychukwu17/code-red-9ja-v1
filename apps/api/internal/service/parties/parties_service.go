@@ -112,11 +112,11 @@ func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Pa
 
 // GetPartyByID returns a party by its database ID.
 func (s *PartiesService) GetPartyByID(ctx context.Context, id int64) (queries.Party, error) {
-	return s.queries.GetPartyByID(ctx, id)
+	return s.queries.GetPartyByID(ctx, int16(id))
 }
 
 // GetPartyBasicInfo retrieves basic party info.
-func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int64) *queries.GetPartyBasicInfoRow {
+func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow {
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
 
 	// Try to get from Redis
@@ -158,7 +158,7 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID pgtype.Int8) 
 		}
 	}
 
-	party, err := s.queries.GetPartyByID(ctx, partyID.Int64)
+	party, err := s.queries.GetPartyByID(ctx, int16(partyID.Int64))
 	if err == nil {
 		// Save to Redis
 		if partyData, err := json.Marshal(party); err == nil {
@@ -182,7 +182,7 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, erro
 // UpdateParty modifies the short name, name, and logo of an existing party.
 func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
-		ID:        id,
+		ID:        int16(id),
 		ShortName: shortName,
 		Name:      name,
 		Logo:      logo,
@@ -193,17 +193,17 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
-	return s.queries.DeleteParty(ctx, id)
+	return s.queries.DeleteParty(ctx, int16(id))
 }
 
 // GetPartyWallet retrieves the wallet associated with a party.
-func (s *PartiesService) GetPartyWallet(ctx context.Context, partyID int64) (queries.PartyWallet, error) {
+func (s *PartiesService) GetPartyWallet(ctx context.Context, partyID int16) (queries.PartyWallet, error) {
 	return s.queries.GetPartyWalletByPartyID(ctx, partyID)
 }
 
 // GetPartyWalletTransactions returns a paginated list of wallet transactions
 // for the given party, most recent first.
-func (s *PartiesService) GetPartyWalletTransactions(ctx context.Context, partyID int64, limit, offset int32) ([]queries.PartyWalletTransaction, error) {
+func (s *PartiesService) GetPartyWalletTransactions(ctx context.Context, partyID int16, limit, offset int32) ([]queries.PartyWalletTransaction, error) {
 	wallet, err := s.queries.GetPartyWalletByPartyID(ctx, partyID)
 	if err != nil {
 		return nil, fmt.Errorf("wallet not found for party %d: %w", partyID, err)
@@ -282,7 +282,7 @@ func (s *PartiesService) CreditWallet(
 // bankAccountNumber / bankCode are the destination account for the payout.
 func (s *PartiesService) WithdrawFromWallet(
 	ctx context.Context,
-	partyID int64,
+	partyID int16,
 	amountKobo int64,
 	transactionReference string,
 	bankAccountNumber, bankCode, narration string,
@@ -398,7 +398,7 @@ func (s *PartiesService) UpdateGlobalSlotPrice(ctx context.Context, priceKobo in
 
 // GetPartySlotPrice calculates the customized slot price for a given party,
 // applying their discount percentage to the global slot price.
-func (s *PartiesService) GetPartySlotPrice(ctx context.Context, partyID int64) (int64, error) {
+func (s *PartiesService) GetPartySlotPrice(ctx context.Context, partyID int16) (int64, error) {
 	globalPrice, err := s.GetGlobalSlotPrice(ctx)
 	if err != nil {
 		return 0, err
@@ -430,7 +430,7 @@ func (s *PartiesService) GetPartySlotPrice(ctx context.Context, partyID int64) (
 
 // BuySlots debits the party wallet and adds slots directly to the party's balance.
 // This is executed as a database transaction.
-func (s *PartiesService) BuySlots(ctx context.Context, partyID int64, quantity int32) (queries.Party, error) {
+func (s *PartiesService) BuySlots(ctx context.Context, partyID int16, quantity int32) (queries.Party, error) {
 	if quantity <= 0 {
 		return queries.Party{}, fmt.Errorf("quantity must be positive")
 	}
@@ -528,7 +528,7 @@ func (s *PartiesService) BuySlots(ctx context.Context, partyID int64, quantity i
 }
 
 // UpdatePartyDiscount sets custom discount percentage for a political party.
-func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int64, discountPercentage float64) (queries.Party, error) {
+func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error) {
 	if discountPercentage < 0.0 || discountPercentage > 100.0 {
 		return queries.Party{}, fmt.Errorf("discount percentage must be between 0 and 100")
 	}
@@ -546,7 +546,7 @@ func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int64,
 
 // DepositAllowance debits the party wallet and adds it to the party's dedicated polling agent allowance balance.
 // This is executed as a database transaction.
-func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int64, amountKobo int64) (queries.Party, error) {
+func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error) {
 	if amountKobo <= 0 {
 		return queries.Party{}, fmt.Errorf("amount must be positive")
 	}
@@ -618,7 +618,7 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int64, am
 }
 
 // UpdateStateAllowances updates the state-by-state polling agent payment settings for a party.
-func (s *PartiesService) UpdateStateAllowances(ctx context.Context, partyID int64, allowancesJSON []byte) (queries.Party, error) {
+func (s *PartiesService) UpdateStateAllowances(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
 	// Simple validation to ensure valid JSON is supplied
 	var temp map[string]any
 	if err := json.Unmarshal(allowancesJSON, &temp); err != nil {

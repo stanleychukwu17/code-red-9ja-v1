@@ -1,32 +1,16 @@
-import * as React from "react";
-import {
-  UserFormDialog as SharedUserFormDialog,
-  type UserFormDialogProps,
-  type UserResult,
-} from "@repo/ui/components/custom/UserFormDialog";
+import { UserFormDialog as SharedUserFormDialog, type UserFormDialogProps, type UserResult, } from "@repo/ui/components/custom/UserFormDialog";
 import { getAllCountries, getCities } from "#/lib/server/countries";
 import { getStates } from "#/lib/server/states";
-import {
-  getParties,
-  getPresignedUploadURL,
-  confirmFileUpload,
-} from "#/lib/server/parties";
+import { getParties, getPresignedUploadURL, confirmFileUpload, } from "#/lib/server/parties";
 import { registerCandidate } from "#/lib/server/auth/auth";
-import { updateUser } from "#/lib/server/users";
+import { updateUser, getUserPhoneNumbers, deleteUserPhoneNumber, updateUserPhoneNumbers } from "#/lib/server/users";
 
 export type { UserResult };
 
 export function UserFormDialog(
   props: Omit<
-    UserFormDialogProps,
-    | "getAllCountries"
-    | "getStates"
-    | "getCities"
-    | "getParties"
-    | "getPresignedUploadURL"
-    | "confirmFileUpload"
-    | "registerCandidate"
-    | "updateUser"
+    UserFormDialogProps, | "getAllCountries" | "getStates" | "getCities" | "getParties" | "getPresignedUploadURL"
+    | "confirmFileUpload" | "registerCandidate" | "updateUser" | "updateUserMoreInfo" | "updateUserPhoneNumbers" | "deleteUserPhoneNumber" | "loadUserPhoneNumber" | "getOccupations"
   >
 ) {
   return (
@@ -40,6 +24,11 @@ export function UserFormDialog(
       confirmFileUpload={confirmFileUpload}
       registerCandidate={registerCandidate}
       updateUser={updateUser}
+      loadUserPhoneNumber={getUserPhoneNumbers}
+      deleteUserPhoneNumber={deleteUserPhoneNumber}
+      updateUserPhoneNumbers={updateUserPhoneNumbers}
+    // updateUserMoreInfo={...} // TODO: implement and pass this API
+    // getOccupations={...} // TODO: implement and pass this API
     />
   );
 }

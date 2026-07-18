@@ -97,9 +97,9 @@ func (m *MockAuthService) RegisterCandidatePlaceholder(ctx context.Context, emai
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
-func (m *MockAuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error) {
+func (m *MockAuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
 	args := m.Called(ctx, fakeID)
-	return args.Get(0).(queries.User), args.Error(1)
+	return args.Get(0).(queries.UserWithPlaces), args.Error(1)
 }
 
 func (m *MockAuthService) ChangePasswordByEmail(ctx context.Context, email, newPassword string) error {
@@ -107,16 +107,43 @@ func (m *MockAuthService) ChangePasswordByEmail(ctx context.Context, email, newP
 	return args.Error(0)
 }
 
-func (m *MockAuthService) SeedUsers(ctx context.Context, users []authservice.SeedUserRequest) ([]int64, error) {
+func (m *MockAuthService) SeedUsers(ctx context.Context, users []authservice.SeedUserRequest) (string, error) {
 	args := m.Called(ctx, users)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]int64), args.Error(1)
+	return args.String(0), args.Error(1)
 }
 
 func (m *MockAuthService) MakeUserSuperAdmin(ctx context.Context, username string) error {
 	args := m.Called(ctx, username)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) CheckEmail(ctx context.Context, email string) bool {
+	args := m.Called(ctx, email)
+	return args.Bool(0)
+}
+
+func (m *MockAuthService) CheckPhone(ctx context.Context, phone string) bool {
+	args := m.Called(ctx, phone)
+	return args.Bool(0)
+}
+
+func (m *MockAuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) {
+	args := m.Called(phone, country_code)
+	return args.String(0), args.Error(1)
+}
+
+func (m *MockAuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error {
+	args := m.Called(ctx, username, email, nin, userID, fakeID)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) error {
+	args := m.Called(ctx, fakeID)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error {
+	args := m.Called(ctx, userID, roleCode, whoAssigned)
 	return args.Error(0)
 }
 
@@ -341,7 +368,7 @@ func TestAdminLogin(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/auth/admin/login", bytes.NewBuffer(body))
 		rr := httptest.NewRecorder()
 
-		mockService.On("Login", mock.Anything, reqBody.IdentifierType, reqBody.Identifier, reqBody.Password, "", []string{"admin", "superadmin"}).Return(authservice.LoginResult{
+		mockService.On("Login", mock.Anything, reqBody.IdentifierType, reqBody.Identifier, reqBody.Password, "", []string{"admin", "super_admin"}).Return(authservice.LoginResult{
 			AccessToken:  "access-token",
 			RefreshToken: "refresh-token",
 			User: authservice.LoginUser{
@@ -373,7 +400,7 @@ func TestChangePasswordByEmail(t *testing.T) {
 
 		reqBody := authhandler.ChangePasswordByEmailRequest{
 			Email:    "user@example.com",
-			Password: "newpassword123",
+			Password: "password123",
 		}
 
 		body, _ := json.Marshal(reqBody)
@@ -416,7 +443,7 @@ func TestChangePasswordByEmail(t *testing.T) {
 
 		reqBody := authhandler.ChangePasswordByEmailRequest{
 			Email:    "notfound@example.com",
-			Password: "newpassword123",
+			Password: "password123",
 		}
 
 		body, _ := json.Marshal(reqBody)

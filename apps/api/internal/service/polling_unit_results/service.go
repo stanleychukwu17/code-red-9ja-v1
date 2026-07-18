@@ -43,7 +43,7 @@ type SubmitResultInput struct {
 	ElectionID          int64
 	ElectionGroupID     int64
 	PollingUnitID       int32
-	PartyID             *int64
+	PartyID             *int16
 	ResultSheetImageURL string
 	ResultSheetVideoURL string
 	UploadedByINEC      bool
@@ -143,9 +143,9 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		assignmentID = pgtype.Int8{Int64: *input.AssignmentID, Valid: true}
 	}
 
-	var partyID pgtype.Int8
+	var partyID pgtype.Int2
 	if input.PartyID != nil {
-		partyID = pgtype.Int8{Int64: *input.PartyID, Valid: true}
+		partyID = pgtype.Int2{Int16: int16(int16(*input.PartyID)), Valid: true}
 	}
 
 	var imageURL pgtype.Text
@@ -257,7 +257,7 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		// Increment party_election_groups.results_submitted_count when submitted by a party agent
 		if input.PartyID != nil {
 			if err := qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
-				PartyID:         *input.PartyID,
+				PartyID:         int16(*input.PartyID),
 				ElectionGroupID: input.ElectionGroupID,
 			}); err != nil {
 				return queries.PollingUnitResult{}, err

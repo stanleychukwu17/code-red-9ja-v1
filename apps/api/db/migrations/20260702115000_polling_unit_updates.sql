@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
-  party_id BIGINT REFERENCES parties(id) ON DELETE SET NULL,
+  party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
