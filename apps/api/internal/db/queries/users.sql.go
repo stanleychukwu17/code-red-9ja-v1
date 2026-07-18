@@ -119,19 +119,66 @@ func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCand
 	return id, err
 }
 
+const createMoreInfoAboutThisUser = `-- name: CreateMoreInfoAboutThisUser :one
+INSERT INTO user_more_infos (
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING user_id
+`
+
+type CreateMoreInfoAboutThisUserParams struct {
+	UserID            int64       `json:"user_id"`
+	OccupationID      pgtype.Int2 `json:"occupation_id"`
+	EducationalStatus pgtype.Text `json:"educational_status"`
+	HighestDegree     pgtype.Text `json:"highest_degree"`
+	GraduationYear    pgtype.Text `json:"graduation_year"`
+	SchoolName        pgtype.Text `json:"school_name"`
+	Religion          pgtype.Text `json:"religion"`
+	MaritalStatus     pgtype.Text `json:"marital_status"`
+	EducationLevel    pgtype.Text `json:"education_level"`
+	Address           pgtype.Text `json:"address"`
+}
+
+func (q *Queries) CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMoreInfoAboutThisUserParams) (int64, error) {
+	row := q.db.QueryRow(ctx, createMoreInfoAboutThisUser,
+		arg.UserID,
+		arg.OccupationID,
+		arg.EducationalStatus,
+		arg.HighestDegree,
+		arg.GraduationYear,
+		arg.SchoolName,
+		arg.Religion,
+		arg.MaritalStatus,
+		arg.EducationLevel,
+		arg.Address,
+	)
+	var user_id int64
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const createPhoneNumber = `-- name: CreatePhoneNumber :one
-INSERT INTO users_phone_numbers (user_id, phone)
-VALUES ($1, $2)
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, is_default)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id
 `
 
 type CreatePhoneNumberParams struct {
-	UserID int64  `json:"user_id"`
-	Phone  string `json:"phone"`
+	UserID    int64       `json:"user_id"`
+	Phone     string      `json:"phone"`
+	Phonecode string      `json:"phonecode"`
+	RawInput  string      `json:"raw_input"`
+	IsDefault pgtype.Bool `json:"is_default"`
 }
 
 func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createPhoneNumber, arg.UserID, arg.Phone)
+	row := q.db.QueryRow(ctx, createPhoneNumber,
+		arg.UserID,
+		arg.Phone,
+		arg.Phonecode,
+		arg.RawInput,
+		arg.IsDefault,
+	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
@@ -204,44 +251,6 @@ func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (i
 	return id, err
 }
 
-const createUserProfile = `-- name: CreateUserProfile :one
-INSERT INTO user_profiles (
-  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-RETURNING user_id
-`
-
-type CreateUserProfileParams struct {
-	UserID            int64       `json:"user_id"`
-	OccupationID      pgtype.Int2 `json:"occupation_id"`
-	EducationalStatus pgtype.Text `json:"educational_status"`
-	HighestDegree     pgtype.Text `json:"highest_degree"`
-	GraduationYear    pgtype.Text `json:"graduation_year"`
-	SchoolName        pgtype.Text `json:"school_name"`
-	Religion          pgtype.Text `json:"religion"`
-	MaritalStatus     pgtype.Text `json:"marital_status"`
-	EducationLevel    pgtype.Text `json:"education_level"`
-	Address           pgtype.Text `json:"address"`
-}
-
-func (q *Queries) CreateUserProfile(ctx context.Context, arg CreateUserProfileParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createUserProfile,
-		arg.UserID,
-		arg.OccupationID,
-		arg.EducationalStatus,
-		arg.HighestDegree,
-		arg.GraduationYear,
-		arg.SchoolName,
-		arg.Religion,
-		arg.MaritalStatus,
-		arg.EducationLevel,
-		arg.Address,
-	)
-	var user_id int64
-	err := row.Scan(&user_id)
-	return user_id, err
-}
-
 const createUserSecurityQuestions = `-- name: CreateUserSecurityQuestions :one
 INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
 VALUES ($1, $2, $3, $4, $5, $6)
@@ -309,6 +318,42 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteUserPhoneNumber = `-- name: DeleteUserPhoneNumber :exec
+UPDATE users_phone_numbers
+SET is_active = false
+WHERE id = $1
+`
+
+func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
+	_, err := q.db.Exec(ctx, deleteUserPhoneNumber, id)
+	return err
+}
+
+const getMoreInfoAboutThisUser = `-- name: GetMoreInfoAboutThisUser :one
+SELECT user_id, occupation_id, educational_status, education_level, highest_degree, graduation_year, school_name, religion, marital_status, address, created_at, updated_at FROM user_more_infos
+WHERE user_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error) {
+	row := q.db.QueryRow(ctx, getMoreInfoAboutThisUser, userID)
+	var i UserMoreInfo
+	err := row.Scan(
+		&i.UserID,
+		&i.OccupationID,
+		&i.EducationalStatus,
+		&i.EducationLevel,
+		&i.HighestDegree,
+		&i.GraduationYear,
+		&i.SchoolName,
+		&i.Religion,
+		&i.MaritalStatus,
+		&i.Address,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUserByFakeID = `-- name: GetUserByFakeID :one
 SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
@@ -364,29 +409,38 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (UsersNi
 	return i, err
 }
 
-const getUserProfile = `-- name: GetUserProfile :one
-SELECT user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address, created_at, updated_at FROM user_profiles
-WHERE user_id = $1 LIMIT 1
+const getUserPhoneNumbersByUserID = `-- name: GetUserPhoneNumbersByUserID :many
+SELECT id, user_id, phone, raw_input, phonecode, on_whatsapp, is_default, is_active FROM users_phone_numbers
+WHERE user_id = $1 AND is_active = true ORDER BY id DESC
 `
 
-func (q *Queries) GetUserProfile(ctx context.Context, userID int64) (UserProfile, error) {
-	row := q.db.QueryRow(ctx, getUserProfile, userID)
-	var i UserProfile
-	err := row.Scan(
-		&i.UserID,
-		&i.OccupationID,
-		&i.EducationalStatus,
-		&i.HighestDegree,
-		&i.GraduationYear,
-		&i.SchoolName,
-		&i.Religion,
-		&i.MaritalStatus,
-		&i.EducationLevel,
-		&i.Address,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
+func (q *Queries) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error) {
+	rows, err := q.db.Query(ctx, getUserPhoneNumbersByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UsersPhoneNumber
+	for rows.Next() {
+		var i UsersPhoneNumber
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Phone,
+			&i.RawInput,
+			&i.Phonecode,
+			&i.OnWhatsapp,
+			&i.IsDefault,
+			&i.IsActive,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getUserSecurityQuestionsByNIN = `-- name: GetUserSecurityQuestionsByNIN :one
@@ -496,24 +550,44 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.whatsapp_phone, u.data_phone, u.current_country, u.current_state, u.current_lga, u.current_ward, u.current_city, u.state_of_origin, u.voters_card_image, u.bank_account_number, u.bank_code, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_code, u.account_status, u.created_at, u.updated_at FROM users u
+SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.account_status, u.created_at FROM users u
 WHERE 
   ($1::bigint IS NULL OR u.id < $1::bigint)
   AND ($2::smallint IS NULL OR u.party_id = $2::smallint)
-  AND ($3::text IS NULL OR EXISTS (
+  AND ($3::text[] IS NULL OR EXISTS (
       -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
       -- if a user somehow has multiple roles (or just to keep the base query simple).
-      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = $3::text
+      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY($3::text[])
   ))
 ORDER BY u.id DESC
 LIMIT $4::int
 `
 
 type ListUsersParams struct {
-	Cursor   pgtype.Int8 `json:"cursor"`
-	PartyID  pgtype.Int2 `json:"party_id"`
-	RoleCode pgtype.Text `json:"role_code"`
-	LimitNum int32       `json:"limit_num"`
+	Cursor    pgtype.Int8 `json:"cursor"`
+	PartyID   pgtype.Int2 `json:"party_id"`
+	RoleCodes []string    `json:"role_codes"`
+	LimitNum  int32       `json:"limit_num"`
+}
+
+type ListUsersRow struct {
+	ID             int64              `json:"id"`
+	FakeID         pgtype.Int8        `json:"fake_id"`
+	Email          pgtype.Text        `json:"email"`
+	Username       pgtype.Text        `json:"username"`
+	Avatar         pgtype.Text        `json:"avatar"`
+	FirstName      pgtype.Text        `json:"first_name"`
+	LastName       pgtype.Text        `json:"last_name"`
+	MiddleName     pgtype.Text        `json:"middle_name"`
+	Gender         pgtype.Text        `json:"gender"`
+	DateOfBirth    pgtype.Date        `json:"date_of_birth"`
+	StateOfOrigin  pgtype.Int2        `json:"state_of_origin"`
+	CurrentCountry int16              `json:"current_country"`
+	CurrentState   int16              `json:"current_state"`
+	CurrentCity    pgtype.Int4        `json:"current_city"`
+	PartyID        pgtype.Int2        `json:"party_id"`
+	AccountStatus  pgtype.Text        `json:"account_status"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
 // ListUsers fetches a paginated list of users with optional filtering.
@@ -521,51 +595,38 @@ type ListUsersParams struct {
 // If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL'
 // condition becomes true, effectively skipping that filter.
 // This allows us to use a single dynamic query instead of writing multiple separate queries.
-func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error) {
+func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error) {
 	rows, err := q.db.Query(ctx, listUsers,
 		arg.Cursor,
 		arg.PartyID,
-		arg.RoleCode,
+		arg.RoleCodes,
 		arg.LimitNum,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersRow
 	for rows.Next() {
-		var i User
+		var i ListUsersRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.FakeID,
 			&i.Email,
-			&i.Avatar,
-			&i.Phone,
 			&i.Username,
-			&i.PasswordHash,
-			&i.LastName,
+			&i.Avatar,
 			&i.FirstName,
+			&i.LastName,
 			&i.MiddleName,
 			&i.Gender,
 			&i.DateOfBirth,
-			&i.WhatsappPhone,
-			&i.DataPhone,
+			&i.StateOfOrigin,
 			&i.CurrentCountry,
 			&i.CurrentState,
-			&i.CurrentLga,
-			&i.CurrentWard,
 			&i.CurrentCity,
-			&i.StateOfOrigin,
-			&i.VotersCardImage,
-			&i.BankAccountNumber,
-			&i.BankCode,
 			&i.PartyID,
-			&i.PollingUnitID,
-			&i.ReferralCode,
-			&i.ReferredByCode,
 			&i.AccountStatus,
 			&i.CreatedAt,
-			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -641,8 +702,54 @@ func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, erro
 	return id, err
 }
 
-const updateUserAgentProfile = `-- name: UpdateUserAgentProfile :exec
-INSERT INTO user_profiles (
+const updateMoreInfoAboutThisUser = `-- name: UpdateMoreInfoAboutThisUser :exec
+INSERT INTO user_more_infos (
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (user_id) DO UPDATE
+SET occupation_id = EXCLUDED.occupation_id,
+    educational_status = EXCLUDED.educational_status,
+    highest_degree = EXCLUDED.highest_degree,
+    graduation_year = EXCLUDED.graduation_year,
+    school_name = EXCLUDED.school_name,
+    religion = EXCLUDED.religion,
+    marital_status = EXCLUDED.marital_status,
+    education_level = EXCLUDED.education_level,
+    address = EXCLUDED.address,
+    updated_at = NOW()
+`
+
+type UpdateMoreInfoAboutThisUserParams struct {
+	UserID            int64       `json:"user_id"`
+	OccupationID      pgtype.Int2 `json:"occupation_id"`
+	EducationalStatus pgtype.Text `json:"educational_status"`
+	HighestDegree     pgtype.Text `json:"highest_degree"`
+	GraduationYear    pgtype.Text `json:"graduation_year"`
+	SchoolName        pgtype.Text `json:"school_name"`
+	Religion          pgtype.Text `json:"religion"`
+	MaritalStatus     pgtype.Text `json:"marital_status"`
+	EducationLevel    pgtype.Text `json:"education_level"`
+	Address           pgtype.Text `json:"address"`
+}
+
+func (q *Queries) UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMoreInfoAboutThisUserParams) error {
+	_, err := q.db.Exec(ctx, updateMoreInfoAboutThisUser,
+		arg.UserID,
+		arg.OccupationID,
+		arg.EducationalStatus,
+		arg.HighestDegree,
+		arg.GraduationYear,
+		arg.SchoolName,
+		arg.Religion,
+		arg.MaritalStatus,
+		arg.EducationLevel,
+		arg.Address,
+	)
+	return err
+}
+
+const updateUserAgentMoreInfo = `-- name: UpdateUserAgentMoreInfo :exec
+INSERT INTO user_more_infos (
   user_id, educational_status, highest_degree, graduation_year, school_name, address
 ) VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (user_id) DO UPDATE
@@ -654,7 +761,7 @@ SET educational_status = EXCLUDED.educational_status,
     updated_at = NOW()
 `
 
-type UpdateUserAgentProfileParams struct {
+type UpdateUserAgentMoreInfoParams struct {
 	UserID            int64       `json:"user_id"`
 	EducationalStatus pgtype.Text `json:"educational_status"`
 	HighestDegree     pgtype.Text `json:"highest_degree"`
@@ -663,8 +770,8 @@ type UpdateUserAgentProfileParams struct {
 	Address           pgtype.Text `json:"address"`
 }
 
-func (q *Queries) UpdateUserAgentProfile(ctx context.Context, arg UpdateUserAgentProfileParams) error {
-	_, err := q.db.Exec(ctx, updateUserAgentProfile,
+func (q *Queries) UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error {
+	_, err := q.db.Exec(ctx, updateUserAgentMoreInfo,
 		arg.UserID,
 		arg.EducationalStatus,
 		arg.HighestDegree,
@@ -761,52 +868,6 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		arg.CurrentCountry,
 		arg.CurrentState,
 		arg.CurrentCity,
-	)
-	return err
-}
-
-const updateUserProfileDetails = `-- name: UpdateUserProfileDetails :exec
-INSERT INTO user_profiles (
-  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-ON CONFLICT (user_id) DO UPDATE
-SET occupation_id = EXCLUDED.occupation_id,
-    educational_status = EXCLUDED.educational_status,
-    highest_degree = EXCLUDED.highest_degree,
-    graduation_year = EXCLUDED.graduation_year,
-    school_name = EXCLUDED.school_name,
-    religion = EXCLUDED.religion,
-    marital_status = EXCLUDED.marital_status,
-    education_level = EXCLUDED.education_level,
-    address = EXCLUDED.address,
-    updated_at = NOW()
-`
-
-type UpdateUserProfileDetailsParams struct {
-	UserID            int64       `json:"user_id"`
-	OccupationID      pgtype.Int2 `json:"occupation_id"`
-	EducationalStatus pgtype.Text `json:"educational_status"`
-	HighestDegree     pgtype.Text `json:"highest_degree"`
-	GraduationYear    pgtype.Text `json:"graduation_year"`
-	SchoolName        pgtype.Text `json:"school_name"`
-	Religion          pgtype.Text `json:"religion"`
-	MaritalStatus     pgtype.Text `json:"marital_status"`
-	EducationLevel    pgtype.Text `json:"education_level"`
-	Address           pgtype.Text `json:"address"`
-}
-
-func (q *Queries) UpdateUserProfileDetails(ctx context.Context, arg UpdateUserProfileDetailsParams) error {
-	_, err := q.db.Exec(ctx, updateUserProfileDetails,
-		arg.UserID,
-		arg.OccupationID,
-		arg.EducationalStatus,
-		arg.HighestDegree,
-		arg.GraduationYear,
-		arg.SchoolName,
-		arg.Religion,
-		arg.MaritalStatus,
-		arg.EducationLevel,
-		arg.Address,
 	)
 	return err
 }

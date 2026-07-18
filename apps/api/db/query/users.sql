@@ -26,8 +26,8 @@ VALUES ($1, $2)
 RETURNING id;
 
 -- name: CreatePhoneNumber :one
-INSERT INTO users_phone_numbers (user_id, phone)
-VALUES ($1, $2)
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, is_default)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING id;
 
 -- name: UpdateUserFakeID :exec
@@ -92,14 +92,14 @@ WHERE id = $1;
 -- If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL' 
 -- condition becomes true, effectively skipping that filter.
 -- This allows us to use a single dynamic query instead of writing multiple separate queries.
-SELECT u.* FROM users u
+SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.account_status, u.created_at FROM users u
 WHERE 
   (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
   AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)
-  AND (sqlc.narg('role_code')::text IS NULL OR EXISTS (
+  AND (sqlc.narg('role_codes')::text[] IS NULL OR EXISTS (
       -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
       -- if a user somehow has multiple roles (or just to keep the base query simple).
-      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = sqlc.narg('role_code')::text
+      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY(sqlc.narg('role_codes')::text[])
   ))
 ORDER BY u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
@@ -144,18 +144,18 @@ UPDATE users
 SET voters_card_image = $2, updated_at = NOW()
 WHERE id = $1;
 
--- name: GetUserProfile :one
-SELECT * FROM user_profiles
+-- name: GetMoreInfoAboutThisUser :one
+SELECT * FROM user_more_infos
 WHERE user_id = $1 LIMIT 1;
 
--- name: CreateUserProfile :one
-INSERT INTO user_profiles (
+-- name: CreateMoreInfoAboutThisUser :one
+INSERT INTO user_more_infos (
   user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 RETURNING user_id;
 
--- name: UpdateUserProfileDetails :exec
-INSERT INTO user_profiles (
+-- name: UpdateMoreInfoAboutThisUser :exec
+INSERT INTO user_more_infos (
   user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 ON CONFLICT (user_id) DO UPDATE
@@ -170,8 +170,8 @@ SET occupation_id = EXCLUDED.occupation_id,
     address = EXCLUDED.address,
     updated_at = NOW();
 
--- name: UpdateUserAgentProfile :exec
-INSERT INTO user_profiles (
+-- name: UpdateUserAgentMoreInfo :exec
+INSERT INTO user_more_infos (
   user_id, educational_status, highest_degree, graduation_year, school_name, address
 ) VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (user_id) DO UPDATE
@@ -191,3 +191,12 @@ RETURNING user_id;
 -- name: GetUserVerification :one
 SELECT * FROM user_verifications
 WHERE user_id = $1 LIMIT 1;
+
+-- name: GetUserPhoneNumbersByUserID :many
+SELECT * FROM users_phone_numbers
+WHERE user_id = $1 AND is_active = true ORDER BY id DESC;
+
+-- name: DeleteUserPhoneNumber :exec
+UPDATE users_phone_numbers
+SET is_active = false
+WHERE id = $1;

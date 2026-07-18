@@ -16,7 +16,7 @@ import { Loader2 } from "lucide-react";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
 import { useIntersectionObserver } from "usehooks-ts";
 
-export const Route = createFileRoute("/_authenticated/users/party-members")({
+export const Route = createFileRoute("/_authenticated/users/party-admin")({
   head: () => getPageHeader({ title: "Users - Superadmin" }),
   component: RouteComponent,
 });
@@ -24,32 +24,34 @@ export const Route = createFileRoute("/_authenticated/users/party-members")({
 function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-    error,
-    refetch,
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch, } = useInfiniteQuery({
+    // Unique key for React Query cache
     queryKey: ["users", "partyadmin"],
+
+    // Function to fetch a page of data using the cursor parameter
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
-        data: { role: "partyadmin", limit: 20, cursor: pageParam },
+        data: { role: "party_admin,super_party_admin", limit: 20, cursor: pageParam },
       });
       if (res && res.success && res.data) {
         return res;
       }
-      throw new Error(res?.message || "Failed to load party members");
+      throw new Error(res?.message || "Failed to load party admins");
     },
+
+    // Starting cursor when fetching the first page
     initialPageParam: "",
+
+    // Determines if there is a next page and returns the cursor to fetch it
     getNextPageParam: (lastPage) => {
       if (lastPage && lastPage.meta && lastPage.meta.has_more) {
         return lastPage.meta.next_cursor || "";
       }
       return undefined;
     },
+
+    // Disable refetch when switching back to the tab
+    refetchOnWindowFocus: false,
   });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
@@ -64,13 +66,13 @@ function RouteComponent() {
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Flatten pages to items — preserve full entity data
-  const partyMembers = data
+  const partyAdmins = data
     ? data.pages.flatMap((page) => page.data?.users || [])
     : [];
 
   return (
     <Layout>
-      <PageHeader title="Users" activeTab="party-members" tabs={USERS_TABS} />
+      <PageHeader title="Users" activeTab="party-admin" tabs={USERS_TABS} />
       <PageSearchLayer
         rightComponent={
           <>
@@ -80,7 +82,7 @@ function RouteComponent() {
         }
       />
 
-      {isLoading && partyMembers.length === 0 ? (
+      {isLoading && partyAdmins.length === 0 ? (
         <div className="w-full h-60 flex items-center justify-center">
           <Loader2 className="size-8 animate-spin text-c-50" />
         </div>
@@ -88,15 +90,15 @@ function RouteComponent() {
         <div className="w-full p-6 text-center text-red-600 font-medium">
           {error instanceof Error
             ? error.message
-            : "Failed to load party members"}
+            : "Failed to load party admins"}
         </div>
-      ) : partyMembers.length === 0 ? (
+      ) : partyAdmins.length === 0 ? (
         <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
-          No party members found.
+          No party admins found.
         </div>
       ) : (
         <>
-          <UsersTable items={partyMembers} refetch={refetch} />
+          <UsersTable items={partyAdmins} refetch={refetch} />
 
           {/* Sentinel element for infinite scroll */}
           {hasNextPage && (

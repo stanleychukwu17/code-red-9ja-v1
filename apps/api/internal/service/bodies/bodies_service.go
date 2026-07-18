@@ -3,6 +3,7 @@ package bodiesservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
@@ -23,6 +24,7 @@ func NewBodiesService(q *queries.Queries, rdb *redis.Client) *BodiesService {
 	}
 }
 
+// GetAllCountries retrieves a list of all countries, using a cached version if available.
 func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCountriesRow, error) {
 	type CountriesResponse struct {
 		Countries []queries.ListCountriesRow `json:"countries"`
@@ -41,7 +43,7 @@ func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCoun
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, 5*365*24*time.Hour)
+		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, 5*365*24*time.Hour) // 5years TTL
 
 		return dbCountries, nil
 	case nil:
@@ -53,6 +55,39 @@ func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCoun
 	}
 }
 
+// GetStatesByCountryID retrieves a list of states for a given country ID, using a cached version if available.
+func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.GetStatesByCountryIDRow, error) {
+	type StatesResponse struct {
+		States []queries.GetStatesByCountryIDRow `json:"states"`
+	}
+
+	redisKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, countryID)
+	statesData, err := s.rdb.Get(ctx, redisKey).Result()
+	switch err {
+	case redis.Nil:
+		dbStates, err := s.queries.GetStatesByCountryID(ctx, countryID)
+		if err != nil {
+			return nil, err
+		}
+
+		payload := StatesResponse{
+			States: dbStates,
+		}
+
+		jsonData, _ := json.Marshal(payload)
+		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // 5years TTL
+
+		return dbStates, nil
+	case nil:
+		var payload StatesResponse
+		err = json.Unmarshal([]byte(statesData), &payload)
+		return payload.States, nil
+	default:
+		return nil, err
+	}
+}
+
+// GetCitiesByStateID retrieves a list of cities for a given state ID, using a cached version if available.
 func (s *BodiesService) GetCitiesByStateID(ctx context.Context, stateID int16) ([]queries.GetCitiesByStateIDRow, error) {
 	type CitiesResponse struct {
 		Cities []queries.GetCitiesByStateIDRow `json:"cities"`
@@ -72,7 +107,7 @@ func (s *BodiesService) GetCitiesByStateID(ctx context.Context, stateID int16) (
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour)
+		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // 5years TTL
 
 		return dbCities, nil
 	case nil:
@@ -84,6 +119,7 @@ func (s *BodiesService) GetCitiesByStateID(ctx context.Context, stateID int16) (
 	}
 }
 
+// GetLGAs retrieves a list of Local Government Areas (LGAs) for a given state ID, using a cached version if available.
 func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.Lga, error) {
 	type Response struct {
 		LGAs []queries.Lga `json:"lgas"`
@@ -103,7 +139,7 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour)
+		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // 5years TTL
 
 		return dbData, nil
 	case nil:
@@ -115,6 +151,7 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 	}
 }
 
+// CreateLGA creates a new Local Government Area and invalidates the state's LGA cache.
 func (s *BodiesService) CreateLGA(
 	ctx context.Context,
 	name string,
@@ -147,10 +184,12 @@ func (s *BodiesService) CreateLGA(
 	return lga, nil
 }
 
+// GetLGAByID retrieves a single Local Government Area by its ID.
 func (s *BodiesService) GetLGAByID(ctx context.Context, id int32) (queries.Lga, error) {
 	return s.queries.GetLGAByID(ctx, id)
 }
 
+// UpdateLGA updates an existing Local Government Area and invalidates relevant caches.
 func (s *BodiesService) UpdateLGA(
 	ctx context.Context,
 	id int32,
@@ -190,6 +229,7 @@ func (s *BodiesService) UpdateLGA(
 	return lga, nil
 }
 
+// DeleteLGA deletes a Local Government Area by its ID and invalidates the state's cache.
 func (s *BodiesService) DeleteLGA(ctx context.Context, id int32) error {
 	lga, err := s.queries.GetLGAByID(ctx, id)
 	if err != nil {
@@ -211,3 +251,82 @@ func (s *BodiesService) invalidateCache(ctx context.Context, stateID int32) {
 	s.rdb.Del(ctx, redisKey)
 }
 
+// function: check if the user country is valid
+func (s *BodiesService) CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error) {
+	redisCountryKey := fmt.Sprintf("%s%d", db.RedisEachCountry, country_id)
+
+	// attempt to get country details from redis
+	country_data, err := s.rdb.Get(ctx, redisCountryKey).Result()
+	if err == nil {
+		var country_dts queries.GetCountryByIDRow
+		json.Unmarshal([]byte(country_data), &country_dts)
+		if country_dts.ID > 0 {
+			return country_dts, nil
+		}
+	}
+
+	// get country details from db
+	country_dts, _ := s.queries.GetCountryByID(ctx, country_id)
+	if country_dts.ID > 0 {
+		jsonBytes, _ := json.Marshal(country_dts)
+		s.rdb.Set(ctx, redisCountryKey, jsonBytes, 0)
+		return country_dts, nil
+	}
+
+	return queries.GetCountryByIDRow{}, errors.New("invalid country ID")
+}
+
+// function: check if the state is valid
+func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int16) (bool, error) {
+	redisStateKey := fmt.Sprintf("%s%d", db.RedisEachState, state_id)
+
+	// get state details from redis
+	state_data, err := s.rdb.Get(ctx, redisStateKey).Result()
+	if err == nil {
+		var state_dts queries.GetStateByIDRow
+		json.Unmarshal([]byte(state_data), &state_dts)
+		return state_dts.ID > 0, nil
+	}
+
+	// get state details from db
+	state_dts, _ := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
+		ID:        state_id,
+		CountryID: country_id,
+	})
+	if state_dts.ID > 0 {
+		// save to redis
+		state_data, _ := json.Marshal(state_dts)
+		s.rdb.Set(ctx, redisStateKey, state_data, 5*365*24*time.Hour) // expires in 5years
+
+		return true, nil
+	}
+	return false, fmt.Errorf("invalid state ID")
+}
+
+// function: check if the city is valid
+func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id int32) (bool, error) {
+	redisCityKey := fmt.Sprintf("%s%d", db.RedisEachCity, city_id)
+
+	// get city details from redis
+	city_data, err := s.rdb.Get(ctx, redisCityKey).Result()
+	if err == nil {
+		var city_dts queries.GetCityByIDRow
+		json.Unmarshal([]byte(city_data), &city_dts)
+		return city_dts.ID > 0, nil
+	}
+
+	// get city details from db
+	city_dts, _ := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
+		ID:      city_id,
+		StateID: state_id,
+	})
+	if city_dts.ID > 0 {
+		// save to redis
+		city_data, _ := json.Marshal(city_dts)
+		s.rdb.Set(ctx, redisCityKey, city_data, 5*365*24*time.Hour) // expires in 5years
+
+		return true, nil
+	}
+
+	return false, fmt.Errorf("invalid city ID")
+}

@@ -96,7 +96,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	}
 
 	// Update profile details
-	err = txQueries.UpdateUserAgentProfile(ctx, queries.UpdateUserAgentProfileParams{
+	err = txQueries.UpdateUserAgentMoreInfo(ctx, queries.UpdateUserAgentMoreInfoParams{
 		UserID:            input.UserID,
 		EducationalStatus: pgtype.Text{String: input.EducationalStatus, Valid: input.EducationalStatus != ""},
 		HighestDegree:     pgtype.Text{String: input.HighestDegree, Valid: input.HighestDegree != ""},
@@ -133,7 +133,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	if user.FakeID.Valid {
 		s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserInfo, user.FakeID.Int64))
 	}
-	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserProfile, input.UserID))
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserMoreInfo, input.UserID))
 
 	return apps, nil
 }

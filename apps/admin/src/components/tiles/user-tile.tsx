@@ -6,6 +6,9 @@ import {
 } from "@repo/ui/components/tiles";
 import NoProfileImageIcon from "@repo/ui/icons/no-profile-image-icon";
 import { UserDropdown } from "../dropdowns/UserDropdown";
+import { WEB_URL } from "@/lib/config";
+import { Link } from "@tanstack/react-router";
+import { MapPin } from "lucide-react";
 
 export type UserType = {
   id: number;
@@ -72,24 +75,14 @@ export function UserTableHeader() {
   );
 }
 
-export function UserTableTile({
-  data,
-  refetch,
-}: {
-  data: UserType;
-  refetch?: () => void;
-}) {
+export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () => void; }) {
   const firstName = getPgString(data.first_name);
   const lastName = getPgString(data.last_name);
   const username = getPgString(data.username);
-  const email = getPgString(data.email);
 
-  const name =
-    data.name ||
-    [firstName, lastName].filter(Boolean).join(" ") ||
-    username ||
-    email ||
-    "Admin User";
+  console.log(data)
+
+  const name = data.name || [firstName, lastName].filter(Boolean).join(" ") || username;
 
   const rawRoleLevel = data.role_level || "user";
   const formattedRoleLevel =
@@ -100,25 +93,44 @@ export function UserTableTile({
 
   const avatar = data.avatar || data.avatar_url;
 
+  const city = getPgString(data.current_city);
+  const state = getPgString(data.current_state);
+  const country = getPgString(data.current_country);
+  const location = ["state", "country"].filter(Boolean).join(", ");
+
   return (
-    <TileRow>
+    <TileRow className="py-10 border-b">
       <TileLeft>
         {avatar ? (
-          <img
-            src={avatar}
-            alt={name}
-            className="size-10 rounded-full object-cover shrink-0"
-          />
+          <img src={avatar} alt={name} className="size-12 rounded-full object-cover shrink-0 border border-c-100/30" />
         ) : (
-          <NoProfileImageIcon className="size-10" />
+          <NoProfileImageIcon className="size-12 rounded-full " />
         )}
-        <p className="truncate w-full text-[16px] text-c-90">{name}</p>
+        <div className="flex flex-col w-full min-w-0">
+          <div className="flex items-center w-full overflow-hidden">
+            <Link
+              to={WEB_URL.users.profile(username) as any} target="_blank"
+              className="capitalize truncate font-semibold text-[14px] text-c-90 hover:underline hover:text-c-100 transition-colors"
+            >
+              {name}
+            </Link>
+          </div>
+          <div className="truncate pt-1 pb-[2px] w-full text-[11px] text-c-50">
+            @{username}
+          </div>
+          {location && (
+            <div className="flex items-center gap-1 mt-1 text-[11px] text-c-50 w-full overflow-hidden">
+              <MapPin className="size-3 shrink-0" />
+              <span className="truncate">{location}</span>
+            </div>
+          )}
+        </div>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-80 w-[140px]">
+        <span className="text-[14px] text-c-80 w-[140px]">
           {formattedRoleLevel || "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[150px]">{dateAdded}</span>
+        <span className="text-[14px] text-c-70 w-[150px]">{dateAdded}</span>
         <UserDropdown data={data} refetch={refetch} className="ml-2" />
       </TileRight>
     </TileRow>

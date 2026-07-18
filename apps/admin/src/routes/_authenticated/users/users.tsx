@@ -28,23 +28,14 @@ function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
 
   // useInfiniteQuery handles fetching data in pages for infinite scrolling
-  const {
-    data,
-    fetchNextPage, // Function to call to fetch the next page of data
-    hasNextPage, // Boolean indicating if there are more pages available
-    isFetchingNextPage, // Boolean indicating if the next page is currently being fetched
-    isLoading, // Initial loading state (fetching the first page)
-    error, // Any error that occurred during fetching
-    refetch, // Function to manually refetch all data from scratch
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useInfiniteQuery({
     // queryKey uniquely identifies this query in the cache
     queryKey: ["users", "user"],
 
     // queryFn is the function that actually fetches the data
     queryFn: async ({ pageParam }) => {
-      // Fetch users with the role "user", 20 at a time, starting from the pageParam cursor
       const res = await getUsersList({
-        data: { role: "user", limit: 20, cursor: pageParam },
+        data: { limit: 20, cursor: pageParam },
       });
       if (res && res.success && res.data) {
         return res;
@@ -61,9 +52,13 @@ function RouteComponent() {
       if (lastPage && lastPage.meta && lastPage.meta.has_more) {
         return lastPage.meta.next_cursor || "";
       }
+
       // Return undefined when there is no more data to fetch (sets hasNextPage to false)
       return undefined;
     },
+
+    // Disable refetch when switching back to the tab
+    refetchOnWindowFocus: false,
   });
 
   // useIntersectionObserver provides a ref to attach to a DOM element (the sentinel)

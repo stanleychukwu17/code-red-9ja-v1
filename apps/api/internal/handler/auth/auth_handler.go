@@ -32,8 +32,15 @@ type AuthService interface {
 	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.User, error)
 
-	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) ([]int64, error)
+	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) (string, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
+
+	CheckEmail(ctx context.Context, email string) bool
+	CheckPhone(ctx context.Context, phone string) bool
+	ValidatePhoneForCountry(phone, country_code string) (string, error)
+	SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error
+	UpdateCachedUserInfo(ctx context.Context, fakeID int64) error
+	CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -55,7 +62,7 @@ func NewHandler(authService AuthService, utils *utils.Utils) *Handler {
 // RegisterRequest represents the structure of the incoming JSON request body for user registration
 type RegisterRequest struct {
 	Email          string `json:"email" validate:"omitempty,email"`
-	Phone          string `json:"phone" validate:"required,e164"`
+	Phone          string `json:"phone" validate:"required,min=5,max=15"`
 	OnboardingID   string `json:"onboarding_id" validate:"required"`
 	Username       string `json:"username" validate:"required,min=2,max=30"`
 	Nin            string `json:"nin" validate:"required,numeric,len=11"`
@@ -810,15 +817,13 @@ func (h *Handler) SeedUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ids, err := h.authService.SeedUsers(r.Context(), req)
+	msg, err := h.authService.SeedUsers(r.Context(), req)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed users: "+err.Error())
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Users seeded successfully", map[string]interface{}{
-		"ids": ids,
-	})
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
 }
 
 // MakeUserSuperAdminRequest represents the request to promote a user

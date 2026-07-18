@@ -3,8 +3,8 @@ package usersservice
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"errors"
+	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
@@ -60,8 +60,46 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		return queries.User{}, fmt.Errorf("user not found: %w", err)
 	}
 
+	var countryName, stateName, cityName string
+
+	if user.CurrentCountry > 0 {
+		if country, err := s.queries.GetCountryByID(ctx, user.CurrentCountry); err == nil {
+			countryName = country.Name
+		}
+	}
+
+	if user.CurrentState > 0 && user.CurrentCountry > 0 {
+		if state, err := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
+			ID:        user.CurrentState,
+			CountryID: user.CurrentCountry,
+		}); err == nil {
+			stateName = state.Name
+		}
+	}
+
+	if user.CurrentCity.Valid && user.CurrentState > 0 {
+		if city, err := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
+			ID:      user.CurrentCity.Int32,
+			StateID: user.CurrentState,
+		}); err == nil {
+			cityName = city.Name
+		}
+	}
+
 	// Cache it in Redis
-	userJSON, err := json.Marshal(user)
+	userWithPlaces := struct {
+		queries.User
+		CountryName string `json:"country_name"`
+		StateName   string `json:"state_name"`
+		CityName    string `json:"city_name"`
+	}{
+		User:        user,
+		CountryName: countryName,
+		StateName:   stateName,
+		CityName:    cityName,
+	}
+
+	userJSON, err := json.Marshal(userWithPlaces)
 	if err == nil {
 		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour) // 5 years expires
 	}
@@ -114,7 +152,7 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code st
 	// Invalidate the cache
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
 	s.rdb.Del(ctx, userRolesKey)
-	
+
 	return nil
 }
 
@@ -140,7 +178,7 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 	return nil
 }
 
-func (s *UsersService) ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.User, error) {
+func (s *UsersService) ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error) {
 	return s.queries.ListUsers(ctx, arg)
 }
 
@@ -185,25 +223,25 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 	return nil
 }
 
-func (s *UsersService) GetUserProfile(ctx context.Context, userID int64) (queries.UserProfile, error) {
+func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error) {
 	// Check Redis
-	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserProfile, userID)
+	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserMoreInfo, userID)
 	profileJSON, err := s.rdb.Get(ctx, userProfileKey).Result()
 	if err == nil {
-		var profile queries.UserProfile
+		var profile queries.UserMoreInfo
 		if err := json.Unmarshal([]byte(profileJSON), &profile); err == nil {
 			return profile, nil
 		}
 	}
 
 	// Fetch from DB if not in Redis
-	profile, err := s.queries.GetUserProfile(ctx, userID)
+	profile, err := s.queries.GetMoreInfoAboutThisUser(ctx, userID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Return empty profile for new users instead of failing
-			return queries.UserProfile{UserID: userID}, nil
+			return queries.UserMoreInfo{UserID: userID}, nil
 		}
-		return queries.UserProfile{}, fmt.Errorf("user profile not found: %w", err)
+		return queries.UserMoreInfo{}, fmt.Errorf("user profile not found: %w", err)
 	}
 
 	// Cache it in Redis
@@ -216,7 +254,7 @@ func (s *UsersService) GetUserProfile(ctx context.Context, userID int64) (querie
 }
 
 func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel string) error {
-	err := s.queries.UpdateUserProfileDetails(ctx, queries.UpdateUserProfileDetailsParams{
+	err := s.queries.UpdateMoreInfoAboutThisUser(ctx, queries.UpdateMoreInfoAboutThisUserParams{
 		UserID:            userID,
 		EducationalStatus: pgtype.Text{String: educationalStatus, Valid: educationalStatus != ""},
 		HighestDegree:     pgtype.Text{String: highestDegree, Valid: highestDegree != ""},
@@ -231,7 +269,37 @@ func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int6
 	}
 
 	// Invalidate cache
-	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserProfile, userID)
+	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserMoreInfo, userID)
 	s.rdb.Del(ctx, userProfileKey)
 	return nil
+}
+
+func (s *UsersService) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error) {
+	// Check Redis
+	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
+	phoneNumbersJSON, err := s.rdb.Get(ctx, userPhoneNumbersKey).Result()
+	if err == nil {
+		var phoneNumbers []queries.UsersPhoneNumber
+		if err := json.Unmarshal([]byte(phoneNumbersJSON), &phoneNumbers); err == nil {
+			return phoneNumbers, nil
+		}
+	}
+
+	// Fetch from DB if not in Redis
+	phoneNumbers, err := s.queries.GetUserPhoneNumbersByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache it in Redis
+	phoneNumbersJSONBytes, err := json.Marshal(phoneNumbers)
+	if err == nil {
+		s.rdb.Set(ctx, userPhoneNumbersKey, phoneNumbersJSONBytes, 5*365*24*time.Hour) // 5years TTL
+	}
+
+	return phoneNumbers, nil
+}
+
+func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
+	return s.queries.DeleteUserPhoneNumber(ctx, id)
 }

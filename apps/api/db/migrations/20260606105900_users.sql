@@ -34,7 +34,7 @@ CREATE TABLE users (
   polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
 
   -- Referral system
-  -- referral_code format: {FIRSTNAME}{2-digit suffix} e.g. "DANIEL40"
+  -- referral_code format: {FIRST_NAME}{2-digit suffix} e.g. "DANIEL40"
   -- Generated server-side at user registration time, unique per user
   referral_code VARCHAR(30) UNIQUE,
   -- The referral code of whoever referred this user (e.g. an agent)
@@ -73,10 +73,15 @@ CREATE TABLE users_phone_numbers (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id BIGINT NOT NULL,
   phone VARCHAR(25) UNIQUE NOT NULL,
-  on_whatsapp VARCHAR(25) CHECK (on_whatsapp IN ('yes','no')) DEFAULT 'no'
+  raw_input VARCHAR(25) NOT NULL,
+  phonecode VARCHAR(10) NOT NULL,
+  on_whatsapp VARCHAR(25) CHECK (on_whatsapp IN ('yes','no')) DEFAULT 'no',
+  is_default BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true
 );
 CREATE INDEX idx_users_phone_numbers_user_id ON users_phone_numbers(user_id);
 CREATE INDEX idx_users_phone_numbers_phone ON users_phone_numbers(phone);
+CREATE INDEX idx_users_phone_numbers_is_active ON users_phone_numbers(is_active);
 
 -- USERS security questions table
 CREATE TABLE user_security_questions (
@@ -89,16 +94,16 @@ CREATE TABLE user_security_questions (
   answer2 VARCHAR(255) NOT NULL
 );
 
-CREATE TABLE user_profiles (
+CREATE TABLE user_more_infos (
   user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   occupation_id SMALLINT REFERENCES occupations(id) ON DELETE SET NULL,
   educational_status VARCHAR(20) CHECK (educational_status IN ('graduate', 'student', 'none')),
+  education_level VARCHAR(20) CHECK (education_level IN ('none', 'primary', 'secondary', 'bachelors', 'masters', 'phd')),
   highest_degree VARCHAR(100),
   graduation_year VARCHAR(4),
   school_name VARCHAR(255),
   religion VARCHAR(20) CHECK (religion IN ('christianity', 'islam', 'traditional', 'other')),
   marital_status VARCHAR(20) CHECK (marital_status IN ('single', 'married', 'divorced', 'widowed')),
-  education_level VARCHAR(20) CHECK (education_level IN ('none', 'primary', 'secondary', 'bachelors', 'masters', 'phd')),
   address VARCHAR(255),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -121,7 +126,7 @@ ALTER TABLE users ALTER COLUMN id RESTART WITH 8;
 
 -- +goose Down
 DROP TABLE IF EXISTS user_verifications;
-DROP TABLE IF EXISTS user_profiles;
+DROP TABLE IF EXISTS user_more_infos;
 DROP TABLE IF EXISTS user_security_questions;
 DROP TABLE IF EXISTS users_phone_numbers;
 DROP TABLE IF EXISTS users_nin;

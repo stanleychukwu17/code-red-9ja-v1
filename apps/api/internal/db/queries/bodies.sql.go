@@ -435,20 +435,26 @@ func (q *Queries) GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCi
 }
 
 const getCountryByID = `-- name: GetCountryByID :one
-SELECT id, name, iso2 FROM c_countries
+SELECT id, name, iso2, phonecode FROM c_countries
 WHERE id = $1 LIMIT 1
 `
 
 type GetCountryByIDRow struct {
-	ID   int16  `json:"id"`
-	Name string `json:"name"`
-	Iso2 string `json:"iso2"`
+	ID        int16  `json:"id"`
+	Name      string `json:"name"`
+	Iso2      string `json:"iso2"`
+	Phonecode string `json:"phonecode"`
 }
 
 func (q *Queries) GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error) {
 	row := q.db.QueryRow(ctx, getCountryByID, id)
 	var i GetCountryByIDRow
-	err := row.Scan(&i.ID, &i.Name, &i.Iso2)
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Iso2,
+		&i.Phonecode,
+	)
 	return i, err
 }
 

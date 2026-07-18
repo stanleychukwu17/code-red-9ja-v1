@@ -2,11 +2,9 @@ package statesservice
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
@@ -97,37 +95,6 @@ func (s *StatesService) DeleteState(ctx context.Context, id int16) error {
 	s.invalidateCache(ctx, state.CountryID, id)
 
 	return nil
-}
-
-func (s *StatesService) GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.GetStatesByCountryIDRow, error) {
-	type StatesResponse struct {
-		States []queries.GetStatesByCountryIDRow `json:"states"`
-	}
-
-	redisKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, countryID)
-	statesData, err := s.rdb.Get(ctx, redisKey).Result()
-	switch err {
-	case redis.Nil:
-		dbStates, err := s.queries.GetStatesByCountryID(ctx, countryID)
-		if err != nil {
-			return nil, err
-		}
-
-		payload := StatesResponse{
-			States: dbStates,
-		}
-
-		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour)
-
-		return dbStates, nil
-	case nil:
-		var payload StatesResponse
-		err = json.Unmarshal([]byte(statesData), &payload)
-		return payload.States, nil
-	default:
-		return nil, err
-	}
 }
 
 func (s *StatesService) invalidateCache(ctx context.Context, countryID int16, stateID int16) {

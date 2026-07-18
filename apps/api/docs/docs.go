@@ -148,6 +148,104 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/users/phones/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes a specific user phone number by its ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete a user phone number",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Phone Number ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/phones": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches the list of phone numbers for a user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user phone numbers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID or Fake ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/supervisor-assignments": {
             "get": {
                 "description": "Get supervisor assignments for a user for a specific election group",
@@ -1025,7 +1123,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "States"
+                    "Bodies"
                 ],
                 "summary": "Get states by country ID",
                 "parameters": [
@@ -1053,7 +1151,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.GetStatesResponse"
+                            "$ref": "#/definitions/bodieshandler.GetStatesResponse"
                         }
                     },
                     "400": {
@@ -7374,7 +7472,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Role (admin, partyadmin, user)",
+                        "description": "Role (admin, party_admin, user)",
                         "name": "role",
                         "in": "query"
                     },
@@ -8530,7 +8628,9 @@ const docTemplate = `{
                     "minLength": 5
                 },
                 "phone": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 15,
+                    "minLength": 5
                 },
                 "question1": {
                     "type": "integer"
@@ -8866,6 +8966,34 @@ const docTemplate = `{
                 }
             }
         },
+        "bodieshandler.GetStatesData": {
+            "type": "object",
+            "properties": {
+                "states": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bodieshandler.StateResponse"
+                    }
+                }
+            }
+        },
+        "bodieshandler.GetStatesResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/bodieshandler.GetStatesData"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "meta": {
+                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
         "bodieshandler.LGAResponse": {
             "type": "object",
             "properties": {
@@ -8893,6 +9021,17 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "next_cursor": {
+                    "type": "string"
+                }
+            }
+        },
+        "bodieshandler.StateResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
                     "type": "string"
                 }
             }
@@ -10088,56 +10227,6 @@ const docTemplate = `{
                 }
             }
         },
-        "stateshandler.GetStatesData": {
-            "type": "object",
-            "properties": {
-                "states": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/stateshandler.StateResponse"
-                    }
-                }
-            }
-        },
-        "stateshandler.GetStatesResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "$ref": "#/definitions/stateshandler.GetStatesData"
-                },
-                "message": {
-                    "type": "string"
-                },
-                "meta": {
-                    "$ref": "#/definitions/stateshandler.PaginationMeta"
-                },
-                "success": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "stateshandler.PaginationMeta": {
-            "type": "object",
-            "properties": {
-                "has_more": {
-                    "type": "boolean"
-                },
-                "next_cursor": {
-                    "type": "string"
-                }
-            }
-        },
-        "stateshandler.StateResponse": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
         "stateshandler.UpdateStateRequest": {
             "type": "object",
             "properties": {
@@ -10341,11 +10430,11 @@ const docTemplate = `{
                 "religion": {
                     "type": "string"
                 },
-                "role": {
-                    "type": "string"
-                },
-                "role_level": {
-                    "type": "string"
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "school_name": {
                     "type": "string"

@@ -95,7 +95,7 @@ SELECT
   )::integer AS agents_count
 FROM party_applications pa
 JOIN users u ON pa.user_id = u.id
-LEFT JOIN user_profiles up ON u.id = up.user_id
+LEFT JOIN user_more_infos up ON u.id = up.user_id
 JOIN election_groups eg ON pa.election_group_id = eg.id
 JOIN parties p ON pa.party_id = p.id
 LEFT JOIN c_states st ON u.current_state = st.id

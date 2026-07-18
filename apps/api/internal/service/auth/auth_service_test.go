@@ -268,7 +268,7 @@ func TestCheckPhone(t *testing.T) {
 	defer app.Server.Shutdown(ctx)
 
 	q := queries.New(app.DB)
-	s := authservice.NewAuthService(q, app.RDB, &mockMessagingService{}, nil, nil, "jwt_test_string", 15*time.Minute, 168*time.Hour)
+	s := authservice.NewAuthService(q, app.RDB, &mockMessagingService{}, nil, nil, nil, "jwt_test_string", 15*time.Minute, 168*time.Hour)
 
 	phone := "+2348011111111"
 

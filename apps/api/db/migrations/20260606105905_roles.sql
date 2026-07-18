@@ -36,11 +36,10 @@ INSERT INTO role_permissions (code, description) VALUES
 
 -- Seed Default Roles
 INSERT INTO roles (id, code, name, description) VALUES 
-(1, 'user', 'User', 'Regular platform user'), 
-(2, 'admin', 'Admin', 'Standard system administrator'),
-(3, 'super_admin', 'Super Admin', 'Super administrator with full system access'),
-(4, 'super_party_admin', 'Super Party Admin', 'Super administrator for a political party'),
-(5, 'party_admin', 'Party Admin', 'Administrator for a political party');
+(1, 'admin', 'Admin', 'Standard system administrator'),
+(2, 'super_admin', 'Super Admin', 'Super administrator with full system access'),
+(3, 'super_party_admin', 'Super Party Admin', 'Super administrator for a political party'),
+(4, 'party_admin', 'Party Admin', 'Administrator for a political party');
 
 -- Reset identity sequence
 SELECT setval(pg_get_serial_sequence('roles', 'id'), coalesce(max(id), 1)) FROM roles;

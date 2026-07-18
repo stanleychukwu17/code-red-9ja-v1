@@ -24,23 +24,20 @@ interface PartiesResponse {
   };
 }
 
-export const SelectParty = ({
-  update,
-  errorMsg,
-  selectedId,
-  className,
-  align = "start",
-  fetchParties,
-}: SelectProps<Party> & {
+/**
+ * SelectParty
+ * A responsive select component for choosing a political party.
+ * Uses react-query to fetch parties and supports both desktop (popover/command) and mobile (drawer) views.
+ */
+export const SelectParty = ({ update, errorMsg, selectedId, className, align = "start", fetchParties }: SelectProps<Party> & {
   fetchParties: () => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
   const [desktopSearch, setDesktopSearch] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<Party | undefined>(
-    undefined,
-  );
+  const [selectedItem, setSelectedItem] = useState<Party | undefined>(undefined);
 
+  // Fetch parties using react-query for caching and state management
   const { data, isLoading } = useQuery<PartiesResponse>({
     queryKey: ["parties-select"],
     queryFn: async () => {
@@ -52,6 +49,7 @@ export const SelectParty = ({
 
   const parties = data?.data?.parties || [];
 
+  // Sync selected item state when selectedId prop or parties data changes
   useEffect(() => {
     if (selectedId) {
       const party = parties.find((p) => String(p.id) === String(selectedId));
@@ -71,6 +69,7 @@ export const SelectParty = ({
     setOpen(false);
   };
 
+  // Filter parties based on search input for desktop and mobile views respectively
   const filteredParties = parties.filter(
     (p) =>
       p.name.toLowerCase().includes(desktopSearch.toLowerCase()) ||
@@ -82,11 +81,7 @@ export const SelectParty = ({
       p.short_name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
-  const currentSelectedId = selectedItem?.id
-    ? `${selectedItem.id}`
-    : selectedId
-      ? `${selectedId}`
-      : undefined;
+  const currentSelectedId = selectedItem?.id ? `${selectedItem.id}` : selectedId ? `${selectedId}` : undefined;
   const getId = (item: Party) => `${item.id}`;
   const getName = (item: Party) => item.name;
 
@@ -100,7 +95,7 @@ export const SelectParty = ({
           className="size-5 rounded-full object-cover shrink-0"
         />
       )}
-      <span className="font-normal text-c-90">{item.short_name}</span>
+      <span className="font-normal text-c-90">{item.short_name} - {item.name}</span>
     </div>
   );
 

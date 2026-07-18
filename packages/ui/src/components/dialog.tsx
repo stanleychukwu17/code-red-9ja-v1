@@ -58,6 +58,7 @@ function DialogContent({
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
+        aria-describedby={undefined}
         className={cn(
           "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-2 border bg-background p-5 shadow-lg duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-open:slide-in-from-left-1/2 data-open:slide-in-from-top-1/2 data-closed:slide-out-to-left-1/2 data-closed:slide-out-to-top-1/2 rounded-[24px]",
           className,
@@ -114,9 +115,9 @@ function DialogHeader({
       className="flex items-center justify-between px-6 pr-4 pt-4"
       {...props}
     >
-      <h2 className="text-[20px] font-medium text-c-80 tracking-tight">
+      <DialogPrimitive.Title className="text-[20px] font-medium text-c-80 tracking-tight">
         {title}
-      </h2>
+      </DialogPrimitive.Title>
       <DialogClose asChild>
         <button
           className="size-10 flex items-center justify-center rounded-full text-c-50 hover:bg-c-5 hover:text-c-80 transition-colors duration-150 cursor-pointer"

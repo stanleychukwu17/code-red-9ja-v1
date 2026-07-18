@@ -5,8 +5,24 @@
 package queries
 
 import (
+	"net/netip"
+
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type AuditLog struct {
+	ID         int64              `json:"id"`
+	ActorID    int64              `json:"actor_id"`
+	ActorRole  pgtype.Text        `json:"actor_role"`
+	Action     string             `json:"action"`
+	EntityType string             `json:"entity_type"`
+	EntityID   string             `json:"entity_id"`
+	OldValues  []byte             `json:"old_values"`
+	NewValues  []byte             `json:"new_values"`
+	IpAddress  *netip.Addr        `json:"ip_address"`
+	UserAgent  pgtype.Text        `json:"user_agent"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+}
 
 type CCity struct {
 	ID        int32          `json:"id"`
@@ -798,16 +814,16 @@ type User struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
-type UserProfile struct {
+type UserMoreInfo struct {
 	UserID            int64              `json:"user_id"`
 	OccupationID      pgtype.Int2        `json:"occupation_id"`
 	EducationalStatus pgtype.Text        `json:"educational_status"`
+	EducationLevel    pgtype.Text        `json:"education_level"`
 	HighestDegree     pgtype.Text        `json:"highest_degree"`
 	GraduationYear    pgtype.Text        `json:"graduation_year"`
 	SchoolName        pgtype.Text        `json:"school_name"`
 	Religion          pgtype.Text        `json:"religion"`
 	MaritalStatus     pgtype.Text        `json:"marital_status"`
-	EducationLevel    pgtype.Text        `json:"education_level"`
 	Address           pgtype.Text        `json:"address"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
@@ -881,7 +897,11 @@ type UsersPhoneNumber struct {
 	ID         int64       `json:"id"`
 	UserID     int64       `json:"user_id"`
 	Phone      string      `json:"phone"`
+	RawInput   string      `json:"raw_input"`
+	Phonecode  string      `json:"phonecode"`
 	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
+	IsDefault  pgtype.Bool `json:"is_default"`
+	IsActive   pgtype.Bool `json:"is_active"`
 }
 
 type Ward struct {

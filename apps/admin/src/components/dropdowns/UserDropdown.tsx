@@ -8,6 +8,7 @@ import { Pencil } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { UserFormDialog } from "../dialogs/UserFormDialog";
+import { UserRoleDialog } from "../dialogs/UserRoleDialog";
 import type { UserType } from "../tiles/user-tile";
 
 interface UserDropdownProps {
@@ -19,6 +20,7 @@ interface UserDropdownProps {
 export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openRoleDialog, setOpenRoleDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
 
@@ -39,7 +41,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
 
   const group1: TDropdownGroup = [
     {
-      title: "Edit",
+      title: "Edit user info",
       icon: <Pencil className="size-4" />,
       action: () => {
         setOpenMenu(false);
@@ -47,7 +49,15 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
       },
     },
     {
-      title: "Delete",
+      title: "Add/Edit user role",
+      icon: <Pencil className="size-4" />,
+      action: () => {
+        setOpenMenu(false);
+        setOpenRoleDialog(true);
+      },
+    },
+    {
+      title: "Delete user account",
       icon: <TrashcanIcon />,
       action: () => {
         setOpenMenu(false);
@@ -97,6 +107,16 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
         mode="update"
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
+        user={userForDialog}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["users"] });
+          refetch?.();
+        }}
+      />
+
+      <UserRoleDialog
+        open={openRoleDialog}
+        onClose={() => setOpenRoleDialog(false)}
         user={userForDialog}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["users"] });
