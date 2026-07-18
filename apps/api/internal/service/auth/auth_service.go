@@ -655,9 +655,11 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, err
 	}
 	// city check
-	_, err = s.bodiesService.CheckCity(ctx, params.CurrentState, params.CurrentCity.Int32)
-	if err != nil {
-		return RegisterResult{}, err
+	if params.CurrentCity.Int32 > 0 {
+		_, err = s.bodiesService.CheckCity(ctx, params.CurrentState, params.CurrentCity.Int32)
+		if err != nil {
+			return RegisterResult{}, err
+		}
 	}
 
 	// check phone country validation

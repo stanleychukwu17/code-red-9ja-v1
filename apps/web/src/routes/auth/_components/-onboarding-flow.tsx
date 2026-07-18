@@ -235,9 +235,11 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       return;
     }
 
+    // for fetching the cities
     const fetchCities = async () => {
       setIsLoadingCities(true);
       setCitiesError(null);
+
       try {
         const res = await getCities({ data: { stateId } });
         if (res.success && Array.isArray(res.data.cities)) {
@@ -253,7 +255,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           // Set cities
           setCities(mappedCities);
         } else {
-          setCitiesError(res.error || res.message || "Failed to fetch cities");
+          setCities([]);
         }
       } catch (err) {
         console.error("Failed to load cities:", err);
@@ -370,7 +372,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     step === "details"
       ? Boolean(data.firstName && data.surname && data.gender && data.dateOfBirth && data.username)
       : step === "nin" ? data.nin.length === 11
-        : Boolean(data.country && data.state && data.city);
+        : Boolean(data.country && data.state);
 
   return (
     <OnboardingWrapper>
@@ -547,9 +549,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
             options={cities}
             disabled={isLoadingCities || !data.state}
             placeholder={isLoadingCities ? "Loading cities..." : "City of residence"}
-            onChange={(value) =>
-              setData((current) => ({ ...current, city: value }))
-            }
+            onChange={(value) => setData((current) => ({ ...current, city: value }))}
           />
         </FlowScreen>
       ) : null}
