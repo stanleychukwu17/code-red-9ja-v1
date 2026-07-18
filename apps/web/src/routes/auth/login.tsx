@@ -119,6 +119,7 @@ function RouteComponent() {
         const matchedCountry = countries.find(
           (c) => c.name.toLowerCase() === value.country.toLowerCase(),
         );
+
         if (matchedCountry) {
           payload.identifier = payload.identifier.startsWith("0")
             ? `+${matchedCountry.phonecode}${payload.identifier.slice(1)}`
