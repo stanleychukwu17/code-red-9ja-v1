@@ -2,6 +2,9 @@
 CREATE TABLE audit_logs (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     
+    -- WHERE did it happen? (e.g., "admin", "parties", "party_history")
+    module VARCHAR(50),
+
     -- WHO did it?
     actor_id BIGINT NOT NULL REFERENCES users(id),
     actor_role VARCHAR(50), 
