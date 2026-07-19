@@ -183,7 +183,7 @@ FROM polling_unit_results
 WHERE
   ($1::bigint    IS NULL OR election_id       = $1)
   AND ($2::bigint IS NULL OR election_group_id = $2)
-  AND ($3::bigint   IS NULL OR party_id          = $3)
+  AND ($3::smallint   IS NULL OR party_id          = $3)
   AND ($4::int IS NULL OR polling_unit_id = $4)
   AND ($5::bigint IS NULL OR submitted_by    = $5)
   AND ($6::smallint IS NULL OR state_id          = $6)
@@ -199,7 +199,7 @@ LIMIT $12
 type ListPollingUnitResultsParams struct {
 	ElectionID      pgtype.Int8 `json:"election_id"`
 	ElectionGroupID pgtype.Int8 `json:"election_group_id"`
-	PartyID         pgtype.Int8 `json:"party_id"`
+	PartyID         pgtype.Int2 `json:"party_id"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
 	SubmittedBy     pgtype.Int8 `json:"submitted_by"`
 	StateID         pgtype.Int2 `json:"state_id"`

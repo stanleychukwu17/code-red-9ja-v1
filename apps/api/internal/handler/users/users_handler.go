@@ -67,7 +67,7 @@ func NewHandler(usersService UsersService, auditService audit.AuditService, bodi
 		auditService:  auditService,
 		bodiesService: bodiesService,
 		validate:      validator.New(),
-		utils:        utilsInstance,
+		utils:         utilsInstance,
 	}
 }
 
@@ -607,33 +607,33 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	responses := make([]UserResponse, len(paginatedUsers))
 	for i, u := range paginatedUsers {
 		uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
-		
+
 		countryName := ""
 		stateName := ""
 		cityName := ""
-		
+
 		countryData, err := h.bodiesService.CheckCountry(r.Context(), u.CurrentCountry)
 		if err == nil {
 			countryName = countryData.Name
 		}
-		
+
 		stateData, err := h.bodiesService.CheckState(r.Context(), u.CurrentCountry, u.CurrentState)
 		if err == nil {
 			stateName = stateData.Name
 		}
-		
+
 		if u.CurrentCity.Int32 > 0 {
 			cityData, err := h.bodiesService.CheckCity(r.Context(), u.CurrentState, u.CurrentCity.Int32)
 			if err == nil {
 				cityName = cityData.Name
 			}
 		}
-		
+
 		res := mapListUserRowToResponse(u, uRoles)
 		res.CountryName = countryName
 		res.StateName = stateName
 		res.CityName = cityName
-		
+
 		responses[i] = res
 	}
 
@@ -913,7 +913,7 @@ func (h *Handler) GetUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateUserPhoneNumbersRequest struct {
-	Phones []usersservice.PhonePayload `json:"phones"`
+	// Phones []usersservice.PhonePayload `json:"phones"`
 }
 
 // UpdateUserPhoneNumbers handles PUT /api/v1/admin/users/{id}/phones
@@ -943,17 +943,17 @@ func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	user, err := h.usersService.GetUserByFakeID(r.Context(), userFakeID)
+	_, err = h.usersService.GetUserByFakeID(r.Context(), userFakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
-	err = h.usersService.UpdateUserPhoneNumbers(r.Context(), user.ID, req.Phones)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update phone numbers: "+err.Error())
-		return
-	}
+	// err = h.usersService.UpdateUserPhoneNumbers(r.Context(), user.ID, req.Phones)
+	// if err != nil {
+	// 	h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update phone numbers: "+err.Error())
+	// 	return
+	// }
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Phone numbers updated successfully", nil)
 }

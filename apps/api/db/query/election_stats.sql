@@ -1434,11 +1434,11 @@ UPDATE election_group_polling_units
 SET
   total_agents_count = GREATEST(0, total_agents_count + sqlc.arg(delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  elem,
                  '{agents_count}',
@@ -1450,7 +1450,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                sqlc.arg(party_id)::bigint,
+      'party_id',                                sqlc.arg(party_id)::smallint,
       'agents_count',                            GREATEST(0, sqlc.arg(delta)::int),
       'agents_in_attendance_count',              0,
       'average_arrival_time',                    NULL,
@@ -1481,7 +1481,7 @@ SET
   parties = (
     SELECT jsonb_agg(
       CASE
-        WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+        WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
         THEN jsonb_set(
                jsonb_set(
                  jsonb_set(
@@ -1515,7 +1515,7 @@ SET
   updated_at = NOW()
 WHERE election_group_id = sqlc.arg(election_group_id)::bigint
   AND polling_unit_id   = sqlc.arg(polling_unit_id)::int
-  AND parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint));
+  AND parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint));
 
 -- name: UpsertElectionGroupWardPartyEntry :exec
 -- Upserts party entry in election_group_wards.parties.
@@ -1526,11 +1526,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1546,7 +1546,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         sqlc.arg(party_id)::bigint,
+      'party_id',                                         sqlc.arg(party_id)::smallint,
       'pu_agents_count',                                  GREATEST(0, sqlc.arg(agents_delta)::int),
       'unique_pu_agents_count',                           GREATEST(0, sqlc.arg(unique_pu_delta)::int),
       'pu_agents_in_attendance_count',                    0,
@@ -1581,11 +1581,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1601,7 +1601,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         sqlc.arg(party_id)::bigint,
+      'party_id',                                         sqlc.arg(party_id)::smallint,
       'pu_agents_count',                                  GREATEST(0, sqlc.arg(agents_delta)::int),
       'unique_pu_agents_count',                           GREATEST(0, sqlc.arg(unique_pu_delta)::int),
       'pu_agents_in_attendance_count',                    0,
@@ -1635,11 +1635,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1655,7 +1655,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         sqlc.arg(party_id)::bigint,
+      'party_id',                                         sqlc.arg(party_id)::smallint,
       'pu_agents_count',                                  GREATEST(0, sqlc.arg(agents_delta)::int),
       'unique_pu_agents_count',                           GREATEST(0, sqlc.arg(unique_pu_delta)::int),
       'pu_agents_in_attendance_count',                    0,
@@ -1689,11 +1689,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1709,7 +1709,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         sqlc.arg(party_id)::bigint,
+      'party_id',                                         sqlc.arg(party_id)::smallint,
       'pu_agents_count',                                  GREATEST(0, sqlc.arg(agents_delta)::int),
       'unique_pu_agents_count',                           GREATEST(0, sqlc.arg(unique_pu_delta)::int),
       'pu_agents_in_attendance_count',                    0,
@@ -1743,11 +1743,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1763,7 +1763,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         sqlc.arg(party_id)::bigint,
+      'party_id',                                         sqlc.arg(party_id)::smallint,
       'pu_agents_count',                                  GREATEST(0, sqlc.arg(agents_delta)::int),
       'unique_pu_agents_count',                           GREATEST(0, sqlc.arg(unique_pu_delta)::int),
       'pu_agents_in_attendance_count',                    0,
@@ -1797,11 +1797,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1817,7 +1817,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         sqlc.arg(party_id)::bigint,
+      'party_id',                                         sqlc.arg(party_id)::smallint,
       'pu_agents_count',                                  GREATEST(0, sqlc.arg(agents_delta)::int),
       'unique_pu_agents_count',                           GREATEST(0, sqlc.arg(unique_pu_delta)::int),
       'pu_agents_in_attendance_count',                    0,
@@ -1856,7 +1856,7 @@ SELECT COALESCE(
   (
     SELECT (elem->>'agents_count')::int
     FROM jsonb_array_elements(parties) AS elem
-    WHERE (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+    WHERE (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
     LIMIT 1
   ),
   0
@@ -1878,11 +1878,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1898,7 +1898,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'ward_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_ward_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -1913,11 +1913,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1933,7 +1933,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'ward_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_ward_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -1948,11 +1948,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -1968,7 +1968,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'ward_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_ward_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -1983,11 +1983,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2003,7 +2003,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'ward_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_ward_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2018,11 +2018,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2038,7 +2038,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'ward_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_ward_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2053,11 +2053,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + sqlc.arg(delta)::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2073,7 +2073,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'lga_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_lga_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2088,11 +2088,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + sqlc.arg(delta)::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2108,7 +2108,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'lga_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_lga_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2123,11 +2123,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + sqlc.arg(delta)::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2143,7 +2143,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'lga_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_lga_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2160,7 +2160,7 @@ SELECT COUNT(*)::int AS supervisor_count
 FROM ward_election_supervisors
 WHERE election_group_id = sqlc.arg(election_group_id)::bigint
   AND ward_id           = sqlc.arg(ward_id)::int
-  AND party_id          = sqlc.arg(party_id)::bigint;
+  AND party_id          = sqlc.arg(party_id)::smallint;
 
 -- name: GetLGASupervisorCount :one
 -- Returns the current count of LGA supervisors for a party in a given lga+election group.
@@ -2168,7 +2168,7 @@ SELECT COUNT(*)::int AS supervisor_count
 FROM lga_election_supervisors
 WHERE election_group_id = sqlc.arg(election_group_id)::bigint
   AND lga_id            = sqlc.arg(lga_id)::int
-  AND party_id          = sqlc.arg(party_id)::bigint;
+  AND party_id          = sqlc.arg(party_id)::smallint;
 
 -- name: GetStateSupervisorCount :one
 -- Returns the current count of state supervisors for a party in a given state+election group.
@@ -2176,7 +2176,7 @@ SELECT COUNT(*)::int AS supervisor_count
 FROM state_election_supervisors
 WHERE election_group_id = sqlc.arg(election_group_id)::bigint
   AND state_id          = sqlc.arg(state_id)::smallint
-  AND party_id          = sqlc.arg(party_id)::bigint;
+  AND party_id          = sqlc.arg(party_id)::smallint;
 
 -- name: AdjustElectionGroupWardWardSupervisorCounts :exec
 UPDATE election_group_wards
@@ -2184,11 +2184,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2204,7 +2204,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'ward_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_ward_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2219,11 +2219,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + sqlc.arg(delta)::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2239,7 +2239,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'ward_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_ward_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2253,11 +2253,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + sqlc.arg(delta)::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2273,7 +2273,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'lga_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_lga_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2287,11 +2287,11 @@ SET
   state_supervisors_count        = GREATEST(0, state_supervisors_count + sqlc.arg(delta)::int),
   unique_state_supervisors_count = GREATEST(0, unique_state_supervisors_count + sqlc.arg(unique_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2307,7 +2307,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'state_supervisors_count', GREATEST(0, sqlc.arg(delta)::int),
       'unique_state_supervisors_count', GREATEST(0, sqlc.arg(unique_delta)::int)
     )
@@ -2322,11 +2322,11 @@ SET
   pu_agents_count = GREATEST(0, pu_agents_count + sqlc.arg(agents_delta)::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + sqlc.arg(unique_pu_delta)::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::bigint
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -2342,7 +2342,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', sqlc.arg(party_id)::bigint,
+      'party_id', sqlc.arg(party_id)::smallint,
       'pu_agents_count', GREATEST(0, sqlc.arg(agents_delta)::int),
       'unique_pu_agents_count', GREATEST(0, sqlc.arg(unique_pu_delta)::int)
     )

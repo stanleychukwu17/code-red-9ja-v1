@@ -14,7 +14,7 @@ import (
 
 type BodiesService interface {
 	GetAllCountries(ctx context.Context) ([]queries.ListCountriesRow, error)
-	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.GetStatesByCountryIDRow, error)
+	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]queries.GetCitiesByStateIDRow, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]queries.Lga, error)
 	CreateLGA(ctx context.Context, name string, abbreviation string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)

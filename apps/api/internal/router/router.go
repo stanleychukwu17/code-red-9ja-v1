@@ -29,6 +29,7 @@ import (
 	officeshandler "free9ja/api/internal/handler/offices"
 	partieshandler "free9ja/api/internal/handler/parties"
 	partyapplicationshandler "free9ja/api/internal/handler/party_applications"
+	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	puassignmentshandler "free9ja/api/internal/handler/polling_unit_assignments"
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
@@ -54,6 +55,7 @@ import (
 	officesservice "free9ja/api/internal/service/offices"
 	partiesservice "free9ja/api/internal/service/parties"
 	partyapplications "free9ja/api/internal/service/party_applications"
+	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	puassignments "free9ja/api/internal/service/polling_unit_assignments"
 	puresults "free9ja/api/internal/service/polling_unit_results"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -136,6 +138,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
 	auditService := audit.NewAuditService(q)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, utilsInstance)
+	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, usersService, partiesService, auditService)
+	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
@@ -227,6 +231,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/parties/{id}", partiesHandler.GetParty)
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
 
+	// page verifications public routes
+	mainRouter.Get("/api/v1/verifications/types", pageVerificationsHandler.ListVerificationTypes)
+	mainRouter.Get("/api/v1/verifications/{pageType}/{pageID}", pageVerificationsHandler.GetPageVerifications)
+
 	// Monnify webhook — must be public (Monnify POSTs from their servers)
 	mainRouter.Post("/api/v1/webhooks/monnify", webhookHandler.HandleMonnify)
 
@@ -299,6 +307,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// slot pricing settings
 		r.Get("/api/v1/admin/settings/slot-price", partiesHandler.GetGlobalSlotPrice)
 		r.Put("/api/v1/admin/settings/slot-price", partiesHandler.UpdateGlobalSlotPrice)
+
+		// page verifications admin mutations
+		r.Post("/api/v1/admin/verifications", pageVerificationsHandler.AssignVerification)
+		r.Delete("/api/v1/admin/verifications", pageVerificationsHandler.RemoveVerification)
 
 		// states admin mutations
 		r.Post("/api/v1/states", statesHandler.CreateState)

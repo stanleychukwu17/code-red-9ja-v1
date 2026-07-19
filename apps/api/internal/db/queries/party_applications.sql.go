@@ -106,7 +106,7 @@ SELECT
       SELECT COUNT(*)::integer
       FROM polling_unit_assignments pua
       WHERE pua.polling_unit_id = pu.id
-        AND pua.party_id = $1::bigint
+        AND pua.party_id = $1::smallint
         AND pua.election_group_id = $2::bigint
     ),
     0
@@ -120,7 +120,7 @@ LIMIT $5::integer
 `
 
 type GetPollingUnitsWithAgentCountsParams struct {
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 	WardID          int32 `json:"ward_id"`
@@ -240,7 +240,7 @@ LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
 WHERE 
   ($1::bigint = 0 OR pa.user_id = $1) AND
-  ($2::bigint = 0 OR pa.party_id = $2) AND
+  ($2::smallint = 0 OR pa.party_id = $2) AND
   ($3::bigint = 0 OR pa.election_group_id = $3) AND
   ($4::varchar = '' OR pa.status = $4) AND
   ($5::bigint = 0 OR pa.id < $5)
@@ -250,7 +250,7 @@ LIMIT $6
 
 type ListApplicationsParams struct {
 	UserID          int64  `json:"user_id"`
-	PartyID         int64  `json:"party_id"`
+	PartyID         int16  `json:"party_id"`
 	ElectionGroupID int64  `json:"election_group_id"`
 	Status          string `json:"status"`
 	Cursor          int64  `json:"cursor"`
@@ -483,7 +483,7 @@ SET
   address = COALESCE(NULLIF($16::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -549,6 +549,8 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
 		&i.BankCode,
+		&i.IsPolitician,
+		&i.IsVerified,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,
@@ -567,7 +569,7 @@ WITH inserted AS (
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
@@ -597,6 +599,8 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
 		&i.BankCode,
+		&i.IsPolitician,
+		&i.IsVerified,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,

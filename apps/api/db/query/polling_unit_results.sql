@@ -50,7 +50,7 @@ FROM polling_unit_results
 WHERE
   (sqlc.narg('election_id')::bigint    IS NULL OR election_id       = sqlc.narg('election_id'))
   AND (sqlc.narg('election_group_id')::bigint IS NULL OR election_group_id = sqlc.narg('election_group_id'))
-  AND (sqlc.narg('party_id')::bigint   IS NULL OR party_id          = sqlc.narg('party_id'))
+  AND (sqlc.narg('party_id')::smallint   IS NULL OR party_id          = sqlc.narg('party_id'))
   AND (sqlc.narg('polling_unit_id')::int IS NULL OR polling_unit_id = sqlc.narg('polling_unit_id'))
   AND (sqlc.narg('submitted_by')::bigint IS NULL OR submitted_by    = sqlc.narg('submitted_by'))
   AND (sqlc.narg('state_id')::smallint IS NULL OR state_id          = sqlc.narg('state_id'))

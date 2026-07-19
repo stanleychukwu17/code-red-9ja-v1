@@ -75,6 +75,7 @@
     "senatorialdistrictshandler",
     "senatorialdistrictsservice",
     "sendfile",
+    "setval",
     "sqlc",
     "sslmode",
     "stanleychukwu",

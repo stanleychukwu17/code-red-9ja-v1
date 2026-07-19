@@ -165,7 +165,7 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		err = qtx.IncrementElectionGroupPUPartyMetrics(ctx, queries.IncrementElectionGroupPUPartyMetricsParams{
 			ElectionGroupID: input.ElectionGroupID,
 			PollingUnitID:   input.PollingUnitID,
-			PartyID:         *input.PartyID,
+			PartyID:         int16(*input.PartyID),
 			ReportsDelta:    reportsInc,
 			UpdatesDelta:    updatesInc,
 		})

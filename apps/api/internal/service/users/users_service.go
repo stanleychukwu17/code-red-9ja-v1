@@ -340,3 +340,19 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
 	return s.queries.DeleteUserPhoneNumber(ctx, id)
 }
+
+func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, fakeID int64, isVerified bool) error {
+	err := s.queries.UpdateUserIsVerified(ctx, queries.UpdateUserIsVerifiedParams{
+		ID:         userID,
+		IsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+	
+	// Invalidate the cache
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+	s.rdb.Del(ctx, userInfoKey)
+	return nil
+}
+

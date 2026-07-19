@@ -30,6 +30,8 @@ CREATE TABLE users (
   bank_account_number VARCHAR(50),
   bank_code VARCHAR(20),
 
+  is_politician BOOLEAN DEFAULT false,
+  is_verified BOOLEAN DEFAULT false,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
 
@@ -60,6 +62,8 @@ CREATE TABLE users (
 CREATE INDEX idx_users_party_id ON users(party_id);
 CREATE INDEX idx_users_polling_unit_id ON users(polling_unit_id);
 CREATE INDEX idx_users_account_status ON users(account_status);
+CREATE INDEX idx_users_is_politician ON users(is_politician);
+CREATE INDEX idx_users_is_verified ON users(is_verified);
 
 -- USERS NIN TABLE
 CREATE TABLE users_nin (

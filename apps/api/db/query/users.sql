@@ -200,3 +200,7 @@ WHERE user_id = $1 AND is_active = true ORDER BY id DESC;
 UPDATE users_phone_numbers
 SET is_active = false
 WHERE id = $1;
+-- name: UpdatePhoneNumber :exec
+UPDATE users_phone_numbers
+SET on_whatsapp = $2, is_default = $3
+WHERE id = $1;

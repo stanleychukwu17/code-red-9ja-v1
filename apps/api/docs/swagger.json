@@ -238,6 +238,65 @@
                         }
                     }
                 }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create or update phone numbers for a user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user phone numbers",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User Fake ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Phones",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/usershandler.UpdateUserPhoneNumbersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
             }
         },
         "/api/v1/supervisor-assignments": {
@@ -1600,6 +1659,49 @@
                 }
             }
         },
+        "/election-groups/{id}/stats/lgas/{lga_id}": {
+            "get": {
+                "description": "Fetches pre-aggregated election statistics for a single LGA unit, extracting a single party from the parties JSONB array if party_id is provided.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get LGA stats for a single geographic unit and optionally a single party",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID",
+                        "name": "lga_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID filter",
+                        "name": "party_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/election-groups/{id}/stats/polling-units": {
             "get": {
                 "description": "Fetches pre-aggregated election statistics at the polling unit level",
@@ -1750,6 +1852,49 @@
                 }
             }
         },
+        "/election-groups/{id}/stats/states/{state_id}": {
+            "get": {
+                "description": "Fetches pre-aggregated election statistics for a single state unit, extracting a single party from the parties JSONB array if party_id is provided.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get state stats for a single geographic unit and optionally a single party",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "state_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID filter",
+                        "name": "party_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/election-groups/{id}/stats/wards": {
             "get": {
                 "description": "Fetches pre-aggregated election statistics at the ward level",
@@ -1778,6 +1923,49 @@
                         "type": "integer",
                         "description": "LGA ID filter",
                         "name": "lga_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/wards/{ward_id}": {
+            "get": {
+                "description": "Fetches pre-aggregated election statistics for a single ward unit, extracting a single party from the parties JSONB array if party_id is provided.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get ward stats for a single geographic unit and optionally a single party",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID",
+                        "name": "ward_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID filter",
+                        "name": "party_id",
                         "in": "query"
                     }
                 ],
@@ -10289,6 +10477,9 @@
                 }
             }
         },
+        "usershandler.UpdateUserPhoneNumbersRequest": {
+            "type": "object"
+        },
         "usershandler.UserResponse": {
             "type": "object",
             "properties": {
@@ -10305,6 +10496,12 @@
                     "type": "string"
                 },
                 "bank_code": {
+                    "type": "string"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "country_name": {
                     "type": "string"
                 },
                 "created_at": {
@@ -10395,6 +10592,9 @@
                     }
                 },
                 "school_name": {
+                    "type": "string"
+                },
+                "state_name": {
                     "type": "string"
                 },
                 "state_of_origin": {

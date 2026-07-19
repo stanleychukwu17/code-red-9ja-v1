@@ -265,7 +265,7 @@ JOIN polling_units pu ON a.polling_unit_id = pu.id
 JOIN election_groups eg ON a.election_group_id = eg.id
 WHERE 
   ($3::bigint = 0 OR a.election_group_id = $3) AND
-  ($4::bigint = 0 OR a.party_id = $4) AND
+  ($4::smallint = 0 OR a.party_id = $4) AND
   ($5::int = 0 OR a.polling_unit_id = $5) AND
   ($6::bigint = 0 OR a.user_id = $6)
 ORDER BY a.id DESC
@@ -276,7 +276,7 @@ type ListAssignmentsParams struct {
 	Limit           int32 `json:"limit"`
 	Offset          int32 `json:"offset"`
 	ElectionGroupID int64 `json:"election_group_id"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 	UserID          int64 `json:"user_id"`
 }

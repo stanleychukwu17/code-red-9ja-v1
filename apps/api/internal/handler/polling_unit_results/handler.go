@@ -204,7 +204,7 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 	}
 	if val := r.URL.Query().Get("party_id"); val != "" {
 		if v, err := strconv.ParseInt(val, 10, 64); err == nil {
-			params.PartyID = pgtype.Int8{Int64: v, Valid: true}
+			params.PartyID = pgtype.Int2{Int16: int16(v), Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("polling_unit_id"); val != "" {
@@ -243,7 +243,7 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 
 	// Enforce role-based scoping: non-admins can only see their party's results
 	if !claims.HasRole("admin") && int64(claims.PartyID) > 0 {
-		params.PartyID = pgtype.Int8{Int64: int64(claims.PartyID), Valid: true}
+		params.PartyID = pgtype.Int2{Int16: int16(claims.PartyID), Valid: true}
 	}
 
 	// Cursor pagination

@@ -630,3 +630,21 @@ func (s *PartiesService) UpdateStateAllowances(ctx context.Context, partyID int1
 		ID:              partyID,
 	})
 }
+
+func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error {
+	err := s.queries.UpdatePartyIsVerified(ctx, queries.UpdatePartyIsVerifiedParams{
+		ID:         partyID,
+		IsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+	
+	// Invalidate cache
+	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
+	s.rdb.Del(ctx, redisKey)
+	redisKeyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
+	s.rdb.Del(ctx, redisKeyInfo)
+	
+	return nil
+}
