@@ -91,7 +91,7 @@ func TestLoadConfig(t *testing.T) {
 	cfg, err := config.LoadConfig()
 	assert.NoError(t, err)
 	assert.NotNil(t, cfg)
-	assert.Equal(t, "4000", cfg.Port) // Default port
+	assert.Equal(t, "4100", cfg.Port) // Default port
 	assert.Contains(t, cfg.Database.URL, "testuser:testpass@localhost:5432/testdb")
 }
 

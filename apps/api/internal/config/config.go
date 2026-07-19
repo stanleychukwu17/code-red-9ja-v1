@@ -185,7 +185,7 @@ func LoadConfig() (*Config, error) {
 
 	configInstance := &Config{
 		Env:  GetEnv("ENV", "development"),
-		Port: GetEnv("PORT", "4000"),
+		Port: GetEnv("PORT", "4100"),
 		Database: DatabaseConfig{
 			URL: db_url,
 		},

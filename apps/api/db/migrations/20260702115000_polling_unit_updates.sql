@@ -34,6 +34,7 @@ CREATE INDEX idx_pu_updates_pu ON polling_unit_updates(polling_unit_id);
 CREATE INDEX idx_pu_updates_created_at ON polling_unit_updates(created_at);
 
 -- Trigger to track interval updates for assignments
+-- +goose StatementBegin
 CREATE OR REPLACE FUNCTION update_assignment_interval()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -60,6 +61,7 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
+-- +goose StatementEnd
 
 CREATE TRIGGER trg_update_assignment_interval
 AFTER INSERT ON polling_unit_updates
