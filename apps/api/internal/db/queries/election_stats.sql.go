@@ -17,11 +17,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -37,7 +37,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'lga_supervisors_count', GREATEST(0, $1::int),
       'unique_lga_supervisors_count', GREATEST(0, $2::int)
     )
@@ -50,7 +50,7 @@ WHERE election_group_id       = $4::bigint
 type AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams struct {
 	Delta                 int32 `json:"delta"`
 	UniqueDelta           int32 `json:"unique_delta"`
-	PartyID               int64 `json:"party_id"`
+	PartyID               int16 `json:"party_id"`
 	ElectionGroupID       int64 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
@@ -72,11 +72,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -92,7 +92,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'ward_supervisors_count', GREATEST(0, $1::int),
       'unique_ward_supervisors_count', GREATEST(0, $2::int)
     )
@@ -105,7 +105,7 @@ WHERE election_group_id       = $4::bigint
 type AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams struct {
 	Delta                 int32 `json:"delta"`
 	UniqueDelta           int32 `json:"unique_delta"`
-	PartyID               int64 `json:"party_id"`
+	PartyID               int16 `json:"party_id"`
 	ElectionGroupID       int64 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
@@ -128,11 +128,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -148,7 +148,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'ward_supervisors_count', GREATEST(0, $1::int),
       'unique_ward_supervisors_count', GREATEST(0, $2::int)
     )
@@ -161,7 +161,7 @@ WHERE election_group_id = $4::bigint
 type AdjustElectionGroupLGAWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
@@ -189,11 +189,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -209,7 +209,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'lga_supervisors_count', GREATEST(0, $1::int),
       'unique_lga_supervisors_count', GREATEST(0, $2::int)
     )
@@ -221,7 +221,7 @@ WHERE id = $4::bigint
 type AdjustElectionGroupNationalLGASupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 }
 
@@ -241,11 +241,11 @@ SET
   state_supervisors_count        = GREATEST(0, state_supervisors_count + $1::int),
   unique_state_supervisors_count = GREATEST(0, unique_state_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -261,7 +261,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'state_supervisors_count', GREATEST(0, $1::int),
       'unique_state_supervisors_count', GREATEST(0, $2::int)
     )
@@ -273,7 +273,7 @@ WHERE id = $4::bigint
 type AdjustElectionGroupNationalStateSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 }
 
@@ -293,11 +293,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -313,7 +313,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'ward_supervisors_count', GREATEST(0, $1::int),
       'unique_ward_supervisors_count', GREATEST(0, $2::int)
     )
@@ -325,7 +325,7 @@ WHERE id = $4::bigint
 type AdjustElectionGroupNationalWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 }
 
@@ -345,11 +345,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -365,7 +365,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'lga_supervisors_count', GREATEST(0, $1::int),
       'unique_lga_supervisors_count', GREATEST(0, $2::int)
     )
@@ -378,7 +378,7 @@ WHERE election_group_id      = $4::bigint
 type AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams struct {
 	Delta                int32 `json:"delta"`
 	UniqueDelta          int32 `json:"unique_delta"`
-	PartyID              int64 `json:"party_id"`
+	PartyID              int16 `json:"party_id"`
 	ElectionGroupID      int64 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
@@ -400,11 +400,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -420,7 +420,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'ward_supervisors_count', GREATEST(0, $1::int),
       'unique_ward_supervisors_count', GREATEST(0, $2::int)
     )
@@ -433,7 +433,7 @@ WHERE election_group_id      = $4::bigint
 type AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams struct {
 	Delta                int32 `json:"delta"`
 	UniqueDelta          int32 `json:"unique_delta"`
-	PartyID              int64 `json:"party_id"`
+	PartyID              int16 `json:"party_id"`
 	ElectionGroupID      int64 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
@@ -455,11 +455,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -475,7 +475,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'ward_supervisors_count', GREATEST(0, $1::int),
       'unique_ward_supervisors_count', GREATEST(0, $2::int)
     )
@@ -488,7 +488,7 @@ WHERE election_group_id     = $4::bigint
 type AdjustElectionGroupStateConstituencyWardSupervisorCountsParams struct {
 	Delta               int32 `json:"delta"`
 	UniqueDelta         int32 `json:"unique_delta"`
-	PartyID             int64 `json:"party_id"`
+	PartyID             int16 `json:"party_id"`
 	ElectionGroupID     int64 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
@@ -510,11 +510,11 @@ SET
   lga_supervisors_count        = GREATEST(0, lga_supervisors_count + $1::int),
   unique_lga_supervisors_count = GREATEST(0, unique_lga_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -530,7 +530,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'lga_supervisors_count', GREATEST(0, $1::int),
       'unique_lga_supervisors_count', GREATEST(0, $2::int)
     )
@@ -543,7 +543,7 @@ WHERE election_group_id = $4::bigint
 type AdjustElectionGroupStateLGASupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
@@ -565,11 +565,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -585,7 +585,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'ward_supervisors_count', GREATEST(0, $1::int),
       'unique_ward_supervisors_count', GREATEST(0, $2::int)
     )
@@ -598,7 +598,7 @@ WHERE election_group_id = $4::bigint
 type AdjustElectionGroupStateWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
@@ -620,11 +620,11 @@ SET
   ward_supervisors_count        = GREATEST(0, ward_supervisors_count + $1::int),
   unique_ward_supervisors_count = GREATEST(0, unique_ward_supervisors_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -640,7 +640,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'ward_supervisors_count', GREATEST(0, $1::int),
       'unique_ward_supervisors_count', GREATEST(0, $2::int)
     )
@@ -653,7 +653,7 @@ WHERE election_group_id = $4::bigint
 type AdjustElectionGroupWardWardSupervisorCountsParams struct {
 	Delta           int32 `json:"delta"`
 	UniqueDelta     int32 `json:"unique_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }
@@ -1078,13 +1078,13 @@ SELECT COUNT(*)::int AS supervisor_count
 FROM lga_election_supervisors
 WHERE election_group_id = $1::bigint
   AND lga_id            = $2::int
-  AND party_id          = $3::bigint
+  AND party_id          = $3::smallint
 `
 
 type GetLGASupervisorCountParams struct {
 	ElectionGroupID int64 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 }
 
 // Returns the current count of LGA supervisors for a party in a given lga+election group.
@@ -1101,7 +1101,7 @@ SELECT COALESCE(
   (
     SELECT (elem->>'agents_count')::int
     FROM jsonb_array_elements(parties) AS elem
-    WHERE (elem->>'party_id')::bigint = $1::bigint
+    WHERE (elem->>'party_id')::bigint = $1::smallint
     LIMIT 1
   ),
   0
@@ -1112,7 +1112,7 @@ WHERE election_group_id = $2::bigint
 `
 
 type GetPUPartyAgentsCountParams struct {
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
@@ -1135,13 +1135,13 @@ SELECT COUNT(*)::int AS supervisor_count
 FROM state_election_supervisors
 WHERE election_group_id = $1::bigint
   AND state_id          = $2::smallint
-  AND party_id          = $3::bigint
+  AND party_id          = $3::smallint
 `
 
 type GetStateSupervisorCountParams struct {
 	ElectionGroupID int64 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 }
 
 // Returns the current count of state supervisors for a party in a given state+election group.
@@ -1157,13 +1157,13 @@ SELECT COUNT(*)::int AS supervisor_count
 FROM ward_election_supervisors
 WHERE election_group_id = $1::bigint
   AND ward_id           = $2::int
-  AND party_id          = $3::bigint
+  AND party_id          = $3::smallint
 `
 
 type GetWardSupervisorCountParams struct {
 	ElectionGroupID int64 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 }
 
 // Returns the current count of ward supervisors for a party in a given ward+election group.
@@ -1183,7 +1183,7 @@ SET
   parties = (
     SELECT jsonb_agg(
       CASE
-        WHEN (elem->>'party_id')::bigint = $3::bigint
+        WHEN (elem->>'party_id')::bigint = $3::smallint
         THEN jsonb_set(
                jsonb_set(
                  jsonb_set(
@@ -1217,13 +1217,13 @@ SET
   updated_at = NOW()
 WHERE election_group_id = $4::bigint
   AND polling_unit_id   = $5::int
-  AND parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+  AND parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
 `
 
 type IncrementElectionGroupPUPartyMetricsParams struct {
 	ReportsDelta    int32 `json:"reports_delta"`
 	UpdatesDelta    int32 `json:"updates_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
@@ -4238,11 +4238,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -4258,7 +4258,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         $3::bigint,
+      'party_id',                                         $3::smallint,
       'pu_agents_count',                                  GREATEST(0, $1::int),
       'unique_pu_agents_count',                           GREATEST(0, $2::int),
       'pu_agents_in_attendance_count',                    0,
@@ -4289,7 +4289,7 @@ WHERE election_group_id       = $4::bigint
 type UpsertElectionGroupFederalConstituencyPartyEntryParams struct {
 	AgentsDelta           int32 `json:"agents_delta"`
 	UniquePuDelta         int32 `json:"unique_pu_delta"`
-	PartyID               int64 `json:"party_id"`
+	PartyID               int16 `json:"party_id"`
 	ElectionGroupID       int64 `json:"election_group_id"`
 	FederalConstituencyID int32 `json:"federal_constituency_id"`
 }
@@ -4312,11 +4312,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -4332,7 +4332,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         $3::bigint,
+      'party_id',                                         $3::smallint,
       'pu_agents_count',                                  GREATEST(0, $1::int),
       'unique_pu_agents_count',                           GREATEST(0, $2::int),
       'pu_agents_in_attendance_count',                    0,
@@ -4363,7 +4363,7 @@ WHERE election_group_id = $4::bigint
 type UpsertElectionGroupLGAPartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	LgaID           int32 `json:"lga_id"`
 }
@@ -4387,11 +4387,11 @@ SET
   pu_agents_count = GREATEST(0, pu_agents_count + $1::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -4407,7 +4407,7 @@ SET
       FROM jsonb_array_elements(parties) elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id', $3::bigint,
+      'party_id', $3::smallint,
       'pu_agents_count', GREATEST(0, $1::int),
       'unique_pu_agents_count', GREATEST(0, $2::int)
     )
@@ -4419,7 +4419,7 @@ WHERE id = $4::bigint
 type UpsertElectionGroupNationalPartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 }
 
@@ -4440,11 +4440,11 @@ UPDATE election_group_polling_units
 SET
   total_agents_count = GREATEST(0, total_agents_count + $1::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $2::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $2::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $2::bigint
+          WHEN (elem->>'party_id')::bigint = $2::smallint
           THEN jsonb_set(
                  elem,
                  '{agents_count}',
@@ -4456,7 +4456,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                $2::bigint,
+      'party_id',                                $2::smallint,
       'agents_count',                            GREATEST(0, $1::int),
       'agents_in_attendance_count',              0,
       'average_arrival_time',                    NULL,
@@ -4479,7 +4479,7 @@ WHERE election_group_id = $3::bigint
 
 type UpsertElectionGroupPUPartyEntryParams struct {
 	Delta           int32 `json:"delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	PollingUnitID   int32 `json:"polling_unit_id"`
 }
@@ -4519,11 +4519,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -4539,7 +4539,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         $3::bigint,
+      'party_id',                                         $3::smallint,
       'pu_agents_count',                                  GREATEST(0, $1::int),
       'unique_pu_agents_count',                           GREATEST(0, $2::int),
       'pu_agents_in_attendance_count',                    0,
@@ -4570,7 +4570,7 @@ WHERE election_group_id      = $4::bigint
 type UpsertElectionGroupSenatorialDistrictPartyEntryParams struct {
 	AgentsDelta          int32 `json:"agents_delta"`
 	UniquePuDelta        int32 `json:"unique_pu_delta"`
-	PartyID              int64 `json:"party_id"`
+	PartyID              int16 `json:"party_id"`
 	ElectionGroupID      int64 `json:"election_group_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
 }
@@ -4593,11 +4593,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -4613,7 +4613,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         $3::bigint,
+      'party_id',                                         $3::smallint,
       'pu_agents_count',                                  GREATEST(0, $1::int),
       'unique_pu_agents_count',                           GREATEST(0, $2::int),
       'pu_agents_in_attendance_count',                    0,
@@ -4644,7 +4644,7 @@ WHERE election_group_id       = $4::bigint
 type UpsertElectionGroupStateConstituencyPartyEntryParams struct {
 	AgentsDelta         int32 `json:"agents_delta"`
 	UniquePuDelta       int32 `json:"unique_pu_delta"`
-	PartyID             int64 `json:"party_id"`
+	PartyID             int16 `json:"party_id"`
 	ElectionGroupID     int64 `json:"election_group_id"`
 	StateConstituencyID int32 `json:"state_constituency_id"`
 }
@@ -4667,11 +4667,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -4687,7 +4687,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         $3::bigint,
+      'party_id',                                         $3::smallint,
       'pu_agents_count',                                  GREATEST(0, $1::int),
       'unique_pu_agents_count',                           GREATEST(0, $2::int),
       'pu_agents_in_attendance_count',                    0,
@@ -4718,7 +4718,7 @@ WHERE election_group_id = $4::bigint
 type UpsertElectionGroupStatePartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	StateID         int16 `json:"state_id"`
 }
@@ -4741,11 +4741,11 @@ SET
   pu_agents_count        = GREATEST(0, pu_agents_count + $1::int),
   unique_pu_agents_count = GREATEST(0, unique_pu_agents_count + $2::int),
   parties = CASE
-    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::bigint))
+    WHEN parties @> jsonb_build_array(jsonb_build_object('party_id', $3::smallint))
     THEN (
       SELECT jsonb_agg(
         CASE
-          WHEN (elem->>'party_id')::bigint = $3::bigint
+          WHEN (elem->>'party_id')::bigint = $3::smallint
           THEN jsonb_set(
                  jsonb_set(
                    elem,
@@ -4761,7 +4761,7 @@ SET
       FROM jsonb_array_elements(parties) AS elem
     )
     ELSE parties || jsonb_build_object(
-      'party_id',                                         $3::bigint,
+      'party_id',                                         $3::smallint,
       'pu_agents_count',                                  GREATEST(0, $1::int),
       'unique_pu_agents_count',                           GREATEST(0, $2::int),
       'pu_agents_in_attendance_count',                    0,
@@ -4792,7 +4792,7 @@ WHERE election_group_id = $4::bigint
 type UpsertElectionGroupWardPartyEntryParams struct {
 	AgentsDelta     int32 `json:"agents_delta"`
 	UniquePuDelta   int32 `json:"unique_pu_delta"`
-	PartyID         int64 `json:"party_id"`
+	PartyID         int16 `json:"party_id"`
 	ElectionGroupID int64 `json:"election_group_id"`
 	WardID          int32 `json:"ward_id"`
 }

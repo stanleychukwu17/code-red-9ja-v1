@@ -254,7 +254,7 @@ func (q *Queries) GetWalletTransactionByReference(ctx context.Context, transacti
 }
 
 const listPartiesWithoutWallet = `-- name: ListPartiesWithoutWallet :many
-SELECT p.id, p.short_name, p.name, p.logo, p.display_order, p.status, p.slots, p.discount_percentage, p.allowance_balance_kobo, p.state_allowances, p.created_at, p.updated_at FROM parties p
+SELECT p.id, p.short_name, p.name, p.logo, p.display_order, p.status, p.slots, p.is_verified, p.discount_percentage, p.allowance_balance_kobo, p.state_allowances, p.created_at, p.updated_at FROM parties p
 LEFT JOIN party_wallets pw ON pw.party_id = p.id
 WHERE pw.id IS NULL
 ORDER BY p.id ASC
@@ -277,6 +277,7 @@ func (q *Queries) ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 			&i.DisplayOrder,
 			&i.Status,
 			&i.Slots,
+			&i.IsVerified,
 			&i.DiscountPercentage,
 			&i.AllowanceBalanceKobo,
 			&i.StateAllowances,

@@ -7,6 +7,7 @@ CREATE TABLE parties (
   display_order INTEGER NOT NULL DEFAULT 999,
   status VARCHAR(50) NOT NULL DEFAULT 'active',
   slots INTEGER NOT NULL DEFAULT 0 CHECK (slots >= 0),
+  is_verified BOOLEAN DEFAULT false,
   discount_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
   allowance_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (allowance_balance_kobo >= 0),
   state_allowances JSONB NOT NULL DEFAULT '{}'::jsonb,

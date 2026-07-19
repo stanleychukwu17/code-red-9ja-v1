@@ -12,7 +12,8 @@ CREATE TABLE pages_verified (
   page_type VARCHAR(50) NOT NULL,
   page_id BIGINT NOT NULL,
   verification_type_id SMALLINT NOT NULL REFERENCES page_verification_types(id) ON DELETE CASCADE,
-  verified_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
+  verified_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
+  UNIQUE(page_type, page_id, verification_type_id)
 );
 
 CREATE INDEX idx_pages_verified_page_type ON pages_verified(page_type);

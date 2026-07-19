@@ -82,7 +82,7 @@ JOIN polling_units pu ON a.polling_unit_id = pu.id
 JOIN election_groups eg ON a.election_group_id = eg.id
 WHERE 
   (sqlc.arg(election_group_id)::bigint = 0 OR a.election_group_id = sqlc.arg(election_group_id)) AND
-  (sqlc.arg(party_id)::bigint = 0 OR a.party_id = sqlc.arg(party_id)) AND
+  (sqlc.arg(party_id)::smallint = 0 OR a.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(polling_unit_id)::int = 0 OR a.polling_unit_id = sqlc.arg(polling_unit_id)) AND
   (sqlc.arg(user_id)::bigint = 0 OR a.user_id = sqlc.arg(user_id))
 ORDER BY a.id DESC

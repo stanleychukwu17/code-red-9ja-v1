@@ -148,7 +148,7 @@ func (s *Service) ListApplications(ctx context.Context, userID int64, partyID in
 		UserID:          userID,
 		LimitVal:        limit,
 		Cursor:          cursor,
-		PartyID:         int64(partyID),
+		PartyID:         partyID,
 		ElectionGroupID: electionGroupID,
 		Status:          status,
 	})
@@ -202,7 +202,7 @@ func (s *Service) GetPollingUnitRecommendations(ctx context.Context, partyID int
 
 	// 3. Fetch lowest-agent-count units in the same ward (positions 2 & 3).
 	wardRows, err := s.queries.GetPollingUnitsWithAgentCounts(ctx, queries.GetPollingUnitsWithAgentCountsParams{
-		PartyID:         int64(partyID),
+		PartyID:         partyID,
 		ElectionGroupID: electionGroupID,
 		LgaID:           wardScopeLgaID,
 		WardID:          wardScopeWardID,
@@ -273,15 +273,14 @@ type ApproveApplicationInput struct {
 	AssignedBy    int64
 }
 
-
 // puGeo holds full geography for a polling unit
 type puGeo struct {
-	wardID               int32
-	lgaID                int32
-	stateID              int16
-	stateConstituencyID  int32 // nullable – 0 if not set
-	fedConstID           int32 // nullable – 0 if not set
-	senatDistrictID      int32 // nullable – 0 if not set
+	wardID              int32
+	lgaID               int32
+	stateID             int16
+	stateConstituencyID int32 // nullable – 0 if not set
+	fedConstID          int32 // nullable – 0 if not set
+	senatDistrictID     int32 // nullable – 0 if not set
 }
 
 // fetchPUGeo fetches full geography for a polling unit by querying
@@ -495,11 +494,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// federal_constituency row
 		if lgaFedConstID > 0 {
 			err = txQueries.AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx, queries.AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams{
-				ElectionGroupID:      egID,
+				ElectionGroupID:       egID,
 				FederalConstituencyID: lgaFedConstID,
-				PartyID:              partyID,
-				Delta:                1,
-				UniqueDelta:          isUniqueLgaSup,
+				PartyID:               partyID,
+				Delta:                 1,
+				UniqueDelta:           isUniqueLgaSup,
 			})
 			if err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed to adjust LGA supervisor counts on fed const: %w", err)
@@ -508,11 +507,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// senatorial_district row
 		if lgaSenatID > 0 {
 			err = txQueries.AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx, queries.AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams{
-				ElectionGroupID:     egID,
+				ElectionGroupID:      egID,
 				SenatorialDistrictID: lgaSenatID,
-				PartyID:             partyID,
-				Delta:               1,
-				UniqueDelta:         isUniqueLgaSup,
+				PartyID:              partyID,
+				Delta:                1,
+				UniqueDelta:          isUniqueLgaSup,
 			})
 			if err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed to adjust LGA supervisor counts on senatorial district: %w", err)
@@ -605,11 +604,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// state_constituency row
 		if wardStateConstID > 0 {
 			err = txQueries.AdjustElectionGroupStateConstituencyWardSupervisorCounts(ctx, queries.AdjustElectionGroupStateConstituencyWardSupervisorCountsParams{
-				ElectionGroupID:    egID,
+				ElectionGroupID:     egID,
 				StateConstituencyID: wardStateConstID,
-				PartyID:            partyID,
-				Delta:              1,
-				UniqueDelta:        isUniqueWardSup,
+				PartyID:             partyID,
+				Delta:               1,
+				UniqueDelta:         isUniqueWardSup,
 			})
 			if err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on state const: %w", err)
@@ -618,11 +617,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// federal_constituency row
 		if lgaFedConstID > 0 {
 			err = txQueries.AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx, queries.AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams{
-				ElectionGroupID:      egID,
+				ElectionGroupID:       egID,
 				FederalConstituencyID: lgaFedConstID,
-				PartyID:              partyID,
-				Delta:                1,
-				UniqueDelta:          isUniqueWardSup,
+				PartyID:               partyID,
+				Delta:                 1,
+				UniqueDelta:           isUniqueWardSup,
 			})
 			if err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on fed const: %w", err)
@@ -631,11 +630,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// senatorial_district row
 		if lgaSenatID > 0 {
 			err = txQueries.AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx, queries.AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams{
-				ElectionGroupID:     egID,
+				ElectionGroupID:      egID,
 				SenatorialDistrictID: lgaSenatID,
-				PartyID:             partyID,
-				Delta:               1,
-				UniqueDelta:         isUniqueWardSup,
+				PartyID:              partyID,
+				Delta:                1,
+				UniqueDelta:          isUniqueWardSup,
 			})
 			if err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on senat dist: %w", err)
@@ -743,33 +742,33 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			}
 			if wardStateConstID > 0 {
 				if err = txQueries.UpsertElectionGroupStateConstituencyPartyEntry(ctx, queries.UpsertElectionGroupStateConstituencyPartyEntryParams{
-					ElectionGroupID:    egID,
+					ElectionGroupID:     egID,
 					StateConstituencyID: wardStateConstID,
-					PartyID:            partyID,
-					AgentsDelta:        1,
-					UniquePuDelta:      uniquePuDelta,
+					PartyID:             partyID,
+					AgentsDelta:         1,
+					UniquePuDelta:       uniquePuDelta,
 				}); err != nil {
 					return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupStateConstituencyPartyEntry: %v", err)
 				}
 			}
 			if puFedConstID > 0 {
 				if err = txQueries.UpsertElectionGroupFederalConstituencyPartyEntry(ctx, queries.UpsertElectionGroupFederalConstituencyPartyEntryParams{
-					ElectionGroupID:      egID,
+					ElectionGroupID:       egID,
 					FederalConstituencyID: puFedConstID,
-					PartyID:              partyID,
-					AgentsDelta:          1,
-					UniquePuDelta:        uniquePuDelta,
+					PartyID:               partyID,
+					AgentsDelta:           1,
+					UniquePuDelta:         uniquePuDelta,
 				}); err != nil {
 					return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupFederalConstituencyPartyEntry: %v", err)
 				}
 			}
 			if puSenatID > 0 {
 				if err = txQueries.UpsertElectionGroupSenatorialDistrictPartyEntry(ctx, queries.UpsertElectionGroupSenatorialDistrictPartyEntryParams{
-					ElectionGroupID:     egID,
+					ElectionGroupID:      egID,
 					SenatorialDistrictID: puSenatID,
-					PartyID:             partyID,
-					AgentsDelta:         1,
-					UniquePuDelta:       uniquePuDelta,
+					PartyID:              partyID,
+					AgentsDelta:          1,
+					UniquePuDelta:        uniquePuDelta,
 				}); err != nil {
 					return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupSenatorialDistrictPartyEntry: %v", err)
 				}

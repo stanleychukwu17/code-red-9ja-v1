@@ -104,7 +104,7 @@ LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
 WHERE 
   (sqlc.arg(user_id)::bigint = 0 OR pa.user_id = sqlc.arg(user_id)) AND
-  (sqlc.arg(party_id)::bigint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
+  (sqlc.arg(party_id)::smallint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::bigint = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
   (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
@@ -157,7 +157,7 @@ SELECT
       SELECT COUNT(*)::integer
       FROM polling_unit_assignments pua
       WHERE pua.polling_unit_id = pu.id
-        AND pua.party_id = sqlc.arg(party_id)::bigint
+        AND pua.party_id = sqlc.arg(party_id)::smallint
         AND pua.election_group_id = sqlc.arg(election_group_id)::bigint
     ),
     0

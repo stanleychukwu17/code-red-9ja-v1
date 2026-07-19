@@ -14,7 +14,7 @@ UPDATE parties
 SET allowance_balance_kobo = allowance_balance_kobo + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type DepositPartyAllowanceParams struct {
@@ -33,6 +33,7 @@ func (q *Queries) DepositPartyAllowance(ctx context.Context, arg DepositPartyAll
 		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
+		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AllowanceBalanceKobo,
 		&i.StateAllowances,
@@ -47,7 +48,7 @@ UPDATE parties
 SET state_allowances = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type UpdatePartyStateAllowancesParams struct {
@@ -66,6 +67,7 @@ func (q *Queries) UpdatePartyStateAllowances(ctx context.Context, arg UpdatePart
 		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
+		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AllowanceBalanceKobo,
 		&i.StateAllowances,

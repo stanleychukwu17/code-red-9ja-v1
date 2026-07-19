@@ -56,9 +56,9 @@ func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCoun
 }
 
 // GetStatesByCountryID retrieves a list of states for a given country ID, using a cached version if available.
-func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.GetStatesByCountryIDRow, error) {
+func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error) {
 	type StatesResponse struct {
-		States []queries.GetStatesByCountryIDRow `json:"states"`
+		States []queries.CState `json:"states"`
 	}
 
 	redisKey := fmt.Sprintf("%s%d", db.RedisStatesByCountry, countryID)

@@ -73,11 +73,17 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 		PollingUnitID:   req.PollingUnitID,
 		ElectionGroupID: req.ElectionGroupID,
 		AssignmentID:    req.AssignmentID,
-		PartyID:         func() *int16 { if req.PartyID == nil { return nil }; p := int16(*req.PartyID); return &p }(),
-		Message:         req.Message,
-		MediaUrls:       req.MediaUrls,
-		IsReport:        req.IsReport,
-		ReportTypes:     req.ReportTypes,
+		PartyID: func() *int16 {
+			if req.PartyID == nil {
+				return nil
+			}
+			p := int16(*req.PartyID)
+			return &p
+		}(),
+		Message:     req.Message,
+		MediaUrls:   req.MediaUrls,
+		IsReport:    req.IsReport,
+		ReportTypes: req.ReportTypes,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create update: "+err.Error())
@@ -139,7 +145,7 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 	}
 	if val := r.URL.Query().Get("party_id"); val != "" {
 		if v, err := strconv.ParseInt(val, 10, 64); err == nil {
-			params.PartyID = pgtype.Int8{Int64: v, Valid: true}
+			params.PartyID = pgtype.Int2{Int16: int16(v), Valid: true}
 		}
 	}
 	if val := r.URL.Query().Get("polling_unit_id"); val != "" {
@@ -215,7 +221,7 @@ func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
 	if !isPlatformAdmin {
 		if int64(claims.PartyID) > 0 {
 			// Force filter to user's party
-			params.PartyID = pgtype.Int8{Int64: int64(claims.PartyID), Valid: true}
+			params.PartyID = pgtype.Int2{Int16: int16(claims.PartyID), Valid: true}
 		}
 	}
 

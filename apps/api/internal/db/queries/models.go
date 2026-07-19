@@ -578,6 +578,22 @@ type Office struct {
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PageVerificationType struct {
+	ID                      int16       `json:"id"`
+	VerificationType        string      `json:"verification_type"`
+	VerificationTitle       string      `json:"verification_title"`
+	VerificationDescription pgtype.Text `json:"verification_description"`
+	Badge                   pgtype.Text `json:"badge"`
+}
+
+type PagesVerified struct {
+	ID                 int64              `json:"id"`
+	PageType           string             `json:"page_type"`
+	PageID             int64              `json:"page_id"`
+	VerificationTypeID int16              `json:"verification_type_id"`
+	VerifiedAt         pgtype.Timestamptz `json:"verified_at"`
+}
+
 type Party struct {
 	ID                   int16              `json:"id"`
 	ShortName            string             `json:"short_name"`
@@ -586,6 +602,7 @@ type Party struct {
 	DisplayOrder         int32              `json:"display_order"`
 	Status               string             `json:"status"`
 	Slots                int32              `json:"slots"`
+	IsVerified           pgtype.Bool        `json:"is_verified"`
 	DiscountPercentage   pgtype.Numeric     `json:"discount_percentage"`
 	AllowanceBalanceKobo int64              `json:"allowance_balance_kobo"`
 	StateAllowances      []byte             `json:"state_allowances"`
@@ -920,6 +937,8 @@ type User struct {
 	VotersCardImage   pgtype.Text        `json:"voters_card_image"`
 	BankAccountNumber pgtype.Text        `json:"bank_account_number"`
 	BankCode          pgtype.Text        `json:"bank_code"`
+	IsPolitician      pgtype.Bool        `json:"is_politician"`
+	IsVerified        pgtype.Bool        `json:"is_verified"`
 	PartyID           pgtype.Int2        `json:"party_id"`
 	PollingUnitID     pgtype.Int4        `json:"polling_unit_id"`
 	ReferralCode      pgtype.Text        `json:"referral_code"`

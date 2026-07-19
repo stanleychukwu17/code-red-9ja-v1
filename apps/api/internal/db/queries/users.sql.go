@@ -184,23 +184,6 @@ func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberPa
 	return id, err
 }
 
-const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
-UPDATE users_phone_numbers
-SET on_whatsapp = $2, is_default = $3
-WHERE id = $1
-`
-
-type UpdatePhoneNumberParams struct {
-	ID         int64       `json:"id"`
-	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
-	IsDefault  pgtype.Bool `json:"is_default"`
-}
-
-func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
-	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.ID, arg.OnWhatsapp, arg.IsDefault)
-	return err
-}
-
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (
   email, phone, username, password_hash, last_name,
@@ -372,7 +355,7 @@ func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (U
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -403,6 +386,8 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
 		&i.BankCode,
+		&i.IsPolitician,
+		&i.IsVerified,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,
@@ -762,6 +747,23 @@ func (q *Queries) UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMor
 		arg.EducationLevel,
 		arg.Address,
 	)
+	return err
+}
+
+const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
+UPDATE users_phone_numbers
+SET on_whatsapp = $2, is_default = $3
+WHERE id = $1
+`
+
+type UpdatePhoneNumberParams struct {
+	ID         int64       `json:"id"`
+	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
+	IsDefault  pgtype.Bool `json:"is_default"`
+}
+
+func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
+	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.ID, arg.OnWhatsapp, arg.IsDefault)
 	return err
 }
 

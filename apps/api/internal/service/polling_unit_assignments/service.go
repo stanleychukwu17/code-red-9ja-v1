@@ -47,7 +47,7 @@ func (s *Service) ListAssignments(ctx context.Context, electionGroupID int64, pa
 		Limit:           limit,
 		Offset:          offset,
 		ElectionGroupID: electionGroupID,
-		PartyID:         int64(partyID),
+		PartyID:         partyID,
 		PollingUnitID:   pollingUnitID,
 		UserID:          userID,
 	})
