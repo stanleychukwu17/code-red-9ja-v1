@@ -46,9 +46,9 @@ func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client
 // configured, immediately provisions a reserved virtual account (wallet) for it.
 func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
-		ShortName: shortName,
-		Name:      name,
-		Logo:      logo,
+		ShortName:    shortName,
+		Name:         name,
+		Logo:         logo,
 		DisplayOrder: displayOrder,
 	})
 	if err != nil {
@@ -108,11 +108,6 @@ func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Pa
 	}
 
 	return wallet, nil
-}
-
-// GetPartyByID returns a party by its database ID.
-func (s *PartiesService) GetPartyByID(ctx context.Context, id int64) (queries.Party, error) {
-	return s.queries.GetPartyByID(ctx, int16(id))
 }
 
 // GetPartyBasicInfo retrieves basic party info.
@@ -182,10 +177,10 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, erro
 // UpdateParty modifies the short name, name, and logo of an existing party.
 func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
-		ID:        int16(id),
-		ShortName: shortName,
-		Name:      name,
-		Logo:      logo,
+		ID:           int16(id),
+		ShortName:    shortName,
+		Name:         name,
+		Logo:         logo,
 		DisplayOrder: displayOrder,
 	})
 	return party, err
@@ -631,6 +626,8 @@ func (s *PartiesService) UpdateStateAllowances(ctx context.Context, partyID int1
 	})
 }
 
+// UpdatePartyIsVerified updates the is_verified flag of a party.
+// It also invalidates the cache for the party.
 func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error {
 	err := s.queries.UpdatePartyIsVerified(ctx, queries.UpdatePartyIsVerifiedParams{
 		ID:         partyID,
@@ -639,12 +636,12 @@ func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int1
 	if err != nil {
 		return err
 	}
-	
+
 	// Invalidate cache
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
 	s.rdb.Del(ctx, redisKey)
 	redisKeyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
 	s.rdb.Del(ctx, redisKeyInfo)
-	
+
 	return nil
 }

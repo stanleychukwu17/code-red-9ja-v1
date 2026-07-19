@@ -57,6 +57,12 @@ const (
 	RedisPartyBasicInfo = "parties:basic_info:"
 	//--END--
 
+	//--START-- for page verifications
+	RedisPageVerificationTypeInfo = "page_verification_type:info:"
+	// STRING: "page_verifications:page:<pageType>:<pageID>" is the Redis "string" key used to store and retrieve page verifications.
+	RedisPageVerifications = "page_verifications:page:"
+	//--END--
+
 	//--START-- for political and administrative bodies
 	RedisSenatorialDistrictsByState         = "bodies:senatorial_districts:state:"
 	RedisFederalConstituenciesByState       = "bodies:federal_constituencies:state:"

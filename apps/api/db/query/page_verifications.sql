@@ -34,3 +34,7 @@ SELECT
 FROM pages_verified pv
 JOIN page_verification_types pvt ON pv.verification_type_id = pvt.id
 WHERE pv.page_type = $1 AND pv.page_id = $2;
+
+-- name: GetPageVerificationType :one
+SELECT * FROM page_verification_types
+WHERE id = $1 LIMIT 1;

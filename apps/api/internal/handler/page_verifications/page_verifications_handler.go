@@ -40,36 +40,65 @@ type AssignVerificationRequest struct {
 	VerificationTypeID int16  `json:"verification_type_id" validate:"required"`
 }
 
-// AssignVerification handles POST /api/v1/admin/verifications
+// AssignVerification godoc
+// @Summary      Assign a verification to a page
+// @Description  Assign a verification to a page
+// @Tags         Page Verifications
+// @Accept       json
+// @Produce      json
+// @Param        request body AssignVerificationRequest true "Assign Verification request payload"
+// @Success      200  {object} map[string]interface{} "Verification assigned successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid request body"
+// @Failure      500  {object} map[string]interface{} "Failed to assign verification"
+// @Security     BearerAuth
+// @Router       /admin/verifications [post]
 func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
+	// Ensure the user has the required roles
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin", "admin")
 	if !ok {
 		return
 	}
 
+	// Parse the request body
 	var req AssignVerificationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
+	// Validate the request body
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Assign the verification to the page
 	pv, err := h.service.VerifyPage(r.Context(), req.PageType, req.PageID, req.VerificationTypeID, claims.FakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to assign verification: "+err.Error())
 		return
 	}
 
+	// Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Verification assigned successfully", map[string]interface{}{
 		"verification": pv,
 	})
 }
 
-// RemoveVerification handles DELETE /api/v1/admin/verifications
+// RemoveVerification godoc
+// @Summary      Remove a verification from a page
+// @Description  Remove a verification from a page
+// @Tags         Page Verifications
+// @Accept       json
+// @Produce      json
+// @Param        page_type query string true "Page Type"
+// @Param        page_id query integer true "Page ID"
+// @Param        verification_type_id query integer true "Verification Type ID"
+// @Success      200  {object} map[string]interface{} "Verification removed successfully"
+// @Failure      400  {object} map[string]interface{} "Bad request"
+// @Failure      500  {object} map[string]interface{} "Failed to remove verification"
+// @Security     BearerAuth
+// @Router       /admin/verifications [delete]
 func (h *Handler) RemoveVerification(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin", "admin")
 	if !ok {
@@ -106,7 +135,18 @@ func (h *Handler) RemoveVerification(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Verification removed successfully", nil)
 }
 
-// GetPageVerifications handles GET /api/v1/verifications/{pageType}/{pageID}
+// GetPageVerifications godoc
+// @Summary      Get verifications for a page
+// @Description  Get verifications for a page
+// @Tags         Page Verifications
+// @Accept       json
+// @Produce      json
+// @Param        pageType path string true "Page Type"
+// @Param        pageID path integer true "Page ID"
+// @Success      200  {object} map[string]interface{} "Verifications fetched successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid page ID"
+// @Failure      500  {object} map[string]interface{} "Failed to fetch verifications"
+// @Router       /verifications/{pageType}/{pageID} [get]
 func (h *Handler) GetPageVerifications(w http.ResponseWriter, r *http.Request) {
 	pageType := chi.URLParam(r, "pageType")
 	pageIDStr := chi.URLParam(r, "pageID")
@@ -128,7 +168,15 @@ func (h *Handler) GetPageVerifications(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ListVerificationTypes handles GET /api/v1/verifications/types
+// ListVerificationTypes godoc
+// @Summary      List verification types
+// @Description  List verification types
+// @Tags         Page Verifications
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{} "Verification types fetched successfully"
+// @Failure      500  {object} map[string]interface{} "Failed to fetch verification types"
+// @Router       /verifications/types [get]
 func (h *Handler) ListVerificationTypes(w http.ResponseWriter, r *http.Request) {
 	types, err := h.service.ListVerificationTypes(r.Context())
 	if err != nil {

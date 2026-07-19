@@ -12,9 +12,10 @@ import (
 
 type AuditLog struct {
 	ID         int64              `json:"id"`
+	Module     pgtype.Text        `json:"module"`
+	Action     string             `json:"action"`
 	ActorID    int64              `json:"actor_id"`
 	ActorRole  pgtype.Text        `json:"actor_role"`
-	Action     string             `json:"action"`
 	EntityType string             `json:"entity_type"`
 	EntityID   string             `json:"entity_id"`
 	OldValues  []byte             `json:"old_values"`

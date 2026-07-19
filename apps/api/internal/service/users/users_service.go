@@ -329,7 +329,7 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 			}
 		}
 	}
-	
+
 	// Invalidate cache
 	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
 	s.rdb.Del(ctx, userPhoneNumbersKey)
@@ -349,10 +349,9 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 	if err != nil {
 		return err
 	}
-	
-	// Invalidate the cache
+
+	// Invalidate the user info cache
 	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
 	s.rdb.Del(ctx, userInfoKey)
 	return nil
 }
-

@@ -59,6 +59,24 @@ func (q *Queries) CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIf
 	return exists, err
 }
 
+const getPageVerificationType = `-- name: GetPageVerificationType :one
+SELECT id, verification_type, verification_title, verification_description, badge FROM page_verification_types
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetPageVerificationType(ctx context.Context, id int16) (PageVerificationType, error) {
+	row := q.db.QueryRow(ctx, getPageVerificationType, id)
+	var i PageVerificationType
+	err := row.Scan(
+		&i.ID,
+		&i.VerificationType,
+		&i.VerificationTitle,
+		&i.VerificationDescription,
+		&i.Badge,
+	)
+	return i, err
+}
+
 const getPageVerifications = `-- name: GetPageVerifications :many
 SELECT 
   pv.id,
