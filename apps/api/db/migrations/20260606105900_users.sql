@@ -30,6 +30,8 @@ CREATE TABLE users (
   bank_account_number VARCHAR(50),
   bank_code VARCHAR(20),
 
+  is_politician BOOLEAN DEFAULT false,
+  is_verified BOOLEAN DEFAULT false,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
 
