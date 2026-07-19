@@ -19,3 +19,18 @@ SELECT EXISTS(
 
 -- name: ListVerificationTypes :many
 SELECT * FROM page_verification_types ORDER BY id ASC;
+
+-- name: GetPageVerifications :many
+SELECT 
+  pv.id,
+  pv.page_type,
+  pv.page_id,
+  pv.verification_type_id,
+  pv.verified_at,
+  pvt.verification_type,
+  pvt.verification_title,
+  pvt.verification_description,
+  pvt.badge
+FROM pages_verified pv
+JOIN page_verification_types pvt ON pv.verification_type_id = pvt.id
+WHERE pv.page_type = $1 AND pv.page_id = $2;

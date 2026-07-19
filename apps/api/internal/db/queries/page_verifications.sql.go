@@ -7,6 +7,8 @@ package queries
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const addPageVerification = `-- name: AddPageVerification :one
@@ -55,6 +57,69 @@ func (q *Queries) CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIf
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
+}
+
+const getPageVerifications = `-- name: GetPageVerifications :many
+SELECT 
+  pv.id,
+  pv.page_type,
+  pv.page_id,
+  pv.verification_type_id,
+  pv.verified_at,
+  pvt.verification_type,
+  pvt.verification_title,
+  pvt.verification_description,
+  pvt.badge
+FROM pages_verified pv
+JOIN page_verification_types pvt ON pv.verification_type_id = pvt.id
+WHERE pv.page_type = $1 AND pv.page_id = $2
+`
+
+type GetPageVerificationsParams struct {
+	PageType string `json:"page_type"`
+	PageID   int64  `json:"page_id"`
+}
+
+type GetPageVerificationsRow struct {
+	ID                      int64              `json:"id"`
+	PageType                string             `json:"page_type"`
+	PageID                  int64              `json:"page_id"`
+	VerificationTypeID      int16              `json:"verification_type_id"`
+	VerifiedAt              pgtype.Timestamptz `json:"verified_at"`
+	VerificationType        string             `json:"verification_type"`
+	VerificationTitle       string             `json:"verification_title"`
+	VerificationDescription pgtype.Text        `json:"verification_description"`
+	Badge                   pgtype.Text        `json:"badge"`
+}
+
+func (q *Queries) GetPageVerifications(ctx context.Context, arg GetPageVerificationsParams) ([]GetPageVerificationsRow, error) {
+	rows, err := q.db.Query(ctx, getPageVerifications, arg.PageType, arg.PageID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPageVerificationsRow
+	for rows.Next() {
+		var i GetPageVerificationsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PageType,
+			&i.PageID,
+			&i.VerificationTypeID,
+			&i.VerifiedAt,
+			&i.VerificationType,
+			&i.VerificationTitle,
+			&i.VerificationDescription,
+			&i.Badge,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listVerificationTypes = `-- name: ListVerificationTypes :many

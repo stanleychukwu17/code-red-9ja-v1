@@ -1419,6 +1419,8 @@ definitions:
     - gender
     - last_name
     type: object
+  usershandler.UpdateUserPhoneNumbersRequest:
+    type: object
   usershandler.UserResponse:
     properties:
       account_status:
@@ -1430,6 +1432,10 @@ definitions:
       bank_account_number:
         type: string
       bank_code:
+        type: string
+      city_name:
+        type: string
+      country_name:
         type: string
       created_at:
         type: string
@@ -1490,6 +1496,8 @@ definitions:
           type: string
         type: array
       school_name:
+        type: string
+      state_name:
         type: string
       state_of_origin:
         type: integer
@@ -1727,6 +1735,45 @@ paths:
       security:
       - BearerAuth: []
       summary: Get user phone numbers
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Create or update phone numbers for a user
+      parameters:
+      - description: User Fake ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Phones
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/usershandler.UpdateUserPhoneNumbersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user phone numbers
       tags:
       - Users
   /admin/users/phones/{id}:
@@ -2687,6 +2734,37 @@ paths:
       summary: List LGA stats for an election group
       tags:
       - ElectionStats
+  /election-groups/{id}/stats/lgas/{lga_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single LGA unit,
+        extracting a single party from the parties JSONB array if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: LGA ID
+        in: path
+        name: lga_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get LGA stats for a single geographic unit and optionally a single
+        party
+      tags:
+      - ElectionStats
   /election-groups/{id}/stats/polling-units:
     get:
       description: Fetches pre-aggregated election statistics at the polling unit
@@ -2790,6 +2868,37 @@ paths:
       summary: List state stats for an election group
       tags:
       - ElectionStats
+  /election-groups/{id}/stats/states/{state_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single state unit,
+        extracting a single party from the parties JSONB array if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID
+        in: path
+        name: state_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get state stats for a single geographic unit and optionally a single
+        party
+      tags:
+      - ElectionStats
   /election-groups/{id}/stats/wards:
     get:
       description: Fetches pre-aggregated election statistics at the ward level
@@ -2816,6 +2925,37 @@ paths:
             additionalProperties: true
             type: object
       summary: List ward stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/wards/{ward_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single ward unit,
+        extracting a single party from the parties JSONB array if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Ward ID
+        in: path
+        name: ward_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get ward stats for a single geographic unit and optionally a single
+        party
       tags:
       - ElectionStats
   /election-groups/{id}/vote-status:
