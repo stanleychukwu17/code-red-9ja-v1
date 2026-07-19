@@ -83,9 +83,8 @@ type SubmitApplicationRequest struct {
 // @Security     BearerAuth
 // @Router       /polling-agent-applications [post]
 func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -173,9 +172,8 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /polling-agent-applications [get]
 func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -308,9 +306,8 @@ func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.R
 // @Security     BearerAuth
 // @Router       /polling-agent-applications/{id} [get]
 func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -381,9 +378,8 @@ type ApproveApplicationRequest struct {
 // @Security     BearerAuth
 // @Router       /polling-agent-applications/{id}/approve [post]
 func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -501,9 +497,8 @@ type RejectApplicationRequest struct {
 // @Security     BearerAuth
 // @Router       /polling-agent-applications/{id}/reject [post]
 func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -588,9 +583,8 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /polling-agent-applications/{id}/cancel [post]
 func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 

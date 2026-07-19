@@ -64,9 +64,8 @@ type ReviewRequest struct {
 // @Router /polling-unit-results [post]
 // @Security BearerAuth
 func (h *Handler) SubmitResult(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -184,9 +183,8 @@ func (h *Handler) GetResult(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-results [get]
 // @Security BearerAuth
 func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -302,9 +300,8 @@ func (h *Handler) ListResults(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-final-results [get]
 // @Security BearerAuth
 func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	_, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -434,9 +431,8 @@ func (h *Handler) ListFinalResults(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-results/{id}/vote [patch]
 // @Security BearerAuth
 func (h *Handler) VoteOnResult(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -482,13 +478,8 @@ func (h *Handler) VoteOnResult(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-results/{id}/review [patch]
 // @Security BearerAuth
 func (h *Handler) ReviewResult(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-	if !claims.HasRole("admin") {
-		h.utils.RespondError(w, http.StatusForbidden, "Platform admin access required")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "admin")
+	if !ok {
 		return
 	}
 

@@ -66,9 +66,8 @@ type CreateAssignmentRequest struct {
 // @Security     BearerAuth
 // @Router       /polling-unit-assignments [post]
 func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -175,9 +174,8 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /polling-unit-assignments [get]
 func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -261,9 +259,8 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /polling-unit-assignments/{id} [get]
 func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -319,9 +316,8 @@ func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
 // @Failure      404  {object} map[string]interface{} "Assignment not found"
 // @Router       /polling-unit-assignments/{id} [delete]
 func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -400,9 +396,8 @@ type UpdateAssignmentTrackingRequest struct {
 // @Security     BearerAuth
 // @Router       /polling-unit-assignments/{id}/tracking [patch]
 func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 

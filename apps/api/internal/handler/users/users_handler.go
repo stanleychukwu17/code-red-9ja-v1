@@ -375,9 +375,8 @@ func (h *Handler) ValidateBankAccount(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /users/me [get]
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -423,9 +422,8 @@ type UpdateProfileRequest struct {
 // @Security     BearerAuth
 // @Router       /users/profile [put]
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -541,10 +539,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	var partyID int64
 	// 2. Retrieve JWT claims from the request context
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -649,9 +645,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // DeleteUser handles DELETE /api/v1/admin/users/{id}
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Extract the user's JWT claims from the request context to identify the requester
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -735,9 +730,8 @@ type AdminUpdateUserRequest struct {
 // AdminUpdateUser handles PUT /api/v1/admin/users/{id}
 func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	// Extract the user's JWT claims from the request context
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 

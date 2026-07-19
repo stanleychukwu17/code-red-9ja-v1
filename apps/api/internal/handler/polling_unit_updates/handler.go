@@ -51,9 +51,8 @@ type CreateUpdateRequest struct {
 // @Router /polling-unit-updates [post]
 // @Security BearerAuth
 func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -130,9 +129,8 @@ func (h *Handler) CreateUpdate(w http.ResponseWriter, r *http.Request) {
 // @Router /polling-unit-updates [get]
 // @Security BearerAuth
 func (h *Handler) ListUpdates(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 

@@ -42,14 +42,8 @@ type AssignVerificationRequest struct {
 
 // AssignVerification handles POST /api/v1/admin/verifications
 func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	if !claims.HasAnyRole("super_admin", "admin") {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin", "admin")
+	if !ok {
 		return
 	}
 
@@ -77,14 +71,8 @@ func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
 
 // RemoveVerification handles DELETE /api/v1/admin/verifications
 func (h *Handler) RemoveVerification(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
-		return
-	}
-
-	if !claims.HasAnyRole("super_admin", "admin") {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin", "admin")
+	if !ok {
 		return
 	}
 
