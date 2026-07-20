@@ -15,6 +15,7 @@ import { createElectionGroup, updateElectionGroup } from "#/lib/server/election_
 import { Loader2 } from "lucide-react";
 import { FancyInput } from "@repo/ui/components/input";
 import type { ElectionGroupType } from "../tiles/election-group-tile";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export function ElectionGroupFormDialog({
   electionGroup,
@@ -125,11 +126,7 @@ export function ElectionGroupFormDialog({
           }}
         >
           <DialogPadding className="space-y-6 pb-6">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TinyError error={error} />
 
             {/* Group name input */}
             <div className="w-full">
@@ -197,7 +194,7 @@ export function ElectionGroupFormDialog({
             <Button
               type="submit"
               disabled={saveMutation.isPending}
-              className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+              className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
             >
               {saveMutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />

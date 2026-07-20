@@ -27,6 +27,7 @@ import {
   SelectedItemsContainer,
 } from "./SelectionCommon";
 import { Label } from "@repo/ui/components/input";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface StateItem {
   id: number;
@@ -313,11 +314,7 @@ export function WardElectionFormDialog({
             }}
           >
             <DialogPadding className="space-y-6 pb-6">
-              {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                  {error}
-                </div>
-              )}
+              <TinyError error={error} />
 
               {/* Office */}
               <div className="flex gap-4 items-center">
@@ -447,7 +444,7 @@ export function WardElectionFormDialog({
               <Button
                 type="submit"
                 disabled={saveMutation.isPending}
-                className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+                className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
               >
                 {saveMutation.isPending && (
                   <Loader2 className="size-4 animate-spin" />
@@ -538,7 +535,7 @@ function WardSelectorDialog({
           <Button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer"
+            className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer"
           >
             Close
           </Button>

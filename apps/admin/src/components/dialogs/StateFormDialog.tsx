@@ -14,6 +14,7 @@ import { FancyInput, Input, Label } from "@repo/ui/components/input";
 import { SelectCountry } from "@repo/ui/components/selects/country-select";
 import { getAllCountries } from "#/lib/server/countries";
 import { createState, updateState } from "#/lib/server/states";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export interface State {
   id: number;
@@ -139,11 +140,7 @@ export function StateFormDialog({
           }}
         >
           <DialogPadding className="space-y-6 pb-6">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TinyError error={error} />
 
             {/* State Name */}
             <div className="w-full">
@@ -287,7 +284,7 @@ export function StateFormDialog({
             <Button
               type="submit"
               disabled={saveMutation.isPending}
-              className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+              className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
             >
               {saveMutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />

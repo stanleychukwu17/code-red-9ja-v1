@@ -24,6 +24,7 @@ import { Label } from "@repo/ui/components/input";
 import { CandidateRow } from "./CandidateRow";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
 import { getUsersList } from "#/lib/server/users";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export function NationwideElectionFormDialog({
   open,
@@ -179,11 +180,7 @@ export function NationwideElectionFormDialog({
             }}
           >
             <DialogPadding className="space-y-6 pb-6">
-              {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                  {error}
-                </div>
-              )}
+              <TinyError error={error} />
 
               <div className="flex items-center gap-4">
                 {/* Office */}
@@ -316,7 +313,7 @@ export function NationwideElectionFormDialog({
               <Button
                 type="submit"
                 disabled={saveMutation.isPending}
-                className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+                className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
               >
                 {saveMutation.isPending && (
                   <Loader2 className="size-4 animate-spin" />
