@@ -32,3 +32,25 @@ export async function apiFetch(
 
   return fetch(input, requestInit);
 }
+
+/**
+ * Safely parses the Response from apiFetch. 
+ * If the response is JSON, it parses and checks for `.error`.
+ * If the response is plain text, it throws the text as an error.
+ */
+export async function handleResponse(response: Response) {
+  const contentType = response.headers.get("content-type");
+
+  if (contentType && contentType.includes("application/json")) {
+    const resData = await response.json();
+
+    if (!response.ok && resData && resData.error) {
+      throw new Error(resData.error);
+    }
+
+    return resData;
+  } else {
+    const text = await response.text();
+    throw new Error(text || "Unknown error occurred");
+  }
+}
