@@ -584,7 +584,8 @@ type PageVerificationType struct {
 	VerificationType        string      `json:"verification_type"`
 	VerificationTitle       string      `json:"verification_title"`
 	VerificationDescription pgtype.Text `json:"verification_description"`
-	Badge                   pgtype.Text `json:"badge"`
+	IsAdminAssignable       bool        `json:"is_admin_assignable"`
+	ForWho                  string      `json:"for_who"`
 }
 
 type PagesVerified struct {

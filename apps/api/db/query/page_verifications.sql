@@ -30,7 +30,8 @@ SELECT
   pvt.verification_type,
   pvt.verification_title,
   pvt.verification_description,
-  pvt.badge
+  pvt.is_admin_assignable,
+  pvt.for_who
 FROM pages_verified pv
 JOIN page_verification_types pvt ON pv.verification_type_id = pvt.id
 WHERE pv.page_type = $1 AND pv.page_id = $2;

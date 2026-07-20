@@ -4,7 +4,8 @@ CREATE TABLE page_verification_types (
   verification_type VARCHAR(50) UNIQUE NOT NULL,
   verification_title VARCHAR(100) NOT NULL,
   verification_description VARCHAR(255),
-  badge VARCHAR(255)
+  is_admin_assignable BOOLEAN DEFAULT FALSE NOT NULL,
+  for_who VARCHAR(50) NOT NULL
 );
 
 CREATE TABLE pages_verified (
@@ -22,18 +23,18 @@ CREATE INDEX idx_pages_verified_verification_type_id ON pages_verified(verificat
 
 
 -- Seed Default Page Verification Types
-INSERT INTO page_verification_types (id, verification_type, verification_title, verification_description) VALUES 
-(1, 'profile_verified', 'Verified Profile', 'A verified user profile'),
-(2, 'celebrity_verified', 'Verified Celebrity', 'A verified celebrity or public figure'),
-(3, 'political_party_verified', 'Verified Political Party', 'A verified political party'),
-(4, 'politician_verified', 'Verified Politician', 'A verified politician'),
-(5, 'organization_verified', 'Verified Organization', 'A verified organization'),
-(6, 'business_verified', 'Verified Business', 'A verified business'),
-(7, 'national_official_verified', 'Verified National Official', 'A verified national official'),
-(8, 'zonal_official_verified', 'Verified Zonal Official', 'A verified zonal official'),
-(9, 'state_official_verified', 'Verified State Official', 'A verified state official'),
-(10, 'lga_official_verified', 'Verified LGA Official', 'A verified LGA official'),
-(11, 'ward_official_verified', 'Verified Ward Official', 'A verified ward official');
+INSERT INTO page_verification_types (id, verification_type, verification_title, verification_description, is_admin_assignable, for_who) VALUES 
+(1, 'vip_verified', 'Verified Individual', 'A Verified individual', TRUE, 'user'),
+(2, 'celebrity_verified', 'Verified Celebrity', 'A verified celebrity or public figure', TRUE, 'user'),
+(3, 'political_party_verified', 'Verified Political Party', 'A verified political party', TRUE, 'party'),
+(4, 'politician_verified', 'Verified Politician', 'A verified politician', TRUE, 'politician'),
+(5, 'organization_verified', 'Verified Organization', 'A verified organization', TRUE, 'organization'),
+(6, 'business_verified', 'Verified Business', 'A verified business', TRUE, 'business'),
+(7, 'national_official_verified', 'Verified Party National Official', 'A verified national official of a political party', FALSE, 'party_member'),
+(8, 'zonal_official_verified', 'Verified Party Zonal Official', 'A verified zonal official of a political party', FALSE, 'party_member'),
+(9, 'state_official_verified', 'Verified Party State Official', 'A verified state official of a political party', FALSE, 'party_member'),
+(10, 'lga_official_verified', 'Verified Party LGA Official', 'A verified LGA official of a political party', FALSE, 'party_member'),
+(11, 'ward_official_verified', 'Verified Party Ward Official', 'A verified ward official of a political party', FALSE, 'party_member');
 
 -- Reset identity sequence
 SELECT setval(pg_get_serial_sequence('page_verification_types', 'id'), coalesce(max(id), 1)) FROM page_verification_types;
