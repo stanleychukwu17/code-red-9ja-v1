@@ -865,16 +865,19 @@ definitions:
     type: object
   pageverificationshandler.AssignVerificationRequest:
     properties:
+      for_who:
+        type: string
       page_id:
         type: integer
-      page_type:
-        type: string
-      verification_type_id:
-        type: integer
+      verification_type_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
     required:
+    - for_who
     - page_id
-    - page_type
-    - verification_type_id
+    - verification_type_ids
     type: object
   partieshandler.BuySlotsRequest:
     properties:
@@ -1868,7 +1871,7 @@ paths:
     post:
       consumes:
       - application/json
-      description: Assign a verification to a page
+      description: Assign multiple verifications to a page
       parameters:
       - description: Assign Verification request payload
         in: body
@@ -1880,7 +1883,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Verification assigned successfully
+          description: Verifications assigned successfully
           schema:
             additionalProperties: true
             type: object
@@ -1890,13 +1893,13 @@ paths:
             additionalProperties: true
             type: object
         "500":
-          description: Failed to assign verification
+          description: Failed to assign verifications
           schema:
             additionalProperties: true
             type: object
       security:
       - BearerAuth: []
-      summary: Assign a verification to a page
+      summary: Assign verifications to a page
       tags:
       - Page Verifications
   /api/v1/supervisor-assignments:

@@ -312,7 +312,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Assign a verification to a page",
+                "description": "Assign multiple verifications to a page",
                 "consumes": [
                     "application/json"
                 ],
@@ -322,7 +322,7 @@ const docTemplate = `{
                 "tags": [
                     "Page Verifications"
                 ],
-                "summary": "Assign a verification to a page",
+                "summary": "Assign verifications to a page",
                 "parameters": [
                     {
                         "description": "Assign Verification request payload",
@@ -336,7 +336,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Verification assigned successfully",
+                        "description": "Verifications assigned successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -350,7 +350,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Failed to assign verification",
+                        "description": "Failed to assign verifications",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -9841,19 +9841,23 @@ const docTemplate = `{
         "pageverificationshandler.AssignVerificationRequest": {
             "type": "object",
             "required": [
+                "for_who",
                 "page_id",
-                "page_type",
-                "verification_type_id"
+                "verification_type_ids"
             ],
             "properties": {
+                "for_who": {
+                    "type": "string"
+                },
                 "page_id": {
                     "type": "integer"
                 },
-                "page_type": {
-                    "type": "string"
-                },
-                "verification_type_id": {
-                    "type": "integer"
+                "verification_type_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
                 }
             }
         },
