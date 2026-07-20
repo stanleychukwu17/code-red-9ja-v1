@@ -1439,6 +1439,7 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 
 		// Save details to Redis cache
 		fakeID := u.FakeID
+		fmt.Println("saved ", fakeID)
 		if fakeID == 0 {
 			fakeID = utils.GenerateFakeID(id)
 			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
