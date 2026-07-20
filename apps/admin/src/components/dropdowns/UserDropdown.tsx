@@ -4,11 +4,12 @@ import { deleteUser } from "#/lib/server/users";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { Pencil } from "lucide-react";
+import { Pencil, Plus, Award } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { UserFormDialog } from "../dialogs/UserFormDialog";
 import { UserRoleDialog } from "../dialogs/UserRoleDialog";
+import { UserBadgeDialog } from "../dialogs/UserBadgeDialog";
 import type { UserType } from "../tiles/user-tile";
 
 interface UserDropdownProps {
@@ -21,6 +22,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openRoleDialog, setOpenRoleDialog] = useState(false);
+  const [openBadgeDialog, setOpenBadgeDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
 
@@ -47,14 +49,25 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
         setOpenMenu(false);
         setOpenEditDialog(true);
       },
+      className: "cursor-pointer!",
     },
     {
       title: "Add/Edit user role",
-      icon: <Pencil className="size-4" />,
+      icon: <Plus className="size-4" />,
       action: () => {
         setOpenMenu(false);
         setOpenRoleDialog(true);
       },
+      className: "cursor-pointer!",
+    },
+    {
+      title: "Add/Edit badge",
+      icon: <Award className="size-4" />,
+      action: () => {
+        setOpenMenu(false);
+        setOpenBadgeDialog(true);
+      },
+      className: "cursor-pointer!",
     },
     {
       title: "Delete user account",
@@ -63,12 +76,12 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
         setOpenMenu(false);
         setOpenDeleteAlert(true);
       },
-      className: "[&_svg]:text-red text-red",
+      className: "cursor-pointer! [&_svg]:text-red text-red",
     },
   ];
   const dropdownData: TDropdownGroup[] = [group1];
 
-  const userForDialog = {
+  const userDetails = {
     id: data.id,
     fake_id: data.fake_id,
     first_name: data.first_name,
@@ -83,16 +96,10 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
     party_id: data.party_id,
     email: data.email,
     role: data.role,
-    role_level: data.role_level,
     avatar: data.avatar || data.avatar_url,
   };
 
-  const name =
-    data.name ||
-    [data.first_name, data.last_name].filter(Boolean).join(" ") ||
-    data.username ||
-    data.email ||
-    "User";
+  const name = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.username || "User";
 
   return (
     <>
@@ -107,7 +114,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
         mode="update"
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
-        user={userForDialog}
+        user={userDetails}
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["users"] });
           refetch?.();
@@ -117,7 +124,18 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
       <UserRoleDialog
         open={openRoleDialog}
         onClose={() => setOpenRoleDialog(false)}
-        user={userForDialog}
+        user={userDetails}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["users"] });
+          refetch?.();
+        }}
+      />
+
+      <UserBadgeDialog
+        open={openBadgeDialog}
+        onClose={() => setOpenBadgeDialog(false)}
+        page={userDetails}
+        forWho="user"
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["users"] });
           refetch?.();
