@@ -6,6 +6,7 @@ import { useMutation } from "@tanstack/react-query";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { SelectResponsiveWrapper } from "../selects/select-responsive-wrapper";
 import { GeneralCommand } from "../command/general-command";
+import { TinyError } from "./TinyError";
 
 const ROLE_OPTIONS = [
   { label: "Admin", value: "admin" },
@@ -138,11 +139,7 @@ export function UserRoleDialog({ open, onClose, onSuccess, user, updateUserRole 
         >
           <div className="flex-1 overflow-y-auto min-h-0">
             <DialogPadding className="space-y-6 pb-6 pt-4">
-              {error && (
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                  {error}
-                </div>
-              )}
+              <TinyError error={error} />
 
               <div className="flex flex-col gap-4">
                   <form.Field
@@ -200,7 +197,7 @@ export function UserRoleDialog({ open, onClose, onSuccess, user, updateUserRole 
             <Button
               type="submit"
               disabled={saveMutation.isPending}
-              className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+              className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
             >
               {saveMutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />
