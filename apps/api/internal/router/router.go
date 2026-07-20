@@ -27,9 +27,9 @@ import (
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
 	officeshandler "free9ja/api/internal/handler/offices"
+	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
 	partyapplicationshandler "free9ja/api/internal/handler/party_applications"
-	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	puassignmentshandler "free9ja/api/internal/handler/polling_unit_assignments"
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
@@ -53,9 +53,9 @@ import (
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
+	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
 	partyapplications "free9ja/api/internal/service/party_applications"
-	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	puassignments "free9ja/api/internal/service/polling_unit_assignments"
 	puresults "free9ja/api/internal/service/polling_unit_results"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -288,7 +288,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			jwtSecret = cfg.JWTSecret
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
-		r.Use(apimiddleware.RequireRole("admin"))
+		r.Use(apimiddleware.RequireRole("admin", "super_admin"))
 
 		r.Get("/api/v1/admin/dashboard", func(w http.ResponseWriter, r *http.Request) {
 			utilsInstance.RespondSuccess(w, http.StatusOK, "Welcome to the Admin Dashboard!", nil)
@@ -415,7 +415,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies", electionStatsHandler.GetFederalConstituencyStats)
 		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
-		
+
 		// Single unit dedicated endpoints
 		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}", electionStatsHandler.GetSingleStateStats)
 		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}", electionStatsHandler.GetSingleLGAStats)
@@ -553,6 +553,7 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 
 		// Inject into context
 		ctx := logger.WithContext(r.Context(), log)
+		ctx = audit.WithRequestMetadata(ctx, r.RemoteAddr, r.UserAgent())
 		r = r.WithContext(ctx)
 
 		// We need to wrap the response writer to get the status code
