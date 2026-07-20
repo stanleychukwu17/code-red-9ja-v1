@@ -14,7 +14,7 @@ import (
 )
 
 type PageVerificationsService interface {
-	VerifyPage(ctx context.Context, pageType string, pageID int64, verificationTypeID int16, actorID int64) (queries.PagesVerified, error)
+	VerifyPage(ctx context.Context, forWho string, pageID int64, verificationTypeID int16, actorID int64) (queries.PagesVerified, error)
 	RemoveVerification(ctx context.Context, pageType string, pageID int64, verificationTypeID int16, actorID int64) error
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
@@ -35,21 +35,21 @@ func NewHandler(service PageVerificationsService, utilsInstance *utils.Utils) *H
 }
 
 type AssignVerificationRequest struct {
-	PageType           string `json:"page_type" validate:"required"`
-	PageID             int64  `json:"page_id" validate:"required"`
-	VerificationTypeID int16  `json:"verification_type_id" validate:"required"`
+	ForWho              string  `json:"for_who" validate:"required"`
+	PageID              int64   `json:"page_id" validate:"required"`
+	VerificationTypeIDs []int16 `json:"verification_type_ids" validate:"required,min=1"`
 }
 
 // AssignVerification godoc
-// @Summary      Assign a verification to a page
-// @Description  Assign a verification to a page
+// @Summary      Assign verifications to a page
+// @Description  Assign multiple verifications to a page
 // @Tags         Page Verifications
 // @Accept       json
 // @Produce      json
 // @Param        request body AssignVerificationRequest true "Assign Verification request payload"
-// @Success      200  {object} map[string]interface{} "Verification assigned successfully"
+// @Success      200  {object} map[string]interface{} "Verifications assigned successfully"
 // @Failure      400  {object} map[string]interface{} "Invalid request body"
-// @Failure      500  {object} map[string]interface{} "Failed to assign verification"
+// @Failure      500  {object} map[string]interface{} "Failed to assign verifications"
 // @Security     BearerAuth
 // @Router       /admin/verifications [post]
 func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
@@ -72,16 +72,20 @@ func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Assign the verification to the page
-	pv, err := h.service.VerifyPage(r.Context(), req.PageType, req.PageID, req.VerificationTypeID, claims.FakeID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to assign verification: "+err.Error())
-		return
+	// Assign the verifications to the page
+	var pvs []queries.PagesVerified
+	for _, verificationTypeID := range req.VerificationTypeIDs {
+		pv, err := h.service.VerifyPage(r.Context(), req.ForWho, req.PageID, verificationTypeID, claims.UserID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to assign verification: "+err.Error())
+			return
+		}
+		pvs = append(pvs, pv)
 	}
 
 	// Return success response
-	h.utils.RespondSuccess(w, http.StatusOK, "Verification assigned successfully", map[string]interface{}{
-		"verification": pv,
+	h.utils.RespondSuccess(w, http.StatusOK, "Verifications assigned successfully", map[string]interface{}{
+		"verifications": pvs,
 	})
 }
 

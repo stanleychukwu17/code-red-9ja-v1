@@ -48,9 +48,9 @@ func NewPageVerificationsService(
 }
 
 // VerifyPage assigns a verification badge to a page (user or party) and updates the is_verified flag.
-func (s *PageVerificationsService) VerifyPage(ctx context.Context, pageType string, pageID int64, verificationTypeID int16, actorID int64) (queries.PagesVerified, error) {
+func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string, pageID int64, verificationTypeID int16, actorID int64) (queries.PagesVerified, error) {
 	var userDetails *queries.UserWithPlaces
-	switch pageType {
+	switch forWho {
 	case "user":
 		user, err := s.usersService.GetUserByFakeID(ctx, pageID)
 		if err != nil {
@@ -63,7 +63,7 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, pageType stri
 			return queries.PagesVerified{}, fmt.Errorf("party not found")
 		}
 	default:
-		return queries.PagesVerified{}, fmt.Errorf("invalid page type: %s", pageType)
+		return queries.PagesVerified{}, fmt.Errorf("invalid page type: %s", forWho)
 	}
 
 	// check if the verification type exist in the db
@@ -72,17 +72,17 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, pageType stri
 	}
 
 	// make sure verification type is for user
-	if pageType == "user" && (verificationTypeID == 3 || verificationTypeID == 5 || verificationTypeID == 6) {
+	if forWho == "user" && (verificationTypeID == 3 || verificationTypeID == 5 || verificationTypeID == 6) {
 		return queries.PagesVerified{}, fmt.Errorf("invalid verification type for user")
 	}
 
 	// make sure verification type is for party
-	if pageType == "party" && verificationTypeID != 3 {
+	if forWho == "party" && verificationTypeID != 3 {
 		return queries.PagesVerified{}, fmt.Errorf("invalid verification type for party")
 	}
 
 	// get all the page verifications
-	pageVerifications, err := s.GetPageVerifications(ctx, pageType, pageID)
+	pageVerifications, err := s.GetPageVerifications(ctx, forWho, pageID)
 	if err != nil {
 		return queries.PagesVerified{}, fmt.Errorf("failed to get page verifications: %w", err)
 	}
@@ -94,43 +94,65 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, pageType stri
 		}
 	}
 
+	var pv queries.PagesVerified
+	fmt.Sprint(userDetails)
+
 	// Assign verification in pages_verified table
-	pv, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
-		PageType:           pageType,
-		PageID:             pageID,
-		VerificationTypeID: verificationTypeID,
-	})
-	if err != nil {
-		return queries.PagesVerified{}, fmt.Errorf("failed to add page verification: %w", err)
-	}
+	// pv, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
+	// 	PageType:           forWho,
+	// 	PageID:             pageID,
+	// 	VerificationTypeID: verificationTypeID,
+	// })
+	// if err != nil {
+	// 	return queries.PagesVerified{}, fmt.Errorf("failed to add page verification: %w", err)
+	// }
 
-	// Update the parent table's is_verified flag
-	if err := s.updateParentIsVerifiedFlag(ctx, pageType, pageID, true, userDetails); err != nil {
-		return pv, fmt.Errorf("failed to update is_verified flag: %w", err)
-	}
+	// // Update the parent table's is_verified flag
+	// if err := s.updateParentIsVerifiedFlag(ctx, forWho, pageID, true, userDetails); err != nil {
+	// 	return pv, fmt.Errorf("failed to update is_verified flag: %w", err)
+	// }
 
-	// Invalidate cache
-	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, pageType, pageID)
+	// Invalidate cache for the list of this page verification
+	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, forWho, pageID)
 	s.rdb.Del(ctx, redisKey)
 
+	// prepares old and new data to be saved in the audit_log
 	oldValuesData, _ := json.Marshal(pageVerifications)
-	newPageVerifications, _ := s.GetPageVerifications(ctx, pageType, pageID)
+	newPageVerifications, _ := s.GetPageVerifications(ctx, forWho, pageID)
 	newValuesData, _ := json.Marshal(newPageVerifications)
 
+	ipAddress, userAgent := audit.RequestMetadataFromContext(ctx)
+
 	// Log the action
-	_ = s.auditService.LogAction(
+	err = s.auditService.LogAction(
 		ctx,
 		queries.InsertAuditLogParams{
 			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
 			ActorID:    actorID,
 			ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
 			Action:     db.ActionAssignPageVerification,
-			EntityType: pageType,
+			EntityType: forWho,
 			EntityID:   fmt.Sprintf("%d", pageID),
 			OldValues:  oldValuesData,
 			NewValues:  newValuesData,
+			IpAddress:  audit.ParseIP(ipAddress),
+			UserAgent:  audit.StringToText(userAgent),
 		},
 	)
+	if err != nil {
+		return pv, fmt.Errorf("failed to save audit log: %w", err)
+	}
+
+	fmt.Printf("%+v %v", queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		ActorID:    actorID,
+		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
+		Action:     db.ActionAssignPageVerification,
+		EntityType: forWho,
+		EntityID:   fmt.Sprintf("%d", pageID),
+		OldValues:  oldValuesData,
+		NewValues:  newValuesData,
+	}, err)
 
 	return pv, nil
 }
@@ -188,8 +210,10 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageT
 	newPageVerifications, _ := s.GetPageVerifications(ctx, pageType, pageID)
 	newValuesData, _ := json.Marshal(newPageVerifications)
 
+	ipAddress, userAgent := audit.RequestMetadataFromContext(ctx)
+
 	// 5. Log the action
-	_ = s.auditService.LogAction(
+	err = s.auditService.LogAction(
 		ctx,
 		queries.InsertAuditLogParams{
 			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
@@ -200,8 +224,13 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageT
 			EntityID:   fmt.Sprintf("%d", pageID),
 			OldValues:  oldValuesData,
 			NewValues:  newValuesData,
+			IpAddress:  audit.ParseIP(ipAddress),
+			UserAgent:  audit.StringToText(userAgent),
 		},
 	)
+	if err != nil {
+		return fmt.Errorf("failed to save audit log: %w", err)
+	}
 
 	return nil
 }
@@ -269,8 +298,8 @@ func (s *PageVerificationsService) ListVerificationTypes(ctx context.Context) ([
 }
 
 // updateParentIsVerifiedFlag calls the appropriate service to update the `is_verified` flag on the entity.
-func (s *PageVerificationsService) updateParentIsVerifiedFlag(ctx context.Context, pageType string, pageID int64, isVerified bool, userDetails *queries.UserWithPlaces) error {
-	switch pageType {
+func (s *PageVerificationsService) updateParentIsVerifiedFlag(ctx context.Context, forWho string, pageID int64, isVerified bool, userDetails *queries.UserWithPlaces) error {
+	switch forWho {
 	case "user":
 		if userDetails == nil {
 			return fmt.Errorf("user details not provided")

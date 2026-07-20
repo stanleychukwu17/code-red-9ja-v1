@@ -60,7 +60,7 @@ func (q *Queries) CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIf
 }
 
 const getPageVerificationType = `-- name: GetPageVerificationType :one
-SELECT id, verification_type, verification_title, verification_description, badge FROM page_verification_types
+SELECT id, verification_type, verification_title, verification_description, is_admin_assignable, for_who FROM page_verification_types
 WHERE id = $1 LIMIT 1
 `
 
@@ -72,7 +72,8 @@ func (q *Queries) GetPageVerificationType(ctx context.Context, id int16) (PageVe
 		&i.VerificationType,
 		&i.VerificationTitle,
 		&i.VerificationDescription,
-		&i.Badge,
+		&i.IsAdminAssignable,
+		&i.ForWho,
 	)
 	return i, err
 }
@@ -87,7 +88,8 @@ SELECT
   pvt.verification_type,
   pvt.verification_title,
   pvt.verification_description,
-  pvt.badge
+  pvt.is_admin_assignable,
+  pvt.for_who
 FROM pages_verified pv
 JOIN page_verification_types pvt ON pv.verification_type_id = pvt.id
 WHERE pv.page_type = $1 AND pv.page_id = $2
@@ -107,7 +109,8 @@ type GetPageVerificationsRow struct {
 	VerificationType        string             `json:"verification_type"`
 	VerificationTitle       string             `json:"verification_title"`
 	VerificationDescription pgtype.Text        `json:"verification_description"`
-	Badge                   pgtype.Text        `json:"badge"`
+	IsAdminAssignable       bool               `json:"is_admin_assignable"`
+	ForWho                  string             `json:"for_who"`
 }
 
 func (q *Queries) GetPageVerifications(ctx context.Context, arg GetPageVerificationsParams) ([]GetPageVerificationsRow, error) {
@@ -128,7 +131,8 @@ func (q *Queries) GetPageVerifications(ctx context.Context, arg GetPageVerificat
 			&i.VerificationType,
 			&i.VerificationTitle,
 			&i.VerificationDescription,
-			&i.Badge,
+			&i.IsAdminAssignable,
+			&i.ForWho,
 		); err != nil {
 			return nil, err
 		}
@@ -141,7 +145,7 @@ func (q *Queries) GetPageVerifications(ctx context.Context, arg GetPageVerificat
 }
 
 const listVerificationTypes = `-- name: ListVerificationTypes :many
-SELECT id, verification_type, verification_title, verification_description, badge FROM page_verification_types ORDER BY id ASC
+SELECT id, verification_type, verification_title, verification_description, is_admin_assignable, for_who FROM page_verification_types ORDER BY id ASC
 `
 
 func (q *Queries) ListVerificationTypes(ctx context.Context) ([]PageVerificationType, error) {
@@ -158,7 +162,8 @@ func (q *Queries) ListVerificationTypes(ctx context.Context) ([]PageVerification
 			&i.VerificationType,
 			&i.VerificationTitle,
 			&i.VerificationDescription,
-			&i.Badge,
+			&i.IsAdminAssignable,
+			&i.ForWho,
 		); err != nil {
 			return nil, err
 		}
