@@ -28,7 +28,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await deleteUser({ data: data.fake_id });
+      const res = await deleteUser({ data: data.fake_id as number });
       if (!res.success) {
         throw new Error(res.message || "Failed to delete user");
       }
@@ -82,20 +82,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
   const dropdownData: TDropdownGroup[] = [group1];
 
   const userDetails = {
-    id: data.id,
-    fake_id: data.fake_id,
-    first_name: data.first_name,
-    last_name: data.last_name,
-    middle_name: data.middle_name,
-    gender: data.gender,
-    date_of_birth: data.date_of_birth,
-    current_country: data.current_country,
-    current_state: data.current_state,
-    current_city: data.current_city,
-    state_of_origin: data.state_of_origin,
-    party_id: data.party_id,
-    email: data.email,
-    role: data.role,
+    ...data,
     avatar: data.avatar || data.avatar_url,
   };
 
