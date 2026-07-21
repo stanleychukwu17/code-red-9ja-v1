@@ -531,6 +531,7 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	// 1. Parse URL query parameters for filtering and pagination
 	role := r.URL.Query().Get("role")
 	partyIDStr := r.URL.Query().Get("party_id")
+	search := r.URL.Query().Get("search")
 	limit, cursor := parsePaginationParams(r)
 
 	// split the roles into slice of string, inCase we are trying to get multiple roles at the same
@@ -587,6 +588,9 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	if len(roleSlice) > 0 {
 		arg.RoleCodes = roleSlice
+	}
+	if search != "" {
+		arg.Search = pgtype.Text{String: search, Valid: true}
 	}
 
 	// 6. Fetch paginated and filtered users from the database
@@ -984,4 +988,67 @@ func (h *Handler) DeleteUserPhoneNumber(w http.ResponseWriter, r *http.Request) 
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Phone number deleted successfully", nil)
+}
+
+// GetUserRolesAdmin handles GET /api/v1/admin/users/{id}/roles
+func (h *Handler) GetUserRolesAdmin(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+		return
+	}
+
+	fakeIdStr := chi.URLParam(r, "id")
+	fakeID, err := strconv.ParseInt(fakeIdStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	user, err := h.usersService.GetUserByFakeID(r.Context(), fakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	// Permission checks:
+	isAdmin := claims.HasAnyRole("super_admin", "admin")
+	isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
+	if !isAdmin && !isPartyAdmin {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+		return
+	}
+
+	if isPartyAdmin && !isAdmin {
+		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
+			return
+		}
+		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int16 != currUser.PartyID.Int16 {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only view members of your own party")
+			return
+		}
+	}
+
+	uRoles, err := h.usersService.GetUserRoles(r.Context(), user.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch roles")
+		return
+	}
+
+	roles := make([]string, 0, len(uRoles))
+	for _, role := range uRoles {
+		roles = append(roles, role.Code)
+	}
+
+	var partyID *int16
+	if user.PartyID.Valid {
+		partyID = &user.PartyID.Int16
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "User roles retrieved successfully", map[string]interface{}{
+		"roles":    roles,
+		"party_id": partyID,
+	})
 }

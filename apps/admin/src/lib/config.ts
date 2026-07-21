@@ -42,6 +42,7 @@ export const API_URL = {
     logout: `${api}/auth/logout`,
     registerCandidate: `${api}/auth/register-candidate`,
     superadmin: `${api}/auth/superadmin`,
+    updateRoles: `${api}/auth/roles/update`,
   },
   getAllCountries: `${api}/countries`,
   getStates: (countryId: number, limit?: number, cursor?: string | number) => {
@@ -166,6 +167,7 @@ export const API_URL = {
   electionsWard: `${api}/elections/ward`,
   adminUsers: `${api}/admin/users`,
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
+  userRoles: (id: string | number) => `${api}/admin/users/${id}/roles`,
   userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
   manageUserPhoneNumber: (id: string | number) => `${api}/admin/users/phones/${id}`,
   users: `${api}/users`,

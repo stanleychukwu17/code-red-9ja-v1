@@ -54,6 +54,7 @@ export function FilterButton() {
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "../button";
+import ArrowDownIcon from "../../icons/arrow-down-icon";
 
 export function AddButton({
   onClick,
@@ -331,10 +332,14 @@ export function PageSearchLayer({
   rightComponent,
   placeholder = "Search",
   ariaLabel = "Search",
+  value,
+  onChange,
 }: {
   rightComponent?: ReactNode;
   placeholder?: string;
   ariaLabel?: string;
+  value?: string;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }) {
   return (
     <div className="flex items-center justify-between gap-3">
@@ -342,6 +347,8 @@ export function PageSearchLayer({
         aria-label={ariaLabel}
         placeholder={placeholder}
         className="w-full max-w-[490px]"
+        value={value}
+        onChange={onChange}
       />
 
       <div className="flex items-center gap-3">{rightComponent}</div>
@@ -438,7 +445,7 @@ export function StatCard({
       <p className="text-c-80 text-sm">{label}</p>
       <div className="flex items-center gap-2">
         {icon}
-        <span className="text-c-80 font-medium text-2xl">{value}</span>
+        <span className="text-c-80 font-medium text-[22px]">{value}</span>
       </div>
     </div>
   );
@@ -447,14 +454,58 @@ export function StatCard({
 export function StatSection({
   title,
   children,
+  headerAction,
+  onFormatToggle,
+  isShortened,
 }: {
   title: string;
   children: ReactNode;
+  headerAction?: ReactNode;
+  onFormatToggle?: () => void;
+  isShortened?: boolean;
 }) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  const ExpandOrShorten = () => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onFormatToggle?.();
+      }}
+      className={cn(
+        "text-xs text-orange transition-colors font-medium cursor-pointer bg-orange/10 px-2.5 py-1 rounded-full",
+        isShortened && "bg-c-20 text-c-80",
+      )}
+    >
+      {isShortened ? "Expand" : "Shorten"}
+    </button>
+  );
+
   return (
-    <div className="bg-c-5/50 rounded-[20px] px-5 py-4 space-y-4 shadow-xs">
-      <h2 className="text-sm font-bold text-c-50 tracking-wide">{title}</h2>
-      <div className="grid grid-cols-2 gap-4 gap-y-6">{children}</div>
+    <div className="bg-c-5/50 rounded-[20px] px-2 py-2 space-y-2 shadow-xs cursor-pointer">
+      <div
+        className="h-12 flex items-center justify-between px-3 hover:bg-c-7 rounded-xl transition duration-200"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <h2 className="text-sm font-bold text-c-50 tracking-wide">{title}</h2>
+        <div className="flex items-center gap-3">
+          {onFormatToggle && <ExpandOrShorten />}
+          {headerAction}
+          <div
+            className={cn(
+              "transition-transform duration-200",
+              !isOpen && "rotate-90",
+            )}
+          >
+            <ArrowDownIcon className="size-7" />
+          </div>
+        </div>
+      </div>
+      {isOpen && (
+        <div className="grid grid-cols-2 gap-4 gap-y-7 px-3 pb-2">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

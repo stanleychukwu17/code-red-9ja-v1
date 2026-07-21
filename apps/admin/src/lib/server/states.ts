@@ -96,9 +96,8 @@ export const getStates = createServerFn()
 export const recalculateBodies = createServerFn({ method: "POST" })
   .handler(async () => {
     try {
-      const response = await fetch(API_URL.recalculateBodies, {
+      const response = await apiFetch(API_URL.recalculateBodies, {
         method: "POST",
-        headers: getAuthHeaders(),
       });
       const resData = await response.json();
       return resData;

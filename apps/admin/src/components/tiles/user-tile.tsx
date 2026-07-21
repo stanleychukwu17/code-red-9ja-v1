@@ -26,6 +26,7 @@ export type UserType = {
   city_name?: string;
   state_of_origin?: any;
   role?: any;
+  roles?: string[];
   party_id?: any;
   email?: any;
   phone?: any;

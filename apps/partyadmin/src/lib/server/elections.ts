@@ -358,3 +358,59 @@ export const getElectionsByGroup = createServerFn({ method: "GET" })
       };
     }
   });
+
+export const getElectionStats = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      electionGroupId: number;
+      partyId?: number;
+      stateId?: number;
+      senatorialDistrictId?: number;
+      federalConstituencyId?: number;
+      stateAssemblyConstituencyId?: number;
+      lgaId?: number;
+      wardId?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const { getCookie } = await import("@tanstack/react-start/server");
+      const accessToken = getCookie("access_token");
+      const refreshToken = getCookie("refresh_token");
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (accessToken) {
+        headers["Authorization"] = `Bearer ${accessToken}`;
+        headers["Cookie"] =
+          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
+      }
+
+      let url = "";
+      if (data.wardId) {
+        url = API_URL.electionStats.singleWardStats(data.electionGroupId, data.wardId, data.partyId);
+      } else if (data.stateAssemblyConstituencyId) {
+        url = API_URL.electionStats.singleStateConstituencyStats(data.electionGroupId, data.stateAssemblyConstituencyId, data.partyId);
+      } else if (data.lgaId) {
+        url = API_URL.electionStats.singleLGAStats(data.electionGroupId, data.lgaId, data.partyId);
+      } else if (data.federalConstituencyId) {
+        url = API_URL.electionStats.singleFederalConstituencyStats(data.electionGroupId, data.federalConstituencyId, data.partyId);
+      } else if (data.senatorialDistrictId) {
+        url = API_URL.electionStats.singleSenatorialDistrictStats(data.electionGroupId, data.senatorialDistrictId, data.partyId);
+      } else if (data.stateId) {
+        url = API_URL.electionStats.singleStateStats(data.electionGroupId, data.stateId, data.partyId);
+      } else {
+        url = API_URL.electionStats.singleGlobalStats(data.electionGroupId, data.partyId);
+      }
+
+      const response = await apiFetch(url, { headers });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch election stats: " + (error as Error).message,
+      };
+    }
+  });

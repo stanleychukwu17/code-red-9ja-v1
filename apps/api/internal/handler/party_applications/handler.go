@@ -219,7 +219,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		if r.Code == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "partyadmin" {
+		if r.Code == "party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -341,7 +341,7 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 		if r.Code == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "partyadmin" {
+		if r.Code == "party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -419,7 +419,7 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		if r.Code == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "partyadmin" {
+		if r.Code == "party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -544,7 +544,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		if r.Code == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "partyadmin" {
+		if r.Code == "party_admin" {
 			isPartyAdmin = true
 		}
 	}

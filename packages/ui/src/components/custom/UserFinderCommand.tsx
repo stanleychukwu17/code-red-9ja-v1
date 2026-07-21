@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Check, Loader2, Search, X } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import {
   Command,
   CommandEmpty,
@@ -30,7 +30,7 @@ interface UserFinderCommandProps {
   onClose: () => void;
   onAddUsers: (selectedUsers: User[]) => void;
   alreadySelectedIds: number[];
-  fetchUsers: () => Promise<User[]>;
+  fetchUsers: (params: { cursor?: string | number, search?: string }) => Promise<{ users: User[], nextCursor?: string | number | null }>;
   filterRole?: string;
   filterPartyId?: number;
   title?: string;
@@ -53,15 +53,49 @@ export function UserFinderCommand({
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedUsers, setSelectedUsers] = React.useState<User[]>([]);
 
-  // Fetch users list
-  const { data: usersResponse, isLoading } = useQuery({
-    queryKey: ["users-select-existing", filterRole, filterPartyId],
-    queryFn: async () => {
-      const users = await fetchUsers();
-      return users;
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = React.useState("");
+
+  // Debounce search query
+  React.useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Fetch users list with infinite scrolling
+  const {
+    data,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery<{ users: User[]; nextCursor?: string | number | null }>({
+    queryKey: ["users-select-existing", filterRole, filterPartyId, debouncedSearchQuery],
+    queryFn: async ({ pageParam }) => {
+      return fetchUsers({ cursor: pageParam as string | number | undefined, search: debouncedSearchQuery });
     },
+    getNextPageParam: (lastPage) => lastPage?.nextCursor || undefined,
+    initialPageParam: undefined as string | number | undefined,
     enabled: open,
   });
+
+  const observerRef = React.useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = React.useCallback(
+    (node: HTMLDivElement | null) => {
+      if (isLoading || isFetchingNextPage) return;
+      if (observerRef.current) observerRef.current.disconnect();
+
+      observerRef.current = new IntersectionObserver((entries) => {
+        if (entries[0]?.isIntersecting && hasNextPage) {
+          fetchNextPage();
+        }
+      });
+
+      if (node) observerRef.current.observe(node);
+    },
+    [isLoading, isFetchingNextPage, hasNextPage, fetchNextPage],
+  );
 
   // Reset local state when dialog opens
   React.useEffect(() => {
@@ -71,22 +105,15 @@ export function UserFinderCommand({
     }
   }, [open]);
 
-  const users = usersResponse || [];
+  const users = React.useMemo(
+    () => (data?.pages ? data.pages.flatMap((p) => p.users) : []),
+    [data],
+  );
 
-  // Filter users by search input, role, party, and already added check
+  // Filter users by already added check. 
+  // (Search, role, and party filtering is now handled natively by the backend via fetchUsers).
   const filteredUsers = users.filter((u) => {
-    const fullName = `${u.first_name} ${u.last_name}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchQuery.toLowerCase());
-    const isAlreadyAdded = alreadySelectedIds.includes(u.id);
-
-    // role filter (if provided)
-    const matchesRole = filterRole ? u.role === filterRole : true;
-
-    // party filter (if provided)
-    const matchesParty =
-      filterPartyId !== undefined ? u.party_id === filterPartyId : true;
-
-    return matchesSearch && !isAlreadyAdded && matchesRole && matchesParty;
+    return !alreadySelectedIds.includes(u.id);
   });
 
   const handleToggleSelect = (user: User) => {
@@ -187,6 +214,20 @@ export function UserFinderCommand({
                       );
                     })}
                   </div>
+                  {/* Sentinel element for infinite scroll */}
+                  {hasNextPage && (
+                    <div
+                      ref={loadMoreRef}
+                      className="py-6 flex items-center justify-center text-c-50 text-[14px]"
+                    >
+                      {isFetchingNextPage ? (
+                        <Loader2 className="size-5 animate-spin mr-2" />
+                      ) : null}
+                      {isFetchingNextPage
+                        ? "Loading more..."
+                        : "Scroll down to load more"}
+                    </div>
+                  )}
                 </CommandGroup>
               )}
             </CommandList>

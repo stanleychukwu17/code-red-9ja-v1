@@ -3,16 +3,18 @@ CREATE TABLE IF NOT EXISTS lgas (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     abbreviation VARCHAR(10) NOT NULL,
-    state_id INTEGER NOT NULL,
+    state_id INTEGER NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
     state_name VARCHAR(255) NOT NULL,
-    senatorial_district_id INTEGER NOT NULL,
+    senatorial_district_id INTEGER NOT NULL REFERENCES senatorial_districts(id) ON DELETE CASCADE,
     senatorial_district_name VARCHAR(255) NOT NULL,
-    federal_constituency_id INTEGER NOT NULL,
+    federal_constituency_id INTEGER NOT NULL REFERENCES federal_constituencies(id) ON DELETE CASCADE,
     federal_constituency_name VARCHAR(255) NOT NULL,
     state_constituencies_count INTEGER DEFAULT 0,
     wards_count INTEGER DEFAULT 0,
     polling_units_count INTEGER DEFAULT 0
 );
+
+CREATE INDEX idx_lgas_name ON lgas (name);
 
 INSERT INTO lgas (id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name) VALUES
 -- ============================================================
@@ -1362,5 +1364,7 @@ INSERT INTO lgas (id, name, abbreviation, state_id, state_name, senatorial_distr
     (280, 'KWALI', '05', 37, 'FEDERAL CAPITAL TERRITORY', 43, 'FCT Senatorial District', 123, 'Abaji / Gwagwalada / Kuje / Kwali'),
     (281, 'MUNICIPAL', '06', 37, 'FEDERAL CAPITAL TERRITORY', 43, 'FCT Senatorial District', 124, 'AMAC / Bwari');
 
+
 -- +goose Down
+DROP INDEX IF EXISTS idx_lgas_name;
 DROP TABLE IF EXISTS lgas;

@@ -201,6 +201,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, authHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
+	mainRouter.Post("/api/v1/auth/assign-role", authHandler.AssignUserRole)                          // Assign role endpoint
 	mainRouter.Post("/api/v1/auth/seed", authHandler.SeedUsers)                                      // Seed users endpoint
 
 	// Banks
@@ -288,13 +289,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			jwtSecret = cfg.JWTSecret
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
-		r.Use(apimiddleware.RequireRole("admin"))
+		r.Use(apimiddleware.RequireRole("admin", "super_admin"))
 
 		r.Get("/api/v1/admin/dashboard", func(w http.ResponseWriter, r *http.Request) {
 			utilsInstance.RespondSuccess(w, http.StatusOK, "Welcome to the Admin Dashboard!", nil)
 		})
 
 		r.Get("/api/v1/admin/users", authHandler.ListAdmins)
+		r.Post("/api/v1/auth/roles/update", authHandler.UpdateUserRoles)
 		r.Post("/api/v1/bodies/recalculate", bodiesHandler.RecalculateBodyMetrics)
 
 		// political parties admin mutations
@@ -392,6 +394,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)
 		r.Delete("/api/v1/admin/users/{id}", usersHandler.DeleteUser)
+		r.Get("/api/v1/admin/users/{id}/roles", usersHandler.GetUserRolesAdmin)
 		r.Get("/api/v1/admin/users/{id}/phones", usersHandler.GetUserPhoneNumbers)
 		r.Put("/api/v1/admin/users/{id}/phones", usersHandler.UpdateUserPhoneNumbers)
 		r.Delete("/api/v1/admin/users/phones/{id}", usersHandler.DeleteUserPhoneNumber)
@@ -417,7 +420,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
 		
 		// Single unit dedicated endpoints
+		r.Get("/api/v1/election-groups/{id}/stats", electionStatsHandler.GetSingleElectionGroupStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}", electionStatsHandler.GetSingleStateStats)
+		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts/{sd_id}", electionStatsHandler.GetSingleSenatorialDistrictStats)
+		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies/{fc_id}", electionStatsHandler.GetSingleFederalConstituencyStats)
+		r.Get("/api/v1/election-groups/{id}/stats/state-constituencies/{sc_id}", electionStatsHandler.GetSingleStateConstituencyStats)
 		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}", electionStatsHandler.GetSingleLGAStats)
 		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}", electionStatsHandler.GetSingleWardStats)
 
@@ -462,14 +469,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
 	})
 
-	// Party-admin routes: authenticated users with role=partyadmin AND roleLevel=admin
+	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin
 	mainRouter.Group(func(r chi.Router) {
 		jwtSecret := ""
 		if cfg != nil {
 			jwtSecret = cfg.JWTSecret
 		}
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
-		r.Use(apimiddleware.RequireRole("partyadmin"))
+		r.Use(apimiddleware.RequireRole("party_admin", "super_party_admin"))
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)

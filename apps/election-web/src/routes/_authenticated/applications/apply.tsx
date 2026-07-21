@@ -1,26 +1,30 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useMemo } from "react";
-import { useAppSelector } from "#/redux/hooks";
-import { AlertCircle } from "lucide-react";
-import { useQuery, useMutation, useInfiniteQuery } from "@tanstack/react-query";
-import {
-  getParties,
-  getPresignedUploadURL,
-  confirmFileUpload,
-} from "#/lib/server/parties";
-import { getElectionGroups } from "#/lib/server/election_groups";
-import { getPollingUnits } from "#/lib/server/polling_units";
-import {
-  submitPollingAgentApplication,
-  getApplications,
-} from "#/lib/server/applications";
-import { getPageHeader } from "#/lib/shared/meta";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
-import { ApplySuccess } from "./components/-ApplySuccess";
+import { useAuth } from "#/hooks/useAuth";
+import {
+  getApplications,
+  submitPollingAgentApplication,
+} from "#/lib/server/applications";
+import { getElectionGroups } from "#/lib/server/election_groups";
+import {
+  confirmFileUpload,
+  getParties,
+  getPresignedUploadURL,
+} from "#/lib/server/parties";
+import { getPollingUnits } from "#/lib/server/polling_units";
+import { getPageHeader } from "#/lib/shared/meta";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { AlertCircle } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ApplyFooter } from "./components/-ApplyFooter";
 import {
+  ContactDetailsStep,
+  EducationalDetailsStep,
+  EducationalStatusStep,
   Step1,
+  Step10,
+  Step11,
   Step2,
   Step3,
   Step4,
@@ -29,13 +33,8 @@ import {
   Step7,
   Step8,
   Step9,
-  Step10,
-  Step11,
-  ContactDetailsStep,
-  EducationalStatusStep,
-  EducationalDetailsStep,
 } from "./components/-ApplySteps";
-import { useAuth } from "#/hooks/useAuth";
+import { ApplySuccess } from "./components/-ApplySuccess";
 
 export const Route = createFileRoute("/_authenticated/applications/apply")({
   head: () => getPageHeader({ title: "Apply as Polling Unit Agent" }),
@@ -48,29 +47,53 @@ function ApplyPage() {
   console.log("AUTH USER: ", user);
 
   // Form states
-  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(user?.party_id || null);
+  const [selectedPartyId, setSelectedPartyId] = useState<number | null>(
+    user?.party_id || null,
+  );
   const [selectedElectionIds, setSelectedElectionIds] = useState<number[]>([]);
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatar || "");
-  const [selectedStateId, setSelectedStateId] = useState<number | null>(user?.current_state || null);
-  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(user?.current_lga || null);
-  const [selectedWardId, setSelectedWardId] = useState<number | null>(user?.current_ward || null);
-  const [streetAddress, setStreetAddress] = useState<string>(user?.address || "");
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(
+    user?.current_state || null,
+  );
+  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(
+    user?.current_lga || null,
+  );
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(
+    user?.current_ward || null,
+  );
+  const [streetAddress, setStreetAddress] = useState<string>(
+    user?.address || "",
+  );
   const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<
     number | null
   >(user?.polling_unit_id || null);
-  const [bankAccountNumber, setBankAccountNumber] = useState<string>(user?.bank_account_number || "");
-  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(user?.bank_code || null);
+  const [bankAccountNumber, setBankAccountNumber] = useState<string>(
+    user?.bank_account_number || "",
+  );
+  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(
+    user?.bank_code || null,
+  );
   const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
   const [phone, setPhone] = useState<string>(user?.phone || "");
-  const [whatsappPhone, setWhatsappPhone] = useState<string>(user?.whatsapp_phone || "");
+  const [whatsappPhone, setWhatsappPhone] = useState<string>(
+    user?.whatsapp_phone || "",
+  );
   const [dataPhone, setDataPhone] = useState<string>(user?.data_phone || "");
-  const [educationalStatus, setEducationalStatus] = useState<string>(user?.educational_status || "");
-  const [highestDegree, setHighestDegree] = useState(user?.highest_degree || "");
-  const [graduationYear, setGraduationYear] = useState(user?.graduation_year || "");
+  const [educationalStatus, setEducationalStatus] = useState<string>(
+    user?.educational_status || "",
+  );
+  const [highestDegree, setHighestDegree] = useState(
+    user?.highest_degree || "",
+  );
+  const [graduationYear, setGraduationYear] = useState(
+    user?.graduation_year || "",
+  );
   const [schoolName, setSchoolName] = useState(user?.school_name || "");
 
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
-  const [isAccountValid, setIsAccountValid] = useState(!!user?.bank_account_number);
+  const [isAccountValid, setIsAccountValid] = useState(
+    !!user?.bank_account_number,
+  );
 
   // UI state
   const [step, setStep] = useState<number>(1);
@@ -327,7 +350,7 @@ function ApplyPage() {
           bank_account_number: bankAccountNumber,
           bank_code: selectedBankCode,
           whatsapp_phone: whatsappPhone,
-          data_phone: dataPhone,
+          // data_phone: dataPhone,
           educational_status: educationalStatus,
           highest_degree: highestDegree,
           graduation_year: graduationYear,

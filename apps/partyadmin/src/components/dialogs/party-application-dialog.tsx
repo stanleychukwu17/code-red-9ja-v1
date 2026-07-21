@@ -1,4 +1,12 @@
-import * as React from "react";
+import {
+  approveApplication,
+  getLGAs,
+  getPollingUnitRecommendations,
+  getPollingUnits,
+  getWards,
+  rejectApplication,
+} from "#/lib/server/applications";
+import { getStates } from "#/lib/server/countries";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -7,28 +15,20 @@ import {
   DialogHeader,
   DialogPadding,
 } from "@repo/ui/components/dialog";
-import { Check, Loader2 } from "lucide-react";
+import { SelectLga } from "@repo/ui/components/selects/lga-select";
+import { SelectElectionRole } from "@repo/ui/components/selects/election-role-select";
+import { SelectState } from "@repo/ui/components/selects/state-select";
+import { SelectWard } from "@repo/ui/components/selects/ward-select";
 import { cn } from "@repo/ui/lib/utils";
 import {
-  useQuery,
   useInfiniteQuery,
   useMutation,
+  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { Check, Loader2 } from "lucide-react";
+import * as React from "react";
 import { useIntersectionObserver } from "usehooks-ts";
-import {
-  getPollingUnitRecommendations,
-  getPollingUnits,
-  getLGAs,
-  getWards,
-  approveApplication,
-  rejectApplication,
-} from "#/lib/server/applications";
-import { getStates } from "#/lib/server/countries";
-import { SelectState } from "@repo/ui/components/selects/state-select";
-import { SelectLga } from "@repo/ui/components/selects/lga-select";
-import { SelectWard } from "@repo/ui/components/selects/ward-select";
-import { SelectRoleLevel } from "@repo/ui/components/selects/role-level-select";
 
 export type ApplicationData = {
   id?: number;
@@ -315,7 +315,7 @@ export function PartyApplicationDialog({
     <>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
-          <DialogHeader title="Polling Agent Application" />
+          <DialogHeader title="Party Application" />
 
           <DialogPadding className="space-y-5 pt-3 pb-5 max-h-[65vh] overflow-y-auto">
             {/* Profile Block */}
@@ -416,11 +416,11 @@ export function PartyApplicationDialog({
 
             {/* Role & Assignment Block */}
             <div className="space-y-4">
-              <div className="space-y-1">
+              <div className="flex flex-col gap-2">
                 <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
-                  Role Level
+                  Election Role
                 </label>
-                <SelectRoleLevel
+                <SelectElectionRole
                   selectedId={role}
                   update={setRole}
                   className="w-full"

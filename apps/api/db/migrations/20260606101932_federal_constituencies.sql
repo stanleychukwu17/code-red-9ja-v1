@@ -2,15 +2,17 @@
 CREATE TABLE IF NOT EXISTS federal_constituencies (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    state_id INTEGER NOT NULL,
+    state_id INTEGER NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
     state_name VARCHAR(255) NOT NULL,
-    senatorial_district_id INTEGER NOT NULL,
+    senatorial_district_id INTEGER NOT NULL REFERENCES senatorial_districts(id) ON DELETE CASCADE,
     senatorial_district_name VARCHAR(255) NOT NULL,
     lgas_count INTEGER DEFAULT 0,
     state_constituencies_count INTEGER DEFAULT 0,
     wards_count INTEGER DEFAULT 0,
     polling_units_count INTEGER DEFAULT 0
 );
+
+CREATE INDEX idx_federal_constituencies_name ON federal_constituencies (name);
 
 INSERT INTO federal_constituencies (id, name, state_id, state_name, senatorial_district_id, senatorial_district_name) VALUES
 -- ============================================================
@@ -739,5 +741,7 @@ INSERT INTO federal_constituencies (id, name, state_id, state_name, senatorial_d
 (359, 'Anka / Talata Mafara', 36, 'Zamfara', 109, 'Zamfara West'),
 (360, 'Gummi / Bukkuyum', 36, 'Zamfara', 109, 'Zamfara West');
 
+
 -- +goose Down
+DROP INDEX IF EXISTS idx_federal_constituencies_name;
 DROP TABLE IF EXISTS federal_constituencies;

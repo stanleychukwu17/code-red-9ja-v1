@@ -97,7 +97,7 @@ INSERT INTO c_countries (
 ('Guinea-Bissau', 'GW', '245', 'XOF', 'CFA', 1, 3, 'Bissau-Guinean', 12.00000000, -15.00000000, '🇬🇼', 'U+1F1EC U+1F1FC'),
 ('Guyana', 'GY', '592', 'GYD', '$', 2, 8, 'Guyanese', 5.00000000, -59.00000000, '🇬🇾', 'U+1F1EC U+1F1FE'),
 ('Haiti', 'HT', '509', 'HTG', 'G', 2, 7, 'Haitian', 19.00000000, -72.41666666, '🇭🇹', 'U+1F1ED U+1F1F9'),
-('Heard Island and McDonald Islands', 'HM', '672', 'AUD', '$', 0, 0, 'Heard Island or McDonald Islands', -53.10000000, 72.51666666, '🇭🇲', 'U+1F1ED U+1F1F2'),
+('Heard Island and McDonald Islands', 'HM', '672', 'AUD', '$', NULL, NULL, 'Heard Island or McDonald Islands', -53.10000000, 72.51666666, '🇭🇲', 'U+1F1ED U+1F1F2'),
 ('Honduras', 'HN', '504', 'HNL', 'L', 2, 9, 'Honduran', 15.00000000, -86.50000000, '🇭🇳', 'U+1F1ED U+1F1F3'),
 ('Hong Kong S.A.R.', 'HK', '852', 'HKD', '$', 3, 12, 'Hong Kong, Hong Kongese', 22.25000000, 114.16666666, '🇭🇰', 'U+1F1ED U+1F1F0'),
 ('Hungary', 'HU', '36', 'HUF', 'Ft', 4, 15, 'Hungarian, Magyar', 47.00000000, 20.00000000, '🇭🇺', 'U+1F1ED U+1F1FA'),

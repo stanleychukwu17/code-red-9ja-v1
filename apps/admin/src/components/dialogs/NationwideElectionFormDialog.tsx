@@ -352,12 +352,17 @@ export function NationwideElectionFormDialog({
         onClose={() => setIsExistingDialogOpen(false)}
         onAddUsers={handleAddMultipleExistingCandidates}
         alreadySelectedIds={candidates.map((c) => c.id)}
-        fetchUsers={async () => {
-          const res = await getUsersList();
+        fetchUsers={async ({ cursor, search }) => {
+          const res = await getUsersList({
+            data: { cursor, search, limit: 20 },
+          });
           if (res && res.success && res.data?.users) {
-            return res.data.users;
+            return {
+              users: res.data.users,
+              nextCursor: res.data.meta?.next_cursor,
+            };
           }
-          return [];
+          return { users: [] };
         }}
         title="Search Candidates"
         placeholder="Search candidates to add"

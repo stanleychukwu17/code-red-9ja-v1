@@ -1,6 +1,6 @@
 -- name: CreateElectionGroup :one
-INSERT INTO election_groups (name, rank, elections_count, states_count, election_date)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO election_groups (name, rank, elections_count, states_count, election_date, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 RETURNING *;
 
 -- name: GetElectionGroupByID :one

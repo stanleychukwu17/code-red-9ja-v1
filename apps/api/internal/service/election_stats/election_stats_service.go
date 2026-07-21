@@ -16,6 +16,10 @@ type ElectionStatsService interface {
 	GetElectionGroupStateStats(ctx context.Context, arg queries.GetElectionGroupStateStatsParams) (queries.ElectionGroupState, error)
 	GetElectionGroupLGAStats(ctx context.Context, arg queries.GetElectionGroupLGAStatsParams) (queries.ElectionGroupLga, error)
 	GetElectionGroupWardStats(ctx context.Context, arg queries.GetElectionGroupWardStatsParams) (queries.ElectionGroupWard, error)
+	GetElectionGroupFederalConstituencyStats(ctx context.Context, arg queries.GetElectionGroupFederalConstituencyStatsParams) (queries.ElectionGroupFederalConstituency, error)
+	GetElectionGroupStateConstituencyStats(ctx context.Context, arg queries.GetElectionGroupStateConstituencyStatsParams) (queries.ElectionGroupStateConstituency, error)
+	GetElectionGroupSenatorialDistrictStats(ctx context.Context, arg queries.GetElectionGroupSenatorialDistrictStatsParams) (queries.ElectionGroupSenatorialDistrict, error)
+	GetElectionGroupByID(ctx context.Context, id int64) (queries.ElectionGroup, error)
 }
 
 type Service struct {
@@ -66,4 +70,20 @@ func (s *Service) GetElectionGroupLGAStats(ctx context.Context, arg queries.GetE
 
 func (s *Service) GetElectionGroupWardStats(ctx context.Context, arg queries.GetElectionGroupWardStatsParams) (queries.ElectionGroupWard, error) {
 	return s.queries.GetElectionGroupWardStats(ctx, arg)
+}
+
+func (s *Service) GetElectionGroupFederalConstituencyStats(ctx context.Context, arg queries.GetElectionGroupFederalConstituencyStatsParams) (queries.ElectionGroupFederalConstituency, error) {
+	return s.queries.GetElectionGroupFederalConstituencyStats(ctx, arg)
+}
+
+func (s *Service) GetElectionGroupStateConstituencyStats(ctx context.Context, arg queries.GetElectionGroupStateConstituencyStatsParams) (queries.ElectionGroupStateConstituency, error) {
+	return s.queries.GetElectionGroupStateConstituencyStats(ctx, arg)
+}
+
+func (s *Service) GetElectionGroupSenatorialDistrictStats(ctx context.Context, arg queries.GetElectionGroupSenatorialDistrictStatsParams) (queries.ElectionGroupSenatorialDistrict, error) {
+	return s.queries.GetElectionGroupSenatorialDistrictStats(ctx, arg)
+}
+
+func (s *Service) GetElectionGroupByID(ctx context.Context, id int64) (queries.ElectionGroup, error) {
+	return s.queries.GetElectionGroupByID(ctx, id)
 }

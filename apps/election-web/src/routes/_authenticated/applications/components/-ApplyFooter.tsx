@@ -85,7 +85,7 @@ export function ApplyFooter({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          disabled={!whatsappPhone || !dataPhone}
+          disabled={!whatsappPhone}
           onClick={() => setStep(6)}
         >
           Continue

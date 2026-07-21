@@ -13,6 +13,16 @@ import {
   ApplicationTableTile,
   type ApplicationType,
 } from "./tiles/application-tile";
+import {
+  PartyAdminTableHeader,
+  PartyAdminTableTile,
+  type PartyAdminType,
+} from "./tiles/party-member-tile";
+import {
+  UserTableHeader,
+  UserTableTile,
+  type UserType,
+} from "./tiles/user-tile";
 
 export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
   return (
@@ -70,33 +80,22 @@ export function ApplicationsTable({
   );
 }
 
-import {
-  PartyMemberTableHeader,
-  PartyMemberTableTile,
-  type PartyMemberType,
-} from "./tiles/party-member-tile";
-import {
-  UserTableHeader,
-  UserTableTile,
-  type UserType,
-} from "./tiles/user-tile";
-
 export { type UserType };
 
-export function PartyMembersTable({
+export function PartyAdminsTable({
   columns,
   items,
 }: {
   columns: string[];
-  items: readonly PartyMemberType[];
+  items: readonly PartyAdminType[];
 }) {
   return (
     <div className="w-full">
-      <PartyMemberTableHeader columns={columns} />
+      <PartyAdminTableHeader columns={columns} />
 
       <div>
         {items.map((data, index) => (
-          <PartyMemberTableTile key={`${data.name}-${index}`} data={data} />
+          <PartyAdminTableTile key={`${data.name}-${index}`} data={data} />
         ))}
       </div>
     </div>
@@ -125,5 +124,3 @@ export function UsersTable({
     </div>
   );
 }
-
-

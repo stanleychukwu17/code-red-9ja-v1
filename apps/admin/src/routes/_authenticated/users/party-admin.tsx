@@ -14,7 +14,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { getUsersList } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
-import { useIntersectionObserver } from "usehooks-ts";
+import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 
 export const Route = createFileRoute("/_authenticated/users/party-admin")({
   head: () => getPageHeader({ title: "Users - Superadmin" }),
@@ -23,15 +23,17 @@ export const Route = createFileRoute("/_authenticated/users/party-admin")({
 
 function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch, } = useInfiniteQuery({
     // Unique key for React Query cache
-    queryKey: ["users", "partyadmin"],
+    queryKey: ["users", "partyadmin", debouncedSearchQuery],
 
     // Function to fetch a page of data using the cursor parameter
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
-        data: { role: "party_admin,super_party_admin", limit: 20, cursor: pageParam },
+        data: { role: "party_admin,super_party_admin", limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
       });
       if (res && res.success && res.data) {
         return res;
@@ -74,6 +76,8 @@ function RouteComponent() {
     <Layout>
       <PageHeader title="Users" activeTab="party-admin" tabs={USERS_TABS} />
       <PageSearchLayer
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
         rightComponent={
           <>
             <FilterButton />

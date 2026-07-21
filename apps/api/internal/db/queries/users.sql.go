@@ -329,6 +329,15 @@ func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteUserRoles = `-- name: DeleteUserRoles :exec
+DELETE FROM user_roles WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUserRoles(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deleteUserRoles, userID)
+	return err
+}
+
 const getMoreInfoAboutThisUser = `-- name: GetMoreInfoAboutThisUser :one
 SELECT user_id, occupation_id, educational_status, education_level, highest_degree, graduation_year, school_name, religion, marital_status, address, created_at, updated_at FROM user_more_infos
 WHERE user_id = $1 LIMIT 1
@@ -355,7 +364,7 @@ func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (U
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -382,6 +391,7 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.CurrentLga,
 		&i.CurrentWard,
 		&i.CurrentCity,
+		&i.Address,
 		&i.StateOfOrigin,
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
@@ -561,14 +571,22 @@ WHERE
       -- if a user somehow has multiple roles (or just to keep the base query simple).
       SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY($3::text[])
   ))
+  AND ($4::text IS NULL OR (
+      u.first_name ILIKE '%' || $4::text || '%' OR
+      u.last_name ILIKE '%' || $4::text || '%' OR
+      u.middle_name ILIKE '%' || $4::text || '%' OR
+      u.email ILIKE '%' || $4::text || '%' OR
+      u.username ILIKE '%' || $4::text || '%'
+  ))
 ORDER BY u.id DESC
-LIMIT $4::int
+LIMIT $5::int
 `
 
 type ListUsersParams struct {
 	Cursor    pgtype.Int8 `json:"cursor"`
 	PartyID   pgtype.Int2 `json:"party_id"`
 	RoleCodes []string    `json:"role_codes"`
+	Search    pgtype.Text `json:"search"`
 	LimitNum  int32       `json:"limit_num"`
 }
 
@@ -602,6 +620,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 		arg.Cursor,
 		arg.PartyID,
 		arg.RoleCodes,
+		arg.Search,
 		arg.LimitNum,
 	)
 	if err != nil {

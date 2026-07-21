@@ -7,7 +7,7 @@ import {
 } from "@repo/ui/components/tiles";
 import { formatISODate } from "@repo/ui/lib/date";
 import StarIcon from "@repo/ui/icons/star-icon";
-import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
+import { AppAvatar, Avatar, AvatarImage } from "@repo/ui/components/avatar";
 import { PartyElectionInstanceDropdown } from "../dropdowns/PartyElectionInstanceDropdown";
 
 export type ElectionInstanceType = {
@@ -79,21 +79,18 @@ export function ElectionInstanceTableTile({
       <TileRight>
         {data.candidate ? (
           <div className="hidden lg:flex items-center gap-2 w-[200px]">
-            <Avatar className="size-6 shrink-0">
-              <AvatarImage
-                src={data.candidate.avatar}
-                alt={data.candidate.name}
-              />
-            </Avatar>
+            <AppAvatar
+              src={data.candidate.avatar}
+              alt={data.candidate.name}
+              className="size-6 shrink-0"
+            />
             <p className="truncate text-c-80 text-[15px]">
               {data.candidate.name}
             </p>
           </div>
         ) : (
           <div className="hidden lg:flex items-center gap-2 w-[200px]">
-            <div className="size-6 rounded-full bg-[#3b82f6] text-white flex items-center justify-center font-bold text-[12px] shrink-0">
-              A
-            </div>
+            <AppAvatar src={""} alt={""} className="size-6 shrink-0" />
             <p className="text-c-40 text-[15px] font-medium">Add candidate</p>
           </div>
         )}

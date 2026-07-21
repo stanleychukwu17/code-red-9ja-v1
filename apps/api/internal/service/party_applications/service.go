@@ -578,18 +578,6 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			isUniqueWardSup = 1
 		}
 
-		// ward row
-		err = txQueries.AdjustElectionGroupWardWardSupervisorCounts(ctx, queries.AdjustElectionGroupWardWardSupervisorCountsParams{
-			ElectionGroupID: egID,
-			WardID:          input.WardID,
-			PartyID:         partyID,
-			Delta:           1,
-			UniqueDelta:     isUniqueWardSup,
-		})
-		if err != nil {
-			return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on ward: %w", err)
-		}
-
 		// lga row
 		err = txQueries.AdjustElectionGroupLGAWardSupervisorCounts(ctx, queries.AdjustElectionGroupLGAWardSupervisorCountsParams{
 			ElectionGroupID: egID,

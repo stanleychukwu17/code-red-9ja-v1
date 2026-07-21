@@ -15,6 +15,8 @@ CREATE TABLE parties (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX parties_short_name_idx ON parties (short_name);
+
 -- Seed default political parties
 
 INSERT INTO parties (id, short_name, name, logo, display_order) VALUES
@@ -43,4 +45,5 @@ INSERT INTO parties (id, short_name, name, logo, display_order) VALUES
     (23, 'A', 'Accord', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/A-Accord-c5c9260c-1402-4038-8212-3b2d7ffb107a.webp', 999);
 
 -- +goose Down
+DROP INDEX IF EXISTS idx_parties_short_name;
 DROP TABLE IF EXISTS parties;

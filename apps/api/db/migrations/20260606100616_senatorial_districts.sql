@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS senatorial_districts (
     name VARCHAR(255) NOT NULL,
     description TEXT,
     coalition_center VARCHAR(255),
-    state_id INTEGER NOT NULL,
+    state_id INTEGER NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
     state_name VARCHAR(255) NOT NULL,
     federal_constituencies_count INTEGER DEFAULT 0,
     lgas_count INTEGER DEFAULT 0,
@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS senatorial_districts (
     wards_count INTEGER DEFAULT 0,
     polling_units_count INTEGER DEFAULT 0
 );
+
+CREATE INDEX idx_senatorial_districts_name ON senatorial_districts (name);
 
 INSERT INTO senatorial_districts (id, name, description, coalition_center, state_id, state_name) VALUES
 -- Abia (ID: 1)
@@ -197,5 +199,7 @@ INSERT INTO senatorial_districts (id, name, description, coalition_center, state
 (108, 'Zamfara Central', 'Gusau, Tsafe, Bungudu, Maru', 'Gusau', 36, 'Zamfara'),
 (109, 'Zamfara West', 'Bakura, Maradun, Talata Mafara, Anka, Gummi, Bukkuyum', 'Talata Mafara', 36, 'Zamfara');
 
+
 -- +goose Down
+DROP INDEX IF EXISTS idx_senatorial_districts_name;
 DROP TABLE IF EXISTS senatorial_districts;

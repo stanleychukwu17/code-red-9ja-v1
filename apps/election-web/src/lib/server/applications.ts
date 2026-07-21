@@ -223,7 +223,7 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
       bank_account_number: string;
       bank_code: string;
       whatsapp_phone: string;
-      data_phone: string;
+      data_phone?: string;
       educational_status: string;
       highest_degree: string;
       graduation_year: string;

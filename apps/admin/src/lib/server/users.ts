@@ -5,7 +5,7 @@ import { apiFetch } from "./fetch";
 // Returns users from the API based on the provided data
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { role?: string; limit?: number; cursor?: string | number; party_id?: number } | undefined) => data,
+    (data: { role?: string; limit?: number; cursor?: string | number; party_id?: number; search?: string } | undefined) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -14,7 +14,9 @@ export const getUsersList = createServerFn({ method: "GET" })
       if (data?.limit) params.append("limit", String(data.limit));
       if (data?.cursor) params.append("cursor", String(data.cursor));
       if (data?.party_id) params.append("party_id", String(data.party_id));
+      if (data?.search) params.append("search", data.search);
       const qs = params.toString();
+      console.log("getUsersList qs:", qs, "data:", data);
 
       const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
       const resData = await response.json();
@@ -53,6 +55,36 @@ export const deleteUser = createServerFn({ method: "POST" })
       return resData;
     } catch (error) {
       return { success: false, message: "Failed to delete user: " + (error as Error).message };
+    }
+  });
+
+// Updates user roles and optionally their party ID
+export const updateUserRoles = createServerFn({ method: "POST" })
+  .inputValidator((data: { user_id: number; roles: string[]; party_id?: number }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(API_URL.auth.updateRoles, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to update user roles: " + (error as Error).message };
+    }
+  });
+
+// Gets user roles
+export const getUserRoles = createServerFn({ method: "GET" })
+  .inputValidator((data: { user_id: string | number }) => data)
+  .handler(async ({ data: { user_id } }) => {
+    try {
+      const response = await apiFetch(API_URL.userRoles(user_id));
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to fetch user roles: " + (error as Error).message };
     }
   });
 

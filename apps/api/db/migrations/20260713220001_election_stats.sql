@@ -33,41 +33,43 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   senatorial_district_id    INT       REFERENCES senatorial_districts(id) ON DELETE SET NULL,
 
   -- Number of elections this PU is eligible for in this election group
-  unique_final_results_expected               INT         NOT NULL DEFAULT 0,
+  unique_final_results_expected                        INT         NOT NULL DEFAULT 0,
 
   -- Overall aggregate fields (across all parties at this PU)
-  total_agents_count                          INT         NOT NULL DEFAULT 0,
-  total_agents_in_attendance_count            INT         NOT NULL DEFAULT 0,
-  total_reports_count                         INT         NOT NULL DEFAULT 0,
-  total_updates_count                         INT         NOT NULL DEFAULT 0,
+  pu_agents_count                                      INT         NOT NULL DEFAULT 0,
+  pu_agents_in_attendance_count                        INT         NOT NULL DEFAULT 0,
+  pu_reports_count                                     INT         NOT NULL DEFAULT 0,
+  pu_updates_count                                     INT         NOT NULL DEFAULT 0,
   -- Averaged from polling_unit_assignments.election_started_at / election_ended_at
-  average_election_started_at                 TIMESTAMPTZ,
-  average_election_ended_at                 TIMESTAMPTZ,
+  pu_average_arrival_time                              TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds           FLOAT NOT NULL DEFAULT 0,
+  pu_average_election_started_at                       TIMESTAMPTZ,
+  pu_average_election_ended_at                         TIMESTAMPTZ,
   -- Averaged from polling_unit_assignments.election_practice_test_readiness_percentage
-  election_practice_test_readiness_percentage NUMERIC(5,2) NOT NULL DEFAULT 0,
+  pu_election_practice_test_readiness_percentage       NUMERIC(5,2) NOT NULL DEFAULT 0,
   -- Total rows in polling_unit_results for this PU in this election group
-  total_final_results_uploaded_count          INT         NOT NULL DEFAULT 0,
+  pu_final_results_uploaded_count                      INT         NOT NULL DEFAULT 0,
   -- Distinct election_ids with >=1 result submission for this PU
-  total_unique_final_results_uploaded_count   INT         NOT NULL DEFAULT 0,
+  unique_pu_final_results_uploaded_count               INT         NOT NULL DEFAULT 0,
   -- Voters whose referred_by_code matches an agent assigned to this PU, who then voted
-  live_voters_referred_by_agent_count         INT         NOT NULL DEFAULT 0,
+  pu_live_voters_referred_by_agent_count               INT         NOT NULL DEFAULT 0,
 
   -- Per-party breakdown. Array of objects:
   -- {
   --   party_id,
-  --   agents_in_attendance_count,
-  --   average_arrival_time,
-  --   election_started_at,
-  --   election_ended_at,
-  --   updates_count,
-  --   reports_count,
-  --   agents_count,
-  --   final_results_uploaded_count,
-  --   unique_final_results_uploaded_count,
+  --   pu_agents_count,
+  --   pu_agents_in_attendance_count,
+  --   pu_average_arrival_time,
+  --   pu_average_election_started_at,
+  --   pu_average_election_ended_at,
+  --   pu_updates_count,
+  --   pu_reports_count,
+  --   pu_final_results_uploaded_count,
+  --   unique_pu_final_results_uploaded_count,
   --   last_update_given_at,
-  --   average_update_time_interval_in_seconds,
-  --   election_practice_test_readiness_percentage,
-  --   live_voters_referred_by_agent_count
+  --   pu_average_update_time_interval_in_seconds,
+  --   pu_election_practice_test_readiness_percentage,
+  --   pu_live_voters_referred_by_agent_count
   -- }
   parties JSONB NOT NULL DEFAULT '[]'::jsonb,
 
@@ -101,14 +103,16 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   state_id                SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
 
   -- Sum of unique_final_results_expected across all PUs in this ward
-  unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
+  unique_final_results_expected                    INT NOT NULL DEFAULT 1, -- total unique results (a polling unit may have)
 
   -- Rollups of per-PU scalar fields
   pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu agents
-  unique_pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
+  unique_pu_agents_count                     INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
   pu_agents_in_attendance_count              INT NOT NULL DEFAULT 0, -- total agents in attendance
-  reports_count                           INT NOT NULL DEFAULT 0, -- total reports
-  updates_count                           INT NOT NULL DEFAULT 0, -- total updates
+  pu_reports_count                           INT NOT NULL DEFAULT 0, -- total reports
+  pu_updates_count                           INT NOT NULL DEFAULT 0, -- total updates
+  pu_average_arrival_time                          TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
   pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
   pu_average_election_ended_at                   TIMESTAMPTZ,
   pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
@@ -125,9 +129,6 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
   total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
 
-  ward_supervisors_count                           INT NOT NULL DEFAULT 0,
-  unique_ward_supervisors_count                    INT NOT NULL DEFAULT 0,
-
   -- Per-party rollup. Array of objects, one per party:
   -- {
   --   party_id,
@@ -139,8 +140,8 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   --   pu_average_arrival_time,
   --   pu_average_election_started_at,
   --   pu_average_election_ended_at,
-  --   pu_final_results_uploaded_count,
-  --   unique_pu_final_results_uploaded_count,
+  --   pu_final_results_uploaded_count,-
+  --   unique_pu_final_results_uploaded_count,-
   --   pu_average_update_time_interval_in_seconds,
   --   pu_election_practice_test_readiness_percentage,
   --   pu_live_voters_referred_by_agent_count,
@@ -149,7 +150,7 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   --   total_pu_with_agents_in_attendance,
   --   total_pu_where_election_has_started,
   --   total_pu_where_election_has_ended,
-  --   total_pu_unique_final_results_uploaded,
+  --   total_pu_unique_final_results_uploaded,-
   --   total_pu_where_agents_referred_live_voters
   -- }
   parties JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -187,6 +188,8 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
   reports_count                                    INT NOT NULL DEFAULT 0, -- total reports
   updates_count                                    INT NOT NULL DEFAULT 0, -- total updates
+  pu_average_arrival_time                          TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
   pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
   pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
   pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
@@ -200,9 +203,6 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   total_pu_where_election_has_ended                INT NOT NULL DEFAULT 0, -- total pu where election has ended
   total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
   total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
-
-  lga_supervisors_count                            INT NOT NULL DEFAULT 0,
-  unique_lga_supervisors_count                     INT NOT NULL DEFAULT 0,
 
   ward_supervisors_count                           INT NOT NULL DEFAULT 0,
   unique_ward_supervisors_count                    INT NOT NULL DEFAULT 0,
@@ -242,11 +242,13 @@ CREATE TABLE IF NOT EXISTS election_group_state_constituencies (
   state_id                  SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
 
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
-  pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu agents
-  unique_pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
-  pu_agents_in_attendance_count              INT NOT NULL DEFAULT 0, -- total agents in attendance
-  reports_count                           INT NOT NULL DEFAULT 0, -- total reports
-  updates_count                           INT NOT NULL DEFAULT 0, -- total updates
+  pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
+  unique_pu_agents_count                           INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
+  pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
+  pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
+  pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
+  pu_average_arrival_time                          TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
   pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
   pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
   pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
@@ -302,8 +304,10 @@ CREATE TABLE IF NOT EXISTS election_group_federal_constituencies (
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
   unique_pu_agents_count                           INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
   pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
-  reports_count                                    INT NOT NULL DEFAULT 0, -- total reports
-  updates_count                                    INT NOT NULL DEFAULT 0, -- total updates
+  pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
+  pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
+  pu_average_arrival_time                          TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
   pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
   pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
   pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
@@ -361,11 +365,13 @@ CREATE TABLE IF NOT EXISTS election_group_senatorial_districts (
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
 
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
-  pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu agents
-  unique_pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
-  pu_agents_in_attendance_count              INT NOT NULL DEFAULT 0, -- total agents in attendance
-  reports_count                           INT NOT NULL DEFAULT 0, -- total reports
-  updates_count                           INT NOT NULL DEFAULT 0, -- total updates
+  pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
+  unique_pu_agents_count                           INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
+  pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
+  pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
+  pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
+  pu_average_arrival_time                          TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
   pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
   pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
   pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
@@ -427,8 +433,10 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
   unique_pu_agents_count                           INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
   pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
-  reports_count                                    INT NOT NULL DEFAULT 0, -- total reports
-  updates_count                                    INT NOT NULL DEFAULT 0, -- total updates
+  pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
+  pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
+  pu_average_arrival_time                          TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
   pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
   pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
   pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
@@ -442,9 +450,6 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   total_pu_where_election_has_ended                INT NOT NULL DEFAULT 0, -- total pu where election has ended
   total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
   total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
-
-  state_supervisors_count                          INT NOT NULL DEFAULT 0,
-  unique_state_supervisors_count                   INT NOT NULL DEFAULT 0,
 
   lga_supervisors_count                            INT NOT NULL DEFAULT 0,
   unique_lga_supervisors_count                     INT NOT NULL DEFAULT 0,

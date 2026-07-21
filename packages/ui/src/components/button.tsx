@@ -55,10 +55,10 @@ const buttonVariants = cva(
         sm: "h-9 px-7",
         lg: "h-10 px-7",
         xl: "h-11 px-8",
-        "2xl": "h-12 px-3",
-        "3xl": "h-[52px] px-3",
+        "2xl": "h-12 px-6",
+        "3xl": "h-[52px] px-6",
         "4xl": "h-[56px] px-8 text-lg rounded-2xl",
-        "5xl": "h-[60px] px-3 text-lg rounded-2xl",
+        "5xl": "h-[60px] px-8 text-lg rounded-2xl",
         "extra-large":
           "h-[52px] rounded-[16px] w-full font-medium [&_svg]:size-5",
         "icon-sm":

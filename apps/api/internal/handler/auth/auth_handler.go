@@ -41,6 +41,7 @@ type AuthService interface {
 	SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error
 	UpdateCachedUserInfo(ctx context.Context, fakeID int64) error
 	CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error
+	UpdateUserRoles(ctx context.Context, userID int64, roles []string, partyID *int64, whoAssigned int64) error
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -616,7 +617,7 @@ func (h *Handler) PartyLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "partyadmin")
+	result, err := h.authService.Login(r.Context(), req.IdentifierType, req.Identifier, req.Password, req.Iso2, "party_admin", "super_party_admin")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
 		return
@@ -658,7 +659,7 @@ type RegisterCandidatePlaceholderRequest struct {
 	StateOfOrigin  int16  `json:"state_of_origin" validate:"omitempty"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
-	Role           string `json:"role" validate:"required,oneof=admin partyadmin user"`
+	Role           string `json:"role" validate:"required,oneof=admin party_admin user"`
 	RoleLevel      string `json:"role_level" validate:"required,oneof=super_admin admin member placeholder pollingagent user"`
 }
 
@@ -691,14 +692,14 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if req.Role == "partyadmin" && req.PartyID == 0 {
+	if req.Role == "party_admin" && req.PartyID == 0 {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: Key: 'RegisterCandidatePlaceholderRequest.PartyID' Error:Field validation for 'PartyID' failed on the 'required' tag")
 		return
 	}
 
 	// Permission checks
 	isAdmin := claims.HasRole("admin")
-	isPartyAdmin := claims.HasRole("partyadmin")
+	isPartyAdmin := claims.HasRole("party_admin") || claims.HasRole("super_party_admin")
 	if !isAdmin && !isPartyAdmin {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
@@ -731,7 +732,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		if req.RoleLevel == "super_admin" || req.RoleLevel == "admin" {
 			isValidCombo = true
 		}
-	case "partyadmin":
+	case "party_admin":
 		if req.RoleLevel == "admin" || req.RoleLevel == "member" || req.RoleLevel == "placeholder" {
 			isValidCombo = true
 		}
@@ -861,4 +862,127 @@ func (h *Handler) MakeUserSuperAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "User successfully promoted to superadmin", nil)
+}
+
+// AssignRoleRequest represents the request to assign a role to a user
+type AssignRoleRequest struct {
+	UserID int64  `json:"user_id" validate:"required"`
+	Role   string `json:"role" validate:"required"`
+}
+
+// @Summary Assign a role to a user
+// @Description Assigns a specific role (like party_admin) to an existing user
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body AssignRoleRequest true "Role assignment details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/assign-role [post]
+func (h *Handler) AssignUserRole(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+		return
+	}
+
+	// Must be an admin or super_admin to assign roles manually
+	if !claims.HasAnyRole("admin", "super_admin") {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions to assign roles")
+		return
+	}
+
+	var req AssignRoleRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
+		return
+	}
+
+	// Call CheckAndAssignRole
+	err := h.authService.CheckAndAssignRole(r.Context(), req.UserID, req.Role, claims.UserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to assign role: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Role successfully assigned to user", nil)
+}
+
+// UpdateUserRolesRequest represents the request to completely replace a user's roles
+type UpdateUserRolesRequest struct {
+	UserID     int64    `json:"user_id" validate:"required"`
+	UserFakeID *int64   `json:"user_fake_id" validate:"omitempty"`
+	Roles      []string `json:"roles" validate:"required,min=1"`
+	PartyID    *int64   `json:"party_id" validate:"omitempty"`
+}
+
+// @Summary Update all roles for a user
+// @Description Replaces all roles for an existing user and optionally sets their party ID if party_admin is included
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body UpdateUserRolesRequest true "Role update details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/roles/update [post]
+func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+		return
+	}
+
+	// Must be an admin or super_admin to update roles manually
+	if !claims.HasAnyRole("admin", "super_admin") {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions to manage roles")
+		return
+	}
+
+	var req UpdateUserRolesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
+		return
+	}
+
+	// Make sure if they include party_admin they provide a party ID
+	hasPartyAdmin := false
+	for _, role := range req.Roles {
+		if role == "party_admin" || role == "super_party_admin" {
+			hasPartyAdmin = true
+			break
+		}
+	}
+	if hasPartyAdmin && req.PartyID == nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: party_id is required when assigning party_admin role")
+		return
+	}
+
+	// Call UpdateUserRoles
+	err := h.authService.UpdateUserRoles(r.Context(), req.UserID, req.Roles, req.PartyID, claims.UserID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update roles: "+err.Error())
+		return
+	}
+
+	if req.UserFakeID != nil {
+		_ = h.authService.UpdateCachedUserInfo(r.Context(), *req.UserFakeID)
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "User roles successfully updated", nil)
 }

@@ -16,6 +16,34 @@ type Querier struct {
 	mock.Mock
 }
 
+// AddPageVerification provides a mock function with given fields: ctx, arg
+func (_m *Querier) AddPageVerification(ctx context.Context, arg queries.AddPageVerificationParams) (queries.PagesVerified, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddPageVerification")
+	}
+
+	var r0 queries.PagesVerified
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPageVerificationParams) (queries.PagesVerified, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AddPageVerificationParams) queries.PagesVerified); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(queries.PagesVerified)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.AddPageVerificationParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // AddPartySlots provides a mock function with given fields: ctx, arg
 func (_m *Querier) AddPartySlots(ctx context.Context, arg queries.AddPartySlotsParams) (queries.Party, error) {
 	ret := _m.Called(ctx, arg)
@@ -44,6 +72,204 @@ func (_m *Querier) AddPartySlots(ctx context.Context, arg queries.AddPartySlotsP
 	return r0, r1
 }
 
+// AdjustElectionGroupFederalConstituencyLGASupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupFederalConstituencyLGASupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupFederalConstituencyWardSupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupFederalConstituencyWardSupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupLGAWardSupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupLGAWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupLGAWardSupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupLGAWardSupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupLGAWardSupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupNationalLGASupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupNationalLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupNationalLGASupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupNationalLGASupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupNationalLGASupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupNationalStateSupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupNationalStateSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupNationalStateSupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupNationalStateSupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupNationalStateSupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupNationalWardSupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupNationalWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupNationalWardSupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupNationalWardSupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupNationalWardSupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupSenatorialDistrictLGASupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupSenatorialDistrictLGASupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupSenatorialDistrictWardSupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupSenatorialDistrictWardSupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupStateConstituencyWardSupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupStateConstituencyWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupStateConstituencyWardSupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupStateConstituencyWardSupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupStateConstituencyWardSupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupStateLGASupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupStateLGASupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupStateLGASupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupStateLGASupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupStateLGASupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// AdjustElectionGroupStateWardSupervisorCounts provides a mock function with given fields: ctx, arg
+func (_m *Querier) AdjustElectionGroupStateWardSupervisorCounts(ctx context.Context, arg queries.AdjustElectionGroupStateWardSupervisorCountsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AdjustElectionGroupStateWardSupervisorCounts")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AdjustElectionGroupStateWardSupervisorCountsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // AdminUpdateUser provides a mock function with given fields: ctx, arg
 func (_m *Querier) AdminUpdateUser(ctx context.Context, arg queries.AdminUpdateUserParams) error {
 	ret := _m.Called(ctx, arg)
@@ -60,6 +286,52 @@ func (_m *Querier) AdminUpdateUser(ctx context.Context, arg queries.AdminUpdateU
 	}
 
 	return r0
+}
+
+// AssignUserRole provides a mock function with given fields: ctx, arg
+func (_m *Querier) AssignUserRole(ctx context.Context, arg queries.AssignUserRoleParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AssignUserRole")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.AssignUserRoleParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// CheckIfPageHasAnyVerification provides a mock function with given fields: ctx, arg
+func (_m *Querier) CheckIfPageHasAnyVerification(ctx context.Context, arg queries.CheckIfPageHasAnyVerificationParams) (bool, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CheckIfPageHasAnyVerification")
+	}
+
+	var r0 bool
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CheckIfPageHasAnyVerificationParams) (bool, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CheckIfPageHasAnyVerificationParams) bool); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(bool)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.CheckIfPageHasAnyVerificationParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // CheckIfUserVotedInElection provides a mock function with given fields: ctx, arg
@@ -482,6 +754,34 @@ func (_m *Querier) CreateLgaSupervisor(ctx context.Context, arg queries.CreateLg
 	return r0, r1
 }
 
+// CreateMoreInfoAboutThisUser provides a mock function with given fields: ctx, arg
+func (_m *Querier) CreateMoreInfoAboutThisUser(ctx context.Context, arg queries.CreateMoreInfoAboutThisUserParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateMoreInfoAboutThisUser")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateMoreInfoAboutThisUserParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateMoreInfoAboutThisUserParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateMoreInfoAboutThisUserParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // CreateOffice provides a mock function with given fields: ctx, arg
 func (_m *Querier) CreateOffice(ctx context.Context, arg queries.CreateOfficeParams) (queries.Office, error) {
 	ret := _m.Called(ctx, arg)
@@ -791,22 +1091,22 @@ func (_m *Querier) CreateUser(ctx context.Context, arg queries.CreateUserParams)
 }
 
 // CreateUserNIN provides a mock function with given fields: ctx, arg
-func (_m *Querier) CreateUserNIN(ctx context.Context, arg queries.CreateUserNINParams) (int32, error) {
+func (_m *Querier) CreateUserNIN(ctx context.Context, arg queries.CreateUserNINParams) (int64, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateUserNIN")
 	}
 
-	var r0 int32
+	var r0 int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserNINParams) (int32, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserNINParams) (int64, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserNINParams) int32); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserNINParams) int64); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(int32)
+		r0 = ret.Get(0).(int64)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateUserNINParams) error); ok {
@@ -838,6 +1138,34 @@ func (_m *Querier) CreateUserSecurityQuestions(ctx context.Context, arg queries.
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateUserSecurityQuestionsParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// CreateUserVerification provides a mock function with given fields: ctx, arg
+func (_m *Querier) CreateUserVerification(ctx context.Context, arg queries.CreateUserVerificationParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateUserVerification")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserVerificationParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserVerificationParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateUserVerificationParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
@@ -1271,7 +1599,7 @@ func (_m *Querier) DeleteOffice(ctx context.Context, id int64) error {
 }
 
 // DeleteParty provides a mock function with given fields: ctx, id
-func (_m *Querier) DeleteParty(ctx context.Context, id int64) error {
+func (_m *Querier) DeleteParty(ctx context.Context, id int16) error {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -1279,7 +1607,7 @@ func (_m *Querier) DeleteParty(ctx context.Context, id int64) error {
 	}
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) error); ok {
 		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Error(0)
@@ -1389,6 +1717,42 @@ func (_m *Querier) DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, queries.DeleteUserDidNotVoteReasonByElectionGroupParams) error); ok {
 		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteUserPhoneNumber provides a mock function with given fields: ctx, id
+func (_m *Querier) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteUserPhoneNumber")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// DeleteUserRoles provides a mock function with given fields: ctx, userID
+func (_m *Querier) DeleteUserRoles(ctx context.Context, userID int64) error {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteUserRoles")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, userID)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -1772,6 +2136,34 @@ func (_m *Querier) GetElectionGroupLGAStats(ctx context.Context, arg queries.Get
 	return r0, r1
 }
 
+// GetElectionGroupPollingUnitGeoIDs provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetElectionGroupPollingUnitGeoIDs(ctx context.Context, arg queries.GetElectionGroupPollingUnitGeoIDsParams) (queries.GetElectionGroupPollingUnitGeoIDsRow, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetElectionGroupPollingUnitGeoIDs")
+	}
+
+	var r0 queries.GetElectionGroupPollingUnitGeoIDsRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupPollingUnitGeoIDsParams) (queries.GetElectionGroupPollingUnitGeoIDsRow, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetElectionGroupPollingUnitGeoIDsParams) queries.GetElectionGroupPollingUnitGeoIDsRow); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(queries.GetElectionGroupPollingUnitGeoIDsRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetElectionGroupPollingUnitGeoIDsParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetElectionGroupPollingUnitStats provides a mock function with given fields: ctx, arg
 func (_m *Querier) GetElectionGroupPollingUnitStats(ctx context.Context, arg queries.GetElectionGroupPollingUnitStatsParams) (queries.ElectionGroupPollingUnit, error) {
 	ret := _m.Called(ctx, arg)
@@ -2112,6 +2504,34 @@ func (_m *Querier) GetLGAByID(ctx context.Context, id int32) (queries.Lga, error
 	return r0, r1
 }
 
+// GetLGASupervisorCount provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetLGASupervisorCount(ctx context.Context, arg queries.GetLGASupervisorCountParams) (int32, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetLGASupervisorCount")
+	}
+
+	var r0 int32
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetLGASupervisorCountParams) (int32, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetLGASupervisorCountParams) int32); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int32)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetLGASupervisorCountParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetLGAs provides a mock function with given fields: ctx, stateID
 func (_m *Querier) GetLGAs(ctx context.Context, stateID int32) ([]queries.Lga, error) {
 	ret := _m.Called(ctx, stateID)
@@ -2163,6 +2583,34 @@ func (_m *Querier) GetLgaSupervisorByElectionGroup(ctx context.Context, arg quer
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.GetLgaSupervisorByElectionGroupParams) error); ok {
 		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetMoreInfoAboutThisUser provides a mock function with given fields: ctx, userID
+func (_m *Querier) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetMoreInfoAboutThisUser")
+	}
+
+	var r0 queries.UserMoreInfo
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.UserMoreInfo, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.UserMoreInfo); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(queries.UserMoreInfo)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2284,8 +2732,66 @@ func (_m *Querier) GetOfficeByName(ctx context.Context, name string) (queries.Of
 	return r0, r1
 }
 
+// GetPUPartyAgentsCount provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetPUPartyAgentsCount(ctx context.Context, arg queries.GetPUPartyAgentsCountParams) (int32, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPUPartyAgentsCount")
+	}
+
+	var r0 int32
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPUPartyAgentsCountParams) (int32, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPUPartyAgentsCountParams) int32); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int32)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetPUPartyAgentsCountParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetPageVerifications provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetPageVerifications(ctx context.Context, arg queries.GetPageVerificationsParams) ([]queries.GetPageVerificationsRow, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPageVerifications")
+	}
+
+	var r0 []queries.GetPageVerificationsRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPageVerificationsParams) ([]queries.GetPageVerificationsRow, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPageVerificationsParams) []queries.GetPageVerificationsRow); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.GetPageVerificationsRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetPageVerificationsParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetPartyBasicInfo provides a mock function with given fields: ctx, id
-func (_m *Querier) GetPartyBasicInfo(ctx context.Context, id int64) (queries.GetPartyBasicInfoRow, error) {
+func (_m *Querier) GetPartyBasicInfo(ctx context.Context, id int16) (queries.GetPartyBasicInfoRow, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -2294,16 +2800,16 @@ func (_m *Querier) GetPartyBasicInfo(ctx context.Context, id int64) (queries.Get
 
 	var r0 queries.GetPartyBasicInfoRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.GetPartyBasicInfoRow, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) (queries.GetPartyBasicInfoRow, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.GetPartyBasicInfoRow); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) queries.GetPartyBasicInfoRow); ok {
 		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Get(0).(queries.GetPartyBasicInfoRow)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int16) error); ok {
 		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -2313,7 +2819,7 @@ func (_m *Querier) GetPartyBasicInfo(ctx context.Context, id int64) (queries.Get
 }
 
 // GetPartyByID provides a mock function with given fields: ctx, id
-func (_m *Querier) GetPartyByID(ctx context.Context, id int64) (queries.Party, error) {
+func (_m *Querier) GetPartyByID(ctx context.Context, id int16) (queries.Party, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
@@ -2322,16 +2828,16 @@ func (_m *Querier) GetPartyByID(ctx context.Context, id int64) (queries.Party, e
 
 	var r0 queries.Party
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.Party, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) (queries.Party, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.Party); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) queries.Party); ok {
 		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Get(0).(queries.Party)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int16) error); ok {
 		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)
@@ -2455,7 +2961,7 @@ func (_m *Querier) GetPartyWalletByID(ctx context.Context, id int64) (queries.Pa
 }
 
 // GetPartyWalletByPartyID provides a mock function with given fields: ctx, partyID
-func (_m *Querier) GetPartyWalletByPartyID(ctx context.Context, partyID int64) (queries.PartyWallet, error) {
+func (_m *Querier) GetPartyWalletByPartyID(ctx context.Context, partyID int16) (queries.PartyWallet, error) {
 	ret := _m.Called(ctx, partyID)
 
 	if len(ret) == 0 {
@@ -2464,16 +2970,16 @@ func (_m *Querier) GetPartyWalletByPartyID(ctx context.Context, partyID int64) (
 
 	var r0 queries.PartyWallet
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.PartyWallet, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) (queries.PartyWallet, error)); ok {
 		return rf(ctx, partyID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.PartyWallet); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) queries.PartyWallet); ok {
 		r0 = rf(ctx, partyID)
 	} else {
 		r0 = ret.Get(0).(queries.PartyWallet)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int16) error); ok {
 		r1 = rf(ctx, partyID)
 	} else {
 		r1 = ret.Error(1)
@@ -2619,6 +3125,34 @@ func (_m *Querier) GetPollingUnitsWithAgentCounts(ctx context.Context, arg queri
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.GetPollingUnitsWithAgentCountsParams) error); ok {
 		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetRoleByCode provides a mock function with given fields: ctx, code
+func (_m *Querier) GetRoleByCode(ctx context.Context, code string) (queries.Role, error) {
+	ret := _m.Called(ctx, code)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRoleByCode")
+	}
+
+	var r0 queries.Role
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.Role, error)); ok {
+		return rf(ctx, code)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) queries.Role); ok {
+		r0 = rf(ctx, code)
+	} else {
+		r0 = ret.Get(0).(queries.Role)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, code)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -2826,6 +3360,34 @@ func (_m *Querier) GetStateSupervisorByElectionGroup(ctx context.Context, arg qu
 	return r0, r1
 }
 
+// GetStateSupervisorCount provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetStateSupervisorCount(ctx context.Context, arg queries.GetStateSupervisorCountParams) (int32, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetStateSupervisorCount")
+	}
+
+	var r0 int32
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateSupervisorCountParams) (int32, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateSupervisorCountParams) int32); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int32)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetStateSupervisorCountParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetStatesByCountryID provides a mock function with given fields: ctx, countryID
 func (_m *Querier) GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error) {
 	ret := _m.Called(ctx, countryID)
@@ -2884,34 +3446,6 @@ func (_m *Querier) GetSystemSetting(ctx context.Context, key string) (queries.Sy
 	return r0, r1
 }
 
-// GetUserByEmail provides a mock function with given fields: ctx, email
-func (_m *Querier) GetUserByEmail(ctx context.Context, email pgtype.Text) (queries.User, error) {
-	ret := _m.Called(ctx, email)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUserByEmail")
-	}
-
-	var r0 queries.User
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, pgtype.Text) (queries.User, error)); ok {
-		return rf(ctx, email)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, pgtype.Text) queries.User); ok {
-		r0 = rf(ctx, email)
-	} else {
-		r0 = ret.Get(0).(queries.User)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, pgtype.Text) error); ok {
-		r1 = rf(ctx, email)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // GetUserByFakeID provides a mock function with given fields: ctx, fakeID
 func (_m *Querier) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (queries.User, error) {
 	ret := _m.Called(ctx, fakeID)
@@ -2933,34 +3467,6 @@ func (_m *Querier) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (que
 
 	if rf, ok := ret.Get(1).(func(context.Context, pgtype.Int8) error); ok {
 		r1 = rf(ctx, fakeID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetUserByID provides a mock function with given fields: ctx, id
-func (_m *Querier) GetUserByID(ctx context.Context, id int64) (queries.User, error) {
-	ret := _m.Called(ctx, id)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUserByID")
-	}
-
-	var r0 queries.User
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.User, error)); ok {
-		return rf(ctx, id)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.User); ok {
-		r0 = rf(ctx, id)
-	} else {
-		r0 = ret.Get(0).(queries.User)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -3024,6 +3530,66 @@ func (_m *Querier) GetUserNINByUserID(ctx context.Context, userID int64) (querie
 	return r0, r1
 }
 
+// GetUserPhoneNumbersByUserID provides a mock function with given fields: ctx, userID
+func (_m *Querier) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserPhoneNumbersByUserID")
+	}
+
+	var r0 []queries.UsersPhoneNumber
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.UsersPhoneNumber, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.UsersPhoneNumber); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.UsersPhoneNumber)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUserRoles provides a mock function with given fields: ctx, userID
+func (_m *Querier) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserRoles")
+	}
+
+	var r0 []queries.GetUserRolesRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.GetUserRolesRow, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.GetUserRolesRow); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.GetUserRolesRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, userID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetUserSecurityQuestionsByNIN provides a mock function with given fields: ctx, nin
 func (_m *Querier) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (queries.UserSecurityQuestion, error) {
 	ret := _m.Called(ctx, nin)
@@ -3045,6 +3611,34 @@ func (_m *Querier) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string
 
 	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, nin)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetUserVerification provides a mock function with given fields: ctx, userID
+func (_m *Querier) GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error) {
+	ret := _m.Called(ctx, userID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUserVerification")
+	}
+
+	var r0 queries.UserVerification
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.UserVerification, error)); ok {
+		return rf(ctx, userID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.UserVerification); ok {
+		r0 = rf(ctx, userID)
+	} else {
+		r0 = ret.Get(0).(queries.UserVerification)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, userID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -3278,6 +3872,34 @@ func (_m *Querier) GetWardSupervisorByElectionGroup(ctx context.Context, arg que
 	return r0, r1
 }
 
+// GetWardSupervisorCount provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetWardSupervisorCount(ctx context.Context, arg queries.GetWardSupervisorCountParams) (int32, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetWardSupervisorCount")
+	}
+
+	var r0 int32
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetWardSupervisorCountParams) (int32, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetWardSupervisorCountParams) int32); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int32)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetWardSupervisorCountParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
 // GetWards provides a mock function with given fields: ctx, arg
 func (_m *Querier) GetWards(ctx context.Context, arg queries.GetWardsParams) ([]queries.Ward, error) {
 	ret := _m.Called(ctx, arg)
@@ -3354,6 +3976,24 @@ func (_m *Querier) IncrementElectionGroupMetrics(ctx context.Context, arg querie
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, queries.IncrementElectionGroupMetricsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IncrementElectionGroupPUPartyMetrics provides a mock function with given fields: ctx, arg
+func (_m *Querier) IncrementElectionGroupPUPartyMetrics(ctx context.Context, arg queries.IncrementElectionGroupPUPartyMetricsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IncrementElectionGroupPUPartyMetrics")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.IncrementElectionGroupPUPartyMetricsParams) error); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Error(0)
@@ -3468,6 +4108,34 @@ func (_m *Querier) IncrementPollingUnitAssignmentMetrics(ctx context.Context, ar
 	}
 
 	return r0
+}
+
+// InsertAuditLog provides a mock function with given fields: ctx, arg
+func (_m *Querier) InsertAuditLog(ctx context.Context, arg queries.InsertAuditLogParams) (queries.AuditLog, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertAuditLog")
+	}
+
+	var r0 queries.AuditLog
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.InsertAuditLogParams) (queries.AuditLog, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.InsertAuditLogParams) queries.AuditLog); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(queries.AuditLog)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.InsertAuditLogParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // ListAdmins provides a mock function with given fields: ctx
@@ -3891,7 +4559,7 @@ func (_m *Querier) ListElectionGroups(ctx context.Context) ([]queries.ElectionGr
 }
 
 // ListElectionGroupsWithPartyStats provides a mock function with given fields: ctx, partyID
-func (_m *Querier) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int64) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
+func (_m *Querier) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
 	ret := _m.Called(ctx, partyID)
 
 	if len(ret) == 0 {
@@ -3900,10 +4568,10 @@ func (_m *Querier) ListElectionGroupsWithPartyStats(ctx context.Context, partyID
 
 	var r0 []queries.ListElectionGroupsWithPartyStatsRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListElectionGroupsWithPartyStatsRow, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error)); ok {
 		return rf(ctx, partyID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListElectionGroupsWithPartyStatsRow); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int16) []queries.ListElectionGroupsWithPartyStatsRow); ok {
 		r0 = rf(ctx, partyID)
 	} else {
 		if ret.Get(0) != nil {
@@ -3911,7 +4579,7 @@ func (_m *Querier) ListElectionGroupsWithPartyStats(ctx context.Context, partyID
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, int16) error); ok {
 		r1 = rf(ctx, partyID)
 	} else {
 		r1 = ret.Error(1)
@@ -4220,29 +4888,29 @@ func (_m *Querier) ListUserWalletTransactions(ctx context.Context, arg queries.L
 	return r0, r1
 }
 
-// ListUsers provides a mock function with given fields: ctx
-func (_m *Querier) ListUsers(ctx context.Context) ([]queries.User, error) {
-	ret := _m.Called(ctx)
+// ListUsers provides a mock function with given fields: ctx, arg
+func (_m *Querier) ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error) {
+	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ListUsers")
 	}
 
-	var r0 []queries.User
+	var r0 []queries.ListUsersRow
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.User, error)); ok {
-		return rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListUsersParams) ([]queries.ListUsersRow, error)); ok {
+		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.User); ok {
-		r0 = rf(ctx)
+	if rf, ok := ret.Get(0).(func(context.Context, queries.ListUsersParams) []queries.ListUsersRow); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.User)
+			r0 = ret.Get(0).([]queries.ListUsersRow)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
+	if rf, ok := ret.Get(1).(func(context.Context, queries.ListUsersParams) error); ok {
+		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -4268,6 +4936,36 @@ func (_m *Querier) ListUsersWithoutWallet(ctx context.Context) ([]queries.User, 
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]queries.User)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// ListVerificationTypes provides a mock function with given fields: ctx
+func (_m *Querier) ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListVerificationTypes")
+	}
+
+	var r0 []queries.PageVerificationType
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.PageVerificationType, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []queries.PageVerificationType); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.PageVerificationType)
 		}
 	}
 
@@ -4482,6 +5180,24 @@ func (_m *Querier) RefreshAllElectionGroupFederalConstituencyStats(ctx context.C
 	return r0
 }
 
+// RefreshAllElectionGroupGlobalStats provides a mock function with given fields: ctx
+func (_m *Querier) RefreshAllElectionGroupGlobalStats(ctx context.Context) error {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshAllElectionGroupGlobalStats")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = rf(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // RefreshAllElectionGroupLGAStats provides a mock function with given fields: ctx
 func (_m *Querier) RefreshAllElectionGroupLGAStats(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -4600,6 +5316,132 @@ func (_m *Querier) RefreshPollingUnitLiveResults(ctx context.Context, arg querie
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, queries.RefreshPollingUnitLiveResultsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RefreshSingleElectionGroupGlobalStats provides a mock function with given fields: ctx, electionGroupID
+func (_m *Querier) RefreshSingleElectionGroupGlobalStats(ctx context.Context, electionGroupID int64) error {
+	ret := _m.Called(ctx, electionGroupID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshSingleElectionGroupGlobalStats")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, electionGroupID)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RefreshSingleElectionGroupLGAStats provides a mock function with given fields: ctx, arg
+func (_m *Querier) RefreshSingleElectionGroupLGAStats(ctx context.Context, arg queries.RefreshSingleElectionGroupLGAStatsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshSingleElectionGroupLGAStats")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RefreshSingleElectionGroupLGAStatsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RefreshSingleElectionGroupPollingUnitStats provides a mock function with given fields: ctx, arg
+func (_m *Querier) RefreshSingleElectionGroupPollingUnitStats(ctx context.Context, arg queries.RefreshSingleElectionGroupPollingUnitStatsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshSingleElectionGroupPollingUnitStats")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RefreshSingleElectionGroupPollingUnitStatsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RefreshSingleElectionGroupStateConstituencyStats provides a mock function with given fields: ctx, arg
+func (_m *Querier) RefreshSingleElectionGroupStateConstituencyStats(ctx context.Context, arg queries.RefreshSingleElectionGroupStateConstituencyStatsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshSingleElectionGroupStateConstituencyStats")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RefreshSingleElectionGroupStateConstituencyStatsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RefreshSingleElectionGroupStateStats provides a mock function with given fields: ctx, arg
+func (_m *Querier) RefreshSingleElectionGroupStateStats(ctx context.Context, arg queries.RefreshSingleElectionGroupStateStatsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshSingleElectionGroupStateStats")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RefreshSingleElectionGroupStateStatsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RefreshSingleElectionGroupWardStats provides a mock function with given fields: ctx, arg
+func (_m *Querier) RefreshSingleElectionGroupWardStats(ctx context.Context, arg queries.RefreshSingleElectionGroupWardStatsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RefreshSingleElectionGroupWardStats")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RefreshSingleElectionGroupWardStatsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// RemovePageVerification provides a mock function with given fields: ctx, arg
+func (_m *Querier) RemovePageVerification(ctx context.Context, arg queries.RemovePageVerificationParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RemovePageVerification")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.RemovePageVerificationParams) error); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Error(0)
@@ -5256,6 +6098,24 @@ func (_m *Querier) UpdateLGA(ctx context.Context, arg queries.UpdateLGAParams) (
 	return r0, r1
 }
 
+// UpdateMoreInfoAboutThisUser provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpdateMoreInfoAboutThisUser(ctx context.Context, arg queries.UpdateMoreInfoAboutThisUserParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateMoreInfoAboutThisUser")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateMoreInfoAboutThisUserParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // UpdateOffice provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpdateOffice(ctx context.Context, arg queries.UpdateOfficeParams) (queries.Office, error) {
 	ret := _m.Called(ctx, arg)
@@ -5366,6 +6226,24 @@ func (_m *Querier) UpdatePartyStateAllowances(ctx context.Context, arg queries.U
 	}
 
 	return r0, r1
+}
+
+// UpdatePhoneNumber provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpdatePhoneNumber(ctx context.Context, arg queries.UpdatePhoneNumberParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdatePhoneNumber")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePhoneNumberParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpdatePollingUnit provides a mock function with given fields: ctx, arg
@@ -5592,6 +6470,24 @@ func (_m *Querier) UpdateUserAgentDetails(ctx context.Context, arg queries.Updat
 	return r0, r1
 }
 
+// UpdateUserAgentMoreInfo provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpdateUserAgentMoreInfo(ctx context.Context, arg queries.UpdateUserAgentMoreInfoParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateUserAgentMoreInfo")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateUserAgentMoreInfoParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // UpdateUserAvatar provides a mock function with given fields: ctx, arg
 func (_m *Querier) UpdateUserAvatar(ctx context.Context, arg queries.UpdateUserAvatarParams) error {
 	ret := _m.Called(ctx, arg)
@@ -5682,27 +6578,9 @@ func (_m *Querier) UpdateUserProfile(ctx context.Context, arg queries.UpdateUser
 	return r0
 }
 
-// UpdateUserRoleAndStatus provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateUserRoleAndStatus(ctx context.Context, arg queries.UpdateUserRoleAndStatusParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateUserRoleAndStatus")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateUserRoleAndStatusParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// UpdateUserRoleForPartyApp provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateUserRoleForPartyApp(ctx context.Context, arg queries.UpdateUserRoleForPartyAppParams) (queries.User, error) {
-	ret := _m.Called(ctx, arg)
+// UpdateUserRoleForPartyApp provides a mock function with given fields: ctx, id
+func (_m *Querier) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (queries.User, error) {
+	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateUserRoleForPartyApp")
@@ -5710,22 +6588,40 @@ func (_m *Querier) UpdateUserRoleForPartyApp(ctx context.Context, arg queries.Up
 
 	var r0 queries.User
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateUserRoleForPartyAppParams) (queries.User, error)); ok {
-		return rf(ctx, arg)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.User, error)); ok {
+		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateUserRoleForPartyAppParams) queries.User); ok {
-		r0 = rf(ctx, arg)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.User); ok {
+		r0 = rf(ctx, id)
 	} else {
 		r0 = ret.Get(0).(queries.User)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdateUserRoleForPartyAppParams) error); ok {
-		r1 = rf(ctx, arg)
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
 	} else {
 		r1 = ret.Error(1)
 	}
 
 	return r0, r1
+}
+
+// UpdateUserStatus provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpdateUserStatus(ctx context.Context, arg queries.UpdateUserStatusParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpdateUserStatus")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateUserStatusParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpdateUserVotersCard provides a mock function with given fields: ctx, arg
@@ -5772,6 +6668,150 @@ func (_m *Querier) UpdateWard(ctx context.Context, arg queries.UpdateWardParams)
 	}
 
 	return r0, r1
+}
+
+// UpsertElectionGroupFederalConstituencyPartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupFederalConstituencyPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupFederalConstituencyPartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupFederalConstituencyPartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupFederalConstituencyPartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpsertElectionGroupLGAPartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupLGAPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupLGAPartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupLGAPartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupLGAPartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpsertElectionGroupNationalPartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupNationalPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupNationalPartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupNationalPartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupNationalPartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpsertElectionGroupPUPartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupPUPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupPUPartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupPUPartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupPUPartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpsertElectionGroupSenatorialDistrictPartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupSenatorialDistrictPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupSenatorialDistrictPartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupSenatorialDistrictPartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupSenatorialDistrictPartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpsertElectionGroupStateConstituencyPartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupStateConstituencyPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupStateConstituencyPartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupStateConstituencyPartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupStateConstituencyPartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpsertElectionGroupStatePartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupStatePartyEntry(ctx context.Context, arg queries.UpsertElectionGroupStatePartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupStatePartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupStatePartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// UpsertElectionGroupWardPartyEntry provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpsertElectionGroupWardPartyEntry(ctx context.Context, arg queries.UpsertElectionGroupWardPartyEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpsertElectionGroupWardPartyEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertElectionGroupWardPartyEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
 }
 
 // UpsertPartyElectionGroupCoverage provides a mock function with given fields: ctx, arg

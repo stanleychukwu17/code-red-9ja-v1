@@ -428,3 +428,173 @@ func (h *Handler) GetSingleWardStats(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
 }
+
+// GetSingleFederalConstituencyStats godoc
+// @Summary      Get federal constituency stats for a single geographic unit and optionally a single party
+// @Description  Fetches pre-aggregated election statistics for a single federal constituency unit, extracting a single party from the parties JSONB array if party_id is provided.
+// @Tags         ElectionStats
+// @Produce      json
+// @Param        id        path  int  true  "Election Group ID"
+// @Param        fc_id     path  int  true  "Federal Constituency ID"
+// @Param        party_id  query int  false "Party ID filter"
+// @Success      200  {object} map[string]interface{}
+// @Router       /election-groups/{id}/stats/federal-constituencies/{fc_id} [get]
+func (h *Handler) GetSingleFederalConstituencyStats(w http.ResponseWriter, r *http.Request) {
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		return
+	}
+	fcID, err := strconv.ParseInt(chi.URLParam(r, "fc_id"), 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid Federal Constituency ID")
+		return
+	}
+
+	arg := queries.GetElectionGroupFederalConstituencyStatsParams{
+		ElectionGroupID: groupID,
+		FederalConstituencyID: int32(fcID),
+	}
+	stats, err := h.service.GetElectionGroupFederalConstituencyStats(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
+		return
+	}
+
+	partyID, hasPartyID := parseOptionalInt(r, "party_id")
+	if hasPartyID {
+		partyStats := extractPartyStats(stats.Parties, partyID)
+		h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
+			"party_stats": partyStats,
+			"targets":     stats,
+		})
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
+}
+
+// GetSingleStateConstituencyStats godoc
+// @Summary      Get state constituency stats for a single geographic unit and optionally a single party
+// @Description  Fetches pre-aggregated election statistics for a single state constituency unit, extracting a single party from the parties JSONB array if party_id is provided.
+// @Tags         ElectionStats
+// @Produce      json
+// @Param        id        path  int  true  "Election Group ID"
+// @Param        sc_id     path  int  true  "State Constituency ID"
+// @Param        party_id  query int  false "Party ID filter"
+// @Success      200  {object} map[string]interface{}
+// @Router       /election-groups/{id}/stats/state-constituencies/{sc_id} [get]
+func (h *Handler) GetSingleStateConstituencyStats(w http.ResponseWriter, r *http.Request) {
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		return
+	}
+	scID, err := strconv.ParseInt(chi.URLParam(r, "sc_id"), 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid State Constituency ID")
+		return
+	}
+
+	arg := queries.GetElectionGroupStateConstituencyStatsParams{
+		ElectionGroupID: groupID,
+		StateConstituencyID: int32(scID),
+	}
+	stats, err := h.service.GetElectionGroupStateConstituencyStats(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
+		return
+	}
+
+	partyID, hasPartyID := parseOptionalInt(r, "party_id")
+	if hasPartyID {
+		partyStats := extractPartyStats(stats.Parties, partyID)
+		h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
+			"party_stats": partyStats,
+			"targets":     stats,
+		})
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
+}
+
+// GetSingleSenatorialDistrictStats godoc
+// @Summary      Get senatorial district stats for a single geographic unit and optionally a single party
+// @Description  Fetches pre-aggregated election statistics for a single senatorial district unit, extracting a single party from the parties JSONB array if party_id is provided.
+// @Tags         ElectionStats
+// @Produce      json
+// @Param        id        path  int  true  "Election Group ID"
+// @Param        sd_id     path  int  true  "Senatorial District ID"
+// @Param        party_id  query int  false "Party ID filter"
+// @Success      200  {object} map[string]interface{}
+// @Router       /election-groups/{id}/stats/senatorial-districts/{sd_id} [get]
+func (h *Handler) GetSingleSenatorialDistrictStats(w http.ResponseWriter, r *http.Request) {
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		return
+	}
+	sdID, err := strconv.ParseInt(chi.URLParam(r, "sd_id"), 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid Senatorial District ID")
+		return
+	}
+
+	arg := queries.GetElectionGroupSenatorialDistrictStatsParams{
+		ElectionGroupID: groupID,
+		SenatorialDistrictID: int32(sdID),
+	}
+	stats, err := h.service.GetElectionGroupSenatorialDistrictStats(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
+		return
+	}
+
+	partyID, hasPartyID := parseOptionalInt(r, "party_id")
+	if hasPartyID {
+		partyStats := extractPartyStats(stats.Parties, partyID)
+		h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
+			"party_stats": partyStats,
+			"targets":     stats,
+		})
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
+}
+
+// GetSingleElectionGroupStats godoc
+// @Summary      Get global stats for a single election group and optionally a single party
+// @Description  Fetches pre-aggregated election statistics for an election group, extracting a single party from the parties JSONB array if party_id is provided.
+// @Tags         ElectionStats
+// @Produce      json
+// @Param        id        path  int  true  "Election Group ID"
+// @Param        party_id  query int  false "Party ID filter"
+// @Success      200  {object} map[string]interface{}
+// @Router       /election-groups/{id}/stats [get]
+func (h *Handler) GetSingleElectionGroupStats(w http.ResponseWriter, r *http.Request) {
+	groupID, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid election group ID")
+		return
+	}
+
+	stats, err := h.service.GetElectionGroupByID(r.Context(), groupID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
+		return
+	}
+
+	partyID, hasPartyID := parseOptionalInt(r, "party_id")
+	if hasPartyID {
+		partyStats := extractPartyStats(stats.Parties, partyID)
+		h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{
+			"party_stats": partyStats,
+			"targets":     stats,
+		})
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Stats fetched", map[string]interface{}{"stats": stats})
+}

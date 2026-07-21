@@ -13,14 +13,14 @@ CREATE TABLE roles (
 );
 
 CREATE TABLE role_assigned_permissions (
-  role_id SMALLINT,
-  permission_id SMALLINT,
+  role_id SMALLINT REFERENCES roles(id) ON DELETE CASCADE,
+  permission_id SMALLINT REFERENCES role_permissions(id) ON DELETE CASCADE,
   PRIMARY KEY (role_id, permission_id)
 );
 
 CREATE TABLE user_roles (
-  user_id BIGINT,
-  role_id SMALLINT,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  role_id SMALLINT REFERENCES roles(id) ON DELETE CASCADE,
   role_code VARCHAR(50) NOT NULL,
   date_assigned TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL,
   who_assigned_user_id BIGINT DEFAULT 0 NOT NULL,

@@ -14,7 +14,7 @@ import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getUsersList } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";
-import { useIntersectionObserver } from "usehooks-ts";
+import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 
 // Define the route for the users page, requiring authentication.
 export const Route = createFileRoute("/_authenticated/users/users")({
@@ -26,17 +26,34 @@ export const Route = createFileRoute("/_authenticated/users/users")({
 function RouteComponent() {
   // State to control the visibility of the "Add User" form dialog
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
   // useInfiniteQuery handles fetching data in pages for infinite scrolling
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch } = useInfiniteQuery({
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    error,
+    refetch,
+  } = useInfiniteQuery({
     // queryKey uniquely identifies this query in the cache
-    queryKey: ["users", "user"],
+    queryKey: ["users", "user", debouncedSearchQuery],
 
     // queryFn is the function that actually fetches the data
     queryFn: async ({ pageParam }) => {
+      console.log("SEARCH:", debouncedSearchQuery);
       const res = await getUsersList({
-        data: { limit: 20, cursor: pageParam },
+        data: {
+          limit: 20,
+          cursor: pageParam,
+          search: debouncedSearchQuery || undefined,
+        },
       });
+      console.log("RES:", res);
+
       if (res && res.success && res.data) {
         return res;
       }
@@ -88,6 +105,8 @@ function RouteComponent() {
 
       {/* Search and filter action bar */}
       <PageSearchLayer
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
         rightComponent={
           <>
             <FilterButton />
@@ -129,7 +148,9 @@ function RouteComponent() {
               {isFetchingNextPage ? (
                 <Loader2 className="size-5 animate-spin mr-2" />
               ) : null}
-              {isFetchingNextPage ? "Loading more..." : "Scroll down to load more"}
+              {isFetchingNextPage
+                ? "Loading more..."
+                : "Scroll down to load more"}
             </div>
           )}
         </>

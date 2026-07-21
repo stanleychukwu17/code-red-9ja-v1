@@ -93,19 +93,23 @@ export const PartyElectionInstanceDropdown = ({
         onClose={() => setOpenFinderDialog(false)}
         onAddUsers={handleFieldCandidate}
         alreadySelectedIds={data.candidate ? [Number(data.candidate.id)] : []}
-        fetchUsers={async () => {
+        fetchUsers={async ({ cursor, search }) => {
           const res = await getUsersList({
             data: {
-              role: "partyadmin",
               party_id: userPartyId,
+              cursor,
+              search,
+              limit: 20,
             },
           });
           if (res && res.success && res.data?.users) {
-            return res.data.users;
+            return {
+              users: res.data.users,
+              nextCursor: res.data.meta?.next_cursor,
+            };
           }
-          return [];
+          return { users: [] };
         }}
-        filterRole="partyadmin"
         filterPartyId={userPartyId}
         title="Field Candidate"
         placeholder="Search party members..."

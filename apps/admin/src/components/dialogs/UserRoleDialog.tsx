@@ -2,15 +2,18 @@ import {
   UserRoleDialog as SharedUserRoleDialog,
   type UserRoleDialogProps,
 } from "@repo/ui/components/custom/UserRoleDialog";
-// import { updateUserRole } from "#/lib/server/users";
+import { updateUserRoles, getUserRoles } from "#/lib/server/users";
+import { getParties } from "#/lib/server/parties";
 
 export function UserRoleDialog(
-  props: Omit<UserRoleDialogProps, "updateUserRole">
+  props: Omit<UserRoleDialogProps, "updateUserRole" | "fetchParties" | "fetchUserRoles">
 ) {
   return (
     <SharedUserRoleDialog
       {...props}
-    // updateUserRole={updateUserRole} // TODO: Implement and pass this once the backend endpoint is ready
+      updateUserRole={updateUserRoles}
+      fetchParties={getParties}
+      fetchUserRoles={getUserRoles}
     />
   );
 }

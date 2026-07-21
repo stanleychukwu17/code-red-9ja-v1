@@ -2,17 +2,19 @@
 CREATE TABLE IF NOT EXISTS state_assembly_constituencies (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
-    lga_id INTEGER NOT NULL,
+    lga_id INTEGER NOT NULL REFERENCES lgas(id) ON DELETE CASCADE,
     lga_name VARCHAR(255) NOT NULL,
-    state_id INTEGER NOT NULL,
+    state_id INTEGER NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
     state_name VARCHAR(255) NOT NULL,
-    senatorial_district_id INTEGER NOT NULL,
+    senatorial_district_id INTEGER NOT NULL REFERENCES senatorial_districts(id) ON DELETE CASCADE,
     senatorial_district_name VARCHAR(255) NOT NULL,
-    federal_constituency_id INTEGER NOT NULL,
+    federal_constituency_id INTEGER NOT NULL REFERENCES federal_constituencies(id) ON DELETE CASCADE,
     federal_constituency_name VARCHAR(255) NOT NULL,
     wards_count INTEGER DEFAULT 0,
     polling_units_count INTEGER DEFAULT 0
 );
+
+CREATE INDEX idx_state_assembly_constituencies_name ON state_assembly_constituencies (name);
 
 INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name) VALUES
 -- ============================================================
@@ -1286,5 +1288,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (1009, 'Bukkuyum North', 758, 'BUKKUYUM', 37, 'Zamfara', 109, 'Zamfara West', 360, 'Gummi / Bukkuyum'),
 (1010, 'Bukkuyum South', 758, 'BUKKUYUM', 37, 'Zamfara', 109, 'Zamfara West', 360, 'Gummi / Bukkuyum');
 
+
 -- +goose Down
+DROP INDEX IF EXISTS idx_state_assembly_constituencies_name;
 DROP TABLE IF EXISTS state_assembly_constituencies;

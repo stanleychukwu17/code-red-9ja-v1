@@ -90,6 +90,7 @@ type Querier interface {
 	DeleteUser(ctx context.Context, id int64) error
 	DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context, arg DeleteUserDidNotVoteReasonByElectionGroupParams) error
 	DeleteUserPhoneNumber(ctx context.Context, id int64) error
+	DeleteUserRoles(ctx context.Context, userID int64) error
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)

@@ -26,12 +26,23 @@ func NewElectionGroupsService(q *queries.Queries, rdb *redis.Client, distributor
 }
 
 func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error) {
+	metrics, err := s.queries.GetNationalMetrics(ctx)
+	if err != nil {
+		return queries.ElectionGroup{}, err
+	}
+
 	eg, err := s.queries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-		Name:           name,
-		Rank:           rank,
-		ElectionsCount: electionsCount,
-		StatesCount:    statesCount,
-		ElectionDate:   pgtype.Date{Time: electionDate, Valid: true},
+		Name:                       name,
+		Rank:                       rank,
+		ElectionsCount:             electionsCount,
+		StatesCount:                statesCount,
+		ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+		SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+		FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+		LgasCount:                  metrics.LgasCount,
+		StateConstituenciesCount:   metrics.StateConstituenciesCount,
+		WardsCount:                 metrics.WardsCount,
+		PollingUnitsCount:          metrics.PollingUnitsCount,
 	})
 	if err != nil {
 		return eg, err

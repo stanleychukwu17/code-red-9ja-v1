@@ -478,12 +478,11 @@ SET
   data_phone = $12,
   current_ward = $13,
   phone = COALESCE(NULLIF($14::varchar, ''), phone),
-  phone_verified = CASE WHEN NULLIF($14::varchar, '') IS NOT NULL AND NULLIF($14::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
   polling_unit_id = $15,
   address = COALESCE(NULLIF($16::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -545,6 +544,7 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.CurrentLga,
 		&i.CurrentWard,
 		&i.CurrentCity,
+		&i.Address,
 		&i.StateOfOrigin,
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
@@ -565,11 +565,11 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 const updateUserRoleForPartyApp = `-- name: UpdateUserRoleForPartyApp :one
 WITH inserted AS (
   INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
-  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'partyadmin'
+  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'party_admin'
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
@@ -595,6 +595,7 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User
 		&i.CurrentLga,
 		&i.CurrentWard,
 		&i.CurrentCity,
+		&i.Address,
 		&i.StateOfOrigin,
 		&i.VotersCardImage,
 		&i.BankAccountNumber,

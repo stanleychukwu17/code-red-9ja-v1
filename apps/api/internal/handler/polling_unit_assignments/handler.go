@@ -99,7 +99,7 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 		if r.Code == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "partyadmin" {
+		if r.Code == "party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -352,7 +352,7 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 		if r.Code == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "partyadmin" {
+		if r.Code == "party_admin" {
 			isPartyAdmin = true
 		}
 	}

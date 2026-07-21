@@ -29,6 +29,7 @@ CREATE TABLE election_groups (
   unique_pu_agents_count INT NOT NULL DEFAULT 0,
   pu_agents_in_attendance_count INT NOT NULL DEFAULT 0,
   
+  pu_average_arrival_time TIMESTAMPTZ,
   pu_average_election_started_at TIMESTAMPTZ,
   pu_average_election_ended_at TIMESTAMPTZ,
   pu_election_practice_test_readiness_percentage FLOAT NOT NULL DEFAULT 0,

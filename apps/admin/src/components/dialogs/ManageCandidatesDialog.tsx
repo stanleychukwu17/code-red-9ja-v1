@@ -212,7 +212,7 @@ export function ManageCandidatesDialog({
                 </span>
               </div>
             ) : (
-              <div className="space-y-1 pr-1 max-h-[40vh] overflow-y-auto">
+              <div className="space-y-1 pr-1 py-2 max-h-[40vh] overflow-y-auto">
                 {filteredCandidates.map((cand, idx) => (
                   <CandidateRow
                     key={cand.id}
@@ -229,9 +229,10 @@ export function ManageCandidatesDialog({
           <DialogFooter>
             <Button
               type="button"
+              variant="secondary"
+              size="2xl"
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
-              className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
             >
               {saveMutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />
@@ -253,12 +254,17 @@ export function ManageCandidatesDialog({
         onClose={() => setIsExistingDialogOpen(false)}
         onAddUsers={handleAddMultipleExistingCandidates}
         alreadySelectedIds={candidates.map((c) => c.id)}
-        fetchUsers={async () => {
-          const res = await getUsersList();
+        fetchUsers={async ({ cursor, search }) => {
+          const res = await getUsersList({
+            data: { cursor, search, limit: 20 },
+          });
           if (res && res.success && res.data?.users) {
-            return res.data.users;
+            return {
+              users: res.data.users,
+              nextCursor: res.data.meta?.next_cursor,
+            };
           }
-          return [];
+          return { users: [] };
         }}
         title="Search Candidates"
         placeholder="Search candidates to add"

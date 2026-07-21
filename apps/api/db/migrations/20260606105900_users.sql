@@ -23,6 +23,7 @@ CREATE TABLE users (
   current_lga INTEGER REFERENCES lgas(id) ON DELETE SET NULL,
   current_ward INTEGER REFERENCES wards(id) ON DELETE SET NULL,
   current_city INT REFERENCES c_cities(id),
+  address VARCHAR(255),
 
   state_of_origin SMALLINT REFERENCES c_states(id),
 
@@ -75,7 +76,7 @@ CREATE TABLE users_nin (
 -- USERS Phone number table
 CREATE TABLE users_phone_numbers (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   phone VARCHAR(25) UNIQUE NOT NULL,
   raw_input VARCHAR(25) NOT NULL,
   phonecode VARCHAR(10) NOT NULL,

@@ -9,16 +9,22 @@ import { PartyAdminsTable } from "#/components/Tables";
 import { getPageHeader } from "#/lib/shared/meta";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPartyAdminsTabs, getAgentPartyAdmins } from "./-data";
-import { PartyAdminsActions } from "#/components/party-members/PartyAdminsActions";
+import { PartyAdminsActions } from "#/components/party-members/PartyMembersActions";
 import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 
 // Server Functions
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
-import { getParties, getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
+import {
+  getParties,
+  getPresignedUploadURL,
+  confirmFileUpload,
+} from "#/lib/server/parties";
 import { registerCandidate } from "#/lib/server/auth/auth";
 import { updateUser } from "#/lib/server/users";
 
-export const Route = createFileRoute("/_authenticated/$partyShortName/party-members/agent")({
+export const Route = createFileRoute(
+  "/_authenticated/$partyShortName/party-members/agent",
+)({
   head: () => getPageHeader({ title: "Party members" }),
   component: RouteComponent,
 });
@@ -59,8 +65,6 @@ function RouteComponent() {
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         partyShortName={partyShortName}
-        defaultRole="user"
-        defaultRoleLevel="pollingagent"
         getAllCountries={getAllCountries}
         getStates={getStates}
         getCities={getCities}

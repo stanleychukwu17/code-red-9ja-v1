@@ -4,15 +4,17 @@ CREATE TABLE IF NOT EXISTS wards (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     abbreviation VARCHAR(10) NOT NULL,
-    lga_id INTEGER NOT NULL,
+    lga_id INTEGER NOT NULL REFERENCES lgas(id) ON DELETE CASCADE,
     lga_name VARCHAR(255) NOT NULL,
-    state_id INTEGER NOT NULL,
+    state_id INTEGER NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
     state_name VARCHAR(255) NOT NULL,
-    state_assembly_constituency_id INTEGER,
+    state_assembly_constituency_id INTEGER REFERENCES state_assembly_constituencies(id) ON DELETE CASCADE,
     state_assembly_constituency_name VARCHAR(255),
     status VARCHAR(50) DEFAULT 'active',
     polling_units_count INTEGER DEFAULT 0
 );
+
+CREATE INDEX idx_wards_name ON wards (name);
 
 INSERT INTO wards (id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name) VALUES
 -- ============================================================
@@ -554,16 +556,16 @@ INSERT INTO wards (id, name, abbreviation, lga_id, lga_name, state_id, state_nam
     (493, 'IBENO IX', '09', 46, 'IBENO', 3, 'AKWA IBOM', 70, 'Esit Eket'),
     (494, 'IBENO X', '10', 46, 'IBENO', 3, 'AKWA IBOM', 70, 'Esit Eket'),
 -- IBESIKPO ASUTAN LGA (lga_id: 47)
-    (495, 'IBESIKPO 1', '01', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (496, 'IBESIKPO 11', '02', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (497, 'IBESIKPO 111', '03', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (498, 'IBESIKPO 1V', '04', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (499, 'IBESIKPO V', '05', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (500, 'ASUTAN 1', '06', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (501, 'ASUTAN 11', '07', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (502, 'ASUTAN 111', '08', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (503, 'ASUTAN 1V', '09', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
-    (504, 'ASUTAN V', '10', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', 0, 'Unknown'),
+    (495, 'IBESIKPO 1', '01', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (496, 'IBESIKPO 11', '02', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (497, 'IBESIKPO 111', '03', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (498, 'IBESIKPO 1V', '04', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (499, 'IBESIKPO V', '05', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (500, 'ASUTAN 1', '06', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (501, 'ASUTAN 11', '07', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (502, 'ASUTAN 111', '08', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (503, 'ASUTAN 1V', '09', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
+    (504, 'ASUTAN V', '10', 47, 'IBESIKPO ASUTAN', 3, 'AKWA IBOM', NULL, NULL),
 -- IBIONO IBOM LGA (lga_id: 48)
     (505, 'IBIONO EASTERN 1', '01', 48, 'IBIONO IBOM', 3, 'AKWA IBOM', 54, 'Ibiono Ibom'),
     (506, 'IBIONO EASTERN 11', '02', 48, 'IBIONO IBOM', 3, 'AKWA IBOM', 54, 'Ibiono Ibom'),
@@ -9687,5 +9689,7 @@ INSERT INTO wards (id, name, abbreviation, lga_id, lga_name, state_id, state_nam
     (19707, 'KARU', '10', 281, 'MUNICIPAL', 37, 'FEDERAL CAPITAL TERRITORY', NULL, NULL),
     (19708, 'NYANYA', '11', 281, 'MUNICIPAL', 37, 'FEDERAL CAPITAL TERRITORY', NULL, NULL),
     (19709, 'GWAGWA', '12', 281, 'MUNICIPAL', 37, 'FEDERAL CAPITAL TERRITORY', NULL, NULL);
+
 -- +goose Down
+DROP INDEX IF EXISTS idx_wards_name;
 DROP TABLE IF EXISTS wards;

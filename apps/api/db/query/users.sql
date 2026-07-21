@@ -101,6 +101,13 @@ WHERE
       -- if a user somehow has multiple roles (or just to keep the base query simple).
       SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY(sqlc.narg('role_codes')::text[])
   ))
+  AND (sqlc.narg('search')::text IS NULL OR (
+      u.first_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+      u.last_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+      u.middle_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
+      u.email ILIKE '%' || sqlc.narg('search')::text || '%' OR
+      u.username ILIKE '%' || sqlc.narg('search')::text || '%'
+  ))
 ORDER BY u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 
@@ -134,6 +141,9 @@ SET first_name = $2,
     state_of_origin = $12,
     updated_at = NOW()
 WHERE id = $1;
+
+-- name: DeleteUserRoles :exec
+DELETE FROM user_roles WHERE user_id = $1;
 
 -- name: GetUserNINByUserID :one
 SELECT * FROM users_nin

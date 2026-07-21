@@ -395,11 +395,8 @@ export const getUserVoteStatus = createServerFn({ method: "GET" })
   .inputValidator((data: { electionGroupId: number }) => data)
   .handler(async ({ data: { electionGroupId } }) => {
     try {
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL.electionGroups}/${electionGroupId}/vote-status`,
-        {
-          headers: getAuthHeaders(),
-        },
       );
       const data = await response.json();
       return data;
@@ -411,9 +408,7 @@ export const getUserVoteStatus = createServerFn({ method: "GET" })
 export const getNonVotingReasons = createServerFn({ method: "GET" }).handler(
   async () => {
     try {
-      const response = await fetch(API_URL.nonVotingReasons, {
-        headers: getAuthHeaders(),
-      });
+      const response = await apiFetch(API_URL.nonVotingReasons);
       const data = await response.json();
       return data;
     } catch (error) {
@@ -432,14 +427,56 @@ export const submitDidNotVote = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await fetch(API_URL.didNotVote, {
+      const response = await apiFetch(API_URL.didNotVote, {
         method: "POST",
-        headers: getAuthHeaders(),
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(data),
       });
       const resData = await response.json();
       if (!response.ok) {
         throw new Error(resData.message || "Failed to submit reason");
+      }
+      return resData;
+    } catch (error) {
+      throw error;
+    }
+  });
+
+export const getEligibleElections = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: { electionGroupId: number; pollingUnitId: number }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(
+        `${API_URL.electionGroups}/${data.electionGroupId}/eligible-elections?polling_unit_id=${data.pollingUnitId}`
+      );
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch eligible elections",
+      };
+    }
+  });
+
+export const submitVotes = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(`${API_URL.elections}/submit-votes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      const resData = await response.json();
+      if (!response.ok) {
+        throw new Error(resData.message || "Failed to submit votes");
       }
       return resData;
     } catch (error) {

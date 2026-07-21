@@ -38,14 +38,18 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			}
 
 			if tokenStr == "" {
-				http.Error(w, "Unauthorized: missing token", http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"success":false,"message":"Unauthorized: missing token"}`))
 				return
 			}
 
 			// 3. Verify the token
 			claims, err := utils.VerifyToken(tokenStr, jwtSecret)
 			if err != nil {
-				http.Error(w, "Unauthorized: invalid token", http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"success":false,"message":"Unauthorized: invalid token"}`))
 				return
 			}
 
@@ -63,7 +67,9 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims, ok := r.Context().Value(ClaimsKey).(*utils.JWTClaims)
 			if !ok {
-				http.Error(w, "Unauthorized: claims not found", http.StatusUnauthorized)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"success":false,"message":"Unauthorized: claims not found"}`))
 				return
 			}
 
@@ -76,7 +82,9 @@ func RequireRole(allowedRoles ...string) func(http.Handler) http.Handler {
 			}
 
 			if !roleAllowed {
-				http.Error(w, "Forbidden: insufficient permissions", http.StatusForbidden)
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`{"success":false,"message":"Forbidden: insufficient permissions"}`))
 				return
 			}
 

@@ -97,6 +97,7 @@ export const useAuth = () => {
 
   const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);
   const selectedElection = useAppSelector(selectSelectedElection);
+  console.log({ selectedElectionGroup, selectedElection });
 
   // 1. Fetch party details
   const partyId = user?.party?.id ?? user?.party_id;

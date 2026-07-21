@@ -23,7 +23,11 @@ import { updateAuthState } from "#/redux/slice/authSlice";
 import store from "#/redux/store";
 import { updateCountryState } from "#/redux/slice/countrySlice";
 import { APP_URL } from "#/lib/config";
-import { loginPartyApp, checkIfRefreshTokenInCookie, getUserDetailsCookie } from "#/lib/server/auth/auth";
+import {
+  loginPartyApp,
+  checkIfRefreshTokenInCookie,
+  getUserDetailsCookie,
+} from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
 
@@ -78,7 +82,9 @@ export const Route = createFileRoute("/auth/login")({
       throw new Error(countries.message || "Failed to load countries");
 
     if (typeof window !== "undefined") {
-      store.dispatch(updateCountryState({ countries: countries.data.countries }));
+      store.dispatch(
+        updateCountryState({ countries: countries.data.countries }),
+      );
     }
 
     return { countries: countries.data.countries };
@@ -141,6 +147,7 @@ function LoginComponent() {
 
       try {
         const response = await loginPartyApp({ data: payload });
+        console.log({ response });
 
         if (response.success) {
           dispatch(updateAuthState({ user: response.data.user }));

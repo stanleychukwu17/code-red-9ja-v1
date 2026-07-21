@@ -28,7 +28,6 @@ SET
   data_phone = $12,
   current_ward = $13,
   phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
-  phone_verified = CASE WHEN NULLIF(sqlc.arg(phone)::varchar, '') IS NOT NULL AND NULLIF(sqlc.arg(phone)::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
   polling_unit_id = sqlc.arg(polling_unit_id),
   address = COALESCE(NULLIF(sqlc.arg(address)::varchar, ''), address),
   updated_at = NOW()
@@ -136,7 +135,7 @@ RETURNING *;
 -- name: UpdateUserRoleForPartyApp :one
 WITH inserted AS (
   INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
-  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'partyadmin'
+  SELECT $1, r.id, r.code, 0, CURRENT_TIMESTAMP FROM roles r WHERE r.code = 'party_admin'
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1

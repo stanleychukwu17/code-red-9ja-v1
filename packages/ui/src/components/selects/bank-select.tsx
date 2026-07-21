@@ -29,7 +29,10 @@ export const SelectBank = ({
   buttonText,
   hideIcon,
   fetchBanks,
-}: SelectProps<string> & { className?: string; fetchBanks: () => Promise<any> }) => {
+}: SelectProps<string> & {
+  className?: string;
+  fetchBanks: () => Promise<any>;
+}) => {
   const [open, setOpen] = useState(false);
   const [mobileSearch, setMobileSearch] = useState("");
   const [selectedItem, setSelectedItem] = useState<string | undefined>(
@@ -116,7 +119,7 @@ export const SelectBank = ({
               </span>
             </div>
           ) : (
-            <p className="whitespace-normal text-left line-clamp-1 text-c-50">
+            <p className={cn(isLoading && "animate-pulse")}>
               {isLoading ? "Loading banks..." : buttonText || "Select Bank"}
             </p>
           )}

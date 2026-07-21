@@ -12,6 +12,7 @@ import { VideoPreview } from "#/components/VideoPreview";
 import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 
 import { updateAssignmentTracking } from "#/lib/server/polling_unit_assignments";
+import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
 
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "#/hooks/useAuth";
@@ -26,7 +27,7 @@ function ElectionStartVideo() {
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
   const startTime = search.startTime;
-  const { selectedElectionGroup } = useAuth();
+  const { selectedElectionGroup, pollingUnitId, party } = useAuth();
 
   const [videoFile, setVideoFile] = useState<{
     url: string;
@@ -42,7 +43,21 @@ function ElectionStartVideo() {
         throw new Error(res?.message || "Failed to submit election start time");
       return res;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // Fire a polling unit update to announce election start
+      if (pollingUnitId && selectedElectionGroup?.id) {
+        createPollingUnitUpdate({
+          data: {
+            polling_unit_id: pollingUnitId,
+            election_group_id: selectedElectionGroup.id,
+            assignment_id: assignmentId ? Number(assignmentId) : undefined,
+            party_id: party?.id,
+            message: "The election has started at my polling unit.",
+            media_urls: variables.election_started_video_url ? [variables.election_started_video_url] : [],
+            is_report: false,
+          },
+        }).catch(() => {/* silent – tracking already submitted */});
+      }
       navigate({ to: "/home" });
     },
     onError: (err: any) => {

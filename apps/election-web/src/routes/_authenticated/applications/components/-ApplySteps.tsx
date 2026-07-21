@@ -702,7 +702,7 @@ export const ContactDetailsStep = ({
           className={`h-14 rounded-2xl ${!!userPhone ? "bg-gray-50" : ""}`}
         />
       </div>
-      <div className="flex flex-col gap-2">
+      {/* <div className="flex flex-col gap-2">
         <Label title="Your Phone Number (for data subscription)" />
         <Input
           type="tel"
@@ -711,7 +711,7 @@ export const ContactDetailsStep = ({
           placeholder="Enter phone number used for data sub"
           className="h-14 rounded-2xl"
         />
-      </div>
+      </div> */}
       <div className="flex flex-col gap-2">
         <Label title="Your Whatsapp Phone Number" />
         <Input

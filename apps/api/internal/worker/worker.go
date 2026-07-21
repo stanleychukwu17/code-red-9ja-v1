@@ -9,6 +9,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 
+	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 )
 
@@ -39,9 +40,10 @@ type RedisTaskProcessor struct {
 	pool            *pgxpool.Pool
 	rdb             *redis.Client
 	taskDistributor TaskDistributor
+	cfg             *config.Config
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor) TaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config) TaskProcessor {
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
@@ -59,6 +61,7 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 		pool:            pool,
 		rdb:             rdb,
 		taskDistributor: distributor,
+		cfg:             cfg,
 	}
 }
 
@@ -78,17 +81,24 @@ func (processor *RedisTaskProcessor) Start() error {
 
 	// Register cron rollup jobs with staggered schedules to spread DB load.
 	// Each scope's zenith rollup also updates election_candidates.votes_count.
-	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
-	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
-	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
-	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
-	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
-	processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
-	processor.cron.AddFunc("*/11 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
+	// In development, set STATS_REFRESH_ENABLED=false in your .env to skip these
+	// expensive full-table crons and rely only on event-driven updates.
+	statsEnabled := config.GetEnv("STATS_REFRESH_ENABLED", "true") == "true"
+	if !statsEnabled {
+		slog.Warn("STATS_REFRESH_ENABLED=false — skipping all stats cron registration (dev mode)")
+	} else {
+		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
+		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
+		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
+		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
+		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
+		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
+		processor.cron.AddFunc("*/11 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
 
-	// Geographic Stats: event-driven cascade is the primary mechanism.
-	// This cron is a 30-minute safety-net fallback for any missed cascades.
-	processor.cron.AddFunc("*/30 * * * *", processor.ProcessRefreshAllElectionStats)
+		// Geographic Stats: event-driven cascade is the primary mechanism.
+		// This cron is a 30-minute safety-net fallback for any missed cascades.
+		processor.cron.AddFunc("*/30 * * * *", processor.ProcessRefreshAllElectionStats)
+	}
 
 	processor.cron.Start()
 	slog.Info("cron rollup scheduler started")

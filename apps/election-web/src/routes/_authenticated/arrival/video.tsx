@@ -11,6 +11,7 @@ import { VideoPreview } from "#/components/VideoPreview";
 import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 
 import { updateAssignmentTracking } from "#/lib/server/polling_unit_assignments";
+import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
 
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "#/hooks/useAuth";
@@ -24,7 +25,7 @@ function ArrivalVideo() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
-  const { selectedElectionGroup } = useAuth();
+  const { selectedElectionGroup, pollingUnitId, party } = useAuth();
 
   const [videoFile, setVideoFile] = useState<{
     url: string;
@@ -40,7 +41,21 @@ function ArrivalVideo() {
         throw new Error(res?.message || "Failed to submit arrival");
       return res;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      // Fire a polling unit update to announce arrival
+      if (pollingUnitId && selectedElectionGroup?.id) {
+        createPollingUnitUpdate({
+          data: {
+            polling_unit_id: pollingUnitId,
+            election_group_id: selectedElectionGroup.id,
+            assignment_id: assignmentId ? Number(assignmentId) : undefined,
+            party_id: party?.id,
+            message: "I just arrived at my polling unit.",
+            media_urls: variables.arrival_video_url ? [variables.arrival_video_url] : [],
+            is_report: false,
+          },
+        }).catch(() => {/* silent – tracking already submitted */});
+      }
       navigate({ to: "/home" });
     },
     onError: (err: any) => {

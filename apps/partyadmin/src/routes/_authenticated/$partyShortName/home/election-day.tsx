@@ -2,6 +2,7 @@ import {
   getElectionCandidates,
   getPollingUnitFinalResults,
   getPollingUnitUpdates,
+  getElectionStats,
 } from "#/lib/server/elections";
 import {
   FinalResultReel,
@@ -20,7 +21,7 @@ import {
 } from "@repo/ui/components/cards/leaderboard-card";
 import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
 import ReportCubeIcon from "@repo/ui/icons/report-cube-icon";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import * as React from "react";
@@ -45,8 +46,46 @@ function ElectionDayComponent() {
     selectedLGAId,
     selectedWardId,
     electionCandidates: candidatesList = [],
+    party,
   } = useAppContext();
   const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
+  const fetchElectionStatsFn = useServerFn(getElectionStats);
+
+  const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: [
+      "election-stats",
+      selectedElectionGroup?.id,
+      party?.id,
+      selectedStateId,
+      selectedDistrictId,
+      selectedFederalConstituencyId,
+      selectedStateConstituencyId,
+      selectedLGAId,
+      selectedWardId,
+    ],
+    queryFn: () =>
+      fetchElectionStatsFn({
+        data: {
+          electionGroupId: selectedElectionGroup?.id as number,
+          partyId: party?.id,
+          stateId: selectedStateId,
+          senatorialDistrictId: selectedDistrictId,
+          federalConstituencyId: selectedFederalConstituencyId,
+          stateAssemblyConstituencyId: selectedStateConstituencyId,
+          lgaId: selectedLGAId,
+          wardId: selectedWardId,
+        },
+      }),
+    enabled: !!selectedElectionGroup?.id,
+  });
+
+  const resolvedStats =
+    electionStatsData?.data?.party_stats ||
+    electionStatsData?.data?.stats ||
+    {};
+  const targets =
+    electionStatsData?.data?.targets || electionStatsData?.data?.stats || {};
+  console.log("ResolvedStats:", resolvedStats);
 
   return (
     <DashboardLayout>
@@ -109,7 +148,11 @@ function ElectionDayComponent() {
         </div>
 
         {/* Right Hand Column */}
-        <ElectionStatsSidebar />
+        <ElectionStatsSidebar
+          stats={resolvedStats}
+          targets={targets}
+          isLoading={isStatsLoading}
+        />
       </div>
 
       {/* Stacked Bottom Sections */}
@@ -217,7 +260,6 @@ function GalleryRow({
   onItemClick?: (item: UpdateItem) => void;
   seeAllHref?: string;
 }) {
-  console.log("Gallery Row: ", { items });
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between pb-2">
@@ -273,9 +315,7 @@ function GalleryRow({
 
 function UpdatesGallery({ isReport }: { isReport: boolean }) {
   const { partyShortName } = useParams({ strict: false });
-  const [selectedIndex, setSelectedIndex] = React.useState<number | null>(
-    null,
-  );
+  const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
 
   const {
     selectedElectionGroup,
@@ -322,8 +362,7 @@ function UpdatesGallery({ isReport }: { isReport: boolean }) {
         },
       }),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) =>
-      lastPage?.data?.next_cursor || undefined,
+    getNextPageParam: (lastPage) => lastPage?.data?.next_cursor || undefined,
     enabled: !!selectedElectionGroup?.id,
   });
 

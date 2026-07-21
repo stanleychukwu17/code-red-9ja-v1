@@ -232,8 +232,20 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 	jsonSessionData, _ := json.Marshal(sessionData)
 
+	// Always fetch party_id fresh from DB during login to bypass any stale Redis cache.
+	// The cached user profile may not reflect a recently-assigned party_id.
 	var partyID int16
-	if user.PartyID.Valid {
+	freshUser, freshErr := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if freshErr == nil {
+		if freshUser.PartyID.Valid {
+			partyID = freshUser.PartyID.Int16
+		}
+		// If cache was stale (party_id differs), refresh it so subsequent calls are correct
+		if freshUser.PartyID.Valid != user.PartyID.Valid || freshUser.PartyID.Int16 != user.PartyID.Int16 {
+			_ = s.UpdateCachedUserInfo(ctx, fakeID)
+		}
+	} else if user.PartyID.Valid {
+		// Fall back to cached value if DB query fails
 		partyID = user.PartyID.Int16
 	}
 
@@ -1299,6 +1311,36 @@ func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, role
 	err = s.usersService.AssignUserRole(ctx, userID, roleCode, whoAssigned)
 	if err != nil {
 		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
+	}
+
+	return nil
+}
+
+// UpdateUserRoles replaces a user's roles and optionally sets their party ID.
+func (s *AuthService) UpdateUserRoles(ctx context.Context, userID int64, roles []string, partyID *int64, whoAssigned int64) error {
+	// 1. Delete all existing roles
+	err := s.queries.DeleteUserRoles(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete existing roles: %w", err)
+	}
+
+	// 2. Assign the new roles
+	for _, roleCode := range roles {
+		err = s.usersService.AssignUserRole(ctx, userID, roleCode, whoAssigned)
+		if err != nil {
+			return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
+		}
+	}
+
+	// 3. Update party if provided
+	if partyID != nil {
+		err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+			ID:      userID,
+			PartyID: pgtype.Int2{Int16: int16(*partyID), Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update user party: %w", err)
+		}
 	}
 
 	return nil

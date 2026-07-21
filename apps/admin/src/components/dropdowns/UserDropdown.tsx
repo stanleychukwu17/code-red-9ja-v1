@@ -17,7 +17,11 @@ interface UserDropdownProps {
   refetch?: () => void;
 }
 
-export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) => {
+export const UserDropdown = ({
+  data,
+  className,
+  refetch,
+}: UserDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openRoleDialog, setOpenRoleDialog] = useState(false);
@@ -83,7 +87,7 @@ export const UserDropdown = ({ data, className, refetch }: UserDropdownProps) =>
     party_id: data.party_id,
     email: data.email,
     role: data.role,
-    role_level: data.role_level,
+    roles: data.roles,
     avatar: data.avatar || data.avatar_url,
   };
 
