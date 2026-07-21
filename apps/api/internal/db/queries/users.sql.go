@@ -233,6 +233,40 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (int64, 
 	return id, err
 }
 
+const createUserBankAccount = `-- name: CreateUserBankAccount :one
+INSERT INTO user_bank_accounts (
+  user_id, account_number, bank_code, is_primary
+) VALUES ($1, $2, $3, $4)
+RETURNING id, user_id, account_number, bank_code, is_primary, created_at, updated_at
+`
+
+type CreateUserBankAccountParams struct {
+	UserID        int64       `json:"user_id"`
+	AccountNumber string      `json:"account_number"`
+	BankCode      string      `json:"bank_code"`
+	IsPrimary     pgtype.Bool `json:"is_primary"`
+}
+
+func (q *Queries) CreateUserBankAccount(ctx context.Context, arg CreateUserBankAccountParams) (UserBankAccount, error) {
+	row := q.db.QueryRow(ctx, createUserBankAccount,
+		arg.UserID,
+		arg.AccountNumber,
+		arg.BankCode,
+		arg.IsPrimary,
+	)
+	var i UserBankAccount
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AccountNumber,
+		&i.BankCode,
+		&i.IsPrimary,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createUserNIN = `-- name: CreateUserNIN :one
 INSERT INTO users_nin (user_id, nin)
 VALUES ($1, $2)
@@ -318,6 +352,21 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteUserBankAccount = `-- name: DeleteUserBankAccount :exec
+DELETE FROM user_bank_accounts
+WHERE id = $1 AND user_id = $2
+`
+
+type DeleteUserBankAccountParams struct {
+	ID     int32 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) DeleteUserBankAccount(ctx context.Context, arg DeleteUserBankAccountParams) error {
+	_, err := q.db.Exec(ctx, deleteUserBankAccount, arg.ID, arg.UserID)
+	return err
+}
+
 const deleteUserPhoneNumber = `-- name: DeleteUserPhoneNumber :exec
 UPDATE users_phone_numbers
 SET is_active = false
@@ -354,8 +403,41 @@ func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (U
 	return i, err
 }
 
+const getUserBankAccountsByUserID = `-- name: GetUserBankAccountsByUserID :many
+SELECT id, user_id, account_number, bank_code, is_primary, created_at, updated_at FROM user_bank_accounts
+WHERE user_id = $1 ORDER BY is_primary DESC, id DESC
+`
+
+func (q *Queries) GetUserBankAccountsByUserID(ctx context.Context, userID int64) ([]UserBankAccount, error) {
+	rows, err := q.db.Query(ctx, getUserBankAccountsByUserID, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []UserBankAccount
+	for rows.Next() {
+		var i UserBankAccount
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.AccountNumber,
+			&i.BankCode,
+			&i.IsPrimary,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -384,8 +466,6 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.CurrentCity,
 		&i.StateOfOrigin,
 		&i.VotersCardImage,
-		&i.BankAccountNumber,
-		&i.BankCode,
 		&i.IsPolitician,
 		&i.IsVerified,
 		&i.PartyID,
@@ -552,7 +632,7 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.account_status, u.created_at FROM users u
+SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.is_politician, u.is_verified, u.account_status, u.created_at FROM users u
 WHERE 
   ($1::bigint IS NULL OR u.id < $1::bigint)
   AND ($2::smallint IS NULL OR u.party_id = $2::smallint)
@@ -588,6 +668,8 @@ type ListUsersRow struct {
 	CurrentState   int16              `json:"current_state"`
 	CurrentCity    pgtype.Int4        `json:"current_city"`
 	PartyID        pgtype.Int2        `json:"party_id"`
+	IsPolitician   pgtype.Bool        `json:"is_politician"`
+	IsVerified     pgtype.Bool        `json:"is_verified"`
 	AccountStatus  pgtype.Text        `json:"account_status"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
@@ -627,6 +709,8 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 			&i.CurrentState,
 			&i.CurrentCity,
 			&i.PartyID,
+			&i.IsPolitician,
+			&i.IsVerified,
 			&i.AccountStatus,
 			&i.CreatedAt,
 		); err != nil {
@@ -644,35 +728,33 @@ const seedUser = `-- name: SeedUser :one
 INSERT INTO users (
   fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
-  state_of_origin, voters_card_image, bank_account_number, bank_code,
+  state_of_origin, voters_card_image,
   account_status, party_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 RETURNING id
 `
 
 type SeedUserParams struct {
-	FakeID            pgtype.Int8 `json:"fake_id"`
-	Email             pgtype.Text `json:"email"`
-	Avatar            pgtype.Text `json:"avatar"`
-	Phone             pgtype.Text `json:"phone"`
-	Username          pgtype.Text `json:"username"`
-	PasswordHash      string      `json:"password_hash"`
-	LastName          pgtype.Text `json:"last_name"`
-	FirstName         pgtype.Text `json:"first_name"`
-	MiddleName        pgtype.Text `json:"middle_name"`
-	Gender            pgtype.Text `json:"gender"`
-	DateOfBirth       pgtype.Date `json:"date_of_birth"`
-	CurrentCountry    int16       `json:"current_country"`
-	CurrentState      int16       `json:"current_state"`
-	CurrentLga        pgtype.Int4 `json:"current_lga"`
-	CurrentCity       pgtype.Int4 `json:"current_city"`
-	StateOfOrigin     pgtype.Int2 `json:"state_of_origin"`
-	VotersCardImage   pgtype.Text `json:"voters_card_image"`
-	BankAccountNumber pgtype.Text `json:"bank_account_number"`
-	BankCode          pgtype.Text `json:"bank_code"`
-	AccountStatus     pgtype.Text `json:"account_status"`
-	PartyID           pgtype.Int2 `json:"party_id"`
+	FakeID          pgtype.Int8 `json:"fake_id"`
+	Email           pgtype.Text `json:"email"`
+	Avatar          pgtype.Text `json:"avatar"`
+	Phone           pgtype.Text `json:"phone"`
+	Username        pgtype.Text `json:"username"`
+	PasswordHash    string      `json:"password_hash"`
+	LastName        pgtype.Text `json:"last_name"`
+	FirstName       pgtype.Text `json:"first_name"`
+	MiddleName      pgtype.Text `json:"middle_name"`
+	Gender          pgtype.Text `json:"gender"`
+	DateOfBirth     pgtype.Date `json:"date_of_birth"`
+	CurrentCountry  int16       `json:"current_country"`
+	CurrentState    int16       `json:"current_state"`
+	CurrentLga      pgtype.Int4 `json:"current_lga"`
+	CurrentCity     pgtype.Int4 `json:"current_city"`
+	StateOfOrigin   pgtype.Int2 `json:"state_of_origin"`
+	VotersCardImage pgtype.Text `json:"voters_card_image"`
+	AccountStatus   pgtype.Text `json:"account_status"`
+	PartyID         pgtype.Int2 `json:"party_id"`
 }
 
 func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, error) {
@@ -694,14 +776,28 @@ func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, erro
 		arg.CurrentCity,
 		arg.StateOfOrigin,
 		arg.VotersCardImage,
-		arg.BankAccountNumber,
-		arg.BankCode,
 		arg.AccountStatus,
 		arg.PartyID,
 	)
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const setPrimaryBankAccount = `-- name: SetPrimaryBankAccount :exec
+UPDATE user_bank_accounts
+SET is_primary = CASE WHEN id = $1 THEN true ELSE false END
+WHERE user_id = $2
+`
+
+type SetPrimaryBankAccountParams struct {
+	ID     int32 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) SetPrimaryBankAccount(ctx context.Context, arg SetPrimaryBankAccountParams) error {
+	_, err := q.db.Exec(ctx, setPrimaryBankAccount, arg.ID, arg.UserID)
+	return err
 }
 
 const updateMoreInfoAboutThisUser = `-- name: UpdateMoreInfoAboutThisUser :exec
@@ -816,6 +912,42 @@ type UpdateUserAvatarParams struct {
 func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error {
 	_, err := q.db.Exec(ctx, updateUserAvatar, arg.ID, arg.Avatar)
 	return err
+}
+
+const updateUserBankAccount = `-- name: UpdateUserBankAccount :one
+UPDATE user_bank_accounts
+SET account_number = $2, bank_code = $3, is_primary = $4, updated_at = NOW()
+WHERE id = $1 AND user_id = $5
+RETURNING id, user_id, account_number, bank_code, is_primary, created_at, updated_at
+`
+
+type UpdateUserBankAccountParams struct {
+	ID            int32       `json:"id"`
+	AccountNumber string      `json:"account_number"`
+	BankCode      string      `json:"bank_code"`
+	IsPrimary     pgtype.Bool `json:"is_primary"`
+	UserID        int64       `json:"user_id"`
+}
+
+func (q *Queries) UpdateUserBankAccount(ctx context.Context, arg UpdateUserBankAccountParams) (UserBankAccount, error) {
+	row := q.db.QueryRow(ctx, updateUserBankAccount,
+		arg.ID,
+		arg.AccountNumber,
+		arg.BankCode,
+		arg.IsPrimary,
+		arg.UserID,
+	)
+	var i UserBankAccount
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.AccountNumber,
+		&i.BankCode,
+		&i.IsPrimary,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateUserFakeID = `-- name: UpdateUserFakeID :exec

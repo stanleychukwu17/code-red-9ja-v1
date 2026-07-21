@@ -10044,6 +10044,45 @@ const docTemplate = `{
                 }
             }
         },
+        "pgtype.InfinityModifier": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                1,
+                0,
+                -1
+            ],
+            "x-enum-varnames": [
+                "Infinity",
+                "Finite",
+                "NegativeInfinity"
+            ]
+        },
+        "pgtype.Text": {
+            "type": "object",
+            "properties": {
+                "string": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Timestamptz": {
+            "type": "object",
+            "properties": {
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
         "polling_unit_results.ReviewRequest": {
             "type": "object",
             "properties": {
@@ -10361,6 +10400,41 @@ const docTemplate = `{
                 },
                 "election_started_video_url": {
                     "type": "string"
+                }
+            }
+        },
+        "queries.GetPageVerificationsRow": {
+            "type": "object",
+            "properties": {
+                "for_who": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_admin_assignable": {
+                    "type": "boolean"
+                },
+                "page_id": {
+                    "type": "integer"
+                },
+                "page_type": {
+                    "type": "string"
+                },
+                "verification_description": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "verification_title": {
+                    "type": "string"
+                },
+                "verification_type": {
+                    "type": "string"
+                },
+                "verification_type_id": {
+                    "type": "integer"
+                },
+                "verified_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 }
             }
         },
@@ -10790,6 +10864,12 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_politician": {
+                    "type": "boolean"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
                 "last_name": {
                     "type": "string"
                 },
@@ -10837,6 +10917,12 @@ const docTemplate = `{
                 },
                 "username": {
                     "type": "string"
+                },
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
                 },
                 "voters_card_image": {
                     "type": "string"

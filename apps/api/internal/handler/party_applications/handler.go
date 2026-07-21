@@ -57,8 +57,7 @@ type SubmitApplicationRequest struct {
 	CurrentLga        int32   `json:"current_lga"`
 	CurrentWard       int32   `json:"current_ward"`
 	CurrentCity       int32   `json:"current_city"`
-	BankAccountNumber string  `json:"bank_account_number"`
-	BankCode          string  `json:"bank_code"`
+
 	WhatsappPhone     string  `json:"whatsapp_phone"`
 	DataPhone         string  `json:"data_phone"`
 	EducationalStatus string  `json:"educational_status"`
@@ -106,8 +105,8 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		electionGroupIDs = []int64{req.ElectionGroupID}
 	}
 
-	if req.PartyID <= 0 || len(electionGroupIDs) == 0 || req.PollingUnitID <= 0 || req.CurrentCountry <= 0 || req.CurrentState <= 0 || req.CurrentLga <= 0 || req.BankAccountNumber == "" || req.BankCode == "" {
-		h.utils.RespondError(w, http.StatusBadRequest, "party_id, election_group_ids (or election_group_id), polling_unit_id, current_country, current_state, current_lga, bank_account_number, and bank_code are required")
+	if req.PartyID <= 0 || len(electionGroupIDs) == 0 || req.PollingUnitID <= 0 || req.CurrentCountry <= 0 || req.CurrentState <= 0 || req.CurrentLga <= 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "party_id, election_group_ids (or election_group_id), polling_unit_id, current_country, current_state, current_lga are required")
 		return
 	}
 
@@ -123,8 +122,6 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		CurrentLga:        req.CurrentLga,
 		CurrentWard:       req.CurrentWard,
 		CurrentCity:       req.CurrentCity,
-		BankAccountNumber: req.BankAccountNumber,
-		BankCode:          req.BankCode,
 		WhatsappPhone:     req.WhatsappPhone,
 		DataPhone:         req.DataPhone,
 		EducationalStatus: req.EducationalStatus,

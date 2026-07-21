@@ -334,3 +334,28 @@ func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id i
 
 	return queries.GetCityByIDRow{}, fmt.Errorf("invalid city ID")
 }
+
+// GetLocationNames retrieves the country, state, and city names based on their IDs using caching.
+func (s *BodiesService) GetLocationNames(ctx context.Context, countryID, stateID int16, cityID int32) (string, string, string) {
+	var countryName, stateName, cityName string
+
+	if countryID > 0 {
+		if countryData, err := s.CheckCountry(ctx, countryID); err == nil {
+			countryName = countryData.Name
+		}
+	}
+
+	if countryID > 0 && stateID > 0 {
+		if stateData, err := s.CheckState(ctx, countryID, stateID); err == nil {
+			stateName = stateData.Name
+		}
+	}
+
+	if stateID > 0 && cityID > 0 {
+		if cityData, err := s.CheckCity(ctx, stateID, cityID); err == nil {
+			cityName = cityData.Name
+		}
+	}
+
+	return countryName, stateName, cityName
+}

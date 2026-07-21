@@ -111,8 +111,6 @@ type LoginUser struct {
 	HighestDegree     string                        `json:"highest_degree"`
 	GraduationYear    string                        `json:"graduation_year"`
 	SchoolName        string                        `json:"school_name"`
-	BankAccountNumber string                        `json:"bank_account_number"`
-	BankCode          string                        `json:"bank_code"`
 	VotersCardImage   string                        `json:"voters_card_image"`
 	Religion          string                        `json:"religion"`
 	MaritalStatus     string                        `json:"marital_status"`
@@ -303,8 +301,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			CurrentCity:       user.CurrentCity.Int32,
 			WhatsappPhone:     user.WhatsappPhone.String,
 			DataPhone:         user.DataPhone.String,
-			BankAccountNumber: user.BankAccountNumber.String,
-			BankCode:          user.BankCode.String,
 			VotersCardImage:   user.VotersCardImage.String,
 			Party:             partyObj,
 		},
@@ -402,8 +398,6 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		CurrentCity:       user.CurrentCity.Int32,
 		WhatsappPhone:     user.WhatsappPhone.String,
 		DataPhone:         user.DataPhone.String,
-		BankAccountNumber: user.BankAccountNumber.String,
-		BankCode:          user.BankCode.String,
 		VotersCardImage:   user.VotersCardImage.String,
 		Party:             partyObj,
 	}
@@ -1398,9 +1392,7 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			CurrentLga:        currentLgaVal,
 			CurrentCity:       currentCityVal,
 			StateOfOrigin:     stateOfOriginVal,
-			VotersCardImage:   pgtype.Text{},
-			BankAccountNumber: pgtype.Text{},
-			BankCode:          pgtype.Text{},
+			VotersCardImage:   pgtype.Text{String: "", Valid: false},
 			AccountStatus:     pgtype.Text{},
 			PartyID:           pgtype.Int2{},
 		}

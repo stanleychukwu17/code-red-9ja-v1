@@ -68,6 +68,15 @@ func RequestMetadataFromContext(ctx context.Context) (string, string) {
 
 // LogAction logs an action to the audit log.
 func (s *auditService) LogAction(ctx context.Context, params queries.InsertAuditLogParams) error {
+	ipAddress, userAgent := RequestMetadataFromContext(ctx)
+
+	if params.IpAddress == nil {
+		params.IpAddress = ParseIP(ipAddress)
+	}
+	if !params.UserAgent.Valid {
+		params.UserAgent = StringToText(userAgent)
+	}
+
 	// Execute the insertion synchronously for now.
 	// We might consider doing this asynchronously in the future if it becomes a bottleneck.
 	_, err := s.q.InsertAuditLog(ctx, params)

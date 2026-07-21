@@ -27,8 +27,6 @@ CREATE TABLE users (
   state_of_origin SMALLINT REFERENCES c_states(id),
 
   voters_card_image VARCHAR(255),
-  bank_account_number VARCHAR(50),
-  bank_code VARCHAR(20),
 
   is_politician BOOLEAN DEFAULT false,
   is_verified BOOLEAN DEFAULT false,
@@ -58,6 +56,18 @@ CREATE TABLE users (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- USER BANK ACCOUNTS TABLE
+CREATE TABLE user_bank_accounts (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  account_number VARCHAR(50) NOT NULL,
+  bank_code VARCHAR(20) NOT NULL,
+  is_primary BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 
 CREATE INDEX idx_users_party_id ON users(party_id);
 CREATE INDEX idx_users_polling_unit_id ON users(polling_unit_id);
@@ -134,4 +144,5 @@ DROP TABLE IF EXISTS user_more_infos;
 DROP TABLE IF EXISTS user_security_questions;
 DROP TABLE IF EXISTS users_phone_numbers;
 DROP TABLE IF EXISTS users_nin;
+DROP TABLE IF EXISTS user_bank_accounts;
 DROP TABLE IF EXISTS users;

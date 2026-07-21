@@ -67,8 +67,6 @@ export interface UserDetails {
   highest_degree?: string;
   graduation_year?: string;
   school_name?: string;
-  bank_account_number?: string;
-  bank_code?: string;
   voters_card_image?: string;
   address?: string;
   party?: {

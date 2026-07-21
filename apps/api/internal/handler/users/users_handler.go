@@ -42,6 +42,7 @@ type UsersService interface {
 
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
 	DeleteUserPhoneNumber(ctx context.Context, id int64) error
+	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -49,6 +50,7 @@ type BodiesService interface {
 	CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error)
 	CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error)
 	CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error)
+	GetLocationNames(ctx context.Context, countryID, stateID int16, cityID int32) (string, string, string)
 }
 
 // Handler holds dependencies for the users handler
@@ -73,49 +75,49 @@ func NewHandler(usersService UsersService, auditService audit.AuditService, bodi
 
 // UserResponse represents the sanitized user profile details returned to the frontend
 type UserResponse struct {
-	ID                 int64    `json:"id"`
-	FakeID             int64    `json:"fake_id"`
-	Email              string   `json:"email"`
-	Avatar             string   `json:"avatar"`
-	Phone              string   `json:"phone"`
-	Username           string   `json:"username"`
-	LastName           string   `json:"last_name"`
-	FirstName          string   `json:"first_name"`
-	MiddleName         string   `json:"middle_name"`
-	Gender             string   `json:"gender"`
-	DateOfBirth        string   `json:"date_of_birth"`
-	CurrentCountry     int16    `json:"current_country"`
-	CurrentState       int16    `json:"current_state"`
-	CurrentCity        int32    `json:"current_city"`
-	CurrentLga         int32    `json:"current_lga"`
-	CurrentWard        int32    `json:"current_ward"`
-	StateOfOrigin      int16    `json:"state_of_origin"`
-	NinVerified        bool     `json:"nin_verified"`
-	PhoneVerified      bool     `json:"phone_verified"`
-	EmailVerified      bool     `json:"email_verified"`
-	VotersCardVerified bool     `json:"voters_card_verified"`
-	Roles              []string `json:"roles"`
-	AccountStatus      string   `json:"account_status"`
-	PartyID            int64    `json:"party_id,omitempty"`
-	PollingUnitID      int64    `json:"polling_unit_id,omitempty"`
-	CreatedAt          string   `json:"created_at"`
-	UpdatedAt          string   `json:"updated_at"`
-	WhatsappPhone      string   `json:"whatsapp_phone"`
-	DataPhone          string   `json:"data_phone"`
-	EducationalStatus  string   `json:"educational_status"`
-	HighestDegree      string   `json:"highest_degree"`
-	GraduationYear     string   `json:"graduation_year"`
-	SchoolName         string   `json:"school_name"`
-	BankAccountNumber  string   `json:"bank_account_number"`
-	BankCode           string   `json:"bank_code"`
-	VotersCardImage    string   `json:"voters_card_image"`
-	Address            string   `json:"address"`
-	Religion           string   `json:"religion"`
-	MaritalStatus      string   `json:"marital_status"`
-	EducationLevel     string   `json:"education_level"`
-	CountryName        string   `json:"country_name,omitempty"`
-	StateName          string   `json:"state_name,omitempty"`
-	CityName           string   `json:"city_name,omitempty"`
+	ID                 int64                             `json:"id"`
+	FakeID             int64                             `json:"fake_id"`
+	Email              string                            `json:"email"`
+	Avatar             string                            `json:"avatar"`
+	Phone              string                            `json:"phone"`
+	Username           string                            `json:"username"`
+	LastName           string                            `json:"last_name"`
+	FirstName          string                            `json:"first_name"`
+	MiddleName         string                            `json:"middle_name"`
+	Gender             string                            `json:"gender"`
+	DateOfBirth        string                            `json:"date_of_birth"`
+	CurrentCountry     int16                             `json:"current_country"`
+	CurrentState       int16                             `json:"current_state"`
+	CurrentCity        int32                             `json:"current_city"`
+	CurrentLga         int32                             `json:"current_lga"`
+	CurrentWard        int32                             `json:"current_ward"`
+	StateOfOrigin      int16                             `json:"state_of_origin"`
+	NinVerified        bool                              `json:"nin_verified"`
+	PhoneVerified      bool                              `json:"phone_verified"`
+	EmailVerified      bool                              `json:"email_verified"`
+	VotersCardVerified bool                              `json:"voters_card_verified"`
+	IsPolitician       bool                              `json:"is_politician"`
+	IsVerified         bool                              `json:"is_verified"`
+	Verifications      []queries.GetPageVerificationsRow `json:"verifications,omitempty"`
+	Roles              []string                          `json:"roles"`
+	AccountStatus      string                            `json:"account_status"`
+	PartyID            int64                             `json:"party_id,omitempty"`
+	PollingUnitID      int64                             `json:"polling_unit_id,omitempty"`
+	CreatedAt          string                            `json:"created_at"`
+	UpdatedAt          string                            `json:"updated_at"`
+	WhatsappPhone      string                            `json:"whatsapp_phone"`
+	DataPhone          string                            `json:"data_phone"`
+	EducationalStatus  string                            `json:"educational_status"`
+	HighestDegree      string                            `json:"highest_degree"`
+	GraduationYear     string                            `json:"graduation_year"`
+	SchoolName         string                            `json:"school_name"`
+	Address            string                            `json:"address"`
+	Religion           string                            `json:"religion"`
+	MaritalStatus      string                            `json:"marital_status"`
+	EducationLevel     string                            `json:"education_level"`
+	CountryName        string                            `json:"country_name,omitempty"`
+	StateName          string                            `json:"state_name,omitempty"`
+	CityName           string                            `json:"city_name,omitempty"`
 }
 
 func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles []queries.GetUserRolesRow) UserResponse {
@@ -123,8 +125,7 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 	var dateOfBirth, accountStatus string
 	var ninVerified, phoneVerified, emailVerified, votersCardVerified bool
 	var whatsappPhone, dataPhone, educationalStatus, highestDegree, graduationYear, schoolName string
-	var bankAccountNumber, bankCode, votersCardImage, address string
-	var religion, maritalStatus, educationLevel string
+	var address, religion, maritalStatus, educationLevel string
 	var partyID, pollingUnitID int64
 	var cityID, lgaID, wardID int32
 	var stateOfOrigin int16
@@ -228,15 +229,6 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 			address = p.Address.String
 		}
 	}
-	if u.BankAccountNumber.Valid {
-		bankAccountNumber = u.BankAccountNumber.String
-	}
-	if u.BankCode.Valid {
-		bankCode = u.BankCode.String
-	}
-	if u.VotersCardImage.Valid {
-		votersCardImage = u.VotersCardImage.String
-	}
 
 	return UserResponse{
 		ID:                 u.ID,
@@ -272,9 +264,9 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 		HighestDegree:      highestDegree,
 		GraduationYear:     graduationYear,
 		SchoolName:         schoolName,
-		BankAccountNumber:  bankAccountNumber,
-		BankCode:           bankCode,
-		VotersCardImage:    votersCardImage,
+		IsPolitician:       u.User.IsPolitician.Bool,
+		IsVerified:         u.User.IsVerified.Bool,
+		Verifications:      u.Verifications,
 		Address:            address,
 		Religion:           religion,
 		MaritalStatus:      maritalStatus,
@@ -282,7 +274,7 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 	}
 }
 
-func mapListUserRowToResponse(u queries.ListUsersRow, uRoles []queries.GetUserRolesRow) UserResponse {
+func mapListUserRowToResponse(u queries.ListUsersRow, uRoles []queries.GetUserRolesRow, countryName, stateName, cityName string, verifications []queries.GetPageVerificationsRow) UserResponse {
 	var roles []string
 	for _, r := range uRoles {
 		roles = append(roles, r.Code)
@@ -307,6 +299,12 @@ func mapListUserRowToResponse(u queries.ListUsersRow, uRoles []queries.GetUserRo
 		AccountStatus:  u.AccountStatus.String,
 		PartyID:        int64(u.PartyID.Int16),
 		CreatedAt:      u.CreatedAt.Time.Format(time.RFC3339),
+		IsPolitician:   u.IsPolitician.Bool,
+		IsVerified:     u.IsVerified.Bool,
+		Verifications:  verifications,
+		CountryName:    countryName,
+		StateName:      stateName,
+		CityName:       cityName,
 	}
 }
 
@@ -592,44 +590,33 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hasMore := false
-	nextCursor := ""
+	hasMore := false // are there more users than the limit?
+	nextCursor := "" // cursor is the last user returned from this fetch
 
 	if len(paginatedUsers) == limit && len(paginatedUsers) > 0 {
 		hasMore = true
 		nextCursor = strconv.FormatInt(paginatedUsers[len(paginatedUsers)-1].ID, 10)
 	}
 
+	// loop through the paginatedUsers, so we can fetch some more extra info
 	responses := make([]UserResponse, len(paginatedUsers))
 	for i, u := range paginatedUsers {
+		// get the roles of the user
 		uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
 
-		countryName := ""
-		stateName := ""
-		cityName := ""
+		// get the names of the country, state and city of the user
+		countryName, stateName, cityName := h.bodiesService.GetLocationNames(r.Context(), u.CurrentCountry, u.CurrentState, u.CurrentCity.Int32)
 
-		countryData, err := h.bodiesService.CheckCountry(r.Context(), u.CurrentCountry)
-		if err == nil {
-			countryName = countryData.Name
+		// if user is verified, get their verification details
+		var verifications []queries.GetPageVerificationsRow
+		if u.IsVerified.Bool {
+			verifications, _ = h.usersService.GetUserPageVerifications(r.Context(), u.ID)
 		}
 
-		stateData, err := h.bodiesService.CheckState(r.Context(), u.CurrentCountry, u.CurrentState)
-		if err == nil {
-			stateName = stateData.Name
-		}
+		// map the user to the response struct
+		res := mapListUserRowToResponse(u, uRoles, countryName, stateName, cityName, verifications)
 
-		if u.CurrentCity.Int32 > 0 {
-			cityData, err := h.bodiesService.CheckCity(r.Context(), u.CurrentState, u.CurrentCity.Int32)
-			if err == nil {
-				cityName = cityData.Name
-			}
-		}
-
-		res := mapListUserRowToResponse(u, uRoles)
-		res.CountryName = countryName
-		res.StateName = stateName
-		res.CityName = cityName
-
+		// attach it to the response slice
 		responses[i] = res
 	}
 
@@ -856,8 +843,6 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			EntityID:   strconv.FormatInt(user.ID, 10),
 			OldValues:  oldValuesJSON,
 			NewValues:  newValuesJSON,
-			IpAddress:  audit.ParseIP(r.RemoteAddr),
-			UserAgent:  audit.StringToText(r.UserAgent()),
 		})
 	}
 	// ---------------------

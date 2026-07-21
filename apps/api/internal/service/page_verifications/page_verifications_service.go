@@ -51,14 +51,14 @@ func NewPageVerificationsService(
 func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string, pageID int64, verificationTypeID int16, actorID int64) (queries.PagesVerified, error) {
 	var userDetails *queries.UserWithPlaces
 	switch forWho {
-	case "user":
+	case db.PageTypeUser:
 		user, err := s.usersService.GetUserByFakeID(ctx, pageID)
 		if err != nil {
 			return queries.PagesVerified{}, fmt.Errorf("user not found: %w", err)
 		}
 		userDetails = &user
 		pageID = user.ID
-	case "party":
+	case db.PageTypeParty:
 		if party := s.partiesService.GetPartyInfo(ctx, pgtype.Int8{Int64: pageID, Valid: true}); party == nil {
 			return queries.PagesVerified{}, fmt.Errorf("party not found")
 		}
@@ -72,12 +72,12 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 	}
 
 	// make sure verification type is for user
-	if forWho == "user" && (verificationTypeID == 3 || verificationTypeID == 5 || verificationTypeID == 6) {
+	if forWho == db.PageTypeUser && (verificationTypeID == 3 || verificationTypeID == 5 || verificationTypeID == 6) {
 		return queries.PagesVerified{}, fmt.Errorf("invalid verification type for user")
 	}
 
 	// make sure verification type is for party
-	if forWho == "party" && verificationTypeID != 3 {
+	if forWho == db.PageTypeParty && verificationTypeID != 3 {
 		return queries.PagesVerified{}, fmt.Errorf("invalid verification type for party")
 	}
 
@@ -94,23 +94,20 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 		}
 	}
 
-	var pv queries.PagesVerified
-	fmt.Sprint(userDetails)
-
 	// Assign verification in pages_verified table
-	// pv, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
-	// 	PageType:           forWho,
-	// 	PageID:             pageID,
-	// 	VerificationTypeID: verificationTypeID,
-	// })
-	// if err != nil {
-	// 	return queries.PagesVerified{}, fmt.Errorf("failed to add page verification: %w", err)
-	// }
+	pv, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
+		PageType:           forWho,
+		PageID:             pageID,
+		VerificationTypeID: verificationTypeID,
+	})
+	if err != nil {
+		return queries.PagesVerified{}, fmt.Errorf("failed to add page verification: %w", err)
+	}
 
-	// // Update the parent table's is_verified flag
-	// if err := s.updateParentIsVerifiedFlag(ctx, forWho, pageID, true, userDetails); err != nil {
-	// 	return pv, fmt.Errorf("failed to update is_verified flag: %w", err)
-	// }
+	// Update the parent table's is_verified flag
+	if err := s.updateParentIsVerifiedFlag(ctx, forWho, pageID, true, userDetails); err != nil {
+		return pv, fmt.Errorf("failed to update is_verified flag: %w", err)
+	}
 
 	// Invalidate cache for the list of this page verification
 	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, forWho, pageID)
@@ -120,8 +117,6 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 	oldValuesData, _ := json.Marshal(pageVerifications)
 	newPageVerifications, _ := s.GetPageVerifications(ctx, forWho, pageID)
 	newValuesData, _ := json.Marshal(newPageVerifications)
-
-	ipAddress, userAgent := audit.RequestMetadataFromContext(ctx)
 
 	// Log the action
 	err = s.auditService.LogAction(
@@ -135,24 +130,11 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 			EntityID:   fmt.Sprintf("%d", pageID),
 			OldValues:  oldValuesData,
 			NewValues:  newValuesData,
-			IpAddress:  audit.ParseIP(ipAddress),
-			UserAgent:  audit.StringToText(userAgent),
 		},
 	)
 	if err != nil {
 		return pv, fmt.Errorf("failed to save audit log: %w", err)
 	}
-
-	fmt.Printf("%+v %v", queries.InsertAuditLogParams{
-		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-		ActorID:    actorID,
-		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
-		Action:     db.ActionAssignPageVerification,
-		EntityType: forWho,
-		EntityID:   fmt.Sprintf("%d", pageID),
-		OldValues:  oldValuesData,
-		NewValues:  newValuesData,
-	}, err)
 
 	return pv, nil
 }
@@ -160,7 +142,7 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 // RemoveVerification removes a verification badge. If no badges remain, sets is_verified to false.
 func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageType string, pageID int64, verificationTypeID int16, actorID int64) error {
 	var userDetails *queries.UserWithPlaces
-	if pageType == "user" {
+	if pageType == db.PageTypeUser {
 		user, err := s.usersService.GetUserByFakeID(ctx, pageID)
 		if err != nil {
 			return fmt.Errorf("user not found: %w", err)
@@ -210,8 +192,6 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageT
 	newPageVerifications, _ := s.GetPageVerifications(ctx, pageType, pageID)
 	newValuesData, _ := json.Marshal(newPageVerifications)
 
-	ipAddress, userAgent := audit.RequestMetadataFromContext(ctx)
-
 	// 5. Log the action
 	err = s.auditService.LogAction(
 		ctx,
@@ -224,8 +204,6 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageT
 			EntityID:   fmt.Sprintf("%d", pageID),
 			OldValues:  oldValuesData,
 			NewValues:  newValuesData,
-			IpAddress:  audit.ParseIP(ipAddress),
-			UserAgent:  audit.StringToText(userAgent),
 		},
 	)
 	if err != nil {
@@ -300,12 +278,12 @@ func (s *PageVerificationsService) ListVerificationTypes(ctx context.Context) ([
 // updateParentIsVerifiedFlag calls the appropriate service to update the `is_verified` flag on the entity.
 func (s *PageVerificationsService) updateParentIsVerifiedFlag(ctx context.Context, forWho string, pageID int64, isVerified bool, userDetails *queries.UserWithPlaces) error {
 	switch forWho {
-	case "user":
+	case db.PageTypeUser:
 		if userDetails == nil {
 			return fmt.Errorf("user details not provided")
 		}
 		return s.usersService.UpdateUserIsVerified(ctx, userDetails.ID, userDetails.FakeID.Int64, isVerified)
-	case "party":
+	case db.PageTypeParty:
 		return s.partiesService.UpdatePartyIsVerified(ctx, int16(pageID), isVerified)
 	default:
 		// Other types (e.g., party_member) could be added here

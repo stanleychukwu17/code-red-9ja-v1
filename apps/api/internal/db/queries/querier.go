@@ -61,6 +61,7 @@ type Querier interface {
 	CreateStateAssemblyConstituency(ctx context.Context, arg CreateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
 	CreateStateSupervisor(ctx context.Context, arg CreateStateSupervisorParams) (StateElectionSupervisor, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
+	CreateUserBankAccount(ctx context.Context, arg CreateUserBankAccountParams) (UserBankAccount, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error)
 	CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error)
 	CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) (int64, error)
@@ -88,6 +89,7 @@ type Querier interface {
 	DeleteState(ctx context.Context, id int16) error
 	DeleteStateAssemblyConstituency(ctx context.Context, id int32) error
 	DeleteUser(ctx context.Context, id int64) error
+	DeleteUserBankAccount(ctx context.Context, arg DeleteUserBankAccountParams) error
 	DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context, arg DeleteUserDidNotVoteReasonByElectionGroupParams) error
 	DeleteUserPhoneNumber(ctx context.Context, id int64) error
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
@@ -169,6 +171,7 @@ type Querier interface {
 	GetStateSupervisorCount(ctx context.Context, arg GetStateSupervisorCountParams) (int32, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]CState, error)
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
+	GetUserBankAccountsByUserID(ctx context.Context, userID int64) ([]UserBankAccount, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
@@ -333,6 +336,7 @@ type Querier interface {
 	// Inserts one zeroed row per ward in-scope for this election group.
 	SeedElectionGroupWardStats(ctx context.Context, dollar_1 int64) error
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
+	SetPrimaryBankAccount(ctx context.Context, arg SetPrimaryBankAccountParams) error
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
@@ -366,6 +370,7 @@ type Querier interface {
 	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error)
 	UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
+	UpdateUserBankAccount(ctx context.Context, arg UpdateUserBankAccountParams) (UserBankAccount, error)
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 	UpdateUserParty(ctx context.Context, arg UpdateUserPartyParams) error
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error

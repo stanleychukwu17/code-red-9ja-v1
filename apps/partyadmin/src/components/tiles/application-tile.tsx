@@ -37,8 +37,6 @@ export type ApplicationType = {
   current_lga?: any;
   current_ward?: any;
   current_city?: any;
-  bank_account_number?: any;
-  bank_code?: any;
   election_group_name?: string;
   election_date?: any;
   party_name?: string;
@@ -168,9 +166,9 @@ export function ApplicationTableTile({
 
   const lgaVal =
     data.current_lga &&
-    typeof data.current_lga === "object" &&
-    "Int32" in data.current_lga &&
-    data.current_lga.Valid
+      typeof data.current_lga === "object" &&
+      "Int32" in data.current_lga &&
+      data.current_lga.Valid
       ? data.current_lga.Int32
       : data.current_lga;
 
@@ -217,31 +215,31 @@ export function ApplicationTableTile({
         : "reject");
 
   const applicationDetails = {
-      id: data.id,
-      name,
-      avatar,
-      location: residence,
-      election,
-      voterId,
-      phone: phone || undefined,
-      callingPhone: phone || undefined,
-      whatsappPhone: getPgString(data.whatsapp_phone) || undefined,
-      dataPhone: getPgString(data.data_phone) || undefined,
-      schoolName: getPgString(data.school_name) || undefined,
-      degree: getPgString(data.highest_degree) || undefined,
-      graduationYear: getPgString(data.graduation_year) || undefined,
-      educationalStatus: getPgString(data.educational_status) || undefined,
-      address: getPgString(data.address) || undefined,
-      wardName: getPgString(data.ward_name) || undefined,
-      wardId: data.current_ward?.Int32 || data.current_ward || undefined,
-      pollingUnitId:
-        data.polling_unit_id?.Int32 || data.polling_unit_id || undefined,
-      electionGroupId: data.election_group_id || undefined,
-      partyId: data.party_id || undefined,
-      stateId: data.current_state || data.stateId,
-      lgaId: Number(lgaVal) || data.lgaId || undefined,
-      partyLogo: partyLogo,
-      partyShortName: partyShortName,
+    id: data.id,
+    name,
+    avatar,
+    location: residence,
+    election,
+    voterId,
+    phone: phone || undefined,
+    callingPhone: phone || undefined,
+    whatsappPhone: getPgString(data.whatsapp_phone) || undefined,
+    dataPhone: getPgString(data.data_phone) || undefined,
+    schoolName: getPgString(data.school_name) || undefined,
+    degree: getPgString(data.highest_degree) || undefined,
+    graduationYear: getPgString(data.graduation_year) || undefined,
+    educationalStatus: getPgString(data.educational_status) || undefined,
+    address: getPgString(data.address) || undefined,
+    wardName: getPgString(data.ward_name) || undefined,
+    wardId: data.current_ward?.Int32 || data.current_ward || undefined,
+    pollingUnitId:
+      data.polling_unit_id?.Int32 || data.polling_unit_id || undefined,
+    electionGroupId: data.election_group_id || undefined,
+    partyId: data.party_id || undefined,
+    stateId: data.current_state || data.stateId,
+    lgaId: Number(lgaVal) || data.lgaId || undefined,
+    partyLogo: partyLogo,
+    partyShortName: partyShortName,
   };
 
   const handleOpenDialog = () => {
@@ -257,9 +255,9 @@ export function ApplicationTableTile({
 
     const pollingUnitID =
       data.polling_unit_id &&
-      typeof data.polling_unit_id === "object" &&
-      "Int32" in data.polling_unit_id &&
-      data.polling_unit_id.Valid
+        typeof data.polling_unit_id === "object" &&
+        "Int32" in data.polling_unit_id &&
+        data.polling_unit_id.Valid
         ? data.polling_unit_id.Int32
         : typeof data.polling_unit_id === "number"
           ? data.polling_unit_id
@@ -389,11 +387,11 @@ function DecisionPill({
       className={cn(
         "h-8 rounded-[10px] px-3 text-[14px] font-semibold transition truncate text-center cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "accept" &&
-          "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
+        "bg-[#10dd84] text-[#083b25] hover:bg-[#08cf79]",
         variant === "reject" &&
-          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         variant === "pending" &&
-          "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
+        "bg-[#ececec] text-[#5e6a64] hover:bg-[#e6e6e6]",
         className,
       )}
     >
