@@ -24,6 +24,11 @@ type PageVerificationsService interface {
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 }
 
+// PartyService interface defines the methods needed from the party service
+type PartyService interface {
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow
+}
+
 // UsersService provides operations for managing user data, roles, and related services.
 type UsersService struct {
 	queries                  *queries.Queries
@@ -31,6 +36,7 @@ type UsersService struct {
 	monnify                  *monnifyclient.Client
 	bodiesService            BodiesService
 	pageVerificationsService PageVerificationsService
+	partyService             PartyService
 }
 
 // NewUsersService initializes and returns a new UsersService.
@@ -46,6 +52,11 @@ func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclie
 // SetPageVerificationsService sets the PageVerificationsService to avoid circular dependency in constructor.
 func (s *UsersService) SetPageVerificationsService(pvs PageVerificationsService) {
 	s.pageVerificationsService = pvs
+}
+
+// SetPartyService sets the PartyService to avoid circular dependency in constructor.
+func (s *UsersService) SetPartyService(ps PartyService) {
+	s.partyService = ps
 }
 
 // GetUserPageVerifications retrieves the page verifications for a specific user ID.
@@ -102,19 +113,32 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	// attach the user countryName, stateName, cityName to the user info that will be cached in redis
 	countryName, stateName, cityName := s.bodiesService.GetLocationNames(ctx, user.CurrentCountry, user.CurrentState, user.CurrentCity.Int32)
 
-	// Create a copy of the user and obscure the password hash for caching
+	// Fetch party basic info if user belongs to a party
+	var partyBasicInfo *queries.GetPartyBasicInfoRow
+	if user.PartyID.Valid && user.PartyID.Int16 > 0 {
+		if s.partyService != nil {
+			partyBasicInfo = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
+		}
+	}
+
+	// Create a copy of the user and obscure sensitive fields for caching
 	userForCache := user
 	userForCache.PasswordHash = "---"
+	if userForCache.VotersCardImage.Valid {
+		userForCache.VotersCardImage.String = "---"
+	}
 
 	// Cache it in Redis
 	userWithPlacesForCache := queries.UserWithPlaces{
-		User:          userForCache,
-		CountryName:   countryName,
-		StateName:     stateName,
-		CityName:      cityName,
-		Verifications: verifications,
+		User:           userForCache,
+		CountryName:    countryName,
+		StateName:      stateName,
+		CityName:       cityName,
+		Verifications:  verifications,
+		PartyBasicInfo: partyBasicInfo,
 	}
 
+	// cache the user data in redis
 	userJSON, err := json.Marshal(userWithPlacesForCache)
 	if err == nil {
 		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisFiveYearsTTL) // 5 years expires
