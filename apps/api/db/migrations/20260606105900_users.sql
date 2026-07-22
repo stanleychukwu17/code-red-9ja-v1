@@ -57,6 +57,12 @@ CREATE TABLE users (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_users_party_id ON users(party_id);
+CREATE INDEX idx_users_polling_unit_id ON users(polling_unit_id);
+CREATE INDEX idx_users_account_status ON users(account_status);
+CREATE INDEX idx_users_is_politician ON users(is_politician);
+CREATE INDEX idx_users_is_verified ON users(is_verified);
+
 -- USER BANK ACCOUNTS TABLE
 CREATE TABLE user_bank_accounts (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -67,13 +73,6 @@ CREATE TABLE user_bank_accounts (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-
-CREATE INDEX idx_users_party_id ON users(party_id);
-CREATE INDEX idx_users_polling_unit_id ON users(polling_unit_id);
-CREATE INDEX idx_users_account_status ON users(account_status);
-CREATE INDEX idx_users_is_politician ON users(is_politician);
-CREATE INDEX idx_users_is_verified ON users(is_verified);
 
 -- USERS NIN TABLE
 CREATE TABLE users_nin (
