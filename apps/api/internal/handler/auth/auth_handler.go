@@ -34,13 +34,6 @@ type AuthService interface {
 
 	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) (string, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
-
-	CheckEmail(ctx context.Context, email string) bool
-	CheckPhone(ctx context.Context, phone string) bool
-	ValidatePhoneForCountry(phone, country_code string) (string, error)
-	SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error
-	UpdateCachedUserInfo(ctx context.Context, fakeID int64) error
-	CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error
 }
 
 // Handler struct holds the dependencies for the auth handler

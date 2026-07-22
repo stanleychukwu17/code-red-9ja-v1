@@ -35,6 +35,7 @@ type UsersService interface {
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
+	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
 }
 
 type PartyService interface {
@@ -280,29 +281,29 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		AccessToken:  accessToken,
 		RefreshToken: randStr.RandomString,
 		User: LoginUser{
-			ID:                user.ID,
-			FakeID:            user.FakeID.Int64,
-			Email:             user.Email.String,
-			Username:          user.Username.String,
-			FirstName:         user.FirstName.String,
-			LastName:          user.LastName.String,
-			MiddleName:        user.MiddleName.String,
-			Gender:            user.Gender.String,
-			Avatar:            user.Avatar.String,
-			Phone:             user.Phone.String,
-			Roles:             userRoleCodes,
-			AccountStatus:     user.AccountStatus.String,
-			PartyID:           partyID,
-			PollingUnitID:     user.PollingUnitID.Int32,
-			CurrentCountry:    user.CurrentCountry,
-			CurrentState:      user.CurrentState,
-			CurrentLga:        user.CurrentLga.Int32,
-			CurrentWard:       user.CurrentWard.Int32,
-			CurrentCity:       user.CurrentCity.Int32,
-			WhatsappPhone:     user.WhatsappPhone.String,
-			DataPhone:         user.DataPhone.String,
-			VotersCardImage:   user.VotersCardImage.String,
-			Party:             partyObj,
+			ID:              user.ID,
+			FakeID:          user.FakeID.Int64,
+			Email:           user.Email.String,
+			Username:        user.Username.String,
+			FirstName:       user.FirstName.String,
+			LastName:        user.LastName.String,
+			MiddleName:      user.MiddleName.String,
+			Gender:          user.Gender.String,
+			Avatar:          user.Avatar.String,
+			Phone:           user.Phone.String,
+			Roles:           userRoleCodes,
+			AccountStatus:   user.AccountStatus.String,
+			PartyID:         partyID,
+			PollingUnitID:   user.PollingUnitID.Int32,
+			CurrentCountry:  user.CurrentCountry,
+			CurrentState:    user.CurrentState,
+			CurrentLga:      user.CurrentLga.Int32,
+			CurrentWard:     user.CurrentWard.Int32,
+			CurrentCity:     user.CurrentCity.Int32,
+			WhatsappPhone:   user.WhatsappPhone.String,
+			DataPhone:       user.DataPhone.String,
+			VotersCardImage: user.VotersCardImage.String,
+			Party:           partyObj,
 		},
 	}
 
@@ -377,29 +378,29 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
 	userDetails := LoginUser{
-		ID:                user.ID,
-		FakeID:            user.FakeID.Int64,
-		Email:             user.Email.String,
-		Username:          user.Username.String,
-		FirstName:         user.FirstName.String,
-		LastName:          user.LastName.String,
-		MiddleName:        user.MiddleName.String,
-		Gender:            user.Gender.String,
-		Avatar:            user.Avatar.String,
-		Phone:             user.Phone.String,
-		Roles:             userRoleCodes,
-		AccountStatus:     user.AccountStatus.String,
-		PartyID:           userPartyID,
-		PollingUnitID:     user.PollingUnitID.Int32,
-		CurrentCountry:    user.CurrentCountry,
-		CurrentState:      user.CurrentState,
-		CurrentLga:        user.CurrentLga.Int32,
-		CurrentWard:       user.CurrentWard.Int32,
-		CurrentCity:       user.CurrentCity.Int32,
-		WhatsappPhone:     user.WhatsappPhone.String,
-		DataPhone:         user.DataPhone.String,
-		VotersCardImage:   user.VotersCardImage.String,
-		Party:             partyObj,
+		ID:              user.ID,
+		FakeID:          user.FakeID.Int64,
+		Email:           user.Email.String,
+		Username:        user.Username.String,
+		FirstName:       user.FirstName.String,
+		LastName:        user.LastName.String,
+		MiddleName:      user.MiddleName.String,
+		Gender:          user.Gender.String,
+		Avatar:          user.Avatar.String,
+		Phone:           user.Phone.String,
+		Roles:           userRoleCodes,
+		AccountStatus:   user.AccountStatus.String,
+		PartyID:         userPartyID,
+		PollingUnitID:   user.PollingUnitID.Int32,
+		CurrentCountry:  user.CurrentCountry,
+		CurrentState:    user.CurrentState,
+		CurrentLga:      user.CurrentLga.Int32,
+		CurrentWard:     user.CurrentWard.Int32,
+		CurrentCity:     user.CurrentCity.Int32,
+		WhatsappPhone:   user.WhatsappPhone.String,
+		DataPhone:       user.DataPhone.String,
+		VotersCardImage: user.VotersCardImage.String,
+		Party:           partyObj,
 	}
 
 	profile, _ := s.usersService.GetMoreInfoAboutThisUser(ctx, user.ID)
@@ -1024,28 +1025,6 @@ func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) 
 	return s.usersService.GetUserByFakeID(ctx, fakeID)
 }
 
-// UpdateCachedUserInfo refreshes the cached user information in Redis.
-// This function should be called anytime a user's details changes
-func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) error {
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-
-	// Fetch fresh data from DB
-	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
-	if err != nil {
-		// If the user can't be fetched, remove the cache anyway to avoid stale data
-		s.rdb.Del(ctx, userInfoKey)
-		return fmt.Errorf("user not found for cache update: %w", err)
-	}
-
-	// Marshal and update Redis
-	userJSON, err := json.Marshal(user)
-	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour)
-	}
-
-	return err
-}
-
 type VerifySecurityQuestionsResult struct {
 	ChangePasswordID string `json:"change_password_id"`
 	UserFID          int64  `json:"user_fid"`
@@ -1163,9 +1142,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID strin
 		_, _ = pipe.Exec(ctx)
 	}
 
-	// Update cached user info
-	_ = s.UpdateCachedUserInfo(ctx, userFid)
-
+	// Invalidate cached user info
+	_ = s.usersService.InvalidateCachedUserInfo(ctx, userFid)
 	return nil
 }
 
@@ -1376,25 +1354,25 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		}
 
 		params := queries.SeedUserParams{
-			FakeID:            pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
-			Email:             emailVal,
-			Avatar:            avatarVal,
-			Phone:             phoneVal,
-			Username:          usernameVal,
-			PasswordHash:      string(hashed),
-			LastName:          pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
-			FirstName:         pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
-			MiddleName:        middleNameVal,
-			Gender:            genderVal,
-			DateOfBirth:       pgtype.Date{Time: dob, Valid: true},
-			CurrentCountry:    u.CurrentCountry,
-			CurrentState:      u.CurrentState,
-			CurrentLga:        currentLgaVal,
-			CurrentCity:       currentCityVal,
-			StateOfOrigin:     stateOfOriginVal,
-			VotersCardImage:   pgtype.Text{String: "", Valid: false},
-			AccountStatus:     pgtype.Text{},
-			PartyID:           pgtype.Int2{},
+			FakeID:          pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
+			Email:           emailVal,
+			Avatar:          avatarVal,
+			Phone:           phoneVal,
+			Username:        usernameVal,
+			PasswordHash:    string(hashed),
+			LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
+			FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
+			MiddleName:      middleNameVal,
+			Gender:          genderVal,
+			DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
+			CurrentCountry:  u.CurrentCountry,
+			CurrentState:    u.CurrentState,
+			CurrentLga:      currentLgaVal,
+			CurrentCity:     currentCityVal,
+			StateOfOrigin:   stateOfOriginVal,
+			VotersCardImage: pgtype.Text{String: "", Valid: false},
+			AccountStatus:   pgtype.Text{},
+			PartyID:         pgtype.Int2{},
 		}
 
 		id, err := s.queries.SeedUser(ctx, params)

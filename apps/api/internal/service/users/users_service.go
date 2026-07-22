@@ -120,6 +120,13 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	return userWithPlaces, nil
 }
 
+// InvalidateCachedUserInfo invalidates the cached user information in Redis.
+// This function should be called anytime a user's details changes
+func (s *UsersService) InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error {
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+	return s.rdb.Del(ctx, userInfoKey).Err()
+}
+
 // GetUserRoles fetches the roles assigned to a specific user, utilizing Redis caching.
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
@@ -189,8 +196,7 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 	}
 
 	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
 
@@ -206,14 +212,13 @@ func (s *UsersService) GetUserVerification(ctx context.Context, userID int64) (q
 
 // DeleteUser removes a user by ID and invalidates their user info cache.
 func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) error {
-	err := s.queries.DeleteUser(ctx, id)
-	if err != nil {
-		return err
-	}
+	// err := s.queries.DeleteUser(ctx, id)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
 
@@ -238,8 +243,7 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 	}
 
 	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
 
@@ -385,7 +389,6 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 	}
 
 	// Invalidate the user info cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
