@@ -846,25 +846,65 @@ func CleanUsername(input string) (string, error) {
 // function: check if the username already exist in redis and in the postgres db
 func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisUsernameFakeID+username).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisUsernameFakeID+username, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 // function: checks if the email already exists in redis and in the postgres db
 func (s *AuthService) CheckEmail(ctx context.Context, email string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisEmailFakeID+email).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisEmailFakeID+email, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 // function: checks if the phone exists in redis and in the postgres db
 func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisPhoneFakeID+phone).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisPhoneFakeID+phone, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 // CheckNIN function checks if the nin already exists in the database
 func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisNINFakeID+nin).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByNIN(ctx, nin)
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisNINFakeID+nin, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 // ValidatePhoneForCountry checks:
@@ -900,13 +940,13 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 	pipe := s.rdb.TxPipeline()
 
 	if username != "" {
-		pipe.Set(ctx, db.RedisUsernameFakeID+username, fakeID, 0)
+		pipe.Set(ctx, db.RedisUsernameFakeID+username, fakeID, db.RedisFiveYearsTTL)
 	}
 	if email != "" {
-		pipe.Set(ctx, db.RedisEmailFakeID+email, fakeID, 0)
+		pipe.Set(ctx, db.RedisEmailFakeID+email, fakeID, db.RedisFiveYearsTTL)
 	}
 	if nin != "" {
-		pipe.Set(ctx, db.RedisNINFakeID+nin, fakeID, 0)
+		pipe.Set(ctx, db.RedisNINFakeID+nin, fakeID, db.RedisFiveYearsTTL)
 	}
 
 	_, err := pipe.Exec(ctx)

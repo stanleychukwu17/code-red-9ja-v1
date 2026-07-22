@@ -1,6 +1,11 @@
 package db
 
+import "time"
+
 const (
+	RedisFiveYearsTTL = 5 * 365 * 24 * time.Hour
+	RedisTwoYearsTTL  = 2 * 365 * 24 * time.Hour
+
 	//--START-- for registration
 	// STRING: RedisRegisterOnboarding is the Redis key prefix used to store onboarding data.
 	RedisRegisterOnboarding = "register:onboarding:"

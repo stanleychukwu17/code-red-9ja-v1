@@ -8,7 +8,6 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -114,7 +113,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 
 	userJSON, err := json.Marshal(userWithPlaces)
 	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour) // 5 years expires
+		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisFiveYearsTTL) // 5 years expires
 	}
 
 	return userWithPlaces, nil
@@ -149,7 +148,7 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]querie
 	// Cache it in Redis
 	rolesJSONBytes, err := json.Marshal(roles)
 	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, 5*365*24*time.Hour) // expires in 5years
+		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisFiveYearsTTL) // expires in 5years
 	}
 
 	return roles, nil
@@ -272,7 +271,7 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	// Cache it in Redis
 	profileJSONBytes, err := json.Marshal(profile)
 	if err == nil {
-		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, 5*365*24*time.Hour)
+		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisFiveYearsTTL)
 	}
 
 	return profile, nil
@@ -321,7 +320,7 @@ func (s *UsersService) GetUserPhoneNumbersByUserID(ctx context.Context, userID i
 	// Cache it in Redis
 	phoneNumbersJSONBytes, err := json.Marshal(phoneNumbers)
 	if err == nil {
-		s.rdb.Set(ctx, userPhoneNumbersKey, phoneNumbersJSONBytes, 5*365*24*time.Hour) // 5years TTL
+		s.rdb.Set(ctx, userPhoneNumbersKey, phoneNumbersJSONBytes, db.RedisFiveYearsTTL) // 5years TTL
 	}
 
 	return phoneNumbers, nil

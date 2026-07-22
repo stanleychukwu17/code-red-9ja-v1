@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -43,7 +42,7 @@ func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCoun
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, 5*365*24*time.Hour) // 5years TTL
+		s.rdb.Set(ctx, db.RedisCountriesAll, jsonData, db.RedisFiveYearsTTL) // 5years TTL
 
 		return dbCountries, nil
 	case nil:
@@ -75,7 +74,7 @@ func (s *BodiesService) GetStatesByCountryID(ctx context.Context, countryID int1
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // 5years TTL
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL) // 5years TTL
 
 		return dbStates, nil
 	case nil:
@@ -107,7 +106,7 @@ func (s *BodiesService) GetCitiesByStateID(ctx context.Context, stateID int16) (
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // 5years TTL
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL) // 5years TTL
 
 		return dbCities, nil
 	case nil:
@@ -139,7 +138,7 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour) // 5years TTL
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL) // 5years TTL
 
 		return dbData, nil
 	case nil:
@@ -298,7 +297,7 @@ func (s *BodiesService) CheckState(ctx context.Context, country_id, state_id int
 	if state_dts.ID > 0 {
 		// save to redis
 		state_data, _ := json.Marshal(state_dts)
-		s.rdb.Set(ctx, redisStateKey, state_data, 5*365*24*time.Hour) // expires in 5years
+		s.rdb.Set(ctx, redisStateKey, state_data, db.RedisFiveYearsTTL) // expires in 5years
 
 		return state_dts, nil
 	}
@@ -327,7 +326,7 @@ func (s *BodiesService) CheckCity(ctx context.Context, state_id int16, city_id i
 	if city_dts.ID > 0 {
 		// save to redis
 		city_data, _ := json.Marshal(city_dts)
-		s.rdb.Set(ctx, redisCityKey, city_data, 5*365*24*time.Hour) // expires in 5years
+		s.rdb.Set(ctx, redisCityKey, city_data, db.RedisFiveYearsTTL) // expires in 5years
 
 		return city_dts, nil
 	}

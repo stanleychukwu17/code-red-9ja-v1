@@ -378,6 +378,56 @@ func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
 	return err
 }
 
+const getFakeIDByEmail = `-- name: GetFakeIDByEmail :one
+SELECT fake_id FROM users
+WHERE email = $1 LIMIT 1
+`
+
+func (q *Queries) GetFakeIDByEmail(ctx context.Context, email pgtype.Text) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, getFakeIDByEmail, email)
+	var fake_id pgtype.Int8
+	err := row.Scan(&fake_id)
+	return fake_id, err
+}
+
+const getFakeIDByNIN = `-- name: GetFakeIDByNIN :one
+SELECT u.fake_id
+FROM users u
+JOIN users_nin n ON u.id = n.user_id
+WHERE n.nin = $1 LIMIT 1
+`
+
+func (q *Queries) GetFakeIDByNIN(ctx context.Context, nin string) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, getFakeIDByNIN, nin)
+	var fake_id pgtype.Int8
+	err := row.Scan(&fake_id)
+	return fake_id, err
+}
+
+const getFakeIDByPhone = `-- name: GetFakeIDByPhone :one
+SELECT fake_id FROM users
+WHERE phone = $1 LIMIT 1
+`
+
+func (q *Queries) GetFakeIDByPhone(ctx context.Context, phone pgtype.Text) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, getFakeIDByPhone, phone)
+	var fake_id pgtype.Int8
+	err := row.Scan(&fake_id)
+	return fake_id, err
+}
+
+const getFakeIDByUsername = `-- name: GetFakeIDByUsername :one
+SELECT fake_id FROM users
+WHERE username = $1 LIMIT 1
+`
+
+func (q *Queries) GetFakeIDByUsername(ctx context.Context, username pgtype.Text) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, getFakeIDByUsername, username)
+	var fake_id pgtype.Int8
+	err := row.Scan(&fake_id)
+	return fake_id, err
+}
+
 const getMoreInfoAboutThisUser = `-- name: GetMoreInfoAboutThisUser :one
 SELECT user_id, occupation_id, educational_status, education_level, highest_degree, graduation_year, school_name, religion, marital_status, address, created_at, updated_at FROM user_more_infos
 WHERE user_id = $1 LIMIT 1
