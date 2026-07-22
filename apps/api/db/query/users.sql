@@ -229,3 +229,25 @@ WHERE id = $1 AND user_id = $2;
 UPDATE user_bank_accounts
 SET is_primary = CASE WHEN id = $1 THEN true ELSE false END
 WHERE user_id = $2;
+
+-- name: GetFakeIDByUsername :one
+SELECT fake_id FROM users
+WHERE username = $1 LIMIT 1;
+
+-- name: GetFakeIDByEmail :one
+SELECT fake_id FROM users
+WHERE email = $1 LIMIT 1;
+
+-- name: GetFakeIDByPhone :one
+SELECT fake_id FROM users
+WHERE phone = $1 LIMIT 1;
+
+-- name: GetFakeIDByNIN :one
+SELECT u.fake_id
+FROM users u
+JOIN users_nin n ON u.id = n.user_id
+WHERE n.nin = $1 LIMIT 1;
+
+-- name: GetUserPasswordHashByFakeID :one
+SELECT password_hash FROM users
+WHERE fake_id = $1 LIMIT 1;

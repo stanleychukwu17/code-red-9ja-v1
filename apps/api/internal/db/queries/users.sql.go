@@ -541,6 +541,18 @@ func (q *Queries) GetUserNINByUserID(ctx context.Context, userID int64) (UsersNi
 	return i, err
 }
 
+const getUserPasswordHashByFakeID = `-- name: GetUserPasswordHashByFakeID :one
+SELECT password_hash FROM users
+WHERE fake_id = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype.Int8) (string, error) {
+	row := q.db.QueryRow(ctx, getUserPasswordHashByFakeID, fakeID)
+	var password_hash string
+	err := row.Scan(&password_hash)
+	return password_hash, err
+}
+
 const getUserPhoneNumbersByUserID = `-- name: GetUserPhoneNumbersByUserID :many
 SELECT id, user_id, phone, raw_input, phonecode, on_whatsapp, is_default, is_active FROM users_phone_numbers
 WHERE user_id = $1 AND is_active = true ORDER BY id DESC

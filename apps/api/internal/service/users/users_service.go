@@ -102,21 +102,25 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	// attach the user countryName, stateName, cityName to the user info that will be cached in redis
 	countryName, stateName, cityName := s.bodiesService.GetLocationNames(ctx, user.CurrentCountry, user.CurrentState, user.CurrentCity.Int32)
 
+	// Create a copy of the user and obscure the password hash for caching
+	userForCache := user
+	userForCache.PasswordHash = "---"
+
 	// Cache it in Redis
-	userWithPlaces := queries.UserWithPlaces{
-		User:          user,
+	userWithPlacesForCache := queries.UserWithPlaces{
+		User:          userForCache,
 		CountryName:   countryName,
 		StateName:     stateName,
 		CityName:      cityName,
 		Verifications: verifications,
 	}
 
-	userJSON, err := json.Marshal(userWithPlaces)
+	userJSON, err := json.Marshal(userWithPlacesForCache)
 	if err == nil {
 		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisFiveYearsTTL) // 5 years expires
 	}
 
-	return userWithPlaces, nil
+	return userWithPlacesForCache, nil
 }
 
 // InvalidateCachedUserInfo invalidates the cached user information in Redis.

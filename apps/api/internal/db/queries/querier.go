@@ -179,6 +179,7 @@ type Querier interface {
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
+	GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype.Int8) (string, error)
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
 	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)

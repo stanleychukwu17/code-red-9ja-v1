@@ -208,8 +208,14 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		}
 	}
 
+	// Fetch the actual password hash directly from the database
+	actualPasswordHash, err := s.queries.GetUserPasswordHashByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		return LoginResult{}, errors.New("invalid login details provided")
+	}
+
 	//  Check if password matches
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(actualPasswordHash), []byte(password))
 	if err != nil {
 		return LoginResult{}, errors.New("invalid email, username, phone or password")
 	}
