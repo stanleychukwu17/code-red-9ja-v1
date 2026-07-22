@@ -33,7 +33,7 @@ type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
-	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
+	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
 }
@@ -1236,15 +1236,15 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	if err != nil {
 		return RegisterResult{}, err
 	}
-	if role != "" {
-		_ = s.usersService.AssignUserRole(ctx, userID, role, 0)
-	}
-
 	// generate a fake_id using the user_id and update the user fake_id
 	fakeID := utils.GenerateFakeID(userID)
 	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: userID, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
 	if err != nil {
 		return RegisterResult{}, err
+	}
+
+	if role != "" {
+		_ = s.usersService.AssignUserRole(ctx, userID, fakeID, role, 0)
 	}
 
 	// save some of the user details to our db & also to redis(using pipeline)
@@ -1294,11 +1294,11 @@ func (s *AuthService) MakeUserSuperAdmin(ctx context.Context, username string) e
 		return fmt.Errorf("failed to fetch user details: %w", err)
 	}
 
-	return s.CheckAndAssignRole(ctx, user.ID, "super_admin", 0)
+	return s.CheckAndAssignRole(ctx, user.ID, fakeID, "super_admin", 0)
 }
 
 // CheckAndAssignRole checks if a user already has a specific role, and if not, assigns it.
-func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error {
+func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, fakeID int64, roleCode string, whoAssigned int64) error {
 	// 1. Get user roles (with cache check)
 	roles, err := s.usersService.GetUserRoles(ctx, userID)
 	if err != nil {
@@ -1314,7 +1314,7 @@ func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, role
 	}
 
 	// 3. Assign the role in DB (UsersService handles caching)
-	err = s.usersService.AssignUserRole(ctx, userID, roleCode, whoAssigned)
+	err = s.usersService.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
 	if err != nil {
 		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
 	}

@@ -487,7 +487,7 @@ func (q *Queries) GetUserBankAccountsByUserID(ctx context.Context, userID int64)
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -518,6 +518,7 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.VotersCardImage,
 		&i.IsPolitician,
 		&i.IsVerified,
+		&i.HasRole,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,
@@ -1025,6 +1026,22 @@ type UpdateUserFakeIDParams struct {
 
 func (q *Queries) UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error {
 	_, err := q.db.Exec(ctx, updateUserFakeID, arg.ID, arg.FakeID)
+	return err
+}
+
+const updateUserHasRole = `-- name: UpdateUserHasRole :exec
+UPDATE users
+SET has_role = $2
+WHERE id = $1
+`
+
+type UpdateUserHasRoleParams struct {
+	ID      int64       `json:"id"`
+	HasRole pgtype.Bool `json:"has_role"`
+}
+
+func (q *Queries) UpdateUserHasRole(ctx context.Context, arg UpdateUserHasRoleParams) error {
+	_, err := q.db.Exec(ctx, updateUserHasRole, arg.ID, arg.HasRole)
 	return err
 }
 

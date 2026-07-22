@@ -96,10 +96,18 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		}
 	}
 
-	// Fetch from DB if not in Redis
+	// Fetch user info from DB
 	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
 	if err != nil {
 		return queries.UserWithPlaces{}, fmt.Errorf("user not found: %w", err)
+	}
+
+	// fetch the user roles
+	var roles []queries.GetUserRolesRow
+	if user.HasRole.Valid && user.HasRole.Bool {
+		if r, err := s.GetUserRoles(ctx, user.ID); err == nil {
+			roles = r
+		}
 	}
 
 	// check if the user is verified, then fetches all the verification types of the user
@@ -134,6 +142,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		CityName:       cityName,
 		Verifications:  verifications,
 		PartyBasicInfo: partyBasicInfo,
+		Roles:          roles,
 	}
 
 	// cache the user data in redis
@@ -181,7 +190,7 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]querie
 }
 
 // AssignUserRole assigns a specific role to a user and invalidates the user's role cache.
-func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error {
+func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error {
 	role, err := s.queries.GetRoleByCode(ctx, code)
 	if err != nil {
 		return err
@@ -196,9 +205,48 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code st
 		return err
 	}
 
+	// Invalidate the user-roles cache
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+	s.rdb.Del(ctx, userRolesKey)
+
+	// Update the user_table, updates has_role to true
+	_ = s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
+		ID:      userID,
+		HasRole: pgtype.Bool{Bool: true, Valid: true},
+	})
+
+	// Invalidate user info cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
+	return nil
+}
+
+// RemoveUserRole removes a specific role from a user and updates has_role if needed.
+func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID int64, code string) error {
+	err := s.queries.RemoveUserRole(ctx, queries.RemoveUserRoleParams{
+		UserID:   userID,
+		RoleCode: code,
+	})
+	if err != nil {
+		return err
+	}
+
 	// Invalidate the cache
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
 	s.rdb.Del(ctx, userRolesKey)
+
+	// Check if user has any roles left
+	hasRole, err := s.queries.CheckUserHasAnyRole(ctx, userID)
+	if err != nil {
+		return err
+	}
+	_ = s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
+		ID:      userID,
+		HasRole: pgtype.Bool{Bool: hasRole, Valid: true},
+	})
+
+	// Invalidate user info cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 
 	return nil
 }

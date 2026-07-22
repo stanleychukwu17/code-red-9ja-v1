@@ -12,3 +12,13 @@ WHERE code = $1;
 INSERT INTO user_roles (user_id, role_id, role_code, who_assigned_user_id, date_assigned)
 VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
 ON CONFLICT (user_id, role_id) DO NOTHING;
+
+-- name: RemoveUserRole :exec
+DELETE FROM user_roles
+WHERE user_id = $1 AND role_code = $2;
+
+-- name: CheckUserHasAnyRole :one
+SELECT EXISTS (
+  SELECT 1 FROM user_roles
+  WHERE user_id = $1
+);

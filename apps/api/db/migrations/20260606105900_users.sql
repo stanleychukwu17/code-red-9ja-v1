@@ -30,6 +30,7 @@ CREATE TABLE users (
 
   is_politician BOOLEAN DEFAULT false,
   is_verified BOOLEAN DEFAULT false,
+  has_role BOOLEAN DEFAULT false,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
 

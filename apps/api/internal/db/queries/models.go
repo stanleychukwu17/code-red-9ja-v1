@@ -939,6 +939,7 @@ type User struct {
 	VotersCardImage pgtype.Text        `json:"voters_card_image"`
 	IsPolitician    pgtype.Bool        `json:"is_politician"`
 	IsVerified      pgtype.Bool        `json:"is_verified"`
+	HasRole         pgtype.Bool        `json:"has_role"`
 	PartyID         pgtype.Int2        `json:"party_id"`
 	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
 	ReferralCode    pgtype.Text        `json:"referral_code"`

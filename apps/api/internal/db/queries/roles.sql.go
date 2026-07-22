@@ -34,6 +34,20 @@ func (q *Queries) AssignUserRole(ctx context.Context, arg AssignUserRoleParams) 
 	return err
 }
 
+const checkUserHasAnyRole = `-- name: CheckUserHasAnyRole :one
+SELECT EXISTS (
+  SELECT 1 FROM user_roles
+  WHERE user_id = $1
+)
+`
+
+func (q *Queries) CheckUserHasAnyRole(ctx context.Context, userID int64) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUserHasAnyRole, userID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const getRoleByCode = `-- name: GetRoleByCode :one
 SELECT id, code, name, description
 FROM roles
@@ -90,4 +104,19 @@ func (q *Queries) GetUserRoles(ctx context.Context, userID int64) ([]GetUserRole
 		return nil, err
 	}
 	return items, nil
+}
+
+const removeUserRole = `-- name: RemoveUserRole :exec
+DELETE FROM user_roles
+WHERE user_id = $1 AND role_code = $2
+`
+
+type RemoveUserRoleParams struct {
+	UserID   int64  `json:"user_id"`
+	RoleCode string `json:"role_code"`
+}
+
+func (q *Queries) RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error {
+	_, err := q.db.Exec(ctx, removeUserRole, arg.UserID, arg.RoleCode)
+	return err
 }

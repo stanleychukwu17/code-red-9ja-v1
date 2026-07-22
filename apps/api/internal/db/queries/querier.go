@@ -36,6 +36,7 @@ type Querier interface {
 	CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIfPageHasAnyVerificationParams) (bool, error)
 	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
+	CheckUserHasAnyRole(ctx context.Context, userID int64) (bool, error)
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
@@ -310,6 +311,7 @@ type Querier interface {
 	// Aggregates from election_group_polling_units for a single ward.
 	RefreshSingleElectionGroupWardStats(ctx context.Context, arg RefreshSingleElectionGroupWardStatsParams) error
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
+	RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error
 	RollupElectionFinalResults(ctx context.Context) error
 	RollupFederalConstituencyFinalResults(ctx context.Context) error
 	RollupLGAFinalResults(ctx context.Context) error
@@ -377,6 +379,7 @@ type Querier interface {
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
 	UpdateUserBankAccount(ctx context.Context, arg UpdateUserBankAccountParams) (UserBankAccount, error)
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
+	UpdateUserHasRole(ctx context.Context, arg UpdateUserHasRoleParams) error
 	UpdateUserParty(ctx context.Context, arg UpdateUserPartyParams) error
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error

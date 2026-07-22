@@ -7,4 +7,5 @@ type UserWithPlaces struct {
 	CityName       string                    `json:"city_name"`
 	Verifications  []GetPageVerificationsRow `json:"verifications"`
 	PartyBasicInfo *GetPartyBasicInfoRow     `json:"party_basic_info"`
+	Roles          []GetUserRolesRow         `json:"roles"`
 }

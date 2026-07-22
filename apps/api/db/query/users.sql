@@ -251,3 +251,8 @@ WHERE n.nin = $1 LIMIT 1;
 -- name: GetUserPasswordHashByFakeID :one
 SELECT password_hash FROM users
 WHERE fake_id = $1 LIMIT 1;
+
+-- name: UpdateUserHasRole :exec
+UPDATE users
+SET has_role = $2
+WHERE id = $1;
