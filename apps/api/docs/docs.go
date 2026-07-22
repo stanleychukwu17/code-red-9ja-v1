@@ -9043,12 +9043,6 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
                 "current_city": {
                     "type": "integer"
                 },
@@ -9982,12 +9976,6 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
                 "current_city": {
                     "type": "integer"
                 },
@@ -10798,12 +10786,6 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
                 "city_name": {
                     "type": "string"
                 },
@@ -10923,9 +10905,6 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/queries.GetPageVerificationsRow"
                     }
-                },
-                "voters_card_image": {
-                    "type": "string"
                 },
                 "voters_card_verified": {
                     "type": "boolean"

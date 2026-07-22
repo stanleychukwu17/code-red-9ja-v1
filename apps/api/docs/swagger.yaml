@@ -345,10 +345,6 @@ definitions:
         type: string
       avatar:
         type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
       current_city:
         type: integer
       current_country:
@@ -957,10 +953,6 @@ definitions:
         type: string
       avatar:
         type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
       current_city:
         type: integer
       current_country:
@@ -1495,10 +1487,6 @@ definitions:
         type: string
       avatar:
         type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
       city_name:
         type: string
       country_name:
@@ -1579,8 +1567,6 @@ definitions:
         items:
           $ref: '#/definitions/queries.GetPageVerificationsRow'
         type: array
-      voters_card_image:
-        type: string
       voters_card_verified:
         type: boolean
       whatsapp_phone:
