@@ -15,6 +15,8 @@ CREATE TABLE parties (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_parties_status_display_order ON parties(status, display_order);
+
 -- Seed default political parties
 
 INSERT INTO parties (id, short_name, name, logo, display_order) VALUES
