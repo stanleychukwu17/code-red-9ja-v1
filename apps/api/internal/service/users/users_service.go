@@ -115,10 +115,8 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 
 	// Fetch party basic info if user belongs to a party
 	var partyBasicInfo *queries.GetPartyBasicInfoRow
-	if user.PartyID.Valid && user.PartyID.Int16 > 0 {
-		if s.partyService != nil {
-			partyBasicInfo = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
-		}
+	if user.PartyID.Valid && user.PartyID.Int16 > 0 && s.partyService != nil {
+		partyBasicInfo = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
 	}
 
 	// Create a copy of the user and obscure sensitive fields for caching
