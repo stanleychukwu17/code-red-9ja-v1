@@ -58,7 +58,11 @@ const (
 	//--END--
 
 	//--START-- for parties
-	RedisPartyInfo      = "parties:info:"
+	// STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
+	RedisPartiesList = "parties:list"
+	// STRING: "parties:info:<partyID>" is used to store and retrieve party info.
+	RedisPartyInfo = "parties:info:"
+	// STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
 	RedisPartyBasicInfo = "parties:basic_info:"
 	//--END--
 

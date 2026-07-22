@@ -132,6 +132,7 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 
 const listParties = `-- name: ListParties :many
 SELECT id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at FROM parties
+WHERE status = 'active'
 ORDER BY display_order ASC, name ASC
 `
 

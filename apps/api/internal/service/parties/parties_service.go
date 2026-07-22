@@ -171,7 +171,29 @@ func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName stri
 
 // ListParties returns all parties ordered by ID ascending.
 func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, error) {
-	return s.queries.ListParties(ctx)
+	redisKey := db.RedisPartiesList
+
+	// Try to get from Redis
+	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
+	if err == nil {
+		var parties []queries.Party
+		if err := json.Unmarshal([]byte(cachedData), &parties); err == nil {
+			return parties, nil
+		}
+	}
+
+	// fetch from db using the status and display order
+	parties, err := s.queries.ListParties(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Save to Redis
+	if partyData, err := json.Marshal(parties); err == nil {
+		s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
+	}
+
+	return parties, nil
 }
 
 // UpdateParty modifies the short name, name, and logo of an existing party.
