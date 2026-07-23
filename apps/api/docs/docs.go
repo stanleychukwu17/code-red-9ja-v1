@@ -9138,6 +9138,9 @@ const docTemplate = `{
         "authservice.SeedUserRequest": {
             "type": "object",
             "properties": {
+                "account_status": {
+                    "type": "string"
+                },
                 "avatar": {
                     "type": "string"
                 },
@@ -9187,6 +9190,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "occupation_id": {
+                    "type": "integer"
+                },
+                "party_id": {
                     "type": "integer"
                 },
                 "password": {

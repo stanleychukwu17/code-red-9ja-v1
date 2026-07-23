@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/logger"
 	"free9ja/api/internal/service/audit"
 	"time"
 
@@ -76,6 +77,11 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 		return queries.PagesVerified{}, fmt.Errorf("invalid verification type for user")
 	}
 
+	// if the verificationTypeID is 4, then an admin cannot assign this role, only system can do this
+	if forWho == db.PageTypeUser && verificationTypeID == 4 {
+		return queries.PagesVerified{}, fmt.Errorf("admin cannot assign this role, only system can do this")
+	}
+
 	// make sure verification type is for party
 	if forWho == db.PageTypeParty && verificationTypeID != 3 {
 		return queries.PagesVerified{}, fmt.Errorf("invalid verification type for party")
@@ -109,32 +115,35 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 		return pv, fmt.Errorf("failed to update is_verified flag: %w", err)
 	}
 
-	// Invalidate cache for the list of this page verification
+	// Invalidate redis cache
 	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, forWho, pageID)
 	s.rdb.Del(ctx, redisKey)
 
-	// prepares old and new data to be saved in the audit_log
 	oldValuesData, _ := json.Marshal(pageVerifications)
-	newPageVerifications, _ := s.GetPageVerifications(ctx, forWho, pageID)
-	newValuesData, _ := json.Marshal(newPageVerifications)
 
-	// Log the action
-	err = s.auditService.LogAction(
-		ctx,
-		queries.InsertAuditLogParams{
+	// Log the action in a goroutine
+	go func(oldData []byte, entityType string, entityID int64, actor int64) {
+		bgCtx := context.Background()
+		log := logger.FromContext(bgCtx).With("component", logger.ComponentPageVerificationsService)
+
+		newPageVerifications, _ := s.GetPageVerifications(bgCtx, entityType, entityID)
+		newValuesData, _ := json.Marshal(newPageVerifications)
+
+		auditParams := queries.InsertAuditLogParams{
 			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-			ActorID:    actorID,
+			ActorID:    actor,
 			ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
 			Action:     db.ActionAssignPageVerification,
-			EntityType: forWho,
-			EntityID:   fmt.Sprintf("%d", pageID),
-			OldValues:  oldValuesData,
+			EntityType: entityType,
+			EntityID:   fmt.Sprintf("%d", entityID),
+			OldValues:  oldData,
 			NewValues:  newValuesData,
-		},
-	)
-	if err != nil {
-		return pv, fmt.Errorf("failed to save audit log: %w", err)
-	}
+		}
+
+		if err := s.auditService.LogAction(bgCtx, auditParams); err != nil {
+			log.Error(logger.EventAuditLogFailed, "error", err, "action", db.ActionAssignPageVerification, "entity_type", entityType, "entity_id", entityID)
+		}
+	}(oldValuesData, forWho, pageID, actorID)
 
 	return pv, nil
 }
@@ -188,29 +197,45 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageT
 	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, pageType, pageID)
 	s.rdb.Del(ctx, redisKey)
 
-	// Get new page verifications after removal
-	newPageVerifications, _ := s.GetPageVerifications(ctx, pageType, pageID)
-	newValuesData, _ := json.Marshal(newPageVerifications)
+	// Log the action in a goroutine
+	go func(oldData []byte, entityType string, entityID int64, actor int64) {
+		bgCtx := context.Background()
+		log := logger.FromContext(bgCtx).With("component", logger.ComponentPageVerificationsService)
 
-	// 5. Log the action
-	err = s.auditService.LogAction(
-		ctx,
-		queries.InsertAuditLogParams{
+		newPageVerifications, _ := s.GetPageVerifications(bgCtx, entityType, entityID)
+		newValuesData, _ := json.Marshal(newPageVerifications)
+
+		auditParams := queries.InsertAuditLogParams{
 			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-			ActorID:    actorID,
+			ActorID:    actor,
 			ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
 			Action:     db.ActionRemovePageVerification,
-			EntityType: pageType,
-			EntityID:   fmt.Sprintf("%d", pageID),
-			OldValues:  oldValuesData,
+			EntityType: entityType,
+			EntityID:   fmt.Sprintf("%d", entityID),
+			OldValues:  oldData,
 			NewValues:  newValuesData,
-		},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to save audit log: %w", err)
-	}
+		}
+
+		if err := s.auditService.LogAction(bgCtx, auditParams); err != nil {
+			log.Error(logger.EventAuditLogFailed, "error", err, "action", db.ActionRemovePageVerification, "entity_type", entityType, "entity_id", entityID)
+		}
+	}(oldValuesData, pageType, pageID, actorID)
 
 	return nil
+}
+
+// GetUserDetails retrieves a user's details by their fake ID
+func (s *PageVerificationsService) GetUserDetails(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
+	return s.usersService.GetUserByFakeID(ctx, fakeID)
+}
+
+// GetPartyDetails retrieves a party's details by their ID
+func (s *PageVerificationsService) GetPartyDetails(ctx context.Context, partyID int64) (*queries.Party, error) {
+	party := s.partiesService.GetPartyInfo(ctx, pgtype.Int8{Int64: partyID, Valid: true})
+	if party == nil {
+		return nil, fmt.Errorf("party not found")
+	}
+	return party, nil
 }
 
 // GetPageVerifications returns all verifications for a specific page.

@@ -22,6 +22,7 @@ import (
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
@@ -121,7 +122,7 @@ type UserResponse struct {
 }
 
 func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles []queries.GetUserRolesRow) UserResponse {
-	var email, avatar, phone, username, lastName, firstName, middleName, gender string
+	var avatar, username, lastName, firstName, middleName, gender string
 	var dateOfBirth, accountStatus string
 	var ninVerified, phoneVerified, emailVerified, votersCardVerified bool
 	var whatsappPhone, dataPhone, educationalStatus, highestDegree, graduationYear, schoolName string
@@ -135,14 +136,8 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 		roles = append(roles, r.Code)
 	}
 
-	if u.Email.Valid {
-		email = u.Email.String
-	}
 	if u.Avatar.Valid {
 		avatar = u.Avatar.String
-	}
-	if u.Phone.Valid {
-		phone = u.Phone.String
 	}
 	if u.Username.Valid {
 		username = u.Username.String
@@ -233,9 +228,7 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 	return UserResponse{
 		ID:                 u.ID,
 		FakeID:             u.FakeID.Int64,
-		Email:              email,
 		Avatar:             avatar,
-		Phone:              phone,
 		Username:           username,
 		LastName:           lastName,
 		FirstName:          firstName,
@@ -274,16 +267,15 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 	}
 }
 
-func mapListUserRowToResponse(u queries.ListUsersRow, uRoles []queries.GetUserRolesRow, countryName, stateName, cityName string, verifications []queries.GetPageVerificationsRow) UserResponse {
+func mapListUserRowToResponse(u queries.UserWithPlaces) UserResponse {
 	var roles []string
-	for _, r := range uRoles {
+	for _, r := range u.Roles {
 		roles = append(roles, r.Code)
 	}
 
 	return UserResponse{
 		ID:             u.ID,
 		FakeID:         u.FakeID.Int64,
-		Email:          u.Email.String,
 		Username:       u.Username.String,
 		Avatar:         u.Avatar.String,
 		FirstName:      u.FirstName.String,
@@ -301,10 +293,10 @@ func mapListUserRowToResponse(u queries.ListUsersRow, uRoles []queries.GetUserRo
 		CreatedAt:      u.CreatedAt.Time.Format(time.RFC3339),
 		IsPolitician:   u.IsPolitician.Bool,
 		IsVerified:     u.IsVerified.Bool,
-		Verifications:  verifications,
-		CountryName:    countryName,
-		StateName:      stateName,
-		CityName:       cityName,
+		Verifications:  u.Verifications,
+		CountryName:    u.CountryName,
+		StateName:      u.StateName,
+		CityName:       u.CityName,
 	}
 }
 
@@ -598,26 +590,28 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		nextCursor = strconv.FormatInt(paginatedUsers[len(paginatedUsers)-1].ID, 10)
 	}
 
-	// loop through the paginatedUsers, so we can fetch some more extra info
-	responses := make([]UserResponse, len(paginatedUsers))
-	for i, u := range paginatedUsers {
-		// get the roles of the user
-		uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
-
-		// get the names of the country, state and city of the user
-		countryName, stateName, cityName := h.bodiesService.GetLocationNames(r.Context(), u.CurrentCountry, u.CurrentState, u.CurrentCity.Int32)
-
-		// if user is verified, get their verification details
-		var verifications []queries.GetPageVerificationsRow
-		if u.IsVerified.Bool {
-			verifications, _ = h.usersService.GetUserPageVerifications(r.Context(), u.ID)
+	// Collect fake_ids for bulk fetching
+	fakeIDs := make([]int64, 0, len(paginatedUsers))
+	for _, u := range paginatedUsers {
+		if u.FakeID.Valid {
+			fakeIDs = append(fakeIDs, u.FakeID.Int64)
 		}
+	}
 
-		// map the user to the response struct
-		res := mapListUserRowToResponse(u, uRoles, countryName, stateName, cityName, verifications)
+	// Fetch users efficiently via MGET + concurrent DB queries
+	fullUsers, err := h.usersService.GetUsersByFakeIDs(r.Context(), fakeIDs)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch detailed user profiles: "+err.Error())
+		return
+	}
 
-		// attach it to the response slice
-		responses[i] = res
+	responses := make([]UserResponse, 0, len(fullUsers))
+	for _, fullUser := range fullUsers {
+		// Only map non-empty user structs (in case of an error for a specific user, though we returned the error above)
+		if fullUser.User.ID > 0 {
+			res := mapListUserRowToResponse(fullUser)
+			responses = append(responses, res)
+		}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{

@@ -695,7 +695,7 @@ func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.is_politician, u.is_verified, u.account_status, u.created_at FROM users u
+SELECT u.id, u.fake_id FROM users u
 WHERE 
   ($1::bigint IS NULL OR u.id < $1::bigint)
   AND ($2::smallint IS NULL OR u.party_id = $2::smallint)
@@ -716,25 +716,8 @@ type ListUsersParams struct {
 }
 
 type ListUsersRow struct {
-	ID             int64              `json:"id"`
-	FakeID         pgtype.Int8        `json:"fake_id"`
-	Email          pgtype.Text        `json:"email"`
-	Username       pgtype.Text        `json:"username"`
-	Avatar         pgtype.Text        `json:"avatar"`
-	FirstName      pgtype.Text        `json:"first_name"`
-	LastName       pgtype.Text        `json:"last_name"`
-	MiddleName     pgtype.Text        `json:"middle_name"`
-	Gender         pgtype.Text        `json:"gender"`
-	DateOfBirth    pgtype.Date        `json:"date_of_birth"`
-	StateOfOrigin  pgtype.Int2        `json:"state_of_origin"`
-	CurrentCountry int16              `json:"current_country"`
-	CurrentState   int16              `json:"current_state"`
-	CurrentCity    pgtype.Int4        `json:"current_city"`
-	PartyID        pgtype.Int2        `json:"party_id"`
-	IsPolitician   pgtype.Bool        `json:"is_politician"`
-	IsVerified     pgtype.Bool        `json:"is_verified"`
-	AccountStatus  pgtype.Text        `json:"account_status"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ID     int64       `json:"id"`
+	FakeID pgtype.Int8 `json:"fake_id"`
 }
 
 // ListUsers fetches a paginated list of users with optional filtering.
@@ -756,27 +739,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 	var items []ListUsersRow
 	for rows.Next() {
 		var i ListUsersRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.FakeID,
-			&i.Email,
-			&i.Username,
-			&i.Avatar,
-			&i.FirstName,
-			&i.LastName,
-			&i.MiddleName,
-			&i.Gender,
-			&i.DateOfBirth,
-			&i.StateOfOrigin,
-			&i.CurrentCountry,
-			&i.CurrentState,
-			&i.CurrentCity,
-			&i.PartyID,
-			&i.IsPolitician,
-			&i.IsVerified,
-			&i.AccountStatus,
-			&i.CreatedAt,
-		); err != nil {
+		if err := rows.Scan(&i.ID, &i.FakeID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

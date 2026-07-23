@@ -408,6 +408,8 @@ definitions:
     type: object
   authservice.SeedUserRequest:
     properties:
+      account_status:
+        type: string
       avatar:
         type: string
       current_city:
@@ -441,6 +443,8 @@ definitions:
       middle_name:
         type: string
       occupation_id:
+        type: integer
+      party_id:
         type: integer
       password:
         type: string

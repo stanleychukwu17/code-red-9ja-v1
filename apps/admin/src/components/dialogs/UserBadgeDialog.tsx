@@ -4,8 +4,8 @@ import { AppAvatar } from "@repo/ui/components/avatar";
 import { Loader2, Trash2 } from "lucide-react";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
 import { Button } from "@repo/ui/components/button";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getVerificationTypes, assignVerifications } from "#/lib/server/page_verifications";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getVerificationTypes, assignVerifications, removeVerification } from "#/lib/server/page_verifications";
 import { toast } from "sonner";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
@@ -34,6 +34,8 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
   const name = forWho === "user"
     ? [page?.first_name, page?.last_name].filter(Boolean).join(" ")
     : page?.name || page?.party_name || "Party";
+
+  const queryClient = useQueryClient();
 
   const [activeVerifications, setActiveVerifications] = useState<VerificationType[]>([]);
 
@@ -69,59 +71,152 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     enabled: open, // only fetch when the dialog is open
   });
 
-  // Handler to add the selected verification type to the local list
-  const handleAddVerification = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!selectedCategoryId || !verificationCategories) return;
+  // Handler to add the selected verification type to the local list (moved to select onChange)
 
-    // Check if the type is already in the user's active list
-    const checkIfAddedAlready = activeVerifications.some((v: VerificationType) => {
-      if (typeof v.page_type != undefined && v.verification_type_id === selectedCategoryId) {
-        return true
-      } else if (v.id === selectedCategoryId) {
-        return true
+  // mutation to remove verification
+  const removeMutation = useMutation({
+    mutationFn: async ({ verification_type_id, id }: { verification_type_id: number; id: number }) => {
+      // Find the verification in local state to check if it's already in DB or just local
+      const v = activeVerifications.find(av => av.id === id && av.verification_type_id === verification_type_id);
+
+      if (v && v.page_type && v.page_id > 0) {
+        // It's an existing mapped verification in the DB, make API call to remove
+        const payload = {
+          page_type: forWho,
+          page_id: forWho === "user" ? page?.fake_id : page?.id,
+          verification_type_id: v.verification_type_id > 0 ? v.verification_type_id : v.id,
+        };
+        const res = await removeVerification({ data: payload });
+        if (res && res.success === false) {
+          throw new Error(res.message || "Failed to remove verification");
+        }
+        return { isDb: true, id, verification_type_id, response: res };
+      } else {
+        // It's a purely local verification that hasn't been saved yet
+        return { isDb: false, id, verification_type_id };
+      }
+    },
+    onSuccess: (data) => {
+      if (data.isDb) {
+        toast.success("Verification removed successfully");
+        if (onSuccess) onSuccess();
+
+        // update cache using data.response similar to saveMutation
+        const updatedDetails = data.response?.data?.page_details;
+        if (updatedDetails && (updatedDetails?.first_name?.length > 0 || updatedDetails?.name?.length > 0 || updatedDetails?.party_name?.length > 0)) {
+          if (forWho == "user") {
+            queryClient.setQueryData(["users", "user"], (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                pages: oldData.pages.map((page: any) => ({
+                  ...page,
+                  data: {
+                    ...page.data,
+                    users: page.data?.users?.map((u: any) =>
+                      u.fake_id === updatedDetails.fake_id ? updatedDetails : u
+                    ) || []
+                  }
+                }))
+              };
+            });
+          } else if (forWho == "party") {
+            queryClient.setQueryData(["parties"], (oldData: any) => {
+              if (!oldData) return oldData;
+              return oldData.map((p: any) =>
+                p.id === updatedDetails.id ? updatedDetails : p
+              );
+            });
+          }
+        }
       }
 
-      return false;
-    })
-    if (checkIfAddedAlready) { return; }
-
-    // Find the full verification type object and add it to state
-    const typeToAdd = verificationCategories.find((t: VerificationType) => t.id == selectedCategoryId);
-    if (typeToAdd) {
-      setActiveVerifications([...activeVerifications, typeToAdd]);
-      setSelectedCategoryId(undefined); // Reset dropdown selection
+      // Update local state in both cases
+      setActiveVerifications(activeVerifications.filter(v => v.id !== data.id || v.verification_type_id !== data.verification_type_id));
+    },
+    onError: (error: Error) => {
+      setError(error.message);
+      toast.error(error.message);
     }
-  };
+  });
 
   // Handler to remove a verification type from the local list
   const handleRemoveVerification = (e: React.MouseEvent, verification_type_id: number, id: number) => {
     e.preventDefault();
-    console.log(verification_type_id, id)
-    // setActiveVerifications(activeVerifications.filter(v => v.id !== id));
+    // console.log()
+    // removeMutation.mutate({ verification_type_id, id });
   };
 
   // save the verifications to the backend
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const typeIds = activeVerifications.map(v => v.id);
+      // the verification type ids to send to the backend
+      const typeIds: number[] = [];
+
+      // loop through the verification types selected and add the id to the typeIds
+      activeVerifications.map(v => {
+        // Existing mapped verifications have a page_type and page_id > 0.
+        // Newly added verifications (from the dropdown) won't have these, 
+        // so we only extract the IDs of the newly added verification types.
+        if (v.page_type && v.page_id > 0) { }
+        else { typeIds.push(v.id) }
+      });
+
+      // if no verification type is selected, throw an error
       if (typeIds.length === 0) {
         throw new Error("Please select at least one verification type to assign, or use the remove verification function.");
       }
+
+      // else send the payload to the backend
       const payload = {
         for_who: forWho,
         page_id: forWho === "user" ? page?.fake_id : page?.id,
         verification_type_ids: typeIds,
       };
 
+      // call the assignVerifications function
       const res = await assignVerifications({ data: payload });
+
+      // if the assignment fails, throw an error
       if (res && res.success === false) {
         throw new Error(res.message || "Failed to assign verifications");
       }
       return res;
     },
 
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const updatedDetails = response?.data?.page_details;
+      if (updatedDetails === null || !updatedDetails || updatedDetails?.first_name.length <= 0) return;
+
+      // console.log("about to update", updatedDetails)
+
+      if (forWho == "user") {
+        // Update users infinite query cache with the new user details
+        queryClient.setQueryData(["users", "user"], (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => ({
+              ...page,
+              data: {
+                ...page.data,
+                users: page.data?.users?.map((u: any) =>
+                  u.fake_id === updatedDetails.fake_id ? updatedDetails : u
+                ) || []
+              }
+            }))
+          };
+        });
+      } else if (forWho == "party") {
+        // Update parties query cache with the new party details
+        queryClient.setQueryData(["parties"], (oldData: any) => {
+          if (!oldData) return oldData;
+          return oldData.map((p: any) =>
+            p.id === updatedDetails.id ? updatedDetails : p
+          );
+        });
+      }
+
       toast.success("Verifications updated successfully");
       if (onSuccess) onSuccess();
       onClose();
@@ -159,8 +254,8 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
             <div className="flex gap-1 items-center">
               {activeVerifications.map((v) => (
                 <VerificationBadge
-                  key={`badge-logo-${v.id}`}
-                  // if v.verification_type_id > 0, it means it's an already verified user, else it's a new one
+                  // Use verification_type_id for existing verifications, and id for newly added types from the dropdown
+                  key={`badge-logo-${v.verification_type_id > 0 ? v.verification_type_id : v.id}`}
                   id={v.verification_type_id > 0 ? v.verification_type_id : v.id}
                   className="size-6"
                 />
@@ -182,7 +277,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
               <div className="py-4 text-gray-500 text-sm">No verifications added yet.</div>
             ) : (
               activeVerifications.map((v) => (
-                <div key={`badge-row-${v.id}`} className="flex w-full items-center py-4 border-b border-gray-200">
+                <div key={`badge-row-${v.verification_type_id > 0 ? v.verification_type_id : v.id}`} className="flex w-full items-center py-4 border-b border-gray-200">
                   <div className="w-30">
                     <VerificationBadge id={v.page_id > 0 ? v.verification_type_id : v.id} className="size-6" />
                   </div>
@@ -190,9 +285,14 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
                   <div className="w-10 flex justify-end">
                     <button
                       onClick={(e) => handleRemoveVerification(e, v.verification_type_id, v.id)}
-                      className="text-destructive cursor-pointer hover:bg-destructive/10 px-2 py-2 rounded-lg transition-colors"
+                      disabled={removeMutation.isPending}
+                      className="text-destructive cursor-pointer hover:bg-destructive/10 px-2 py-2 rounded-lg transition-colors disabled:opacity-50"
                     >
-                      <Trash2 className="size-4" />
+                      {removeMutation.isPending && removeMutation.variables?.id === v.id ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="size-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -201,18 +301,25 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
           </div>
         </div>
 
-        {/* Add Verification Form */}
         <div className="flex items-center gap-4 mt-8">
           <div className="flex-1">
             <select
-              value={selectedCategoryId}
+              value={selectedCategoryId || 0}
               onChange={(e) => {
                 const val = e.target.value as unknown as number;
-                if (val > 0) {
-                  setSelectedCategoryId(val)
-                } else {
-                  setSelectedCategoryId(undefined)
+                if (val > 0 && verificationCategories) {
+                  // Find the selected global verification type
+                  const typeToAdd = verificationCategories.find((t: VerificationType) => t.id == val);
+                  if (typeToAdd) {
+                    // Prevent adding duplicates by checking against both existing and newly added verifications
+                    const isAdded = activeVerifications.some(v => (v.page_id > 0 ? v.verification_type_id : v.id) == val);
+                    if (!isAdded) {
+                      setActiveVerifications([...activeVerifications, typeToAdd]);
+                    }
+                  }
                 }
+                // Reset dropdown back to default placeholder after selection
+                setSelectedCategoryId(undefined);
               }}
               className="w-full appearance-none focus:outline-none bg-[#f1f2f6] text-sm rounded-xl px-4 py-3.5 border border-[#e5e7eb]"
             >
@@ -231,13 +338,6 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
               )}
             </select>
           </div>
-          <button
-            onClick={handleAddVerification}
-            disabled={!selectedCategoryId}
-            className="text-[#0ea5e9] disabled:opacity-50 disabled:cursor-not-allowed font-medium text-[15px] flex items-center gap-1.5 shrink-0 px-2 hover:text-[#0284c7] transition-colors"
-          >
-            <span className="text-xl leading-none font-normal">+</span> add verification
-          </button>
         </div>
 
         {error && (

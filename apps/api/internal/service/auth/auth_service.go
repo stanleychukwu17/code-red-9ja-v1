@@ -1345,6 +1345,8 @@ type SeedUserRequest struct {
 	EducationLevel string  `json:"education_level"`
 	HomeAddress    string  `json:"home_address"`
 	OccupationID   *int16  `json:"occupation_id"`
+	PartyID        *int16  `json:"party_id"`
+	AccountStatus  string  `json:"account_status"`
 }
 
 func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
@@ -1376,6 +1378,7 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
 		stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
 		occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
+		partyIDVal := pgtype.Int2{Int16: *u.PartyID, Valid: true}
 
 		// check if the user phone number is valid
 		var phoneVal pgtype.Text
@@ -1417,8 +1420,8 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			CurrentCity:     currentCityVal,
 			StateOfOrigin:   stateOfOriginVal,
 			VotersCardImage: pgtype.Text{String: "", Valid: false},
-			AccountStatus:   pgtype.Text{},
-			PartyID:         pgtype.Int2{},
+			AccountStatus:   pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
+			PartyID:         partyIDVal,
 		}
 
 		id, err := s.queries.SeedUser(ctx, params)

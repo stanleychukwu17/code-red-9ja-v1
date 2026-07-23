@@ -77,9 +77,7 @@ function RouteComponent() {
   }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // Flatten the pages array from useInfiniteQuery into a single continuous array of user items
-  const appUsers = data
-    ? data.pages.flatMap((page) => page.data?.users || [])
-    : [];
+  const appUsers = data ? data.pages.flatMap((page) => page.data?.users || []) : [];
 
   return (
     <Layout>

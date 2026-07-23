@@ -92,7 +92,7 @@ WHERE id = $1;
 -- If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL' 
 -- condition becomes true, effectively skipping that filter.
 -- This allows us to use a single dynamic query instead of writing multiple separate queries.
-SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.is_politician, u.is_verified, u.account_status, u.created_at FROM users u
+SELECT u.id, u.fake_id FROM users u
 WHERE 
   (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
   AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)

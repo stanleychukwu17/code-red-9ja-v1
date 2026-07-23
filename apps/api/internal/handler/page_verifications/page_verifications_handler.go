@@ -3,6 +3,7 @@ package pageverificationshandler
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/utils"
@@ -18,6 +19,8 @@ type PageVerificationsService interface {
 	RemoveVerification(ctx context.Context, pageType string, pageID int64, verificationTypeID int16, actorID int64) error
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
+	GetUserDetails(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	GetPartyDetails(ctx context.Context, partyID int64) (*queries.Party, error)
 }
 
 type Handler struct {
@@ -53,6 +56,7 @@ type AssignVerificationRequest struct {
 // @Security     BearerAuth
 // @Router       /admin/verifications [post]
 func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
+
 	// Ensure the user has the required roles
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin", "admin")
 	if !ok {
@@ -83,9 +87,19 @@ func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
 		pvs = append(pvs, pv)
 	}
 
+	// Fetch updated user or party details
+	var pageDetails interface{}
+	switch req.ForWho {
+	case db.PageTypeUser:
+		pageDetails, _ = h.service.GetUserDetails(r.Context(), req.PageID)
+	case db.PageTypeParty:
+		pageDetails, _ = h.service.GetPartyDetails(r.Context(), req.PageID)
+	}
+
 	// Return success response
 	h.utils.RespondSuccess(w, http.StatusOK, "Verifications assigned successfully", map[string]interface{}{
 		"verifications": pvs,
+		"page_details":  pageDetails,
 	})
 }
 

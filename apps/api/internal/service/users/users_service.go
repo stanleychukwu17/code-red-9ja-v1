@@ -9,9 +9,12 @@ import (
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 
+	"sync"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/errgroup"
 )
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -130,9 +133,9 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	// Create a copy of the user and obscure sensitive fields for caching
 	userForCache := user
 	userForCache.PasswordHash = "---"
-	if userForCache.VotersCardImage.Valid {
-		userForCache.VotersCardImage.String = "---"
-	}
+	userForCache.VotersCardImage.String = "---"
+	userForCache.Phone.String = "---"
+	userForCache.Email.String = "---"
 
 	// Cache it in Redis
 	userWithPlacesForCache := queries.UserWithPlaces{
@@ -152,6 +155,84 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	}
 
 	return userWithPlacesForCache, nil
+}
+
+// GetUsersByFakeIDs retrieves multiple users optimally.
+// It uses Redis MGET to fetch cached users in a single round-trip,
+// and uses an errgroup to concurrently fetch any cache misses from the database.
+func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error) {
+	if len(fakeIDs) == 0 {
+		return []queries.UserWithPlaces{}, nil
+	}
+
+	// put the keys of the users in a slice
+	keys := make([]string, len(fakeIDs))
+	for i, id := range fakeIDs {
+		keys[i] = fmt.Sprintf("%s%d", db.RedisUserInfo, id)
+	}
+
+	// Fetch from Redis via MGET
+	// MGet returns interface{} slice. If a key is missed, the value is nil.
+	cachedUsers, err := s.rdb.MGet(ctx, keys...).Result()
+	if err != nil && err != redis.Nil {
+		return nil, fmt.Errorf("failed to mget users from redis: %w", err)
+	}
+
+	// init the results and missed indices slice
+	results := make([]queries.UserWithPlaces, len(fakeIDs))
+	var missedIndices []int // slice for missed results
+
+	// loop through the cached values
+	for i, cachedUser := range cachedUsers {
+		if cachedUser != nil {
+			userValue, ok := cachedUser.(string)
+			if ok {
+				var user queries.UserWithPlaces
+				if err := json.Unmarshal([]byte(userValue), &user); err == nil {
+					results[i] = user
+					continue // skip the missedIndices below
+				}
+			}
+		}
+
+		// If we reach here, it's a cache miss or invalid JSON
+		missedIndices = append(missedIndices, i)
+	}
+
+	if len(missedIndices) > 0 {
+		var g errgroup.Group // errgroup will run the GetUserByFakeID in a separate goroutine for each missed index
+		// Unleash full concurrency! RDS Proxy will handle the DB connections.
+		var mu sync.Mutex // mutex to protect the results slice from race conditions
+
+		for _, idx := range missedIndices {
+			fakeID := fakeIDs[idx]
+			g.Go(func() error {
+				// s.GetUserByFakeID handles fetching from DB and caching it in Redis
+				user, err := s.GetUserByFakeID(ctx, fakeID)
+				if err != nil {
+					// Return error to short-circuit if a critical failure occurs
+					return err
+				}
+
+				// The Mutex doesn't "know" it's protecting the 'results' slice.
+				// Instead, it locks this exact path of code execution.
+				// If Goroutine A is between Lock() and Unlock(), Goroutine B will be paused at Lock()
+				// waiting for the door to open, guaranteeing that only one goroutine modifies the slice at a time.
+				// what ever is inbetween mu.Lock() and mu.Unlock() can only be accessed by one Goroutine at a time
+				mu.Lock()
+				results[idx] = user
+				mu.Unlock() // allows other Goroutine to continue from mu.Lock()
+
+				return nil
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			return nil, err
+		}
+	}
+
+	return results, nil
 }
 
 // InvalidateCachedUserInfo invalidates the cached user information in Redis.
