@@ -8,7 +8,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { PageHeader } from "../../../components/Headers";
 
-interface NotVotingReasonSearch {
+export interface NotVotingReasonSearch {
   reasonId?: number;
 }
 

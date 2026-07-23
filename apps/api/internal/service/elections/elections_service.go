@@ -276,49 +276,40 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		}
 	} else {
 		// Auto-create election group
-		computedGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
-		// Check if group already exists with this computed name
-		eg, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
-		if err == nil {
-			// Reuse existing group and increment count
-			groupID = eg.ID
-			groupName = eg.Name
-			_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-				ID:             eg.ID,
-				Name:           eg.Name,
-				Rank:           eg.Rank,
-				ElectionsCount: eg.ElectionsCount + 1,
-				StatesCount:    eg.StatesCount,
-				ElectionDate:   eg.ElectionDate,
-			})
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		computedGroupName := baseGroupName
+		suffix := 1
+		for {
+			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				return queries.Election{}, fmt.Errorf("failed to update existing election group: %w", err)
+				break
 			}
-		} else {
-			// Create new group
-			metrics, err := txQueries.GetNationalMetrics(ctx)
-			if err != nil {
-				return queries.Election{}, fmt.Errorf("failed to fetch national metrics: %w", err)
-			}
-			newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-				Name:                       computedGroupName,
-				Rank:                       et.Rank,
-				ElectionsCount:             1,
-				StatesCount:                37, // Fixed 37 states for nationwide election
-				ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-				SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-				FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-				LgasCount:                  metrics.LgasCount,
-				StateConstituenciesCount:   metrics.StateConstituenciesCount,
-				WardsCount:                 metrics.WardsCount,
-				PollingUnitsCount:          metrics.PollingUnitsCount,
-			})
-			if err != nil {
-				return queries.Election{}, fmt.Errorf("failed to create election group: %w", err)
-			}
-			groupID = newGroup.ID
-			groupName = newGroup.Name
+			suffix++
+			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
+		// Create new group
+		metrics, err := txQueries.GetNationalMetrics(ctx)
+		if err != nil {
+			return queries.Election{}, fmt.Errorf("failed to fetch national metrics: %w", err)
+		}
+		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
+			Name:                       computedGroupName,
+			Rank:                       et.Rank,
+			ElectionsCount:             1,
+			StatesCount:                37, // Fixed 37 states for nationwide election
+			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+			LgasCount:                  metrics.LgasCount,
+			StateConstituenciesCount:   metrics.StateConstituenciesCount,
+			WardsCount:                 metrics.WardsCount,
+			PollingUnitsCount:          metrics.PollingUnitsCount,
+		})
+		if err != nil {
+			return queries.Election{}, fmt.Errorf("failed to create election group: %w", err)
+		}
+		groupID = newGroup.ID
+		groupName = newGroup.Name
 	}
 
 	// 3. Create election record (with all geographic IDs NULL)
@@ -412,49 +403,40 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 		}
 	} else {
 		// Auto-create election group
-		computedGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
-		// Check if group already exists with this computed name
-		eg, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
-		if err == nil {
-			// Reuse existing group and increment count
-			groupID = eg.ID
-			groupName = eg.Name
-			_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-				ID:             eg.ID,
-				Name:           eg.Name,
-				Rank:           eg.Rank,
-				ElectionsCount: eg.ElectionsCount + int32(len(stateIDs)),
-				StatesCount:    eg.StatesCount,
-				ElectionDate:   eg.ElectionDate,
-			})
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		computedGroupName := baseGroupName
+		suffix := 1
+		for {
+			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to update existing election group: %w", err)
+				break
 			}
-		} else {
-			// Create new group
-			metrics, err := txQueries.GetNationalMetrics(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-			}
-			newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-				Name:                       computedGroupName,
-				Rank:                       et.Rank,
-				ElectionsCount:             int32(len(stateIDs)),
-				StatesCount:                int32(len(stateIDs)),
-				ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-				SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-				FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-				LgasCount:                  metrics.LgasCount,
-				StateConstituenciesCount:   metrics.StateConstituenciesCount,
-				WardsCount:                 metrics.WardsCount,
-				PollingUnitsCount:          metrics.PollingUnitsCount,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create election group: %w", err)
-			}
-			groupID = newGroup.ID
-			groupName = newGroup.Name
+			suffix++
+			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
+		// Create new group
+		metrics, err := txQueries.GetNationalMetrics(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
+		}
+		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
+			Name:                       computedGroupName,
+			Rank:                       et.Rank,
+			ElectionsCount:             int32(len(stateIDs)),
+			StatesCount:                int32(len(stateIDs)),
+			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+			LgasCount:                  metrics.LgasCount,
+			StateConstituenciesCount:   metrics.StateConstituenciesCount,
+			WardsCount:                 metrics.WardsCount,
+			PollingUnitsCount:          metrics.PollingUnitsCount,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create election group: %w", err)
+		}
+		groupID = newGroup.ID
+		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(stateIDs))
@@ -555,49 +537,40 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 		}
 	} else {
 		// Auto-create election group
-		computedGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
-		// Check if group already exists with this computed name
-		eg, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
-		if err == nil {
-			// Reuse existing group and increment count
-			groupID = eg.ID
-			groupName = eg.Name
-			_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-				ID:             eg.ID,
-				Name:           eg.Name,
-				Rank:           eg.Rank,
-				ElectionsCount: eg.ElectionsCount + int32(len(senatorialDistrictIDs)),
-				StatesCount:    eg.StatesCount,
-				ElectionDate:   eg.ElectionDate,
-			})
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		computedGroupName := baseGroupName
+		suffix := 1
+		for {
+			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to update existing election group: %w", err)
+				break
 			}
-		} else {
-			// Create new group
-			metrics, err := txQueries.GetNationalMetrics(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-			}
-			newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-				Name:                       computedGroupName,
-				Rank:                       et.Rank,
-				ElectionsCount:             int32(len(senatorialDistrictIDs)),
-				StatesCount:                37,
-				ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-				SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-				FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-				LgasCount:                  metrics.LgasCount,
-				StateConstituenciesCount:   metrics.StateConstituenciesCount,
-				WardsCount:                 metrics.WardsCount,
-				PollingUnitsCount:          metrics.PollingUnitsCount,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create election group: %w", err)
-			}
-			groupID = newGroup.ID
-			groupName = newGroup.Name
+			suffix++
+			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
+		// Create new group
+		metrics, err := txQueries.GetNationalMetrics(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
+		}
+		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
+			Name:                       computedGroupName,
+			Rank:                       et.Rank,
+			ElectionsCount:             int32(len(senatorialDistrictIDs)),
+			StatesCount:                37,
+			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+			LgasCount:                  metrics.LgasCount,
+			StateConstituenciesCount:   metrics.StateConstituenciesCount,
+			WardsCount:                 metrics.WardsCount,
+			PollingUnitsCount:          metrics.PollingUnitsCount,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create election group: %w", err)
+		}
+		groupID = newGroup.ID
+		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(senatorialDistrictIDs))
@@ -708,49 +681,40 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 		}
 	} else {
 		// Auto-create election group
-		computedGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
-		// Check if group already exists with this computed name
-		eg, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
-		if err == nil {
-			// Reuse existing group and increment count
-			groupID = eg.ID
-			groupName = eg.Name
-			_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-				ID:             eg.ID,
-				Name:           eg.Name,
-				Rank:           eg.Rank,
-				ElectionsCount: eg.ElectionsCount + int32(len(federalConstituencyIDs)),
-				StatesCount:    eg.StatesCount,
-				ElectionDate:   eg.ElectionDate,
-			})
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		computedGroupName := baseGroupName
+		suffix := 1
+		for {
+			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to update existing election group: %w", err)
+				break
 			}
-		} else {
-			// Create new group
-			metrics, err := txQueries.GetNationalMetrics(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-			}
-			newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-				Name:                       computedGroupName,
-				Rank:                       et.Rank,
-				ElectionsCount:             int32(len(federalConstituencyIDs)),
-				StatesCount:                37,
-				ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-				SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-				FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-				LgasCount:                  metrics.LgasCount,
-				StateConstituenciesCount:   metrics.StateConstituenciesCount,
-				WardsCount:                 metrics.WardsCount,
-				PollingUnitsCount:          metrics.PollingUnitsCount,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create election group: %w", err)
-			}
-			groupID = newGroup.ID
-			groupName = newGroup.Name
+			suffix++
+			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
+		// Create new group
+		metrics, err := txQueries.GetNationalMetrics(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
+		}
+		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
+			Name:                       computedGroupName,
+			Rank:                       et.Rank,
+			ElectionsCount:             int32(len(federalConstituencyIDs)),
+			StatesCount:                37,
+			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+			LgasCount:                  metrics.LgasCount,
+			StateConstituenciesCount:   metrics.StateConstituenciesCount,
+			WardsCount:                 metrics.WardsCount,
+			PollingUnitsCount:          metrics.PollingUnitsCount,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create election group: %w", err)
+		}
+		groupID = newGroup.ID
+		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(federalConstituencyIDs))
@@ -864,49 +828,40 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		}
 	} else {
 		// Auto-create election group
-		computedGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
-		// Check if group already exists with this computed name
-		eg, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
-		if err == nil {
-			// Reuse existing group and increment count
-			groupID = eg.ID
-			groupName = eg.Name
-			_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-				ID:             eg.ID,
-				Name:           eg.Name,
-				Rank:           eg.Rank,
-				ElectionsCount: eg.ElectionsCount + int32(len(stateConstituencyIDs)),
-				StatesCount:    eg.StatesCount,
-				ElectionDate:   eg.ElectionDate,
-			})
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		computedGroupName := baseGroupName
+		suffix := 1
+		for {
+			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to update existing election group: %w", err)
+				break
 			}
-		} else {
-			// Create new group
-			metrics, err := txQueries.GetNationalMetrics(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-			}
-			newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-				Name:                       computedGroupName,
-				Rank:                       et.Rank,
-				ElectionsCount:             int32(len(stateConstituencyIDs)),
-				StatesCount:                37,
-				ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-				SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-				FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-				LgasCount:                  metrics.LgasCount,
-				StateConstituenciesCount:   metrics.StateConstituenciesCount,
-				WardsCount:                 metrics.WardsCount,
-				PollingUnitsCount:          metrics.PollingUnitsCount,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create election group: %w", err)
-			}
-			groupID = newGroup.ID
-			groupName = newGroup.Name
+			suffix++
+			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
+		// Create new group
+		metrics, err := txQueries.GetNationalMetrics(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
+		}
+		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
+			Name:                       computedGroupName,
+			Rank:                       et.Rank,
+			ElectionsCount:             int32(len(stateConstituencyIDs)),
+			StatesCount:                37,
+			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+			LgasCount:                  metrics.LgasCount,
+			StateConstituenciesCount:   metrics.StateConstituenciesCount,
+			WardsCount:                 metrics.WardsCount,
+			PollingUnitsCount:          metrics.PollingUnitsCount,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create election group: %w", err)
+		}
+		groupID = newGroup.ID
+		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(stateConstituencyIDs))
@@ -1020,49 +975,40 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64
 		}
 	} else {
 		// Auto-create election group
-		computedGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
-		// Check if group already exists with this computed name
-		eg, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
-		if err == nil {
-			// Reuse existing group and increment count
-			groupID = eg.ID
-			groupName = eg.Name
-			_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-				ID:             eg.ID,
-				Name:           eg.Name,
-				Rank:           eg.Rank,
-				ElectionsCount: eg.ElectionsCount + int32(len(lgaIDs)),
-				StatesCount:    eg.StatesCount,
-				ElectionDate:   eg.ElectionDate,
-			})
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		computedGroupName := baseGroupName
+		suffix := 1
+		for {
+			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to update existing election group: %w", err)
+				break
 			}
-		} else {
-			// Create new group
-			metrics, err := txQueries.GetNationalMetrics(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-			}
-			newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-				Name:                       computedGroupName,
-				Rank:                       et.Rank,
-				ElectionsCount:             int32(len(lgaIDs)),
-				StatesCount:                37,
-				ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-				SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-				FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-				LgasCount:                  metrics.LgasCount,
-				StateConstituenciesCount:   metrics.StateConstituenciesCount,
-				WardsCount:                 metrics.WardsCount,
-				PollingUnitsCount:          metrics.PollingUnitsCount,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create election group: %w", err)
-			}
-			groupID = newGroup.ID
-			groupName = newGroup.Name
+			suffix++
+			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
+		// Create new group
+		metrics, err := txQueries.GetNationalMetrics(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
+		}
+		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
+			Name:                       computedGroupName,
+			Rank:                       et.Rank,
+			ElectionsCount:             int32(len(lgaIDs)),
+			StatesCount:                37,
+			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+			LgasCount:                  metrics.LgasCount,
+			StateConstituenciesCount:   metrics.StateConstituenciesCount,
+			WardsCount:                 metrics.WardsCount,
+			PollingUnitsCount:          metrics.PollingUnitsCount,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create election group: %w", err)
+		}
+		groupID = newGroup.ID
+		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(lgaIDs))
@@ -1173,49 +1119,40 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int6
 		}
 	} else {
 		// Auto-create election group
-		computedGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
-		// Check if group already exists with this computed name
-		eg, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
-		if err == nil {
-			// Reuse existing group and increment count
-			groupID = eg.ID
-			groupName = eg.Name
-			_, err = txQueries.UpdateElectionGroup(ctx, queries.UpdateElectionGroupParams{
-				ID:             eg.ID,
-				Name:           eg.Name,
-				Rank:           eg.Rank,
-				ElectionsCount: eg.ElectionsCount + int32(len(wardIDs)),
-				StatesCount:    eg.StatesCount,
-				ElectionDate:   eg.ElectionDate,
-			})
+		baseGroupName := fmt.Sprintf("%d %s Election", electionDate.Year(), et.Election)
+		computedGroupName := baseGroupName
+		suffix := 1
+		for {
+			_, err := txQueries.GetElectionGroupByName(ctx, computedGroupName)
 			if err != nil {
-				return nil, fmt.Errorf("failed to update existing election group: %w", err)
+				break
 			}
-		} else {
-			// Create new group
-			metrics, err := txQueries.GetNationalMetrics(ctx)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-			}
-			newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
-				Name:                       computedGroupName,
-				Rank:                       et.Rank,
-				ElectionsCount:             int32(len(wardIDs)),
-				StatesCount:                37,
-				ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
-				SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
-				FederalConstituenciesCount: metrics.FederalConstituenciesCount,
-				LgasCount:                  metrics.LgasCount,
-				StateConstituenciesCount:   metrics.StateConstituenciesCount,
-				WardsCount:                 metrics.WardsCount,
-				PollingUnitsCount:          metrics.PollingUnitsCount,
-			})
-			if err != nil {
-				return nil, fmt.Errorf("failed to create election group: %w", err)
-			}
-			groupID = newGroup.ID
-			groupName = newGroup.Name
+			suffix++
+			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
+		// Create new group
+		metrics, err := txQueries.GetNationalMetrics(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
+		}
+		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
+			Name:                       computedGroupName,
+			Rank:                       et.Rank,
+			ElectionsCount:             int32(len(wardIDs)),
+			StatesCount:                37,
+			ElectionDate:               pgtype.Date{Time: electionDate, Valid: true},
+			SenatorialDistrictsCount:   metrics.SenatorialDistrictsCount,
+			FederalConstituenciesCount: metrics.FederalConstituenciesCount,
+			LgasCount:                  metrics.LgasCount,
+			StateConstituenciesCount:   metrics.StateConstituenciesCount,
+			WardsCount:                 metrics.WardsCount,
+			PollingUnitsCount:          metrics.PollingUnitsCount,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create election group: %w", err)
+		}
+		groupID = newGroup.ID
+		groupName = newGroup.Name
 	}
 
 	createdElections := make([]queries.Election, 0, len(wardIDs))
@@ -1455,13 +1392,27 @@ func (s *ElectionsService) syncElectionGroupNameAndRank(ctx context.Context, txQ
 	}
 
 	// 3. Compute group name
-	var newGroupName string
+	var baseGroupName string
 	if len(elections) == 1 {
 		// Single election: Year + Election Name (which contains the entity name in parentheses if sub-national)
-		newGroupName = fmt.Sprintf("%d %s", year, highestRanked.Name)
+		baseGroupName = fmt.Sprintf("%d %s", year, highestRanked.Name)
 	} else {
 		// 2 or more elections: Year + Highest Ranked Office Election + " Election"
-		newGroupName = fmt.Sprintf("%d %s Election", year, highestRanked.OfficeElection)
+		baseGroupName = fmt.Sprintf("%d %s Election", year, highestRanked.OfficeElection)
+	}
+
+	newGroupName := baseGroupName
+	suffix := 1
+	for {
+		existingGroup, err := txQueries.GetElectionGroupByName(ctx, newGroupName)
+		if err != nil {
+			break // Name is available
+		}
+		if existingGroup.ID == groupID {
+			break // Name is already ours
+		}
+		suffix++
+		newGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 	}
 
 	// 4. Update the election group

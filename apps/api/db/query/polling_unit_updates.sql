@@ -37,8 +37,8 @@ WHERE party_id = $1 AND election_group_id = $2;
 -- name: IncrementElectionGroupMetrics :exec
 UPDATE election_groups
 SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3
+  pu_reports_count = pu_reports_count + $2,
+  pu_updates_count = pu_updates_count + $3
 WHERE id = $1;
 
 -- name: IncrementElectionMetricsByGroup :exec

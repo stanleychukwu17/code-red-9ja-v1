@@ -137,17 +137,29 @@ export const API_URL = {
     const qs = params.toString();
     return `${api}/polling-units${qs ? `?${qs}` : ""}`;
   },
-  
+
   electionStats: {
-    singleStateStats: (id: number | string, stateId: number | string, partyId?: number | string) => {
+    singleStateStats: (
+      id: number | string,
+      stateId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/states/${stateId}${qs}`;
     },
-    singleLGAStats: (id: number | string, lgaId: number | string, partyId?: number | string) => {
+    singleLGAStats: (
+      id: number | string,
+      lgaId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/lgas/${lgaId}${qs}`;
     },
-    singleWardStats: (id: number | string, wardId: number | string, partyId?: number | string) => {
+    singleWardStats: (
+      id: number | string,
+      wardId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/wards/${wardId}${qs}`;
     },

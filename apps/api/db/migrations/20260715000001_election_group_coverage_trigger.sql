@@ -74,7 +74,7 @@ BEGIN
       state_id, lga_id, ward_id,
       state_constituency_id, federal_constituency_id, senatorial_district_id,
       -- Grab static counts from geography tables
-      total_agents_count
+      pu_agents_count
     ) VALUES (
       v_eg_id, v_pu_id,
       v_state_id, v_pu.lga_id, v_pu.ward_id,

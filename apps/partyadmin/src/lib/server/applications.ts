@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
-
 export const getApplications = createServerFn({ method: "GET" })
   .inputValidator(
     (data: { status?: string; limit?: number; cursor?: number } | undefined) =>

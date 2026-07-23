@@ -97,7 +97,7 @@ func (processor *RedisTaskProcessor) Start() error {
 
 		// Geographic Stats: event-driven cascade is the primary mechanism.
 		// This cron is a 30-minute safety-net fallback for any missed cascades.
-		processor.cron.AddFunc("*/30 * * * *", processor.ProcessRefreshAllElectionStats)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRefreshAllElectionStats)
 	}
 
 	processor.cron.Start()

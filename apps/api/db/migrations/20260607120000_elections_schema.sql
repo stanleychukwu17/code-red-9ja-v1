@@ -20,8 +20,8 @@ CREATE TABLE election_groups (
   ward_supervisors_count INT NOT NULL DEFAULT 0,
   unique_ward_supervisors_count INT NOT NULL DEFAULT 0,
   
-  reports_count INT NOT NULL DEFAULT 0,
-  updates_count INT NOT NULL DEFAULT 0,
+  pu_reports_count INT NOT NULL DEFAULT 0,
+  pu_updates_count INT NOT NULL DEFAULT 0,
   results_submitted_count INT NOT NULL DEFAULT 0,
   
   unique_final_results_expected INT NOT NULL DEFAULT 0,

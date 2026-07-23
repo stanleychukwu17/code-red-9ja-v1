@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	puupdates "free9ja/api/internal/service/polling_unit_updates"
+
 	"github.com/go-chi/chi/v5"
 )
 
@@ -28,18 +30,20 @@ type UsersService interface {
 }
 
 type Handler struct {
-	service         PollingUnitAssignmentsService
-	usersService    UsersService
-	utils           *utils.Utils
-	taskDistributor worker.TaskDistributor
+	service                   PollingUnitAssignmentsService
+	usersService              UsersService
+	pollingUnitUpdatesService *puupdates.Service
+	utils                     *utils.Utils
+	taskDistributor           worker.TaskDistributor
 }
 
-func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, utils *utils.Utils, taskDistributor worker.TaskDistributor) *Handler {
+func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, taskDistributor worker.TaskDistributor) *Handler {
 	return &Handler{
-		service:         service,
-		usersService:    usersService,
-		utils:           utils,
-		taskDistributor: taskDistributor,
+		service:                   service,
+		usersService:              usersService,
+		pollingUnitUpdatesService: puUpdatesService,
+		utils:                     utils,
+		taskDistributor:           taskDistributor,
 	}
 }
 
@@ -441,6 +445,59 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update tracking: "+err.Error())
 		return
+	}
+
+	partyID := int16(assignment.PartyID)
+
+	if req.ArrivedAt != nil && !assignment.ArrivedAt.Valid {
+		mediaUrls := []string{}
+		if req.ArrivalVideoUrl != nil && *req.ArrivalVideoUrl != "" {
+			mediaUrls = append(mediaUrls, *req.ArrivalVideoUrl)
+		}
+		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
+			UserID:          claims.FakeID,
+			PollingUnitID:   assignment.PollingUnitID,
+			ElectionGroupID: assignment.ElectionGroupID,
+			AssignmentID:    &assignment.ID,
+			PartyID:         &partyID,
+			Message:         "I just arrived at my polling unit.",
+			MediaUrls:       mediaUrls,
+			IsReport:        false,
+		})
+	}
+
+	if req.ElectionStartedAt != nil && !assignment.ElectionStartedAt.Valid {
+		mediaUrls := []string{}
+		if req.ElectionStartedVideoUrl != nil && *req.ElectionStartedVideoUrl != "" {
+			mediaUrls = append(mediaUrls, *req.ElectionStartedVideoUrl)
+		}
+		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
+			UserID:          claims.FakeID,
+			PollingUnitID:   assignment.PollingUnitID,
+			ElectionGroupID: assignment.ElectionGroupID,
+			AssignmentID:    &assignment.ID,
+			PartyID:         &partyID,
+			Message:         "The election at my polling unit has started.",
+			MediaUrls:       mediaUrls,
+			IsReport:        false,
+		})
+	}
+
+	if req.ElectionEndedAt != nil && !assignment.ElectionEndedAt.Valid {
+		mediaUrls := []string{}
+		if req.ElectionEndedVideoUrl != nil && *req.ElectionEndedVideoUrl != "" {
+			mediaUrls = append(mediaUrls, *req.ElectionEndedVideoUrl)
+		}
+		_, _ = h.pollingUnitUpdatesService.CreateUpdate(r.Context(), puupdates.CreateUpdateInput{
+			UserID:          claims.FakeID,
+			PollingUnitID:   assignment.PollingUnitID,
+			ElectionGroupID: assignment.ElectionGroupID,
+			AssignmentID:    &assignment.ID,
+			PartyID:         &partyID,
+			Message:         "The election at my polling unit has ended.",
+			MediaUrls:       mediaUrls,
+			IsReport:        false,
+		})
 	}
 
 	// Enqueue debounced polling unit stats refresh

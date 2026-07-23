@@ -98,6 +98,13 @@ export function NationwideElectionFormDialog({
         throw new Error("Office is required");
       }
 
+      const missingPartyIndex = candidates.findIndex((c) => !c.party_id);
+      if (missingPartyIndex !== -1) {
+        throw new Error(
+          `Please select a party for candidate: ${candidates[missingPartyIndex].first_name}`,
+        );
+      }
+
       const res = await createNationwideElection({
         data: {
           office_id: values.officeId,
@@ -157,6 +164,7 @@ export function NationwideElectionFormDialog({
         i === index
           ? {
               ...c,
+              party_id: newParty.id,
               party_short_name: newParty.short_name,
               party_logo: newParty.logo,
             }

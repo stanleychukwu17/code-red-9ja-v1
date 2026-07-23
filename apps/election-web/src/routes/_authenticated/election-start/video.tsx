@@ -44,20 +44,6 @@ function ElectionStartVideo() {
       return res;
     },
     onSuccess: (_data, variables) => {
-      // Fire a polling unit update to announce election start
-      if (pollingUnitId && selectedElectionGroup?.id) {
-        createPollingUnitUpdate({
-          data: {
-            polling_unit_id: pollingUnitId,
-            election_group_id: selectedElectionGroup.id,
-            assignment_id: assignmentId ? Number(assignmentId) : undefined,
-            party_id: party?.id,
-            message: "The election has started at my polling unit.",
-            media_urls: variables.election_started_video_url ? [variables.election_started_video_url] : [],
-            is_report: false,
-          },
-        }).catch(() => {/* silent – tracking already submitted */});
-      }
       navigate({ to: "/home" });
     },
     onError: (err: any) => {
@@ -70,7 +56,9 @@ function ElectionStartVideo() {
 
     if (selectedElectionGroup?.election_date) {
       const today = new Date().toISOString().split("T")[0];
-      const electionDate = new Date(selectedElectionGroup.election_date).toISOString().split("T")[0];
+      const electionDate = new Date(selectedElectionGroup.election_date)
+        .toISOString()
+        .split("T")[0];
       if (today !== electionDate) {
         toast.error("Updates can only be submitted on the election day.");
         return;
@@ -92,7 +80,7 @@ function ElectionStartVideo() {
           parsedTime = d.toISOString();
         }
       }
-    } catch (e) { }
+    } catch (e) {}
 
     setIsUploading(true);
     try {
@@ -241,7 +229,9 @@ function ElectionStartVideo() {
                 disabled={trackingMutation.isPending || isUploading}
                 onClick={handleSubmit}
               >
-                {trackingMutation.isPending || isUploading ? "Uploading video..." : "Submit"}
+                {trackingMutation.isPending || isUploading
+                  ? "Uploading video..."
+                  : "Submit"}
               </Button>
               <Button
                 type="button"

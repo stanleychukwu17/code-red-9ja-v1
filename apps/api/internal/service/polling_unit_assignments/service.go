@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/worker"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -11,14 +12,16 @@ import (
 )
 
 type Service struct {
-	queries *queries.Queries
-	rdb     *redis.Client
+	queries         *queries.Queries
+	rdb             *redis.Client
+	taskDistributor worker.TaskDistributor
 }
 
-func NewService(q *queries.Queries, rdb *redis.Client) *Service {
+func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.TaskDistributor) *Service {
 	return &Service{
-		queries: q,
-		rdb:     rdb,
+		queries:         q,
+		rdb:             rdb,
+		taskDistributor: taskDistributor,
 	}
 }
 
@@ -93,7 +96,7 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 		}
 	}
 
-	return s.queries.UpdateAssignmentTracking(ctx, queries.UpdateAssignmentTrackingParams{
+	updated, err := s.queries.UpdateAssignmentTracking(ctx, queries.UpdateAssignmentTrackingParams{
 		ID:                      id,
 		ArrivedAt:               parseTimeParam(arrivedAt),
 		ArrivalVideoUrl:         parseTextParam(arrivalVideoUrl),
@@ -102,4 +105,18 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 		ElectionEndedAt:         parseTimeParam(electionEndedAt),
 		ElectionEndedVideoUrl:   parseTextParam(electionEndedVideoUrl),
 	})
+	if err != nil {
+		return updated, err
+	}
+
+	// Enqueue a background task to recalculate the PU stats (which will cascade to Ward, LGA, etc.)
+	// The worker debounces duplicate updates to the same PU automatically.
+	_ = s.taskDistributor.DistributeTaskRefreshPollingUnitStats(context.Background(), &worker.RefreshPollingUnitStatsPayload{
+		Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
+			ElectionGroupID: assignment.ElectionGroupID,
+			PollingUnitID:   assignment.PollingUnitID,
+		},
+	})
+
+	return updated, nil
 }

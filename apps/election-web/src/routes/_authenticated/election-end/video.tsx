@@ -39,29 +39,16 @@ function ElectionEndVideo() {
   const trackingMutation = useMutation({
     mutationFn: async (payload: any) => {
       const res = await updateAssignmentTracking({ data: payload });
-      if (!res || !res.success) throw new Error(res?.message || "Failed to submit election end time");
+      if (!res || !res.success)
+        throw new Error(res?.message || "Failed to submit election end time");
       return res;
     },
     onSuccess: (_data, variables) => {
-      // Fire a polling unit update to announce election end
-      if (pollingUnitId && selectedElectionGroup?.id) {
-        createPollingUnitUpdate({
-          data: {
-            polling_unit_id: pollingUnitId,
-            election_group_id: selectedElectionGroup.id,
-            assignment_id: assignmentId ? Number(assignmentId) : undefined,
-            party_id: party?.id,
-            message: "The election has ended at my polling unit.",
-            media_urls: variables.election_ended_video_url ? [variables.election_ended_video_url] : [],
-            is_report: false,
-          },
-        }).catch(() => {/* silent – tracking already submitted */});
-      }
       navigate({ to: "/home" });
     },
     onError: (err: any) => {
       toast.error(err.message || "An error occurred while submitting.");
-    }
+    },
   });
 
   const handleSubmit = async () => {
@@ -69,7 +56,9 @@ function ElectionEndVideo() {
 
     if (selectedElectionGroup?.election_date) {
       const today = new Date().toISOString().split("T")[0];
-      const electionDate = new Date(selectedElectionGroup.election_date).toISOString().split("T")[0];
+      const electionDate = new Date(selectedElectionGroup.election_date)
+        .toISOString()
+        .split("T")[0];
       if (today !== electionDate) {
         toast.error("Updates can only be submitted on the election day.");
         return;
@@ -91,7 +80,7 @@ function ElectionEndVideo() {
           parsedTime = d.toISOString();
         }
       }
-    } catch (e) { }
+    } catch (e) {}
 
     setIsUploading(true);
     try {
@@ -244,7 +233,9 @@ function ElectionEndVideo() {
               disabled={trackingMutation.isPending || isUploading}
               onClick={handleSubmit}
             >
-              {trackingMutation.isPending || isUploading ? "Uploading video..." : "Submit"}
+              {trackingMutation.isPending || isUploading
+                ? "Uploading video..."
+                : "Submit"}
             </Button>
             <Button
               type="button"
@@ -274,4 +265,3 @@ function ElectionEndVideo() {
     </PageWrapper>
   );
 }
-

@@ -159,8 +159,8 @@ type ElectionGroup struct {
 	UniqueLgaSupervisorsCount                 int32              `json:"unique_lga_supervisors_count"`
 	WardSupervisorsCount                      int32              `json:"ward_supervisors_count"`
 	UniqueWardSupervisorsCount                int32              `json:"unique_ward_supervisors_count"`
-	ReportsCount                              int32              `json:"reports_count"`
-	UpdatesCount                              int32              `json:"updates_count"`
+	PuReportsCount                            int32              `json:"pu_reports_count"`
+	PuUpdatesCount                            int32              `json:"pu_updates_count"`
 	ResultsSubmittedCount                     int32              `json:"results_submitted_count"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
@@ -238,8 +238,8 @@ type ElectionGroupLga struct {
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
 	PuAgentsInAttendanceCount                 int32              `json:"pu_agents_in_attendance_count"`
-	ReportsCount                              int32              `json:"reports_count"`
-	UpdatesCount                              int32              `json:"updates_count"`
+	PuReportsCount                            int32              `json:"pu_reports_count"`
+	PuUpdatesCount                            int32              `json:"pu_updates_count"`
 	PuAverageArrivalTime                      pgtype.Timestamptz `json:"pu_average_arrival_time"`
 	PuAverageUpdateTimeIntervalInSeconds      float64            `json:"pu_average_update_time_interval_in_seconds"`
 	PuAverageElectionStartedAt                pgtype.Timestamptz `json:"pu_average_election_started_at"`

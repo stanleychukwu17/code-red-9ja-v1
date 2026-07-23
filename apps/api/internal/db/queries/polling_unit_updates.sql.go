@@ -96,19 +96,19 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 const incrementElectionGroupMetrics = `-- name: IncrementElectionGroupMetrics :exec
 UPDATE election_groups
 SET 
-  reports_count = reports_count + $2,
-  updates_count = updates_count + $3
+  pu_reports_count = pu_reports_count + $2,
+  pu_updates_count = pu_updates_count + $3
 WHERE id = $1
 `
 
 type IncrementElectionGroupMetricsParams struct {
-	ID           int64 `json:"id"`
-	ReportsCount int32 `json:"reports_count"`
-	UpdatesCount int32 `json:"updates_count"`
+	ID             int64 `json:"id"`
+	PuReportsCount int32 `json:"pu_reports_count"`
+	PuUpdatesCount int32 `json:"pu_updates_count"`
 }
 
 func (q *Queries) IncrementElectionGroupMetrics(ctx context.Context, arg IncrementElectionGroupMetricsParams) error {
-	_, err := q.db.Exec(ctx, incrementElectionGroupMetrics, arg.ID, arg.ReportsCount, arg.UpdatesCount)
+	_, err := q.db.Exec(ctx, incrementElectionGroupMetrics, arg.ID, arg.PuReportsCount, arg.PuUpdatesCount)
 	return err
 }
 

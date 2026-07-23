@@ -42,20 +42,6 @@ function ArrivalVideo() {
       return res;
     },
     onSuccess: (_data, variables) => {
-      // Fire a polling unit update to announce arrival
-      if (pollingUnitId && selectedElectionGroup?.id) {
-        createPollingUnitUpdate({
-          data: {
-            polling_unit_id: pollingUnitId,
-            election_group_id: selectedElectionGroup.id,
-            assignment_id: assignmentId ? Number(assignmentId) : undefined,
-            party_id: party?.id,
-            message: "I just arrived at my polling unit.",
-            media_urls: variables.arrival_video_url ? [variables.arrival_video_url] : [],
-            is_report: false,
-          },
-        }).catch(() => {/* silent – tracking already submitted */});
-      }
       navigate({ to: "/home" });
     },
     onError: (err: any) => {
@@ -68,7 +54,9 @@ function ArrivalVideo() {
 
     if (selectedElectionGroup?.election_date) {
       const today = new Date().toISOString().split("T")[0];
-      const electionDate = new Date(selectedElectionGroup.election_date).toISOString().split("T")[0];
+      const electionDate = new Date(selectedElectionGroup.election_date)
+        .toISOString()
+        .split("T")[0];
       if (today !== electionDate) {
         toast.error("Updates can only be submitted on the election day.");
         return;
@@ -229,7 +217,9 @@ function ArrivalVideo() {
               disabled={trackingMutation.isPending || isUploading}
               onClick={handleSubmit}
             >
-              {trackingMutation.isPending || isUploading ? "Uploading video..." : "Submit"}
+              {trackingMutation.isPending || isUploading
+                ? "Uploading video..."
+                : "Submit"}
             </Button>
             <Button
               type="button"

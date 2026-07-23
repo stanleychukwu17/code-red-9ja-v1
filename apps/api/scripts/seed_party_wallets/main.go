@@ -18,11 +18,14 @@ import (
 	partiesservice "free9ja/api/internal/service/parties"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
 )
-
 
 func main() {
 	ctx := context.Background()
+
+	// Ensure .env is loaded if we're running this from the script's directory
+	_ = godotenv.Load("../../.env", "../../../.env")
 
 	// Load config (reads .env automatically)
 	cfg := config.Load()
