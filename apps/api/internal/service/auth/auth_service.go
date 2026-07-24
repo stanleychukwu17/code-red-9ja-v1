@@ -1345,6 +1345,8 @@ func (s *AuthService) UpdateUserRoles(ctx context.Context, userID int64, roles [
 	// 	}
 	// }
 
+	// invalidate the user cache here
+
 	return nil
 }
 

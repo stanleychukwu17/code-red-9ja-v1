@@ -35,12 +35,7 @@ type AuthService interface {
 	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) (string, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
 
-	CheckEmail(ctx context.Context, email string) bool
-	CheckPhone(ctx context.Context, phone string) bool
-	ValidatePhoneForCountry(phone, country_code string) (string, error)
-	SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error
-	UpdateCachedUserInfo(ctx context.Context, fakeID int64) error
-	CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error
+	CheckAndAssignRole(ctx context.Context, userID int64, fakeID int64, roleCode string, whoAssigned int64) error
 	UpdateUserRoles(ctx context.Context, userID int64, roles []string, partyID *int64, whoAssigned int64) error
 }
 
@@ -906,7 +901,7 @@ func (h *Handler) AssignUserRole(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Call CheckAndAssignRole
-	err := h.authService.CheckAndAssignRole(r.Context(), req.UserID, req.Role, claims.UserID)
+	err := h.authService.CheckAndAssignRole(r.Context(), req.UserID, 0, req.Role, claims.UserID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to assign role: "+err.Error())
 		return
@@ -980,7 +975,7 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.UserFakeID != nil {
-		_ = h.authService.UpdateCachedUserInfo(r.Context(), *req.UserFakeID)
+		// _ = h.authService.UpdateCachedUserInfo(r.Context(), *req.UserFakeID)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "User roles successfully updated", nil)
