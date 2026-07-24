@@ -378,6 +378,15 @@ func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
 	return err
 }
 
+const deleteUserRoles = `-- name: DeleteUserRoles :exec
+DELETE FROM user_roles WHERE user_id = $1
+`
+
+func (q *Queries) DeleteUserRoles(ctx context.Context, userID int64) error {
+	_, err := q.db.Exec(ctx, deleteUserRoles, userID)
+	return err
+}
+
 const getFakeIDByEmail = `-- name: GetFakeIDByEmail :one
 SELECT fake_id FROM users
 WHERE email = $1 LIMIT 1
@@ -426,15 +435,6 @@ func (q *Queries) GetFakeIDByUsername(ctx context.Context, username pgtype.Text)
 	var fake_id pgtype.Int8
 	err := row.Scan(&fake_id)
 	return fake_id, err
-}
-
-const deleteUserRoles = `-- name: DeleteUserRoles :exec
-DELETE FROM user_roles WHERE user_id = $1
-`
-
-func (q *Queries) DeleteUserRoles(ctx context.Context, userID int64) error {
-	_, err := q.db.Exec(ctx, deleteUserRoles, userID)
-	return err
 }
 
 const getMoreInfoAboutThisUser = `-- name: GetMoreInfoAboutThisUser :one
@@ -496,7 +496,7 @@ func (q *Queries) GetUserBankAccountsByUserID(ctx context.Context, userID int64)
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 

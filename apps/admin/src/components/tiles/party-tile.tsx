@@ -36,7 +36,7 @@ export function PartyTableTile({ data }: { data: PartyType }) {
   return (
     <TileRow>
       <TileLeft>
-        <div className="flex items-center gap-10 w-[180px] shrink-0">
+        <div className="flex items-center gap-10 w-45 shrink-0">
           <img
             src={
               data.logo ||

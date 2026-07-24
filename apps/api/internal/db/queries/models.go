@@ -944,6 +944,7 @@ type User struct {
 	CurrentLga      pgtype.Int4        `json:"current_lga"`
 	CurrentWard     pgtype.Int4        `json:"current_ward"`
 	CurrentCity     pgtype.Int4        `json:"current_city"`
+	Address         pgtype.Text        `json:"address"`
 	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
 	VotersCardImage pgtype.Text        `json:"voters_card_image"`
 	IsPolitician    pgtype.Bool        `json:"is_politician"`
