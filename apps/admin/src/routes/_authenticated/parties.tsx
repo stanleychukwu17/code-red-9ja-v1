@@ -20,12 +20,7 @@ export const Route = createFileRoute("/_authenticated/parties")({
 });
 
 function RouteComponent() {
-  const {
-    data: parties = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<PartyType[]>({
+  const { data: parties = [], isLoading, error, refetch, } = useQuery<PartyType[]>({
     queryKey: ["parties"],
     queryFn: async () => {
       const res = await getParties();
