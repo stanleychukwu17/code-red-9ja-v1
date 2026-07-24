@@ -137,13 +137,8 @@ func (m *MockAuthService) SaveSomeUserRegistrationDetails(ctx context.Context, u
 	return args.Error(0)
 }
 
-func (m *MockAuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) error {
-	args := m.Called(ctx, fakeID)
-	return args.Error(0)
-}
-
-func (m *MockAuthService) CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error {
-	args := m.Called(ctx, userID, roleCode, whoAssigned)
+func (m *MockAuthService) CheckAndAssignRole(ctx context.Context, userID int64, fakeID int64, roleCode string, whoAssigned int64) error {
+	args := m.Called(ctx, userID, fakeID, roleCode, whoAssigned)
 	return args.Error(0)
 }
 

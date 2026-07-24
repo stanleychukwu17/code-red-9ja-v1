@@ -7,6 +7,7 @@ import (
 
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
+	bodiesservice "free9ja/api/internal/service/bodies"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	usersservice "free9ja/api/internal/service/users"
 
@@ -37,8 +38,11 @@ func main() {
 		ContractCode: cfg.Monnify.ContractCode,
 	})
 
+	// Build a bodies service
+	bodiesSvc := bodiesservice.NewBodiesService(q, nil)
+
 	// Build a users service
-	usersSvc := usersservice.NewUsersService(q, nil, monnifyClient)
+	usersSvc := usersservice.NewUsersService(q, nil, monnifyClient, bodiesSvc)
 
 	// Fetch all users that don't yet have a wallet
 	unwalletedUsers, err := q.ListUsersWithoutWallet(ctx)

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	apimiddleware "free9ja/api/internal/middleware"
-	"free9ja/api/internal/utils"
+
 	"net/http"
 	"strconv"
 
@@ -24,9 +24,8 @@ import (
 // @Security     BearerAuth
 // @Router       /users/me/wallet [get]
 func (h *Handler) GetMyWallet(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -78,9 +77,8 @@ func (h *Handler) GetMyWallet(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /users/me/wallet/transactions [get]
 func (h *Handler) ListMyWalletTransactions(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -118,9 +116,8 @@ func (h *Handler) ListMyWalletTransactions(w http.ResponseWriter, r *http.Reques
 // @Security     BearerAuth
 // @Router       /users/me/wallet/withdraw [post]
 func (h *Handler) WithdrawFromUserWallet(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 

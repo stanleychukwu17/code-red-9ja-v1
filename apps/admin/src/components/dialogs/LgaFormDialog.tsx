@@ -18,6 +18,7 @@ import { getStates } from "#/lib/server/states";
 import { getSenatorialDistricts } from "#/lib/server/senatorial_districts";
 import { getFederalConstituencies } from "#/lib/server/federal_constituencies";
 import { createLga, updateLga } from "#/lib/server/lgas";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export interface Lga {
   id: number;
@@ -159,11 +160,7 @@ export function LgaFormDialog({
           }}
         >
           <DialogPadding className="space-y-6 pb-6">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TinyError error={error} />
 
             {/* LGA Name */}
             <div className="w-full">

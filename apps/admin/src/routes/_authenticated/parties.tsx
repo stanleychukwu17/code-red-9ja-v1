@@ -14,18 +14,13 @@ import { getParties } from "#/lib/server/parties";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
-export const Route = createFileRoute("/_authenticated/parties/")({
+export const Route = createFileRoute("/_authenticated/parties")({
   head: () => getPageHeader({ title: "Parties" }),
   component: RouteComponent,
 });
 
 function RouteComponent() {
-  const {
-    data: parties = [],
-    isLoading,
-    error,
-    refetch,
-  } = useQuery<PartyType[]>({
+  const { data: parties = [], isLoading, error, refetch, } = useQuery<PartyType[]>({
     queryKey: ["parties"],
     queryFn: async () => {
       const res = await getParties();

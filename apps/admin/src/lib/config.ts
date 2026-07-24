@@ -172,4 +172,6 @@ export const API_URL = {
   manageUserPhoneNumber: (id: string | number) => `${api}/admin/users/phones/${id}`,
   users: `${api}/users`,
   recalculateBodies: `${api}/bodies/recalculate`,
+  verificationTypes: `${api}/verifications/types`,
+  adminVerifications: `${api}/admin/verifications`,
 };

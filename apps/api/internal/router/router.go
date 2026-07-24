@@ -27,9 +27,9 @@ import (
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
 	officeshandler "free9ja/api/internal/handler/offices"
+	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
 	partyapplicationshandler "free9ja/api/internal/handler/party_applications"
-	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	puassignmentshandler "free9ja/api/internal/handler/polling_unit_assignments"
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
@@ -53,9 +53,9 @@ import (
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
+	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
 	partyapplications "free9ja/api/internal/service/party_applications"
-	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	puassignments "free9ja/api/internal/service/polling_unit_assignments"
 	puresults "free9ja/api/internal/service/polling_unit_results"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -102,9 +102,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			"reason", "MONNIFY_API_KEY or MONNIFY_SECRET_KEY is empty")
 	}
 
-	usersService := usersservice.NewUsersService(q, rdb, monnifyClient)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
 	bodiesService := bodiesservice.NewBodiesService(q, rdb)
+	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
 
 	statesService := statesservice.NewStatesService(q, rdb)
@@ -138,7 +138,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
 	auditService := audit.NewAuditService(q)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, utilsInstance)
-	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, usersService, partiesService, auditService)
+	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
+	usersService.SetPageVerificationsService(pageVerificationsService)
+	usersService.SetPartyService(partiesService)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
@@ -418,7 +420,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies", electionStatsHandler.GetFederalConstituencyStats)
 		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
-		
+
 		// Single unit dedicated endpoints
 		r.Get("/api/v1/election-groups/{id}/stats", electionStatsHandler.GetSingleElectionGroupStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}", electionStatsHandler.GetSingleStateStats)
@@ -560,6 +562,13 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 
 		// Inject into context
 		ctx := logger.WithContext(r.Context(), log)
+
+		// Injects the http remote ip address and user agent to the context
+		// these metadata will be used for auditing purposes
+		ctx = audit.WithRequestMetadata(ctx, r.RemoteAddr, r.UserAgent())
+
+		// updates the request to use the currently updated context with all the information attached
+		// we attached the logger and the audit metadata to the context
 		r = r.WithContext(ctx)
 
 		// We need to wrap the response writer to get the status code

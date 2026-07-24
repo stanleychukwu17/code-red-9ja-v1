@@ -92,7 +92,7 @@ WHERE id = $1;
 -- If a parameter like 'cursor' is not provided (null), the 'sqlc.narg('cursor')::bigint IS NULL' 
 -- condition becomes true, effectively skipping that filter.
 -- This allows us to use a single dynamic query instead of writing multiple separate queries.
-SELECT u.id, u.fake_id, u.email, u.username, u.avatar, u.first_name, u.last_name, u.middle_name, u.gender, u.date_of_birth, u.state_of_origin, u.current_country, u.current_state, u.current_city, u.party_id, u.account_status, u.created_at FROM users u
+SELECT u.id, u.fake_id FROM users u
 WHERE 
   (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
   AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)
@@ -119,10 +119,10 @@ WHERE id = $1;
 INSERT INTO users (
   fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
-  state_of_origin, voters_card_image, bank_account_number, bank_code,
+  state_of_origin, voters_card_image,
   account_status, party_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
 RETURNING id;
 
 
@@ -213,4 +213,56 @@ WHERE id = $1;
 -- name: UpdatePhoneNumber :exec
 UPDATE users_phone_numbers
 SET on_whatsapp = $2, is_default = $3
+WHERE id = $1;
+
+-- name: CreateUserBankAccount :one
+INSERT INTO user_bank_accounts (
+  user_id, account_number, bank_code, is_primary
+) VALUES ($1, $2, $3, $4)
+RETURNING *;
+
+-- name: GetUserBankAccountsByUserID :many
+SELECT * FROM user_bank_accounts
+WHERE user_id = $1 ORDER BY is_primary DESC, id DESC;
+
+-- name: UpdateUserBankAccount :one
+UPDATE user_bank_accounts
+SET account_number = $2, bank_code = $3, is_primary = $4, updated_at = NOW()
+WHERE id = $1 AND user_id = $5
+RETURNING *;
+
+-- name: DeleteUserBankAccount :exec
+DELETE FROM user_bank_accounts
+WHERE id = $1 AND user_id = $2;
+
+-- name: SetPrimaryBankAccount :exec
+UPDATE user_bank_accounts
+SET is_primary = CASE WHEN id = $1 THEN true ELSE false END
+WHERE user_id = $2;
+
+-- name: GetFakeIDByUsername :one
+SELECT fake_id FROM users
+WHERE username = $1 LIMIT 1;
+
+-- name: GetFakeIDByEmail :one
+SELECT fake_id FROM users
+WHERE email = $1 LIMIT 1;
+
+-- name: GetFakeIDByPhone :one
+SELECT fake_id FROM users
+WHERE phone = $1 LIMIT 1;
+
+-- name: GetFakeIDByNIN :one
+SELECT u.fake_id
+FROM users u
+JOIN users_nin n ON u.id = n.user_id
+WHERE n.nin = $1 LIMIT 1;
+
+-- name: GetUserPasswordHashByFakeID :one
+SELECT password_hash FROM users
+WHERE fake_id = $1 LIMIT 1;
+
+-- name: UpdateUserHasRole :exec
+UPDATE users
+SET has_role = $2
 WHERE id = $1;

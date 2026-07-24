@@ -282,6 +282,127 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/verifications": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Assign multiple verifications to a page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Page Verifications"
+                ],
+                "summary": "Assign verifications to a page",
+                "parameters": [
+                    {
+                        "description": "Assign Verification request payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/pageverificationshandler.AssignVerificationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Verifications assigned successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to assign verifications",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove a verification from a page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Page Verifications"
+                ],
+                "summary": "Remove a verification from a page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page Type",
+                        "name": "page_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page ID",
+                        "name": "page_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Verification Type ID",
+                        "name": "verification_type_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Verification removed successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to remove verification",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/supervisor-assignments": {
+            "get": {
+                "description": "Get supervisor assignments for a user for a specific election group",
         "/auth/admin/login": {
             "post": {
                 "description": "Authenticates an admin and returns access and refresh tokens",
@@ -6732,6 +6853,91 @@ const docTemplate = `{
                 }
             }
         },
+        "/verifications/types": {
+            "get": {
+                "description": "List verification types",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Page Verifications"
+                ],
+                "summary": "List verification types",
+                "responses": {
+                    "200": {
+                        "description": "Verification types fetched successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch verification types",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/verifications/{pageType}/{pageID}": {
+            "get": {
+                "description": "Get verifications for a page",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Page Verifications"
+                ],
+                "summary": "Get verifications for a page",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Page Type",
+                        "name": "pageType",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page ID",
+                        "name": "pageID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Verifications fetched successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid page ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to fetch verifications",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/wards": {
             "get": {
                 "description": "Fetches wards with optional lga_id and state_id filtering and cursor pagination",
@@ -7557,12 +7763,6 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
                 "current_city": {
                     "type": "integer"
                 },
@@ -7658,6 +7858,9 @@ const docTemplate = `{
         "authservice.SeedUserRequest": {
             "type": "object",
             "properties": {
+                "account_status": {
+                    "type": "string"
+                },
                 "avatar": {
                     "type": "string"
                 },
@@ -7707,6 +7910,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "occupation_id": {
+                    "type": "integer"
+                },
+                "party_id": {
                     "type": "integer"
                 },
                 "password": {
@@ -8352,6 +8558,29 @@ const docTemplate = `{
                 }
             }
         },
+        "pageverificationshandler.AssignVerificationRequest": {
+            "type": "object",
+            "required": [
+                "for_who",
+                "page_id",
+                "verification_type_ids"
+            ],
+            "properties": {
+                "for_who": {
+                    "type": "string"
+                },
+                "page_id": {
+                    "type": "integer"
+                },
+                "verification_type_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
         "partieshandler.BuySlotsRequest": {
             "type": "object",
             "properties": {
@@ -8473,12 +8702,6 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
                 "current_city": {
                     "type": "integer"
                 },
@@ -8531,6 +8754,95 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "whatsapp_phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "pgtype.InfinityModifier": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                1,
+                0,
+                -1
+            ],
+            "x-enum-varnames": [
+                "Infinity",
+                "Finite",
+                "NegativeInfinity"
+            ]
+        },
+        "pgtype.Text": {
+            "type": "object",
+            "properties": {
+                "string": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Timestamptz": {
+            "type": "object",
+            "properties": {
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "polling_unit_results.ReviewRequest": {
+            "type": "object",
+            "properties": {
+                "disputed_reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "\"confirmed\" or \"nullified\"",
+                    "type": "string"
+                }
+            }
+        },
+        "polling_unit_results.SubmitResultRequest": {
+            "type": "object",
+            "properties": {
+                "assignment_id": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "election_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "result_sheet_image_url": {
+                    "type": "string"
+                },
+                "result_sheet_video_url": {
+                    "type": "string"
+                },
+                "uploaded_by_inec": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "polling_unit_results.VoteRequest": {
+            "type": "object",
+            "properties": {
+                "vote_type": {
+                    "description": "\"up\" or \"down\"",
                     "type": "string"
                 }
             }
@@ -8802,6 +9114,41 @@ const docTemplate = `{
                 },
                 "election_started_video_url": {
                     "type": "string"
+                }
+            }
+        },
+        "queries.GetPageVerificationsRow": {
+            "type": "object",
+            "properties": {
+                "for_who": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_admin_assignable": {
+                    "type": "boolean"
+                },
+                "page_id": {
+                    "type": "integer"
+                },
+                "page_type": {
+                    "type": "string"
+                },
+                "verification_description": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "verification_title": {
+                    "type": "string"
+                },
+                "verification_type": {
+                    "type": "string"
+                },
+                "verification_type_id": {
+                    "type": "integer"
+                },
+                "verified_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
                 }
             }
         },
@@ -9165,12 +9512,6 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
-                "bank_account_number": {
-                    "type": "string"
-                },
-                "bank_code": {
-                    "type": "string"
-                },
                 "city_name": {
                     "type": "string"
                 },
@@ -9231,6 +9572,12 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "is_politician": {
+                    "type": "boolean"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
                 "last_name": {
                     "type": "string"
                 },
@@ -9279,8 +9626,11 @@ const docTemplate = `{
                 "username": {
                     "type": "string"
                 },
-                "voters_card_image": {
-                    "type": "string"
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
                 },
                 "voters_card_verified": {
                     "type": "boolean"

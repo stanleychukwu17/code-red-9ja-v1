@@ -14,17 +14,18 @@ import (
 
 const insertAuditLog = `-- name: InsertAuditLog :one
 INSERT INTO audit_logs (
-    actor_id, actor_role, action, entity_type, entity_id, old_values, new_values, ip_address, user_agent
+    module, action, actor_id, actor_role, entity_type, entity_id, old_values, new_values, ip_address, user_agent
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-RETURNING id, actor_id, actor_role, action, entity_type, entity_id, old_values, new_values, ip_address, user_agent, created_at
+RETURNING id, module, action, actor_id, actor_role, entity_type, entity_id, old_values, new_values, ip_address, user_agent, created_at
 `
 
 type InsertAuditLogParams struct {
+	Module     pgtype.Text `json:"module"`
+	Action     string      `json:"action"`
 	ActorID    int64       `json:"actor_id"`
 	ActorRole  pgtype.Text `json:"actor_role"`
-	Action     string      `json:"action"`
 	EntityType string      `json:"entity_type"`
 	EntityID   string      `json:"entity_id"`
 	OldValues  []byte      `json:"old_values"`
@@ -35,9 +36,10 @@ type InsertAuditLogParams struct {
 
 func (q *Queries) InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error) {
 	row := q.db.QueryRow(ctx, insertAuditLog,
+		arg.Module,
+		arg.Action,
 		arg.ActorID,
 		arg.ActorRole,
-		arg.Action,
 		arg.EntityType,
 		arg.EntityID,
 		arg.OldValues,
@@ -48,9 +50,10 @@ func (q *Queries) InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) 
 	var i AuditLog
 	err := row.Scan(
 		&i.ID,
+		&i.Module,
+		&i.Action,
 		&i.ActorID,
 		&i.ActorRole,
-		&i.Action,
 		&i.EntityType,
 		&i.EntityID,
 		&i.OldValues,

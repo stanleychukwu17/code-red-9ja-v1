@@ -675,9 +675,8 @@ type RegisterCandidatePlaceholderRequest struct {
 // @Router /auth/register_candidate [post]
 // RegisterCandidatePlaceholder registers any placeholder user (with specific role & role_level)
 func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 

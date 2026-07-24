@@ -17,6 +17,7 @@ import {
   createSenatorialDistrict,
   updateSenatorialDistrict,
 } from "#/lib/server/senatorial_districts";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export interface SenatorialDistrict {
   id: number;
@@ -141,11 +142,7 @@ export function SenatorialDistrictFormDialog({
           }}
         >
           <DialogPadding className="space-y-6 pb-6">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TinyError error={error} />
 
             {/* Senatorial District Name */}
             <div className="w-full">

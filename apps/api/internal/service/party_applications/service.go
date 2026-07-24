@@ -40,8 +40,7 @@ type SubmitApplicationInput struct {
 	CurrentLga        int32
 	CurrentCity       int32
 	CurrentWard       int32
-	BankAccountNumber string
-	BankCode          string
+
 	WhatsappPhone     string
 	DataPhone         string
 	EducationalStatus string
@@ -83,8 +82,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		CurrentState:      int16(input.CurrentState),
 		CurrentLga:        pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
 		CurrentCity:       pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
-		BankAccountNumber: pgtype.Text{String: input.BankAccountNumber, Valid: input.BankAccountNumber != ""},
-		BankCode:          pgtype.Text{String: input.BankCode, Valid: input.BankCode != ""},
+
 		WhatsappPhone:     pgtype.Text{String: input.WhatsappPhone, Valid: input.WhatsappPhone != ""},
 		DataPhone:         pgtype.Text{String: input.DataPhone, Valid: input.DataPhone != ""},
 		CurrentWard:       pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},

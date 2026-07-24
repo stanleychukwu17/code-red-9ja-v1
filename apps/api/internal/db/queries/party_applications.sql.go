@@ -197,8 +197,8 @@ SELECT
   u.current_state,
   u.current_lga,
   u.current_city,
-  u.bank_account_number,
-  u.bank_code,
+  uba.account_number AS bank_account_number,
+  uba.bank_code AS bank_code,
   u.whatsapp_phone,
   u.data_phone,
   up.educational_status,
@@ -238,6 +238,7 @@ LEFT JOIN c_states st ON u.current_state = st.id
 LEFT JOIN lgas lg ON u.current_lga = lg.id
 LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
+LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
   ($1::bigint = 0 OR pa.user_id = $1) AND
   ($2::smallint = 0 OR pa.party_id = $2) AND
@@ -472,36 +473,33 @@ SET
   current_state = $6,
   current_lga = $7,
   current_city = $8,
-  bank_account_number = $9,
-  bank_code = $10,
-  whatsapp_phone = $11,
-  data_phone = $12,
-  current_ward = $13,
-  phone = COALESCE(NULLIF($14::varchar, ''), phone),
-  polling_unit_id = $15,
-  address = COALESCE(NULLIF($16::varchar, ''), address),
+  whatsapp_phone = $9,
+  data_phone = $10,
+  phone = COALESCE(NULLIF($12::varchar, ''), phone),
+  polling_unit_id = $13,
+  current_ward = $11,
+  phone_verified = CASE WHEN NULLIF($12::varchar, '') IS NOT NULL AND NULLIF($12::varchar, '') != COALESCE(phone, '') THEN 'false' ELSE phone_verified END,
+  address = COALESCE(NULLIF($14::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
-	ID                int64       `json:"id"`
-	PartyID           pgtype.Int2 `json:"party_id"`
-	Avatar            pgtype.Text `json:"avatar"`
-	VotersCardImage   pgtype.Text `json:"voters_card_image"`
-	CurrentCountry    int16       `json:"current_country"`
-	CurrentState      int16       `json:"current_state"`
-	CurrentLga        pgtype.Int4 `json:"current_lga"`
-	CurrentCity       pgtype.Int4 `json:"current_city"`
-	BankAccountNumber pgtype.Text `json:"bank_account_number"`
-	BankCode          pgtype.Text `json:"bank_code"`
-	WhatsappPhone     pgtype.Text `json:"whatsapp_phone"`
-	DataPhone         pgtype.Text `json:"data_phone"`
-	CurrentWard       pgtype.Int4 `json:"current_ward"`
-	Phone             string      `json:"phone"`
-	PollingUnitID     pgtype.Int4 `json:"polling_unit_id"`
-	Address           string      `json:"address"`
+	ID              int64       `json:"id"`
+	PartyID         pgtype.Int2 `json:"party_id"`
+	Avatar          pgtype.Text `json:"avatar"`
+	VotersCardImage pgtype.Text `json:"voters_card_image"`
+	CurrentCountry  int16       `json:"current_country"`
+	CurrentState    int16       `json:"current_state"`
+	CurrentLga      pgtype.Int4 `json:"current_lga"`
+	CurrentCity     pgtype.Int4 `json:"current_city"`
+	WhatsappPhone   pgtype.Text `json:"whatsapp_phone"`
+	DataPhone       pgtype.Text `json:"data_phone"`
+	CurrentWard     pgtype.Int4 `json:"current_ward"`
+	Phone           string      `json:"phone"`
+	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
+	Address         string      `json:"address"`
 }
 
 func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error) {
@@ -514,8 +512,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.CurrentState,
 		arg.CurrentLga,
 		arg.CurrentCity,
-		arg.BankAccountNumber,
-		arg.BankCode,
 		arg.WhatsappPhone,
 		arg.DataPhone,
 		arg.CurrentWard,
@@ -547,10 +543,9 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.Address,
 		&i.StateOfOrigin,
 		&i.VotersCardImage,
-		&i.BankAccountNumber,
-		&i.BankCode,
 		&i.IsPolitician,
 		&i.IsVerified,
+		&i.HasRole,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,
@@ -569,7 +564,7 @@ WITH inserted AS (
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, state_of_origin, voters_card_image, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
@@ -598,10 +593,9 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User
 		&i.Address,
 		&i.StateOfOrigin,
 		&i.VotersCardImage,
-		&i.BankAccountNumber,
-		&i.BankCode,
 		&i.IsPolitician,
 		&i.IsVerified,
+		&i.HasRole,
 		&i.PartyID,
 		&i.PollingUnitID,
 		&i.ReferralCode,

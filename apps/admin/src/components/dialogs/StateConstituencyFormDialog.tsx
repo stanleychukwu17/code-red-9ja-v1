@@ -23,6 +23,7 @@ import {
   createStateAssemblyConstituency,
   updateStateAssemblyConstituency,
 } from "#/lib/server/state_assembly_constituencies";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export interface StateAssemblyConstituency {
   id: number;
@@ -169,11 +170,7 @@ export function StateConstituencyFormDialog({
           }}
         >
           <DialogPadding className="space-y-6 pb-6">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TinyError error={error} />
 
             {/* State Constituency Name */}
             <div className="w-full">

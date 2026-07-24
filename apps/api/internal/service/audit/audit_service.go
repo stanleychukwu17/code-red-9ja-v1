@@ -10,6 +10,13 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type contextKey string
+
+const (
+	contextKeyIP        contextKey = "request_ip"
+	contextKeyUserAgent contextKey = "request_user_agent"
+)
+
 type AuditService interface {
 	LogAction(ctx context.Context, params queries.InsertAuditLogParams) error
 }
@@ -45,8 +52,31 @@ func ParseIP(ipStr string) *netip.Addr {
 	return &addr
 }
 
+// WithRequestMetadata stores request-level metadata on the context for audit logging.
+func WithRequestMetadata(ctx context.Context, ip, userAgent string) context.Context {
+	ctx = context.WithValue(ctx, contextKeyIP, ip)
+	ctx = context.WithValue(ctx, contextKeyUserAgent, userAgent)
+	return ctx
+}
+
+// RequestMetadataFromContext extracts request-level metadata from the context.
+func RequestMetadataFromContext(ctx context.Context) (string, string) {
+	ip, _ := ctx.Value(contextKeyIP).(string)
+	userAgent, _ := ctx.Value(contextKeyUserAgent).(string)
+	return ip, userAgent
+}
+
 // LogAction logs an action to the audit log.
 func (s *auditService) LogAction(ctx context.Context, params queries.InsertAuditLogParams) error {
+	ipAddress, userAgent := RequestMetadataFromContext(ctx)
+
+	if params.IpAddress == nil {
+		params.IpAddress = ParseIP(ipAddress)
+	}
+	if !params.UserAgent.Valid {
+		params.UserAgent = StringToText(userAgent)
+	}
+
 	// Execute the insertion synchronously for now.
 	// We might consider doing this asynchronously in the future if it becomes a bottleneck.
 	_, err := s.q.InsertAuditLog(ctx, params)
