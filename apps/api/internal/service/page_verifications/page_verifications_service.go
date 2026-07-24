@@ -78,9 +78,10 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 	}
 
 	// if the verificationTypeID is 4, then an admin cannot assign this role, only system can do this
-	if forWho == db.PageTypeUser && verificationTypeID == 4 {
-		return queries.PagesVerified{}, fmt.Errorf("admin cannot assign this role, only system can do this")
-	}
+	// ID 4 = politician_verified
+	// if forWho == db.PageTypeUser && verificationTypeID == 4 {
+	// 	return queries.PagesVerified{}, fmt.Errorf("admin cannot assign this role, only system can do this")
+	// }
 
 	// make sure verification type is for party
 	if forWho == db.PageTypeParty && verificationTypeID != 3 {
@@ -148,53 +149,64 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 	return pv, nil
 }
 
+type RemoveVerificationParams struct {
+	PageType           string
+	PageID             int64
+	VerificationTypeID int16
+	ActorID            int64
+	ActiveVrfId        int64
+}
+
 // RemoveVerification removes a verification badge. If no badges remain, sets is_verified to false.
-func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageType string, pageID int64, verificationTypeID int16, actorID int64) error {
+func (s *PageVerificationsService) RemoveVerification(ctx context.Context, params RemoveVerificationParams) (interface{}, error) {
 	var userDetails *queries.UserWithPlaces
-	if pageType == db.PageTypeUser {
-		user, err := s.usersService.GetUserByFakeID(ctx, pageID)
+	var fakeID int64
+
+	// get the userDetails
+	if params.PageType == db.PageTypeUser {
+		fakeID = params.PageID
+		user, err := s.usersService.GetUserByFakeID(ctx, params.PageID)
 		if err != nil {
-			return fmt.Errorf("user not found: %w", err)
+			return nil, fmt.Errorf("user not found: %w", err)
 		}
 		userDetails = &user
-		pageID = user.ID
+		params.PageID = user.ID
 	}
 
 	// get all the page verifications before removal
-	oldPageVerifications, err := s.GetPageVerifications(ctx, pageType, pageID)
+	oldPageVerifications, err := s.GetPageVerifications(ctx, params.PageType, params.PageID)
 	if err != nil {
-		return fmt.Errorf("failed to get page verifications: %w", err)
+		return nil, fmt.Errorf("failed to get page verifications: %w", err)
 	}
 	oldValuesData, _ := json.Marshal(oldPageVerifications)
 
 	// 1. Remove verification from pages_verified table
 	err = s.queries.RemovePageVerification(ctx, queries.RemovePageVerificationParams{
-		PageType:           pageType,
-		PageID:             pageID,
-		VerificationTypeID: verificationTypeID,
+		ID:                 params.ActiveVrfId,
+		PageType:           params.PageType,
+		PageID:             params.PageID,
+		VerificationTypeID: params.VerificationTypeID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to remove page verification: %w", err)
+		return nil, fmt.Errorf("failed to remove page verification: %w", err)
 	}
 
 	// 2. Check if the page has any other verifications left
 	hasOtherVerifications, err := s.queries.CheckIfPageHasAnyVerification(ctx, queries.CheckIfPageHasAnyVerificationParams{
-		PageType: pageType,
-		PageID:   pageID,
+		PageType: params.PageType,
+		PageID:   params.PageID,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to check remaining verifications: %w", err)
+		return nil, fmt.Errorf("failed to check remaining verifications: %w", err)
 	}
 
-	// 3. If no verifications left, set is_verified to false
-	if !hasOtherVerifications {
-		if err := s.updateParentIsVerifiedFlag(ctx, pageType, pageID, false, userDetails); err != nil {
-			return fmt.Errorf("failed to unset is_verified flag: %w", err)
-		}
+	// 3. Update the parent table's is_verified flag based on whether any verifications remain
+	if err := s.updateParentIsVerifiedFlag(ctx, params.PageType, params.PageID, hasOtherVerifications, userDetails); err != nil {
+		return nil, fmt.Errorf("failed to unset is_verified flag: %w", err)
 	}
 
 	// 4. Invalidate cache
-	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, pageType, pageID)
+	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, params.PageType, params.PageID)
 	s.rdb.Del(ctx, redisKey)
 
 	// Log the action in a goroutine
@@ -219,9 +231,17 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, pageT
 		if err := s.auditService.LogAction(bgCtx, auditParams); err != nil {
 			log.Error(logger.EventAuditLogFailed, "error", err, "action", db.ActionRemovePageVerification, "entity_type", entityType, "entity_id", entityID)
 		}
-	}(oldValuesData, pageType, pageID, actorID)
+	}(oldValuesData, params.PageType, params.PageID, params.ActorID)
 
-	return nil
+	var pageDetails interface{}
+	switch params.PageType {
+	case db.PageTypeUser:
+		pageDetails, _ = s.GetUserDetails(ctx, fakeID)
+	case db.PageTypeParty:
+		pageDetails, _ = s.GetPartyDetails(ctx, params.PageID)
+	}
+
+	return pageDetails, nil
 }
 
 // GetUserDetails retrieves a user's details by their fake ID
@@ -297,7 +317,27 @@ func (s *PageVerificationsService) GetVerificationTypeInfo(ctx context.Context, 
 
 // ListVerificationTypes returns all available verification types.
 func (s *PageVerificationsService) ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error) {
-	return s.queries.ListVerificationTypes(ctx)
+	// Try to get from Redis
+	val, err := s.rdb.Get(ctx, db.RedisPageVerificationTypesList).Result()
+	if err == nil {
+		var vt []queries.PageVerificationType
+		if jsonErr := json.Unmarshal([]byte(val), &vt); jsonErr == nil {
+			return vt, nil
+		}
+	}
+
+	// If not in Redis or error, get from DB
+	vt, err := s.queries.ListVerificationTypes(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache in Redis
+	if data, jsonErr := json.Marshal(vt); jsonErr == nil {
+		s.rdb.Set(ctx, db.RedisPageVerificationTypesList, data, 0)
+	}
+
+	return vt, nil
 }
 
 // updateParentIsVerifiedFlag calls the appropriate service to update the `is_verified` flag on the entity.

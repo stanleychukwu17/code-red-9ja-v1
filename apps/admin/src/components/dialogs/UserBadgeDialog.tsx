@@ -30,13 +30,13 @@ export interface UserBadgeDialogProps {
 }
 
 export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: UserBadgeDialogProps) {
+  const queryClient = useQueryClient();
   // Compute page's full name for display based on type
   const name = forWho === "user"
     ? [page?.first_name, page?.last_name].filter(Boolean).join(" ")
     : page?.name || page?.party_name || "Party";
 
-  const queryClient = useQueryClient();
-
+  // list of active verifications attached to the page
   const [activeVerifications, setActiveVerifications] = useState<VerificationType[]>([]);
 
   // Track the currently selected verification type in the dropdown
@@ -73,19 +73,53 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
 
   // Handler to add the selected verification type to the local list (moved to select onChange)
 
+  // helper to update cache
+  const updateCacheWithNewDetails = (updatedDetails: any) => {
+    if (!updatedDetails) return;
+    if (!(updatedDetails?.first_name?.length > 0 || updatedDetails?.name?.length > 0 || updatedDetails?.party_name?.length > 0)) {
+      return;
+    }
+
+    if (forWho === "user") {
+      // Update users infinite query cache with the new user details
+      // ["users", "user"]: is the key we used to fetch all the users in /_authenticated/users/users.tsx
+      queryClient.setQueryData(["users", "user"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          pages: oldData.pages.map((page: any) => ({
+            ...page,
+            data: {
+              ...page.data,
+              users: page.data?.users?.map((user: any) => user.fake_id === updatedDetails.fake_id ? updatedDetails : user) || []
+            }
+          }))
+        };
+      });
+    } else if (forWho === "party") {
+      // Update parties query cache with the new party details
+      queryClient.setQueryData(["parties"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((party: any) => party.id === updatedDetails.id ? updatedDetails : party);
+      });
+    }
+  };
+
   // mutation to remove verification
   const removeMutation = useMutation({
     mutationFn: async ({ verification_type_id, id }: { verification_type_id: number; id: number }) => {
-      // Find the verification in local state to check if it's already in DB or just local
-      const v = activeVerifications.find(av => av.id === id && av.verification_type_id === verification_type_id);
+      // besure that the id we're trying to delete is among the list of the user verfification
+      const v = activeVerifications.find(activeVrf => activeVrf.id === id && activeVrf.verification_type_id === verification_type_id);
 
       if (v && v.page_type && v.page_id > 0) {
         // It's an existing mapped verification in the DB, make API call to remove
         const payload = {
           page_type: forWho,
           page_id: forWho === "user" ? page?.fake_id : page?.id,
-          verification_type_id: v.verification_type_id > 0 ? v.verification_type_id : v.id,
+          verification_type_id: v.verification_type_id,
+          activeVrfId: id
         };
+
         const res = await removeVerification({ data: payload });
         if (res && res.success === false) {
           throw new Error(res.message || "Failed to remove verification");
@@ -96,44 +130,28 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
         return { isDb: false, id, verification_type_id };
       }
     },
+
     onSuccess: (data) => {
       if (data.isDb) {
         toast.success("Verification removed successfully");
         if (onSuccess) onSuccess();
 
         // update cache using data.response similar to saveMutation
-        const updatedDetails = data.response?.data?.page_details;
-        if (updatedDetails && (updatedDetails?.first_name?.length > 0 || updatedDetails?.name?.length > 0 || updatedDetails?.party_name?.length > 0)) {
-          if (forWho == "user") {
-            queryClient.setQueryData(["users", "user"], (oldData: any) => {
-              if (!oldData) return oldData;
-              return {
-                ...oldData,
-                pages: oldData.pages.map((page: any) => ({
-                  ...page,
-                  data: {
-                    ...page.data,
-                    users: page.data?.users?.map((u: any) =>
-                      u.fake_id === updatedDetails.fake_id ? updatedDetails : u
-                    ) || []
-                  }
-                }))
-              };
-            });
-          } else if (forWho == "party") {
-            queryClient.setQueryData(["parties"], (oldData: any) => {
-              if (!oldData) return oldData;
-              return oldData.map((p: any) =>
-                p.id === updatedDetails.id ? updatedDetails : p
-              );
-            });
-          }
-        }
+        updateCacheWithNewDetails(data.response?.data?.page_details);
       }
 
       // Update local state in both cases
-      setActiveVerifications(activeVerifications.filter(v => v.id !== data.id || v.verification_type_id !== data.verification_type_id));
+      setActiveVerifications(activeVerifications.filter(v => {
+        if (data.isDb) {
+          // If it was a DB removal, remove the entry by matching both id and verification_type_id
+          return v.id !== data.id || v.verification_type_id !== data.verification_type_id;
+        } else {
+          // If it was a local removal, remove the entry by matching only the local id
+          return v.id !== data.id;
+        }
+      }));
     },
+
     onError: (error: Error) => {
       setError(error.message);
       toast.error(error.message);
@@ -143,8 +161,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
   // Handler to remove a verification type from the local list
   const handleRemoveVerification = (e: React.MouseEvent, verification_type_id: number, id: number) => {
     e.preventDefault();
-    // console.log()
-    // removeMutation.mutate({ verification_type_id, id });
+    removeMutation.mutate({ verification_type_id, id });
   };
 
   // save the verifications to the backend
@@ -167,14 +184,14 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
         throw new Error("Please select at least one verification type to assign, or use the remove verification function.");
       }
 
-      // else send the payload to the backend
+      // prepare payload to send to the backend
       const payload = {
         for_who: forWho,
         page_id: forWho === "user" ? page?.fake_id : page?.id,
         verification_type_ids: typeIds,
       };
 
-      // call the assignVerifications function
+      // call the assignVerifications function, it sends the payload to the backend
       const res = await assignVerifications({ data: payload });
 
       // if the assignment fails, throw an error
@@ -185,41 +202,8 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     },
 
     onSuccess: (response) => {
-      const updatedDetails = response?.data?.page_details;
-      if (updatedDetails === null || !updatedDetails || updatedDetails?.first_name.length <= 0) return;
-
-      // console.log("about to update", updatedDetails)
-
-      if (forWho == "user") {
-        // Update users infinite query cache with the new user details
-        queryClient.setQueryData(["users", "user"], (oldData: any) => {
-          if (!oldData) return oldData;
-          return {
-            ...oldData,
-            pages: oldData.pages.map((page: any) => ({
-              ...page,
-              data: {
-                ...page.data,
-                users: page.data?.users?.map((u: any) =>
-                  u.fake_id === updatedDetails.fake_id ? updatedDetails : u
-                ) || []
-              }
-            }))
-          };
-        });
-      } else if (forWho == "party") {
-        // Update parties query cache with the new party details
-        queryClient.setQueryData(["parties"], (oldData: any) => {
-          if (!oldData) return oldData;
-          return oldData.map((p: any) =>
-            p.id === updatedDetails.id ? updatedDetails : p
-          );
-        });
-      }
-
+      updateCacheWithNewDetails(response?.data?.page_details);
       toast.success("Verifications updated successfully");
-      if (onSuccess) onSuccess();
-      onClose();
     },
 
     onError: (error: Error) => {
@@ -265,7 +249,10 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
         </div>
 
         {/* Badges List */}
+        {/* === Active Verifications List === */}
+        {/* Displays the list of currently active or newly selected verifications for the user/page */}
         <div className="w-full">
+          {/* Table Header */}
           <div className="flex w-full text-base font-medium mb-2 text-black">
             <div className="w-30">Badge</div>
             <div className="flex-1">Verification type</div>
@@ -279,15 +266,18 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
               activeVerifications.map((v) => (
                 <div key={`badge-row-${v.verification_type_id > 0 ? v.verification_type_id : v.id}`} className="flex w-full items-center py-4 border-b border-gray-200">
                   <div className="w-30">
+                    {/* Render the badge icon. We check page_id to determine if 'v' is an existing UserVerification or a VerificationType */}
                     <VerificationBadge id={v.page_id > 0 ? v.verification_type_id : v.id} className="size-6" />
                   </div>
                   <div className="flex-1 text-[17px] text-black">{v.verification_title}</div>
                   <div className="w-10 flex justify-end">
+                    {/* Button to remove a verification from the list/database */}
                     <button
                       onClick={(e) => handleRemoveVerification(e, v.verification_type_id, v.id)}
                       disabled={removeMutation.isPending}
                       className="text-destructive cursor-pointer hover:bg-destructive/10 px-2 py-2 rounded-lg transition-colors disabled:opacity-50"
                     >
+                      {/* Show a loading spinner if this specific row is being deleted */}
                       {removeMutation.isPending && removeMutation.variables?.id === v.id ? (
                         <Loader2 className="size-4 animate-spin" />
                       ) : (
@@ -301,6 +291,8 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
           </div>
         </div>
 
+        {/* === Add New Verification Dropdown === */}
+        {/* Allows selecting a new verification type to add to the activeVerifications list */}
         <div className="flex items-center gap-4 mt-8">
           <div className="flex-1">
             <select
@@ -312,6 +304,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
                   const typeToAdd = verificationCategories.find((t: VerificationType) => t.id == val);
                   if (typeToAdd) {
                     // Prevent adding duplicates by checking against both existing and newly added verifications
+                    // We check both verification_type_id (for existing ones) and id (for newly added VerificationType objects)
                     const isAdded = activeVerifications.some(v => (v.page_id > 0 ? v.verification_type_id : v.id) == val);
                     if (!isAdded) {
                       setActiveVerifications([...activeVerifications, typeToAdd]);
@@ -330,6 +323,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
                     <option
                       key={type.id}
                       value={type.id}
+                      // Disable the option if it is already in the activeVerifications list
                       disabled={activeVerifications.some(v => (v.page_id > 0 ? v.verification_type_id : v.id) == type.id)}
                     >
                       {type.verification_title}

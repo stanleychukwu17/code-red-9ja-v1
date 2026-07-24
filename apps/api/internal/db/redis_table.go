@@ -67,10 +67,9 @@ const (
 	//--END--
 
 	//--START-- for page verifications & badges
-	// STRING: "page_verification_type:info:<pageVerificationType>:<pageVerificationTypeID>" gets info on one verification type
-	RedisPageVerificationTypeInfo = "page_verification_type:info:"
-	// STRING: "page_verifications:page:<pageType>:<pageID>" used to store and retrieve page verifications.
-	RedisPageVerifications = "page_verifications:page:"
+	RedisPageVerificationTypesList = "page_verification_type:list"
+	RedisPageVerificationTypeInfo  = "page_verification_type:info:"
+	RedisPageVerifications         = "page_verifications:page:"
 	//--END--
 
 	//--START-- for political and administrative bodies

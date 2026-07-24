@@ -10,7 +10,7 @@ RETURNING *;
 
 -- name: RemovePageVerification :exec
 DELETE FROM pages_verified
-WHERE page_type = $1 AND page_id = $2 AND verification_type_id = $3;
+WHERE id = $1 AND page_type = $2 AND page_id = $3 AND verification_type_id = $4;
 
 -- name: CheckIfPageHasAnyVerification :one
 SELECT EXISTS(

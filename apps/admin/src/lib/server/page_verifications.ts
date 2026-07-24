@@ -30,15 +30,16 @@ export const assignVerifications = createServerFn({ method: "POST" })
   });
 
 export const removeVerification = createServerFn({ method: "POST" })
-  .inputValidator((data: { page_type: string; page_id: number; verification_type_id: number }) => data)
+  .inputValidator((data: { page_type: string; page_id: number; verification_type_id: number, activeVrfId: number }) => data)
   .handler(async ({ data }) => {
     try {
       const queryParams = new URLSearchParams({
         page_type: data.page_type,
         page_id: data.page_id.toString(),
         verification_type_id: data.verification_type_id.toString(),
+        activeVrfId: data.activeVrfId.toString(),
       }).toString();
-      
+
       const response = await apiFetch(`${API_URL.adminVerifications}?${queryParams}`, {
         method: 'DELETE',
       });

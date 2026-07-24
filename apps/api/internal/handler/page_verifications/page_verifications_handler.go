@@ -3,9 +3,11 @@ package pageverificationshandler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
@@ -16,7 +18,7 @@ import (
 
 type PageVerificationsService interface {
 	VerifyPage(ctx context.Context, forWho string, pageID int64, verificationTypeID int16, actorID int64) (queries.PagesVerified, error)
-	RemoveVerification(ctx context.Context, pageType string, pageID int64, verificationTypeID int16, actorID int64) error
+	RemoveVerification(ctx context.Context, params pageverificationsservice.RemoveVerificationParams) (interface{}, error)
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 	GetUserDetails(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
@@ -76,6 +78,28 @@ func (h *Handler) AssignVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch all verification types to validate admin permissions
+	verificationTypes, err := h.service.ListVerificationTypes(r.Context())
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch verification types")
+		return
+	}
+
+	// Create a lookup map of verification types by ID for efficient querying
+	typesMap := make(map[int16]queries.PageVerificationType)
+	for _, vt := range verificationTypes {
+		typesMap[vt.ID] = vt
+	}
+
+	// Check if the current admin has permission to assign the requested verification types.
+	// The database dictates whether a verification type is_admin_assignable (e.g. some roles can only be system assigned).
+	for _, typeID := range req.VerificationTypeIDs {
+		if vt, exists := typesMap[typeID]; exists && !vt.IsAdminAssignable {
+			h.utils.RespondError(w, http.StatusForbidden, fmt.Sprintf("The verification type '%s' cannot be assigned by an admin", vt.VerificationTitle))
+			return
+		}
+	}
+
 	// Assign the verifications to the page
 	var pvs []queries.PagesVerified
 	for _, verificationTypeID := range req.VerificationTypeIDs {
@@ -123,11 +147,12 @@ func (h *Handler) RemoveVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pageType := r.URL.Query().Get("page_type")
 	pageIDStr := r.URL.Query().Get("page_id")
+	pageType := r.URL.Query().Get("page_type")
+	activeVrfId := r.URL.Query().Get("activeVrfId")
 	typeIDStr := r.URL.Query().Get("verification_type_id")
 
-	if pageType == "" || pageIDStr == "" || typeIDStr == "" {
+	if pageType == "" || pageIDStr == "" || typeIDStr == "" || activeVrfId == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "page_type, page_id, and verification_type_id are required")
 		return
 	}
@@ -144,13 +169,45 @@ func (h *Handler) RemoveVerification(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.service.RemoveVerification(r.Context(), pageType, pageID, int16(typeID), claims.FakeID)
+	activeVrfIdInt, err := strconv.ParseInt(activeVrfId, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid activeVrfId")
+		return
+	}
+
+	// Fetch all verification types to validate admin permissions
+	verificationTypes, err := h.service.ListVerificationTypes(r.Context())
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch verification types")
+		return
+	}
+
+	// Iterate through the verification types to check if the specific type being removed is_admin_assignable.
+	// If it isn't (e.g. it was assigned by the system and meant to be permanent or system-managed), block the admin from removing it.
+	for _, vt := range verificationTypes {
+		if vt.ID == int16(typeID) && !vt.IsAdminAssignable {
+			h.utils.RespondError(w, http.StatusForbidden, fmt.Sprintf("The verification type '%s' cannot be removed by an admin", vt.VerificationTitle))
+			return
+		}
+	}
+
+	// Remove the verification from the page
+	// then return the new pageDetails
+	pageDetails, err := h.service.RemoveVerification(r.Context(), pageverificationsservice.RemoveVerificationParams{
+		PageType:           pageType,
+		PageID:             pageID,
+		VerificationTypeID: int16(typeID),
+		ActorID:            claims.FakeID,
+		ActiveVrfId:        activeVrfIdInt,
+	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to remove verification: "+err.Error())
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Verification removed successfully", nil)
+	h.utils.RespondSuccess(w, http.StatusOK, "Verification removed successfully", map[string]interface{}{
+		"page_details": pageDetails,
+	})
 }
 
 // GetPageVerifications godoc
