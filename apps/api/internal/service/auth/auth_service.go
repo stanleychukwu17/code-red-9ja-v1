@@ -237,21 +237,10 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 	jsonSessionData, _ := json.Marshal(sessionData)
 
-	// Always fetch party_id fresh from DB during login to bypass any stale Redis cache.
-	// The cached user profile may not reflect a recently-assigned party_id.
-	var partyID int16
-	freshUser, freshErr := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
-	if freshErr == nil {
-		if freshUser.PartyID.Valid {
-			partyID = freshUser.PartyID.Int16
-		}
-		// If cache was stale (party_id differs), refresh it so subsequent calls are correct
-		if freshUser.PartyID.Valid != user.PartyID.Valid || freshUser.PartyID.Int16 != user.PartyID.Int16 {
-			_ = s.UpdateCachedUserInfo(ctx, fakeID)
-		}
-	} else if user.PartyID.Valid {
-		// Fall back to cached value if DB query fails
-		partyID = user.PartyID.Int16
+	var partyObj *queries.GetPartyBasicInfoRow
+	partyID := user.PartyID.Int16
+	if partyID != 0 {
+		partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
 	}
 
 	// Generate Access Token and Refresh Token
@@ -288,11 +277,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	if err != nil {
 		log.Error(logger.EventRedisPipelineFailed, "error", err, "operation", "login_session_storage")
 		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
-	}
-
-	var partyObj *queries.GetPartyBasicInfoRow
-	if partyID != 0 {
-		partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
 	}
 
 	loginResult := LoginResult{
@@ -1343,23 +1327,23 @@ func (s *AuthService) UpdateUserRoles(ctx context.Context, userID int64, roles [
 	}
 
 	// 2. Assign the new roles
-	for _, roleCode := range roles {
-		err = s.usersService.AssignUserRole(ctx, userID, roleCode, whoAssigned)
-		if err != nil {
-			return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
-		}
-	}
+	// for _, roleCode := range roles {
+	// 	err = s.usersService.AssignUserRole(ctx, userID, roleCode, whoAssigned)
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
+	// 	}
+	// }
 
 	// 3. Update party if provided
-	if partyID != nil {
-		err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
-			ID:      userID,
-			PartyID: pgtype.Int2{Int16: int16(*partyID), Valid: true},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to update user party: %w", err)
-		}
-	}
+	// if partyID != nil {
+	// 	err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+	// 		ID:      userID,
+	// 		PartyID: pgtype.Int2{Int16: int16(*partyID), Valid: true},
+	// 	})
+	// 	if err != nil {
+	// 		return fmt.Errorf("failed to update user party: %w", err)
+	// 	}
+	// }
 
 	return nil
 }
