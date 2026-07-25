@@ -10,7 +10,7 @@ SELECT * FROM parties WHERE id = $1;
 SELECT * FROM parties WHERE short_name = $1;
 
 -- name: GetPartyBasicInfo :one
-SELECT id, short_name, name, logo FROM parties WHERE id = $1 LIMIT 1;
+SELECT id, short_name, name, logo, is_verified FROM parties WHERE id = $1 LIMIT 1;
 
 -- name: ListParties :many
 SELECT * FROM parties

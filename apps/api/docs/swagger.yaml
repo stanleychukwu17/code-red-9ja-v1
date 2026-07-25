@@ -411,7 +411,7 @@ definitions:
       middle_name:
         type: string
       party:
-        $ref: '#/definitions/queries.GetPartyBasicInfoRow'
+        $ref: '#/definitions/queries.PartyBasicInfoWithVerifications'
       party_id:
         type: integer
       phone:
@@ -483,6 +483,8 @@ definitions:
         type: integer
       username:
         type: string
+    type: object
+  big.Int:
     type: object
   bodieshandler.CityResponse:
     properties:
@@ -1021,6 +1023,13 @@ definitions:
       whatsapp_phone:
         type: string
     type: object
+  pgtype.Bool:
+    properties:
+      bool:
+        type: boolean
+      valid:
+        type: boolean
+    type: object
   pgtype.InfinityModifier:
     enum:
     - 1
@@ -1032,6 +1041,20 @@ definitions:
     - Infinity
     - Finite
     - NegativeInfinity
+  pgtype.Numeric:
+    properties:
+      exp:
+        format: int32
+        type: integer
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      int:
+        $ref: '#/definitions/big.Int'
+      naN:
+        type: boolean
+      valid:
+        type: boolean
+    type: object
   pgtype.Text:
     properties:
       string:
@@ -1281,16 +1304,57 @@ definitions:
       verified_at:
         $ref: '#/definitions/pgtype.Timestamptz'
     type: object
-  queries.GetPartyBasicInfoRow:
+  queries.PartyBasicInfoWithVerifications:
     properties:
       id:
         type: integer
+      is_verified:
+        $ref: '#/definitions/pgtype.Bool'
       logo:
         type: string
       name:
         type: string
       short_name:
         type: string
+      verifications:
+        items:
+          $ref: '#/definitions/queries.GetPageVerificationsRow'
+        type: array
+    type: object
+  queries.PartyWithVerifications:
+    properties:
+      allowance_balance_kobo:
+        type: integer
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      discount_percentage:
+        $ref: '#/definitions/pgtype.Numeric'
+      display_order:
+        type: integer
+      id:
+        type: integer
+      is_verified:
+        $ref: '#/definitions/pgtype.Bool'
+      logo:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+      slots:
+        type: integer
+      state_allowances:
+        items:
+          type: integer
+        type: array
+      status:
+        type: string
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      verifications:
+        items:
+          $ref: '#/definitions/queries.GetPageVerificationsRow'
+        type: array
     type: object
   senatorialdistrictshandler.CreateSenatorialDistrictRequest:
     properties:
@@ -5320,6 +5384,35 @@ paths:
             additionalProperties: true
             type: object
       summary: Withdraw from a party wallet
+      tags:
+      - Parties
+  /parties/{party_id}/{short_name}/profile:
+    get:
+      description: Get party details by party ID and short name
+      parameters:
+      - description: Party ID
+        in: path
+        name: party_id
+        required: true
+        type: integer
+      - description: Party Short Name
+        in: path
+        name: short_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/queries.PartyWithVerifications'
+              type: object
+      summary: Get basic party profile
       tags:
       - Parties
   /parties/wallets/provision-missing:

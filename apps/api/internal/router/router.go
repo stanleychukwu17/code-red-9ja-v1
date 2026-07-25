@@ -140,6 +140,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, utilsInstance)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	usersService.SetPageVerificationsService(pageVerificationsService)
+	partiesService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
@@ -232,6 +233,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// political parties public routes
 	mainRouter.Get("/api/v1/parties", partiesHandler.ListParties)
 	mainRouter.Get("/api/v1/parties/{id}", partiesHandler.GetParty)
+	mainRouter.Get("/api/v1/parties/{party_id}/{short_name}/profile", partiesHandler.GetPartyProfile)
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
 
 	// page verifications public routes

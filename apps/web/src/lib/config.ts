@@ -39,4 +39,5 @@ export const API_URL = {
   "getAllCountries": `${api}/countries`,
   "getStates": (countryId: number) => `${api}/countries/${countryId}/states`,
   "getCities": (stateId: number) => `${api}/states/${stateId}/cities`,
+  "getPartyProfile": (partyId: number, shortName: string) => `${api}/parties/${partyId}/${shortName}/profile`,
 }

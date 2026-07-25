@@ -129,7 +129,6 @@ export const UserDropdown = ({
         forWho="user"
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ["users"] });
-          refetch?.();
         }}
       />
 

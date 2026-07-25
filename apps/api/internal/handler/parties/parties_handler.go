@@ -15,14 +15,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type PartiesService interface {
 	CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error)
-	GetPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party
+	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
-	ListParties(ctx context.Context) ([]queries.Party, error)
+	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	// Wallet methods
@@ -99,7 +99,7 @@ type CreatePartyRequest struct {
 }
 
 type UpdatePartyRequest struct {
-	ShortName string `json:"short_name"`
+	ShortName    string `json:"short_name"`
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
 	DisplayOrder int32  `json:"display_order"`
@@ -190,7 +190,7 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var paginated []queries.Party
+	var paginated []queries.PartyWithVerifications
 	hasMore := false
 	nextCursor := ""
 
@@ -205,7 +205,7 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
 		}
 	} else {
-		paginated = []queries.Party{}
+		paginated = []queries.PartyWithVerifications{}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Parties fetched successfully", map[string]interface{}{
@@ -237,7 +237,7 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true})
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(id))
 	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
@@ -245,6 +245,36 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party fetched successfully", map[string]interface{}{
 		"party": party,
+	})
+}
+
+// GetPartyProfile godoc
+// @Summary      Get basic party profile
+// @Description  Get party details by party ID and short name
+// @Tags         Parties
+// @Produce      json
+// @Param        party_id path int true "Party ID"
+// @Param        short_name path string true "Party Short Name"
+// @Success      200  {object}  utils.SuccessResponse{data=queries.PartyWithVerifications}
+// @Router       /parties/{party_id}/{short_name}/profile [get]
+func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "party_id")
+	// shortName := chi.URLParam(r, "short_name") // can be used later for validation if needed
+
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
+	if party == nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", map[string]interface{}{
+		"data": party,
 	})
 }
 
@@ -283,7 +313,7 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify party exists
-	if party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true}); party == nil {
+	if party := h.partiesService.GetPartyInfo(r.Context(), int16(id)); party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
@@ -322,7 +352,7 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify party exists
-	if party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true}); party == nil {
+	if party := h.partiesService.GetPartyInfo(r.Context(), int16(id)); party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
@@ -524,13 +554,13 @@ func (h *Handler) CreatePartyWalletHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true})
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(id))
 	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
-	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), *party)
+	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), party.Party)
 	if err != nil {
 		if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 			h.utils.RespondError(w, http.StatusConflict, "This party already has a wallet")

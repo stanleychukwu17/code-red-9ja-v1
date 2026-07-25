@@ -29,7 +29,7 @@ type PageVerificationsService interface {
 
 // PartyService interface defines the methods needed from the party service
 type PartyService interface {
-	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 }
 
 // UsersService provides operations for managing user data, roles, and related services.
@@ -125,7 +125,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	countryName, stateName, cityName := s.bodiesService.GetLocationNames(ctx, user.CurrentCountry, user.CurrentState, user.CurrentCity.Int32)
 
 	// Fetch party basic info if user belongs to a party
-	var partyBasicInfo *queries.GetPartyBasicInfoRow
+	var partyBasicInfo *queries.PartyBasicInfoWithVerifications
 	if user.PartyID.Valid && user.PartyID.Int16 > 0 && s.partyService != nil {
 		partyBasicInfo = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
 	}

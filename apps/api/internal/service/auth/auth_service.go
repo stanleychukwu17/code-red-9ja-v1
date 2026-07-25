@@ -39,7 +39,7 @@ type UsersService interface {
 }
 
 type PartyService interface {
-	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 }
 
 type BodiesService interface {
@@ -85,38 +85,38 @@ func NewAuthService(
 }
 
 type LoginUser struct {
-	ID                int64                         `json:"id"`
-	FakeID            int64                         `json:"fake_id"`
-	Email             string                        `json:"email"`
-	Username          string                        `json:"username"`
-	FirstName         string                        `json:"first_name"`
-	LastName          string                        `json:"last_name"`
-	MiddleName        string                        `json:"middle_name"`
-	Gender            string                        `json:"gender"`
-	DateOfBirth       string                        `json:"date_of_birth"`
-	Avatar            string                        `json:"avatar"`
-	Phone             string                        `json:"phone"`
-	Roles             []string                      `json:"roles"`
-	AccountStatus     string                        `json:"account_status"`
-	PartyID           int16                         `json:"party_id,omitempty"`
-	PollingUnitID     int32                         `json:"polling_unit_id,omitempty"`
-	CurrentCountry    int16                         `json:"current_country"`
-	CurrentState      int16                         `json:"current_state"`
-	CurrentLga        int32                         `json:"current_lga"`
-	CurrentWard       int32                         `json:"current_ward"`
-	CurrentCity       int32                         `json:"current_city"`
-	Address           string                        `json:"address"`
-	WhatsappPhone     string                        `json:"whatsapp_phone"`
-	DataPhone         string                        `json:"data_phone"`
-	EducationalStatus string                        `json:"educational_status"`
-	HighestDegree     string                        `json:"highest_degree"`
-	GraduationYear    string                        `json:"graduation_year"`
-	SchoolName        string                        `json:"school_name"`
-	VotersCardImage   string                        `json:"voters_card_image"`
-	Religion          string                        `json:"religion"`
-	MaritalStatus     string                        `json:"marital_status"`
-	EducationLevel    string                        `json:"education_level"`
-	Party             *queries.GetPartyBasicInfoRow `json:"party,omitempty"`
+	ID                int64                                    `json:"id"`
+	FakeID            int64                                    `json:"fake_id"`
+	Email             string                                   `json:"email"`
+	Username          string                                   `json:"username"`
+	FirstName         string                                   `json:"first_name"`
+	LastName          string                                   `json:"last_name"`
+	MiddleName        string                                   `json:"middle_name"`
+	Gender            string                                   `json:"gender"`
+	DateOfBirth       string                                   `json:"date_of_birth"`
+	Avatar            string                                   `json:"avatar"`
+	Phone             string                                   `json:"phone"`
+	Roles             []string                                 `json:"roles"`
+	AccountStatus     string                                   `json:"account_status"`
+	PartyID           int16                                    `json:"party_id,omitempty"`
+	PollingUnitID     int32                                    `json:"polling_unit_id,omitempty"`
+	CurrentCountry    int16                                    `json:"current_country"`
+	CurrentState      int16                                    `json:"current_state"`
+	CurrentLga        int32                                    `json:"current_lga"`
+	CurrentWard       int32                                    `json:"current_ward"`
+	CurrentCity       int32                                    `json:"current_city"`
+	Address           string                                   `json:"address"`
+	WhatsappPhone     string                                   `json:"whatsapp_phone"`
+	DataPhone         string                                   `json:"data_phone"`
+	EducationalStatus string                                   `json:"educational_status"`
+	HighestDegree     string                                   `json:"highest_degree"`
+	GraduationYear    string                                   `json:"graduation_year"`
+	SchoolName        string                                   `json:"school_name"`
+	VotersCardImage   string                                   `json:"voters_card_image"`
+	Religion          string                                   `json:"religion"`
+	MaritalStatus     string                                   `json:"marital_status"`
+	EducationLevel    string                                   `json:"education_level"`
+	Party             *queries.PartyBasicInfoWithVerifications `json:"party,omitempty"`
 }
 type LoginResult struct {
 	AccessToken  string
@@ -237,7 +237,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 	jsonSessionData, _ := json.Marshal(sessionData)
 
-	var partyObj *queries.GetPartyBasicInfoRow
+	var partyObj *queries.PartyBasicInfoWithVerifications
 	partyID := user.PartyID.Int16
 	if partyID != 0 {
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
@@ -366,7 +366,9 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	// destructure some of the user info
 	accountStatus := user.AccountStatus.String
 	username := user.Username.String
-	var partyObj *queries.GetPartyBasicInfoRow
+
+	// party details
+	var partyObj *queries.PartyBasicInfoWithVerifications
 	if user.PartyID.Valid {
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
 	}
@@ -374,11 +376,15 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	if user.PartyID.Valid {
 		userPartyID = user.PartyID.Int16
 	}
+
+	// user role details
 	userRoles, _ := s.usersService.GetUserRoles(ctx, user.ID)
 	var userRoleCodes []string
 	for _, ur := range userRoles {
 		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
+
+	// user details
 	userDetails := LoginUser{
 		ID:              user.ID,
 		FakeID:          user.FakeID.Int64,

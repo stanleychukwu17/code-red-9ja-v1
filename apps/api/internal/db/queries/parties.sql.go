@@ -7,6 +7,8 @@ package queries
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createParty = `-- name: CreateParty :one
@@ -58,14 +60,15 @@ func (q *Queries) DeleteParty(ctx context.Context, id int16) error {
 }
 
 const getPartyBasicInfo = `-- name: GetPartyBasicInfo :one
-SELECT id, short_name, name, logo FROM parties WHERE id = $1 LIMIT 1
+SELECT id, short_name, name, logo, is_verified FROM parties WHERE id = $1 LIMIT 1
 `
 
 type GetPartyBasicInfoRow struct {
-	ID        int16  `json:"id"`
-	ShortName string `json:"short_name"`
-	Name      string `json:"name"`
-	Logo      string `json:"logo"`
+	ID         int16       `json:"id"`
+	ShortName  string      `json:"short_name"`
+	Name       string      `json:"name"`
+	Logo       string      `json:"logo"`
+	IsVerified pgtype.Bool `json:"is_verified"`
 }
 
 func (q *Queries) GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasicInfoRow, error) {
@@ -76,6 +79,7 @@ func (q *Queries) GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasi
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.IsVerified,
 	)
 	return i, err
 }

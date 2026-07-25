@@ -29,6 +29,9 @@ const web = `${WEB_DNS}`
 export const WEB_URL = {
   users: {
     profile: (username: string) => `${web}/users/profile/${username}`
+  },
+  parties: {
+    profile: (shortName: string, id: number) => `${web}/party/${shortName}/${id}/home`
   }
 }
 

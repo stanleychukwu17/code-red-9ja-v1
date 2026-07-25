@@ -38,40 +38,10 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
 
   // list of active verifications attached to the page
   const [activeVerifications, setActiveVerifications] = useState<VerificationType[]>([]);
-
   // Track the currently selected verification type in the dropdown
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>();
-
   // tracks error
   const [error, setError] = useState<string | null>(null);
-
-  // Reset local state when the dialog is opened
-  useEffect(() => {
-    if (open) {
-      if (page?.is_verified) {
-        setActiveVerifications(page.verifications);
-      }
-
-      setSelectedCategoryId(undefined);
-      setError(null);
-    }
-  }, [open, page]);
-
-  // Fetch all available verification types from the backend
-  const { data: verificationCategories, isLoading: isLoadingTypes } = useQuery({
-    queryKey: ["verification-types"],
-    queryFn: async () => {
-      const res = await getVerificationTypes();
-      if (res && res.success && res.data?.types) {
-        return res.data.types as VerificationType[];
-      }
-      return [];
-    },
-    staleTime: Infinity, // Cache indefinitely as these rarely change
-    enabled: open, // only fetch when the dialog is open
-  });
-
-  // Handler to add the selected verification type to the local list (moved to select onChange)
 
   // helper to update cache
   const updateCacheWithNewDetails = (updatedDetails: any) => {
@@ -105,6 +75,30 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     }
   };
 
+  // Reset local state when the dialog is opened
+  useEffect(() => {
+    if (open) {
+      setActiveVerifications(page?.verifications || []);
+
+      setSelectedCategoryId(undefined);
+      setError(null);
+    }
+  }, [open, page]);
+
+  // Fetch all available verification types from the backend
+  const { data: verificationCategories, isLoading: isLoadingTypes } = useQuery({
+    queryKey: ["verification-types"],
+    queryFn: async () => {
+      const res = await getVerificationTypes();
+      if (res && res.success && res.data?.types) {
+        return res.data.types as VerificationType[];
+      }
+      return [];
+    },
+    staleTime: Infinity, // Cache indefinitely as these rarely change
+    enabled: open, // only fetch when the dialog is open
+  });
+
   // mutation to remove verification
   const removeMutation = useMutation({
     mutationFn: async ({ verification_type_id, id }: { verification_type_id: number; id: number }) => {
@@ -134,7 +128,6 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     onSuccess: (data) => {
       if (data.isDb) {
         toast.success("Verification removed successfully");
-        if (onSuccess) onSuccess();
 
         // update cache using data.response similar to saveMutation
         updateCacheWithNewDetails(data.response?.data?.page_details);

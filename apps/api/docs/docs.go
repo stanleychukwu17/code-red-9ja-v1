@@ -5315,6 +5315,54 @@ const docTemplate = `{
                 }
             }
         },
+        "/parties/{party_id}/{short_name}/profile": {
+            "get": {
+                "description": "Get party details by party ID and short name",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Parties"
+                ],
+                "summary": "Get basic party profile",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Party Short Name",
+                        "name": "short_name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/queries.PartyWithVerifications"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
         "/polling-agent-applications": {
             "get": {
                 "security": [
@@ -9432,7 +9480,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "party": {
-                    "$ref": "#/definitions/queries.GetPartyBasicInfoRow"
+                    "$ref": "#/definitions/queries.PartyBasicInfoWithVerifications"
                 },
                 "party_id": {
                     "type": "integer"
@@ -9542,6 +9590,9 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "big.Int": {
+            "type": "object"
         },
         "bodieshandler.CityResponse": {
             "type": "object",
@@ -10369,6 +10420,17 @@ const docTemplate = `{
                 }
             }
         },
+        "pgtype.Bool": {
+            "type": "object",
+            "properties": {
+                "bool": {
+                    "type": "boolean"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
         "pgtype.InfinityModifier": {
             "type": "integer",
             "format": "int32",
@@ -10382,6 +10444,27 @@ const docTemplate = `{
                 "Finite",
                 "NegativeInfinity"
             ]
+        },
+        "pgtype.Numeric": {
+            "type": "object",
+            "properties": {
+                "exp": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "int": {
+                    "$ref": "#/definitions/big.Int"
+                },
+                "naN": {
+                    "type": "boolean"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
         },
         "pgtype.Text": {
             "type": "object",
@@ -10763,11 +10846,14 @@ const docTemplate = `{
                 }
             }
         },
-        "queries.GetPartyBasicInfoRow": {
+        "queries.PartyBasicInfoWithVerifications": {
             "type": "object",
             "properties": {
                 "id": {
                     "type": "integer"
+                },
+                "is_verified": {
+                    "$ref": "#/definitions/pgtype.Bool"
                 },
                 "logo": {
                     "type": "string"
@@ -10777,6 +10863,65 @@ const docTemplate = `{
                 },
                 "short_name": {
                     "type": "string"
+                },
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
+                }
+            }
+        },
+        "queries.PartyWithVerifications": {
+            "type": "object",
+            "properties": {
+                "allowance_balance_kobo": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "discount_percentage": {
+                    "$ref": "#/definitions/pgtype.Numeric"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_verified": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slots": {
+                    "type": "integer"
+                },
+                "state_allowances": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
                 }
             }
         },

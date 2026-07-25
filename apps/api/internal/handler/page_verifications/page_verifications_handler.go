@@ -22,7 +22,7 @@ type PageVerificationsService interface {
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 	GetUserDetails(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
-	GetPartyDetails(ctx context.Context, partyID int64) (*queries.Party, error)
+	GetPartyDetails(ctx context.Context, partyID int64) (*queries.PartyWithVerifications, error)
 }
 
 type Handler struct {

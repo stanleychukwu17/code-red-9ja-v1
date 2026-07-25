@@ -4,10 +4,11 @@ import { deleteParty } from "#/lib/server/parties";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { Pencil } from "lucide-react";
+import { Pencil, Award } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { PartyFormDialog } from "../dialogs/PartyFormDialog";
+import { UserBadgeDialog } from "../dialogs/UserBadgeDialog";
 import type { PartyType } from "../tiles/party-tile";
 
 interface PartyDropdownProps {
@@ -18,6 +19,7 @@ interface PartyDropdownProps {
 export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openBadgeDialog, setOpenBadgeDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
 
@@ -45,6 +47,15 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
       },
     },
     {
+      title: "Add/Edit badge",
+      icon: <Award className="size-4" />,
+      action: () => {
+        setOpenMenu(false);
+        setOpenBadgeDialog(true);
+      },
+      className: "cursor-pointer!",
+    },
+    {
       title: "Delete",
       icon: <TrashcanIcon />,
       action: () => {
@@ -70,6 +81,13 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
         party={data}
+      />
+
+      <UserBadgeDialog
+        open={openBadgeDialog}
+        onClose={() => setOpenBadgeDialog(false)}
+        page={data}
+        forWho="party"
       />
 
       <DeleteAlertDialog

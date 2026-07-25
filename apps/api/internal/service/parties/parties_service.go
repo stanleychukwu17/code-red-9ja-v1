@@ -25,10 +25,16 @@ func pgTextFromString(s string) pgtype.Text {
 
 // PartiesService manages political parties and their Monnify-backed wallets.
 type PartiesService struct {
-	queries *queries.Queries
-	pool    *pgxpool.Pool
-	rdb     *redis.Client
-	monnify *monnifyclient.Client
+	queries                  *queries.Queries
+	pool                     *pgxpool.Pool
+	rdb                      *redis.Client
+	monnify                  *monnifyclient.Client
+	pageVerificationsService PageVerificationsService
+}
+
+// PageVerificationsService interface defines the methods needed from the page verifications service
+type PageVerificationsService interface {
+	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 }
 
 // NewPartiesService creates a new PartiesService.
@@ -40,6 +46,11 @@ func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client
 		rdb:     rdb,
 		monnify: monnify,
 	}
+}
+
+// SetPageVerificationsService sets the PageVerificationsService to avoid circular dependency in constructor.
+func (s *PartiesService) SetPageVerificationsService(pvs PageVerificationsService) {
+	s.pageVerificationsService = pvs
 }
 
 // CreateParty inserts a party into the database and, if a Monnify client is
@@ -111,21 +122,33 @@ func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Pa
 }
 
 // GetPartyBasicInfo retrieves basic party info.
-func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow {
+func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications {
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
 
 	// Try to get from Redis
 	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
 	if err == nil {
-		var party queries.GetPartyBasicInfoRow
+		var party queries.PartyBasicInfoWithVerifications
 		if err := json.Unmarshal([]byte(cachedData), &party); err == nil {
 			return &party
 		}
 	}
 
-	party, err := s.queries.GetPartyBasicInfo(ctx, partyID)
+	partyRow, err := s.queries.GetPartyBasicInfo(ctx, partyID)
 	if err != nil {
 		return nil
+	}
+
+	party := queries.PartyBasicInfoWithVerifications{
+		GetPartyBasicInfoRow: partyRow,
+	}
+
+	// Only fetch verifications if the party is flagged as verified
+	if partyRow.IsVerified.Bool && s.pageVerificationsService != nil {
+		verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
+		if verifications != nil {
+			party.Verifications = verifications
+		}
 	}
 
 	// Save to Redis
@@ -137,24 +160,31 @@ func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *
 }
 
 // GetPartyInfo returns a party if the provided optional partyID is valid.
-func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party {
-	if !partyID.Valid {
-		return nil
-	}
-
-	redisKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID.Int64)
+func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications {
+	redisKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
 
 	// Try to get from Redis
 	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
 	if err == nil {
-		var party queries.Party
+		var party queries.PartyWithVerifications
 		if err := json.Unmarshal([]byte(cachedData), &party); err == nil {
 			return &party
 		}
 	}
 
-	party, err := s.queries.GetPartyByID(ctx, int16(partyID.Int64))
+	partyRow, err := s.queries.GetPartyByID(ctx, int16(partyID))
 	if err == nil {
+		party := queries.PartyWithVerifications{
+			Party: partyRow,
+		}
+
+		if partyRow.IsVerified.Bool && s.pageVerificationsService != nil {
+			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
+			if verifications != nil {
+				party.Verifications = verifications
+			}
+		}
+
 		// Save to Redis
 		if partyData, err := json.Marshal(party); err == nil {
 			s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
@@ -170,22 +200,37 @@ func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName stri
 }
 
 // ListParties returns all parties ordered by ID ascending.
-func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, error) {
+func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error) {
 	redisKey := db.RedisPartiesList
 
 	// Try to get from Redis
 	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
 	if err == nil {
-		var parties []queries.Party
+		var parties []queries.PartyWithVerifications
 		if err := json.Unmarshal([]byte(cachedData), &parties); err == nil {
 			return parties, nil
 		}
 	}
 
 	// fetch from db using the status and display order
-	parties, err := s.queries.ListParties(ctx)
+	partyRows, err := s.queries.ListParties(ctx)
 	if err != nil {
 		return nil, err
+	}
+
+	var parties []queries.PartyWithVerifications
+	for _, p := range partyRows {
+		party := queries.PartyWithVerifications{
+			Party: p,
+		}
+
+		if p.IsVerified.Bool && s.pageVerificationsService != nil {
+			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(p.ID))
+			if verifications != nil {
+				party.Verifications = verifications
+			}
+		}
+		parties = append(parties, party)
 	}
 
 	// Save to Redis
@@ -198,6 +243,7 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, erro
 
 // UpdateParty modifies the short name, name, and logo of an existing party.
 func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
+	defer s.InvalidatePartyCache(ctx, int16(id))
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
 		ID:           int16(id),
 		ShortName:    shortName,
@@ -210,6 +256,7 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
+	defer s.InvalidatePartyCache(ctx, int16(id))
 	return s.queries.DeleteParty(ctx, int16(id))
 }
 
@@ -660,10 +707,17 @@ func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int1
 	}
 
 	// Invalidate cache
-	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
-	s.rdb.Del(ctx, redisKey)
-	redisKeyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
-	s.rdb.Del(ctx, redisKeyInfo)
+	s.InvalidatePartyCache(ctx, partyID)
 
 	return nil
+}
+
+// InvalidatePartyCache invalidates the Redis cache for a given party and the global parties list.
+func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16) {
+	redisPartyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
+	redisPartyBasicInfo := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
+
+	s.rdb.Del(ctx, redisPartyInfo)
+	s.rdb.Del(ctx, redisPartyBasicInfo)
+	s.rdb.Del(ctx, db.RedisPartiesList)
 }
