@@ -1,4 +1,4 @@
-import { RewardCard } from "@repo/ui/components/cards/Rewards";
+import { InfoCard } from "@repo/ui/components/cards/Rewards";
 import { TitleText } from "@repo/ui/components/custom/Texts";
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import CloudIcon from "@repo/ui/icons/cloud-icon";
@@ -6,7 +6,7 @@ import CloudIcon from "@repo/ui/icons/cloud-icon";
 export function UploadsTab() {
   return (
     <div className="flex flex-col gap-4">
-      <RewardCard
+      <InfoCard
         label="Waiting for network..."
         className="font-medium text-[#AA8C30] text-center"
         icon={<AlertIcon />}

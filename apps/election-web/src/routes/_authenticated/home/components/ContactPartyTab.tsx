@@ -1,12 +1,12 @@
 import { TriangleAlert } from "lucide-react";
 import { ContactCard } from "./ContactCard";
 import AlertIcon from "@repo/ui/icons/alert-icon";
-import { RewardCard } from "@repo/ui/components/cards/Rewards";
+import { InfoCard } from "@repo/ui/components/cards/Rewards";
 
 export function ContactPartyTab() {
   return (
     <div className="flex flex-col">
-      <RewardCard
+      <InfoCard
         label="Call anyone of the below to report an issue."
         className="font-medium text-[#AA8C30]"
         icon={<AlertIcon />}

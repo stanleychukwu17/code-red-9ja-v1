@@ -2,7 +2,7 @@ import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
 import { Button } from "@repo/ui/components/button";
-import { RewardCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
+import { InfoCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
 import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
@@ -37,7 +37,7 @@ function GiveUpdateIntro() {
             },
             { label: "Give update reward", value: "+₦500", bg: "bg-[#FDF2D4]" },
           ].map((item, i) => (
-            <RewardCard
+            <InfoCard
               key={i}
               label={item.label}
               value={item.value}

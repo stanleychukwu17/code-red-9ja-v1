@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedVoteIndexRouteImport } from './routes/_authenticated/vote/index'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
+import { Route as AuthenticatedUpdatePollingUnitIndexRouteImport } from './routes/_authenticated/update-polling-unit/index'
 import { Route as AuthenticatedReportIndexRouteImport } from './routes/_authenticated/report/index'
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
@@ -56,6 +57,12 @@ const AuthenticatedUploadResultIndexRoute =
   AuthenticatedUploadResultIndexRouteImport.update({
     id: '/upload-result/',
     path: '/upload-result/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedUpdatePollingUnitIndexRoute =
+  AuthenticatedUpdatePollingUnitIndexRouteImport.update({
+    id: '/update-polling-unit/',
+    path: '/update-polling-unit/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReportIndexRoute =
@@ -185,6 +192,7 @@ export interface FileRoutesByFullPath {
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/parties/': typeof AuthenticatedPartiesIndexRoute
   '/report/': typeof AuthenticatedReportIndexRoute
+  '/update-polling-unit/': typeof AuthenticatedUpdatePollingUnitIndexRoute
   '/upload-result/': typeof AuthenticatedUploadResultIndexRoute
   '/vote/': typeof AuthenticatedVoteIndexRoute
 }
@@ -209,6 +217,7 @@ export interface FileRoutesByTo {
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/parties': typeof AuthenticatedPartiesIndexRoute
   '/report': typeof AuthenticatedReportIndexRoute
+  '/update-polling-unit': typeof AuthenticatedUpdatePollingUnitIndexRoute
   '/upload-result': typeof AuthenticatedUploadResultIndexRoute
   '/vote': typeof AuthenticatedVoteIndexRoute
 }
@@ -235,6 +244,7 @@ export interface FileRoutesById {
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
   '/_authenticated/report/': typeof AuthenticatedReportIndexRoute
+  '/_authenticated/update-polling-unit/': typeof AuthenticatedUpdatePollingUnitIndexRoute
   '/_authenticated/upload-result/': typeof AuthenticatedUploadResultIndexRoute
   '/_authenticated/vote/': typeof AuthenticatedVoteIndexRoute
 }
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/notifications/'
     | '/parties/'
     | '/report/'
+    | '/update-polling-unit/'
     | '/upload-result/'
     | '/vote/'
   fileRoutesByTo: FileRoutesByTo
@@ -285,6 +296,7 @@ export interface FileRouteTypes {
     | '/notifications'
     | '/parties'
     | '/report'
+    | '/update-polling-unit'
     | '/upload-result'
     | '/vote'
   id:
@@ -310,6 +322,7 @@ export interface FileRouteTypes {
     | '/_authenticated/notifications/'
     | '/_authenticated/parties/'
     | '/_authenticated/report/'
+    | '/_authenticated/update-polling-unit/'
     | '/_authenticated/upload-result/'
     | '/_authenticated/vote/'
   fileRoutesById: FileRoutesById
@@ -355,6 +368,13 @@ declare module '@tanstack/react-router' {
       path: '/upload-result'
       fullPath: '/upload-result/'
       preLoaderRoute: typeof AuthenticatedUploadResultIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/update-polling-unit/': {
+      id: '/_authenticated/update-polling-unit/'
+      path: '/update-polling-unit'
+      fullPath: '/update-polling-unit/'
+      preLoaderRoute: typeof AuthenticatedUpdatePollingUnitIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/report/': {
@@ -505,6 +525,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
   AuthenticatedReportIndexRoute: typeof AuthenticatedReportIndexRoute
+  AuthenticatedUpdatePollingUnitIndexRoute: typeof AuthenticatedUpdatePollingUnitIndexRoute
   AuthenticatedUploadResultIndexRoute: typeof AuthenticatedUploadResultIndexRoute
   AuthenticatedVoteIndexRoute: typeof AuthenticatedVoteIndexRoute
 }
@@ -528,6 +549,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
   AuthenticatedReportIndexRoute: AuthenticatedReportIndexRoute,
+  AuthenticatedUpdatePollingUnitIndexRoute:
+    AuthenticatedUpdatePollingUnitIndexRoute,
   AuthenticatedUploadResultIndexRoute: AuthenticatedUploadResultIndexRoute,
   AuthenticatedVoteIndexRoute: AuthenticatedVoteIndexRoute,
 }

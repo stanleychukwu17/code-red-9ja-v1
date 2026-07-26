@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { apiFetch } from "./fetch";
-import { API_URL } from "#/lib/config";
+import { API_URL } from "../config";
 
 /**
  * Fetches the scoped final-result record for a single election.

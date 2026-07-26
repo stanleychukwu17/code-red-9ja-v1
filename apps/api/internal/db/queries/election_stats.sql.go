@@ -2312,7 +2312,7 @@ update_gaps AS (
   SELECT
     election_group_id, polling_unit_id, party_id,
     EXTRACT(EPOCH FROM (created_at - LAG(created_at) OVER (
-      PARTITION BY election_group_id, polling_unit_id, party_id, user_id ORDER BY created_at
+      PARTITION BY election_group_id, polling_unit_id, party_id ORDER BY created_at
     ))) AS gap_seconds
   FROM polling_unit_updates
   WHERE party_id IS NOT NULL

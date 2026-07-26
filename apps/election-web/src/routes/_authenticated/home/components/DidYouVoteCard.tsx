@@ -1,23 +1,16 @@
-import { useState } from "react";
-import { useLocalStorage } from "usehooks-ts";
-import { useNavigate } from "@tanstack/react-router";
-import { Button } from "@repo/ui/components/button";
-import {
-  GreyCardTitle,
-  GreyCardTopRow,
-  GreyCardWrapper,
-  PayoutCardWrapper,
-} from "./Shared";
-import { NotVotingDrawer } from "./NotVotingDrawer";
-import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import { useAuth } from "#/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
 import { getUserVoteStatus } from "#/lib/server/elections";
-import { AppAvatar } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
 import {
   CheckmarkIndicator,
   DoubleAvatar,
 } from "@repo/ui/components/cards/Rewards";
+import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
+import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
+import { NotVotingDrawer } from "./NotVotingDrawer";
+import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 interface DidYouVoteCardProps {
   onNoClick?: () => void;

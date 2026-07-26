@@ -50,9 +50,9 @@ func parseQueryInt64(r *http.Request, key string) (int64, bool) {
 	return v, err == nil
 }
 
-// GetStatesWithResults returns all Nigerian states with their state_final_result for the given election_id.
+// GetStatesWithResults returns all Nigerian states with their election_state_final_result for the given election_id.
 // @Summary Get states with results
-// @Description Returns all Nigerian states with their state_final_result for the given election_id.
+// @Description Returns all Nigerian states with their election_state_final_result for the given election_id.
 // @Tags ElectionResults
 // @Accept json
 // @Produce json
@@ -88,7 +88,7 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.created_at,
 			fr.updated_at
 		FROM c_states s
-		LEFT JOIN state_final_result fr ON fr.state_id = s.id AND fr.election_id = $1
+		LEFT JOIN election_state_final_result fr ON fr.state_id = s.id AND fr.election_id = $1
 		WHERE s.country_id = 161 AND s.id::int < $2
 		ORDER BY s.id DESC
 		LIMIT $3
@@ -116,7 +116,7 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 	type Row struct {
 		ID               int16    `json:"id"`
 		Name             string   `json:"name"`
-		StateFinalResult *StateFR `json:"state_final_result"`
+		ElectionStateFinalResult *StateFR `json:"election_state_final_result"`
 	}
 
 	var results []Row
@@ -149,7 +149,7 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 			if frCandidateResults != nil {
 				cr = json.RawMessage(frCandidateResults)
 			}
-			row.StateFinalResult = &StateFR{
+			row.ElectionStateFinalResult = &StateFR{
 				ID: *frID, ElectionID: *frElectionID, StateID: *frStateID,
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
 				ValidVotes: *frValidVotes, RejectedVotes: *frRejectedVotes,
@@ -180,7 +180,7 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 
 // GetSenatorialDistrictsWithResults returns senatorial districts for a state with their final result.
 // @Summary Get senatorial districts with results
-// @Description Returns senatorial districts for a state with their senatorial_district_final_result.
+// @Description Returns senatorial districts for a state with their election_senatorial_district_final_result.
 // @Tags ElectionResults
 // @Accept json
 // @Produce json
@@ -212,7 +212,7 @@ func (h *Handler) GetSenatorialDistrictsWithResults(w http.ResponseWriter, r *ht
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM senatorial_districts sd
-		LEFT JOIN senatorial_district_final_result fr
+		LEFT JOIN election_senatorial_district_final_result fr
 			ON fr.senatorial_district_id = sd.id AND fr.election_id = $1
 		WHERE sd.state_id = $2 AND sd.id < $3
 		ORDER BY sd.id DESC
@@ -242,7 +242,7 @@ func (h *Handler) GetSenatorialDistrictsWithResults(w http.ResponseWriter, r *ht
 		Name                            string  `json:"name"`
 		StateID                         int32   `json:"state_id"`
 		StateName                       string  `json:"state_name"`
-		SenatorialDistrictFinalResult   *SDFR   `json:"senatorial_district_final_result"`
+		ElectionSenatorialDistrictFinalResult   *SDFR   `json:"election_senatorial_district_final_result"`
 	}
 
 	var results []Row
@@ -276,7 +276,7 @@ func (h *Handler) GetSenatorialDistrictsWithResults(w http.ResponseWriter, r *ht
 			if frCandidateResults != nil {
 				cr = json.RawMessage(frCandidateResults)
 			}
-			row.SenatorialDistrictFinalResult = &SDFR{
+			row.ElectionSenatorialDistrictFinalResult = &SDFR{
 				ID: *frID, ElectionID: *frElectionID,
 				SenatorialDistrictID: *frSDID, StateID: *frStateID,
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
@@ -306,7 +306,7 @@ func (h *Handler) GetSenatorialDistrictsWithResults(w http.ResponseWriter, r *ht
 
 // GetFederalConstituenciesWithResults returns federal constituencies for a senatorial district with their final result.
 // @Summary Get federal constituencies with results
-// @Description Returns federal constituencies for a senatorial district with their federal_constituency_final_result.
+// @Description Returns federal constituencies for a senatorial district with their election_federal_constituency_final_result.
 // @Tags ElectionResults
 // @Accept json
 // @Produce json
@@ -338,7 +338,7 @@ func (h *Handler) GetFederalConstituenciesWithResults(w http.ResponseWriter, r *
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM federal_constituencies fc
-		LEFT JOIN federal_constituency_final_result fr
+		LEFT JOIN election_federal_constituency_final_result fr
 			ON fr.federal_constituency_id = fc.id AND fr.election_id = $1
 		WHERE fc.senatorial_district_id = $2 AND fc.id < $3
 		ORDER BY fc.id DESC
@@ -369,7 +369,7 @@ func (h *Handler) GetFederalConstituenciesWithResults(w http.ResponseWriter, r *
 		Name                           string `json:"name"`
 		SenatorialDistrictID           int32  `json:"senatorial_district_id"`
 		StateID                        int16  `json:"state_id"`
-		FederalConstituencyFinalResult  *FCFR  `json:"federal_constituency_final_result"`
+		ElectionFederalConstituencyFinalResult  *FCFR  `json:"election_federal_constituency_final_result"`
 	}
 
 	var results []Row
@@ -403,7 +403,7 @@ func (h *Handler) GetFederalConstituenciesWithResults(w http.ResponseWriter, r *
 			if frCandidateResults != nil {
 				cr = json.RawMessage(frCandidateResults)
 			}
-			row.FederalConstituencyFinalResult = &FCFR{
+			row.ElectionFederalConstituencyFinalResult = &FCFR{
 				ID: *frID, ElectionID: *frElectionID,
 				FederalConstituencyID: *frFCID, SenatorialDistrictID: *frFCSDID, StateID: *frStateID,
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
@@ -431,9 +431,9 @@ func (h *Handler) GetFederalConstituenciesWithResults(w http.ResponseWriter, r *
 	})
 }
 
-// GetLGAsWithResults returns LGAs for a federal constituency with their lga_final_result.
+// GetLGAsWithResults returns LGAs for a federal constituency with their election_lga_final_result.
 // @Summary Get LGAs with results
-// @Description Returns LGAs for a federal constituency with their lga_final_result.
+// @Description Returns LGAs for a federal constituency with their election_lga_final_result.
 // @Tags ElectionResults
 // @Accept json
 // @Produce json
@@ -465,7 +465,7 @@ func (h *Handler) GetLGAsWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM lgas l
-		LEFT JOIN lga_final_result fr ON fr.lga_id = l.id AND fr.election_id = $1
+		LEFT JOIN election_lga_final_result fr ON fr.lga_id = l.id AND fr.election_id = $1
 		WHERE l.federal_constituency_id = $2 AND l.id < $3
 		ORDER BY l.id DESC
 		LIMIT $4
@@ -494,7 +494,7 @@ func (h *Handler) GetLGAsWithResults(w http.ResponseWriter, r *http.Request) {
 		Name                  string  `json:"name"`
 		StateID               int16   `json:"state_id"`
 		FederalConstituencyID int32   `json:"federal_constituency_id"`
-		LgaFinalResult        *LGAFR  `json:"lga_final_result"`
+		ElectionLgaFinalResult        *LGAFR  `json:"election_lga_final_result"`
 	}
 
 	var results []Row
@@ -528,7 +528,7 @@ func (h *Handler) GetLGAsWithResults(w http.ResponseWriter, r *http.Request) {
 			if frCandidateResults != nil {
 				cr = json.RawMessage(frCandidateResults)
 			}
-			row.LgaFinalResult = &LGAFR{
+			row.ElectionLgaFinalResult = &LGAFR{
 				ID: *frID, ElectionID: *frElectionID,
 				LgaID: *frLgaID, StateID: *frStateID,
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
@@ -556,9 +556,9 @@ func (h *Handler) GetLGAsWithResults(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// GetWardsWithResults returns wards for a given LGA or state_assembly_constituency with their ward_final_result.
+// GetWardsWithResults returns wards for a given LGA or state_assembly_constituency with their election_ward_final_result.
 // @Summary Get wards with results
-// @Description Returns wards for a given LGA or state_assembly_constituency with their ward_final_result.
+// @Description Returns wards for a given LGA or state_assembly_constituency with their election_ward_final_result.
 // @Tags ElectionResults
 // @Accept json
 // @Produce json
@@ -602,7 +602,7 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM wards w
-		LEFT JOIN ward_final_result fr ON fr.ward_id = w.id AND fr.election_id = $1
+		LEFT JOIN election_ward_final_result fr ON fr.ward_id = w.id AND fr.election_id = $1
 		WHERE ` + filterCol + ` = $2 AND w.id < $3
 		ORDER BY w.id DESC
 		LIMIT $4`
@@ -634,7 +634,7 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 		LgaID                         *int32  `json:"lga_id"`
 		StateID                       int16   `json:"state_id"`
 		StateAssemblyConstituencyID   *int32  `json:"state_assembly_constituency_id"`
-		WardFinalResult               *WardFR `json:"ward_final_result"`
+		ElectionWardFinalResult               *WardFR `json:"election_ward_final_result"`
 	}
 
 	var results []Row
@@ -669,7 +669,7 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 			if frCandidateResults != nil {
 				cr = json.RawMessage(frCandidateResults)
 			}
-			row.WardFinalResult = &WardFR{
+			row.ElectionWardFinalResult = &WardFR{
 				ID: *frID, ElectionID: *frElectionID,
 				WardID: *frWardID, LgaID: *frLgaID, StateID: *frStateID,
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
@@ -731,7 +731,7 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
 		FROM polling_units pu
-		LEFT JOIN polling_unit_final_results fr ON fr.polling_unit_id = pu.id AND fr.election_id = $1
+		LEFT JOIN election_polling_unit_final_results fr ON fr.polling_unit_id = pu.id AND fr.election_id = $1
 		WHERE pu.ward_id = $2 AND pu.id < $3
 		ORDER BY pu.id DESC
 		LIMIT $4
@@ -763,7 +763,7 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 		WardID                 int32  `json:"ward_id"`
 		LgaID                  *int32 `json:"lga_id"`
 		StateID                *int16 `json:"state_id"`
-		PollingUnitFinalResult *PUFR  `json:"polling_unit_final_result"`
+		ElectionPollingUnitFinalResult *PUFR  `json:"polling_unit_final_result"`
 	}
 
 	var results []Row
@@ -799,7 +799,7 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 			if frCandidateResults != nil {
 				cr = json.RawMessage(frCandidateResults)
 			}
-			row.PollingUnitFinalResult = &PUFR{
+			row.ElectionPollingUnitFinalResult = &PUFR{
 				ID: *frID, ElectionID: *frElectionID,
 				PollingUnitID: *frPUID, WardID: *frWardID, LgaID: frLgaID, StateID: frStateID,
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
@@ -826,3 +826,100 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 		"meta":          map[string]interface{}{"has_more": hasMore, "next_cursor": nextCursor},
 	})
 }
+
+// GetElectionFinalResult returns a single final result record for the provided scope.
+// @Summary Get scoped final result
+// @Description Returns the specific final result for the provided scope parameters.
+// @Tags ElectionResults
+// @Accept json
+// @Produce json
+// @Param election_id query int true "Election ID"
+// @Param ward_id query int false "Ward ID"
+// @Param state_constituency_id query int false "State Constituency ID"
+// @Param lga_id query int false "LGA ID"
+// @Param federal_constituency_id query int false "Federal Constituency ID"
+// @Param senatorial_district_id query int false "Senatorial District ID"
+// @Param state_id query int false "State ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /elections/results [get]
+func (h *Handler) GetElectionFinalResult(w http.ResponseWriter, r *http.Request) {
+	electionID, ok := parseQueryInt64(r, "election_id")
+	if !ok {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_id is required")
+		return
+	}
+
+	wardID, _ := parseQueryInt64(r, "ward_id")
+	stateConstID, _ := parseQueryInt64(r, "state_constituency_id")
+	lgaID, _ := parseQueryInt64(r, "lga_id")
+	fedConstID, _ := parseQueryInt64(r, "federal_constituency_id")
+	senatorialID, _ := parseQueryInt64(r, "senatorial_district_id")
+	stateID, _ := parseQueryInt64(r, "state_id")
+
+	var query string
+	var args []interface{}
+
+	if wardID > 0 {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_ward_final_result WHERE election_id = $1 AND ward_id = $2 LIMIT 1"
+		args = []interface{}{electionID, wardID}
+	} else if stateConstID > 0 {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_state_constituency_final_result WHERE election_id = $1 AND state_constituency_id = $2 LIMIT 1"
+		args = []interface{}{electionID, stateConstID}
+	} else if lgaID > 0 {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_lga_final_result WHERE election_id = $1 AND lga_id = $2 LIMIT 1"
+		args = []interface{}{electionID, lgaID}
+	} else if fedConstID > 0 {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_federal_constituency_final_result WHERE election_id = $1 AND federal_constituency_id = $2 LIMIT 1"
+		args = []interface{}{electionID, fedConstID}
+	} else if senatorialID > 0 {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_senatorial_district_final_result WHERE election_id = $1 AND senatorial_district_id = $2 LIMIT 1"
+		args = []interface{}{electionID, senatorialID}
+	} else if stateID > 0 {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_state_final_result WHERE election_id = $1 AND state_id = $2 LIMIT 1"
+		args = []interface{}{electionID, stateID}
+	} else {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_final_result WHERE election_id = $1 LIMIT 1"
+		args = []interface{}{electionID}
+	}
+
+	row := h.pool.QueryRow(r.Context(), query, args...)
+
+	type ScopedFR struct {
+		ID                   int64           `json:"id"`
+		ElectionID           int64           `json:"election_id"`
+		AccreditedVoters     int32           `json:"accredited_voters"`
+		VotesCast            int32           `json:"votes_cast"`
+		ValidVotes           int32           `json:"valid_votes"`
+		RejectedVotes        int32           `json:"rejected_votes"`
+		CandidateResults     json.RawMessage `json:"candidate_results"`
+		CandidateResultsLive json.RawMessage `json:"candidate_results_live"`
+	}
+
+	var fr ScopedFR
+	var cr, crl []byte
+	err := row.Scan(&fr.ID, &fr.ElectionID, &fr.AccreditedVoters, &fr.VotesCast, &fr.ValidVotes, &fr.RejectedVotes, &cr, &crl)
+	if err != nil {
+		// return empty object if no result found
+		h.utils.RespondSuccess(w, http.StatusOK, "No final result found for scope", map[string]interface{}{
+			"final_result": nil,
+		})
+		return
+	}
+	
+	fr.CandidateResults = json.RawMessage("[]")
+	if cr != nil {
+		fr.CandidateResults = json.RawMessage(cr)
+	}
+	fr.CandidateResultsLive = json.RawMessage("[]")
+	if crl != nil {
+		fr.CandidateResultsLive = json.RawMessage(crl)
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Final result fetched successfully", map[string]interface{}{
+		"final_result": fr,
+	})
+}
+
+

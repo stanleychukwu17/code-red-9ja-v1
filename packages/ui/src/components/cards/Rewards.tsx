@@ -4,20 +4,21 @@ import { cn } from "../../lib/utils";
 import { Check } from "lucide-react";
 import { AppAvatar } from "../avatar";
 
-export function RewardCard({
+export function InfoCard({
   label,
   value,
   variant = "yellow",
   className,
   icon,
 }: {
-  label: string;
+  label: string | ReactNode;
   value?: string;
-  variant?: "yellow" | "green" | "purple";
+  variant?: "yellow" | "green" | "purple" | "grey";
   className?: string;
   icon?: ReactNode;
 }) {
   const bgColor = {
+    grey: "bg-c-10",
     yellow: "bg-yellow/20",
     green: "bg-secondary/20",
     purple: "bg-purple/20",
@@ -33,7 +34,7 @@ export function RewardCard({
     >
       <div className="flex items-center gap-3 w-full">
         {icon}
-        <p className="w-full text-c-90">{label}</p>
+        <div className="w-full text-c-90">{label}</div>
       </div>
       <span className="font-extrabold">{value}</span>
     </div>
@@ -198,7 +199,7 @@ export function DoubleAvatar({
           src={image2}
           alt="image"
           className={cn(
-            "size-5 absolute bottom-[-1px] right-[-2px] ring-2 ring-background",
+            "size-5 absolute bottom-[-1px] right-[-2px] ring-[1.5px] ring-background",
             avatar2ClassName,
           )}
         />

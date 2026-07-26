@@ -10,7 +10,8 @@ import { Input, Label } from "@repo/ui/components/input";
 import { SelectLga } from "@repo/ui/components/selects/lga-select";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useInfiniteQuery } from "@tanstack/react-query";
+import { useIntersectionObserver } from "usehooks-ts";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2, UploadIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -117,24 +118,49 @@ const Step2 = ({
   selectedPollingUnitId,
   setSelectedPollingUnitId,
 }: any) => {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ["polling-units", selectedWardId],
-    queryFn: async () => {
-      // Temporary implementation of getPollingUnits using useQuery for simplicity
+    queryFn: async ({ pageParam }) => {
       const res = await getPollingUnits({
         data: {
           stateId: selectedStateId,
           localGovernmentId: selectedLgaId,
           wardId: selectedWardId,
+          limit: 20,
+          cursor: pageParam,
         },
       });
-      return res;
+      if (res && res.success && res.data) {
+        return res;
+      }
+      throw new Error(res?.message || "Failed to fetch polling units");
+    },
+    initialPageParam: "",
+    getNextPageParam: (lastPage) => {
+      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+        return lastPage.meta.next_cursor || "";
+      }
+      return undefined;
     },
     enabled: !!selectedWardId,
-  }) as any;
+  });
+
+  const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
+
+  useEffect(() => {
+    if (isIntersecting && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const pollingUnits = data
+    ? data.pages.flatMap((page) => page.data?.polling_units || [])
+    : [];
 
   const targetWardName =
-    data?.data?.polling_units?.[0]?.ward_name || "Selected Ward";
+    pollingUnits.length > 0 ? pollingUnits[0].ward_name : "Selected Ward";
 
   return (
     <div className="flex flex-col gap-4 w-full px-4 h-full">
@@ -158,7 +184,7 @@ const Step2 = ({
         <div className="space-y-3 mt-7">
           <Label title={`Polling Units (${targetWardName})`} className="" />
 
-          {data?.data?.polling_units?.map((unit: any) => {
+          {pollingUnits.map((unit: any) => {
             const isSelected = selectedPollingUnitId === unit.id;
             return (
               <SelectableCard
@@ -170,6 +196,17 @@ const Step2 = ({
               />
             );
           })}
+          
+          {hasNextPage && (
+            <div
+              ref={sentinelRef}
+              className="py-4 flex items-center justify-center text-c-50 text-[14px]"
+            >
+              {isFetchingNextPage
+                ? "Loading more polling units..."
+                : "Scroll down to load more"}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -225,7 +262,7 @@ const Step3 = ({
           const candidate = candidateByPartyId[party.id];
           const displayName = candidate
             ? `${candidate.first_name?.String ?? candidate.first_name ?? ""} ${candidate.last_name?.String ?? candidate.last_name ?? ""} (${party.short_name})`.trim() ||
-            party.short_name
+              party.short_name
             : party.short_name;
           const displayImage =
             (candidate?.avatar?.String ?? candidate?.avatar) || party.logo;
@@ -260,10 +297,9 @@ const Step3 = ({
   );
 };
 
-const Step4 = ({
-  votersCardImage,
-  setVotersCardImage,
-}: any) => {
+const Step4 = ({ votersCardImage, setVotersCardImage }: any) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const handleFileUpload = async (file: File) => {
     // Basic file upload dummy function for now
     // Actually we should use the existing file upload flow.
@@ -279,11 +315,15 @@ const Step4 = ({
     }
   };
 
-  const UploadVotersCardPlaceholder = () => (
-    <div className="min-h-48 border border-c-20 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer bg-c-10/50 hover:bg-c-10 transition-colors">
+  const uploadVotersCardPlaceholder = (
+    <div
+      className="min-h-48 border border-c-20 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer bg-c-10/50 hover:bg-c-10 transition-colors"
+      onClick={() => fileInputRef.current?.click()}
+    >
       <UploadIcon className="size-8 text-c-80 mb-2" />
       <p className="font-semibold text-sm">Upload Voters Card/PVC</p>
       <input
+        ref={fileInputRef}
         type="file"
         accept="image/*"
         className="hidden"
@@ -313,9 +353,8 @@ const Step4 = ({
           />
         </div>
       ) : (
-        <UploadVotersCardPlaceholder />
+        uploadVotersCardPlaceholder
       )}
-
 
       <div className="mt-4">
         <p className="font-semibold text-sm mb-2">Example:</p>
@@ -336,16 +375,24 @@ export const VoteFlow = () => {
 
   const [step, setStep] = useState(1);
   const [currentElectionIndex, setCurrentElectionIndex] = useState(0);
-  const [selectedStateId, setSelectedStateId] = useState<number | null>(null);
-  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(null);
-  const [selectedWardId, setSelectedWardId] = useState<number | null>(null);
+  const [selectedStateId, setSelectedStateId] = useState<number | null>(
+    user?.current_state ?? null,
+  );
+  const [selectedLgaId, setSelectedLgaId] = useState<number | null>(
+    user?.current_lga ?? null,
+  );
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(
+    user?.current_ward ?? null,
+  );
   const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<
     number | null
-  >(null);
+  >(user?.polling_unit_id ?? null);
 
   // votes: Record<electionId, partyId>
   const [votes, setVotes] = useState<Record<number, number>>({});
-  const [votersCardImage, setVotersCardImage] = useState(user?.voters_card_image || "");
+  const [votersCardImage, setVotersCardImage] = useState(
+    user?.voters_card_image || "",
+  );
 
   const { data: elections, isLoading: electionsLoading } = useQuery({
     queryKey: [
@@ -410,8 +457,7 @@ export const VoteFlow = () => {
         setStep(4);
       }
     } else if (step === 4) {
-      if (!votersCardImage)
-        return toast.error("Please provide PVC image");
+      if (!votersCardImage) return toast.error("Please provide PVC image");
 
       const votePayload = Object.entries(votes).map(
         ([electionId, partyId]) => ({

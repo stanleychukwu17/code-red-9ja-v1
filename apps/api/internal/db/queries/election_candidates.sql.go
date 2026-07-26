@@ -74,7 +74,7 @@ const updateElectionCandidateVoteCountsFromFederalConstituency = `-- name: Updat
 UPDATE election_candidates ec
 SET votes_count = (
   SELECT (elem->>'vote_count')::INTEGER
-  FROM federal_constituency_final_result fcfr,
+  FROM election_federal_constituency_final_result fcfr,
        jsonb_array_elements(fcfr.candidate_results) AS elem
   WHERE fcfr.election_id = ec.election_id
     AND fcfr.federal_constituency_id = e.federal_constituency_id
@@ -90,7 +90,7 @@ WHERE ec.election_id = $1
   AND e.scope = 'federal-constituency'
 `
 
-// Updates election_candidates.votes_count from federal_constituency_final_result.
+// Updates election_candidates.votes_count from election_federal_constituency_final_result.
 func (q *Queries) UpdateElectionCandidateVoteCountsFromFederalConstituency(ctx context.Context, electionID int64) error {
 	_, err := q.db.Exec(ctx, updateElectionCandidateVoteCountsFromFederalConstituency, electionID)
 	return err
@@ -100,7 +100,7 @@ const updateElectionCandidateVoteCountsFromLGA = `-- name: UpdateElectionCandida
 UPDATE election_candidates ec
 SET votes_count = (
   SELECT (elem->>'vote_count')::INTEGER
-  FROM lga_final_result lfr,
+  FROM election_lga_final_result lfr,
        jsonb_array_elements(lfr.candidate_results) AS elem
   WHERE lfr.election_id = ec.election_id
     AND lfr.lga_id = e.lga_id
@@ -116,7 +116,7 @@ WHERE ec.election_id = $1
   AND e.scope = 'lga'
 `
 
-// Updates election_candidates.votes_count from lga_final_result for lga-scoped elections.
+// Updates election_candidates.votes_count from election_lga_final_result for lga-scoped elections.
 func (q *Queries) UpdateElectionCandidateVoteCountsFromLGA(ctx context.Context, electionID int64) error {
 	_, err := q.db.Exec(ctx, updateElectionCandidateVoteCountsFromLGA, electionID)
 	return err
@@ -126,7 +126,7 @@ const updateElectionCandidateVoteCountsFromSenatorialDistrict = `-- name: Update
 UPDATE election_candidates ec
 SET votes_count = (
   SELECT (elem->>'vote_count')::INTEGER
-  FROM senatorial_district_final_result sdfr,
+  FROM election_senatorial_district_final_result sdfr,
        jsonb_array_elements(sdfr.candidate_results) AS elem
   WHERE sdfr.election_id = ec.election_id
     AND sdfr.senatorial_district_id = e.senatorial_district_id
@@ -142,7 +142,7 @@ WHERE ec.election_id = $1
   AND e.scope = 'senatorial-district'
 `
 
-// Updates election_candidates.votes_count from senatorial_district_final_result.
+// Updates election_candidates.votes_count from election_senatorial_district_final_result.
 func (q *Queries) UpdateElectionCandidateVoteCountsFromSenatorialDistrict(ctx context.Context, electionID int64) error {
 	_, err := q.db.Exec(ctx, updateElectionCandidateVoteCountsFromSenatorialDistrict, electionID)
 	return err
@@ -152,7 +152,7 @@ const updateElectionCandidateVoteCountsFromState = `-- name: UpdateElectionCandi
 UPDATE election_candidates ec
 SET votes_count = (
   SELECT (elem->>'vote_count')::INTEGER
-  FROM state_final_result sfr,
+  FROM election_state_final_result sfr,
        jsonb_array_elements(sfr.candidate_results) AS elem
   WHERE sfr.election_id = ec.election_id
     AND sfr.state_id = e.state_id
@@ -168,7 +168,7 @@ WHERE ec.election_id = $1
   AND e.scope = 'state'
 `
 
-// Updates election_candidates.votes_count from state_final_result.
+// Updates election_candidates.votes_count from election_state_final_result.
 func (q *Queries) UpdateElectionCandidateVoteCountsFromState(ctx context.Context, electionID int64) error {
 	_, err := q.db.Exec(ctx, updateElectionCandidateVoteCountsFromState, electionID)
 	return err
@@ -178,7 +178,7 @@ const updateElectionCandidateVoteCountsFromStateConstituency = `-- name: UpdateE
 UPDATE election_candidates ec
 SET votes_count = (
   SELECT (elem->>'vote_count')::INTEGER
-  FROM state_constituency_final_result scfr,
+  FROM election_state_constituency_final_result scfr,
        jsonb_array_elements(scfr.candidate_results) AS elem
   WHERE scfr.election_id = ec.election_id
     AND scfr.state_constituency_id = e.state_constituency_id
@@ -194,7 +194,7 @@ WHERE ec.election_id = $1
   AND e.scope = 'state-constituency'
 `
 
-// Updates election_candidates.votes_count from state_constituency_final_result.
+// Updates election_candidates.votes_count from election_state_constituency_final_result.
 func (q *Queries) UpdateElectionCandidateVoteCountsFromStateConstituency(ctx context.Context, electionID int64) error {
 	_, err := q.db.Exec(ctx, updateElectionCandidateVoteCountsFromStateConstituency, electionID)
 	return err
@@ -204,7 +204,7 @@ const updateElectionCandidateVoteCountsFromWard = `-- name: UpdateElectionCandid
 UPDATE election_candidates ec
 SET votes_count = (
   SELECT (elem->>'vote_count')::INTEGER
-  FROM ward_final_result wfr,
+  FROM election_ward_final_result wfr,
        jsonb_array_elements(wfr.candidate_results) AS elem
   WHERE wfr.election_id = ec.election_id
     AND wfr.ward_id = e.ward_id
@@ -220,7 +220,7 @@ WHERE ec.election_id = $1
   AND e.scope = 'ward'
 `
 
-// Updates election_candidates.votes_count from ward_final_result for ward-scoped elections.
+// Updates election_candidates.votes_count from election_ward_final_result for ward-scoped elections.
 // The join chain: election_candidates -> users (candidate) -> parties -> candidate_results JSONB.
 func (q *Queries) UpdateElectionCandidateVoteCountsFromWard(ctx context.Context, electionID int64) error {
 	_, err := q.db.Exec(ctx, updateElectionCandidateVoteCountsFromWard, electionID)

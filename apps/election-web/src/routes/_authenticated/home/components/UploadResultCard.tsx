@@ -1,13 +1,19 @@
 import { Button } from "@repo/ui/components/button";
-import { GreyCardTitle, PayoutCardWrapper } from "./Shared";
+import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangleIcon } from "lucide-react";
+import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 export function UploadResultCard() {
   const navigate = useNavigate();
 
   return (
-    <PayoutCardWrapper amount="+₦10,000">
+    <GreyCardWrapper>
+      <GreyCardTopRow
+        title={"Potential payout"}
+        subtitle={"₦1,200"}
+        icon={<FancyMoneyBagIcon className="size-5" />}
+      />
       <GreyCardTitle label="When election is over. Take a picture & video of the final vote result paper and upload." />
 
       <Button
@@ -23,6 +29,6 @@ export function UploadResultCard() {
         <AlertTriangleIcon className="size-5 shrink-0 mt-0.5" />
         If you miss uploading this, you won't be paid.
       </div>
-    </PayoutCardWrapper>
+    </GreyCardWrapper>
   );
 }

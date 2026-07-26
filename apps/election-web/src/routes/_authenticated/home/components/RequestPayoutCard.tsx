@@ -1,11 +1,11 @@
 import { Button } from "@repo/ui/components/button";
-import { GreyCardTitle, PayoutCardWrapper } from "./Shared";
+import { GreyCardTitle, GreyCardWrapper } from "./Shared";
 
 export function RequestPayoutCard() {
   return (
-    <PayoutCardWrapper amount="+₦$$$">
+    <GreyCardWrapper>
       <GreyCardTitle label="Request Payout. We will review your work and ensure you completed ur objectives before granting payout." />
-      
+
       <Button
         type="button"
         variant="black"
@@ -14,6 +14,6 @@ export function RequestPayoutCard() {
       >
         Request Payout
       </Button>
-    </PayoutCardWrapper>
+    </GreyCardWrapper>
   );
 }

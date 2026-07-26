@@ -28,7 +28,7 @@ import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { LgaSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
-
+import { MyPollingUnit } from "../components/MyPollingUnit";
 export function LGAElectionSupervisorPage() {
   const navigate = useNavigate();
   const {
@@ -151,10 +151,26 @@ export function LGAElectionSupervisorPage() {
     },
   ];
 
+  let headerTitle = "Readiness";
+  let headerRightText = "";
+  if (carouselIndex === 0) {
+    headerTitle = "Readiness";
+    const completed = readiness.filter((r) => r.isCompleted).length;
+    headerRightText = `${Math.round((completed / Math.max(readiness.length, 1)) * 100)}%`;
+  } else if (carouselIndex === 1) {
+    headerTitle = "Objectives";
+    const completed = objectives.filter((o) => o.isCompleted).length;
+    headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
+  } else if (carouselIndex === 2) {
+    headerTitle = "Elections";
+    headerRightText = "";
+  }
+
   return (
     <div className="w-full min-h-screen">
       <HomeHeader daysLeft={daysLeft} />
-      <HomeHeader2 title="Objectives" rightText="20%" />
+      <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+      <MyPollingUnit />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
@@ -207,7 +223,7 @@ export function LGAElectionSupervisorPage() {
             </LeaderboardCardWrapper>
           </CarouselItem>
           <CarouselItem>
-            <CandidatesLeaderboard electionId={selectedElection?.id} />
+            <CandidatesLeaderboard />
           </CarouselItem>
         </CarouselContent>
       </Carousel>

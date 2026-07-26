@@ -32,6 +32,7 @@ import { UploadResultCard } from "../components/UploadResultCard";
 import { UploadsTab } from "../components/UploadsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeBody } from "../components/Shared";
+import { MyPollingUnit } from "../components/MyPollingUnit";
 
 export function PollingAgentPage() {
   const navigate = useNavigate();
@@ -102,7 +103,8 @@ export function PollingAgentPage() {
       isCompleted: !!(
         currentPollingUnitAssignment?.results_submitted_count &&
         currentPollingUnitAssignment.results_submitted_count > 0 &&
-        currentPollingUnitAssignment.results_submitted_count >= (currentPollingUnitAssignment.results_expected_to_submit_count || 1)
+        currentPollingUnitAssignment.results_submitted_count >=
+          (currentPollingUnitAssignment.results_expected_to_submit_count || 1)
       ),
     },
     {
@@ -137,10 +139,39 @@ export function PollingAgentPage() {
     },
   ];
 
+  let headerTitle = "";
+  let headerRightText = "";
+  const carouselItems: { title: string; rightText: string }[] = [];
+
+  if (showObjectives) {
+    const completed = objectives.filter((o) => o.isCompleted).length;
+    carouselItems.push({
+      title: "Objectives",
+      rightText: `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`,
+    });
+  }
+  if (showReadiness) {
+    const completed = readiness.filter((r) => r.isCompleted).length;
+    carouselItems.push({
+      title: "Readiness",
+      rightText: `${Math.round((completed / Math.max(readiness.length, 1)) * 100)}%`,
+    });
+  }
+  carouselItems.push({
+    title: "Elections",
+    rightText: "",
+  });
+
+  if (carouselItems[carouselIndex]) {
+    headerTitle = carouselItems[carouselIndex].title;
+    headerRightText = carouselItems[carouselIndex].rightText;
+  }
+
   return (
     <div className="w-full min-h-screen">
       <HomeHeader daysLeft={daysLeft} />
-      <HomeHeader2 title="Objectives" rightText="20%" />
+      <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+      <MyPollingUnit />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           {showObjectives && (
@@ -184,7 +215,7 @@ export function PollingAgentPage() {
             </CarouselItem>
           )}
           <CarouselItem>
-            <CandidatesLeaderboard electionId={selectedElection?.id} />
+            <CandidatesLeaderboard />
           </CarouselItem>
         </CarouselContent>
       </Carousel>

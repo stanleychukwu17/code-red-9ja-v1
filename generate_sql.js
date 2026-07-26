@@ -1,52 +1,18 @@
--- name: UpsertPollingUnitFinalResult :one
-INSERT INTO election_polling_unit_final_results (
-  election_id,
-  election_group_id,
-  polling_unit_id,
-  state_id,
-  senatorial_district_id,
-  federal_constituency_id,
-  state_constituency_id,
-  lga_id,
-  ward_id,
-  polling_unit_result_id,
-  accredited_voters,
-  votes_cast,
-  valid_votes,
-  rejected_votes,
-  candidate_results,
-  candidate_results_live,
-  matching_submissions_count,
-  total_submissions_count
-) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18
-)
-ON CONFLICT (election_id, polling_unit_id)
-DO UPDATE SET
-  state_id = EXCLUDED.state_id,
-  senatorial_district_id = EXCLUDED.senatorial_district_id,
-  federal_constituency_id = EXCLUDED.federal_constituency_id,
-  state_constituency_id = EXCLUDED.state_constituency_id,
-  lga_id = EXCLUDED.lga_id,
-  ward_id = EXCLUDED.ward_id,
-  polling_unit_result_id = EXCLUDED.polling_unit_result_id,
-  accredited_voters = EXCLUDED.accredited_voters,
-  votes_cast = EXCLUDED.votes_cast,
-  valid_votes = EXCLUDED.valid_votes,
-  rejected_votes = EXCLUDED.rejected_votes,
-  candidate_results = EXCLUDED.candidate_results,
-  candidate_results_live = EXCLUDED.candidate_results_live,
-  matching_submissions_count = EXCLUDED.matching_submissions_count,
-  total_submissions_count = EXCLUDED.total_submissions_count,
-  updated_at = NOW()
-RETURNING *;
+const fs = require('fs');
 
+let original = fs.readFileSync('apps/api/db/query/final_results.sql.bak', 'utf8');
 
--- name: GetPollingUnitFinalResult :one
-SELECT * FROM election_polling_unit_final_results
-WHERE election_id = $1 AND polling_unit_id = $2;
+// Strip BOM
+if (original.charCodeAt(0) === 0xFEFF) {
+  original = original.slice(1);
+}
 
+const parts = original.split('-- name: RollupWardFinalResults :exec');
+const header = parts[0];
+const footerIndex = parts[1].indexOf('-- name: UpdateCandidatesFromWardElections :exec');
+const footer = parts[1].substring(footerIndex);
 
+const newQueries = `
 -- name: RollupWardFinalResults :exec
 WITH agg AS (
     SELECT 
@@ -56,20 +22,20 @@ WITH agg AS (
         COALESCE(SUM(valid_votes), 0) as valid_votes,
         COALESCE(SUM(rejected_votes), 0) as rejected_votes,
         COUNT(polling_unit_id) as polling_units_counted
-    FROM election_polling_unit_final_results
+    FROM polling_unit_final_results
     GROUP BY election_id, ward_id, lga_id, state_id
 ),
 pu_winners AS (
     SELECT DISTINCT ON (p.election_id, p.polling_unit_id)
         p.election_id, p.ward_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_polling_unit_final_results p, jsonb_array_elements(p.candidate_results) as c(value)
+    FROM polling_unit_final_results p, jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.polling_unit_id, (c.value->>'vote_count')::int DESC
 ),
 pu_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.polling_unit_id)
         p.election_id, p.ward_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_polling_unit_final_results p, jsonb_array_elements(p.candidate_results_live) as c(value)
+    FROM polling_unit_final_results p, jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.polling_unit_id, (c.value->>'vote_count')::int DESC
 ),
@@ -78,7 +44,7 @@ cand_agg AS (
         p.election_id, p.ward_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count
-    FROM election_polling_unit_final_results p, 
+    FROM polling_unit_final_results p, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, p.ward_id, c.value->>'party_short_name'
 ),
@@ -106,7 +72,7 @@ cand_live_agg AS (
         p.election_id, p.ward_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count
-    FROM election_polling_unit_final_results p, 
+    FROM polling_unit_final_results p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, p.ward_id, c.value->>'party_short_name'
 ),
@@ -129,7 +95,7 @@ cand_live_json AS (
     LEFT JOIN pu_live_win_count w ON c.election_id = w.election_id AND c.ward_id = w.ward_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.ward_id
 )
-INSERT INTO election_ward_final_result (
+INSERT INTO ward_final_result (
     election_id, ward_id, lga_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     polling_units_counted, total_polling_units,
@@ -167,7 +133,7 @@ WITH agg AS (
         COALESCE(SUM(r.rejected_votes), 0) as rejected_votes,
         COALESCE(SUM(r.polling_units_counted), 0) as polling_units_counted,
         COUNT(r.ward_id) as wards_counted
-    FROM election_ward_final_result r
+    FROM ward_final_result r
     JOIN wards w ON r.ward_id = w.id
     JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id
     GROUP BY r.election_id, s.id, r.state_id, s.senatorial_district_id, s.federal_constituency_id, s.lga_id
@@ -175,7 +141,7 @@ WITH agg AS (
 ward_winners AS (
     SELECT DISTINCT ON (p.election_id, p.ward_id)
         p.election_id, s.id as state_constituency_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_ward_final_result p
+    FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
     JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id,
     jsonb_array_elements(p.candidate_results) as c(value)
@@ -185,7 +151,7 @@ ward_winners AS (
 ward_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.ward_id)
         p.election_id, s.id as state_constituency_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_ward_final_result p
+    FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
     JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id,
     jsonb_array_elements(p.candidate_results_live) as c(value)
@@ -198,7 +164,7 @@ cand_agg AS (
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
-    FROM election_ward_final_result p
+    FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
     JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id, 
          jsonb_array_elements(p.candidate_results) as c(value)
@@ -230,7 +196,7 @@ cand_live_agg AS (
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
-    FROM election_ward_final_result p
+    FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
     JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
@@ -256,7 +222,7 @@ cand_live_json AS (
     LEFT JOIN ward_live_win_count w ON c.election_id = w.election_id AND c.state_constituency_id = w.state_constituency_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.state_constituency_id
 )
-INSERT INTO election_state_constituency_final_result (
+INSERT INTO state_constituency_final_result (
     election_id, state_constituency_id, state_id, senatorial_district_id, federal_constituency_id, lga_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     wards_counted, total_wards,
@@ -293,35 +259,35 @@ WITH agg AS (
         COALESCE(SUM(r.valid_votes), 0) as valid_votes,
         COALESCE(SUM(r.rejected_votes), 0) as rejected_votes,
         COUNT(r.ward_id) as wards_counted
-    FROM election_ward_final_result r
+    FROM ward_final_result r
     JOIN lgas l ON r.lga_id = l.id
     GROUP BY r.election_id, r.lga_id, r.state_id, l.senatorial_district_id, l.federal_constituency_id
 ),
 ward_winners AS (
     SELECT DISTINCT ON (p.election_id, p.ward_id)
         p.election_id, p.lga_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_ward_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
+    FROM ward_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.ward_id, (c.value->>'vote_count')::int DESC
 ),
 ward_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.ward_id)
         p.election_id, p.lga_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_ward_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
+    FROM ward_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.ward_id, (c.value->>'vote_count')::int DESC
 ),
 sc_winners AS (
     SELECT DISTINCT ON (p.election_id, p.state_constituency_id)
         p.election_id, p.lga_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_state_constituency_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
+    FROM state_constituency_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.state_constituency_id, (c.value->>'vote_count')::int DESC
 ),
 sc_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.state_constituency_id)
         p.election_id, p.lga_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_state_constituency_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
+    FROM state_constituency_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.state_constituency_id, (c.value->>'vote_count')::int DESC
 ),
@@ -331,7 +297,7 @@ cand_agg AS (
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
-    FROM election_ward_final_result p, 
+    FROM ward_final_result p, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, p.lga_id, c.value->>'party_short_name'
 ),
@@ -368,7 +334,7 @@ cand_live_agg AS (
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
-    FROM election_ward_final_result p, 
+    FROM ward_final_result p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, p.lga_id, c.value->>'party_short_name'
 ),
@@ -399,7 +365,7 @@ cand_live_json AS (
     LEFT JOIN sc_live_win_count sc ON c.election_id = sc.election_id AND c.lga_id = sc.lga_id AND c.party_short_name = sc.party_short_name
     GROUP BY c.election_id, c.lga_id
 )
-INSERT INTO election_lga_final_result (
+INSERT INTO lga_final_result (
     election_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     wards_counted, total_wards,
@@ -436,14 +402,14 @@ WITH agg AS (
         COALESCE(SUM(r.valid_votes), 0) as valid_votes,
         COALESCE(SUM(r.rejected_votes), 0) as rejected_votes,
         COUNT(r.lga_id) as lgas_counted
-    FROM election_lga_final_result r
+    FROM lga_final_result r
     JOIN lgas l ON r.lga_id = l.id
     GROUP BY r.election_id, l.federal_constituency_id, r.state_id, l.senatorial_district_id
 ),
 lga_winners AS (
     SELECT DISTINCT ON (p.election_id, p.lga_id)
         p.election_id, l.federal_constituency_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_lga_final_result p
+    FROM lga_final_result p
     JOIN lgas l ON p.lga_id = l.id,
     jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
@@ -452,7 +418,7 @@ lga_winners AS (
 lga_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.lga_id)
         p.election_id, l.federal_constituency_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_lga_final_result p
+    FROM lga_final_result p
     JOIN lgas l ON p.lga_id = l.id,
     jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
@@ -466,7 +432,7 @@ cand_agg AS (
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
-    FROM election_lga_final_result p
+    FROM lga_final_result p
     JOIN lgas l ON p.lga_id = l.id, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, l.federal_constituency_id, c.value->>'party_short_name'
@@ -501,7 +467,7 @@ cand_live_agg AS (
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
-    FROM election_lga_final_result p
+    FROM lga_final_result p
     JOIN lgas l ON p.lga_id = l.id, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, l.federal_constituency_id, c.value->>'party_short_name'
@@ -528,7 +494,7 @@ cand_live_json AS (
     LEFT JOIN lga_live_win_count w ON c.election_id = w.election_id AND c.federal_constituency_id = w.federal_constituency_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.federal_constituency_id
 )
-INSERT INTO election_federal_constituency_final_result (
+INSERT INTO federal_constituency_final_result (
     election_id, federal_constituency_id, state_id, senatorial_district_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     lgas_counted, total_lgas,
@@ -565,35 +531,35 @@ WITH agg AS (
         COALESCE(SUM(r.valid_votes), 0) as valid_votes,
         COALESCE(SUM(r.rejected_votes), 0) as rejected_votes,
         COUNT(r.lga_id) as lgas_counted
-    FROM election_lga_final_result r
+    FROM lga_final_result r
     JOIN lgas l ON r.lga_id = l.id
     GROUP BY r.election_id, l.senatorial_district_id, r.state_id
 ),
 lga_winners AS (
     SELECT DISTINCT ON (p.election_id, p.lga_id)
         p.election_id, p.senatorial_district_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_lga_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
+    FROM lga_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.lga_id, (c.value->>'vote_count')::int DESC
 ),
 lga_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.lga_id)
         p.election_id, p.senatorial_district_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_lga_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
+    FROM lga_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.lga_id, (c.value->>'vote_count')::int DESC
 ),
 fc_winners AS (
     SELECT DISTINCT ON (p.election_id, p.federal_constituency_id)
         p.election_id, p.senatorial_district_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_federal_constituency_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
+    FROM federal_constituency_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.federal_constituency_id, (c.value->>'vote_count')::int DESC
 ),
 fc_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.federal_constituency_id)
         p.election_id, p.senatorial_district_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_federal_constituency_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
+    FROM federal_constituency_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.federal_constituency_id, (c.value->>'vote_count')::int DESC
 ),
@@ -605,7 +571,7 @@ cand_agg AS (
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
-    FROM election_lga_final_result p
+    FROM lga_final_result p
     JOIN lgas l ON p.lga_id = l.id, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, l.senatorial_district_id, c.value->>'party_short_name'
@@ -647,7 +613,7 @@ cand_live_agg AS (
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
-    FROM election_lga_final_result p
+    FROM lga_final_result p
     JOIN lgas l ON p.lga_id = l.id, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, l.senatorial_district_id, c.value->>'party_short_name'
@@ -681,7 +647,7 @@ cand_live_json AS (
     LEFT JOIN fc_live_win_count w ON c.election_id = w.election_id AND c.senatorial_district_id = w.senatorial_district_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.senatorial_district_id
 )
-INSERT INTO election_senatorial_district_final_result (
+INSERT INTO senatorial_district_final_result (
     election_id, senatorial_district_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     lgas_counted, total_lgas,
@@ -718,20 +684,20 @@ WITH agg AS (
         COALESCE(SUM(r.valid_votes), 0) as valid_votes,
         COALESCE(SUM(r.rejected_votes), 0) as rejected_votes,
         COUNT(r.senatorial_district_id) as senatorial_districts_counted
-    FROM election_senatorial_district_final_result r
+    FROM senatorial_district_final_result r
     GROUP BY r.election_id, r.state_id
 ),
 sd_winners AS (
     SELECT DISTINCT ON (p.election_id, p.senatorial_district_id)
         p.election_id, p.state_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_senatorial_district_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
+    FROM senatorial_district_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.senatorial_district_id, (c.value->>'vote_count')::int DESC
 ),
 sd_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.senatorial_district_id)
         p.election_id, p.state_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_senatorial_district_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
+    FROM senatorial_district_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.senatorial_district_id, (c.value->>'vote_count')::int DESC
 ),
@@ -745,7 +711,7 @@ cand_agg AS (
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
         SUM((c.value->>'lgas_winning_count')::int) as lga_count,
         SUM((c.value->>'federal_constituencies_winning_count')::int) as fc_count
-    FROM election_senatorial_district_final_result p, 
+    FROM senatorial_district_final_result p, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, p.state_id, c.value->>'party_short_name'
 ),
@@ -783,7 +749,7 @@ cand_live_agg AS (
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
         SUM((c.value->>'lgas_winning_count')::int) as lga_count,
         SUM((c.value->>'federal_constituencies_winning_count')::int) as fc_count
-    FROM election_senatorial_district_final_result p, 
+    FROM senatorial_district_final_result p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, p.state_id, c.value->>'party_short_name'
 ),
@@ -811,7 +777,7 @@ cand_live_json AS (
     LEFT JOIN sd_live_win_count w ON c.election_id = w.election_id AND c.state_id = w.state_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.state_id
 )
-INSERT INTO election_state_final_result (
+INSERT INTO state_final_result (
     election_id, state_id,
     accredited_voters, votes_cast, valid_votes, rejected_votes,
     senatorial_districts_counted, total_senatorial_districts,
@@ -848,20 +814,20 @@ WITH agg AS (
         COALESCE(SUM(r.valid_votes), 0) as valid_votes,
         COALESCE(SUM(r.rejected_votes), 0) as rejected_votes,
         COUNT(r.state_id) as states_counted
-    FROM election_state_final_result r
+    FROM state_final_result r
     GROUP BY r.election_id
 ),
 state_winners AS (
     SELECT DISTINCT ON (p.election_id, p.state_id)
         p.election_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_state_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
+    FROM state_final_result p, jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.state_id, (c.value->>'vote_count')::int DESC
 ),
 state_winners_live AS (
     SELECT DISTINCT ON (p.election_id, p.state_id)
         p.election_id, (c.value->>'party_short_name')::text as party_short_name
-    FROM election_state_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
+    FROM state_final_result p, jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.state_id, (c.value->>'vote_count')::int DESC
 ),
@@ -876,7 +842,7 @@ cand_agg AS (
         SUM((c.value->>'lgas_winning_count')::int) as lga_count,
         SUM((c.value->>'federal_constituencies_winning_count')::int) as fc_count,
         SUM((c.value->>'senatorial_districts_winning_count')::int) as sd_count
-    FROM election_state_final_result p, 
+    FROM state_final_result p, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, c.value->>'party_short_name'
 ),
@@ -916,7 +882,7 @@ cand_live_agg AS (
         SUM((c.value->>'lgas_winning_count')::int) as lga_count,
         SUM((c.value->>'federal_constituencies_winning_count')::int) as fc_count,
         SUM((c.value->>'senatorial_districts_winning_count')::int) as sd_count
-    FROM election_state_final_result p, 
+    FROM state_final_result p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, c.value->>'party_short_name'
 ),
@@ -972,200 +938,7 @@ DO UPDATE SET
     candidate_results = EXCLUDED.candidate_results,
     candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW();
+`
 
--- name: UpdateCandidatesFromWardElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_ward_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'ward'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name;
-
--- name: UpdateCandidatesFromLGAElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_lga_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'lga'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name;
-
--- name: UpdateCandidatesFromStateConstituencyElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_state_constituency_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'state-constituency'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name;
-
--- name: UpdateCandidatesFromFederalConstituencyElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_federal_constituency_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'federal-constituency'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name;
-
--- name: UpdateCandidatesFromSenatorialDistrictElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_senatorial_district_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'senatorial-district'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name;
-
--- name: UpdateCandidatesFromStateElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_state_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'state'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name;
-
--- name: UpdateCandidatesFromNationwideElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'nationwide'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name;
-
--- name: ListPollingUnitFinalResults :many
-SELECT 
-  fr.id,
-  fr.election_id,
-  fr.election_group_id,
-  fr.polling_unit_id,
-  pu.name AS polling_unit_name,
-  fr.state_id,
-  s.name AS state_name,
-  fr.lga_id,
-  l.name AS lga_name,
-  fr.ward_id,
-  fr.senatorial_district_id,
-  fr.federal_constituency_id,
-  fr.state_constituency_id,
-  fr.polling_unit_result_id,
-  r.result_sheet_image_url,
-  r.result_sheet_video_url,
-  fr.accredited_voters,
-  fr.votes_cast,
-  fr.valid_votes,
-  fr.rejected_votes,
-  fr.candidate_results,
-  fr.created_at,
-  u.first_name AS uploader_first_name,
-  u.last_name AS uploader_last_name,
-  u.avatar AS uploader_avatar
-FROM election_polling_unit_final_results fr
-JOIN polling_units pu ON fr.polling_unit_id = pu.id
-LEFT JOIN c_states s ON fr.state_id = s.id
-LEFT JOIN lgas l ON fr.lga_id = l.id
-LEFT JOIN polling_unit_results r ON fr.polling_unit_result_id = r.id
-LEFT JOIN users u ON r.submitted_by = u.id
-WHERE
-  (sqlc.narg('election_group_id')::bigint IS NULL OR fr.election_group_id = sqlc.narg('election_group_id'))
-  AND (sqlc.narg('state_id')::smallint IS NULL OR fr.state_id = sqlc.narg('state_id'))
-  AND (sqlc.narg('senatorial_district_id')::int IS NULL OR fr.senatorial_district_id = sqlc.narg('senatorial_district_id'))
-  AND (sqlc.narg('federal_constituency_id')::int IS NULL OR fr.federal_constituency_id = sqlc.narg('federal_constituency_id'))
-  AND (sqlc.narg('state_constituency_id')::int IS NULL OR fr.state_constituency_id = sqlc.narg('state_constituency_id'))
-  AND (sqlc.narg('lga_id')::int IS NULL OR fr.lga_id = sqlc.narg('lga_id'))
-  AND (sqlc.narg('ward_id')::int IS NULL OR fr.ward_id = sqlc.narg('ward_id'))
-  AND (sqlc.narg('has_media')::boolean IS NULL OR (sqlc.narg('has_media') = true AND r.result_sheet_image_url IS NOT NULL) OR (sqlc.narg('has_media') = false))
-  AND fr.id < sqlc.arg('cursor')::bigint
-ORDER BY fr.id DESC
-LIMIT sqlc.arg('limit')::int;
-
--- name: RefreshPollingUnitLiveResults :exec
-WITH live_counts AS (
-  SELECT 
-    p.short_name AS party_short_name,
-    COUNT(ev.id)::int AS vote_count
-  FROM election_votes ev
-  JOIN parties p ON ev.party_id = p.id
-  WHERE ev.election_id = $1 AND ev.polling_unit_id = $2
-  GROUP BY p.short_name
-),
-live_json AS (
-  SELECT COALESCE(
-    jsonb_agg(
-      jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)
-    ), '[]'::jsonb
-  ) as candidate_results_live
-  FROM live_counts
-)
-INSERT INTO election_polling_unit_final_results (
-  election_id, election_group_id, polling_unit_id,
-  state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id,
-  candidate_results_live, candidate_results
-) VALUES (
-  $1, $3, $2,
-  $4, $5, $6, $7, $8, $9,
-  (SELECT candidate_results_live FROM live_json),
-  '[]'::jsonb
-)
-ON CONFLICT (election_id, polling_unit_id) DO UPDATE SET
-  candidate_results_live = EXCLUDED.candidate_results_live,
-  updated_at = NOW();
+fs.writeFileSync('apps/api/db/query/final_results.sql', header + newQueries + '\n' + footer);
+console.log("Success");

@@ -147,6 +147,11 @@ func (m *MockAuthService) CheckAndAssignRole(ctx context.Context, userID int64, 
 	return args.Error(0)
 }
 
+func (m *MockAuthService) UpdateUserRoles(ctx context.Context, userID int64, roles []string, partyID *int64, whoAssigned int64) error {
+	args := m.Called(ctx, userID, roles, partyID, whoAssigned)
+	return args.Error(0)
+}
+
 // TestRegister tests the Register method of the AuthHandler
 func TestRegister(t *testing.T) {
 	// Create a new instance of the utils package

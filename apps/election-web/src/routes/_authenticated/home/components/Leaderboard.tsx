@@ -1,60 +1,101 @@
 import { Button } from "@repo/ui/components/button";
-import ReportIcon from "@repo/ui/icons/report-icon";
-import { useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { getElectionCandidates } from "#/lib/server/elections";
 import {
   LeaderboardCardRow,
   LeaderboardCardWrapper,
 } from "@repo/ui/components/cards/leaderboard-card";
-import { useServerFn } from "@tanstack/react-start";
+import ReportIcon from "@repo/ui/icons/report-icon";
+import { useNavigate } from "@tanstack/react-router";
+
+import { useAuth } from "#/hooks/useAuth";
+import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
 import { Loader2 } from "lucide-react";
 
-interface LeaderboardCardProps {
-  electionId?: string | number;
-}
-
-export function CandidatesLeaderboard({ electionId }: LeaderboardCardProps) {
+export function CandidatesLeaderboard() {
   const navigate = useNavigate();
-  const fetchCandidates = useServerFn(getElectionCandidates);
+  const {
+    selectedElection,
+    activeParties,
+    electionCandidates,
+    finalResultObj,
+    isLive,
+    isResultLoading,
+    party,
+    selectedSupervisorAssignment,
+    isLock,
+  } = useAuth();
 
-  const { data, isFetching } = useQuery({
-    queryKey: ["election-candidates", electionId],
-    queryFn: () =>
-      fetchCandidates({ data: { electionId: electionId!, limit: 3 } }),
-    enabled: !!electionId,
-    // Clear stale data immediately when electionId changes so the previous
-    // election's candidates never flash while the new fetch is in-flight.
-    placeholderData: undefined,
-    staleTime: 0,
+  const sortedResults = mergeElectionResults({
+    candidates: electionCandidates || [],
+    electionFinalResults: finalResultObj,
+    parties:
+      activeParties.length > 0
+        ? activeParties
+        : party?.shortName
+          ? [{ short_name: party.shortName, ...party }]
+          : [],
+    isLive,
   });
-
-  const candidates = data?.data?.candidates || data?.candidates || [];
 
   return (
     <LeaderboardCardWrapper className="mx-2.5">
-      {isFetching ? (
+      {isResultLoading ? (
         <div className="flex items-center justify-center h-full flex-1">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
-      ) : !electionId ? (
+      ) : !selectedElection?.id ? (
         <div className="flex items-center justify-center h-full flex-1 text-neutral-500 text-sm">
           Select an election to see candidates
         </div>
-      ) : candidates.length === 0 ? (
+      ) : sortedResults.length === 0 ? (
         <div className="flex items-center justify-center h-full flex-1 text-neutral-500 text-sm">
           No candidates found
         </div>
       ) : (
-        candidates.map((candidate: any, index: number) => (
-          <LeaderboardCardRow
-            key={candidate.id}
-            rank={index + 1}
-            avatarUrl={candidate.avatar}
-            name={`${candidate.first_name} ${candidate.last_name}`}
-            votesCount={`${candidate.votes_count || 0} votes`}
-          />
-        ))
+        sortedResults.slice(0, 3).map((item: any, index: number) => {
+          const partyShortName: string =
+            item.party_short_name || item.short_name || "";
+          const candidateName: string | null =
+            item.name ||
+            item.candidate_name ||
+            (item.first_name
+              ? `${item.first_name} ${item.last_name || ""}`.trim()
+              : null);
+          const candidateAvatar: string | undefined =
+            item.candidate_avatar || item.avatar;
+          const partyLogo: string | undefined = item.party_logo || item.logo;
+          const votes: number = item.votes ?? item.vote_count ?? 0;
+
+          let regionsWinningCountStr = `${item.states_winning_count || 0} states`;
+          if (isLock) {
+            if (selectedSupervisorAssignment?.type === "state") {
+              regionsWinningCountStr = `${item.lgas_winning_count || 0} LGAs`;
+            } else if (selectedSupervisorAssignment?.type === "lga") {
+              regionsWinningCountStr = `${item.wards_winning_count || 0} wards`;
+            } else if (
+              selectedSupervisorAssignment?.type === "ward" ||
+              !selectedSupervisorAssignment
+            ) {
+              regionsWinningCountStr = `${item.polling_units_winning_count || 0} PUs`;
+            }
+          }
+
+          return (
+            <LeaderboardCardRow
+              key={partyShortName || index}
+              rank={index + 1}
+              image={candidateAvatar || partyLogo}
+              image2={partyLogo}
+              name={
+                candidateName
+                  ? `${candidateName} (${partyShortName})`
+                  : // `${candidateName}`
+                    partyShortName
+              }
+              regionsWinningCount={regionsWinningCountStr}
+              votesCount={`${votes.toLocaleString()} votes`}
+            />
+          );
+        })
       )}
 
       {/* Buttons */}

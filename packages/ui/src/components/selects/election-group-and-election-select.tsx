@@ -8,6 +8,7 @@ import ArrowDownIcon from "../../icons/arrow-down-icon";
 import { IconInput } from "../input";
 import { ChevronLeft } from "lucide-react";
 import { cn } from "../../lib/utils";
+import { Button } from "../button";
 
 export interface ElectionGroup {
   id: number;
@@ -234,12 +235,21 @@ export const SelectElectionGroupAndElection = ({
   // ─── Loading skeleton ─────────────────────────────────────────────────────
   if (electionGroups.length === 0 && isLoading && !disabled) {
     return (
-      <div className="flex items-center gap-4 cursor-pointer select-none group text-left animate-pulse">
-        <span className="text-sm font-semibold text-c-900 group-hover:text-c-800 transition line-clamp-1">
+      <Button
+        variant="select"
+        size="select"
+        className={cn(
+          "justify-between w-full gap-2 animate-pulse",
+          errorMsg && "border-0.8 border-red",
+          className,
+        )}
+        type="button"
+      >
+        <span className="whitespace-normal text-left line-clamp-1">
           Select Election Group
         </span>
-        <ArrowDownIcon className="size-6 text-c-50 group-hover:text-c-600 transition" />
-      </div>
+        <ArrowDownIcon className="ml-auto text-c-80" />
+      </Button>
     );
   }
 
@@ -366,15 +376,21 @@ export const SelectElectionGroupAndElection = ({
       align={align}
       className={className}
       trigger={
-        <button
+        <Button
+          variant="select"
+          size="select"
+          className={cn(
+            "justify-between w-full gap-2",
+            errorMsg && "border-0.8 border-red",
+            className,
+          )}
           type="button"
-          className="flex items-center gap-4 cursor-pointer select-none group text-left"
         >
-          <span className="text-sm font-semibold text-c-900 group-hover:text-c-800 transition line-clamp-1">
+          <span className="whitespace-normal text-left line-clamp-1">
             {displayText}
           </span>
-          <ArrowDownIcon className="size-6 text-c-50 group-hover:text-c-600 transition" />
-        </button>
+          <ArrowDownIcon className="ml-auto text-c-80" />
+        </Button>
       }
       desktopContent={desktopContent}
       mobileContent={mobileContent}

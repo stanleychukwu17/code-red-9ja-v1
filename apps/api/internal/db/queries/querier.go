@@ -153,7 +153,7 @@ type Querier interface {
 	GetPartyWalletByID(ctx context.Context, id int64) (PartyWallet, error)
 	GetPartyWalletByPartyID(ctx context.Context, partyID int16) (PartyWallet, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit, error)
-	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (PollingUnitFinalResult, error)
+	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
 	GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPollingUnitsWithAgentCountsParams) ([]GetPollingUnitsWithAgentCountsRow, error)
@@ -411,7 +411,7 @@ type Querier interface {
 	UpsertElectionGroupWardPartyEntry(ctx context.Context, arg UpsertElectionGroupWardPartyEntryParams) error
 	UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)
-	UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPollingUnitFinalResultParams) (PollingUnitFinalResult, error)
+	UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }
 

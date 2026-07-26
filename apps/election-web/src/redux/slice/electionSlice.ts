@@ -4,6 +4,8 @@ import type { RootState } from "../store";
 export interface ElectionState {
   selectedElectionGroup: any | null;
   selectedElection: any | null;
+  isLive: boolean;
+  isLock: boolean;
 }
 
 const safeGetLocalStorage = <T>(key: string, defaultValue: T): T => {
@@ -29,6 +31,8 @@ const safeSetLocalStorage = (key: string, value: any) => {
 const initialState: ElectionState = {
   selectedElectionGroup: safeGetLocalStorage("selected-election-group", null),
   selectedElection: safeGetLocalStorage("selected-election", null),
+  isLive: safeGetLocalStorage("is-live", true),
+  isLock: safeGetLocalStorage("is-lock", false),
 };
 
 export const electionSlice = createSlice({
@@ -43,12 +47,29 @@ export const electionSlice = createSlice({
       state.selectedElection = action.payload;
       safeSetLocalStorage("selected-election", action.payload);
     },
+    setIsLive: (state, action: PayloadAction<boolean>) => {
+      state.isLive = action.payload;
+      safeSetLocalStorage("is-live", action.payload);
+    },
+    setIsLocked: (state, action: PayloadAction<boolean>) => {
+      state.isLock = action.payload;
+      safeSetLocalStorage("is-lock", action.payload);
+    },
   },
 });
 
-export const { setSelectedElectionGroup, setSelectedElection } = electionSlice.actions;
+export const {
+  setSelectedElectionGroup,
+  setSelectedElection,
+  setIsLive,
+  setIsLocked,
+} = electionSlice.actions;
 
-export const selectSelectedElectionGroup = (state: RootState) => state.election.selectedElectionGroup;
-export const selectSelectedElection = (state: RootState) => state.election.selectedElection;
+export const selectSelectedElectionGroup = (state: RootState) =>
+  state.election.selectedElectionGroup;
+export const selectSelectedElection = (state: RootState) =>
+  state.election.selectedElection;
+export const selectIsLive = (state: RootState) => state.election.isLive;
+export const selectIsLocked = (state: RootState) => state.election.isLock;
 
 export default electionSlice.reducer;

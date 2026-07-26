@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { Menu, Play, Users } from "lucide-react";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
+import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
 import {
   PostActionButton,
   ReelNavButtons,
@@ -96,6 +97,7 @@ function ResultReelSidebar({
 export function FinalResultReel({
   result,
   candidatesList,
+  activeParties,
   onClose,
   onNext,
   onPrev,
@@ -104,6 +106,7 @@ export function FinalResultReel({
 }: {
   result: ResultOverlayItem;
   candidatesList: any[];
+  activeParties?: any[];
   onClose: () => void;
   onNext?: () => void;
   onPrev?: () => void;
@@ -114,32 +117,14 @@ export function FinalResultReel({
 
   useReelKeyboard({ hasNext, hasPrev, onNext, onPrev, onClose });
 
-  let candidateResults = [];
-  try {
-    if (Array.isArray(result.candidate_results)) {
-      candidateResults = result.candidate_results;
-    } else if (typeof result.candidate_results === "string") {
-      candidateResults = JSON.parse(result.candidate_results);
-    }
-  } catch (e) {
-    console.error("Error parsing candidate results", e);
-  }
-
-  const votesData = candidateResults
-    .map((cr: any) => {
-      const candidate = candidatesList.find(
-        (c: any) => c.party_short_name === cr.party_short_name,
-      );
-      return {
-        party_short_name: cr.party_short_name,
-        vote_count: cr.vote_count || 0,
-        name: candidate
-          ? `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim()
-          : "",
-        avatar: candidate?.avatar,
-      };
-    })
-    .sort((a: any, b: any) => b.vote_count - a.vote_count);
+  const votesData = mergeElectionResults({
+    candidates: candidatesList,
+    electionFinalResults: {
+      candidate_results: result.candidate_results,
+    },
+    parties: activeParties || [],
+    isLive: false, // assuming reel is always showing final (or we can pass isLive if needed, but it currently only looks at result.candidate_results)
+  });
 
   const displayTime = result.created_at
     ? format(new Date(result.created_at), "h:mm a · MMM d, yyyy")

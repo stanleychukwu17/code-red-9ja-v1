@@ -14,6 +14,19 @@ export const getParties = createServerFn({ method: "POST" })
     }
   });
 
+export const getPublicParties = createServerFn({ method: "POST" })
+  .handler(async () => {
+    try {
+      const response = await apiFetch(`${API_URL.parties}/public`, {
+        method: "GET", // The route is GET in router.go
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to fetch public parties from API" };
+    }
+  });
+
 export const getParty = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {

@@ -10,6 +10,7 @@ import {
   setSelectedElection,
   setSelectedElectionGroup,
 } from "#/redux/slice/electionSlice";
+import { getAutoSelectedSession } from "#/hooks/useAuth";
 
 export default function LoadElectionSession() {
   const dispatch = useAppDispatch();
@@ -25,27 +26,18 @@ export default function LoadElectionSession() {
   });
   const groups = groupsData?.data?.election_groups || [];
 
-  // Auto-select highest ranked group with closest date if none selected
+  // Auto-select group with closest date if none selected or if the selected one is invalid
   useEffect(() => {
-    if (groups.length > 0 && !selectedElectionGroup) {
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
+    if (groups.length > 0) {
+      const isGroupValid =
+        selectedElectionGroup &&
+        groups.some((g: any) => g.id === selectedElectionGroup.id);
 
-      let validGroups = groups.filter((g: any) => {
-        if (!g.election_date) return false;
-        const d = new Date(g.election_date);
-        d.setHours(0, 0, 0, 0);
-        return d.getTime() >= now.getTime();
-      });
-
-      if (validGroups.length === 0) validGroups = groups;
-
-      validGroups.sort((a: any, b: any) => {
-        return b.rank - a.rank;
-      });
-
-      if (validGroups.length > 0) {
-        dispatch(setSelectedElectionGroup(validGroups[0]));
+      if (!isGroupValid) {
+        const { selectedGroup } = getAutoSelectedSession(groups, []);
+        if (selectedGroup) {
+          dispatch(setSelectedElectionGroup(selectedGroup));
+        }
       }
     }
   }, [groups, selectedElectionGroup, dispatch]);
@@ -57,17 +49,24 @@ export default function LoadElectionSession() {
   });
   const elections = electionsData?.data?.elections || [];
 
-  // Auto-select highest ranked election if none selected or if group changed
+  // Auto-select highest ranked election if none selected or if group changed or if the selected one is invalid
   useEffect(() => {
     if (elections.length > 0 && selectedElectionGroup) {
+      const isElectionValid =
+        selectedElection &&
+        elections.some((e: any) => e.id === selectedElection.id);
+
       if (
-        !selectedElection ||
+        !isElectionValid ||
         selectedElection.election_group_id !== selectedElectionGroup.id
       ) {
-        const sortedElections = [...elections].sort(
-          (a: any, b: any) => b.rank - a.rank,
+        const { selectedElection: newSelection } = getAutoSelectedSession(
+          [selectedElectionGroup],
+          elections,
         );
-        dispatch(setSelectedElection(sortedElections[0]));
+        if (newSelection) {
+          dispatch(setSelectedElection(newSelection));
+        }
       }
     }
   }, [elections, selectedElectionGroup, selectedElection, dispatch]);

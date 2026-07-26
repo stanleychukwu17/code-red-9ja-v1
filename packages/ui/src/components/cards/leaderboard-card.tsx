@@ -1,6 +1,7 @@
 import * as React from "react";
 import { cn } from "../../lib/utils";
 import { Check } from "lucide-react";
+import { DoubleAvatar } from "./Rewards";
 
 export function LeaderboardCardWrapper({
   children,
@@ -24,6 +25,8 @@ export function LeaderboardCardWrapper({
 export function LeaderboardCardRow({
   rank,
   avatarUrl,
+  image,
+  image2,
   name,
   partyShortName,
   regionsWinningCount: statesWinningCount,
@@ -31,6 +34,11 @@ export function LeaderboardCardRow({
   className,
 }: {
   rank: number;
+  /** Primary avatar (candidate photo or party logo). Used in DoubleAvatar as image. */
+  image?: string;
+  /** Secondary overlay image (party logo). Used in DoubleAvatar as image2. */
+  image2?: string;
+  /** Legacy single avatar — used only when image is not supplied. */
   avatarUrl?: string;
   name: string;
   partyShortName?: string;
@@ -38,22 +46,27 @@ export function LeaderboardCardRow({
   votesCount: string | number;
   className?: string;
 }) {
+  const hasDoubleAvatar = !!image;
   return (
     <div
       className={cn(
-        "h-[56px] flex items-center justify-between px-4 md:px-6",
+        "h-[56px] flex items-center justify-between px-4 gap-4 md:px-6",
         className,
       )}
     >
       {/* Left: Avatar & Name */}
       <div className="flex items-center gap-4">
-        <div className="size-10 rounded-full overflow-hidden border border-neutral-800 bg-neutral-900 shrink-0">
-          <img
-            src={avatarUrl || "/default-avatar.png"}
-            alt="Avatar"
-            className="w-full h-full object-cover"
-          />
-        </div>
+        {hasDoubleAvatar ? (
+          <DoubleAvatar image={image} image2={image2} />
+        ) : (
+          <div className="size-10 rounded-full overflow-hidden border border-neutral-800 bg-neutral-900 shrink-0">
+            <img
+              src={avatarUrl || "/default-avatar.png"}
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
         <div className="flex items-center">
           <span className={cn("text-white leading-tight")}>
             {name}{" "}
@@ -68,13 +81,13 @@ export function LeaderboardCardRow({
 
       {/* Right: Votes & Rank */}
       <div className="flex items-center gap-6">
-        <span className="text-white font-medium hidden md:block">
-          {statesWinningCount}
-        </span>
-        <span className="md:w-[100px] text-right text-white font-medium">
+        <span className="shrink-0 md:w-[100px] text-right text-white font-medium">
           {votesCount}
         </span>
-        <span className="text-neutral-500 font-semibold w-6 text-right">
+        <span className="md:w-[100px] text-white text-right hidden md:block">
+          {statesWinningCount}
+        </span>
+        <span className="text-neutral-500 font-semibold w-6 text-right md:ml-6">
           #{rank}
         </span>
       </div>

@@ -1,17 +1,14 @@
 import {
-  getElectionCandidates,
-  getPollingUnitFinalResults,
   getPollingUnitUpdates,
+  getPollingUnitFinalResults,
   getElectionStats,
 } from "#/lib/server/elections";
-import {
-  FinalResultReel,
-  ResultOverlayItem,
-} from "./components/-final-result-reel";
+import { getElectionScopedFinalResult } from "#/lib/server/final-results";
+import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
+import { FinalResultReel } from "./components/-final-result-reel";
 import { UpdateReel } from "./components/-update-reel";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useAppContext } from "#/hooks/useAppContext";
-import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import { ActivitiesCard } from "@repo/ui/components/cards/activities-card";
 import { ElectionStatsSidebar } from "@repo/ui/components/cards/election-stats-sidebar";
@@ -27,6 +24,9 @@ import { useServerFn } from "@tanstack/react-start";
 import * as React from "react";
 import { ElectionScopeSelector } from "./components/-election-scope-selector";
 import { HomePageHeader } from "./-header";
+import { InfoCard } from "@repo/ui/components/cards/Rewards";
+import AlertIcon from "@repo/ui/icons/alert-icon";
+import { cn } from "@repo/ui/lib/utils";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/election-day",
@@ -34,6 +34,19 @@ export const Route = createFileRoute(
   head: () => getPageHeader({ title: "Election Day Dashboard" }),
   component: ElectionDayComponent,
 });
+
+// Returns true if today matches electionDate (YYYY-MM-DD)
+function isElectionDay(electionDate?: string | null): boolean {
+  if (!electionDate) return false;
+  const today = new Date().toISOString().split("T")[0];
+  const d = new Date(electionDate).toISOString().split("T")[0];
+  return today === d;
+}
+
+// Returns true if current time is before 4pm local time
+function isBeforeEndOfDay(): boolean {
+  return new Date().getHours() < 16;
+}
 
 function ElectionDayComponent() {
   const {
@@ -45,11 +58,15 @@ function ElectionDayComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-    electionCandidates: candidatesList = [],
     party,
+    electionCandidates,
+    activeParties,
+    isLive,
   } = useAppContext();
+
   const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
   const fetchElectionStatsFn = useServerFn(getElectionStats);
+  const fetchScopedFinalResultFn = useServerFn(getElectionScopedFinalResult);
 
   const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
     queryKey: [
@@ -79,13 +96,49 @@ function ElectionDayComponent() {
     enabled: !!selectedElectionGroup?.id,
   });
 
+  // Fetch scoped election final result
+  const { data: scopedResultData, isLoading: isResultLoading } = useQuery({
+    queryKey: [
+      "election-scoped-final-result",
+      selectedElection?.id,
+      selectedStateId,
+      selectedDistrictId,
+      selectedFederalConstituencyId,
+      selectedStateConstituencyId,
+      selectedLGAId,
+      selectedWardId,
+    ],
+    queryFn: () =>
+      fetchScopedFinalResultFn({
+        data: {
+          electionId: selectedElection?.id as number,
+          wardId: selectedWardId,
+          stateConstituencyId: selectedStateConstituencyId,
+          lgaId: selectedLGAId,
+          federalConstituencyId: selectedFederalConstituencyId,
+          senatorialDistrictId: selectedDistrictId,
+          stateId: selectedStateId,
+        },
+      }),
+    enabled: !!selectedElection?.id,
+  });
+
   const resolvedStats =
     electionStatsData?.data?.party_stats ||
     electionStatsData?.data?.stats ||
     {};
   const targets =
     electionStatsData?.data?.targets || electionStatsData?.data?.stats || {};
-  console.log("ResolvedStats:", resolvedStats);
+
+  const finalResultObj = scopedResultData?.data?.final_result || null;
+
+  const sortedResults = mergeElectionResults({
+    candidates: electionCandidates || [],
+    electionFinalResults: finalResultObj,
+    parties: activeParties.length > 0 ? activeParties : party ? [party] : [],
+    isLive,
+  });
+  console.log({ sortedResults });
 
   return (
     <DashboardLayout>
@@ -94,34 +147,65 @@ function ElectionDayComponent() {
       {/* Filter and Switcher Row */}
       <ElectionScopeSelector />
 
+      <ResultTypeCardInfo isLive={isLive} />
+
       {/* Grid Main Layout */}
       <div className="grid gap-6 lg:grid-cols-[2fr_1.2fr] items-start">
         {/* Left Hand Column */}
         <div className="space-y-6">
-          {/* Leaderboard Card */}
+          {/* Leaderboard Card – scoped election result */}
           <LeaderboardCardWrapper>
-            {candidatesList.length === 0 ? (
+            {isResultLoading ? (
+              <div className="p-6 text-center text-gray-400 text-sm">
+                Loading results…
+              </div>
+            ) : sortedResults.length === 0 ? (
               <div className="p-6 text-center text-gray-500 font-medium">
-                There are no candidates for this election was found.
+                No result data available for this scope yet.
               </div>
             ) : (
-              candidatesList.map((candidate: any, index: number) => (
-                <LeaderboardCardRow
-                  key={candidate.id || index}
-                  rank={index + 1}
-                  avatarUrl={
-                    candidate.avatar ||
-                    "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&h=100&fit=crop"
-                  }
-                  name={
-                    `${candidate.first_name || ""} ${candidate.last_name || ""}`.trim() ||
-                    "Unknown Candidate"
-                  }
-                  partyShortName={candidate.party_short_name || "-"}
-                  regionsWinningCount={"-"}
-                  votesCount={`${candidate.vote_count || 0} votes`}
-                />
-              ))
+              sortedResults.slice(0, 3).map((item: any, index: number) => {
+                const partyShortName: string =
+                  item.party_short_name || item.short_name || "";
+                const candidateName: string | null =
+                  item.name ||
+                  item.candidate_name ||
+                  (item.first_name
+                    ? `${item.first_name} ${item.last_name || ""}`.trim()
+                    : null);
+                const candidateAvatar: string | undefined =
+                  item.candidate_avatar || item.avatar;
+                const partyLogo: string | undefined =
+                  item.party_logo || item.logo;
+                const votes: number = item.votes ?? item.vote_count ?? 0;
+
+                return (
+                  <LeaderboardCardRow
+                    key={partyShortName || index}
+                    rank={index + 1}
+                    image={candidateAvatar || partyLogo}
+                    // image2={candidateAvatar ? partyLogo : undefined}
+                    image2={partyLogo}
+                    name={
+                      candidateName
+                        ? `${candidateName} (${partyShortName})`
+                        : partyShortName
+                    }
+                    regionsWinningCount={
+                      selectedWardId
+                        ? `${item.polling_units_winning_count || 0} PUs`
+                        : selectedLGAId || selectedStateConstituencyId
+                          ? `${item.wards_winning_count || 0} wards`
+                          : selectedStateId ||
+                              selectedDistrictId ||
+                              selectedFederalConstituencyId
+                            ? `${item.lgas_winning_count || 0} LGAs`
+                            : `${item.states_winning_count || 0} states`
+                    }
+                    votesCount={`${votes.toLocaleString()} votes`}
+                  />
+                );
+              })
             )}
             <div className="px-6 w-full my-2">
               <Button
@@ -157,11 +241,68 @@ function ElectionDayComponent() {
 
       {/* Stacked Bottom Sections */}
       <div className="space-y-10 pt-5 pb-24">
-        <FinalResultsGallery />
+        <FinalResultsGallery activeParties={activeParties} />
         <AgentUpdatesGallery />
         <ReportsGallery />
       </div>
     </DashboardLayout>
+  );
+}
+
+function ResultTypeCardInfo({ isLive }: { isLive: boolean }) {
+  const LabelDetails = ({
+    title,
+    subtitle,
+    className,
+  }: {
+    title: string;
+    subtitle: string;
+    className?: string;
+  }) => (
+    <div className={cn("text-[15px] space-y-2 text-primary", className)}>
+      <p>
+        <span className="font-bold">{isLive ? "Live" : "Final"} Results:</span>{" "}
+        {title}
+      </p>
+      <p>
+        <span className="font-bold">Note:</span> {subtitle}
+      </p>
+    </div>
+  );
+
+  if (!isLive) {
+    return (
+      <InfoCard
+        icon={<AlertIcon className="size-6 text-c-80" />}
+        variant="grey"
+        label={
+          <LabelDetails
+            title={
+              "These are final results extracted from uploaded EC8 forms submitted by either INEC, party unit polling agents or voters at their polling unit."
+            }
+            subtitle={"The results for this start coming in anything past 4PM."}
+            className="text-c-80"
+          />
+        }
+      />
+    );
+  }
+
+  return (
+    <InfoCard
+      icon={<AlertIcon className="size-6 text-primary" />}
+      variant="green"
+      label={
+        <LabelDetails
+          title={
+            "These are live voting results from users who have voted at their polling units and decided to indicate who they voted for on Free9ja."
+          }
+          subtitle={
+            "They may not be fully accurate because not everyone reports their vote on Free9ja."
+          }
+        />
+      }
+    />
   );
 }
 
@@ -193,18 +334,27 @@ export function GalleryItem({
     }
   }
 
+  const isVideo = imageSrc?.match(/\.(mp4|webm|ogg|mov)$/i);
+
   return (
     <div className="space-y-2.5 cursor-pointer group" onClick={onClick}>
       {/* Image container */}
       <div className="relative aspect-[2.1/3] w-full rounded-2xl overflow-hidden shadow-xs border border-c-10 bg-border">
-        <img
-          src={imageSrc}
-          alt={title}
-          className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-        />
-        {/* <div className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded-full text-[10px] font-bold text-white shadow-xs">
-          {time}
-        </div> */}
+        {isVideo ? (
+          <video
+            src={`${imageSrc}#t=0.1`}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            preload="metadata"
+            muted
+            playsInline
+          />
+        ) : (
+          <img
+            src={imageSrc}
+            alt={title}
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        )}
         <p className="absolute bottom-3 right-3 text-sm font-bold text-white [text-shadow:_0_0px_8px_rgb(0_0_0_/_0.9)]">
           {displayTime}
         </p>
@@ -212,7 +362,15 @@ export function GalleryItem({
 
       {/* Details sub-row */}
       <div className="flex gap-2 items-start px-0.5">
-        <AppAvatar src={avatarSrc} alt="Avatar" className="size-8" />
+        <div className="size-8 rounded-full overflow-hidden bg-neutral-200 shrink-0">
+          {avatarSrc && (
+            <img
+              src={avatarSrc}
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
+          )}
+        </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-xs text-c-90 truncate leading-tight">
             {title}
@@ -424,7 +582,7 @@ function ReportsGallery() {
   return <UpdatesGallery isReport={true} />;
 }
 
-function FinalResultsGallery() {
+function FinalResultsGallery({ activeParties }: { activeParties?: any[] }) {
   const { partyShortName } = useParams({ strict: false });
   const [selectedResultIndex, setSelectedResultIndex] = React.useState<
     number | null
@@ -529,6 +687,7 @@ function FinalResultsGallery() {
         <FinalResultReel
           result={selectedResult}
           candidatesList={electionCandidates}
+          activeParties={activeParties}
           onClose={() => setSelectedResultIndex(null)}
           onNext={handleNext}
           onPrev={handlePrev}

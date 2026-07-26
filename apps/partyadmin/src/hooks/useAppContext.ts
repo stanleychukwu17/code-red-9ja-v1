@@ -2,8 +2,11 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRouteContext } from "@tanstack/react-router";
-import { getParty } from "#/lib/server/parties";
-import { getElectionCandidates, getElectionsByGroup } from "#/lib/server/elections";
+import { getParty, getPublicParties } from "#/lib/server/parties";
+import {
+  getElectionCandidates,
+  getElectionsByGroup,
+} from "#/lib/server/elections";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
@@ -25,6 +28,8 @@ import {
   setSelectedStateConstituencyId,
   setSelectedLGAId,
   setSelectedWardId,
+  selectIsLive,
+  setIsLive,
 } from "#/redux/slice/electionSlice";
 
 export interface PartyDetails {
@@ -172,14 +177,56 @@ export const useAppContext = () => {
   const selectedCountryId = useAppSelector(selectSelectedCountryId);
   const selectedStateId = useAppSelector(selectSelectedStateId);
   const selectedDistrictId = useAppSelector(selectSelectedDistrictId);
-  const selectedFederalConstituencyId = useAppSelector(selectSelectedFederalConstituencyId);
-  const selectedStateConstituencyId = useAppSelector(selectSelectedStateConstituencyId);
+  const selectedFederalConstituencyId = useAppSelector(
+    selectSelectedFederalConstituencyId,
+  );
+  const selectedStateConstituencyId = useAppSelector(
+    selectSelectedStateConstituencyId,
+  );
   const selectedLGAId = useAppSelector(selectSelectedLGAId);
   const selectedWardId = useAppSelector(selectSelectedWardId);
   const electionCandidates = useElectionCandidates();
+  const isLive = useAppSelector(selectIsLive);
+
+  // Returns true if today matches electionDate (YYYY-MM-DD)
+  const isElectionDay = (electionDate?: string | null): boolean => {
+    if (!electionDate) return false;
+    const today = new Date().toISOString().split("T")[0];
+    const d = new Date(electionDate).toISOString().split("T")[0];
+    return today === d;
+  };
+
+  // Returns true if current time is before 4pm local time
+  const isBeforeEndOfDay = (): boolean => {
+    return new Date().getHours() < 16;
+  };
+
+  const electionDay = isElectionDay(selectedElectionGroup?.election_date);
+
+  // Auto-switch to false after 4pm (check on mount and whenever tab gains focus)
+  useEffect(() => {
+    if (!electionDay) return;
+    const checkTime = () => {
+      if (!isBeforeEndOfDay()) dispatch(setIsLive(false));
+    };
+    checkTime();
+    window.addEventListener("focus", checkTime);
+    const interval = setInterval(checkTime, 60_000); // re-check every minute
+    return () => {
+      window.removeEventListener("focus", checkTime);
+      clearInterval(interval);
+    };
+  }, [electionDay, dispatch]);
 
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElections = useServerFn(getElectionsByGroup);
+  const fetchPublicParties = useServerFn(getPublicParties);
+
+  const { data: publicPartiesData } = useQuery({
+    queryKey: ["public-parties"],
+    queryFn: () => fetchPublicParties(),
+  });
+  const activeParties = publicPartiesData?.data?.parties || [];
 
   const { data: groupsData } = useQuery({
     queryKey: ["election-groups"],
@@ -239,23 +286,36 @@ export const useAppContext = () => {
     party,
     selectedElectionGroup,
     selectedElection,
-    setSelectedElectionGroup: (group: any | null) => dispatch(setSelectedElectionGroup(group)),
-    setSelectedElection: (election: any | null) => dispatch(setSelectedElection(election)),
+    setSelectedElectionGroup: (group: any | null) =>
+      dispatch(setSelectedElectionGroup(group)),
+    setSelectedElection: (election: any | null) =>
+      dispatch(setSelectedElection(election)),
     selectedCountryId,
-    setSelectedCountryId: (id: number | undefined) => dispatch(setSelectedCountryId(id)),
+    setSelectedCountryId: (id: number | undefined) =>
+      dispatch(setSelectedCountryId(id)),
     selectedStateId,
-    setSelectedStateId: (id: number | undefined) => dispatch(setSelectedStateId(id)),
+    setSelectedStateId: (id: number | undefined) =>
+      dispatch(setSelectedStateId(id)),
     selectedDistrictId,
-    setSelectedDistrictId: (id: number | undefined) => dispatch(setSelectedDistrictId(id)),
+    setSelectedDistrictId: (id: number | undefined) =>
+      dispatch(setSelectedDistrictId(id)),
     selectedFederalConstituencyId,
-    setSelectedFederalConstituencyId: (id: number | undefined) => dispatch(setSelectedFederalConstituencyId(id)),
+    setSelectedFederalConstituencyId: (id: number | undefined) =>
+      dispatch(setSelectedFederalConstituencyId(id)),
     selectedStateConstituencyId,
-    setSelectedStateConstituencyId: (id: number | undefined) => dispatch(setSelectedStateConstituencyId(id)),
+    setSelectedStateConstituencyId: (id: number | undefined) =>
+      dispatch(setSelectedStateConstituencyId(id)),
     selectedLGAId,
-    setSelectedLGAId: (id: number | undefined) => dispatch(setSelectedLGAId(id)),
+    setSelectedLGAId: (id: number | undefined) =>
+      dispatch(setSelectedLGAId(id)),
     selectedWardId,
-    setSelectedWardId: (id: number | undefined) => dispatch(setSelectedWardId(id)),
+    setSelectedWardId: (id: number | undefined) =>
+      dispatch(setSelectedWardId(id)),
     electionCandidates,
+    activeParties,
+    isLive,
+    setIsLive: (v: boolean) => dispatch(setIsLive(v)),
+    electionDay,
   };
 };
 

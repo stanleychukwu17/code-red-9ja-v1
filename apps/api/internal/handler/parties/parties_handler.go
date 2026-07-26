@@ -216,6 +216,73 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// ListPartiesPublic godoc
+// @Summary      List public political parties
+// @Description  Fetches a list of political parties ordered by ID, returns only basic fields.
+// @Tags         Parties
+// @Accept       json
+// @Produce      json
+// @Param        order_by query string false "Order by field (default: display_order, enum: display_order, name, short_name)"
+// @Param        order    query string false "Order direction (default: ASC, enum: ASC, DESC)"
+// @Success      200  {object} map[string]interface{} "Parties fetched successfully"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Router       /parties/public [get]
+func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
+	parties, err := h.partiesService.ListParties(r.Context())
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch parties: "+err.Error())
+		return
+	}
+
+	orderBy, orderDir := parseSortParams(r, "display_order", "ASC")
+
+	sort.SliceStable(parties, func(i, j int) bool {
+		var less bool
+		if orderBy == "name" {
+			less = parties[i].Name < parties[j].Name
+		} else if orderBy == "short_name" {
+			less = parties[i].ShortName < parties[j].ShortName
+		} else {
+			less = parties[i].DisplayOrder < parties[j].DisplayOrder
+		}
+		if orderDir == "DESC" {
+			return !less
+		}
+		return less
+	})
+
+	type PartyPublic struct {
+		ID           int16  `json:"id"`
+		ShortName    string `json:"short_name"`
+		Name         string `json:"name"`
+		Logo         string `json:"logo"`
+		DisplayOrder int32  `json:"display_order"`
+		Status       string `json:"status"`
+		IsVerified   bool   `json:"is_verified"`
+	}
+
+	var publicParties []PartyPublic
+	for _, p := range parties {
+		publicParties = append(publicParties, PartyPublic{
+			ID:           p.ID,
+			ShortName:    p.ShortName,
+			Name:         p.Name,
+			Logo:         p.Logo,
+			DisplayOrder: p.DisplayOrder,
+			Status:       p.Status,
+			IsVerified:   p.IsVerified.Bool,
+		})
+	}
+
+	h.utils.RespondJSON(w, http.StatusOK, map[string]interface{}{
+		"success": true,
+		"message": "Public parties fetched successfully",
+		"data": map[string]interface{}{
+			"parties": publicParties,
+		},
+	})
+}
+
 // GetParty godoc
 // @Summary      Get a political party by ID
 // @Description  Retrieves details of a single political party using its unique database ID

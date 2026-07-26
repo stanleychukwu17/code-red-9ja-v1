@@ -3017,22 +3017,22 @@ func (_m *Querier) GetPollingUnitByID(ctx context.Context, id int32) (queries.Po
 }
 
 // GetPollingUnitFinalResult provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetPollingUnitFinalResult(ctx context.Context, arg queries.GetPollingUnitFinalResultParams) (queries.PollingUnitFinalResult, error) {
+func (_m *Querier) GetPollingUnitFinalResult(ctx context.Context, arg queries.GetPollingUnitFinalResultParams) (queries.ElectionPollingUnitFinalResult, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetPollingUnitFinalResult")
 	}
 
-	var r0 queries.PollingUnitFinalResult
+	var r0 queries.ElectionPollingUnitFinalResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPollingUnitFinalResultParams) (queries.PollingUnitFinalResult, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPollingUnitFinalResultParams) (queries.ElectionPollingUnitFinalResult, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPollingUnitFinalResultParams) queries.PollingUnitFinalResult); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetPollingUnitFinalResultParams) queries.ElectionPollingUnitFinalResult); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.PollingUnitFinalResult)
+		r0 = ret.Get(0).(queries.ElectionPollingUnitFinalResult)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.GetPollingUnitFinalResultParams) error); ok {
@@ -6871,22 +6871,22 @@ func (_m *Querier) UpsertPartyElectionGroupStats(ctx context.Context, arg querie
 }
 
 // UpsertPollingUnitFinalResult provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpsertPollingUnitFinalResult(ctx context.Context, arg queries.UpsertPollingUnitFinalResultParams) (queries.PollingUnitFinalResult, error) {
+func (_m *Querier) UpsertPollingUnitFinalResult(ctx context.Context, arg queries.UpsertPollingUnitFinalResultParams) (queries.ElectionPollingUnitFinalResult, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpsertPollingUnitFinalResult")
 	}
 
-	var r0 queries.PollingUnitFinalResult
+	var r0 queries.ElectionPollingUnitFinalResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertPollingUnitFinalResultParams) (queries.PollingUnitFinalResult, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertPollingUnitFinalResultParams) (queries.ElectionPollingUnitFinalResult, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertPollingUnitFinalResultParams) queries.PollingUnitFinalResult); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpsertPollingUnitFinalResultParams) queries.ElectionPollingUnitFinalResult); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.PollingUnitFinalResult)
+		r0 = ret.Get(0).(queries.ElectionPollingUnitFinalResult)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, queries.UpsertPollingUnitFinalResultParams) error); ok {

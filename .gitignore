@@ -50,3 +50,7 @@ states/polling-units.json
 crash.log
 terraform.tfvars
 terraform.tfvars.json
+
+
+# Custom
+todos.txt

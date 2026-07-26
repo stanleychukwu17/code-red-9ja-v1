@@ -10,6 +10,7 @@ import {
 } from "@repo/ui/components/selects/election-group-and-election-select";
 import { HeaderTabs } from "@repo/ui/components/custom/AdminLayouts";
 import { APP_URL } from "#/lib/config";
+import { ResultModeToggle } from "./components/-result-mode-toggle";
 
 export function HomePageHeader({
   activeTab,
@@ -22,6 +23,9 @@ export function HomePageHeader({
     selectedElectionGroup,
     setSelectedElectionGroup,
     setSelectedElection,
+    isLive,
+    setIsLive,
+    electionDay,
   } = useAppContext();
   const partyId = party?.id;
 
@@ -29,7 +33,11 @@ export function HomePageHeader({
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
   const tabs = [
-    { id: "main", label: "Main", href: APP_URL.partyRoutes.home((partyShortName as string) || "party") },
+    {
+      id: "main",
+      label: "Main",
+      href: APP_URL.partyRoutes.home((partyShortName as string) || "party"),
+    },
     {
       id: "election-day",
       label: "Election day",
@@ -41,7 +49,11 @@ export function HomePageHeader({
     <div className="flex items-center justify-between gap-4 pt-5">
       <HeaderTabs activeTab={activeTab} tabs={tabs} />
 
-      <div className="">
+      <div className="flex items-center gap-4">
+        {/* isLive toggle — only shown on election day */}
+        {electionDay && (
+          <ResultModeToggle isLive={isLive} setIsLive={setIsLive} />
+        )}
         <SelectElectionGroupAndElection
           fetchElectionGroups={fetchGroups}
           fetchElectionsByGroup={fetchElectionsByGroup}
@@ -52,7 +64,7 @@ export function HomePageHeader({
             setSelectedElection(election);
           }}
           partyId={partyId}
-        // className="h-12 rounded-[12px] bg-c-20 border-0 hover:bg-c-10 ring-0 hover:ring-0 shadow-none hover:shadow-none focus:ring-0 focus-visible:ring-0 px-5 text-[18px] text-c-80"
+          // className="h-12 rounded-[12px] bg-c-20 border-0 hover:bg-c-10 ring-0 hover:ring-0 shadow-none hover:shadow-none focus:ring-0 focus-visible:ring-0 px-5 text-[18px] text-c-80"
         />
       </div>
     </div>

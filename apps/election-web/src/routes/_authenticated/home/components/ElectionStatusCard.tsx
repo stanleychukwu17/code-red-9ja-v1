@@ -1,5 +1,6 @@
 import { Button } from "@repo/ui/components/button";
-import { GreyCardTitle, PayoutCardWrapper } from "./Shared";
+import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
+import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 
 interface ElectionStatusCardProps {
   hasStarted?: boolean;
@@ -13,7 +14,12 @@ export function ElectionStatusCard({
   onEndClick,
 }: ElectionStatusCardProps) {
   return (
-    <PayoutCardWrapper amount="+₦****">
+    <GreyCardWrapper>
+      <GreyCardTopRow
+        title={"Potential payout"}
+        subtitle={"₦1,200"}
+        icon={<FancyMoneyBagIcon className="size-5" />}
+      />
       <GreyCardTitle
         label={
           hasStarted
@@ -30,6 +36,6 @@ export function ElectionStatusCard({
       >
         {hasStarted ? "Yes, it has ended" : "Yes, it has started"}
       </Button>
-    </PayoutCardWrapper>
+    </GreyCardWrapper>
   );
 }

@@ -3,7 +3,7 @@ import { Play, TriangleAlert, X, Plus } from "lucide-react";
 import { useState, useRef } from "react";
 import { PageHeader } from "#/components/Headers";
 import { TitleText, DescriptiveText } from "@repo/ui/components/custom/Texts";
-import { RewardCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
+import { InfoCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
 import { Button } from "@repo/ui/components/button";
 import { StickyFooter } from "#/components/Footers";
 import { PageWrapper } from "#/components/Wrappers";
@@ -165,17 +165,17 @@ function ElectionEndVideo() {
         <div className="flex flex-col gap-3 mt-6">
           {!videoFile && (
             <>
-              <RewardCard
+              <InfoCard
                 label="Video must be within 10 to 60 seconds."
                 className="font-medium"
                 icon={<AlertIcon />}
               />
-              <RewardCard
+              <InfoCard
                 label="Please ensure you capture the polling unit environment, including INEC officials and the voting line."
                 className="font-medium"
                 icon={<AlertIcon />}
               />
-              <RewardCard
+              <InfoCard
                 label="Polling unit agents that don't upload this evidence will not be paid."
                 className="font-medium"
                 icon={<AlertIcon />}

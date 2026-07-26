@@ -27,9 +27,9 @@ import (
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
 	officeshandler "free9ja/api/internal/handler/offices"
+	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
 	partyapplicationshandler "free9ja/api/internal/handler/party_applications"
-	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	puassignmentshandler "free9ja/api/internal/handler/polling_unit_assignments"
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
@@ -53,9 +53,9 @@ import (
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
+	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
 	partyapplications "free9ja/api/internal/service/party_applications"
-	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	puassignments "free9ja/api/internal/service/polling_unit_assignments"
 	puresults "free9ja/api/internal/service/polling_unit_results"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -226,8 +226,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/elections/results/lgas", electionResultsHandler.GetLGAsWithResults)
 	mainRouter.Get("/api/v1/elections/results/wards", electionResultsHandler.GetWardsWithResults)
 	mainRouter.Get("/api/v1/elections/results/polling-units", electionResultsHandler.GetPollingUnitsWithResults)
+	mainRouter.Get("/api/v1/elections/results", electionResultsHandler.GetElectionFinalResult)
 
 	// political parties public routes
+	mainRouter.Get("/api/v1/parties/public", partiesHandler.ListPartiesPublic)
 	mainRouter.Get("/api/v1/parties", partiesHandler.ListParties)
 	mainRouter.Get("/api/v1/parties/{id}", partiesHandler.GetParty)
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)

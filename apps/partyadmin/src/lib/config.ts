@@ -16,7 +16,7 @@ export const APP_URL = {
     applications: (party: string) => `/${party}/applications`,
     members: (party: string) => `/${party}/party-members`,
     wallet: (party: string) => `/${party}/wallet`,
-  }
+  },
 } as const;
 
 const api = `${API_BASE}/api/v1`;
@@ -75,32 +75,57 @@ export const API_URL = {
   electionResultsLGAs: `${api}/elections/results/lgas`,
   electionResultsWards: `${api}/elections/results/wards`,
   electionResultsPollingUnits: `${api}/elections/results/polling-units`,
+  electionResultsScoped: `${api}/elections/results`,
   electionStats: {
     singleGlobalStats: (id: number | string, partyId?: number | string) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats${qs}`;
     },
-    singleStateStats: (id: number | string, stateId: number | string, partyId?: number | string) => {
+    singleStateStats: (
+      id: number | string,
+      stateId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/states/${stateId}${qs}`;
     },
-    singleSenatorialDistrictStats: (id: number | string, sdId: number | string, partyId?: number | string) => {
+    singleSenatorialDistrictStats: (
+      id: number | string,
+      sdId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/senatorial-districts/${sdId}${qs}`;
     },
-    singleFederalConstituencyStats: (id: number | string, fcId: number | string, partyId?: number | string) => {
+    singleFederalConstituencyStats: (
+      id: number | string,
+      fcId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/federal-constituencies/${fcId}${qs}`;
     },
-    singleStateConstituencyStats: (id: number | string, scId: number | string, partyId?: number | string) => {
+    singleStateConstituencyStats: (
+      id: number | string,
+      scId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/state-constituencies/${scId}${qs}`;
     },
-    singleLGAStats: (id: number | string, lgaId: number | string, partyId?: number | string) => {
+    singleLGAStats: (
+      id: number | string,
+      lgaId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/lgas/${lgaId}${qs}`;
     },
-    singleWardStats: (id: number | string, wardId: number | string, partyId?: number | string) => {
+    singleWardStats: (
+      id: number | string,
+      wardId: number | string,
+      partyId?: number | string,
+    ) => {
       const qs = partyId ? `?party_id=${partyId}` : "";
       return `${api}/election-groups/${id}/stats/wards/${wardId}${qs}`;
     },

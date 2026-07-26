@@ -25,7 +25,7 @@ import { CandidatesLeaderboard } from "../components/Leaderboard";
 import { PracticeTestCard } from "../components/PracticeTestCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
-
+import { MyPollingUnit } from "../components/MyPollingUnit";
 export function GeneralPage() {
   const navigate = useNavigate();
   const { selectedElectionGroup, selectedElection } = useAuth();
@@ -82,10 +82,22 @@ export function GeneralPage() {
     },
   ];
 
+  let headerTitle = "Objectives";
+  let headerRightText = "";
+  if (carouselIndex === 0) {
+    headerTitle = "Objectives";
+    const completed = objectives.filter((o) => o.isCompleted).length;
+    headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
+  } else if (carouselIndex === 1) {
+    headerTitle = "Elections";
+    headerRightText = "";
+  }
+
   return (
     <div className="w-full min-h-screen">
       <HomeHeader daysLeft={daysLeft} />
-      <HomeHeader2 title="Objectives" rightText="20%" />
+      <MyPollingUnit />
+      <HomeHeader2 title={headerTitle} rightText={headerRightText} />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
@@ -113,7 +125,7 @@ export function GeneralPage() {
             </LeaderboardCardWrapper>
           </CarouselItem>
           <CarouselItem>
-            <CandidatesLeaderboard electionId={selectedElection?.id} />
+            <CandidatesLeaderboard />
           </CarouselItem>
         </CarouselContent>
       </Carousel>

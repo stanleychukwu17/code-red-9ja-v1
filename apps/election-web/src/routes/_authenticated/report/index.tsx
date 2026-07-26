@@ -1,4 +1,4 @@
-import { RewardCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
+import { InfoCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
 import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
@@ -205,7 +205,7 @@ function ReportIrregularities() {
           <TitleText text="Report any irregularities taking place at your polling unit" />
 
           <div className="flex flex-col gap-3 mt-6">
-            <RewardCard
+            <InfoCard
               label="The value of your report will be determined upon review"
               value="₦???"
             />

@@ -220,6 +220,20 @@ export const API_URL = {
   electionsLga: `${api}/elections/lga`,
   electionsWard: `${api}/elections/ward`,
 
+  stateFinalResults: `${api}/state-final-results`,
+  senatorialDistrictFinalResults: `${api}/senatorial-district-final-results`,
+  federalConstituencyFinalResults: `${api}/federal-constituency-final-results`,
+  stateConstituencyFinalResults: `${api}/state-constituency-final-results`,
+  lgaFinalResults: `${api}/lga-final-results`,
+  wardFinalResults: `${api}/ward-final-results`,
+  electionResultsStates: `${api}/elections/results/states`,
+  electionResultsSenatorialDistricts: `${api}/elections/results/senatorial-districts`,
+  electionResultsFederalConstituencies: `${api}/elections/results/federal-constituencies`,
+  electionResultsLGAs: `${api}/elections/results/lgas`,
+  electionResultsWards: `${api}/elections/results/wards`,
+  electionResultsPollingUnits: `${api}/elections/results/polling-units`,
+  electionResultsScoped: `${api}/elections/results`,
+
   adminUsers: `${api}/admin/users`,
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
 

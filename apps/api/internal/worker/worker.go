@@ -87,17 +87,17 @@ func (processor *RedisTaskProcessor) Start() error {
 	if !statsEnabled {
 		slog.Warn("STATS_REFRESH_ENABLED=false — skipping all stats cron registration (dev mode)")
 	} else {
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
-		processor.cron.AddFunc("*/11 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
 
 		// Geographic Stats: event-driven cascade is the primary mechanism.
 		// This cron is a 30-minute safety-net fallback for any missed cascades.
-		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRefreshAllElectionStats)
+		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRefreshAllElectionStats)
 	}
 
 	processor.cron.Start()

@@ -28,7 +28,7 @@ import { HomeBody } from "../components/Shared";
 import { SupervisorStartDutyCard } from "../components/SupervisorReadyCard";
 import { WardSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
-
+import { MyPollingUnit } from "../components/MyPollingUnit";
 export function WardElectionSupervisorPage() {
   const navigate = useNavigate();
   const {
@@ -67,7 +67,12 @@ export function WardElectionSupervisorPage() {
   }
 
   const { data: statsRes } = useQuery({
-    queryKey: ["wardStats", selectedElectionGroup?.id, currentAssignment?.ward_id, currentAssignment?.party_id],
+    queryKey: [
+      "wardStats",
+      selectedElectionGroup?.id,
+      currentAssignment?.ward_id,
+      currentAssignment?.party_id,
+    ],
     queryFn: () =>
       getSingleWardStats({
         data: {
@@ -76,7 +81,10 @@ export function WardElectionSupervisorPage() {
           party_id: currentAssignment!.party_id!,
         },
       }),
-    enabled: !!selectedElectionGroup?.id && !!currentAssignment?.ward_id && !!currentAssignment?.party_id,
+    enabled:
+      !!selectedElectionGroup?.id &&
+      !!currentAssignment?.ward_id &&
+      !!currentAssignment?.party_id,
   });
 
   const partyStats = statsRes?.data?.party_stats || {};
@@ -87,13 +95,16 @@ export function WardElectionSupervisorPage() {
       title: "Polling agents coverage",
       rightText: `${partyStats.unique_pu_agents_count || 0}`,
       rightText2: `/ ${targets.polling_units_count || 0}`,
-      isCompleted: (partyStats.unique_pu_agents_count || 0) >= (targets.polling_units_count || 0),
+      isCompleted:
+        (partyStats.unique_pu_agents_count || 0) >=
+        (targets.polling_units_count || 0),
     },
     {
       title: "Election day practice test",
       rightText: `${partyStats.pu_election_practice_test_readiness_percentage || 0}%`,
       rightText2: "",
-      isCompleted: (partyStats.pu_election_practice_test_readiness_percentage || 0) == 100,
+      isCompleted:
+        (partyStats.pu_election_practice_test_readiness_percentage || 0) == 100,
     },
   ];
 
@@ -102,7 +113,9 @@ export function WardElectionSupervisorPage() {
       title: "Agents that are at their PU",
       rightText: `${partyStats.pu_agents_in_attendance_count || 0}`,
       rightText2: `/ ${partyStats.pu_agents_count || 0}`,
-      isCompleted: (partyStats.pu_agents_in_attendance_count || 0) >= (partyStats.pu_agents_count || 1),
+      isCompleted:
+        (partyStats.pu_agents_in_attendance_count || 0) >=
+        (partyStats.pu_agents_count || 1),
     },
     {
       title: "PU election have started in",
@@ -130,10 +143,26 @@ export function WardElectionSupervisorPage() {
     },
   ];
 
+  let headerTitle = "Readiness";
+  let headerRightText = "";
+  if (carouselIndex === 0) {
+    headerTitle = "Readiness";
+    const completed = readiness.filter((r) => r.isCompleted).length;
+    headerRightText = `${Math.round((completed / Math.max(readiness.length, 1)) * 100)}%`;
+  } else if (carouselIndex === 1) {
+    headerTitle = "Objectives";
+    const completed = objectives.filter((o) => o.isCompleted).length;
+    headerRightText = `${Math.round((completed / Math.max(objectives.length, 1)) * 100)}%`;
+  } else if (carouselIndex === 2) {
+    headerTitle = "Elections";
+    headerRightText = "";
+  }
+
   return (
     <div className="w-full min-h-screen">
       <HomeHeader daysLeft={daysLeft} />
-      <HomeHeader2 title="Objectives" rightText="20%" />
+      <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+      <MyPollingUnit />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
@@ -187,7 +216,7 @@ export function WardElectionSupervisorPage() {
             </LeaderboardCardWrapper>
           </CarouselItem>
           <CarouselItem>
-            <CandidatesLeaderboard electionId={selectedElection?.id} />
+            <CandidatesLeaderboard />
           </CarouselItem>
         </CarouselContent>
       </Carousel>

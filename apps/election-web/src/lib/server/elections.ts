@@ -451,7 +451,7 @@ export const getEligibleElections = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(
-        `${API_URL.electionGroups}/${data.electionGroupId}/eligible-elections?polling_unit_id=${data.pollingUnitId}`
+        `${API_URL.elections}/eligible?election_group_id=${data.electionGroupId}&polling_unit_id=${data.pollingUnitId}`
       );
       const resData = await response.json();
       return resData;
@@ -467,7 +467,7 @@ export const submitVotes = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(`${API_URL.elections}/submit-votes`, {
+      const response = await apiFetch(`${API_URL.elections}/votes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

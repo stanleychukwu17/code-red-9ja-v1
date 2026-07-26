@@ -15,6 +15,7 @@ export interface ElectionState {
   selectedElection: any | null;
   selectedCountryId: number | undefined;
   electionScopes: Record<number, ElectionSelections>;
+  isLive: boolean;
 }
 
 const safeGetLocalStorage = <T>(key: string, defaultValue: T): T => {
@@ -42,6 +43,7 @@ const initialState: ElectionState = {
   selectedElection: safeGetLocalStorage("partyadmin-selected-election", null),
   selectedCountryId: safeGetLocalStorage("partyadmin-selected-country-id", 161),
   electionScopes: safeGetLocalStorage("partyadmin-election-scopes", {}),
+  isLive: safeGetLocalStorage("partyadmin-is-live", true),
 };
 
 export const electionSlice = createSlice({
@@ -108,6 +110,10 @@ export const electionSlice = createSlice({
         safeSetLocalStorage("partyadmin-election-scopes", state.electionScopes);
       }
     },
+    setIsLive: (state, action: PayloadAction<boolean>) => {
+      state.isLive = action.payload;
+      safeSetLocalStorage("partyadmin-is-live", action.payload);
+    },
   },
 });
 
@@ -121,12 +127,14 @@ export const {
   setSelectedStateConstituencyId,
   setSelectedLGAId,
   setSelectedWardId,
+  setIsLive,
 } = electionSlice.actions;
 
 // Selectors
 export const selectSelectedElectionGroup = (state: RootState) => state.election.selectedElectionGroup;
 export const selectSelectedElection = (state: RootState) => state.election.selectedElection;
 export const selectSelectedCountryId = (state: RootState) => state.election.selectedCountryId;
+export const selectIsLive = (state: RootState) => state.election.isLive;
 
 export const selectCurrentSelections = (state: RootState) => {
   const electionId = state.election.selectedElection?.id;

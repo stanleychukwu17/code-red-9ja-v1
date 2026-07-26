@@ -47,7 +47,7 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
               setSelectedElectionGroup(group);
               setSelectedElection(election);
             }}
-            className="border-none shadow-none bg-transparent hover:bg-transparent px-0 font-semibold text-c-900 p-0 h-auto"
+            className="border-none ring-0 text-sm shadow-none bg-transparent hover:bg-transparent px-0 font-semibold text-c-900 p-0 h-auto"
           />
         </div>
       </div>
