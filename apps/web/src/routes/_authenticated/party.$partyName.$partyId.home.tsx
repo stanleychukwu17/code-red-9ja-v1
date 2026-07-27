@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Users, UserPlus, Check, Star, MapPin, Loader2 } from 'lucide-react';
+import { Users, UserPlus, Check, Star, MapPin } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getPartyProfile } from '@/lib/server/parties';
 import { Skeleton } from "@repo/ui/components/skeleton";
