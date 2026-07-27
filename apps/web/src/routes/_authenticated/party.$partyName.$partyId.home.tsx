@@ -125,7 +125,7 @@ function PartyHomeComponent() {
         {/* Content Tabs (Mock) */}
         <div className="mt-8">
           <div className="flex border-b border-neutral-200 dark:border-neutral-800 gap-8 overflow-x-auto hide-scrollbar">
-            {['Home', 'Internal', 'Members', 'About', 'Candidates', 'Manifesto', 'Updates'].map((tab, i) => (
+            {['Home', 'Internal', 'Members', 'Chapters', 'Executives', 'Offices', 'Groups', 'About', 'Candidates', 'Manifesto', 'Updates'].map((tab, i) => (
               <button
                 key={tab}
                 className={`pb-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${i === 0
