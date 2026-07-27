@@ -1,7 +1,7 @@
 -- +goose Up
 
 CREATE TABLE non_voting_reasons (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  id SMALLINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   reason VARCHAR(255) UNIQUE NOT NULL,
   usage_count INT NOT NULL DEFAULT 0,
 
@@ -25,7 +25,7 @@ CREATE TABLE did_not_vote_reasons (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   election_group_id BIGINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
-  non_voting_reason_id BIGINT REFERENCES non_voting_reasons(id) ON DELETE SET NULL,
+  non_voting_reason_id SMALLINT REFERENCES non_voting_reasons(id) ON DELETE SET NULL,
   explanation TEXT,
 
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
@@ -56,6 +56,9 @@ CREATE TABLE election_votes (
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, election_id)
 );
+
+CREATE INDEX idx_election_votes_user_group ON election_votes (user_id, election_group_id);
+CREATE INDEX idx_election_votes_election_pu ON election_votes (election_id, polling_unit_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS election_votes;

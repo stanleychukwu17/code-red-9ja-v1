@@ -19,6 +19,8 @@ CREATE TABLE user_wallets (
   updated_at            TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_user_wallets_status ON user_wallets(status);
+
 -- Immutable ledger of every credit/debit against a user wallet.
 -- Each row corresponds to one Monnify webhook event or manual/payout transaction.
 CREATE TABLE user_wallet_transactions (

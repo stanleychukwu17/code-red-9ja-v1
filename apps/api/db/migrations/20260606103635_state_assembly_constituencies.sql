@@ -15,6 +15,10 @@ CREATE TABLE IF NOT EXISTS state_assembly_constituencies (
 );
 
 CREATE INDEX idx_state_assembly_constituencies_name ON state_assembly_constituencies (name);
+CREATE INDEX idx_state_assembly_constituencies_lga_id ON state_assembly_constituencies (lga_id);
+CREATE INDEX idx_state_assembly_constituencies_state_id ON state_assembly_constituencies (state_id);
+CREATE INDEX idx_state_assembly_constituencies_senatorial_district_id ON state_assembly_constituencies (senatorial_district_id);
+CREATE INDEX idx_state_assembly_constituencies_federal_constituency_id ON state_assembly_constituencies (federal_constituency_id);
 
 INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name) VALUES
 -- ============================================================

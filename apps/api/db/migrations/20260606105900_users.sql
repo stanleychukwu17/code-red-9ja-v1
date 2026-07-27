@@ -17,17 +17,16 @@ CREATE TABLE users (
 
   whatsapp_phone VARCHAR(25),
   data_phone VARCHAR(25),
+  voters_card_image VARCHAR(255),
 
   current_country SMALLINT REFERENCES c_countries(id) NOT NULL,
   current_state SMALLINT REFERENCES c_states(id) NOT NULL,
+  current_city INT REFERENCES c_cities(id),
   current_lga INTEGER REFERENCES lgas(id) ON DELETE SET NULL,
   current_ward INTEGER REFERENCES wards(id) ON DELETE SET NULL,
-  current_city INT REFERENCES c_cities(id),
   address VARCHAR(255),
 
   state_of_origin SMALLINT REFERENCES c_states(id),
-
-  voters_card_image VARCHAR(255),
 
   is_politician BOOLEAN DEFAULT false,
   is_verified BOOLEAN DEFAULT false,
@@ -61,9 +60,8 @@ CREATE TABLE users (
 
 CREATE INDEX idx_users_party_id ON users(party_id);
 CREATE INDEX idx_users_polling_unit_id ON users(polling_unit_id);
-CREATE INDEX idx_users_account_status ON users(account_status);
 CREATE INDEX idx_users_is_politician ON users(is_politician);
-CREATE INDEX idx_users_is_verified ON users(is_verified);
+CREATE INDEX idx_users_account_status ON users(account_status);
 
 -- USER BANK ACCOUNTS TABLE
 CREATE TABLE user_bank_accounts (
@@ -75,6 +73,8 @@ CREATE TABLE user_bank_accounts (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX idx_user_bank_accounts_user_id ON user_bank_accounts(user_id);
 
 -- USERS NIN TABLE
 CREATE TABLE users_nin (
@@ -136,8 +136,6 @@ CREATE TABLE user_verifications (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
-
-ALTER TABLE users ALTER COLUMN id RESTART WITH 8;
 
 -- +goose Down
 DROP TABLE IF EXISTS user_verifications;

@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS lga_election_supervisors (
 );
 
 CREATE INDEX idx_lga_supervisors_user ON lga_election_supervisors(user_id);
+CREATE INDEX idx_lga_supervisors_state ON lga_election_supervisors(state_id);
 CREATE INDEX idx_lga_supervisors_party ON lga_election_supervisors(party_id);
 CREATE INDEX idx_lga_supervisors_lga ON lga_election_supervisors(lga_id);
 CREATE INDEX idx_lga_supervisors_election_group ON lga_election_supervisors(election_group_id);
@@ -76,6 +77,8 @@ CREATE TABLE IF NOT EXISTS ward_election_supervisors (
 );
 
 CREATE INDEX idx_ward_supervisors_user ON ward_election_supervisors(user_id);
+CREATE INDEX idx_ward_supervisors_state ON ward_election_supervisors(state_id);
+CREATE INDEX idx_ward_supervisors_lga ON ward_election_supervisors(lga_id);
 CREATE INDEX idx_ward_supervisors_party ON ward_election_supervisors(party_id);
 CREATE INDEX idx_ward_supervisors_ward ON ward_election_supervisors(ward_id);
 CREATE INDEX idx_ward_supervisors_election_group ON ward_election_supervisors(election_group_id);

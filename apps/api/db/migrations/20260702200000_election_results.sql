@@ -61,8 +61,7 @@ CREATE TABLE polling_unit_results (
 );
 
 -- One result per election per polling unit from a specific user
-CREATE UNIQUE INDEX uq_result_submission
-  ON polling_unit_results (election_id, polling_unit_id, submitted_by);
+CREATE UNIQUE INDEX uq_result_submission ON polling_unit_results (election_id, polling_unit_id, submitted_by);
 
 -- Indexes for common query patterns
 CREATE INDEX idx_pu_results_election       ON polling_unit_results(election_id);
@@ -70,16 +69,8 @@ CREATE INDEX idx_pu_results_election_group ON polling_unit_results(election_grou
 CREATE INDEX idx_pu_results_pu             ON polling_unit_results(polling_unit_id);
 CREATE INDEX idx_pu_results_party_group    ON polling_unit_results(party_id, election_group_id);
 CREATE INDEX idx_pu_results_submitted_by   ON polling_unit_results(submitted_by);
-CREATE INDEX idx_pu_results_state          ON polling_unit_results(state_id);
-CREATE INDEX idx_pu_results_lga            ON polling_unit_results(lga_id);
+CREATE INDEX idx_pu_results_location       ON polling_unit_results(state_id, lga_id, ward_id);
 CREATE INDEX idx_pu_results_status         ON polling_unit_results(status);
-
-
--- Add a lifecycle status to elections so the API knows when to accept result submissions
-ALTER TABLE elections
-  ADD COLUMN status VARCHAR(30) NOT NULL DEFAULT 'upcoming'
-    CHECK (status IN ('upcoming', 'ongoing', 'ended', 'cancelled'));
-
 
 -- ============================================================
 -- polling_unit_final_results
@@ -123,14 +114,15 @@ CREATE TABLE polling_unit_final_results (
 );
 
 -- One final result per election per polling unit
-CREATE UNIQUE INDEX uq_pu_final_result
-  ON polling_unit_final_results (election_id, polling_unit_id);
+CREATE UNIQUE INDEX uq_pu_final_result ON polling_unit_final_results (election_id, polling_unit_id);
 
 CREATE INDEX idx_pu_final_results_election ON polling_unit_final_results(election_id);
 CREATE INDEX idx_pu_final_results_election_group ON polling_unit_final_results(election_group_id);
 CREATE INDEX idx_pu_final_results_pu ON polling_unit_final_results(polling_unit_id);
-CREATE INDEX idx_pu_final_results_state ON polling_unit_final_results(state_id);
-CREATE INDEX idx_pu_final_results_lga ON polling_unit_final_results(lga_id);
+CREATE INDEX idx_pu_final_results_location ON polling_unit_final_results(state_id, lga_id, ward_id);
+CREATE INDEX idx_pu_final_results_senatorial ON polling_unit_final_results(senatorial_district_id);
+CREATE INDEX idx_pu_final_results_federal ON polling_unit_final_results(federal_constituency_id);
+CREATE INDEX idx_pu_final_results_state_assembly ON polling_unit_final_results(state_constituency_id);
 
 
 -- ============================================================
@@ -157,30 +149,7 @@ CREATE TABLE ward_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_ward_final_result_election_ward ON ward_final_result (election_id, ward_id);
-
--- ============================================================
--- state_constituency_final_result
--- ============================================================
-CREATE TABLE state_constituency_final_result (
-  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
-  state_constituency_id       INT      REFERENCES state_assembly_constituencies(id) ON DELETE CASCADE NOT NULL,
-  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
-
-  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
-  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
-  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
-  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
-  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
-  candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
-
-  wards_counted               INTEGER  NOT NULL DEFAULT 0,
-  total_wards                 INTEGER  NOT NULL DEFAULT 0,
-
-  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE UNIQUE INDEX idx_sc_final_result_election_sc ON state_constituency_final_result (election_id, state_constituency_id);
+CREATE INDEX idx_ward_final_result_location ON ward_final_result (state_id, lga_id);
 
 -- ============================================================
 -- lga_final_result
@@ -205,6 +174,31 @@ CREATE TABLE lga_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_lga_final_result_election_lga ON lga_final_result (election_id, lga_id);
+CREATE INDEX idx_lga_final_result_state ON lga_final_result (state_id);
+
+-- ============================================================
+-- state_constituency_final_result
+-- ============================================================
+CREATE TABLE state_constituency_final_result (
+  id                          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  election_id                 BIGINT   REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
+  state_constituency_id       INT      REFERENCES state_assembly_constituencies(id) ON DELETE CASCADE NOT NULL,
+  state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  accredited_voters           INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
+  votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
+  valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
+  rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
+  candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
+
+  wards_counted               INTEGER  NOT NULL DEFAULT 0,
+  total_wards                 INTEGER  NOT NULL DEFAULT 0,
+
+  created_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX idx_sc_final_result_election_sc ON state_constituency_final_result (election_id, state_constituency_id);
 
 -- ============================================================
 -- senatorial_district_final_result
@@ -300,12 +294,6 @@ CREATE TABLE election_final_result (
 CREATE UNIQUE INDEX idx_election_final_result_election ON election_final_result (election_id);
 
 -- +goose Down
-ALTER TABLE elections
-  DROP COLUMN IF EXISTS status;
-
-ALTER TABLE polling_unit_assignments
-  DROP COLUMN IF EXISTS results_submitted_count,
-  DROP COLUMN IF EXISTS results_status;
 
 DROP TABLE IF EXISTS election_final_result;
 DROP TABLE IF EXISTS state_final_result;

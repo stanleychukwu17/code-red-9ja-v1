@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS lgas (
 );
 
 CREATE INDEX idx_lgas_name ON lgas (name);
+CREATE INDEX idx_lgas_state_id ON lgas (state_id);
+CREATE INDEX idx_lgas_senatorial_district_id ON lgas (senatorial_district_id);
+CREATE INDEX idx_lgas_federal_constituency_id ON lgas (federal_constituency_id);
 
 INSERT INTO lgas (id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name) VALUES
 -- ============================================================

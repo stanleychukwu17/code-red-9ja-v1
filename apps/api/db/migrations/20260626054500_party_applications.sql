@@ -24,11 +24,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_active_user_app_per_group
 ON party_applications (user_id, election_group_id) 
 WHERE status NOT IN ('rejected', 'cancelled');
 
-ALTER TABLE users
-  ADD CONSTRAINT fk_users_current_lga FOREIGN KEY (current_lga) REFERENCES lgas(id) ON DELETE SET NULL;
 
 -- +goose Down
-ALTER TABLE users
-  DROP CONSTRAINT IF EXISTS fk_users_current_lga;
-
 DROP TABLE IF EXISTS party_applications;

@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS wards (
 );
 
 CREATE INDEX idx_wards_name ON wards (name);
+CREATE INDEX idx_wards_lga_id ON wards (lga_id);
+CREATE INDEX idx_wards_state_id ON wards (state_id);
+CREATE INDEX idx_wards_state_assembly_constituency_id ON wards (state_assembly_constituency_id);
 
 INSERT INTO wards (id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name) VALUES
 -- ============================================================

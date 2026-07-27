@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS senatorial_districts (
 );
 
 CREATE INDEX idx_senatorial_districts_name ON senatorial_districts (name);
+CREATE INDEX idx_senatorial_districts_state_id ON senatorial_districts (state_id);
 
 INSERT INTO senatorial_districts (id, name, description, coalition_center, state_id, state_name) VALUES
 -- Abia (ID: 1)

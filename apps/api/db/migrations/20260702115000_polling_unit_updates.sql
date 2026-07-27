@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
   
   -- Denormalized references for fast dashboard filtering
   user_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
-  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   election_group_id BIGINT REFERENCES election_groups(id) ON DELETE CASCADE NOT NULL,
+  polling_unit_id INTEGER REFERENCES polling_units(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
@@ -29,9 +29,13 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
 
 -- Indexes for fast querying by parties and on election day
 CREATE INDEX idx_pu_updates_assignment ON polling_unit_updates(assignment_id);
-CREATE INDEX idx_pu_updates_party_group ON polling_unit_updates(party_id, election_group_id);
 CREATE INDEX idx_pu_updates_pu ON polling_unit_updates(polling_unit_id);
+CREATE INDEX idx_pu_updates_party_group ON polling_unit_updates(party_id, election_group_id);
 CREATE INDEX idx_pu_updates_created_at ON polling_unit_updates(created_at);
+CREATE INDEX idx_pu_updates_location ON polling_unit_updates(state_id, lga_id, ward_id);
+CREATE INDEX idx_pu_updates_senatorial ON polling_unit_updates(senatorial_district_id);
+CREATE INDEX idx_pu_updates_federal ON polling_unit_updates(federal_constituency_id);
+CREATE INDEX idx_pu_updates_state_assembly ON polling_unit_updates(state_assembly_constituency_id);
 
 -- Trigger to track interval updates for assignments
 -- +goose StatementBegin
