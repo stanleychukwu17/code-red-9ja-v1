@@ -1,13 +1,10 @@
 -- +goose Up
 
-CREATE TYPE chapter_type_num AS ENUM ('national', 'zonal', 'state', 'lga', 'ward', 'polling_unit');
-CREATE TYPE party_member_status_enum AS ENUM ('active', 'inactive', 'suspended');
-CREATE TYPE party_request_status_enum AS ENUM ('pending', 'approved', 'rejected');
 
 CREATE TABLE party_chapters (
     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
-    chapter_type chapter_type_num NOT NULL,
+    chapter_type VARCHAR(20) NOT NULL CHECK (chapter_type IN ('national', 'zonal', 'state', 'lga', 'ward', 'polling_unit')),
     country_id SMALLINT,
     zonal_id SMALLINT,
     state_id SMALLINT,
@@ -30,7 +27,7 @@ CREATE TABLE party_membership (
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     party_id INT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
     chapter_id INT NOT NULL REFERENCES party_chapters(id) ON DELETE CASCADE,
-    status party_member_status_enum NOT NULL DEFAULT 'active',
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE(user_id, party_id, chapter_id)
 );
@@ -42,7 +39,7 @@ CREATE TABLE party_membership_requests (
     party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
     chapter_id INT NOT NULL REFERENCES party_chapters(id) ON DELETE CASCADE,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    status party_request_status_enum NOT NULL DEFAULT 'pending',
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -79,9 +76,6 @@ CREATE TABLE party_custom_positions (
     UNIQUE(party_id, custom_position_name)
 );
 
-
-
-
 -- CREATE TABLE party_nomination_positions (
 --     id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 --     party_id SMALLINT NOT NULL REFERENCES parties(id) ON DELETE CASCADE,
@@ -108,7 +102,3 @@ DROP TABLE IF EXISTS party_membership_requests;
 DROP TABLE IF EXISTS party_members;
 DROP TABLE IF EXISTS party_chapter_settings;
 DROP TABLE IF EXISTS party_chapters;
-
-DROP TYPE IF EXISTS party_request_status_enum;
-DROP TYPE IF EXISTS party_member_status_enum;
-DROP TYPE IF EXISTS chapter_type_num;
