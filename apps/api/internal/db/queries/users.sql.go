@@ -496,7 +496,7 @@ func (q *Queries) GetUserBankAccountsByUserID(ctx context.Context, userID int64)
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -518,14 +518,14 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.DateOfBirth,
 		&i.WhatsappPhone,
 		&i.DataPhone,
+		&i.VotersCardImage,
 		&i.CurrentCountry,
 		&i.CurrentState,
+		&i.CurrentCity,
 		&i.CurrentLga,
 		&i.CurrentWard,
-		&i.CurrentCity,
 		&i.Address,
 		&i.StateOfOrigin,
-		&i.VotersCardImage,
 		&i.IsPolitician,
 		&i.IsVerified,
 		&i.HasRole,

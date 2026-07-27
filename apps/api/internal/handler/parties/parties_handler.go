@@ -267,11 +267,14 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get the party basic info
 	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
 	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
+
+	// get the national party chapter
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", map[string]interface{}{
 		"data": party,

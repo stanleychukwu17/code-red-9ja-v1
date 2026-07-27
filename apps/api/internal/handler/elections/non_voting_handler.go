@@ -26,7 +26,7 @@ func (h *Handler) GetNonVotingReasons(w http.ResponseWriter, r *http.Request) {
 
 type CreateDidNotVoteReasonRequest struct {
 	ElectionGroupID   int64   `json:"election_group_id"`
-	NonVotingReasonID *int64  `json:"non_voting_reason_id,omitempty"`
+	NonVotingReasonID *int16  `json:"non_voting_reason_id,omitempty"`
 	Explanation       *string `json:"explanation,omitempty"`
 }
 
@@ -67,7 +67,7 @@ func (h *Handler) CreateDidNotVoteReason(w http.ResponseWriter, r *http.Request)
 	}
 
 	if req.NonVotingReasonID != nil {
-		arg.NonVotingReasonID = pgtype.Int8{Int64: *req.NonVotingReasonID, Valid: true}
+		arg.NonVotingReasonID = pgtype.Int2{Int16: *req.NonVotingReasonID, Valid: true}
 	}
 	if req.Explanation != nil {
 		arg.Explanation = pgtype.Text{String: *req.Explanation, Valid: true}

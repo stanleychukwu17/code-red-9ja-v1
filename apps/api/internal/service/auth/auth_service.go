@@ -23,6 +23,7 @@ import (
 	phonenumbers "github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/sync/errgroup"
 )
 
 type MessagingService interface {
@@ -1384,132 +1385,143 @@ type SeedUserRequest struct {
 }
 
 func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
+	eg, ctx := errgroup.WithContext(ctx)
+	// eg.SetLimit(20) // Limit concurrency to avoid overloading the database
+
 	for _, u := range users {
-		// check if email already exit, if yes, we can skip this user onto the next
-		if s.CheckEmail(ctx, u.Email) {
-			continue
-		}
-
-		// Hash password
-		hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return "", err
-		}
-
-		// parse date of birth
-		dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
-		if err != nil {
-			return "", fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
-		}
-
-		// Prepare params
-		emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
-		avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
-		usernameVal := pgtype.Text{String: *u.Username, Valid: true}
-		middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
-		genderVal := pgtype.Text{String: u.Gender, Valid: true}
-		currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
-		currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
-		stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
-		occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
-		partyIDVal := pgtype.Int2{Int16: *u.PartyID, Valid: true}
-
-		// check if the user phone number is valid
-		var phoneVal pgtype.Text
-		var iso2 string
-		var phonecode string
-		var formattedPhone string
-		var rawPhoneInput string
-		if u.Phone != nil && *u.Phone != "" {
-			rawPhoneInput = *u.Phone
-			country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
-			if err != nil {
-				return "", fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
+		eg.Go(func() error {
+			// check if email already exit, if yes, we can skip this user onto the next
+			if s.CheckEmail(ctx, u.Email) {
+				return nil
 			}
 
-			iso2 = country.Iso2
-			phonecode = country.Phonecode
-			formattedPhone, err = s.ValidatePhoneForCountry(rawPhoneInput, iso2)
+			// Hash password
+			hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 			if err != nil {
-				return "", fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
+				return err
 			}
-			phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
-		}
 
-		params := queries.SeedUserParams{
-			FakeID:          pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
-			Email:           emailVal,
-			Avatar:          avatarVal,
-			Phone:           phoneVal,
-			Username:        usernameVal,
-			PasswordHash:    string(hashed),
-			LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
-			FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
-			MiddleName:      middleNameVal,
-			Gender:          genderVal,
-			DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
-			CurrentCountry:  u.CurrentCountry,
-			CurrentState:    u.CurrentState,
-			CurrentLga:      currentLgaVal,
-			CurrentCity:     currentCityVal,
-			StateOfOrigin:   stateOfOriginVal,
-			VotersCardImage: pgtype.Text{String: "", Valid: false},
-			AccountStatus:   pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
-			PartyID:         partyIDVal,
-		}
+			// parse date of birth
+			dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
+			if err != nil {
+				return fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
+			}
 
-		id, err := s.queries.SeedUser(ctx, params)
-		if err != nil {
-			return "", fmt.Errorf("failed to seed user %s: %w", u.Email, err)
-		}
+			// Prepare params
+			emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
+			avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
+			usernameVal := pgtype.Text{String: *u.Username, Valid: true}
+			middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
+			genderVal := pgtype.Text{String: u.Gender, Valid: true}
+			currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
+			currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
+			stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
+			occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
+			partyIDVal := pgtype.Int2{Int16: *u.PartyID, Valid: true}
 
-		_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
-			UserID:            id,
-			OccupationID:      occupationIDVal,
-			EducationalStatus: pgtype.Text{},
-			HighestDegree:     pgtype.Text{},
-			GraduationYear:    pgtype.Text{},
-			SchoolName:        pgtype.Text{},
-			Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
-			MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
-			EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
-			Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
+			// check if the user phone number is valid
+			var phoneVal pgtype.Text
+			var iso2 string
+			var phonecode string
+			var formattedPhone string
+			var rawPhoneInput string
+			if u.Phone != nil && *u.Phone != "" {
+				rawPhoneInput = *u.Phone
+				country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
+				if err != nil {
+					return fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
+				}
+
+				iso2 = country.Iso2
+				phonecode = country.Phonecode
+				formattedPhone, err = s.ValidatePhoneForCountry(rawPhoneInput, iso2)
+				if err != nil {
+					return fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
+				}
+				phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
+			}
+
+			params := queries.SeedUserParams{
+				FakeID:          pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
+				Email:           emailVal,
+				Avatar:          avatarVal,
+				Phone:           phoneVal,
+				Username:        usernameVal,
+				PasswordHash:    string(hashed),
+				LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
+				FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
+				MiddleName:      middleNameVal,
+				Gender:          genderVal,
+				DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
+				CurrentCountry:  u.CurrentCountry,
+				CurrentState:    u.CurrentState,
+				CurrentLga:      currentLgaVal,
+				CurrentCity:     currentCityVal,
+				StateOfOrigin:   stateOfOriginVal,
+				VotersCardImage: pgtype.Text{String: "", Valid: false},
+				AccountStatus:   pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
+				PartyID:         partyIDVal,
+			}
+
+			id, err := s.queries.SeedUser(ctx, params)
+			if err != nil {
+				return fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+			}
+
+			_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
+				UserID:            id,
+				OccupationID:      occupationIDVal,
+				EducationalStatus: pgtype.Text{},
+				HighestDegree:     pgtype.Text{},
+				GraduationYear:    pgtype.Text{},
+				SchoolName:        pgtype.Text{},
+				Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
+				MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
+				EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
+				Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
+			}
+
+			_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
+				UserID:             id,
+				NinVerified:        pgtype.Bool{Bool: false, Valid: true},
+				PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
+				EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
+				VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
+			})
+			if err != nil {
+				return fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
+			}
+
+			// Save details to Redis cache
+			fakeID := u.FakeID
+			fmt.Println("saved ", fakeID)
+			if fakeID == 0 {
+				fakeID = utils.GenerateFakeID(id)
+				_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
+			}
+
+			emailStr := emailVal.String
+			usernameStr := usernameVal.String
+			_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", id, fakeID)
+
+			// save the user phone number
+			if formattedPhone != "" {
+				_ = s.SaveUserPhone(ctx, id, fakeID, formattedPhone, rawPhoneInput, phonecode)
+			}
+
+			// get and save the user details to cache in redis
+			_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
+
+			return nil
 		})
-		if err != nil {
-			return "", fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
-		}
-
-		_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
-			UserID:             id,
-			NinVerified:        pgtype.Bool{Bool: false, Valid: true},
-			PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
-			EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
-			VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
-		}
-
-		// Save details to Redis cache
-		fakeID := u.FakeID
-		fmt.Println("saved ", fakeID)
-		if fakeID == 0 {
-			fakeID = utils.GenerateFakeID(id)
-			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
-		}
-
-		emailStr := emailVal.String
-		usernameStr := usernameVal.String
-		_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", id, fakeID)
-
-		// save the user phone number
-		if formattedPhone != "" {
-			_ = s.SaveUserPhone(ctx, id, fakeID, formattedPhone, rawPhoneInput, phonecode)
-		}
-
-		// get and save the user details to cache in redis
-		_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
-
 	}
+
+	if err := eg.Wait(); err != nil {
+		return "", err
+	}
+
 	return "Users seeded successfully", nil
 }

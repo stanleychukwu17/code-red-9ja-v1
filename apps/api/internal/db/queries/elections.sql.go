@@ -53,7 +53,7 @@ INSERT INTO elections (
   state_constituency_id, lga_id, ward_id
 )
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
-RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at
 `
 
 type CreateElectionInstanceParams struct {
@@ -109,13 +109,13 @@ func (q *Queries) CreateElectionInstance(ctx context.Context, arg CreateElection
 		&i.ElectionGroupName,
 		&i.OfficeName,
 		&i.Scope,
+		&i.Status,
 		&i.CandidatesCount,
 		&i.ReportsCount,
 		&i.UpdatesCount,
 		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Status,
 	)
 	return i, err
 }
@@ -166,7 +166,7 @@ func (q *Queries) GetElectionCandidatesCount(ctx context.Context, electionID int
 }
 
 const getElectionInstanceByID = `-- name: GetElectionInstanceByID :one
-SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status FROM elections WHERE id = $1
+SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at FROM elections WHERE id = $1
 `
 
 func (q *Queries) GetElectionInstanceByID(ctx context.Context, id int64) (Election, error) {
@@ -188,13 +188,13 @@ func (q *Queries) GetElectionInstanceByID(ctx context.Context, id int64) (Electi
 		&i.ElectionGroupName,
 		&i.OfficeName,
 		&i.Scope,
+		&i.Status,
 		&i.CandidatesCount,
 		&i.ReportsCount,
 		&i.UpdatesCount,
 		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Status,
 	)
 	return i, err
 }
@@ -296,7 +296,7 @@ func (q *Queries) ListElectionCandidatesDetailedByElectionID(ctx context.Context
 }
 
 const listElectionInstances = `-- name: ListElectionInstances :many
-SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status FROM elections
+SELECT id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at FROM elections
 ORDER BY election_date DESC, id DESC
 `
 
@@ -325,13 +325,13 @@ func (q *Queries) ListElectionInstances(ctx context.Context) ([]Election, error)
 			&i.ElectionGroupName,
 			&i.OfficeName,
 			&i.Scope,
+			&i.Status,
 			&i.CandidatesCount,
 			&i.ReportsCount,
 			&i.UpdatesCount,
 			&i.ResultsSubmittedCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -345,7 +345,7 @@ func (q *Queries) ListElectionInstances(ctx context.Context) ([]Election, error)
 
 const listElectionsDetailedByGroupID = `-- name: ListElectionsDetailedByGroupID :many
 SELECT 
-  e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.rank, e.election_date, e.election_group_name, e.office_name, e.scope, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.created_at, e.updated_at, e.status,
+  e.id, e.election_group_id, e.state_id, e.senatorial_district_id, e.federal_constituency_id, e.state_constituency_id, e.lga_id, e.ward_id, e.office_id, e.name, e.rank, e.election_date, e.election_group_name, e.office_name, e.scope, e.status, e.candidates_count, e.reports_count, e.updates_count, e.results_submitted_count, e.created_at, e.updated_at,
   o.election AS office_election,
   o.name AS office_name_full
 FROM elections e
@@ -369,13 +369,13 @@ type ListElectionsDetailedByGroupIDRow struct {
 	ElectionGroupName     string             `json:"election_group_name"`
 	OfficeName            string             `json:"office_name"`
 	Scope                 string             `json:"scope"`
+	Status                string             `json:"status"`
 	CandidatesCount       int32              `json:"candidates_count"`
 	ReportsCount          int32              `json:"reports_count"`
 	UpdatesCount          int32              `json:"updates_count"`
 	ResultsSubmittedCount int32              `json:"results_submitted_count"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	Status                string             `json:"status"`
 	OfficeElection        string             `json:"office_election"`
 	OfficeNameFull        string             `json:"office_name_full"`
 }
@@ -405,13 +405,13 @@ func (q *Queries) ListElectionsDetailedByGroupID(ctx context.Context, electionGr
 			&i.ElectionGroupName,
 			&i.OfficeName,
 			&i.Scope,
+			&i.Status,
 			&i.CandidatesCount,
 			&i.ReportsCount,
 			&i.UpdatesCount,
 			&i.ResultsSubmittedCount,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.Status,
 			&i.OfficeElection,
 			&i.OfficeNameFull,
 		); err != nil {
@@ -462,7 +462,7 @@ SET name = $1, rank = $2, candidates_count = $3, election_date = $4, election_gr
     state_id = $10, senatorial_district_id = $11, federal_constituency_id = $12,
     state_constituency_id = $13, lga_id = $14, ward_id = $15, updated_at = NOW()
 WHERE id = $16
-RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at, status
+RETURNING id, election_group_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, office_id, name, rank, election_date, election_group_name, office_name, scope, status, candidates_count, reports_count, updates_count, results_submitted_count, created_at, updated_at
 `
 
 type UpdateElectionInstanceParams struct {
@@ -520,13 +520,13 @@ func (q *Queries) UpdateElectionInstance(ctx context.Context, arg UpdateElection
 		&i.ElectionGroupName,
 		&i.OfficeName,
 		&i.Scope,
+		&i.Status,
 		&i.CandidatesCount,
 		&i.ReportsCount,
 		&i.UpdatesCount,
 		&i.ResultsSubmittedCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.Status,
 	)
 	return i, err
 }

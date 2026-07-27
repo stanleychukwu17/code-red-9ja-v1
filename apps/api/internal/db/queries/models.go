@@ -5,10 +5,144 @@
 package queries
 
 import (
+	"database/sql/driver"
+	"fmt"
 	"net/netip"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
+
+type ChapterTypeNum string
+
+const (
+	ChapterTypeNumNational    ChapterTypeNum = "national"
+	ChapterTypeNumZonal       ChapterTypeNum = "zonal"
+	ChapterTypeNumState       ChapterTypeNum = "state"
+	ChapterTypeNumLga         ChapterTypeNum = "lga"
+	ChapterTypeNumWard        ChapterTypeNum = "ward"
+	ChapterTypeNumPollingUnit ChapterTypeNum = "polling_unit"
+)
+
+func (e *ChapterTypeNum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ChapterTypeNum(s)
+	case string:
+		*e = ChapterTypeNum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ChapterTypeNum: %T", src)
+	}
+	return nil
+}
+
+type NullChapterTypeNum struct {
+	ChapterTypeNum ChapterTypeNum `json:"chapter_type_num"`
+	Valid          bool           `json:"valid"` // Valid is true if ChapterTypeNum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullChapterTypeNum) Scan(value interface{}) error {
+	if value == nil {
+		ns.ChapterTypeNum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ChapterTypeNum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullChapterTypeNum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ChapterTypeNum), nil
+}
+
+type PartyMemberStatusEnum string
+
+const (
+	PartyMemberStatusEnumActive    PartyMemberStatusEnum = "active"
+	PartyMemberStatusEnumInactive  PartyMemberStatusEnum = "inactive"
+	PartyMemberStatusEnumSuspended PartyMemberStatusEnum = "suspended"
+)
+
+func (e *PartyMemberStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PartyMemberStatusEnum(s)
+	case string:
+		*e = PartyMemberStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PartyMemberStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullPartyMemberStatusEnum struct {
+	PartyMemberStatusEnum PartyMemberStatusEnum `json:"party_member_status_enum"`
+	Valid                 bool                  `json:"valid"` // Valid is true if PartyMemberStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPartyMemberStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.PartyMemberStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PartyMemberStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPartyMemberStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PartyMemberStatusEnum), nil
+}
+
+type PartyRequestStatusEnum string
+
+const (
+	PartyRequestStatusEnumPending  PartyRequestStatusEnum = "pending"
+	PartyRequestStatusEnumApproved PartyRequestStatusEnum = "approved"
+	PartyRequestStatusEnumRejected PartyRequestStatusEnum = "rejected"
+)
+
+func (e *PartyRequestStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PartyRequestStatusEnum(s)
+	case string:
+		*e = PartyRequestStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PartyRequestStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullPartyRequestStatusEnum struct {
+	PartyRequestStatusEnum PartyRequestStatusEnum `json:"party_request_status_enum"`
+	Valid                  bool                   `json:"valid"` // Valid is true if PartyRequestStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPartyRequestStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.PartyRequestStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PartyRequestStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPartyRequestStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PartyRequestStatusEnum), nil
+}
 
 type AuditLog struct {
 	ID         int64              `json:"id"`
@@ -77,11 +211,17 @@ type CSubregion struct {
 	RegionID int16  `json:"region_id"`
 }
 
+type CZonesNigerium struct {
+	ID       int16   `json:"id"`
+	Name     string  `json:"name"`
+	StateIds []int16 `json:"state_ids"`
+}
+
 type DidNotVoteReason struct {
 	ID                int64              `json:"id"`
 	UserID            int64              `json:"user_id"`
 	ElectionGroupID   int64              `json:"election_group_id"`
-	NonVotingReasonID pgtype.Int8        `json:"non_voting_reason_id"`
+	NonVotingReasonID pgtype.Int2        `json:"non_voting_reason_id"`
 	Explanation       pgtype.Text        `json:"explanation"`
 	StateID           pgtype.Int2        `json:"state_id"`
 	LgaID             pgtype.Int4        `json:"lga_id"`
@@ -107,13 +247,13 @@ type Election struct {
 	ElectionGroupName     string             `json:"election_group_name"`
 	OfficeName            string             `json:"office_name"`
 	Scope                 string             `json:"scope"`
+	Status                string             `json:"status"`
 	CandidatesCount       int32              `json:"candidates_count"`
 	ReportsCount          int32              `json:"reports_count"`
 	UpdatesCount          int32              `json:"updates_count"`
 	ResultsSubmittedCount int32              `json:"results_submitted_count"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-	Status                string             `json:"status"`
 }
 
 type ElectionCandidate struct {
@@ -564,7 +704,7 @@ type NationalMetric struct {
 }
 
 type NonVotingReason struct {
-	ID         int64              `json:"id"`
+	ID         int16              `json:"id"`
 	Reason     string             `json:"reason"`
 	UsageCount int32              `json:"usage_count"`
 	CreatedAt  pgtype.Timestamptz `json:"created_at"`
@@ -637,6 +777,31 @@ type PartyApplication struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PartyChapter struct {
+	ID            int32          `json:"id"`
+	PartyID       int16          `json:"party_id"`
+	ChapterType   ChapterTypeNum `json:"chapter_type"`
+	CountryID     pgtype.Int2    `json:"country_id"`
+	ZonalID       pgtype.Int2    `json:"zonal_id"`
+	StateID       pgtype.Int2    `json:"state_id"`
+	LgaID         pgtype.Int2    `json:"lga_id"`
+	WardID        pgtype.Int2    `json:"ward_id"`
+	PollingUnitID pgtype.Int4    `json:"polling_unit_id"`
+}
+
+type PartyChapterSetting struct {
+	ID        int32  `json:"id"`
+	PartyID   int16  `json:"party_id"`
+	ChapterID int32  `json:"chapter_id"`
+	Settings  []byte `json:"settings"`
+}
+
+type PartyCustomPosition struct {
+	ID                 int32  `json:"id"`
+	PartyID            int16  `json:"party_id"`
+	CustomPositionName string `json:"custom_position_name"`
+}
+
 type PartyElectionGroup struct {
 	ID                    int64              `json:"id"`
 	PartyID               int16              `json:"party_id"`
@@ -648,6 +813,47 @@ type PartyElectionGroup struct {
 	ResultsSubmittedCount int32              `json:"results_submitted_count"`
 	CreatedAt             pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PartyMembership struct {
+	ID            int64                 `json:"id"`
+	PartyID       int32                 `json:"party_id"`
+	ChapterID     int32                 `json:"chapter_id"`
+	ChapterType   ChapterTypeNum        `json:"chapter_type"`
+	CountryID     pgtype.Int2           `json:"country_id"`
+	ZonalID       pgtype.Int2           `json:"zonal_id"`
+	StateID       pgtype.Int2           `json:"state_id"`
+	LgaID         pgtype.Int2           `json:"lga_id"`
+	WardID        pgtype.Int2           `json:"ward_id"`
+	PollingUnitID pgtype.Int4           `json:"polling_unit_id"`
+	UserID        int64                 `json:"user_id"`
+	Status        PartyMemberStatusEnum `json:"status"`
+	DateJoined    pgtype.Timestamptz    `json:"date_joined"`
+}
+
+type PartyMembershipHistory struct {
+	ID          int32              `json:"id"`
+	PartyID     int16              `json:"party_id"`
+	ChapterID   int32              `json:"chapter_id"`
+	ChapterType ChapterTypeNum     `json:"chapter_type"`
+	UserID      int64              `json:"user_id"`
+	Action      string             `json:"action"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+}
+
+type PartyMembershipRequest struct {
+	ID        int64                  `json:"id"`
+	PartyID   int16                  `json:"party_id"`
+	ChapterID int32                  `json:"chapter_id"`
+	UserID    int64                  `json:"user_id"`
+	Status    PartyRequestStatusEnum `json:"status"`
+	CreatedAt pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt pgtype.Timestamptz     `json:"updated_at"`
+}
+
+type PartyPositionType struct {
+	ID           int32       `json:"id"`
+	PositionName pgtype.Text `json:"position_name"`
 }
 
 type PartyWallet struct {
@@ -788,8 +994,8 @@ type PollingUnitUpdate struct {
 	ID                          int64              `json:"id"`
 	AssignmentID                pgtype.Int8        `json:"assignment_id"`
 	UserID                      int64              `json:"user_id"`
-	PollingUnitID               int32              `json:"polling_unit_id"`
 	ElectionGroupID             int64              `json:"election_group_id"`
+	PollingUnitID               int32              `json:"polling_unit_id"`
 	PartyID                     pgtype.Int2        `json:"party_id"`
 	StateID                     pgtype.Int2        `json:"state_id"`
 	LgaID                       pgtype.Int4        `json:"lga_id"`
@@ -939,14 +1145,14 @@ type User struct {
 	DateOfBirth     pgtype.Date        `json:"date_of_birth"`
 	WhatsappPhone   pgtype.Text        `json:"whatsapp_phone"`
 	DataPhone       pgtype.Text        `json:"data_phone"`
+	VotersCardImage pgtype.Text        `json:"voters_card_image"`
 	CurrentCountry  int16              `json:"current_country"`
 	CurrentState    int16              `json:"current_state"`
+	CurrentCity     pgtype.Int4        `json:"current_city"`
 	CurrentLga      pgtype.Int4        `json:"current_lga"`
 	CurrentWard     pgtype.Int4        `json:"current_ward"`
-	CurrentCity     pgtype.Int4        `json:"current_city"`
 	Address         pgtype.Text        `json:"address"`
 	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
-	VotersCardImage pgtype.Text        `json:"voters_card_image"`
 	IsPolitician    pgtype.Bool        `json:"is_politician"`
 	IsVerified      pgtype.Bool        `json:"is_verified"`
 	HasRole         pgtype.Bool        `json:"has_role"`
