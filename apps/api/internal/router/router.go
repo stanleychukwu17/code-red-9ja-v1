@@ -34,6 +34,7 @@ import (
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
 	pollingunitshandler "free9ja/api/internal/handler/polling_units"
+	seedhandler "free9ja/api/internal/handler/seed"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
 	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
 	stateshandler "free9ja/api/internal/handler/states"
@@ -61,6 +62,7 @@ import (
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
 	pollingunitsservice "free9ja/api/internal/service/polling_units"
 	r2service "free9ja/api/internal/service/r2"
+	seedservice "free9ja/api/internal/service/seed"
 	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
 	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
 	statesservice "free9ja/api/internal/service/states"
@@ -102,26 +104,35 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			"reason", "MONNIFY_API_KEY or MONNIFY_SECRET_KEY is empty")
 	}
 
-	bodiesService := bodiesservice.NewBodiesService(q, rdb)
-	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
-	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
-
-	statesService := statesservice.NewStatesService(q, rdb)
-	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
-	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateAssemblyConstituenciesService(q, rdb)
-	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
-	wardsService := wardsservice.NewWardsService(q, rdb)
-	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
-	officesService := officesservice.NewOfficesService(q, rdb)
-	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
-	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor)
-	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor)
-	partyApplicationsService := partyapplications.NewService(q, pool, rdb)
-	pollingUnitUpdatesService := puupdates.NewService(q, pool)
-	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
-	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
 	utilsInstance := utils.NewUtils(pool)
+	auditService := audit.NewAuditService(q)
+	wardsService := wardsservice.NewWardsService(q, rdb)
+	bodiesService := bodiesservice.NewBodiesService(q, rdb)
+	statesService := statesservice.NewStatesService(q, rdb)
+	pollingUnitUpdatesService := puupdates.NewService(q, pool)
+	officesService := officesservice.NewOfficesService(q, rdb)
+	electionStatsService := electionstats.NewElectionStatsService(q)
+	partyApplicationsService := partyapplications.NewService(q, pool, rdb)
+	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
+	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
+	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
+	pollingUnitAssignmentsService := puassignments.NewService(q, rdb, distributor)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
+	electionsService := electionsservice.NewElectionsService(q, pool, rdb, distributor)
+	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
+	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
+	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
+	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateAssemblyConstituenciesService(q, rdb)
+
+	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
+	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
+	seedService := seedservice.NewSeedService(q, rdb, authService, bodiesService)
+	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
+
+	usersService.SetPageVerificationsService(pageVerificationsService)
+	usersService.SetPartyService(partiesService)
+	partiesService.SetPageVerificationsService(pageVerificationsService)
+
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, utilsInstance)
@@ -133,15 +144,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, q, utilsInstance)
 	officesHandler := officeshandler.NewHandler(officesService, utilsInstance)
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
-	electionStatsService := electionstats.NewElectionStatsService(q)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
-	auditService := audit.NewAuditService(q)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, utilsInstance)
-	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
-	usersService.SetPageVerificationsService(pageVerificationsService)
-	partiesService.SetPageVerificationsService(pageVerificationsService)
-	usersService.SetPartyService(partiesService)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
@@ -150,6 +155,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
+	seedHandler := seedhandler.New(seedService, utilsInstance)
 
 	// Initialize the R2 service (nil-safe: file endpoints return an error if un-configured)
 	var filesHandler *fileshandler.Handler
@@ -205,7 +211,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, authHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
 	mainRouter.Post("/api/v1/auth/assign-role", authHandler.AssignUserRole)                          // Assign role endpoint
-	mainRouter.Post("/api/v1/auth/seed", authHandler.SeedUsers)                                      // Seed users endpoint
+
+	// for seeds
+	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers) // Seed users endpoint
 
 	// Banks
 	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)

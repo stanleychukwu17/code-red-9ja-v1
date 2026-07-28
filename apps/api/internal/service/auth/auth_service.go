@@ -23,7 +23,6 @@ import (
 	phonenumbers "github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/sync/errgroup"
 )
 
 type MessagingService interface {
@@ -753,6 +752,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 	params.ReferralCode = pgtype.Text{String: refCode, Valid: true}
 
+	//--CREATE USER--
 	// creates the user's new account in our database
 	user_id, err := s.queries.CreateUser(ctx, params)
 	if err != nil {
@@ -800,17 +800,15 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 
 	// TODO: this creating of user wallet should be in done in a background job or queue instead of a go routine
 	// Create user wallet (best effort, non-blocking)
-	if s.usersService != nil {
-		if userErr == nil {
-			go func() {
-				bgCtx := context.Background()
-				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
-					slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
-				}
-			}()
-		} else {
-			slog.Error("failed to fetch user details to create wallet", "user_id", user_id, "err", userErr)
-		}
+	if userErr == nil {
+		go func() {
+			bgCtx := context.Background()
+			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
+				slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
+			}
+		}()
+	} else {
+		slog.Error("failed to fetch user details to create wallet", "user_id", user_id, "err", userErr)
 	}
 
 	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
@@ -1355,168 +1353,4 @@ func (s *AuthService) UpdateUserRoles(ctx context.Context, userID int64, roles [
 	// invalidate the user cache here
 
 	return nil
-}
-
-type SeedUserRequest struct {
-	ID             int64   `json:"id"`
-	FakeID         int64   `json:"fake_id"`
-	Email          string  `json:"email"`
-	Avatar         string  `json:"avatar"`
-	Phone          *string `json:"phone"`
-	Username       *string `json:"username"`
-	Password       string  `json:"password"`
-	LastName       string  `json:"last_name"`
-	FirstName      string  `json:"first_name"`
-	MiddleName     *string `json:"middle_name"`
-	Gender         string  `json:"gender"`
-	DateOfBirth    string  `json:"date_of_birth"`
-	Religion       string  `json:"religion"`
-	CurrentCountry int16   `json:"current_country"`
-	CurrentState   int16   `json:"current_state"`
-	CurrentLga     *int32  `json:"current_lga"`
-	CurrentCity    *int32  `json:"current_city"`
-	StateOfOrigin  *int16  `json:"state_of_origin"`
-	MaritalStatus  string  `json:"marital_status"`
-	EducationLevel string  `json:"education_level"`
-	HomeAddress    string  `json:"home_address"`
-	OccupationID   *int16  `json:"occupation_id"`
-	PartyID        *int16  `json:"party_id"`
-	AccountStatus  string  `json:"account_status"`
-}
-
-func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
-	eg, ctx := errgroup.WithContext(ctx)
-	// eg.SetLimit(20) // Limit concurrency to avoid overloading the database
-
-	for _, u := range users {
-		eg.Go(func() error {
-			// check if email already exit, if yes, we can skip this user onto the next
-			if s.CheckEmail(ctx, u.Email) {
-				return nil
-			}
-
-			// Hash password
-			hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-			if err != nil {
-				return err
-			}
-
-			// parse date of birth
-			dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
-			if err != nil {
-				return fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
-			}
-
-			// Prepare params
-			emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
-			avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
-			usernameVal := pgtype.Text{String: *u.Username, Valid: true}
-			middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
-			genderVal := pgtype.Text{String: u.Gender, Valid: true}
-			currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
-			currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
-			stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
-			occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
-			partyIDVal := pgtype.Int2{Int16: *u.PartyID, Valid: true}
-
-			// check if the user phone number is valid
-			var phoneVal pgtype.Text
-			var iso2 string
-			var phonecode string
-			var formattedPhone string
-			var rawPhoneInput string
-			if u.Phone != nil && *u.Phone != "" {
-				rawPhoneInput = *u.Phone
-				country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
-				if err != nil {
-					return fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
-				}
-
-				iso2 = country.Iso2
-				phonecode = country.Phonecode
-				formattedPhone, err = s.ValidatePhoneForCountry(rawPhoneInput, iso2)
-				if err != nil {
-					return fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
-				}
-				phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
-			}
-
-			params := queries.SeedUserParams{
-				Email:           emailVal,
-				Avatar:          avatarVal,
-				Phone:           phoneVal,
-				Username:        usernameVal,
-				PasswordHash:    string(hashed),
-				LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
-				FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
-				MiddleName:      middleNameVal,
-				Gender:          genderVal,
-				DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
-				CurrentCountry:  u.CurrentCountry,
-				CurrentState:    u.CurrentState,
-				CurrentLga:      currentLgaVal,
-				CurrentCity:     currentCityVal,
-				StateOfOrigin:   stateOfOriginVal,
-				VotersCardImage: pgtype.Text{String: "", Valid: false},
-				AccountStatus:   pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
-				PartyID:         partyIDVal,
-			}
-
-			id, err := s.queries.SeedUser(ctx, params)
-			if err != nil {
-				return fmt.Errorf("failed to seed user %s: %w", u.Email, err)
-			}
-
-			_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
-				UserID:            id,
-				OccupationID:      occupationIDVal,
-				EducationalStatus: pgtype.Text{},
-				HighestDegree:     pgtype.Text{},
-				GraduationYear:    pgtype.Text{},
-				SchoolName:        pgtype.Text{},
-				Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
-				MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
-				EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
-				Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
-			}
-
-			_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
-				UserID:             id,
-				NinVerified:        pgtype.Bool{Bool: false, Valid: true},
-				PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
-				EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
-				VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
-			})
-			if err != nil {
-				return fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
-			}
-
-			// Save details to Redis cache
-			fakeID := utils.GenerateFakeID(id)
-			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
-
-			emailStr := emailVal.String
-			usernameStr := usernameVal.String
-			_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", id, fakeID)
-
-			// save the user phone number
-			if formattedPhone != "" {
-				_ = s.SaveUserPhone(ctx, id, fakeID, formattedPhone, rawPhoneInput, phonecode)
-			}
-
-			// get and save the user details to cache in redis
-			_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
-
-			return nil
-		})
-	}
-
-	if err := eg.Wait(); err != nil {
-		return "", err
-	}
-
-	return "Users seeded successfully", nil
 }

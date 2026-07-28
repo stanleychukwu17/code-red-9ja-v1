@@ -8,7 +8,7 @@ import (
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"os"
+
 	"strings"
 	"time"
 
@@ -32,7 +32,6 @@ type AuthService interface {
 	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 
-	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) (string, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
 
 	CheckAndAssignRole(ctx context.Context, userID int64, fakeID int64, roleCode string, whoAssigned int64) error
@@ -787,38 +786,6 @@ func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Admins retrieved successfully", map[string]interface{}{
 		"admins": admins,
 	})
-}
-
-// @Summary Seed testing users
-// @Description Batch registers testing users from formatted JSON data
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body []auth.SeedUserRequest true "List of users to seed"
-// @Success 200 {object} map[string]interface{} "Users seeded successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 500 {object} map[string]interface{} "Failed to seed users"
-// @Router /auth/seed [post]
-// SeedUsers handles batch registration of testing users from seed data
-func (h *Handler) SeedUsers(w http.ResponseWriter, r *http.Request) {
-	if os.Getenv("ENV") == "production" {
-		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
-		return
-	}
-
-	var req []auth.SeedUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	msg, err := h.authService.SeedUsers(r.Context(), req)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed users: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
 }
 
 // MakeUserSuperAdminRequest represents the request to promote a user
