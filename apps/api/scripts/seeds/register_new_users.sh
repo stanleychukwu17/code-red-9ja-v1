@@ -3,9 +3,11 @@
 # Navigate to the directory where seed_users.json is located
 cd "$(dirname "$0")" || exit 1
 
-echo "Seeding users to http://localhost:4100/api/v1/auth/seed..."
+BASE_URL="http://localhost:4100"
 
-curl -X POST http://localhost:4100/api/v1/auth/seed \
+echo "Seeding users to ${BASE_URL}/api/v1/seed/users..."
+
+curl -X POST ${BASE_URL}/api/v1/seed/users \
   -H "Content-Type: application/json" \
   -d @seed_users.json
 
