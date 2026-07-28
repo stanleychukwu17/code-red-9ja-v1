@@ -93,21 +93,39 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			// Prepare params
 			emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
 			avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
-			usernameVal := pgtype.Text{String: *u.Username, Valid: true}
-			middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
+			var usernameVal pgtype.Text
+			if u.Username != nil {
+				usernameVal = pgtype.Text{String: *u.Username, Valid: true}
+			}
+			var middleNameVal pgtype.Text
+			if u.MiddleName != nil {
+				middleNameVal = pgtype.Text{String: *u.MiddleName, Valid: true}
+			}
 			genderVal := pgtype.Text{String: u.Gender, Valid: true}
-			currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
-			currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
-			stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
-			occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
-			partyIDVal := pgtype.Int2{Int16: *u.PartyID, Valid: true}
+			var currentLgaVal pgtype.Int4
+			if u.CurrentLga != nil {
+				currentLgaVal = pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
+			}
+			var currentCityVal pgtype.Int4
+			if u.CurrentCity != nil {
+				currentCityVal = pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
+			}
+			var stateOfOriginVal pgtype.Int2
+			if u.StateOfOrigin != nil {
+				stateOfOriginVal = pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
+			}
+			var occupationIDVal pgtype.Int2
+			if u.OccupationID != nil {
+				occupationIDVal = pgtype.Int2{Int16: *u.OccupationID, Valid: true}
+			}
+			var partyIDVal pgtype.Int2
+			if u.PartyID != nil {
+				partyIDVal = pgtype.Int2{Int16: *u.PartyID, Valid: true}
+			}
 
 			// check if the user phone number is valid
 			var phoneVal pgtype.Text
-			var iso2 string
-			var phonecode string
-			var formattedPhone string
-			var rawPhoneInput string
+			var iso2, phonecode, formattedPhone, rawPhoneInput string
 			if u.Phone != nil && *u.Phone != "" {
 				rawPhoneInput = *u.Phone
 				country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
