@@ -433,57 +433,6 @@ definitions:
       whatsapp_phone:
         type: string
     type: object
-  authservice.SeedUserRequest:
-    properties:
-      account_status:
-        type: string
-      avatar:
-        type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_lga:
-        type: integer
-      current_state:
-        type: integer
-      date_of_birth:
-        type: string
-      education_level:
-        type: string
-      email:
-        type: string
-      fake_id:
-        type: integer
-      first_name:
-        type: string
-      gender:
-        type: string
-      home_address:
-        type: string
-      id:
-        type: integer
-      last_name:
-        type: string
-      marital_status:
-        type: string
-      middle_name:
-        type: string
-      occupation_id:
-        type: integer
-      party_id:
-        type: integer
-      password:
-        type: string
-      phone:
-        type: string
-      religion:
-        type: string
-      state_of_origin:
-        type: integer
-      username:
-        type: string
-    type: object
   big.Int:
     type: object
   bodieshandler.CityResponse:
@@ -1355,6 +1304,61 @@ definitions:
         items:
           $ref: '#/definitions/queries.GetPageVerificationsRow'
         type: array
+    type: object
+  seedservice.SeedUserRequest:
+    properties:
+      account_status:
+        type: string
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        type: string
+      education_level:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      gender:
+        type: string
+      home_address:
+        type: string
+      is_politician:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      marital_status:
+        type: string
+      middle_name:
+        type: string
+      num:
+        type: integer
+      occupation_id:
+        type: integer
+      party_id:
+        type: integer
+      password:
+        type: string
+      phone:
+        type: string
+      religion:
+        type: string
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+      verification_type_id:
+        type: integer
     type: object
   senatorialdistrictshandler.CreateSenatorialDistrictRequest:
     properties:
@@ -2532,41 +2536,6 @@ paths:
             additionalProperties: true
             type: object
       summary: Update all roles for a user
-      tags:
-      - Auth
-  /auth/seed:
-    post:
-      consumes:
-      - application/json
-      description: Batch registers testing users from formatted JSON data
-      parameters:
-      - description: List of users to seed
-        in: body
-        name: request
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/authservice.SeedUserRequest'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Users seeded successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Failed to seed users
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Seed testing users
       tags:
       - Auth
   /auth/superadmin:
@@ -6642,6 +6611,41 @@ paths:
       summary: Update a polling unit
       tags:
       - Polling Units
+  /seed/users:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers testing users from formatted JSON data
+      parameters:
+      - description: List of users to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.SeedUserRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Users seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed users
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed testing users
+      tags:
+      - Seed
   /senatorial-districts:
     get:
       consumes:

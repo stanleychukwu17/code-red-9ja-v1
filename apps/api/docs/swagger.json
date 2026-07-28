@@ -1146,58 +1146,6 @@
                 }
             }
         },
-        "/auth/seed": {
-            "post": {
-                "description": "Batch registers testing users from formatted JSON data",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Seed testing users",
-                "parameters": [
-                    {
-                        "description": "List of users to seed",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/authservice.SeedUserRequest"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Users seeded successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to seed users",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/superadmin": {
             "post": {
                 "description": "Promotes a user to superadmin if their username is in the pre-approved list",
@@ -7137,6 +7085,58 @@
                 }
             }
         },
+        "/seed/users": {
+            "post": {
+                "description": "Batch registers testing users from formatted JSON data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seed"
+                ],
+                "summary": "Seed testing users",
+                "parameters": [
+                    {
+                        "description": "List of users to seed",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/seedservice.SeedUserRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Users seeded successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to seed users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/senatorial-districts": {
             "get": {
                 "description": "Fetches senatorial districts with optional stateID filtering and cursor pagination",
@@ -9508,83 +9508,6 @@
                 }
             }
         },
-        "authservice.SeedUserRequest": {
-            "type": "object",
-            "properties": {
-                "account_status": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "type": "string"
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_lga": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "date_of_birth": {
-                    "type": "string"
-                },
-                "education_level": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "fake_id": {
-                    "type": "integer"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "home_address": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "marital_status": {
-                    "type": "string"
-                },
-                "middle_name": {
-                    "type": "string"
-                },
-                "occupation_id": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "religion": {
-                    "type": "string"
-                },
-                "state_of_origin": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
         "big.Int": {
             "type": "object"
         },
@@ -10916,6 +10839,89 @@
                     "items": {
                         "$ref": "#/definitions/queries.GetPageVerificationsRow"
                     }
+                }
+            }
+        },
+        "seedservice.SeedUserRequest": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "education_level": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "home_address": {
+                    "type": "string"
+                },
+                "is_politician": {
+                    "type": "boolean"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "marital_status": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "num": {
+                    "type": "integer"
+                },
+                "occupation_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "religion": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "verification_type_id": {
+                    "type": "integer"
                 }
             }
         },
