@@ -117,12 +117,12 @@ WHERE id = $1;
 
 -- name: SeedUser :one
 INSERT INTO users (
-  fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
+  email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
   state_of_origin, voters_card_image,
   account_status, party_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 RETURNING id;
 
 

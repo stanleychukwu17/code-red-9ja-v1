@@ -771,17 +771,16 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 
 const seedUser = `-- name: SeedUser :one
 INSERT INTO users (
-  fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
+  email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
   state_of_origin, voters_card_image,
   account_status, party_id
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
 RETURNING id
 `
 
 type SeedUserParams struct {
-	FakeID          pgtype.Int8 `json:"fake_id"`
 	Email           pgtype.Text `json:"email"`
 	Avatar          pgtype.Text `json:"avatar"`
 	Phone           pgtype.Text `json:"phone"`
@@ -804,7 +803,6 @@ type SeedUserParams struct {
 
 func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, error) {
 	row := q.db.QueryRow(ctx, seedUser,
-		arg.FakeID,
 		arg.Email,
 		arg.Avatar,
 		arg.Phone,
