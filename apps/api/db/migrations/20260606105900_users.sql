@@ -5,7 +5,7 @@ CREATE TABLE users (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   fake_id BIGINT UNIQUE,
   email VARCHAR(255) UNIQUE,
-  avatar VARCHAR(255),
+  avatar VARCHAR(1000),
   phone VARCHAR(25) UNIQUE,
   username VARCHAR(30) UNIQUE,
   password_hash VARCHAR(100) NOT NULL,
@@ -96,7 +96,6 @@ CREATE TABLE users_phone_numbers (
 );
 CREATE INDEX idx_users_phone_numbers_user_id ON users_phone_numbers(user_id);
 CREATE INDEX idx_users_phone_numbers_phone ON users_phone_numbers(phone);
-CREATE INDEX idx_users_phone_numbers_is_active ON users_phone_numbers(is_active);
 
 -- USERS security questions table
 CREATE TABLE user_security_questions (
