@@ -979,7 +979,7 @@ func (q *Queries) GetElectionGroupStateConstituencyStats(ctx context.Context, ar
 }
 
 const getElectionGroupStateStats = `-- name: GetElectionGroupStateStats :one
-SELECT id, election_group_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_reports_count, pu_updates_count, pu_average_arrival_time, pu_average_update_time_interval_in_seconds, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_states
+SELECT id, election_group_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_reports_count, pu_updates_count, pu_average_arrival_time, pu_average_update_time_interval_in_seconds, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, state_supervisors_count, unique_state_supervisors_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_states
 WHERE election_group_id = $1 AND state_id = $2
 `
 
@@ -1020,6 +1020,8 @@ func (q *Queries) GetElectionGroupStateStats(ctx context.Context, arg GetElectio
 		&i.UniqueLgaSupervisorsCount,
 		&i.WardSupervisorsCount,
 		&i.UniqueWardSupervisorsCount,
+		&i.StateSupervisorsCount,
+		&i.UniqueStateSupervisorsCount,
 		&i.SenatorialDistrictsCount,
 		&i.FederalConstituenciesCount,
 		&i.LgasCount,
@@ -1595,7 +1597,7 @@ func (q *Queries) ListElectionGroupStateConstituencyStatsByGroup(ctx context.Con
 }
 
 const listElectionGroupStateStatsByGroup = `-- name: ListElectionGroupStateStatsByGroup :many
-SELECT id, election_group_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_reports_count, pu_updates_count, pu_average_arrival_time, pu_average_update_time_interval_in_seconds, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_states
+SELECT id, election_group_id, state_id, unique_final_results_expected, pu_agents_count, unique_pu_agents_count, pu_agents_in_attendance_count, pu_reports_count, pu_updates_count, pu_average_arrival_time, pu_average_update_time_interval_in_seconds, pu_average_election_started_at, pu_average_election_ended_at, pu_election_practice_test_readiness_percentage, pu_final_results_uploaded_count, unique_pu_final_results_uploaded_count, pu_live_voters_referred_by_agent_count, total_pu_with_reports, total_pu_with_updates, total_pu_with_agents_in_attendance, total_pu_where_election_has_started, total_pu_where_election_has_ended, total_pu_unique_final_results_uploaded, total_pu_where_agents_referred_live_voters, lga_supervisors_count, unique_lga_supervisors_count, ward_supervisors_count, unique_ward_supervisors_count, state_supervisors_count, unique_state_supervisors_count, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, parties, created_at, updated_at FROM election_group_states
 WHERE election_group_id = $1
 ORDER BY state_id
 `
@@ -1638,6 +1640,8 @@ func (q *Queries) ListElectionGroupStateStatsByGroup(ctx context.Context, electi
 			&i.UniqueLgaSupervisorsCount,
 			&i.WardSupervisorsCount,
 			&i.UniqueWardSupervisorsCount,
+			&i.StateSupervisorsCount,
+			&i.UniqueStateSupervisorsCount,
 			&i.SenatorialDistrictsCount,
 			&i.FederalConstituenciesCount,
 			&i.LgasCount,

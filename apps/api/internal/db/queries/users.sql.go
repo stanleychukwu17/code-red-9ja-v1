@@ -774,9 +774,9 @@ INSERT INTO users (
   email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
   state_of_origin, voters_card_image,
-  account_status, party_id
+  account_status, party_id, is_politician, is_verified
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 RETURNING id
 `
 
@@ -799,6 +799,8 @@ type SeedUserParams struct {
 	VotersCardImage pgtype.Text `json:"voters_card_image"`
 	AccountStatus   pgtype.Text `json:"account_status"`
 	PartyID         pgtype.Int2 `json:"party_id"`
+	IsPolitician    pgtype.Bool `json:"is_politician"`
+	IsVerified      pgtype.Bool `json:"is_verified"`
 }
 
 func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, error) {
@@ -821,6 +823,8 @@ func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, erro
 		arg.VotersCardImage,
 		arg.AccountStatus,
 		arg.PartyID,
+		arg.IsPolitician,
+		arg.IsVerified,
 	)
 	var id int64
 	err := row.Scan(&id)
