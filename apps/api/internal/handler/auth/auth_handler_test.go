@@ -107,11 +107,6 @@ func (m *MockAuthService) ChangePasswordByEmail(ctx context.Context, email, newP
 	return args.Error(0)
 }
 
-func (m *MockAuthService) SeedUsers(ctx context.Context, users []authservice.SeedUserRequest) (string, error) {
-	args := m.Called(ctx, users)
-	return args.String(0), args.Error(1)
-}
-
 func (m *MockAuthService) MakeUserSuperAdmin(ctx context.Context, username string) error {
 	args := m.Called(ctx, username)
 	return args.Error(0)
@@ -139,6 +134,11 @@ func (m *MockAuthService) SaveSomeUserRegistrationDetails(ctx context.Context, u
 
 func (m *MockAuthService) CheckAndAssignRole(ctx context.Context, userID int64, fakeID int64, roleCode string, whoAssigned int64) error {
 	args := m.Called(ctx, userID, fakeID, roleCode, whoAssigned)
+	return args.Error(0)
+}
+
+func (m *MockAuthService) UpdateUserRoles(ctx context.Context, userID int64, roles []string, partyID *int64, whoAssigned int64) error {
+	args := m.Called(ctx, userID, roles, partyID, whoAssigned)
 	return args.Error(0)
 }
 
