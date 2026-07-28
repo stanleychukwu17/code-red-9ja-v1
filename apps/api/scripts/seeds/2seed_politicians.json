@@ -1,7 +1,5 @@
 [
     {
-        "id": 1501,
-        "fake_id": 101504,
         "email": "yemi_osinbajo88@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Yemi%20Osinbajo\u0026background=random",
         "phone": "08030115063",
@@ -26,8 +24,6 @@
         "account_status": "active"
     },
     {
-        "id": 1502,
-        "fake_id": 101505,
         "email": "kashim_shettima518@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Kashim%20Shettima\u0026background=random",
         "phone": "08070793684",
@@ -52,8 +48,6 @@
         "account_status": "active"
     },
     {
-        "id": 1503,
-        "fake_id": 101506,
         "email": "babatunde_fashola359@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Babatunde%20Fashola\u0026background=random",
         "phone": "08041892384",
@@ -78,8 +72,6 @@
         "account_status": "active"
     },
     {
-        "id": 1504,
-        "fake_id": 101507,
         "email": "nasir_elrufai98@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Nasir%20el-Rufai\u0026background=random",
         "phone": "08068996881",
@@ -104,8 +96,6 @@
         "account_status": "active"
     },
     {
-        "id": 1505,
-        "fake_id": 101508,
         "email": "rotimi_amaechi685@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Rotimi%20Amaechi\u0026background=random",
         "phone": "08044713797",
@@ -130,8 +120,6 @@
         "account_status": "active"
     },
     {
-        "id": 1506,
-        "fake_id": 101509,
         "email": "kayode_fayemi337@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Kayode%20Fayemi\u0026background=random",
         "phone": "08051023960",
@@ -156,8 +144,6 @@
         "account_status": "active"
     },
     {
-        "id": 1507,
-        "fake_id": 101510,
         "email": "abdullahi_ganduje154@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Abdullahi%20Ganduje\u0026background=random",
         "phone": "08085737337",
@@ -182,8 +168,6 @@
         "account_status": "active"
     },
     {
-        "id": 1508,
-        "fake_id": 101511,
         "email": "adams_oshiomhole915@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Adams%20Oshiomhole\u0026background=random",
         "phone": "08019770688",
@@ -208,8 +192,6 @@
         "account_status": "active"
     },
     {
-        "id": 1509,
-        "fake_id": 101512,
         "email": "rauf_aregbesola538@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Rauf%20Aregbesola\u0026background=random",
         "phone": "08092094344",
@@ -234,8 +216,6 @@
         "account_status": "active"
     },
     {
-        "id": 1510,
-        "fake_id": 101513,
         "email": "rochas_okorocha525@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Rochas%20Okorocha\u0026background=random",
         "phone": "08090842354",
@@ -260,8 +240,6 @@
         "account_status": "active"
     },
     {
-        "id": 1511,
-        "fake_id": 101514,
         "email": "yahaya_bello481@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Yahaya%20Bello\u0026background=random",
         "phone": "08040649085",
@@ -286,8 +264,6 @@
         "account_status": "active"
     },
     {
-        "id": 1512,
-        "fake_id": 101515,
         "email": "babagana_zulum287@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Babagana%20Zulum\u0026background=random",
         "phone": "08054817474",
@@ -312,8 +288,6 @@
         "account_status": "active"
     },
     {
-        "id": 1513,
-        "fake_id": 101516,
         "email": "hope_uzodinma188@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Hope%20Uzodinma\u0026background=random",
         "phone": "08057123288",
@@ -338,8 +312,6 @@
         "account_status": "active"
     },
     {
-        "id": 1514,
-        "fake_id": 101517,
         "email": "dapo_abiodun691@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Dapo%20Abiodun\u0026background=random",
         "phone": "08019448619",
@@ -364,8 +336,6 @@
         "account_status": "active"
     },
     {
-        "id": 1515,
-        "fake_id": 101518,
         "email": "babajide_sanwoolu327@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Babajide%20Sanwo-Olu\u0026background=random",
         "phone": "08097082816",
@@ -390,8 +360,6 @@
         "account_status": "active"
     },
     {
-        "id": 1516,
-        "fake_id": 101519,
         "email": "mai_malabuni112@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Mai%20Mala%20Buni\u0026background=random",
         "phone": "08065646926",
@@ -416,8 +384,6 @@
         "account_status": "active"
     },
     {
-        "id": 1517,
-        "fake_id": 101520,
         "email": "abdulrahman_abdulrazaq260@example.com",
         "avatar": "https://ui-avatars.com/api/?name=AbdulRahman%20AbdulRazaq\u0026background=random",
         "phone": "08090538531",
@@ -442,8 +408,6 @@
         "account_status": "active"
     },
     {
-        "id": 1518,
-        "fake_id": 101521,
         "email": "inuwa_yahaya106@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Inuwa%20Yahaya\u0026background=random",
         "phone": "08047966406",
@@ -468,8 +432,6 @@
         "account_status": "active"
     },
     {
-        "id": 1519,
-        "fake_id": 101522,
         "email": "abdullahi_sule206@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Abdullahi%20Sule\u0026background=random",
         "phone": "08068873833",
@@ -494,8 +456,6 @@
         "account_status": "active"
     },
     {
-        "id": 1520,
-        "fake_id": 101523,
         "email": "godswill_akpabio407@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Godswill%20Akpabio\u0026background=random",
         "phone": "08073465286",
@@ -520,8 +480,6 @@
         "account_status": "active"
     },
     {
-        "id": 1521,
-        "fake_id": 101524,
         "email": "ahmad_lawan979@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ahmad%20Lawan\u0026background=random",
         "phone": "08058704095",
@@ -546,8 +504,6 @@
         "account_status": "active"
     },
     {
-        "id": 1522,
-        "fake_id": 101525,
         "email": "femi_gbajabiamila602@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Femi%20Gbajabiamila\u0026background=random",
         "phone": "08062371273",
@@ -572,8 +528,6 @@
         "account_status": "active"
     },
     {
-        "id": 1523,
-        "fake_id": 101526,
         "email": "orji_uzorkalu149@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Orji%20Uzor%20Kalu\u0026background=random",
         "phone": "08084737473",
@@ -598,8 +552,6 @@
         "account_status": "active"
     },
     {
-        "id": 1524,
-        "fake_id": 101527,
         "email": "ovie_omoagege852@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ovie%20Omo-Agege\u0026background=random",
         "phone": "08022985948",
@@ -624,8 +576,6 @@
         "account_status": "active"
     },
     {
-        "id": 1525,
-        "fake_id": 101528,
         "email": "aliyu_wamakko152@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Aliyu%20Wamakko\u0026background=random",
         "phone": "08027478617",
@@ -650,8 +600,6 @@
         "account_status": "active"
     },
     {
-        "id": 1526,
-        "fake_id": 101529,
         "email": "umar_ganduje703@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Umar%20Ganduje\u0026background=random",
         "phone": "08024604882",
@@ -676,8 +624,6 @@
         "account_status": "active"
     },
     {
-        "id": 1527,
-        "fake_id": 101530,
         "email": "abubakar_badaru787@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Abubakar%20Badaru\u0026background=random",
         "phone": "08044471348",
@@ -702,8 +648,6 @@
         "account_status": "active"
     },
     {
-        "id": 1528,
-        "fake_id": 101531,
         "email": "bello_matawalle142@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Bello%20Matawalle\u0026background=random",
         "phone": "08052196697",
@@ -728,8 +672,6 @@
         "account_status": "active"
     },
     {
-        "id": 1529,
-        "fake_id": 101532,
         "email": "ben_ayade543@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ben%20Ayade\u0026background=random",
         "phone": "08058989748",
@@ -754,8 +696,6 @@
         "account_status": "active"
     },
     {
-        "id": 1530,
-        "fake_id": 101533,
         "email": "dave_umahi129@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Dave%20Umahi\u0026background=random",
         "phone": "08094023708",
@@ -780,8 +720,6 @@
         "account_status": "active"
     },
     {
-        "id": 1531,
-        "fake_id": 101534,
         "email": "muhammadu_buhari480@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Muhammadu%20Buhari\u0026background=random",
         "phone": "08052019506",
@@ -806,8 +744,6 @@
         "account_status": "active"
     },
     {
-        "id": 1533,
-        "fake_id": 101536,
         "email": "remi_tinubu601@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Remi%20Tinubu\u0026background=random",
         "phone": "08078211642",
@@ -832,8 +768,6 @@
         "account_status": "active"
     },
     {
-        "id": 1534,
-        "fake_id": 101537,
         "email": "pauline_tallen35@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Pauline%20Tallen\u0026background=random",
         "phone": "08048385872",
@@ -858,8 +792,6 @@
         "account_status": "active"
     },
     {
-        "id": 1536,
-        "fake_id": 101538,
         "email": "goodluck_jonathan43@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Goodluck%20Jonathan\u0026background=random",
         "phone": "08046062201",
@@ -884,8 +816,6 @@
         "account_status": "active"
     },
     {
-        "id": 1537,
-        "fake_id": 101539,
         "email": "nyesom_wike484@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Nyesom%20Wike\u0026background=random",
         "phone": "08011944109",
@@ -910,8 +840,6 @@
         "account_status": "active"
     },
     {
-        "id": 1538,
-        "fake_id": 101540,
         "email": "ifeanyi_okowa958@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ifeanyi%20Okowa\u0026background=random",
         "phone": "08027213588",
@@ -936,8 +864,6 @@
         "account_status": "active"
     },
     {
-        "id": 1539,
-        "fake_id": 101541,
         "email": "bukola_saraki701@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Bukola%20Saraki\u0026background=random",
         "phone": "08081551254",
@@ -962,8 +888,6 @@
         "account_status": "active"
     },
     {
-        "id": 1540,
-        "fake_id": 101542,
         "email": "aminu_tambuwal358@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Aminu%20Tambuwal\u0026background=random",
         "phone": "08087722073",
@@ -988,8 +912,6 @@
         "account_status": "active"
     },
     {
-        "id": 1541,
-        "fake_id": 101543,
         "email": "udom_emmanuel206@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Udom%20Emmanuel\u0026background=random",
         "phone": "08033249791",
@@ -1014,8 +936,6 @@
         "account_status": "active"
     },
     {
-        "id": 1542,
-        "fake_id": 101544,
         "email": "godwin_obaseki702@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Godwin%20Obaseki\u0026background=random",
         "phone": "08060054134",
@@ -1040,8 +960,6 @@
         "account_status": "active"
     },
     {
-        "id": 1543,
-        "fake_id": 101545,
         "email": "seyi_makinde638@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Seyi%20Makinde\u0026background=random",
         "phone": "08014846474",
@@ -1066,8 +984,6 @@
         "account_status": "active"
     },
     {
-        "id": 1544,
-        "fake_id": 101546,
         "email": "bala_mohammed508@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Bala%20Mohammed\u0026background=random",
         "phone": "08057959227",
@@ -1092,8 +1008,6 @@
         "account_status": "active"
     },
     {
-        "id": 1545,
-        "fake_id": 101547,
         "email": "ahmadu_fintiri166@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ahmadu%20Fintiri\u0026background=random",
         "phone": "08042537834",
@@ -1118,8 +1032,6 @@
         "account_status": "active"
     },
     {
-        "id": 1546,
-        "fake_id": 101548,
         "email": "douye_diri46@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Douye%20Diri\u0026background=random",
         "phone": "08078953881",
@@ -1144,8 +1056,6 @@
         "account_status": "active"
     },
     {
-        "id": 1547,
-        "fake_id": 101549,
         "email": "peter_mbah396@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Peter%20Mbah\u0026background=random",
         "phone": "08019737198",
@@ -1170,8 +1080,6 @@
         "account_status": "active"
     },
     {
-        "id": 1548,
-        "fake_id": 101550,
         "email": "ademola_adeleke258@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ademola%20Adeleke\u0026background=random",
         "phone": "08023629553",
@@ -1196,8 +1104,6 @@
         "account_status": "active"
     },
     {
-        "id": 1549,
-        "fake_id": 101551,
         "email": "sheriff_oborevwori57@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Sheriff%20Oborevwori\u0026background=random",
         "phone": "08052402155",
@@ -1222,8 +1128,6 @@
         "account_status": "active"
     },
     {
-        "id": 1550,
-        "fake_id": 101552,
         "email": "caleb_mutfwang911@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Caleb%20Mutfwang\u0026background=random",
         "phone": "08076068828",
@@ -1248,8 +1152,6 @@
         "account_status": "active"
     },
     {
-        "id": 1551,
-        "fake_id": 101553,
         "email": "siminalayi_fubara534@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Siminalayi%20Fubara\u0026background=random",
         "phone": "08049783524",
@@ -1274,8 +1176,6 @@
         "account_status": "active"
     },
     {
-        "id": 1552,
-        "fake_id": 101554,
         "email": "agbu_kefas273@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Agbu%20Kefas\u0026background=random",
         "phone": "08031775321",
@@ -1300,8 +1200,6 @@
         "account_status": "active"
     },
     {
-        "id": 1553,
-        "fake_id": 101555,
         "email": "dauda_lawal199@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Dauda%20Lawal\u0026background=random",
         "phone": "08033490306",
@@ -1326,8 +1224,6 @@
         "account_status": "active"
     },
     {
-        "id": 1554,
-        "fake_id": 101556,
         "email": "umar_bago980@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Umar%20Bago\u0026background=random",
         "phone": "08020637851",
@@ -1352,8 +1248,6 @@
         "account_status": "active"
     },
     {
-        "id": 1555,
-        "fake_id": 101557,
         "email": "samuel_ortom362@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Samuel%20Ortom\u0026background=random",
         "phone": "08083605722",
@@ -1378,8 +1272,6 @@
         "account_status": "active"
     },
     {
-        "id": 1556,
-        "fake_id": 101558,
         "email": "okezie_ikpeazu180@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Okezie%20Ikpeazu\u0026background=random",
         "phone": "08096152457",
@@ -1404,8 +1296,6 @@
         "account_status": "active"
     },
     {
-        "id": 1557,
-        "fake_id": 101559,
         "email": "ifeanyi_ugwuanyi511@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ifeanyi%20Ugwuanyi\u0026background=random",
         "phone": "08094607134",
@@ -1430,8 +1320,6 @@
         "account_status": "active"
     },
     {
-        "id": 1558,
-        "fake_id": 101560,
         "email": "darius_ishaku120@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Darius%20Ishaku\u0026background=random",
         "phone": "08073900854",
@@ -1456,8 +1344,6 @@
         "account_status": "active"
     },
     {
-        "id": 1559,
-        "fake_id": 101561,
         "email": "iyorchia_ayu448@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Iyorchia%20Ayu\u0026background=random",
         "phone": "08092143919",
@@ -1482,8 +1368,6 @@
         "account_status": "active"
     },
     {
-        "id": 1560,
-        "fake_id": 101562,
         "email": "uche_secondus507@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Uche%20Secondus\u0026background=random",
         "phone": "08054931314",
@@ -1508,8 +1392,6 @@
         "account_status": "active"
     },
     {
-        "id": 1562,
-        "fake_id": 101564,
         "email": "jonah_jang429@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Jonah%20Jang\u0026background=random",
         "phone": "08047916762",
@@ -1534,8 +1416,6 @@
         "account_status": "active"
     },
     {
-        "id": 1563,
-        "fake_id": 101565,
         "email": "sule_lamido323@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Sule%20Lamido\u0026background=random",
         "phone": "08050990851",
@@ -1560,8 +1440,6 @@
         "account_status": "active"
     },
     {
-        "id": 1564,
-        "fake_id": 101566,
         "email": "olusegun_obasanjo756@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Olusegun%20Obasanjo\u0026background=random",
         "phone": "08078664893",
@@ -1586,8 +1464,6 @@
         "account_status": "active"
     },
     {
-        "id": 1566,
-        "fake_id": 101568,
         "email": "ngozi_okonjoiweala992@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ngozi%20Okonjo-Iweala\u0026background=random",
         "phone": "08040722578",
@@ -1612,8 +1488,6 @@
         "account_status": "active"
     },
     {
-        "id": 1568,
-        "fake_id": 101569,
         "email": "datti_babaahmed333@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Datti%20Baba-Ahmed\u0026background=random",
         "phone": "08039420959",
@@ -1638,8 +1512,6 @@
         "account_status": "active"
     },
     {
-        "id": 1569,
-        "fake_id": 101570,
         "email": "alex_otti288@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Alex%20Otti\u0026background=random",
         "phone": "08021765072",
@@ -1664,8 +1536,6 @@
         "account_status": "active"
     },
     {
-        "id": 1570,
-        "fake_id": 101571,
         "email": "julius_abure392@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Julius%20Abure\u0026background=random",
         "phone": "08037995127",
@@ -1690,8 +1560,6 @@
         "account_status": "active"
     },
     {
-        "id": 1571,
-        "fake_id": 101572,
         "email": "aisha_yesufu78@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Aisha%20Yesufu\u0026background=random",
         "phone": "08090439123",
@@ -1716,8 +1584,6 @@
         "account_status": "active"
     },
     {
-        "id": 1572,
-        "fake_id": 101573,
         "email": "victor_umeh901@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Victor%20Umeh\u0026background=random",
         "phone": "08086512006",
@@ -1742,8 +1608,6 @@
         "account_status": "active"
     },
     {
-        "id": 1573,
-        "fake_id": 101574,
         "email": "gbadebo_rhodesvivour93@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Gbadebo%20Rhodes-Vivour\u0026background=random",
         "phone": "08087625168",
@@ -1768,8 +1632,6 @@
         "account_status": "active"
     },
     {
-        "id": 1574,
-        "fake_id": 101575,
         "email": "ireti_kingibe256@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Ireti%20Kingibe\u0026background=random",
         "phone": "08036359579",
@@ -1794,8 +1656,6 @@
         "account_status": "active"
     },
     {
-        "id": 1575,
-        "fake_id": 101576,
         "email": "chimaroke_nnamani550@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Chimaroke%20Nnamani\u0026background=random",
         "phone": "08034924958",
@@ -1820,8 +1680,6 @@
         "account_status": "active"
     },
     {
-        "id": 1576,
-        "fake_id": 101577,
         "email": "patrick_utomi657@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Patrick%20Utomi\u0026background=random",
         "phone": "08028377421",
@@ -1846,8 +1704,6 @@
         "account_status": "active"
     },
     {
-        "id": 1577,
-        "fake_id": 101578,
         "email": "yunusa_tanko783@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Yunusa%20Tanko\u0026background=random",
         "phone": "08096511830",
@@ -1872,8 +1728,6 @@
         "account_status": "active"
     },
     {
-        "id": 1578,
-        "fake_id": 101579,
         "email": "kenneth_okonkwo81@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Kenneth%20Okonkwo\u0026background=random",
         "phone": "08086747797",
@@ -1898,8 +1752,6 @@
         "account_status": "active"
     },
     {
-        "id": 1579,
-        "fake_id": 101580,
         "email": "valentine_ozigbo701@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Valentine%20Ozigbo\u0026background=random",
         "phone": "08019664411",
@@ -1924,8 +1776,6 @@
         "account_status": "active"
     },
     {
-        "id": 1582,
-        "fake_id": 101583,
         "email": "rabiu_kwankwaso313@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Rabiu%20Kwankwaso\u0026background=random",
         "phone": "08099909401",
@@ -1950,8 +1800,6 @@
         "account_status": "active"
     },
     {
-        "id": 1583,
-        "fake_id": 101584,
         "email": "abba_kabiryusuf312@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Abba%20Kabir%20Yusuf\u0026background=random",
         "phone": "08089250224",
@@ -1976,8 +1824,6 @@
         "account_status": "active"
     },
     {
-        "id": 1584,
-        "fake_id": 101585,
         "email": "buba_galadima487@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Buba%20Galadima\u0026background=random",
         "phone": "08031566780",
@@ -2002,8 +1848,6 @@
         "account_status": "active"
     },
     {
-        "id": 1587,
-        "fake_id": 101588,
         "email": "rufai_hanga104@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Rufai%20Hanga\u0026background=random",
         "phone": "08088479221",
@@ -2028,8 +1872,6 @@
         "account_status": "active"
     },
     {
-        "id": 1589,
-        "fake_id": 101590,
         "email": "alhassan_doguwa118@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Alhassan%20Doguwa\u0026background=random",
         "phone": "08084127370",
@@ -2054,8 +1896,6 @@
         "account_status": "active"
     },
     {
-        "id": 1590,
-        "fake_id": 101591,
         "email": "danjuma_goje158@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Danjuma%20Goje\u0026background=random",
         "phone": "08054258095",
@@ -2080,8 +1920,6 @@
         "account_status": "active"
     },
     {
-        "id": 1591,
-        "fake_id": 101592,
         "email": "chukwuma_soludo432@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Chukwuma%20Soludo\u0026background=random",
         "phone": "08064373596",
@@ -2106,8 +1944,6 @@
         "account_status": "active"
     },
     {
-        "id": 1592,
-        "fake_id": 101593,
         "email": "willie_obiano946@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Willie%20Obiano\u0026background=random",
         "phone": "08018381200",
@@ -2132,8 +1968,6 @@
         "account_status": "active"
     },
     {
-        "id": 1594,
-        "fake_id": 101595,
         "email": "enyinnaya_abaribe359@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Enyinnaya%20Abaribe\u0026background=random",
         "phone": "08097827642",
@@ -2158,8 +1992,6 @@
         "account_status": "active"
     },
     {
-        "id": 1596,
-        "fake_id": 101597,
         "email": "bianca_ojukwu813@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Bianca%20Ojukwu\u0026background=random",
         "phone": "08077276337",
@@ -2184,8 +2016,6 @@
         "account_status": "active"
     },
     {
-        "id": 1597,
-        "fake_id": 101598,
         "email": "donald_duke552@example.com",
         "avatar": "https://ui-avatars.com/api/?name=Donald%20Duke\u0026background=random",
         "phone": "08038767868",
@@ -2210,8 +2040,6 @@
         "account_status": "active"
     },
     {
-        "id": 1609,
-        "fake_id": 101610,
         "email": "admin@adc.com",
         "avatar": "https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/avatars/2026-06-26/David-Mark-decb303d-86fa-437e-8dbf-6fd431b09e83.webp",
         "phone": "2024561281",
@@ -2236,8 +2064,6 @@
         "account_status": "active"
     },
     {
-        "id": 1610,
-        "fake_id": 101611,
         "email": "candidate@adc.com",
         "avatar": "https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/avatars/2026-06-26/atiku-91549577-9381-4965-8012-e0b465499075.webp",
         "phone": "2024561282",
@@ -2262,8 +2088,6 @@
         "account_status": "active"
     },
     {
-        "id": 1611,
-        "fake_id": 101612,
         "email": "candidate@pdp.com",
         "avatar": "https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/avatars/2026-06-26/Peter-Obi-81adbecd-fe15-456d-a54a-62a6ca7091ba.webp",
         "phone": "2024561283",
@@ -2288,8 +2112,6 @@
         "account_status": "active"
     },
     {
-        "id": 1612,
-        "fake_id": 101613,
         "email": "candidate@apc.com",
         "avatar": "https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/avatars/2026-06-26/tinibu.png",
         "phone": "2024561284",
