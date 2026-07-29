@@ -34,7 +34,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
 
   // Compute page's full name for display based on type
   const name = forWho === "user"
-    ? [page?.first_name, page?.last_name].filter(Boolean).join(" ")
+    ? [page?.first_name, page?.last_name].filter(Boolean).join(" ") || "User"
     : page?.name || page?.party_name || "Party";
 
   // list of active verifications attached to the page
@@ -349,7 +349,8 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
             type="button"
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
+            // className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
+            className="text-white"
           >
             {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
             Save changes
