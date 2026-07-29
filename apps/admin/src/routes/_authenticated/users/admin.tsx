@@ -28,7 +28,7 @@ function RouteComponent() {
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch, } = useInfiniteQuery({
     // Unique key for React Query cache
-    queryKey: ["users", "admin", debouncedSearchQuery],
+    queryKey: ["users-list", "admin", debouncedSearchQuery],
 
     // Function to fetch a page of data using the cursor parameter
     queryFn: async ({ pageParam }) => {

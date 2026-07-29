@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	"strconv"
 
 	"sync"
 
@@ -242,6 +243,13 @@ func (s *UsersService) InvalidateCachedUserInfo(ctx context.Context, fakeID int6
 	return s.rdb.Del(ctx, userInfoKey).Err()
 }
 
+// InvalidateCachedUserRoles invalidates the cached user roles in Redis.
+// This function should be called anytime a user's roles change.
+func (s *UsersService) InvalidateCachedUserRoles(ctx context.Context, userID int64) error {
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+	return s.rdb.Del(ctx, userRolesKey).Err()
+}
+
 // GetUserRoles fetches the roles assigned to a specific user, utilizing Redis caching.
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
@@ -286,18 +294,14 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, fakeID 
 		return err
 	}
 
-	// Invalidate the user-roles cache
-	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
-	s.rdb.Del(ctx, userRolesKey)
-
 	// Update the user_table, updates has_role to true
 	_ = s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
 		ID:      userID,
 		HasRole: pgtype.Bool{Bool: true, Valid: true},
 	})
 
-	// Invalidate user info cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the user-roles cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
 
 	return nil
 }
@@ -312,10 +316,6 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 		return err
 	}
 
-	// Invalidate the cache
-	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
-	s.rdb.Del(ctx, userRolesKey)
-
 	// Check if user has any roles left
 	hasRole, err := s.queries.CheckUserHasAnyRole(ctx, userID)
 	if err != nil {
@@ -326,8 +326,8 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 		HasRole: pgtype.Bool{Bool: hasRole, Valid: true},
 	})
 
-	// Invalidate user info cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the roles cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
 
 	return nil
 }
@@ -544,5 +544,115 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 
 	// Invalidate the user info cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	return nil
+}
+
+// MakeUserSuperAdmin promotes a specific user to the superadmin role.
+func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) error {
+	allowed := map[string]bool{
+		"stanley": true, "stanley_chukwu": true, "stanleychukwu": true,
+		"daniel": true, "daniel_chukwu": true, "danielchukwu": true,
+	}
+
+	if !allowed[username] {
+		return fmt.Errorf("username not authorized for superadmin promotion")
+	}
+
+	redisKey := fmt.Sprintf("%s%s", db.RedisUsernameFakeID, username)
+	val, err := s.rdb.Get(ctx, redisKey).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return fmt.Errorf("user not found in registry")
+		}
+		return fmt.Errorf("redis error: %w", err)
+	}
+
+	fakeID, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid fake id in redis: %w", err)
+	}
+
+	user, err := s.GetUserByFakeID(ctx, fakeID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user details: %w", err)
+	}
+
+	// 1. Get user roles
+	roles, err := s.GetUserRoles(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user roles: %w", err)
+	}
+
+	// 2. Check if the user already has the super_admin role
+	for _, r := range roles {
+		if r.Code == "super_admin" {
+			// Already has the role, no need to assign again
+			return nil
+		}
+	}
+
+	// 3. Assign the role in DB
+	err = s.AssignUserRole(ctx, user.ID, fakeID, "super_admin", 0)
+	if err != nil {
+		return fmt.Errorf("failed to assign super_admin role: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateUserRoles replaces a user's roles and optionally sets their party ID.
+func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error {
+	// Get existing roles
+	currentRoles, err := s.GetUserRoles(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch current roles: %w", err)
+	}
+
+	// Create a map of current roles for quick lookup
+	currentRolesMap := make(map[string]bool)
+	for _, r := range currentRoles {
+		currentRolesMap[r.Code] = true
+	}
+
+	// Create a map of new roles for quick lookup
+	newRolesMap := make(map[string]bool)
+	for _, roleCode := range roles {
+		newRolesMap[roleCode] = true
+	}
+
+	// Identify and assign roles to ADD
+	for roleCode := range newRolesMap {
+		if !currentRolesMap[roleCode] {
+			err = s.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
+			if err != nil {
+				return fmt.Errorf("failed to add role %s: %w", roleCode, err)
+			}
+		}
+	}
+
+	// 3. Identify and remove roles to DELETE
+	for roleCode := range currentRolesMap {
+		if !newRolesMap[roleCode] {
+			err = s.RemoveUserRole(ctx, userID, fakeID, roleCode)
+			if err != nil {
+				return fmt.Errorf("failed to remove role %s: %w", roleCode, err)
+			}
+		}
+	}
+
+	// 4. Update party if provided
+	if partyID != nil {
+		err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+			ID:      userID,
+			PartyID: pgtype.Int2{Int16: int16(*partyID), Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update user party: %w", err)
+		}
+	}
+
+	// invalidate the user cache here
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
 	return nil
 }

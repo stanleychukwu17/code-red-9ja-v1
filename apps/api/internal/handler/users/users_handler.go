@@ -44,6 +44,8 @@ type UsersService interface {
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
 	DeleteUserPhoneNumber(ctx context.Context, id int64) error
 	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
+	MakeUserSuperAdmin(ctx context.Context, username string) error
+	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -963,65 +965,135 @@ func (h *Handler) DeleteUserPhoneNumber(w http.ResponseWriter, r *http.Request) 
 	h.utils.RespondSuccess(w, http.StatusOK, "Phone number deleted successfully", nil)
 }
 
-// GetUserRolesAdmin handles GET /api/v1/admin/users/{id}/roles
-func (h *Handler) GetUserRolesAdmin(w http.ResponseWriter, r *http.Request) {
+// MakeUserSuperAdminRequest represents the request to promote a user
+type MakeUserSuperAdminRequest struct {
+	Name string `json:"name" validate:"required,min=3"`
+}
+
+// @Summary Make a user superadmin
+// @Description Promotes a user to superadmin if their username is in the pre-approved list
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body MakeUserSuperAdminRequest true "Superadmin promotion details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/superadmin [post]
+func (h *Handler) MakeUserSuperAdmin(w http.ResponseWriter, r *http.Request) {
+	var req MakeUserSuperAdminRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
+		return
+	}
+
+	err := h.usersService.MakeUserSuperAdmin(r.Context(), req.Name)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to make superadmin: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "User successfully promoted to superadmin", nil)
+}
+
+// UpdateUserRolesRequest represents the request to completely replace a user's roles
+type UpdateUserRolesRequest struct {
+	UserFakeID *int64   `json:"user_fid" validate:"omitempty"`
+	Roles      []string `json:"roles" validate:"required,min=1"`
+	PartyID    *int64   `json:"party_id" validate:"omitempty"`
+}
+
+// @Summary Update all roles for a user
+// @Description Replaces all roles for an existing user and optionally sets their party ID if party_admin is included
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body UpdateUserRolesRequest true "Role update details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 403 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /auth/roles/update [post]
+func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok || claims == nil {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
 		return
 	}
 
-	fakeIdStr := chi.URLParam(r, "id")
-	fakeID, err := strconv.ParseInt(fakeIdStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID")
+	isAdmin := claims.HasAnyRole("admin", "super_admin")
+	isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
+
+	// Must be an admin or super_admin to update roles manually
+	if !isAdmin && !isPartyAdmin {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions to manage roles")
 		return
 	}
 
-	user, err := h.usersService.GetUserByFakeID(r.Context(), fakeID)
+	// the logic below is not fit enough to allow party admins to create other party admins,
+	if isPartyAdmin {
+		h.utils.RespondError(w, http.StatusForbidden, "Currently, party admins cannot assign roles")
+		return
+	}
+
+	// destructures the request body
+	var req UpdateUserRolesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	// validates the struct
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
+		return
+	}
+
+	// ensure user_fid is provided
+	if req.UserFakeID == nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: user_fid is required")
+		return
+	}
+
+	// get user details from the fake id
+	userDetails, err := h.usersService.GetUserByFakeID(r.Context(), *req.UserFakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
-	// Permission checks:
-	isAdmin := claims.HasAnyRole("super_admin", "admin")
-	isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
-	if !isAdmin && !isPartyAdmin {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+	// get the userID
+	userID := userDetails.ID
+
+	// Make sure if they include party_admin they provide a party ID
+	hasPartyAdmin := false
+	for _, role := range req.Roles {
+		if role == "party_admin" || role == "super_party_admin" {
+			hasPartyAdmin = true
+			break
+		}
+	}
+	if hasPartyAdmin && req.PartyID == nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: party_id is required when assigning party_admin role")
 		return
 	}
 
-	if isPartyAdmin && !isAdmin {
-		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
-			return
-		}
-		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int16 != currUser.PartyID.Int16 {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only view members of your own party")
-			return
-		}
-	}
-
-	uRoles, err := h.usersService.GetUserRoles(r.Context(), user.ID)
+	// Call UpdateUserRoles
+	err = h.usersService.UpdateUserRoles(r.Context(), userID, *req.UserFakeID, req.Roles, req.PartyID, claims.UserID)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch roles")
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update roles: "+err.Error())
 		return
 	}
 
-	roles := make([]string, 0, len(uRoles))
-	for _, role := range uRoles {
-		roles = append(roles, role.Code)
-	}
-
-	var partyID *int16
-	if user.PartyID.Valid {
-		partyID = &user.PartyID.Int16
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "User roles retrieved successfully", map[string]interface{}{
-		"roles":    roles,
-		"party_id": partyID,
+	freshUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), *req.UserFakeID)
+	h.utils.RespondSuccess(w, http.StatusOK, "User roles successfully updated", map[string]interface{}{
+		"userDetails": freshUserDetails,
 	})
 }

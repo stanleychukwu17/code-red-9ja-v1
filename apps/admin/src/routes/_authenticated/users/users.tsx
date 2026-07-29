@@ -40,11 +40,11 @@ function RouteComponent() {
     refetch,
   } = useInfiniteQuery({
     // queryKey uniquely identifies this query in the cache
-    queryKey: ["users", "user", debouncedSearchQuery],
+    queryKey: ["users-list", "user", debouncedSearchQuery],
 
     // queryFn is the function that actually fetches the data
     queryFn: async ({ pageParam }) => {
-      console.log("SEARCH:", debouncedSearchQuery);
+      // console.log("SEARCH:", debouncedSearchQuery);
       const res = await getUsersList({
         data: {
           limit: 20,
@@ -52,7 +52,7 @@ function RouteComponent() {
           search: debouncedSearchQuery || undefined,
         },
       });
-      console.log("RES:", res);
+      // console.log("RES:", res);
 
       if (res && res.success && res.data) {
         return res;

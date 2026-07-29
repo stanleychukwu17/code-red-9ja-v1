@@ -45,6 +45,7 @@ export const SelectParty = ({ update, errorMsg, selectedId, className, align = "
       if (res && res.success && res.data) return res;
       throw new Error(res?.message || "Failed to fetch parties");
     },
+    staleTime: Infinity,
   });
 
   const parties = data?.data?.parties || [];
@@ -70,10 +71,9 @@ export const SelectParty = ({ update, errorMsg, selectedId, className, align = "
   };
 
   // Filter parties based on search input for desktop and mobile views respectively
-  const filteredParties = parties.filter(
-    (p) =>
-      p.name.toLowerCase().includes(desktopSearch.toLowerCase()) ||
-      p.short_name.toLowerCase().includes(desktopSearch.toLowerCase()),
+  const filteredParties = parties.filter((p) =>
+    p.name.toLowerCase().includes(desktopSearch.toLowerCase()) ||
+    p.short_name.toLowerCase().includes(desktopSearch.toLowerCase()),
   );
   const mobileFiltered = parties.filter(
     (p) =>

@@ -209,8 +209,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)     // Change password by email endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, authHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
-	mainRouter.Post("/api/v1/auth/assign-role", authHandler.AssignUserRole)                          // Assign role endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                  // Make superAdmin endpoint
 
 	// for seeds
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers) // Seed users endpoint
@@ -308,7 +307,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		})
 
 		r.Get("/api/v1/admin/users", authHandler.ListAdmins)
-		r.Post("/api/v1/auth/roles/update", authHandler.UpdateUserRoles)
+		r.Post("/api/v1/auth/roles/update", usersHandler.UpdateUserRoles)
 		r.Post("/api/v1/bodies/recalculate", bodiesHandler.RecalculateBodyMetrics)
 
 		// political parties admin mutations
@@ -406,7 +405,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)
 		r.Delete("/api/v1/admin/users/{id}", usersHandler.DeleteUser)
-		r.Get("/api/v1/admin/users/{id}/roles", usersHandler.GetUserRolesAdmin)
 		r.Get("/api/v1/admin/users/{id}/phones", usersHandler.GetUserPhoneNumbers)
 		r.Put("/api/v1/admin/users/{id}/phones", usersHandler.UpdateUserPhoneNumbers)
 		r.Delete("/api/v1/admin/users/phones/{id}", usersHandler.DeleteUserPhoneNumber)

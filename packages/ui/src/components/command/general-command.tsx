@@ -153,6 +153,7 @@ export function GeneralCommand<T>({
                   return (
                     <div
                       ref={rowVirtualizer.measureElement}
+                      data-index={virtualRow.index}
                       key={getId(item)}
                       className="absolute top-0 left-0 w-full"
                       style={{

@@ -39,7 +39,7 @@ export const UserDropdown = ({
       return res.data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+      queryClient.invalidateQueries({ queryKey: ["users-list"] });
       refetch?.();
       setOpenDeleteAlert(false);
     },
@@ -107,7 +107,7 @@ export const UserDropdown = ({
         onClose={() => setOpenEditDialog(false)}
         user={userDetails}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["users"] });
+          queryClient.invalidateQueries({ queryKey: ["users-list"] });
           refetch?.();
         }}
       />
@@ -117,7 +117,7 @@ export const UserDropdown = ({
         onClose={() => setOpenRoleDialog(false)}
         user={userDetails}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["users"] });
+          queryClient.invalidateQueries({ queryKey: ["users-list"] });
           refetch?.();
         }}
       />
@@ -128,7 +128,8 @@ export const UserDropdown = ({
         page={userDetails}
         forWho="user"
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["users"] });
+          setOpenBadgeDialog(false)
+          // queryClient.invalidateQueries({ queryKey: ["users-list"] });
         }}
       />
 

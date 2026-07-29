@@ -16,7 +16,7 @@ export const getUsersList = createServerFn({ method: "GET" })
       if (data?.party_id) params.append("party_id", String(data.party_id));
       if (data?.search) params.append("search", data.search);
       const qs = params.toString();
-      console.log("getUsersList qs:", qs, "data:", data);
+      // console.log("getUsersList qs:", qs, "data:", data);
 
       const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
       const resData = await response.json();
@@ -60,7 +60,7 @@ export const deleteUser = createServerFn({ method: "POST" })
 
 // Updates user roles and optionally their party ID
 export const updateUserRoles = createServerFn({ method: "POST" })
-  .inputValidator((data: { user_id: number; roles: string[]; party_id?: number }) => data)
+  .inputValidator((data: { user_fid: number; roles: string[]; party_id?: number }) => data)
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.auth.updateRoles, {
@@ -72,19 +72,6 @@ export const updateUserRoles = createServerFn({ method: "POST" })
       return resData;
     } catch (error) {
       return { success: false, message: "Failed to update user roles: " + (error as Error).message };
-    }
-  });
-
-// Gets user roles
-export const getUserRoles = createServerFn({ method: "GET" })
-  .inputValidator((data: { user_id: string | number }) => data)
-  .handler(async ({ data: { user_id } }) => {
-    try {
-      const response = await apiFetch(API_URL.userRoles(user_id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch user roles: " + (error as Error).message };
     }
   });
 
