@@ -45,9 +45,8 @@ export function UserRoleDialog({
 
   // Synchronize form values with initial user data
   React.useEffect(() => {
-    // if user already has roles. we display existing roles
-    if (open && user && user.roles?.roles && user.roles.roles.length > 0) {
-      const initialRoles = user.roles.roles_code;
+    if (open && user) {
+      const initialRoles = user.roles?.roles_code || [];
 
       // update the fields
       form.setFieldValue("roles", initialRoles);
@@ -63,21 +62,25 @@ export function UserRoleDialog({
   // Mutation to handle updating the user's role and associated data on the backend
   const saveMutation = useMutation({
     mutationFn: async (values: any) => {
-      if (!values.roles || values.roles.length === 0)
-        throw new Error("At least one role is required");
-
       if (!updateUserRole) {
         // Return a placeholder success response if no API function is provided yet
         return { success: true, data: values };
       }
 
+      // update the selectedRoles, if [], means removing the user from all roles
+      const selectedRoles = values.roles || [];
+
       // Call the API to update the user roles
       const res = await updateUserRole({
         data: {
           user_fid: user.fake_id,
-          roles: values.roles,
+          roles: selectedRoles,
           // Only send party_id if the selected roles require it (party admin roles)
-          party_id: (values.roles.includes("party_admin") || values.roles.includes("super_party_admin")) ? values.party_id : undefined,
+          party_id:
+            selectedRoles.includes("party_admin") ||
+              selectedRoles.includes("super_party_admin")
+              ? values.party_id
+              : undefined,
         },
       });
 
@@ -91,9 +94,8 @@ export function UserRoleDialog({
 
       // the updated user details
       const updatedDetails = data?.userDetails;
-      console.log({ updatedDetails })
 
-      // if valid user details, we update the cache
+      // if valid user details, we update the user cache in tanstack-query
       if (updatedDetails) {
         queryClient.setQueriesData(
           { queryKey: ["users-list"] },
@@ -147,18 +149,12 @@ export function UserRoleDialog({
                 {/* Form field for managing the dynamic array of roles */}
                 <form.Field
                   name="roles"
-                  validators={{
-                    onChange: ({ value }) => !value || value.length === 0 ? "At least one role is required" : undefined,
-                  }}
                   children={(field: any) => (
                     <div className="flex flex-col gap-3">
                       <label className="text-[14px] text-c-50">Roles</label>
                       {/* Render a row for each assigned role */}
                       {field.state.value.map((role: string, index: number) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-2"
-                        >
+                        <div key={index} className="flex items-center gap-2">
                           <div className="flex-1">
                             {/* Dropdown to select the specific role */}
                             <SelectRole
@@ -191,7 +187,7 @@ export function UserRoleDialog({
                           {/* Button to remove a role row, disabled if only one role is left */}
                           <button
                             type="button"
-                            disabled={field.state.value.length === 1}
+                            // disabled={field.state.value.length === 1}
                             onClick={() => {
                               const newRoles = [...field.state.value];
                               newRoles.splice(index, 1);
@@ -227,7 +223,8 @@ export function UserRoleDialog({
               variant="secondary"
               size="2xl"
               disabled={saveMutation.isPending}
-            // className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+              // className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+              className="text-white"
             >
               {saveMutation.isPending && (
                 <Loader2 className="size-4 animate-spin" />
