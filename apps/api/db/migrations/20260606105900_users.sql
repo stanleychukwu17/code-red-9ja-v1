@@ -136,6 +136,10 @@ CREATE TABLE user_verifications (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX idx_user_verifications_nin_verified ON user_verifications(nin_verified);
+CREATE INDEX idx_user_verifications_phone_verified ON user_verifications(phone_verified);
+CREATE INDEX idx_user_verifications_email_verified ON user_verifications(email_verified);
+
 -- +goose Down
 DROP TABLE IF EXISTS user_verifications;
 DROP TABLE IF EXISTS user_more_infos;
