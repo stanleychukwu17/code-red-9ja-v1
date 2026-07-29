@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/logger"
 	"free9ja/api/internal/service/audit"
 	"time"
 
@@ -123,31 +122,24 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, forWho, pageID)
 	s.rdb.Del(ctx, redisKey)
 
+	// marshal the old data
 	oldValuesData, _ := json.Marshal(pageVerifications)
 
-	// Log the action in a goroutine
-	go func(oldData []byte, entityType string, entityID int64, actor int64) {
-		bgCtx := context.Background()
-		log := logger.FromContext(bgCtx).With("component", logger.ComponentPageVerificationsService)
+	// marshal the new data
+	newPageVerifications, _ := s.GetPageVerifications(ctx, forWho, pageID)
+	newValuesData, _ := json.Marshal(newPageVerifications)
 
-		newPageVerifications, _ := s.GetPageVerifications(bgCtx, entityType, entityID)
-		newValuesData, _ := json.Marshal(newPageVerifications)
-
-		auditParams := queries.InsertAuditLogParams{
-			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-			ActorID:    actor,
-			ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
-			Action:     db.ActionAssignPageVerification,
-			EntityType: entityType,
-			EntityID:   fmt.Sprintf("%d", entityID),
-			OldValues:  oldData,
-			NewValues:  newValuesData,
-		}
-
-		if err := s.auditService.LogAction(bgCtx, auditParams); err != nil {
-			log.Error(logger.EventAuditLogFailed, "error", err, "action", db.ActionAssignPageVerification, "entity_type", entityType, "entity_id", entityID)
-		}
-	}(oldValuesData, forWho, pageID, actorID)
+	// save the old and new data as we log the action of this admin
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		ActorID:    actorID,
+		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
+		Action:     db.ActionAssignPageVerification,
+		EntityType: forWho,
+		EntityID:   fmt.Sprintf("%d", pageID),
+		OldValues:  oldValuesData,
+		NewValues:  newValuesData,
+	})
 
 	return pv, nil
 }
@@ -212,29 +204,21 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, param
 	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, params.PageType, params.PageID)
 	s.rdb.Del(ctx, redisKey)
 
-	// Log the action in a goroutine
-	go func(oldData []byte, entityType string, entityID int64, actor int64) {
-		bgCtx := context.Background()
-		log := logger.FromContext(bgCtx).With("component", logger.ComponentPageVerificationsService)
+	// get all the page verifications after removal
+	newPageVerifications, _ := s.GetPageVerifications(ctx, params.PageType, params.PageID)
+	newValuesData, _ := json.Marshal(newPageVerifications)
 
-		newPageVerifications, _ := s.GetPageVerifications(bgCtx, entityType, entityID)
-		newValuesData, _ := json.Marshal(newPageVerifications)
-
-		auditParams := queries.InsertAuditLogParams{
-			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-			ActorID:    actor,
-			ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
-			Action:     db.ActionRemovePageVerification,
-			EntityType: entityType,
-			EntityID:   fmt.Sprintf("%d", entityID),
-			OldValues:  oldData,
-			NewValues:  newValuesData,
-		}
-
-		if err := s.auditService.LogAction(bgCtx, auditParams); err != nil {
-			log.Error(logger.EventAuditLogFailed, "error", err, "action", db.ActionRemovePageVerification, "entity_type", entityType, "entity_id", entityID)
-		}
-	}(oldValuesData, params.PageType, params.PageID, params.ActorID)
+	// save the old and new data as we log the action of this admin
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		ActorID:    params.ActorID,
+		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
+		Action:     db.ActionRemovePageVerification,
+		EntityType: params.PageType,
+		EntityID:   fmt.Sprintf("%d", params.PageID),
+		OldValues:  oldValuesData,
+		NewValues:  newValuesData,
+	})
 
 	var pageDetails interface{}
 	switch params.PageType {
