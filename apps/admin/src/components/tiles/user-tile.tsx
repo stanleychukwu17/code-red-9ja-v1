@@ -30,7 +30,7 @@ export type UserType = {
   is_politician?: boolean;
   is_verified?: boolean;
   verifications?: any[];
-  roles?: string[];
+  roles?: { roles?: any[]; roles_code?: string[] };
   account_status?: string;
   party_id?: number;
   created_at?: string;
@@ -39,7 +39,7 @@ export type UserType = {
   city_name?: string;
 
   // Frontend-specific fallback fields
-  role?: any;
+  role?: string;
   avatar_url?: string;
   name?: string;
   status?: string;
@@ -89,22 +89,24 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
   const firstName = getPgString(data.first_name);
   const lastName = getPgString(data.last_name);
   const username = getPgString(data.username);
-  const is_verified = data.is_verified as boolean;
-  const verifications = data.verifications as any[];
+  const verifications = (data.verifications || []) as any[];
 
-  const name = data.name || [firstName, lastName].filter(Boolean).join(" ") || username;
-
-  const rawRoleLevel = data.role || "user";
-  const formattedRoleLevel = rawRoleLevel.charAt(0).toUpperCase() + rawRoleLevel.slice(1);
-
-  const createdTime = data.created_at || "";
+  const name = [firstName, lastName].filter(Boolean).join(" ") || username;
+  const createdTime = getPgString(data.created_at);
   const dateAdded = data.dateAdded || formatDate(createdTime);
 
-  const avatar = data.avatar || data.avatar_url;
+  const avatar = getPgString(data.avatar) || data.avatar_url;
 
   const state = getPgString(data.state_name);
   const country = getPgString(data.country_name);
   const location = [state, country].filter(Boolean).join(", ");
+
+  let formattedRoleLevel: string = '';
+  if (data.roles?.roles_code && data.roles.roles_code.length > 0) {
+    formattedRoleLevel = data.roles.roles_code.join(", ")
+  } else {
+    formattedRoleLevel = "user"
+  }
 
   return (
     <TileRow className="py-10 border-b">
@@ -122,7 +124,7 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
             >
               <span className="truncate">{name}</span>
             </Link>
-            {is_verified && verifications.length > 0 && (
+            {data.is_verified && verifications.length > 0 && (
               verifications.map((v: any, i: number) => (
                 <VerificationBadge key={`${v.id}-${v.verification_type_id}`} id={v.verification_type_id} title={v.verification_title} />
               ))
@@ -140,10 +142,10 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
         </div>
       </TileLeft>
       <TileRight>
-        <span className="text-[14px] text-c-80 w-35">
+        <span className="text-[13px] text-c-80 w-35 capitalize truncate">
           {formattedRoleLevel || "-"}
         </span>
-        <span className="text-[14px] text-c-70 w-37.5">{dateAdded}</span>
+        <span className="text-[13px] text-c-70 w-37.5">{dateAdded}</span>
         <UserDropdown data={data} refetch={refetch} className="ml-2" />
       </TileRight>
     </TileRow>
