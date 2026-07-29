@@ -8074,7 +8074,8 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UserResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "401": {
@@ -10239,6 +10240,20 @@ const docTemplate = `{
                 }
             }
         },
+        "pgtype.Date": {
+            "type": "object",
+            "properties": {
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
         "pgtype.InfinityModifier": {
             "type": "integer",
             "format": "int32",
@@ -10252,6 +10267,42 @@ const docTemplate = `{
                 "Finite",
                 "NegativeInfinity"
             ]
+        },
+        "pgtype.Int2": {
+            "type": "object",
+            "properties": {
+                "int16": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Int4": {
+            "type": "object",
+            "properties": {
+                "int32": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Int8": {
+            "type": "object",
+            "properties": {
+                "int64": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
         },
         "pgtype.Numeric": {
             "type": "object",
@@ -10619,6 +10670,23 @@ const docTemplate = `{
                 }
             }
         },
+        "queries.CachedUserRoles": {
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetUserRolesRow"
+                    }
+                },
+                "roles_code": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "queries.GetPageVerificationsRow": {
             "type": "object",
             "properties": {
@@ -10651,6 +10719,26 @@ const docTemplate = `{
                 },
                 "verified_at": {
                     "$ref": "#/definitions/pgtype.Timestamptz"
+                }
+            }
+        },
+        "queries.GetUserRolesRow": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "date_assigned": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "role_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "who_assigned": {
+                    "type": "integer"
                 }
             }
         },
@@ -10730,6 +10818,128 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/queries.GetPageVerificationsRow"
                     }
+                }
+            }
+        },
+        "queries.UserWithPlaces": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "address": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "country_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "current_city": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "current_ward": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "data_phone": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "date_of_birth": {
+                    "$ref": "#/definitions/pgtype.Date"
+                },
+                "email": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "fake_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
+                "first_name": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "gender": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "has_role": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_politician": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "is_verified": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "last_name": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "middle_name": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "party_basic_info": {
+                    "$ref": "#/definitions/queries.PartyBasicInfoWithVerifications"
+                },
+                "party_id": {
+                    "$ref": "#/definitions/pgtype.Int2"
+                },
+                "password_hash": {
+                    "type": "string"
+                },
+                "phone": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "polling_unit_id": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "referral_code": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "referred_by_code": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "roles": {
+                    "$ref": "#/definitions/queries.CachedUserRoles"
+                },
+                "state_name": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "$ref": "#/definitions/pgtype.Int2"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "username": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
+                },
+                "voters_card_image": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "whatsapp_phone": {
+                    "$ref": "#/definitions/pgtype.Text"
                 }
             }
         },
@@ -11066,7 +11276,7 @@ const docTemplate = `{
                 "users": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/usershandler.UserResponse"
+                        "$ref": "#/definitions/queries.UserWithPlaces"
                     }
                 }
             }
@@ -11170,153 +11380,12 @@ const docTemplate = `{
                 },
                 "roles": {
                     "type": "array",
-                    "minItems": 1,
                     "items": {
                         "type": "string"
                     }
                 },
                 "user_fid": {
                     "type": "integer"
-                }
-            }
-        },
-        "usershandler.UserResponse": {
-            "type": "object",
-            "properties": {
-                "account_status": {
-                    "type": "string"
-                },
-                "address": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "type": "string"
-                },
-                "city_name": {
-                    "type": "string"
-                },
-                "country_name": {
-                    "type": "string"
-                },
-                "created_at": {
-                    "type": "string"
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_lga": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "current_ward": {
-                    "type": "integer"
-                },
-                "data_phone": {
-                    "type": "string"
-                },
-                "date_of_birth": {
-                    "type": "string"
-                },
-                "education_level": {
-                    "type": "string"
-                },
-                "educational_status": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "email_verified": {
-                    "type": "boolean"
-                },
-                "fake_id": {
-                    "type": "integer"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "graduation_year": {
-                    "type": "string"
-                },
-                "highest_degree": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "is_politician": {
-                    "type": "boolean"
-                },
-                "is_verified": {
-                    "type": "boolean"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "marital_status": {
-                    "type": "string"
-                },
-                "middle_name": {
-                    "type": "string"
-                },
-                "nin_verified": {
-                    "type": "boolean"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "phone_verified": {
-                    "type": "boolean"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "religion": {
-                    "type": "string"
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "school_name": {
-                    "type": "string"
-                },
-                "state_name": {
-                    "type": "string"
-                },
-                "state_of_origin": {
-                    "type": "integer"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                },
-                "verifications": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
-                    }
-                },
-                "voters_card_verified": {
-                    "type": "boolean"
-                },
-                "whatsapp_phone": {
-                    "type": "string"
                 }
             }
         },
