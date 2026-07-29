@@ -6,10 +6,12 @@ import (
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/utils"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
+
+	"free9ja/api/internal/db"
 
 	"free9ja/api/internal/service/audit"
 	monnifyclient "free9ja/api/internal/service/monnify"
@@ -76,220 +78,10 @@ func NewHandler(usersService UsersService, auditService audit.AuditService, bodi
 	}
 }
 
-// UserResponse represents the sanitized user profile details returned to the frontend
-type UserResponse struct {
-	ID                 int64                             `json:"id"`
-	FakeID             int64                             `json:"fake_id"`
-	Email              string                            `json:"email"`
-	Avatar             string                            `json:"avatar"`
-	Phone              string                            `json:"phone"`
-	Username           string                            `json:"username"`
-	LastName           string                            `json:"last_name"`
-	FirstName          string                            `json:"first_name"`
-	MiddleName         string                            `json:"middle_name"`
-	Gender             string                            `json:"gender"`
-	DateOfBirth        string                            `json:"date_of_birth"`
-	CurrentCountry     int16                             `json:"current_country"`
-	CurrentState       int16                             `json:"current_state"`
-	CurrentCity        int32                             `json:"current_city"`
-	CurrentLga         int32                             `json:"current_lga"`
-	CurrentWard        int32                             `json:"current_ward"`
-	StateOfOrigin      int16                             `json:"state_of_origin"`
-	NinVerified        bool                              `json:"nin_verified"`
-	PhoneVerified      bool                              `json:"phone_verified"`
-	EmailVerified      bool                              `json:"email_verified"`
-	VotersCardVerified bool                              `json:"voters_card_verified"`
-	IsPolitician       bool                              `json:"is_politician"`
-	IsVerified         bool                              `json:"is_verified"`
-	Verifications      []queries.GetPageVerificationsRow `json:"verifications,omitempty"`
-	Roles              queries.CachedUserRoles           `json:"roles"`
-	AccountStatus      string                            `json:"account_status"`
-	PartyID            int64                             `json:"party_id,omitempty"`
-	PollingUnitID      int64                             `json:"polling_unit_id,omitempty"`
-	CreatedAt          string                            `json:"created_at"`
-	UpdatedAt          string                            `json:"updated_at"`
-	WhatsappPhone      string                            `json:"whatsapp_phone"`
-	DataPhone          string                            `json:"data_phone"`
-	EducationalStatus  string                            `json:"educational_status"`
-	HighestDegree      string                            `json:"highest_degree"`
-	GraduationYear     string                            `json:"graduation_year"`
-	SchoolName         string                            `json:"school_name"`
-	Address            string                            `json:"address"`
-	Religion           string                            `json:"religion"`
-	MaritalStatus      string                            `json:"marital_status"`
-	EducationLevel     string                            `json:"education_level"`
-	CountryName        string                            `json:"country_name,omitempty"`
-	StateName          string                            `json:"state_name,omitempty"`
-	CityName           string                            `json:"city_name,omitempty"`
-}
-
-func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles queries.CachedUserRoles) UserResponse {
-	var avatar, username, lastName, firstName, middleName, gender string
-	var dateOfBirth, accountStatus string
-	var ninVerified, phoneVerified, emailVerified, votersCardVerified bool
-	var whatsappPhone, dataPhone, educationalStatus, highestDegree, graduationYear, schoolName string
-	var address, religion, maritalStatus, educationLevel string
-	var partyID, pollingUnitID int64
-	var cityID, lgaID, wardID int32
-	var stateOfOrigin int16
-
-	if u.Avatar.Valid {
-		avatar = u.Avatar.String
-	}
-	if u.Username.Valid {
-		username = u.Username.String
-	}
-	if u.LastName.Valid {
-		lastName = u.LastName.String
-	}
-	if u.FirstName.Valid {
-		firstName = u.FirstName.String
-	}
-	if u.MiddleName.Valid {
-		middleName = u.MiddleName.String
-	}
-	if u.Gender.Valid {
-		gender = u.Gender.String
-	}
-	if u.DateOfBirth.Valid {
-		dateOfBirth = u.DateOfBirth.Time.Format("2006-01-02")
-	}
-	if v != nil {
-		if v.NinVerified.Valid {
-			ninVerified = v.NinVerified.Bool
-		}
-		if v.PhoneVerified.Valid {
-			phoneVerified = v.PhoneVerified.Bool
-		}
-		if v.EmailVerified.Valid {
-			emailVerified = v.EmailVerified.Bool
-		}
-		if v.VotersCardVerified.Valid {
-			votersCardVerified = v.VotersCardVerified.Bool
-		}
-	}
-	if u.AccountStatus.Valid {
-		accountStatus = u.AccountStatus.String
-	}
-	if u.PartyID.Valid {
-		partyID = int64(u.PartyID.Int16)
-	}
-	if u.CurrentCity.Valid {
-		cityID = u.CurrentCity.Int32
-	}
-	if u.StateOfOrigin.Valid {
-		stateOfOrigin = u.StateOfOrigin.Int16
-	}
-	if u.PollingUnitID.Valid {
-		pollingUnitID = int64(u.PollingUnitID.Int32)
-	}
-	if u.CurrentLga.Valid {
-		lgaID = u.CurrentLga.Int32
-	}
-	if u.CurrentWard.Valid {
-		wardID = u.CurrentWard.Int32
-	}
-	if u.WhatsappPhone.Valid {
-		whatsappPhone = u.WhatsappPhone.String
-	}
-	if u.DataPhone.Valid {
-		dataPhone = u.DataPhone.String
-	}
-	if p != nil {
-		if p.EducationalStatus.Valid {
-			educationalStatus = p.EducationalStatus.String
-		}
-		if p.HighestDegree.Valid {
-			highestDegree = p.HighestDegree.String
-		}
-		if p.GraduationYear.Valid {
-			graduationYear = p.GraduationYear.String
-		}
-		if p.SchoolName.Valid {
-			schoolName = p.SchoolName.String
-		}
-		if p.Religion.Valid {
-			religion = p.Religion.String
-		}
-		if p.MaritalStatus.Valid {
-			maritalStatus = p.MaritalStatus.String
-		}
-		if p.EducationLevel.Valid {
-			educationLevel = p.EducationLevel.String
-		}
-		if p.Address.Valid {
-			address = p.Address.String
-		}
-	}
-
-	return UserResponse{
-		ID:                 u.ID,
-		FakeID:             u.FakeID.Int64,
-		Avatar:             avatar,
-		Username:           username,
-		LastName:           lastName,
-		FirstName:          firstName,
-		MiddleName:         middleName,
-		Gender:             gender,
-		DateOfBirth:        dateOfBirth,
-		CurrentCountry:     u.CurrentCountry,
-		CurrentState:       u.CurrentState,
-		CurrentCity:        cityID,
-		CurrentLga:         lgaID,
-		CurrentWard:        wardID,
-		StateOfOrigin:      stateOfOrigin,
-		NinVerified:        ninVerified,
-		PhoneVerified:      phoneVerified,
-		EmailVerified:      emailVerified,
-		VotersCardVerified: votersCardVerified,
-		Roles:              u.Roles,
-		AccountStatus:      accountStatus,
-		PartyID:            partyID,
-		PollingUnitID:      pollingUnitID,
-		CreatedAt:          u.CreatedAt.Time.Format(time.RFC3339),
-		UpdatedAt:          u.UpdatedAt.Time.Format(time.RFC3339),
-		WhatsappPhone:      whatsappPhone,
-		DataPhone:          dataPhone,
-		EducationalStatus:  educationalStatus,
-		HighestDegree:      highestDegree,
-		GraduationYear:     graduationYear,
-		SchoolName:         schoolName,
-		IsPolitician:       u.User.IsPolitician.Bool,
-		IsVerified:         u.User.IsVerified.Bool,
-		Verifications:      u.Verifications,
-		Address:            address,
-		Religion:           religion,
-		MaritalStatus:      maritalStatus,
-		EducationLevel:     educationLevel,
-	}
-}
-
-func mapListUserRowToResponse(u queries.UserWithPlaces) UserResponse {
-	return UserResponse{
-		ID:             u.ID,
-		FakeID:         u.FakeID.Int64,
-		Username:       u.Username.String,
-		Avatar:         u.Avatar.String,
-		FirstName:      u.FirstName.String,
-		LastName:       u.LastName.String,
-		MiddleName:     u.MiddleName.String,
-		Gender:         u.Gender.String,
-		DateOfBirth:    u.DateOfBirth.Time.Format("2006-01-02"),
-		CurrentCountry: u.CurrentCountry,
-		CurrentState:   u.CurrentState,
-		CurrentCity:    u.CurrentCity.Int32,
-		StateOfOrigin:  u.StateOfOrigin.Int16,
-		Roles:          u.Roles,
-		AccountStatus:  u.AccountStatus.String,
-		PartyID:        int64(u.PartyID.Int16),
-		CreatedAt:      u.CreatedAt.Time.Format(time.RFC3339),
-		IsPolitician:   u.IsPolitician.Bool,
-		IsVerified:     u.IsVerified.Bool,
-		Verifications:  u.Verifications,
-		CountryName:    u.CountryName,
-		StateName:      u.StateName,
-		CityName:       u.CityName,
-	}
+// UserProfileResponse represents the complete user profile details returned to the frontend
+type UserProfileResponse struct {
+	queries.UserWithPlaces
+	Profile *queries.UserMoreInfo `json:"profile,omitempty"`
 }
 
 // GetBanks handles GET /api/v1/banks
@@ -351,7 +143,7 @@ func (h *Handler) ValidateBankAccount(w http.ResponseWriter, r *http.Request) {
 // @Tags         Users
 // @Accept       json
 // @Produce      json
-// @Success      200      {object}  UserResponse
+// @Success      200      {object}  map[string]interface{}
 // @Failure      401      {object}  map[string]interface{}
 // @Failure      404      {object}  map[string]interface{}
 // @Security     BearerAuth
@@ -368,13 +160,13 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
-
 	profile, _ := h.usersService.GetMoreInfoAboutThisUser(r.Context(), user.ID)
 
-	verification, _ := h.usersService.GetUserVerification(r.Context(), user.ID)
 	h.utils.RespondSuccess(w, http.StatusOK, "User profile retrieved successfully", map[string]interface{}{
-		"user": mapUserToResponse(user, &profile, &verification, uRoles),
+		"user": UserProfileResponse{
+			UserWithPlaces: user,
+			Profile:        &profile,
+		},
 	})
 }
 
@@ -492,7 +284,7 @@ type GetUsersResponse struct {
 }
 
 type GetUsersData struct {
-	Users []UserResponse `json:"users"`
+	Users []queries.UserWithPlaces `json:"users"`
 }
 
 // ListUsers handles GET /api/v1/users
@@ -601,17 +393,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses := make([]UserResponse, 0, len(fullUsers))
-	for _, fullUser := range fullUsers {
-		// Only map non-empty user structs (in case of an error for a specific user, though we returned the error above)
-		if fullUser.User.ID > 0 {
-			res := mapListUserRowToResponse(fullUser)
-			responses = append(responses, res)
-		}
-	}
-
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
-		"users": responses,
+		"users": fullUsers,
 		"meta": map[string]interface{}{
 			"next_cursor": nextCursor,
 			"has_more":    hasMore,
@@ -995,7 +778,7 @@ func (h *Handler) MakeUserSuperAdmin(w http.ResponseWriter, r *http.Request) {
 // UpdateUserRolesRequest represents the request to completely replace a user's roles
 type UpdateUserRolesRequest struct {
 	UserFakeID *int64   `json:"user_fid" validate:"omitempty"`
-	Roles      []string `json:"roles" validate:"required,min=1"`
+	Roles      []string `json:"roles" validate:"required"`
 	PartyID    *int64   `json:"party_id" validate:"omitempty"`
 }
 
@@ -1075,6 +858,63 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//--start-- Check if they are trying to delete the super_admin role
+	// check if there is a superAdmin in the user current roles
+	hasSuperAdminCurrent := false
+	for _, roleCode := range userDetails.Roles.RolesCode {
+		if roleCode == "super_admin" {
+			hasSuperAdminCurrent = true
+			break
+		}
+	}
+
+	// check if there is a superAdmin in the user new roles
+	hasSuperAdminNew := false
+	for _, roleCode := range req.Roles {
+		if roleCode == "super_admin" {
+			hasSuperAdminNew = true
+			break
+		}
+	}
+
+	// if this is not true, then there is an attempt to remove the super_admin role, and only a super_admin can do this
+	if hasSuperAdminCurrent && !hasSuperAdminNew {
+		// They are trying to delete super_admin
+		if !claims.HasRole("super_admin") {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: only a super_admin can remove the super_admin role")
+			return
+		}
+	}
+	//--end-- Check if they are trying to delete the super_admin role
+
+	//--start-- Check if they are trying to delete the super_party_admin role
+	hasSuperPartyAdminCurrent := false
+	for _, roleCode := range userDetails.Roles.RolesCode {
+		if roleCode == "super_party_admin" {
+			hasSuperPartyAdminCurrent = true
+			break
+		}
+	}
+
+	// check if there is a superPartyAdmin in the user new roles
+	hasSuperPartyAdminNew := false
+	for _, roleCode := range req.Roles {
+		if roleCode == "super_party_admin" {
+			hasSuperPartyAdminNew = true
+			break
+		}
+	}
+
+	// if this is not true, then there is an attempt to remove the super_party_admin role
+	if hasSuperPartyAdminCurrent && !hasSuperPartyAdminNew {
+		// Only admin, super_admin, or super_party_admin can delete super_party_admin
+		if !claims.HasAnyRole("admin", "super_admin", "super_party_admin") {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions to remove the super_party_admin role")
+			return
+		}
+	}
+	//--end-- Check if they are trying to delete the super_party_admin role
+
 	// Call UpdateUserRoles
 	err = h.usersService.UpdateUserRoles(r.Context(), userID, *req.UserFakeID, req.Roles, req.PartyID, claims.UserID)
 	if err != nil {
@@ -1083,6 +923,22 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 	}
 
 	freshUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), *req.UserFakeID)
+
+	// Log the action asynchronously
+	oldValuesData, _ := json.Marshal(userDetails.Roles.RolesCode)
+	newValuesData, _ := json.Marshal(freshUserDetails.Roles.RolesCode)
+
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		ActorID:    claims.UserID,
+		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
+		Action:     db.ActionUpdateUserRoles,
+		EntityType: db.EntityTypeUser,
+		EntityID:   fmt.Sprintf("%d", userID),
+		OldValues:  oldValuesData,
+		NewValues:  newValuesData,
+	})
+
 	h.utils.RespondSuccess(w, http.StatusOK, "User roles successfully updated", map[string]interface{}{
 		"userDetails": freshUserDetails,
 	})
