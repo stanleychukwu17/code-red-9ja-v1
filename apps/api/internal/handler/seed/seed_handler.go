@@ -14,7 +14,8 @@ type Handler struct {
 	utils       *utils.Utils
 }
 
-func New(seedService *seedservice.SeedService, utils *utils.Utils) *Handler {
+// NewHandler creates a new instance of Handler.
+func NewHandler(seedService *seedservice.SeedService, utils *utils.Utils) *Handler {
 	return &Handler{
 		seedService: seedService,
 		utils:       utils,
