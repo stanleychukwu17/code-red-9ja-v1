@@ -31,6 +31,7 @@ export interface UserBadgeDialogProps {
 
 export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: UserBadgeDialogProps) {
   const queryClient = useQueryClient();
+
   // Compute page's full name for display based on type
   const name = forWho === "user"
     ? [page?.first_name, page?.last_name].filter(Boolean).join(" ")
@@ -52,20 +53,25 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
 
     if (forWho === "user") {
       // Update users infinite query cache with the new user details
-      // ["users", "user"]: is the key we used to fetch all the users in /_authenticated/users/users.tsx
-      queryClient.setQueryData(["users", "user"], (oldData: any) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map((page: any) => ({
-            ...page,
-            data: {
-              ...page.data,
-              users: page.data?.users?.map((user: any) => user.fake_id === updatedDetails.fake_id ? updatedDetails : user) || []
-            }
-          }))
-        };
-      });
+      // ["users-list"]: is the key prefix we used to fetch all the users lists
+      queryClient.setQueriesData(
+        { queryKey: ["users-list"] },
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => {
+              return {
+                ...page,
+                data: {
+                  ...page.data,
+                  users: page.data?.users?.map((user: any) => user.fake_id === updatedDetails.fake_id ? updatedDetails : user) || []
+                }
+              }
+            })
+          };
+        }
+      );
     } else if (forWho === "party") {
       // Update parties query cache with the new party details
       queryClient.setQueryData(["parties"], (oldData: any) => {
@@ -99,7 +105,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     enabled: open, // only fetch when the dialog is open
   });
 
-  // mutation to remove verification
+  // mutation: remove verification
   const removeMutation = useMutation({
     mutationFn: async ({ verification_type_id, id }: { verification_type_id: number; id: number }) => {
       // besure that the id we're trying to delete is among the list of the user verfification
@@ -157,7 +163,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     removeMutation.mutate({ verification_type_id, id });
   };
 
-  // save the verifications to the backend
+  // mutation: save the verifications to the backend
   const saveMutation = useMutation({
     mutationFn: async () => {
       // the verification type ids to send to the backend
@@ -197,6 +203,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     onSuccess: (response) => {
       updateCacheWithNewDetails(response?.data?.page_details);
       toast.success("Verifications updated successfully");
+      onSuccess?.();
     },
 
     onError: (error: Error) => {
