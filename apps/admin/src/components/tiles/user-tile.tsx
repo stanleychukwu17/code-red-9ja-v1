@@ -92,8 +92,6 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
   const is_verified = data.is_verified as boolean;
   const verifications = data.verifications as any[];
 
-
-
   const name = data.name || [firstName, lastName].filter(Boolean).join(" ") || username;
 
   const rawRoleLevel = data.role || "user";

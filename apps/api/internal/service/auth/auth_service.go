@@ -32,7 +32,7 @@ type MessagingService interface {
 type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
-	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
+	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
@@ -175,16 +175,12 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 
 	// Fetch the user's assigned roles from the database
-	userRoles, err := s.usersService.GetUserRoles(ctx, user.ID)
+	userRolesData, err := s.usersService.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		return LoginResult{}, errors.New("failed to fetch user roles")
 	}
 
-	var userRoleCodes []string
-	// Extract just the role codes (e.g., "admin", "super_admin", "party_admin", "super_party_admin" e.t.c) into a simple string slice for easier comparison
-	for _, ur := range userRoles {
-		userRoleCodes = append(userRoleCodes, ur.Code)
-	}
+	userRoleCodes := userRolesData.RolesCode
 
 	// Role Validation
 	if len(allowedRoles) > 0 {
@@ -378,11 +374,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	}
 
 	// user role details
-	userRoles, _ := s.usersService.GetUserRoles(ctx, user.ID)
-	var userRoleCodes []string
-	for _, ur := range userRoles {
-		userRoleCodes = append(userRoleCodes, ur.Code)
-	}
+	userRolesData, _ := s.usersService.GetUserRoles(ctx, user.ID)
+	userRoleCodes := userRolesData.RolesCode
 
 	// user details
 	userDetails := LoginUser{

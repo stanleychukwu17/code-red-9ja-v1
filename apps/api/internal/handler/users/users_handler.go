@@ -23,7 +23,7 @@ import (
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
-	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
+	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
@@ -102,7 +102,7 @@ type UserResponse struct {
 	IsPolitician       bool                              `json:"is_politician"`
 	IsVerified         bool                              `json:"is_verified"`
 	Verifications      []queries.GetPageVerificationsRow `json:"verifications,omitempty"`
-	Roles              []string                          `json:"roles"`
+	Roles              queries.CachedUserRoles           `json:"roles"`
 	AccountStatus      string                            `json:"account_status"`
 	PartyID            int64                             `json:"party_id,omitempty"`
 	PollingUnitID      int64                             `json:"polling_unit_id,omitempty"`
@@ -123,7 +123,7 @@ type UserResponse struct {
 	CityName           string                            `json:"city_name,omitempty"`
 }
 
-func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles []queries.GetUserRolesRow) UserResponse {
+func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles queries.CachedUserRoles) UserResponse {
 	var avatar, username, lastName, firstName, middleName, gender string
 	var dateOfBirth, accountStatus string
 	var ninVerified, phoneVerified, emailVerified, votersCardVerified bool
@@ -132,11 +132,6 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 	var partyID, pollingUnitID int64
 	var cityID, lgaID, wardID int32
 	var stateOfOrigin int16
-	var roles []string
-
-	for _, r := range uRoles {
-		roles = append(roles, r.Code)
-	}
 
 	if u.Avatar.Valid {
 		avatar = u.Avatar.String
@@ -247,7 +242,7 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 		PhoneVerified:      phoneVerified,
 		EmailVerified:      emailVerified,
 		VotersCardVerified: votersCardVerified,
-		Roles:              roles,
+		Roles:              u.Roles,
 		AccountStatus:      accountStatus,
 		PartyID:            partyID,
 		PollingUnitID:      pollingUnitID,
@@ -270,11 +265,6 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 }
 
 func mapListUserRowToResponse(u queries.UserWithPlaces) UserResponse {
-	var roles []string
-	for _, r := range u.Roles {
-		roles = append(roles, r.Code)
-	}
-
 	return UserResponse{
 		ID:             u.ID,
 		FakeID:         u.FakeID.Int64,
@@ -289,7 +279,7 @@ func mapListUserRowToResponse(u queries.UserWithPlaces) UserResponse {
 		CurrentState:   u.CurrentState,
 		CurrentCity:    u.CurrentCity.Int32,
 		StateOfOrigin:  u.StateOfOrigin.Int16,
-		Roles:          roles,
+		Roles:          u.Roles,
 		AccountStatus:  u.AccountStatus.String,
 		PartyID:        int64(u.PartyID.Int16),
 		CreatedAt:      u.CreatedAt.Time.Format(time.RFC3339),
@@ -678,8 +668,8 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 		// Party admin cannot delete administrative accounts (e.g. other admins)
 		uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
 		isAdmin := false
-		for _, ur := range uRoles {
-			if strings.ToLower(ur.Code) == "admin" {
+		for _, ur := range uRoles.RolesCode {
+			if ur == "admin" {
 				isAdmin = true
 				break
 			}
@@ -782,8 +772,8 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		// Party admin cannot edit an admin user
 		uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
 		isAdmin := false
-		for _, ur := range uRoles {
-			if strings.ToLower(ur.Code) == "admin" || strings.ToLower(ur.Code) == "super_admin" {
+		for _, ur := range uRoles.RolesCode {
+			if ur == "admin" || ur == "super_admin" {
 				isAdmin = true
 				break
 			}

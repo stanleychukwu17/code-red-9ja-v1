@@ -29,7 +29,7 @@ type PartyApplicationsService interface {
 
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
-	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
+	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 }
 
 type Handler struct {
@@ -47,26 +47,26 @@ func NewHandler(service PartyApplicationsService, usersService UsersService, uti
 }
 
 type SubmitApplicationRequest struct {
-	PartyID           int64   `json:"party_id"`
-	ElectionGroupID   int64   `json:"election_group_id"`
-	ElectionGroupIDs  []int64 `json:"election_group_ids"`
-	PollingUnitID     int32   `json:"polling_unit_id"`
-	Avatar            string  `json:"avatar"`
-	VotersCardImage   string  `json:"voters_card_image"`
-	CurrentCountry    int16   `json:"current_country"`
-	CurrentState      int16   `json:"current_state"`
-	CurrentLga        int32   `json:"current_lga"`
-	CurrentWard       int32   `json:"current_ward"`
-	CurrentCity       int32   `json:"current_city"`
+	PartyID          int64   `json:"party_id"`
+	ElectionGroupID  int64   `json:"election_group_id"`
+	ElectionGroupIDs []int64 `json:"election_group_ids"`
+	PollingUnitID    int32   `json:"polling_unit_id"`
+	Avatar           string  `json:"avatar"`
+	VotersCardImage  string  `json:"voters_card_image"`
+	CurrentCountry   int16   `json:"current_country"`
+	CurrentState     int16   `json:"current_state"`
+	CurrentLga       int32   `json:"current_lga"`
+	CurrentWard      int32   `json:"current_ward"`
+	CurrentCity      int32   `json:"current_city"`
 
-	WhatsappPhone     string  `json:"whatsapp_phone"`
-	DataPhone         string  `json:"data_phone"`
-	EducationalStatus string  `json:"educational_status"`
-	HighestDegree     string  `json:"highest_degree"`
-	GraduationYear    string  `json:"graduation_year"`
-	SchoolName        string  `json:"school_name"`
-	Phone             string  `json:"phone"`
-	Address           string  `json:"address"`
+	WhatsappPhone     string `json:"whatsapp_phone"`
+	DataPhone         string `json:"data_phone"`
+	EducationalStatus string `json:"educational_status"`
+	HighestDegree     string `json:"highest_degree"`
+	GraduationYear    string `json:"graduation_year"`
+	SchoolName        string `json:"school_name"`
+	Phone             string `json:"phone"`
+	Address           string `json:"address"`
 }
 
 // SubmitApplication godoc
@@ -208,14 +208,14 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce visibility scoping
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	isPartyAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "party_admin" {
+		if rCode == "party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -339,15 +339,15 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce visibility restriction
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	// Authorization check
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	isPartyAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "party_admin" {
+		if rCode == "party_admin" || rCode == "super_party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -417,14 +417,14 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	isPartyAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "party_admin" {
+		if rCode == "party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -541,14 +541,14 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	isPartyAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "party_admin" {
+		if rCode == "party_admin" {
 			isPartyAdmin = true
 		}
 	}

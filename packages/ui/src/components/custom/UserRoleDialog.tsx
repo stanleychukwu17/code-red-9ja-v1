@@ -1,13 +1,11 @@
-import { useMutation } from "@tanstack/react-query";
 import * as React from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Button } from "../button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "../dialog";
 import { useForm } from "@tanstack/react-form";
 import { Loader2 } from "lucide-react";
-// import { SelectResponsiveWrapper } from "../selects/select-responsive-wrapper";
-// import { GeneralCommand } from "../command/general-command";
 import { TinyError } from "./TinyError";
-
 import { SelectParty } from "../selects/party-select";
 import { SelectRole } from "../selects/role-select";
 
@@ -27,13 +25,12 @@ export function UserRoleDialog({
   updateUserRole,
   fetchParties,
 }: UserRoleDialogProps) {
+  // get the query client to update the cache
+  const queryClient = useQueryClient();
+
   // Local state for managing form submission errors and selected party ID (if applicable)
   const [error, setError] = React.useState<string | null>(null);
   const [partyId, setPartyId] = React.useState<number | undefined>(undefined);
-
-  // if (open) {
-  //   console.log(user)
-  // }
 
   // Initialize the form with a default role of "user"
   const form = useForm({
@@ -48,13 +45,18 @@ export function UserRoleDialog({
 
   // Synchronize form values with initial user data
   React.useEffect(() => {
-    if (open && user) {
-      const initialRoles = Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : ["user"];
+    // if user already has roles. we display existing roles
+    if (open && user && user.roles?.roles && user.roles.roles.length > 0) {
+      const initialRoles = user.roles.roles_code;
 
       // update the fields
       form.setFieldValue("roles", initialRoles);
-      setPartyId(user.party_id || undefined);
       setError(null);
+    }
+
+    // updates the user partyId
+    if (user?.party_id) {
+      setPartyId(user.party_id);
     }
   }, [open, user]);
 
@@ -85,10 +87,36 @@ export function UserRoleDialog({
       return res.data;
     },
     onSuccess: (data) => {
-      console.log(data?.userDetails)
-      // Trigger success callback and close dialog on successful mutation
-      // onSuccess?.();
-      // onClose();
+      toast.success("User role updated successfully");
+
+      // the updated user details
+      const updatedDetails = data?.userDetails;
+      console.log({ updatedDetails })
+
+      // if valid user details, we update the cache
+      if (updatedDetails) {
+        queryClient.setQueriesData(
+          { queryKey: ["users-list"] },
+          (oldData: any) => {
+            if (!oldData) return oldData;
+            return {
+              ...oldData,
+              pages: oldData.pages.map((page: any) => {
+                return {
+                  ...page,
+                  data: {
+                    ...page.data,
+                    users: page.data?.users?.map((u: any) => u.fake_id === updatedDetails.fake_id ? updatedDetails : u) || []
+                  }
+                }
+              })
+            };
+          }
+        );
+      }
+
+      // Trigger success callback
+      onSuccess?.();
     },
     onError: (err: any) => {
       // Display error message to the user if the mutation fails
@@ -136,7 +164,6 @@ export function UserRoleDialog({
                             <SelectRole
                               selectedId={role}
                               update={(val) => {
-                                console.log(field.state.value)
                                 if (field.state.value.includes(val) && field.state.value[index] !== val) {
                                   return; // Prevent adding duplicate roles
                                 }

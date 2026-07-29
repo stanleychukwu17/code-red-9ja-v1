@@ -9,7 +9,7 @@ type UserWithPlaces struct {
 	CityName       string                           `json:"city_name"`
 	Verifications  []GetPageVerificationsRow        `json:"verifications"`
 	PartyBasicInfo *PartyBasicInfoWithVerifications `json:"party_basic_info"`
-	Roles          []GetUserRolesRow                `json:"roles"`
+	Roles          CachedUserRoles                  `json:"roles"`
 }
 
 // PartyWithVerifications extends the base Party struct to include
@@ -24,4 +24,10 @@ type PartyWithVerifications struct {
 type PartyBasicInfoWithVerifications struct {
 	GetPartyBasicInfoRow
 	Verifications []GetPageVerificationsRow `json:"verifications"`
+}
+
+// CachedUserRoles holds both full role records and just their codes for efficient access
+type CachedUserRoles struct {
+	Roles     []GetUserRolesRow `json:"roles"`
+	RolesCode []string          `json:"roles_code"`
 }

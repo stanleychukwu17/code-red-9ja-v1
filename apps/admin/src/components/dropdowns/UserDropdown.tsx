@@ -117,8 +117,8 @@ export const UserDropdown = ({
         onClose={() => setOpenRoleDialog(false)}
         user={userDetails}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["users-list"] });
-          refetch?.();
+          setOpenRoleDialog(false)
+          // queryClient.invalidateQueries({ queryKey: ["users-list"] });
         }}
       />
 

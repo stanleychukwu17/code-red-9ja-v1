@@ -107,7 +107,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	}
 
 	// fetch the user roles
-	var roles []queries.GetUserRolesRow
+	var roles queries.CachedUserRoles
 	if user.HasRole.Valid && user.HasRole.Bool {
 		if r, err := s.GetUserRoles(ctx, user.ID); err == nil {
 			roles = r
@@ -251,31 +251,41 @@ func (s *UsersService) InvalidateCachedUserRoles(ctx context.Context, userID int
 }
 
 // GetUserRoles fetches the roles assigned to a specific user, utilizing Redis caching.
-func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
+func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error) {
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
 
 	// first redis to see if the roles have been cached
 	rolesJSON, err := s.rdb.Get(ctx, userRolesKey).Result()
 	if err == nil {
-		var roles []queries.GetUserRolesRow
-		if err := json.Unmarshal([]byte(rolesJSON), &roles); err == nil {
-			return roles, nil
+		var cachedRoles queries.CachedUserRoles
+		if err := json.Unmarshal([]byte(rolesJSON), &cachedRoles); err == nil {
+			return cachedRoles, nil
 		}
 	}
 
 	// Fetch from DB if not in Redis
 	roles, err := s.queries.GetUserRoles(ctx, userID)
 	if err != nil {
-		return nil, err
+		return queries.CachedUserRoles{}, err
+	}
+
+	var rolesCode []string
+	for _, r := range roles {
+		rolesCode = append(rolesCode, r.Code)
+	}
+
+	cachedRoles := queries.CachedUserRoles{
+		Roles:     roles,
+		RolesCode: rolesCode,
 	}
 
 	// Cache it in Redis
-	rolesJSONBytes, err := json.Marshal(roles)
+	rolesJSONBytes, err := json.Marshal(cachedRoles)
 	if err == nil {
 		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisFiveYearsTTL) // expires in 5years
 	}
 
-	return roles, nil
+	return cachedRoles, nil
 }
 
 // AssignUserRole assigns a specific role to a user and invalidates the user's role cache.
@@ -578,14 +588,14 @@ func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) 
 	}
 
 	// 1. Get user roles
-	roles, err := s.GetUserRoles(ctx, user.ID)
+	rolesData, err := s.GetUserRoles(ctx, user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch user roles: %w", err)
 	}
 
 	// 2. Check if the user already has the super_admin role
-	for _, r := range roles {
-		if r.Code == "super_admin" {
+	for _, r := range rolesData.RolesCode {
+		if r == "super_admin" {
 			// Already has the role, no need to assign again
 			return nil
 		}
@@ -603,15 +613,15 @@ func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) 
 // UpdateUserRoles replaces a user's roles and optionally sets their party ID.
 func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error {
 	// Get existing roles
-	currentRoles, err := s.GetUserRoles(ctx, userID)
+	currentRolesData, err := s.GetUserRoles(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to fetch current roles: %w", err)
 	}
 
 	// Create a map of current roles for quick lookup
 	currentRolesMap := make(map[string]bool)
-	for _, r := range currentRoles {
-		currentRolesMap[r.Code] = true
+	for _, rCode := range currentRolesData.RolesCode {
+		currentRolesMap[rCode] = true
 	}
 
 	// Create a map of new roles for quick lookup
