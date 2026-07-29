@@ -516,69 +516,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/assign-role": {
-            "post": {
-                "description": "Assigns a specific role (like party_admin) to an existing user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Assign a role to a user",
-                "parameters": [
-                    {
-                        "description": "Role assignment details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.AssignRoleRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/change-password": {
             "post": {
                 "description": "Resets a user's password using their email address and a new password, invalidating active sessions",
@@ -1109,7 +1046,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.UpdateUserRolesRequest"
+                            "$ref": "#/definitions/usershandler.UpdateUserRolesRequest"
                         }
                     }
                 ],
@@ -1172,7 +1109,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.MakeUserSuperAdminRequest"
+                            "$ref": "#/definitions/usershandler.MakeUserSuperAdminRequest"
                         }
                     }
                 ],
@@ -8965,21 +8902,6 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.AssignRoleRequest": {
-            "type": "object",
-            "required": [
-                "role",
-                "user_id"
-            ],
-            "properties": {
-                "role": {
-                    "type": "string"
-                },
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
         "authhandler.ChangePasswordByEmailRequest": {
             "type": "object",
             "required": [
@@ -9085,18 +9007,6 @@ const docTemplate = `{
             "properties": {
                 "refreshToken": {
                     "type": "string"
-                }
-            }
-        },
-        "authhandler.MakeUserSuperAdminRequest": {
-            "type": "object",
-            "required": [
-                "name"
-            ],
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "minLength": 3
                 }
             }
         },
@@ -9355,31 +9265,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 30,
                     "minLength": 2
-                }
-            }
-        },
-        "authhandler.UpdateUserRolesRequest": {
-            "type": "object",
-            "required": [
-                "roles",
-                "user_id"
-            ],
-            "properties": {
-                "party_id": {
-                    "type": "integer"
-                },
-                "roles": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "user_fake_id": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
                 }
             }
         },
@@ -11203,6 +11088,18 @@ const docTemplate = `{
                 }
             }
         },
+        "usershandler.MakeUserSuperAdminRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "minLength": 3
+                }
+            }
+        },
         "usershandler.PaginationMeta": {
             "type": "object",
             "properties": {
@@ -11261,6 +11158,27 @@ const docTemplate = `{
         },
         "usershandler.UpdateUserPhoneNumbersRequest": {
             "type": "object"
+        },
+        "usershandler.UpdateUserRolesRequest": {
+            "type": "object",
+            "required": [
+                "roles"
+            ],
+            "properties": {
+                "party_id": {
+                    "type": "integer"
+                },
+                "roles": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "user_fid": {
+                    "type": "integer"
+                }
+            }
         },
         "usershandler.UserResponse": {
             "type": "object",

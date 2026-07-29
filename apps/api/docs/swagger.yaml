@@ -40,16 +40,6 @@ definitions:
       success:
         type: boolean
     type: object
-  authhandler.AssignRoleRequest:
-    properties:
-      role:
-        type: string
-      user_id:
-        type: integer
-    required:
-    - role
-    - user_id
-    type: object
   authhandler.ChangePasswordByEmailRequest:
     properties:
       email:
@@ -125,14 +115,6 @@ definitions:
     properties:
       refreshToken:
         type: string
-    type: object
-  authhandler.MakeUserSuperAdminRequest:
-    properties:
-      name:
-        minLength: 3
-        type: string
-    required:
-    - name
     type: object
   authhandler.PartyLoginRequest:
     properties:
@@ -327,23 +309,6 @@ definitions:
     - question1
     - question2
     - username
-    type: object
-  authhandler.UpdateUserRolesRequest:
-    properties:
-      party_id:
-        type: integer
-      roles:
-        items:
-          type: string
-        minItems: 1
-        type: array
-      user_fake_id:
-        type: integer
-      user_id:
-        type: integer
-    required:
-    - roles
-    - user_id
     type: object
   authhandler.VerifySecurityQuestionsRequest:
     properties:
@@ -1536,6 +1501,14 @@ definitions:
       success:
         type: boolean
     type: object
+  usershandler.MakeUserSuperAdminRequest:
+    properties:
+      name:
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
   usershandler.PaginationMeta:
     properties:
       has_more:
@@ -1577,6 +1550,20 @@ definitions:
     - last_name
     type: object
   usershandler.UpdateUserPhoneNumbersRequest:
+    type: object
+  usershandler.UpdateUserRolesRequest:
+    properties:
+      party_id:
+        type: integer
+      roles:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      user_fid:
+        type: integer
+    required:
+    - roles
     type: object
   usershandler.UserResponse:
     properties:
@@ -2107,49 +2094,6 @@ paths:
       summary: Login admin user
       tags:
       - Auth
-  /auth/assign-role:
-    post:
-      consumes:
-      - application/json
-      description: Assigns a specific role (like party_admin) to an existing user
-      parameters:
-      - description: Role assignment details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/authhandler.AssignRoleRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Assign a role to a user
-      tags:
-      - Auth
   /auth/change-password:
     post:
       consumes:
@@ -2506,7 +2450,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.UpdateUserRolesRequest'
+          $ref: '#/definitions/usershandler.UpdateUserRolesRequest'
       produces:
       - application/json
       responses:
@@ -2550,7 +2494,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.MakeUserSuperAdminRequest'
+          $ref: '#/definitions/usershandler.MakeUserSuperAdminRequest'
       produces:
       - application/json
       responses:
