@@ -34,14 +34,10 @@ const (
 	//--END--
 
 	//--START-- for user
-	// STRING: user:info:<userFakeID> used to store and retrieve user info.
-	RedisUserInfo = "user:info:"
-	// STRING: user:more_info:<userID> used to store and retrieve user more_info.
-	RedisUserMoreInfo = "user:more_info:"
-	// STRING: user:roles:<userFakeID> used to store and retrieve user roles.
-	RedisUserRoles = "user:roles:"
-	// STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
-	RedisUserPhoneNumbers = "user:phone_numbers:"
+	RedisUserInfo         = "user:info:"          // STRING: user:info:<userFakeID> used to store and retrieve user info.
+	RedisUserMoreInfo     = "user:more_info:"     // STRING: user:more_info:<userID> used to store and retrieve user more_info.
+	RedisUserRoles        = "user:roles:"         // STRING: user:roles:<userFakeID> used to store and retrieve user roles.
+	RedisUserPhoneNumbers = "user:phone_numbers:" // STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
 	//--END--
 
 	//--START-- for countries and states
