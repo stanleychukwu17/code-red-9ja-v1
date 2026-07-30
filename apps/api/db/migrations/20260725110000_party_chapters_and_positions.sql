@@ -33,6 +33,8 @@ CREATE TABLE party_membership (
 );
 
 CREATE INDEX idx_party_membership_created_at ON party_membership(created_at);
+CREATE INDEX idx_party_membership_party_chapter ON party_membership(party_id, chapter_id);
+CREATE INDEX idx_party_membership_chapter_id ON party_membership(chapter_id);
 
 CREATE TABLE party_membership_requests (
     id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
