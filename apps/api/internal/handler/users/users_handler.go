@@ -3,10 +3,10 @@ package usershandler
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/utils"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -816,7 +816,7 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// destructures the request body
+	// de-structures the request body
 	var req UpdateUserRolesRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
