@@ -12,6 +12,8 @@ import (
 
 type Querier interface {
 	AddPageVerification(ctx context.Context, arg AddPageVerificationParams) (PagesVerified, error)
+	AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error
+	AddPartyMembershipRequest(ctx context.Context, arg AddPartyMembershipRequestParams) (PartyMembershipRequest, error)
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
 	AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error
 	AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error
@@ -41,6 +43,7 @@ type Querier interface {
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
 	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error)
+	CreateChapterSettings(ctx context.Context, arg CreateChapterSettingsParams) ([]byte, error)
 	CreateDidNotVoteReason(ctx context.Context, arg CreateDidNotVoteReasonParams) (DidNotVoteReason, error)
 	CreateElectionCandidate(ctx context.Context, arg CreateElectionCandidateParams) (ElectionCandidate, error)
 	CreateElectionGroup(ctx context.Context, arg CreateElectionGroupParams) (ElectionGroup, error)
@@ -51,6 +54,7 @@ type Querier interface {
 	CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, error)
 	CreateLgaSupervisor(ctx context.Context, arg CreateLgaSupervisorParams) (LgaElectionSupervisor, error)
 	CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMoreInfoAboutThisUserParams) (int64, error)
+	CreateNationalChapter(ctx context.Context, arg CreateNationalChapterParams) (int32, error)
 	CreateOffice(ctx context.Context, arg CreateOfficeParams) (Office, error)
 	CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error)
 	CreatePartyWallet(ctx context.Context, arg CreatePartyWalletParams) (PartyWallet, error)
@@ -85,6 +89,7 @@ type Querier interface {
 	DeleteLGA(ctx context.Context, id int32) error
 	DeleteOffice(ctx context.Context, id int64) error
 	DeleteParty(ctx context.Context, id int16) error
+	DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error)
 	DeletePollingUnit(ctx context.Context, id int32) error
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	DeleteState(ctx context.Context, id int16) error
@@ -100,6 +105,8 @@ type Querier interface {
 	GetAllPollingUnitResultsByPU(ctx context.Context, arg GetAllPollingUnitResultsByPUParams) ([]PollingUnitResult, error)
 	GetApplicationByID(ctx context.Context, id int64) (PartyApplication, error)
 	GetAssignmentByID(ctx context.Context, id int64) (GetAssignmentByIDRow, error)
+	GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error)
+	GetChapterSettings(ctx context.Context, arg GetChapterSettingsParams) ([]byte, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]GetCitiesByStateIDRow, error)
 	GetCityByID(ctx context.Context, arg GetCityByIDParams) (GetCityByIDRow, error)
 	GetCountryByID(ctx context.Context, id int16) (GetCountryByIDRow, error)
@@ -129,6 +136,7 @@ type Querier interface {
 	GetFakeIDByEmail(ctx context.Context, email pgtype.Text) (pgtype.Int8, error)
 	GetFakeIDByNIN(ctx context.Context, nin string) (pgtype.Int8, error)
 	GetFakeIDByPhone(ctx context.Context, phone pgtype.Text) (pgtype.Int8, error)
+	GetFakeIDByUserID(ctx context.Context, id int64) (pgtype.Int8, error)
 	GetFakeIDByUsername(ctx context.Context, username pgtype.Text) (pgtype.Int8, error)
 	GetFederalConstituencies(ctx context.Context, arg GetFederalConstituenciesParams) ([]FederalConstituency, error)
 	GetFederalConstituencyByID(ctx context.Context, id int32) (FederalConstituency, error)
@@ -140,6 +148,7 @@ type Querier interface {
 	GetLGAs(ctx context.Context, stateID int32) ([]Lga, error)
 	GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLgaSupervisorByElectionGroupParams) (LgaElectionSupervisor, error)
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error)
+	GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
 	GetNonVotingReasons(ctx context.Context) ([]NonVotingReason, error)
 	GetOfficeByID(ctx context.Context, id int64) (Office, error)
@@ -254,6 +263,7 @@ type Querier interface {
 	RecalculateStateAssemblyConstituencyMetrics(ctx context.Context) error
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
+	RecordPartyMembershipHistory(ctx context.Context, arg RecordPartyMembershipHistoryParams) error
 	// Aggregates from election_group_lgas grouped by federal_constituency_id.
 	RefreshAllElectionGroupFederalConstituencyStats(ctx context.Context) error
 	// Aggregates from election_group_states up to election_groups.

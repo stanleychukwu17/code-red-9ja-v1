@@ -11,6 +11,86 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const addPartyMembership = `-- name: AddPartyMembership :exec
+INSERT INTO party_membership (user_id, party_id, chapter_id, status)
+VALUES ($1, $2, $3, 'active')
+`
+
+type AddPartyMembershipParams struct {
+	UserID    int64 `json:"user_id"`
+	PartyID   int32 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
+
+func (q *Queries) AddPartyMembership(ctx context.Context, arg AddPartyMembershipParams) error {
+	_, err := q.db.Exec(ctx, addPartyMembership, arg.UserID, arg.PartyID, arg.ChapterID)
+	return err
+}
+
+const addPartyMembershipRequest = `-- name: AddPartyMembershipRequest :one
+INSERT INTO party_membership_requests (user_id, party_id, chapter_id)
+VALUES ($1, $2, $3)
+RETURNING id, party_id, chapter_id, user_id, status, created_at, updated_at
+`
+
+type AddPartyMembershipRequestParams struct {
+	UserID    int64 `json:"user_id"`
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
+
+func (q *Queries) AddPartyMembershipRequest(ctx context.Context, arg AddPartyMembershipRequestParams) (PartyMembershipRequest, error) {
+	row := q.db.QueryRow(ctx, addPartyMembershipRequest, arg.UserID, arg.PartyID, arg.ChapterID)
+	var i PartyMembershipRequest
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.ChapterID,
+		&i.UserID,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const createChapterSettings = `-- name: CreateChapterSettings :one
+INSERT INTO party_chapter_settings (party_id, chapter_id, settings)
+VALUES ($1, $2, $3)
+RETURNING settings
+`
+
+type CreateChapterSettingsParams struct {
+	PartyID   int16  `json:"party_id"`
+	ChapterID int32  `json:"chapter_id"`
+	Settings  []byte `json:"settings"`
+}
+
+func (q *Queries) CreateChapterSettings(ctx context.Context, arg CreateChapterSettingsParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, createChapterSettings, arg.PartyID, arg.ChapterID, arg.Settings)
+	var settings []byte
+	err := row.Scan(&settings)
+	return settings, err
+}
+
+const createNationalChapter = `-- name: CreateNationalChapter :one
+INSERT INTO party_chapters (party_id, chapter_type, country_id)
+VALUES ($1, 'national', $2)
+RETURNING id
+`
+
+type CreateNationalChapterParams struct {
+	PartyID   int16       `json:"party_id"`
+	CountryID pgtype.Int2 `json:"country_id"`
+}
+
+func (q *Queries) CreateNationalChapter(ctx context.Context, arg CreateNationalChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, createNationalChapter, arg.PartyID, arg.CountryID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
+}
+
 const createParty = `-- name: CreateParty :one
 INSERT INTO parties (short_name, name, logo, display_order)
 VALUES ($1, $2, $3, $4)
@@ -57,6 +137,80 @@ DELETE FROM parties WHERE id = $1
 func (q *Queries) DeleteParty(ctx context.Context, id int16) error {
 	_, err := q.db.Exec(ctx, deleteParty, id)
 	return err
+}
+
+const deletePartyMembership = `-- name: DeletePartyMembership :many
+DELETE FROM party_membership WHERE user_id = $1 AND party_id = $2 RETURNING chapter_id
+`
+
+type DeletePartyMembershipParams struct {
+	UserID  int64 `json:"user_id"`
+	PartyID int32 `json:"party_id"`
+}
+
+func (q *Queries) DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error) {
+	rows, err := q.db.Query(ctx, deletePartyMembership, arg.UserID, arg.PartyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []int32
+	for rows.Next() {
+		var chapter_id int32
+		if err := rows.Scan(&chapter_id); err != nil {
+			return nil, err
+		}
+		items = append(items, chapter_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getChapterMemberCount = `-- name: GetChapterMemberCount :one
+SELECT COUNT(*) FROM party_membership WHERE chapter_id = $1 AND status = 'active'
+`
+
+func (q *Queries) GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error) {
+	row := q.db.QueryRow(ctx, getChapterMemberCount, chapterID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getChapterSettings = `-- name: GetChapterSettings :one
+SELECT settings FROM party_chapter_settings
+WHERE party_id = $1 AND chapter_id = $2 LIMIT 1
+`
+
+type GetChapterSettingsParams struct {
+	PartyID   int16 `json:"party_id"`
+	ChapterID int32 `json:"chapter_id"`
+}
+
+func (q *Queries) GetChapterSettings(ctx context.Context, arg GetChapterSettingsParams) ([]byte, error) {
+	row := q.db.QueryRow(ctx, getChapterSettings, arg.PartyID, arg.ChapterID)
+	var settings []byte
+	err := row.Scan(&settings)
+	return settings, err
+}
+
+const getNationalChapter = `-- name: GetNationalChapter :one
+SELECT id FROM party_chapters 
+WHERE party_id = $1 AND chapter_type = 'national' AND country_id = $2 LIMIT 1
+`
+
+type GetNationalChapterParams struct {
+	PartyID   int16       `json:"party_id"`
+	CountryID pgtype.Int2 `json:"country_id"`
+}
+
+func (q *Queries) GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getNationalChapter, arg.PartyID, arg.CountryID)
+	var id int32
+	err := row.Scan(&id)
+	return id, err
 }
 
 const getPartyBasicInfo = `-- name: GetPartyBasicInfo :one
@@ -172,6 +326,28 @@ func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const recordPartyMembershipHistory = `-- name: RecordPartyMembershipHistory :exec
+INSERT INTO party_membership_history (user_id, party_id, chapter_id, action)
+VALUES ($1, $2, $3, $4)
+`
+
+type RecordPartyMembershipHistoryParams struct {
+	UserID    int64  `json:"user_id"`
+	PartyID   int16  `json:"party_id"`
+	ChapterID int32  `json:"chapter_id"`
+	Action    string `json:"action"`
+}
+
+func (q *Queries) RecordPartyMembershipHistory(ctx context.Context, arg RecordPartyMembershipHistoryParams) error {
+	_, err := q.db.Exec(ctx, recordPartyMembershipHistory,
+		arg.UserID,
+		arg.PartyID,
+		arg.ChapterID,
+		arg.Action,
+	)
+	return err
 }
 
 const updateParty = `-- name: UpdateParty :one

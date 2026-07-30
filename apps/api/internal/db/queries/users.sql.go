@@ -425,6 +425,18 @@ func (q *Queries) GetFakeIDByPhone(ctx context.Context, phone pgtype.Text) (pgty
 	return fake_id, err
 }
 
+const getFakeIDByUserID = `-- name: GetFakeIDByUserID :one
+SELECT fake_id FROM users
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetFakeIDByUserID(ctx context.Context, id int64) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, getFakeIDByUserID, id)
+	var fake_id pgtype.Int8
+	err := row.Scan(&fake_id)
+	return fake_id, err
+}
+
 const getFakeIDByUsername = `-- name: GetFakeIDByUsername :one
 SELECT fake_id FROM users
 WHERE username = $1 LIMIT 1

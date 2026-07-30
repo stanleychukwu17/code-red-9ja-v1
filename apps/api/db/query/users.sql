@@ -252,6 +252,10 @@ WHERE email = $1 LIMIT 1;
 SELECT fake_id FROM users
 WHERE phone = $1 LIMIT 1;
 
+-- name: GetFakeIDByUserID :one
+SELECT fake_id FROM users
+WHERE id = $1 LIMIT 1;
+
 -- name: GetFakeIDByNIN :one
 SELECT u.fake_id
 FROM users u
@@ -266,3 +270,4 @@ WHERE fake_id = $1 LIMIT 1;
 UPDATE users
 SET has_role = $2
 WHERE id = $1;
+
