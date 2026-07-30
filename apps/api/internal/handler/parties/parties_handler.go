@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/utils"
 	"io"
 	"net/http"
@@ -42,6 +43,9 @@ type PartiesService interface {
 	// Allowance methods
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
 	UpdateStateAllowances(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
+	// Membership methods
+	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
+	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
 }
 
 type Handler struct {
@@ -167,11 +171,12 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 
 	sort.SliceStable(parties, func(i, j int) bool {
 		var less bool
-		if orderBy == "name" {
+		switch orderBy {
+		case "name":
 			less = parties[i].Name < parties[j].Name
-		} else if orderBy == "short_name" {
+		case "short_name":
 			less = parties[i].ShortName < parties[j].ShortName
-		} else {
+		default:
 			less = parties[i].DisplayOrder < parties[j].DisplayOrder
 		}
 		if orderDir == "DESC" {
@@ -330,6 +335,62 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Party updated successfully", map[string]interface{}{
 		"party": updatedParty,
 	})
+}
+
+// JoinParty handles requests to join a party chapter.
+func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	var req struct {
+		ChapterID int32 `json:"chapter_id"` // 0 will default to national chapter
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	err = h.partiesService.JoinParty(r.Context(), int16(partyID), req.ChapterID, claims.UserID, claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Membership request processed successfully", nil)
+}
+
+// LeaveParty handles requests to leave a party.
+func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	err = h.partiesService.LeaveParty(r.Context(), int16(partyID), claims.UserID, claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Left party successfully", nil)
 }
 
 // DeleteParty godoc
