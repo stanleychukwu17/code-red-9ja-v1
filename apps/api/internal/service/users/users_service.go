@@ -636,9 +636,6 @@ func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) 
 
 // UpdateUserRoles replaces a user's roles and optionally sets their party ID.
 func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error {
-	hasPartyAdmin := false
-	hasSuperPartyAdmin := false
-
 	// Get existing roles
 	currentRolesData, err := s.GetUserRoles(ctx, userID)
 	if err != nil {
@@ -660,9 +657,6 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 	// Identify and assign roles to ADD
 	for roleCode := range newRolesMap {
 		if !currentRolesMap[roleCode] {
-			hasPartyAdmin = roleCode == "party_admin" || hasPartyAdmin
-			hasSuperPartyAdmin = roleCode == "super_party_admin" || hasSuperPartyAdmin
-
 			err = s.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
 			if err != nil {
 				return fmt.Errorf("failed to add role %s: %w", roleCode, err)
@@ -677,15 +671,6 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 			if err != nil {
 				return fmt.Errorf("failed to remove role %s: %w", roleCode, err)
 			}
-		}
-	}
-
-	// 4. Update party if provided
-	if partyID != nil && (hasPartyAdmin || hasSuperPartyAdmin) {
-		pID := int16(*partyID)
-		err = s.UpdateUserParty(ctx, userID, &pID, fakeID)
-		if err != nil {
-			return err
 		}
 	}
 
