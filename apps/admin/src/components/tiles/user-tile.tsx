@@ -33,17 +33,14 @@ export type UserType = {
   roles?: { roles?: any[]; roles_code?: string[] };
   account_status?: string;
   party_id?: number;
+  party_basic_info?: {
+    logo?: string;
+    [key: string]: any;
+  };
   created_at?: string;
   country_name?: string;
   state_name?: string;
   city_name?: string;
-
-  // Frontend-specific fallback fields
-  role?: string;
-  avatar_url?: string;
-  name?: string;
-  status?: string;
-  dateAdded?: string;
 };
 
 const getPgString = (val: any) => {
@@ -93,9 +90,9 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
 
   const name = [firstName, lastName].filter(Boolean).join(" ") || username;
   const createdTime = getPgString(data.created_at);
-  const dateAdded = data.dateAdded || formatDate(createdTime);
+  const dateAdded = formatDate(createdTime);
 
-  const avatar = getPgString(data.avatar) || data.avatar_url;
+  const avatar = getPgString(data.avatar);
 
   const state = getPgString(data.state_name);
   const country = getPgString(data.country_name);
@@ -111,11 +108,21 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
   return (
     <TileRow className="py-10 border-b">
       <TileLeft>
-        {avatar ? (
-          <img src={avatar} alt={name} className="size-12 rounded-full object-cover shrink-0 border border-c-100/30" />
-        ) : (
-          <NoProfileImageIcon className="size-12 rounded-full " />
-        )}
+        <div className="relative shrink-0">
+          {avatar ? (
+            <img src={avatar} alt={name} className="size-12 rounded-full object-cover border border-c-100/30" />
+          ) : (
+            <NoProfileImageIcon className="size-12 rounded-full " />
+          )}
+          {((data.party_id && data.party_id > 0) || data.party_basic_info) && data.party_basic_info?.logo && (
+            <img
+              src={data.party_basic_info.logo}
+              alt="Party Logo"
+              title={getPgString(data.party_basic_info.name)}
+              className="absolute -bottom-1 -right-1 size-5.5 rounded-full object-cover border-2 border-white dark:border-c-0 shadow-sm"
+            />
+          )}
+        </div>
         <div className="flex flex-col w-full min-w-0">
           <div className="flex items-center w-full overflow-hidden">
             <Link
