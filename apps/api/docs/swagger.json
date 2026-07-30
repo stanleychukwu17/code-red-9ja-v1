@@ -7022,6 +7022,55 @@
                 }
             }
         },
+        "/seed/admins": {
+            "post": {
+                "description": "Batch registers roles for admins from formatted JSON data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seed"
+                ],
+                "summary": "Seed admins and party admins",
+                "parameters": [
+                    {
+                        "description": "List of admins to seed",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/seedservice.SeedAdminsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admins seeded successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to seed admins",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/seed/users": {
             "post": {
                 "description": "Batch registers testing users from formatted JSON data",
@@ -10934,6 +10983,46 @@
                 },
                 "whatsapp_phone": {
                     "$ref": "#/definitions/pgtype.Text"
+                }
+            }
+        },
+        "seedservice.PartyAdminsData": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "super_party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "seedservice.SeedAdminsRequest": {
+            "type": "object",
+            "properties": {
+                "admins": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "parties": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/definitions/seedservice.PartyAdminsData"
+                        }
+                    }
                 }
             }
         },

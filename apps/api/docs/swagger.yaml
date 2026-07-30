@@ -1408,6 +1408,32 @@ definitions:
       whatsapp_phone:
         $ref: '#/definitions/pgtype.Text'
     type: object
+  seedservice.PartyAdminsData:
+    properties:
+      id:
+        type: integer
+      party_admin:
+        items:
+          type: integer
+        type: array
+      super_party_admin:
+        items:
+          type: integer
+        type: array
+    type: object
+  seedservice.SeedAdminsRequest:
+    properties:
+      admins:
+        items:
+          type: integer
+        type: array
+      parties:
+        items:
+          additionalProperties:
+            $ref: '#/definitions/seedservice.PartyAdminsData'
+          type: object
+        type: array
+    type: object
   seedservice.SeedUserRequest:
     properties:
       account_status:
@@ -6599,6 +6625,39 @@ paths:
       summary: Update a polling unit
       tags:
       - Polling Units
+  /seed/admins:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers roles for admins from formatted JSON data
+      parameters:
+      - description: List of admins to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/seedservice.SeedAdminsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Admins seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed admins
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed admins and party admins
+      tags:
+      - Seed
   /seed/users:
     post:
       consumes:
