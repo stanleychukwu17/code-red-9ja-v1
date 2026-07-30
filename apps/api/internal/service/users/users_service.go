@@ -219,7 +219,7 @@ func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) (
 				// Instead, it locks this exact path of code execution.
 				// If Goroutine A is between Lock() and Unlock(), Goroutine B will be paused at Lock()
 				// waiting for the door to open, guaranteeing that only one goroutine modifies the slice at a time.
-				// what ever is inbetween mu.Lock() and mu.Unlock() can only be accessed by one Goroutine at a time
+				// what ever is in-between mu.Lock() and mu.Unlock() can only be accessed by one Goroutine at a time
 				mu.Lock()
 				results[idx] = user
 				mu.Unlock() // allows other Goroutine to continue from mu.Lock()
@@ -557,6 +557,30 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 	return nil
 }
 
+// UpdateUserParty updates the party_id of a user and invalidates their cache.
+// Pass nil for partyID to remove the user from any party.
+func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error {
+	var pID pgtype.Int2
+	if partyID != nil {
+		pID = pgtype.Int2{Int16: *partyID, Valid: true}
+	} else {
+		pID = pgtype.Int2{Valid: false}
+	}
+
+	err := s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+		ID:      userID,
+		PartyID: pID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update user party: %w", err)
+	}
+
+	// invalidate the user cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
+	return nil
+}
+
 // MakeUserSuperAdmin promotes a specific user to the superadmin role.
 func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) error {
 	allowed := map[string]bool{
@@ -658,12 +682,10 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 
 	// 4. Update party if provided
 	if partyID != nil && (hasPartyAdmin || hasSuperPartyAdmin) {
-		err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
-			ID:      userID,
-			PartyID: pgtype.Int2{Int16: int16(*partyID), Valid: true},
-		})
+		pID := int16(*partyID)
+		err = s.UpdateUserParty(ctx, userID, &pID, fakeID)
 		if err != nil {
-			return fmt.Errorf("failed to update user party: %w", err)
+			return err
 		}
 	}
 
