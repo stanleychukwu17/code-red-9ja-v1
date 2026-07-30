@@ -1012,7 +1012,7 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
 
   // Fetch all countries to be able to extract the user current country international phone code
   const { data: loadedCountries, isLoading: isCountriesLoading } = useQuery({
-    queryKey: ["countries"],
+    queryKey: ["GetAllCountries"],
     queryFn: async () => {
       if (!getAllCountries) return null;
       const res = await getAllCountries();
