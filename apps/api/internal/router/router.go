@@ -126,12 +126,13 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
-	seedService := seedservice.NewSeedService(q, rdb, authService, bodiesService)
+	seedService := seedservice.NewSeedService(q, rdb, authService, bodiesService, usersService, partiesService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)
 	partiesService.SetPageVerificationsService(pageVerificationsService)
+	partiesService.SetUsersService(usersService)
 
 	authHandler := authhandler.NewHandler(authService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
@@ -213,6 +214,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// for seeds
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers) // Seed users endpoint
+	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins) // Seed admins endpoint
 
 	// Banks
 	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)
@@ -443,6 +445,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/slots/price", partiesHandler.GetPartySlotPrice)
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesHandler.BuySlots)
 		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
+		
+		r.Post("/api/v1/parties/{id}/join", partiesHandler.JoinParty)
+		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
 		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateStateAllowances)
 		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.DepositTest)
 
