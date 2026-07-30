@@ -10,6 +10,8 @@ import (
 	"free9ja/api/internal/db/queries"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
+	partiesservice "free9ja/api/internal/service/parties"
+	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -19,10 +21,12 @@ import (
 )
 
 type SeedService struct {
-	queries       *queries.Queries
-	rdb           *redis.Client
-	authService   *authservice.AuthService
-	bodiesService *bodiesservice.BodiesService
+	queries        *queries.Queries
+	rdb            *redis.Client
+	authService    *authservice.AuthService
+	bodiesService  *bodiesservice.BodiesService
+	usersService   *usersservice.UsersService
+	partiesService *partiesservice.PartiesService
 }
 
 func NewSeedService(
@@ -30,12 +34,16 @@ func NewSeedService(
 	rdb *redis.Client,
 	authService *authservice.AuthService,
 	bodiesService *bodiesservice.BodiesService,
+	usersService *usersservice.UsersService,
+	partiesService *partiesservice.PartiesService,
 ) *SeedService {
 	return &SeedService{
-		queries:       q,
-		rdb:           rdb,
-		authService:   authService,
-		bodiesService: bodiesService,
+		queries:        q,
+		rdb:            rdb,
+		authService:    authService,
+		bodiesService:  bodiesService,
+		usersService:   usersService,
+		partiesService: partiesService,
 	}
 }
 
@@ -68,6 +76,9 @@ type SeedUserRequest struct {
 	IsPolitician       bool    `json:"is_politician"`
 }
 
+// SeedUsers registers a batch of new users from a seed request.
+// It handles password hashing, database insertion, generates fake IDs, caches user details in Redis,
+// and optionally appends user verification badges (e.g., for politicians).
 func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
 	eg, ctx := errgroup.WithContext(ctx)
 
@@ -167,14 +178,14 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			}
 
 			// save the users
-			id, err := s.queries.SeedUser(ctx, params)
+			newUserID, err := s.queries.SeedUser(ctx, params)
 			if err != nil {
 				return fmt.Errorf("failed to seed user %s: %w", u.Email, err)
 			}
 
 			// save extra info on the users
 			_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
-				UserID:            id,
+				UserID:            newUserID,
 				OccupationID:      occupationIDVal,
 				EducationalStatus: pgtype.Text{},
 				HighestDegree:     pgtype.Text{},
@@ -191,7 +202,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 
 			// create a request for the user credentials to be verified
 			_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
-				UserID:             id,
+				UserID:             newUserID,
 				NinVerified:        pgtype.Bool{Bool: false, Valid: true},
 				PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
 				EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
@@ -202,24 +213,24 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			}
 
 			// generate and update the user fakeID
-			fakeID := utils.GenerateFakeID(id)
-			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
+			newUserFakeID := utils.GenerateFakeID(newUserID)
+			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: newUserID, FakeID: pgtype.Int8{Int64: newUserFakeID, Valid: true}})
 
 			// Save details to Redis cache
 			emailStr := emailVal.String
 			usernameStr := usernameVal.String
-			_ = s.authService.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", id, fakeID)
+			_ = s.authService.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", newUserID, newUserFakeID)
 
 			// save the user phone number
 			if formattedPhone != "" {
-				_ = s.authService.SaveUserPhone(ctx, id, fakeID, formattedPhone, rawPhoneInput, phonecode)
+				_ = s.authService.SaveUserPhone(ctx, newUserID, newUserFakeID, formattedPhone, rawPhoneInput, phonecode)
 			}
 
 			// update user verification type, this will add a verification badge for the user
 			if u.IsVerified && u.VerificationTypeID != nil {
 				_, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
 					PageType:           db.PageTypeUser,
-					PageID:             id,
+					PageID:             newUserID,
 					VerificationTypeID: *u.VerificationTypeID,
 				})
 				if err != nil {
@@ -227,11 +238,11 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				}
 			}
 
-			// adds a "celebrity" verifcation type for politicians
+			// adds a "celebrity" verification type for politicians
 			if u.IsPolitician {
 				_, err := s.queries.AddPageVerification(ctx, queries.AddPageVerificationParams{
 					PageType:           db.PageTypeUser,
-					PageID:             id,
+					PageID:             newUserID,
 					VerificationTypeID: 2,
 				})
 				if err != nil {
@@ -239,11 +250,19 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				}
 			}
 
+			// if the user belongs to a party, officially join them to the party
+			if u.PartyID != nil && *u.PartyID > 0 {
+				err := s.partiesService.JoinParty(ctx, *u.PartyID, 0, newUserID, newUserFakeID)
+				if err != nil {
+					return fmt.Errorf("failed to join party for user %s: %w", u.Email, err)
+				}
+			}
+
 			// get and save the user details to cache in redis
-			_, _ = s.authService.GetUserDetailsByFakeID(ctx, fakeID)
+			_, _ = s.authService.GetUserDetailsByFakeID(ctx, newUserFakeID)
 
 			// log success message
-			fmt.Println("added id", id)
+			// fmt.Println("added user with id", newUserID)
 			return nil
 		})
 	}
@@ -253,4 +272,116 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 	}
 
 	return "Users seeded successfully", nil
+}
+
+type PartyAdminsData struct {
+	ID              int16   `json:"id"`
+	PartyAdmin      []int64 `json:"party_admin"`
+	SuperPartyAdmin []int64 `json:"super_party_admin"`
+}
+
+type SeedAdminsRequest struct {
+	Admins  []int64                      `json:"admins"`
+	Parties []map[string]PartyAdminsData `json:"parties"`
+}
+
+// SeedAdmins assigns system-wide admin roles, as well as party admin and super party admin roles to existing users.
+// For party roles, it first joins the user to the specified party.
+// All role assignments are processed concurrently.
+func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (string, error) {
+	eg, ctx := errgroup.WithContext(ctx)
+
+	// system admin who assigns
+	systemAdminID := int64(1)
+
+	// Process system admins
+	for _, adminID := range req.Admins {
+		eg.Go(func() error {
+			// get the fake id for the user
+			fakeIDData, err := s.queries.GetFakeIDByUserID(ctx, adminID)
+			if err != nil {
+				return fmt.Errorf("failed to fetch fake ID for user %d: %w", adminID, err)
+			}
+			fakeID := fakeIDData.Int64
+
+			// assign admin role
+			err = s.usersService.AssignUserRole(ctx, adminID, fakeID, "admin", systemAdminID)
+			if err != nil {
+				return fmt.Errorf("failed to assign admin role to user %d: %w", adminID, err)
+			}
+
+			// assign super_admin role
+			// err = s.usersService.AssignUserRole(ctx, adminID, fakeID, "super_admin", systemAdminID)
+			// if err != nil {
+			// 	return fmt.Errorf("failed to assign super_admin role to user %d: %w", adminID, err)
+			// }
+			// fmt.Println("assigned super_admin to id", adminID)
+			return nil
+		})
+	}
+
+	// Process party admins
+	for _, partyMap := range req.Parties {
+		for _, partyData := range partyMap {
+			partyID := partyData.ID
+
+			// Process party_admin
+			for _, pAdminID := range partyData.PartyAdmin {
+				eg.Go(func() error {
+					// get the fake id for the user
+					fakeIDData, err := s.queries.GetFakeIDByUserID(ctx, pAdminID)
+					if err != nil {
+						return fmt.Errorf("failed to fetch fake ID for party admin %d: %w", pAdminID, err)
+					}
+					fakeID := fakeIDData.Int64
+
+					// join party
+					err = s.partiesService.JoinParty(ctx, partyID, 0, pAdminID, fakeID)
+					if err != nil {
+						return fmt.Errorf("failed to join party for user %d: %w", pAdminID, err)
+					}
+
+					// assign role
+					err = s.usersService.AssignUserRole(ctx, pAdminID, fakeID, "party_admin", systemAdminID)
+					if err != nil {
+						return fmt.Errorf("failed to assign party_admin role to user %d: %w", pAdminID, err)
+					}
+					fmt.Println("assigned party_admin to id", pAdminID)
+					return nil
+				})
+			}
+
+			// Process super_party_admin
+			for _, spAdminID := range partyData.SuperPartyAdmin {
+				eg.Go(func() error {
+					// get the fake id for the user
+					fakeIDData, err := s.queries.GetFakeIDByUserID(ctx, spAdminID)
+					if err != nil {
+						return fmt.Errorf("failed to fetch fake ID for super party admin %d: %w", spAdminID, err)
+					}
+					fakeID := fakeIDData.Int64
+
+					// join party
+					err = s.partiesService.JoinParty(ctx, partyID, 0, spAdminID, fakeID)
+					if err != nil {
+						return fmt.Errorf("failed to join party for user %d: %w", spAdminID, err)
+					}
+
+					// assign super_party_admin role
+					err = s.usersService.AssignUserRole(ctx, spAdminID, fakeID, "super_party_admin", systemAdminID)
+					if err != nil {
+						return fmt.Errorf("failed to assign super_party_admin role to user %d: %w", spAdminID, err)
+					}
+					fmt.Println("assigned super_party_admin to id", spAdminID)
+					return nil
+				})
+			}
+		}
+	}
+
+	if err := eg.Wait(); err != nil {
+		return "", err
+	}
+
+	return "Admins seeded successfully", nil
 }
