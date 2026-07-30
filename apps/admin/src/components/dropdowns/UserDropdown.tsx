@@ -19,7 +19,7 @@ interface UserDropdownProps {
 }
 
 export const UserDropdown = ({
-  data,
+  data: userDetails,
   className,
   refetch,
 }: UserDropdownProps) => {
@@ -32,7 +32,7 @@ export const UserDropdown = ({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await deleteUser({ data: data.fake_id as number });
+      const res = await deleteUser({ data: userDetails.fake_id as number });
       if (!res.success) {
         throw new Error(res.message || "Failed to delete user");
       }
@@ -85,12 +85,7 @@ export const UserDropdown = ({
   ];
   const dropdownData: TDropdownGroup[] = [group1];
 
-  const userDetails = {
-    ...data,
-    avatar: data.avatar || data.avatar_url,
-  };
-
-  const name = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.username || "User";
+  const name = [userDetails.first_name, userDetails.last_name].filter(Boolean).join(" ") || userDetails.username || "User";
 
   return (
     <>
