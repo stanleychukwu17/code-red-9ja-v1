@@ -138,9 +138,17 @@ export function GeneralPage() {
         {/* {daysLeft !== 0 && <ApplicationsCard />} */}
         <ApplicationsCard />
         {daysLeft !== 0 && <PracticeTestCard />}
-        {daysLeft === 0 && <DidYouVoteCard />}
-        {daysLeft === 0 && <UploadResultCard />}
-        <GiveUpdateFloatingButton />
+        {daysLeft === 0 && (
+          <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
+        )}
+        {daysLeft === 0 && (
+          <UploadResultCard
+            onClick={() => navigate({ to: "/upload-result" })}
+          />
+        )}
+        <GiveUpdateFloatingButton
+          onClick={() => navigate({ to: "/give-update" })}
+        />
       </HomeBody>
     </div>
   );

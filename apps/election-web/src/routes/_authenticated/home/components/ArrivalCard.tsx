@@ -25,15 +25,15 @@ export function ArrivalCard({ onArrivedClick }: ArrivalCardProps) {
       <GreyCardTitle label="Have you arrived at your polling unit?" />
 
       <div className="flex flex-col">
-        <div className="flex items-center gap-3 ">
-          <p className="text-c-50 w-full">
-            Polling Unit:
-            <span className="ml-1 font-semibold text-c-80">{pollingUnit}</span>
-          </p>
-          <PollingUnitIcon className="size-10 text-c-60" />
+        <div className="flex items-center gap-2">
+          <PollingUnitIcon className="shrink-0 size-7 text-c-60" />
+          <span className="text-c-50">Your Polling Unit</span>
         </div>
-        <p className="text-sm text-c-50">
-          {state}, {lga}, {ward}
+        <p className="w-full font-semibold text-c-80 leading-6">
+          {pollingUnit}
+        </p>
+        <p className="text-sm text-c-50 mt-1">
+          State: {state} | LGA: {lga} | Ward: {ward}
         </p>
       </div>
 

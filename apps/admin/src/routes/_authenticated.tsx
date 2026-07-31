@@ -39,12 +39,17 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: APP_URL.auth.login });
     }
 
-    if (!user?.roles?.includes("admin") && !user?.roles?.includes("super_admin")) {
+    if (
+      !user?.roles?.includes("admin") &&
+      !user?.roles?.includes("super_admin")
+    ) {
       throw new Error("You do not have access to this platform.");
     }
   },
   component: AuthenticatedRoutes,
-  errorComponent: ({ error }) => <div className="text-destructive">{error.message}</div>,
+  errorComponent: ({ error }) => (
+    <div className="text-destructive">{error.message}</div>
+  ),
 });
 
 const ICON_CLASS = "shrink-0 size-6";
@@ -96,9 +101,7 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     id: "notifications",
     label: "Notifications",
     icon: <NotificationIcon className={ICON_CLASS} />,
-    selectedIcon: (
-      <NotificationSolidIcon className={SELECTED_ICON_CLASS} />
-    ),
+    selectedIcon: <NotificationSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.notifications,
   },
 ];
@@ -112,8 +115,7 @@ function AuthenticatedRoutes() {
   const handleLogout = async () => {
     try {
       await logoutUser();
-    } catch (e) {
-    }
+    } catch (e) {}
     dispatch(updateAuthState({ user: null }));
   };
 
@@ -133,16 +135,13 @@ function AuthenticatedRoutes() {
       />
 
       {/* 2. A flex column container for the rest of the page */}
-      <div className="flex flex-col flex-1 w-full min-w-0">
-
+      <div className="flex flex-col flex-1 w-full min-w-0 h-full">
         {/* Main content expands to push footer down */}
-        <main className="flex-1">
+        <main className="flex-1 min-h-svh">
           <Outlet />
         </main>
         {/* Footer stays at the bottom */}
-        <footer className="p-4 border-t text-center font-bold">
-          Free9ja
-        </footer>
+        <footer className="p-4 border-t text-center font-bold">Free9ja</footer>
       </div>
     </div>
   );

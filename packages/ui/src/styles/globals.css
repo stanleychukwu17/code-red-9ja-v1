@@ -156,7 +156,7 @@
     --purple-accent: rgb(138 66 232);
     --pink: rgb(219 11 98);
     --pink-accent: rgb(193 12 88);
-    --green: rgb(31 136 61);
+    --green: rgb(0, 154, 73);
     --yellow: rgb(255 192 71);
     /* --yellow-accent: rgb(255 192 71); */
     --orange: rgb(253 150 68);
@@ -179,7 +179,7 @@
     --text-10: rgb(230 230 230);
 
     /* sidebar */
-    --sidebar: rgba(241, 242, 246, .2);
+    --sidebar: rgba(241, 242, 246, 0.2);
     --sidebar-mobile: rgb(241, 242, 246);
     --sidebar-width: calc(18rem);
 

@@ -55,7 +55,9 @@ export type TileRightProps = {
 };
 export function TileRight({ children }: TileRightProps) {
   return (
-    <div className="shrink-0 flex items-center gap-3 text-[15px] text-c-70">{children}</div>
+    <div className="shrink-0 flex items-center gap-3 text-[15px] text-c-70">
+      {children}
+    </div>
   );
 }
 
@@ -66,10 +68,19 @@ export type TileOptionsProps = {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 };
-export const TileOptions = ({ dropdown, className, disabled, open: controlledOpen, onOpenChange: controlledOnOpenChange }: TileOptionsProps) => {
+export const TileOptions = ({
+  dropdown,
+  className,
+  disabled,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: TileOptionsProps) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
-  const setOpen = controlledOnOpenChange !== undefined ? controlledOnOpenChange : setInternalOpen;
+  const setOpen =
+    controlledOnOpenChange !== undefined
+      ? controlledOnOpenChange
+      : setInternalOpen;
 
   return (
     <div onClick={(e) => e.stopPropagation()} className={cn(className)}>

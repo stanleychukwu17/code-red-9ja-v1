@@ -52,6 +52,30 @@ export const clearAuthCookies = () => {
   });
 };
 
+// Signs up a new user and sets auth cookies with the returned tokens
+export const signupUserImpl = createServerOnlyFn(async ({ data }) => {
+  try {
+    const response = await fetch(API_URL.auth.signup, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    const result = await response.json();
+    if (result.success && result.data?.refreshToken) {
+      setAuthCookies({
+        refreshToken: result.data.refreshToken,
+        accessToken: result.data.accessToken,
+      });
+      delete result.data.refreshToken;
+      delete result.data.accessToken;
+    }
+    return result;
+  } catch (error) {
+    return { success: false, message: "An unexpected error occurred during signup" };
+  }
+});
+
 // Logs in a user by sending a POST request to the server with the user's identifier and password.
 export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
   try {

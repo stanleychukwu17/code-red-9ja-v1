@@ -364,7 +364,7 @@ func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (U
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at, country_of_origin FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -405,6 +405,7 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.AccountStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CountryOfOrigin,
 	)
 	return i, err
 }
@@ -765,6 +766,60 @@ func (q *Queries) UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMor
 		arg.MaritalStatus,
 		arg.EducationLevel,
 		arg.Address,
+	)
+	return err
+}
+
+const updateOnboardingProfile = `-- name: UpdateOnboardingProfile :exec
+UPDATE users
+SET username = $2,
+    first_name = $3,
+    last_name = $4,
+    middle_name = $5,
+    gender = $6,
+    date_of_birth = $7,
+    current_country = $8,
+    current_state = $9,
+    current_city = $10,
+    state_of_origin = $11,
+    country_of_origin = $12,
+    referred_by_code = $13,
+    account_status = 'active',
+    updated_at = NOW()
+WHERE id = $1
+`
+
+type UpdateOnboardingProfileParams struct {
+	ID              int64       `json:"id"`
+	Username        pgtype.Text `json:"username"`
+	FirstName       pgtype.Text `json:"first_name"`
+	LastName        pgtype.Text `json:"last_name"`
+	MiddleName      pgtype.Text `json:"middle_name"`
+	Gender          pgtype.Text `json:"gender"`
+	DateOfBirth     pgtype.Date `json:"date_of_birth"`
+	CurrentCountry  int16       `json:"current_country"`
+	CurrentState    int16       `json:"current_state"`
+	CurrentCity     pgtype.Int4 `json:"current_city"`
+	StateOfOrigin   pgtype.Int2 `json:"state_of_origin"`
+	CountryOfOrigin pgtype.Int2 `json:"country_of_origin"`
+	ReferredByCode  pgtype.Text `json:"referred_by_code"`
+}
+
+func (q *Queries) UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) error {
+	_, err := q.db.Exec(ctx, updateOnboardingProfile,
+		arg.ID,
+		arg.Username,
+		arg.FirstName,
+		arg.LastName,
+		arg.MiddleName,
+		arg.Gender,
+		arg.DateOfBirth,
+		arg.CurrentCountry,
+		arg.CurrentState,
+		arg.CurrentCity,
+		arg.StateOfOrigin,
+		arg.CountryOfOrigin,
+		arg.ReferredByCode,
 	)
 	return err
 }

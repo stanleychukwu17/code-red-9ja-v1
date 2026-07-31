@@ -85,6 +85,23 @@ SET first_name = $2,
     updated_at = NOW()
 WHERE id = $1;
 
+-- name: UpdateOnboardingProfile :exec
+UPDATE users
+SET username = $2,
+    first_name = $3,
+    last_name = $4,
+    middle_name = $5,
+    gender = $6,
+    date_of_birth = $7,
+    current_country = $8,
+    current_state = $9,
+    current_city = $10,
+    state_of_origin = $11,
+    country_of_origin = $12,
+    referred_by_code = $13,
+    account_status = 'active',
+    updated_at = NOW()
+WHERE id = $1;
 
 -- name: ListUsers :many
 -- ListUsers fetches a paginated list of users with optional filtering.

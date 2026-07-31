@@ -15,7 +15,7 @@ export const createLga = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.lgas, {
+      const response = await apiFetch(API_URL.getLGAs(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -189,6 +189,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// for auths
 	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp)         // Register first phase
+	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                       // Basic signup endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                               // Check NIN endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                     // Check Username endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                               // Register endpoint
@@ -393,6 +394,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// users routes
 		r.Get(utils.ApiUrls.Users.GetMe, usersHandler.GetMe)
 		r.Put(utils.ApiUrls.Users.UpdateProfile, usersHandler.UpdateProfile)
+		r.Patch("/api/v1/auth/onboarding", authHandler.CompleteOnboarding) // Complete onboarding step
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)
 		r.Delete("/api/v1/admin/users/{id}", usersHandler.DeleteUser)

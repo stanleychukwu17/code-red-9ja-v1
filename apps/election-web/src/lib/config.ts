@@ -25,7 +25,9 @@ export const API_URL = {
     registerPhaseSignUp: `${api}/auth/register_phase_signup`,
     checkNin: `${api}/auth/check_nin`,
     checkUsername: `${api}/auth/check_username`,
+    signup: `${api}/auth/signup`,
     register: `${api}/auth/register`,
+    completeOnboarding: `${api}/auth/onboarding`,
     login: `${api}/auth/login`,
     adminLogin: `${api}/auth/admin/login`,
     refresh: `${api}/auth/refresh`,
@@ -238,6 +240,7 @@ export const API_URL = {
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
 
   users: `${api}/users`,
+  updateProfile: `${api}/users/profile`,
   pollingAgentApplications: `${api}/party-applications`,
   pollingAgentRecommendations: `${api}/party-applications/recommendations`,
 

@@ -104,10 +104,8 @@ export function GeneralCommand<T>({
   }, [virtualItems, status, loadMore, filteredItems.length]);
 
   return (
-    <Command shouldFilter={status === undefined}>
+    <Command shouldFilter={status === undefined} className="w-full">
       {!disableSearch && (
-        // <CommandInput
-        // />
         <div className="mx-2">
           <IconInput
             placeholder="Search..."
@@ -127,7 +125,9 @@ export function GeneralCommand<T>({
                 onSelect={() => onSelectAll?.()}
                 className="flex items-center gap-2 py-2 px-3 cursor-pointer"
               >
-                <div className="leading-5 font-[450] font-normal flex-1 min-w-0">All</div>
+                <div className="leading-5 font-[450] font-normal flex-1 min-w-0">
+                  All
+                </div>
                 <Check
                   className={cn(
                     "shrink-0",

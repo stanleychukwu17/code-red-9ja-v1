@@ -126,6 +126,24 @@ type ElectionCandidate struct {
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
 
+type ElectionFederalConstituencyFinalResult struct {
+	ID                    int64              `json:"id"`
+	ElectionID            int64              `json:"election_id"`
+	FederalConstituencyID int32              `json:"federal_constituency_id"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	CandidateResultsLive  []byte             `json:"candidate_results_live"`
+	LgasCounted           int32              `json:"lgas_counted"`
+	TotalLgas             int32              `json:"total_lgas"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ElectionFinalResult struct {
 	ID                   int64              `json:"id"`
 	ElectionID           int64              `json:"election_id"`
@@ -441,6 +459,102 @@ type ElectionGroupWard struct {
 	UpdatedAt                                 pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ElectionLgaFinalResult struct {
+	ID                    int64              `json:"id"`
+	ElectionID            int64              `json:"election_id"`
+	LgaID                 int32              `json:"lga_id"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	CandidateResultsLive  []byte             `json:"candidate_results_live"`
+	WardsCounted          int32              `json:"wards_counted"`
+	TotalWards            int32              `json:"total_wards"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ElectionPollingUnitFinalResult struct {
+	ID                       int64              `json:"id"`
+	ElectionID               int64              `json:"election_id"`
+	ElectionGroupID          int64              `json:"election_group_id"`
+	PollingUnitID            int32              `json:"polling_unit_id"`
+	StateID                  pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID     pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID    pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID      pgtype.Int4        `json:"state_constituency_id"`
+	LgaID                    pgtype.Int4        `json:"lga_id"`
+	WardID                   pgtype.Int4        `json:"ward_id"`
+	PollingUnitResultID      pgtype.Int8        `json:"polling_unit_result_id"`
+	AccreditedVoters         int32              `json:"accredited_voters"`
+	VotesCast                int32              `json:"votes_cast"`
+	ValidVotes               int32              `json:"valid_votes"`
+	RejectedVotes            int32              `json:"rejected_votes"`
+	CandidateResults         []byte             `json:"candidate_results"`
+	CandidateResultsLive     []byte             `json:"candidate_results_live"`
+	MatchingSubmissionsCount int32              `json:"matching_submissions_count"`
+	TotalSubmissionsCount    int32              `json:"total_submissions_count"`
+	CreatedAt                pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ElectionSenatorialDistrictFinalResult struct {
+	ID                   int64              `json:"id"`
+	ElectionID           int64              `json:"election_id"`
+	SenatorialDistrictID int32              `json:"senatorial_district_id"`
+	StateID              pgtype.Int2        `json:"state_id"`
+	AccreditedVoters     int32              `json:"accredited_voters"`
+	VotesCast            int32              `json:"votes_cast"`
+	ValidVotes           int32              `json:"valid_votes"`
+	RejectedVotes        int32              `json:"rejected_votes"`
+	CandidateResults     []byte             `json:"candidate_results"`
+	CandidateResultsLive []byte             `json:"candidate_results_live"`
+	LgasCounted          int32              `json:"lgas_counted"`
+	TotalLgas            int32              `json:"total_lgas"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ElectionStateConstituencyFinalResult struct {
+	ID                    int64              `json:"id"`
+	ElectionID            int64              `json:"election_id"`
+	StateConstituencyID   int32              `json:"state_constituency_id"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	CandidateResultsLive  []byte             `json:"candidate_results_live"`
+	WardsCounted          int32              `json:"wards_counted"`
+	TotalWards            int32              `json:"total_wards"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ElectionStateFinalResult struct {
+	ID                         int64              `json:"id"`
+	ElectionID                 int64              `json:"election_id"`
+	StateID                    int16              `json:"state_id"`
+	AccreditedVoters           int32              `json:"accredited_voters"`
+	VotesCast                  int32              `json:"votes_cast"`
+	ValidVotes                 int32              `json:"valid_votes"`
+	RejectedVotes              int32              `json:"rejected_votes"`
+	CandidateResults           []byte             `json:"candidate_results"`
+	CandidateResultsLive       []byte             `json:"candidate_results_live"`
+	SenatorialDistrictsCounted int32              `json:"senatorial_districts_counted"`
+	TotalSenatorialDistricts   int32              `json:"total_senatorial_districts"`
+	CreatedAt                  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
+}
+
 type ElectionVote struct {
 	ID                    int64              `json:"id"`
 	StateID               pgtype.Int2        `json:"state_id"`
@@ -457,6 +571,27 @@ type ElectionVote struct {
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ElectionWardFinalResult struct {
+	ID                    int64              `json:"id"`
+	ElectionID            int64              `json:"election_id"`
+	WardID                int32              `json:"ward_id"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	CandidateResultsLive  []byte             `json:"candidate_results_live"`
+	PollingUnitsCounted   int32              `json:"polling_units_counted"`
+	TotalPollingUnits     int32              `json:"total_polling_units"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
 type FederalConstituency struct {
 	ID                       int32  `json:"id"`
 	Name                     string `json:"name"`
@@ -468,24 +603,6 @@ type FederalConstituency struct {
 	StateConstituenciesCount int32  `json:"state_constituencies_count"`
 	WardsCount               int32  `json:"wards_count"`
 	PollingUnitsCount        int32  `json:"polling_units_count"`
-}
-
-type ElectionFederalConstituencyFinalResult struct {
-	ID                    int64              `json:"id"`
-	ElectionID            int64              `json:"election_id"`
-	FederalConstituencyID int32              `json:"federal_constituency_id"`
-	StateID               pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
-	AccreditedVoters      int32              `json:"accredited_voters"`
-	VotesCast             int32              `json:"votes_cast"`
-	ValidVotes            int32              `json:"valid_votes"`
-	RejectedVotes         int32              `json:"rejected_votes"`
-	CandidateResults      []byte             `json:"candidate_results"`
-	CandidateResultsLive  []byte             `json:"candidate_results_live"`
-	LgasCounted           int32              `json:"lgas_counted"`
-	TotalLgas             int32              `json:"total_lgas"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type File struct {
@@ -532,25 +649,6 @@ type LgaElectionSupervisor struct {
 	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-}
-
-type ElectionLgaFinalResult struct {
-	ID                    int64              `json:"id"`
-	ElectionID            int64              `json:"election_id"`
-	LgaID                 int32              `json:"lga_id"`
-	StateID               pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
-	AccreditedVoters      int32              `json:"accredited_voters"`
-	VotesCast             int32              `json:"votes_cast"`
-	ValidVotes            int32              `json:"valid_votes"`
-	RejectedVotes         int32              `json:"rejected_votes"`
-	CandidateResults      []byte             `json:"candidate_results"`
-	CandidateResultsLive  []byte             `json:"candidate_results_live"`
-	WardsCounted          int32              `json:"wards_counted"`
-	TotalWards            int32              `json:"total_wards"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type NationalMetric struct {
@@ -727,30 +825,6 @@ type PollingUnitAssignment struct {
 	UpdatedAt                               pgtype.Timestamptz `json:"updated_at"`
 }
 
-type ElectionPollingUnitFinalResult struct {
-	ID                       int64              `json:"id"`
-	ElectionID               int64              `json:"election_id"`
-	ElectionGroupID          int64              `json:"election_group_id"`
-	PollingUnitID            int32              `json:"polling_unit_id"`
-	StateID                  pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID     pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID    pgtype.Int4        `json:"federal_constituency_id"`
-	StateConstituencyID      pgtype.Int4        `json:"state_constituency_id"`
-	LgaID                    pgtype.Int4        `json:"lga_id"`
-	WardID                   pgtype.Int4        `json:"ward_id"`
-	PollingUnitResultID      pgtype.Int8        `json:"polling_unit_result_id"`
-	AccreditedVoters         int32              `json:"accredited_voters"`
-	VotesCast                int32              `json:"votes_cast"`
-	ValidVotes               int32              `json:"valid_votes"`
-	RejectedVotes            int32              `json:"rejected_votes"`
-	CandidateResults         []byte             `json:"candidate_results"`
-	CandidateResultsLive     []byte             `json:"candidate_results_live"`
-	MatchingSubmissionsCount int32              `json:"matching_submissions_count"`
-	TotalSubmissionsCount    int32              `json:"total_submissions_count"`
-	CreatedAt                pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                pgtype.Timestamptz `json:"updated_at"`
-}
-
 type PollingUnitResult struct {
 	ID                    int64              `json:"id"`
 	AssignmentID          pgtype.Int8        `json:"assignment_id"`
@@ -838,23 +912,6 @@ type SenatorialDistrict struct {
 	PollingUnitsCount          int32       `json:"polling_units_count"`
 }
 
-type ElectionSenatorialDistrictFinalResult struct {
-	ID                   int64              `json:"id"`
-	ElectionID           int64              `json:"election_id"`
-	SenatorialDistrictID int32              `json:"senatorial_district_id"`
-	StateID              pgtype.Int2        `json:"state_id"`
-	AccreditedVoters     int32              `json:"accredited_voters"`
-	VotesCast            int32              `json:"votes_cast"`
-	ValidVotes           int32              `json:"valid_votes"`
-	RejectedVotes        int32              `json:"rejected_votes"`
-	CandidateResults     []byte             `json:"candidate_results"`
-	CandidateResultsLive []byte             `json:"candidate_results_live"`
-	LgasCounted          int32              `json:"lgas_counted"`
-	TotalLgas            int32              `json:"total_lgas"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
-}
-
 type StateAssemblyConstituency struct {
 	ID                      int32  `json:"id"`
 	Name                    string `json:"name"`
@@ -870,26 +927,6 @@ type StateAssemblyConstituency struct {
 	PollingUnitsCount       int32  `json:"polling_units_count"`
 }
 
-type ElectionStateConstituencyFinalResult struct {
-	ID                    int64              `json:"id"`
-	ElectionID            int64              `json:"election_id"`
-	StateConstituencyID   int32              `json:"state_constituency_id"`
-	StateID               pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
-	LgaID                 pgtype.Int4        `json:"lga_id"`
-	AccreditedVoters      int32              `json:"accredited_voters"`
-	VotesCast             int32              `json:"votes_cast"`
-	ValidVotes            int32              `json:"valid_votes"`
-	RejectedVotes         int32              `json:"rejected_votes"`
-	CandidateResults      []byte             `json:"candidate_results"`
-	CandidateResultsLive  []byte             `json:"candidate_results_live"`
-	WardsCounted          int32              `json:"wards_counted"`
-	TotalWards            int32              `json:"total_wards"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
-}
-
 type StateElectionSupervisor struct {
 	ID              int64              `json:"id"`
 	UserID          int64              `json:"user_id"`
@@ -902,22 +939,6 @@ type StateElectionSupervisor struct {
 	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-}
-
-type ElectionStateFinalResult struct {
-	ID                         int64              `json:"id"`
-	ElectionID                 int64              `json:"election_id"`
-	StateID                    int16              `json:"state_id"`
-	AccreditedVoters           int32              `json:"accredited_voters"`
-	VotesCast                  int32              `json:"votes_cast"`
-	ValidVotes                 int32              `json:"valid_votes"`
-	RejectedVotes              int32              `json:"rejected_votes"`
-	CandidateResults           []byte             `json:"candidate_results"`
-	CandidateResultsLive       []byte             `json:"candidate_results_live"`
-	SenatorialDistrictsCounted int32              `json:"senatorial_districts_counted"`
-	TotalSenatorialDistricts   int32              `json:"total_senatorial_districts"`
-	CreatedAt                  pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type SystemSetting struct {
@@ -962,6 +983,7 @@ type User struct {
 	AccountStatus     pgtype.Text        `json:"account_status"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	CountryOfOrigin   pgtype.Int2        `json:"country_of_origin"`
 }
 
 type UserMoreInfo struct {
@@ -1082,25 +1104,4 @@ type WardElectionSupervisor struct {
 	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-}
-
-type ElectionWardFinalResult struct {
-	ID                    int64              `json:"id"`
-	ElectionID            int64              `json:"election_id"`
-	WardID                int32              `json:"ward_id"`
-	StateID               pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
-	LgaID                 pgtype.Int4        `json:"lga_id"`
-	AccreditedVoters      int32              `json:"accredited_voters"`
-	VotesCast             int32              `json:"votes_cast"`
-	ValidVotes            int32              `json:"valid_votes"`
-	RejectedVotes         int32              `json:"rejected_votes"`
-	CandidateResults      []byte             `json:"candidate_results"`
-	CandidateResultsLive  []byte             `json:"candidate_results_live"`
-	PollingUnitsCounted   int32              `json:"polling_units_counted"`
-	TotalPollingUnits     int32              `json:"total_polling_units"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }

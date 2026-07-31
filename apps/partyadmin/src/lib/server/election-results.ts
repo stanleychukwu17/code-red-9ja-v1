@@ -1,4 +1,4 @@
-﻿import { createServerFn } from "@tanstack/react-start";
+import { createServerFn } from "@tanstack/react-start";
 import { apiFetch } from "./fetch";
 import { API_URL } from "../config";
 

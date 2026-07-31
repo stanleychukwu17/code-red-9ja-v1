@@ -106,7 +106,7 @@ export function ObjectiveTile({
   title: string;
   rightText?: string;
   rightText2?: string;
-  onClick: () => void;
+  onClick?: () => void;
 }) {
   const TodoIcon = () => (
     <div

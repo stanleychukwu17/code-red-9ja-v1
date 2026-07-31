@@ -32,7 +32,7 @@ export const SelectCountry = ({
   disabled,
   align = "start",
   fetchCountries,
-}: SelectProps<Country> & {
+}: SelectProps<Country, number | string> & {
   fetchCountries: () => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
@@ -56,7 +56,9 @@ export const SelectCountry = ({
   useEffect(() => {
     if (selectedId) {
       const country = countries.find(
-        (c) => String(c.id) === String(selectedId),
+        (c) =>
+          String(c.id) === String(selectedId) ||
+          c.name.toLowerCase() === String(selectedId).toLowerCase(),
       );
       if (country) setSelectedItem(country);
     } else {
@@ -88,6 +90,20 @@ export const SelectCountry = ({
       : undefined;
   const getId = (item: Country) => `${item.id}`;
   const getName = (item: Country) => item.name;
+  const getLabel = (item: Country) => (
+    <span className="flex items-center gap-2 capitalize">
+      {item.iso2 && (
+        <span className="country shrink-0">
+          <img
+            src={`https://flagcdn.com/w40/${item.iso2.toLowerCase()}.png`}
+            width="23"
+            alt=""
+          />
+        </span>
+      )}
+      <span>{item.name}</span>
+    </span>
+  );
 
   if (isLoading && countries.length === 0) {
     return (
@@ -121,10 +137,21 @@ export const SelectCountry = ({
           type="button"
           disabled={disabled}
         >
-          <p className="whitespace-normal text-left line-clamp-1">
-            {selectedItem ? selectedItem.name : "Country"}
-          </p>
-          <ArrowDownIcon className="ml-auto text-c-80" />
+          <div className="flex items-center gap-2 min-w-0">
+            {selectedItem?.iso2 && (
+              <span className="country shrink-0">
+                <img
+                  src={`https://flagcdn.com/w40/${selectedItem.iso2.toLowerCase()}.png`}
+                  width="23"
+                  alt=""
+                />
+              </span>
+            )}
+            <p className="whitespace-nowrap text-left truncate font-normal">
+              {selectedItem ? selectedItem.name : "Select Country"}
+            </p>
+          </div>
+          <ArrowDownIcon className="ml-auto shrink-0 text-c-80" />
         </Button>
       }
       desktopContent={
@@ -132,6 +159,7 @@ export const SelectCountry = ({
           data={filteredCountries}
           getId={getId}
           getName={getName}
+          getLabel={getLabel}
           handleSelect={handleSelect}
           selectedId={currentSelectedId}
           onSearch={setDesktopSearch}
@@ -142,6 +170,7 @@ export const SelectCountry = ({
           data={mobileFiltered}
           getId={getId}
           getName={getName}
+          getLabel={getLabel}
           handleSelect={handleSelect}
           selectedId={currentSelectedId}
           searchValue={mobileSearch}

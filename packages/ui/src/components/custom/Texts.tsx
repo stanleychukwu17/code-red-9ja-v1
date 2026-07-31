@@ -32,12 +32,13 @@ export function DescriptiveText({
   className,
 }: {
   text: string;
-  size?: "md" | "sm";
+  size?: "md" | "sm" | "xs";
   className?: string;
 }) {
   const textSize = {
     md: "text-lg leading-7",
-    sm: "text-base leading-7",
+    sm: "text-base leading-6",
+    xs: "text-sm leading-6",
   };
 
   return <p className={cn("text-c-50", textSize[size], className)}>{text}</p>;

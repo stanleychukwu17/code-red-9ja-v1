@@ -1,7 +1,7 @@
 import { Button } from "@repo/ui/components/button";
 import { GreyCardTitle, GreyCardWrapper } from "./Shared";
 
-export function RequestPayoutCard() {
+export function RequestPayoutCard({ onClick }: { onClick: () => void }) {
   return (
     <GreyCardWrapper>
       <GreyCardTitle label="Request Payout. We will review your work and ensure you completed ur objectives before granting payout." />
@@ -10,7 +10,7 @@ export function RequestPayoutCard() {
         type="button"
         variant="black"
         className="rounded-[16px] mt-1 text-lg font-bold h-[52px]"
-        onClick={() => {}}
+        onClick={onClick}
       >
         Request Payout
       </Button>

@@ -62,16 +62,21 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
 
 function AuthenticatedRoutes() {
   const [mounted, setMounted] = useState(false);
-  const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext();
+  const { userDetails, sitePreference: initialSitePreference } =
+    Route.useRouteContext();
   const dispatch = useAppDispatch();
   const reduxSitePreference = useAppSelector((state) => state.site);
 
   // Use Redux state if populated, fallback to route context sitePreference (server loaded)
-  const currentSitePreference = reduxSitePreference?.sideBarState ? reduxSitePreference : initialSitePreference;
+  const currentSitePreference = reduxSitePreference?.sideBarState
+    ? reduxSitePreference
+    : initialSitePreference;
   const isExpanded = currentSitePreference?.sideBarState !== "collapsed";
 
   // fades the page in after the page has been rendered
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -101,7 +106,9 @@ function AuthenticatedRoutes() {
         onSidebarStateChange={handleSidebarStateChange}
         homePageUrl={APP_URL.home}
       />
-      <Outlet />
+      <div className="w-full min-h-svh">
+        <Outlet />
+      </div>
     </motion.div>
   );
 }

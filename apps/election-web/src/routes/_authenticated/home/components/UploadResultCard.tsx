@@ -1,12 +1,9 @@
 import { Button } from "@repo/ui/components/button";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
-import { useNavigate } from "@tanstack/react-router";
 import { AlertTriangleIcon } from "lucide-react";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
-export function UploadResultCard() {
-  const navigate = useNavigate();
-
+export function UploadResultCard({ onClick }: { onClick: () => void }) {
   return (
     <GreyCardWrapper>
       <GreyCardTopRow
@@ -20,7 +17,7 @@ export function UploadResultCard() {
         type="button"
         variant="secondary"
         className="rounded-[16px] mt-1 text-lg font-bold h-[52px]"
-        onClick={() => navigate({ to: "/upload-result" })}
+        onClick={onClick}
       >
         Upload Voting Result
       </Button>

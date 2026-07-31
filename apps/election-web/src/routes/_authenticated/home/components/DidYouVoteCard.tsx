@@ -13,10 +13,11 @@ import { NotVotingDrawer } from "./NotVotingDrawer";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 interface DidYouVoteCardProps {
+  onYesClick?: () => void;
   onNoClick?: () => void;
 }
 
-export function DidYouVoteCard({ onNoClick }: DidYouVoteCardProps) {
+export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
   const { selectedAssignment, selectedElectionGroup } = useAuth();
   const navigate = useNavigate();
   const [isNotVotingDrawerOpen, setIsNotVotingDrawerOpen] = useState(false);
@@ -63,7 +64,7 @@ export function DidYouVoteCard({ onNoClick }: DidYouVoteCardProps) {
             variant="secondary"
             size="4xl"
             className="w-full"
-            onClick={() => navigate({ to: "/vote" })}
+            onClick={onYesClick}
           >
             Yes
           </Button>

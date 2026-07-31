@@ -82,6 +82,7 @@ export interface UserDetails {
   party?: {
     id?: number;
     short_name?: string;
+
     name?: string;
     logo?: string;
     slots?: number;

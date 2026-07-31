@@ -273,13 +273,20 @@ export function PollingAgentPage() {
               }}
             />
           )}
-        {daysLeft === 0 && <DidYouVoteCard />}
+        {daysLeft === 0 && (
+          <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
+        )}
 
         {currentPollingUnitAssignment &&
           currentPollingUnitAssignment.election_ended_at && (
             <>
-              <UploadResultCard />
-              <RequestPayoutCard />
+              <UploadResultCard
+                onClick={() => navigate({ to: "/upload-result" })}
+              />
+              <RequestPayoutCard
+                // onClick={() => navigate({ to: "/request-payout" })}
+                onClick={() => null}
+              />
             </>
           )}
 
@@ -298,18 +305,20 @@ export function PollingAgentPage() {
         onYesClick={() => {
           if (currentPollingUnitAssignment?.id) {
             navigate({
-              to: "/arrival/video",
+              to: "/arrival",
               search: { assignmentId: currentPollingUnitAssignment.id } as any,
             });
           } else {
-            navigate({ to: "/arrival/video" });
+            navigate({ to: "/arrival" });
           }
         }}
         onDismiss={() => setIsArrivalDrawerOpen(false)}
         electionDate={selectedElectionGroup?.election_date}
       />
 
-      <GiveUpdateFloatingButton />
+      <GiveUpdateFloatingButton
+        onClick={() => navigate({ to: "/give-update" })}
+      />
     </div>
   );
 }

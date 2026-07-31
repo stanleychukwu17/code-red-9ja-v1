@@ -27,7 +27,7 @@ export function InfoCard({
   return (
     <div
       className={cn(
-        `rounded-[16px] p-4 flex items-center justify-between text-[17px] [&_svg]:shrink-0 text-c-80`,
+        `rounded-xl p-3 flex items-center justify-between text-[17px] [&_svg]:shrink-0 text-c-80`,
         bgColor[variant],
         className,
       )}
@@ -36,7 +36,7 @@ export function InfoCard({
         {icon}
         <div className="w-full text-c-90">{label}</div>
       </div>
-      <span className="font-extrabold">{value}</span>
+      <span className="shrink-0 font-extrabold">{value}</span>
     </div>
   );
 }
@@ -112,30 +112,36 @@ export function SelectableCard({
   title,
   subtitle,
   isSelected,
+  rightComponent,
+  titleClassName,
+  className,
   onClick,
   disabled,
 }: {
   title: string;
-  subtitle: string;
+  subtitle?: string;
   isSelected: boolean;
   onClick: () => void;
+  rightComponent?: ReactNode;
+  titleClassName?: string;
+  className?: string;
   disabled?: boolean;
 }) {
   return (
     <div
       onClick={onClick}
-      className={`flex items-center justify-between p-5 rounded-2xl transition ${
-        disabled
-          ? "opacity-50 cursor-not-allowed"
-          : isSelected
-            ? "bg-secondary/20 cursor-pointer"
-            : "bg-hover-5 cursor-pointer"
-      }`}
+      className={cn(
+        "relative flex items-center justify-between p-5 rounded-2xl bg-hover-5 cursor-pointer transition",
+        disabled && "opacity-50 cursor-not-allowed",
+        isSelected && "bg-secondary/20 cursor-pointer",
+        className,
+      )}
     >
-      <div className="flex flex-col gap-1.5">
-        <span className="text-c-90 text-[17px]">{title}</span>
-        <span className="text-sm text-c-60">{subtitle}</span>
+      <div className="flex flex-col gap-1.5 w-full">
+        <p className={cn("text-c-90 text-[17px]", titleClassName)}>{title}</p>
+        {subtitle && <span className="text-sm text-c-60">{subtitle}</span>}
       </div>
+      {rightComponent}
       <CheckmarkIndicator isSelected={isSelected} disabled={disabled} />
     </div>
   );

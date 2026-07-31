@@ -861,7 +861,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/register_phase_signup": {
+        "/auth/signup": {
             "post": {
                 "description": "Handles the first phase of user registration (country, phone, email, password)",
                 "consumes": [

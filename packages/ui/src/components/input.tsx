@@ -1,4 +1,5 @@
 import * as React from "react";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { ArrowUp, Eye, EyeOff } from "lucide-react";
 import TextareaAutosize from "react-textarea-autosize";
@@ -7,6 +8,8 @@ import PaperPlaneIcon from "../icons/paper-plane-icon";
 import SearchIcon from "../icons/search-icon";
 import { cn } from "../lib/utils";
 import { Button } from "./button";
+import LoadingCircleIcon from "../icons/loading-circle-icon";
+import CheckIcon from "../icons/check-icon";
 
 const inputClassName = `group flex items-center gap-2 text-lg md:text-base h-14 md:h-11 w-full rounded-xl bg-black/5 px-4 py-6
   transition-colors duration-200 file:border-0 file:bg-transparent ring-inset file:text-foreground placeholder:text-c-60
@@ -91,13 +94,23 @@ const IconInput = ({
 
 type InputErrorTextProps = {
   text?: string;
-  className?: string;
+  className?: string | null;
 };
 const InputErrorText = ({ text, className }: InputErrorTextProps) => {
-  if (!text) return <></>;
-
   return (
-    <p className={cn("text-red-500 text-sm font-medium", className)}>{text}</p>
+    <AnimatePresence mode="wait">
+      {text && (
+        <motion.p
+          key={text}
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          className={cn("text-red-500 text-sm font-medium", className)}
+        >
+          {text}
+        </motion.p>
+      )}
+    </AnimatePresence>
   );
 };
 
@@ -106,19 +119,33 @@ const FormInput = ({
   type,
   labelText,
   errorMsg,
+  isLoading,
+  showCheckMark,
   ref,
   ...props
-}: InputProps & { labelText?: string }) => {
+}: InputProps & {
+  labelText?: string;
+  isLoading?: boolean;
+  showCheckMark?: boolean;
+}) => {
   return (
     <div className="space-y-1 w-full">
       <Label title={labelText} className="mb-2.5" />
-      <input
-        type={type}
-        className={cn(inputClassName, className)}
-        ref={ref}
-        autoComplete="off"
-        {...props}
-      />
+      <div className="relative">
+        <input
+          type={type}
+          className={cn(inputClassName, className)}
+          ref={ref}
+          autoComplete="off"
+          {...props}
+        />
+        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+          {isLoading && !showCheckMark && (
+            <LoadingCircleIcon className="size-5" />
+          )}
+          {showCheckMark && !isLoading && <CheckIcon className="size-5" />}
+        </div>
+      </div>
       <InputErrorText text={errorMsg} />
     </div>
   );

@@ -3,18 +3,32 @@ import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { setOnboardingData, updateOnboardingData } from "@/redux/slice/authSlice";
+import {
+  setOnboardingData,
+  updateOnboardingData,
+} from "@/redux/slice/authSlice";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { SignupError } from "./_components/-signup-error";
 import { FormError } from "./_components/-form-error";
 
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@repo/ui/components/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@repo/ui/components/select";
 import { APP_URL, APP_NAME } from "@/lib/config";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "@/lib/server/countries";
-import { checkIfRefreshTokenInCookie, startUserRegistration } from "@/lib/server/auth/auth";
+import {
+  checkIfRefreshTokenInCookie,
+  startUserRegistration,
+} from "@/lib/server/auth/auth";
 import type { countriesType } from "./login";
 
 import { PiWhatsappLogoDuotone } from "react-icons/pi";
@@ -29,10 +43,11 @@ export const Route = createFileRoute("/auth/signup")({
   },
 
   // Page metadata
-  head: () => getPageHeader({
-    title: "Sign up: Join the movement ",
-    description: `Create your account to start enjoying premium content on ${APP_NAME}`,
-  }),
+  head: () =>
+    getPageHeader({
+      title: "Sign up: Join the movement ",
+      description: `Create your account to start enjoying premium content on ${APP_NAME}`,
+    }),
 
   // Component to render
   component: RouteComponent,
@@ -46,14 +61,16 @@ function RouteComponent() {
   const dispatch = useAppDispatch();
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
-  
+
   const { data: countriesRes } = useQuery({
-    queryKey: ['countries'],
+    queryKey: ["countries"],
     queryFn: () => getAllCountries() as Promise<countriesType>,
     staleTime: Infinity,
   });
-  const countries = (countriesRes?.success ? countriesRes.data.countries : []) as { id: number; name: string; iso2: string; phonecode: string }[];
-  
+  const countries = (
+    countriesRes?.success ? countriesRes.data.countries : []
+  ) as { id: number; name: string; iso2: string; phonecode: string }[];
+
   const [serverError, setServerError] = useState<string | null>(null);
 
   const form = useForm({
@@ -70,7 +87,7 @@ function RouteComponent() {
 
       // find the matched country and add it to the payload
       const matchedCountry = countries.find(
-        (c) => c.name.toLowerCase() === value.country.toLowerCase()
+        (c) => c.name.toLowerCase() === value.country.toLowerCase(),
       );
 
       // create the payload for the server
@@ -99,12 +116,14 @@ function RouteComponent() {
         });
       } else {
         // set error
-        setServerError(result.error || result.message || "An error occurred during registration");
+        setServerError(
+          result.error ||
+            result.message ||
+            "An error occurred during registration",
+        );
       }
     },
   });
-
-
 
   // auto-select the country where the user is browsing from once visitorCountry is available
   useEffect(() => {
@@ -113,7 +132,7 @@ function RouteComponent() {
     const timeoutId = setTimeout(() => {
       // find the matched country
       const matchedCountry = countries.find(
-        (c) => c.name.toLowerCase() === visitorCountry
+        (c) => c.name.toLowerCase() === visitorCountry,
       );
 
       // if no matched country, return
@@ -147,7 +166,8 @@ function RouteComponent() {
         <form.Field
           name="country"
           validators={{
-            onChange: ({ value }) => (!value ? "Country is required" : undefined),
+            onChange: ({ value }) =>
+              !value ? "Country is required" : undefined,
           }}
           children={(field) => (
             <div className="selectElement flex flex-col gap-1">
@@ -164,9 +184,17 @@ function RouteComponent() {
                   <SelectGroup>
                     <SelectLabel>Countries</SelectLabel>
                     {countries.map((country) => (
-                      <SelectItem key={country.name} value={country.name.toLowerCase()}>
+                      <SelectItem
+                        key={country.name}
+                        value={country.name.toLowerCase()}
+                      >
                         <span className="flex items-center gap-2 capitalize py-1.5 cursor-pointer">
-                          <span className="country"><img src={`https://flagcdn.com/w40/${country.iso2.toLowerCase()}.png`} width="23" /></span>
+                          <span className="country">
+                            <img
+                              src={`https://flagcdn.com/w40/${country.iso2.toLowerCase()}.png`}
+                              width="23"
+                            />
+                          </span>
                           <span>{country.name}</span>
                         </span>
                       </SelectItem>
@@ -204,7 +232,9 @@ function RouteComponent() {
                 */}
                 <form.Subscribe selector={(state) => state.values.country}>
                   {(countryValue) => {
-                    const country = countries.find((c) => c.name.toLowerCase() === countryValue);
+                    const country = countries.find(
+                      (c) => c.name.toLowerCase() === countryValue,
+                    );
                     return (
                       <div className="font-semibold tracking-[1px] text-lg">
                         {country ? `+${country.phonecode}` : "+"}
@@ -220,7 +250,8 @@ function RouteComponent() {
                     onChange={(e) => field.handleChange(e.target.value)}
                     maxLength={12}
                     errorMsg={
-                      field.state.meta.isTouched && field.state.meta.errors.length
+                      field.state.meta.isTouched &&
+                      field.state.meta.errors.length
                         ? (field.state.meta.errors[0] as string)
                         : undefined
                     }
@@ -293,7 +324,8 @@ function RouteComponent() {
           validators={{
             onChange: ({ value, fieldApi }) => {
               if (!value) return "Please confirm your password";
-              if (value !== fieldApi.form.getFieldValue("password")) return "Passwords do not match";
+              if (value !== fieldApi.form.getFieldValue("password"))
+                return "Passwords do not match";
               return undefined;
             },
           }}
@@ -315,7 +347,12 @@ function RouteComponent() {
         <form.Subscribe
           selector={(state) => [state.canSubmit, state.isSubmitting]}
           children={([canSubmit, isSubmitting]) => (
-            <Button type="submit" variant="secondary" disabled={!canSubmit} loading={isSubmitting}>
+            <Button
+              type="submit"
+              variant="secondary"
+              disabled={!canSubmit}
+              loading={isSubmitting}
+            >
               Create account
             </Button>
           )}

@@ -17,6 +17,18 @@ export const getAllCountries = createServerFn().handler(async () => {
   }
 });
 
+export const getStates = createServerFn()
+  .inputValidator((data: { countryId: number }) => data)
+  .handler(async ({ data: { countryId } }) => {
+    try {
+      const response = await apiFetch(API_URL.getStates(countryId));
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      return { success: false, message: "Failed to fetch states from API, Maybe the backend server is currently down" };
+    }
+  });
+
 export const getCities = createServerFn()
   .inputValidator((data: { stateId: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { stateId, limit, cursor } }) => {

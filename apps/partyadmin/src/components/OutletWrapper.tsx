@@ -5,9 +5,5 @@ interface OutletWrapperProps {
 }
 
 export function OutletWrapper({ children }: OutletWrapperProps) {
-  return (
-    <div className="flex-1">
-      {children}
-    </div>
-  );
+  return <div className="flex-1 h-full">{children}</div>;
 }

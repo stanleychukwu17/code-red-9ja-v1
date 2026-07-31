@@ -20,6 +20,8 @@ import (
 type AuthService interface {
 	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (auth.RegisterResult, error)
 	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
+	Signup(ctx context.Context, email, phone, password string, countryID int16) (auth.SignupResult, error)
+	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, nin string, q1 int16, a1 string, q2 int16, a2 string) error
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (auth.LoginResult, error)
@@ -171,7 +173,7 @@ type RegisterPhaseSignUpRequest struct {
 // @Param request body RegisterPhaseSignUpRequest true "Initial sign-up details"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
-// @Router /auth/register_phase_signup [post]
+// @Router /auth/signup [post]
 // RegisterPhaseSignUp handles the initial registration phase
 func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 	var req RegisterPhaseSignUpRequest
@@ -197,6 +199,148 @@ func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Initial sign-up data is valid", map[string]interface{}{
 		"id": result.ID,
 	})
+}
+
+// SignupRequest represents the structure for the basic sign-up phase
+type SignupRequest struct {
+	CountryID       int16  `json:"countryId" validate:"required"`
+	PhoneNumber     string `json:"phoneNumber" validate:"required"`
+	Email           string `json:"email" validate:"omitempty,email"`
+	Password        string `json:"password" validate:"required,min=5,max=72"`
+}
+
+// Signup godoc
+// @Summary Basic sign-up
+// @Description Handles the basic user registration (phone, email, password, country)
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body SignupRequest true "Basic sign-up details"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/signup [post]
+func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
+	var req SignupRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	result, err := h.authService.Signup(r.Context(), req.Email, req.PhoneNumber, req.Password, req.CountryID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Sign-up successful", map[string]interface{}{
+		"id":           result.ID,
+		"accessToken":  result.AccessToken,
+		"refreshToken": result.RefreshToken,
+	})
+}
+
+// CompleteOnboardingRequest represents the full onboarding payload
+type CompleteOnboardingRequest struct {
+	// details step
+	FirstName    string `json:"first_name" validate:"required,min=2,max=30"`
+	LastName     string `json:"last_name" validate:"required,min=2,max=30"`
+	MiddleName   string `json:"middle_name" validate:"omitempty,max=30"`
+	Gender       string `json:"gender" validate:"required,oneof=male female"`
+	DateOfBirth  string `json:"date_of_birth" validate:"required"`
+	ReferralCode string `json:"referral_code" validate:"omitempty,max=30"`
+	// username step
+	Username string `json:"username" validate:"required,min=2,max=30"`
+	// nin step
+	Nin string `json:"nin" validate:"required,numeric,len=11"`
+	// origin step
+	CountryOfOrigin int16 `json:"country_of_origin" validate:"omitempty"`
+	StateOfOrigin   int16 `json:"state_of_origin" validate:"omitempty"`
+	// location step
+	CurrentCountry int16 `json:"current_country" validate:"required"`
+	CurrentState   int16 `json:"current_state" validate:"required"`
+	CurrentCity    int32 `json:"current_city" validate:"omitempty"`
+	// security questions step
+	Question1 int16  `json:"question1" validate:"required"`
+	Answer1   string `json:"answer1" validate:"required,min=1,max=100"`
+	Question2 int16  `json:"question2" validate:"required"`
+	Answer2   string `json:"answer2" validate:"required,min=1,max=100"`
+}
+
+// CompleteOnboarding handles PATCH /api/v1/auth/onboarding
+func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	var req CompleteOnboardingRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	ctx := r.Context()
+
+	// Check username availability
+	if h.authService.CheckUsername(ctx, req.Username) {
+		h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
+		return
+	}
+
+	// Check NIN uniqueness
+	if h.authService.CheckNIN(ctx, req.Nin) {
+		h.utils.RespondError(w, http.StatusBadRequest, "NIN is already registered to another account")
+		return
+	}
+
+	// Fetch the DB user
+	user, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	// Parse date of birth
+	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date_of_birth format, expected YYYY-MM-DD")
+		return
+	}
+
+	params := queries.UpdateOnboardingProfileParams{
+		ID:              user.ID,
+		Username:        pgtype.Text{String: req.Username, Valid: req.Username != ""},
+		FirstName:       pgtype.Text{String: req.FirstName, Valid: true},
+		LastName:        pgtype.Text{String: req.LastName, Valid: true},
+		MiddleName:      pgtype.Text{String: req.MiddleName, Valid: req.MiddleName != ""},
+		Gender:          pgtype.Text{String: req.Gender, Valid: true},
+		DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
+		CurrentCountry:  req.CurrentCountry,
+		CurrentState:    req.CurrentState,
+		CurrentCity:     pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
+		StateOfOrigin:   pgtype.Int2{Int16: req.StateOfOrigin, Valid: req.StateOfOrigin != 0},
+		CountryOfOrigin: pgtype.Int2{Int16: req.CountryOfOrigin, Valid: req.CountryOfOrigin != 0},
+		ReferredByCode:  pgtype.Text{String: req.ReferralCode, Valid: req.ReferralCode != ""},
+	}
+
+	if err := h.authService.CompleteOnboarding(ctx, user.ID, claims.FakeID, params, req.Nin, req.Question1, req.Answer1, req.Question2, req.Answer2); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to complete onboarding: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Onboarding completed successfully", nil)
 }
 
 // CheckNINRequest represents the structure for checking if a NIN exists

@@ -50,7 +50,7 @@ var ApiUrls = URLMap{
 	Health: "/health",
 	Root:   "/api/v1",
 	Auth: AuthURLMap{
-		RegisterPhaseSignUp:     "/api/v1/auth/register_phase_signup",
+		RegisterPhaseSignUp:     "/api/v1/auth/signup",
 		CheckNin:                "/api/v1/auth/check_nin",
 		CheckUsername:           "/api/v1/auth/check_username",
 		Register:                "/api/v1/auth/register",

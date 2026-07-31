@@ -12,10 +12,11 @@ import { SelectState } from "@repo/ui/components/selects/state-select";
 import { SelectWard } from "@repo/ui/components/selects/ward-select";
 import { useMutation, useQuery, useInfiniteQuery } from "@tanstack/react-query";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Loader2, UploadIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { showFeedbackToast } from "../../practice/page-components/utils";
 import { StepHeader } from "../../applications/components/-ApplySteps";
 
 import { PageHeader } from "#/components/Headers";
@@ -368,9 +369,10 @@ const Step4 = ({ votersCardImage, setVotersCardImage }: any) => {
   );
 };
 
-export const VoteFlow = () => {
-  const { selectedElectionGroup, user } = useAuth();
+export function VoteFlow() {
   const navigate = useNavigate();
+  const search = useSearch({ strict: false }) as any;
+  const { user, selectedElectionGroup } = useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState(1);
@@ -425,7 +427,7 @@ export const VoteFlow = () => {
       const currentElection = elections[currentElectionIndex];
       return currentElection ? !votes[currentElection.id] : true;
     }
-    if (step === 4) return !votersCardImage;
+    if (step === 4) return search.isPractice ? false : !votersCardImage;
     return false;
   })();
 
@@ -457,6 +459,20 @@ export const VoteFlow = () => {
         setStep(4);
       }
     } else if (step === 4) {
+      if (search.isPractice) {
+        const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
+        showFeedbackToast(true, failedAttempts);
+        navigate({
+          to: "/practice",
+          search: {
+            page: "completed",
+            taskId: search.taskId,
+            isPractice: "true",
+          } as any,
+        });
+        return;
+      }
+
       if (!votersCardImage) return toast.error("Please provide PVC image");
 
       const votePayload = Object.entries(votes).map(

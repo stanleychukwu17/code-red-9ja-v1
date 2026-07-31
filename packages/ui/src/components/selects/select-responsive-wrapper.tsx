@@ -43,7 +43,7 @@ export function SelectResponsiveWrapper({
             className="z-50 p-0 border-0 bg-transparent shadow-none outline-none"
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
-            <div className="overflow-hidden rounded-xl bg-popover shadow-[0_18px_40px_rgba(16,24,40,0.08)]">
+            <div className="overflow-hidden rounded-xl bg-popover shadow-[0_18px_40px_rgba(16,24,40,0.08)] min-w-[var(--radix-popover-trigger-width)]">
               {desktopContent ?? children}
             </div>
           </RadixPopover.Content>
@@ -63,7 +63,7 @@ export function SelectResponsiveWrapper({
       </DrawerTrigger>
       <DrawerContent className="rounded-t-[28px] border-t-0 bg-background focus:outline-none">
         <DrawerTitle className="sr-only">{placeholder}</DrawerTitle>
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="flex flex-col flex-1 overflow-hidden pb-20">
           {mobileContent ?? desktopContent ?? children}
         </div>
       </DrawerContent>

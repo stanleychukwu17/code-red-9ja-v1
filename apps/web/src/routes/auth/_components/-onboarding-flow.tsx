@@ -4,23 +4,33 @@ import {
   OnboardingWrapper,
 } from "#/routes/auth/_components/-onboarding";
 import { Button } from "@repo/ui/components/button";
-import { CountryCombobox } from "@repo/ui/components/combobox/country-combobox";
-import { GenderCombobox } from "@repo/ui/components/combobox/gender-combobox";
-import { StateCombobox } from "@repo/ui/components/combobox/state-combobox";
-import { CityCombobox } from "@repo/ui/components/combobox/city-combobox";
+import { SelectCity } from "@repo/ui/components/selects/city-select";
+import { SelectCountry } from "@repo/ui/components/selects/country-select";
+import { SelectState } from "@repo/ui/components/selects/state-select";
+import { SelectGender } from "@repo/ui/components/selects/gender-select";
+import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { FormInput } from "@repo/ui/components/input";
-import { CalendarPopover } from "@repo/ui/components/popover/calendar-popover";
 import MapPinIcon from "@repo/ui/icons/onboarding/map-pin-icon";
 import NINIcon from "@repo/ui/icons/onboarding/nin-icon ";
 import UserIcon from "@repo/ui/icons/onboarding/user-icon";
-import { useCallback, useState, useEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+  useCallback,
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  type ReactNode,
+} from "react";
 import { APP_URL } from "#/lib/config";
-import { checkNin, checkUsername, completeRegistration } from "#/lib/server/auth/auth";
-import { getCities, getStates } from "#/lib/server/countries";
+import {
+  checkNin,
+  checkUsername,
+  completeRegistration,
+} from "#/lib/server/auth/auth";
+import { getAllCountries, getCities, getStates } from "#/lib/server/countries";
 import { FormError } from "./-form-error";
 import { useAppSelector, useAppDispatch } from "#/redux/hooks";
 import { updateOnboardingData } from "#/redux/slice/authSlice";
-
 
 const ONBOARDING_STEPS = ["details", "nin", "location"] as const;
 
@@ -35,8 +45,11 @@ type OnboardingState = {
   username: string;
   nin: string;
   country: string;
+  countryId: number | undefined;
   state: string;
+  stateId: number | undefined;
   city: string;
+  cityId: number | undefined;
 };
 
 type OnboardingFlowProps = {
@@ -46,7 +59,11 @@ type OnboardingFlowProps = {
 export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const dispatch = useAppDispatch();
   const onboardingData = useAppSelector((state) => state.auth.onboardingData);
-  const { country: userCountry, iso2, countryId } = onboardingData ?? {};
+  const {
+    country: userCountry,
+    iso2,
+    countryId: onboardingCountryId,
+  } = onboardingData ?? {};
 
   const [data, setData] = useState<OnboardingState>({
     firstName: "",
@@ -57,8 +74,11 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     username: "",
     nin: "",
     country: userCountry || "",
+    countryId: onboardingCountryId ?? undefined,
     state: "",
+    stateId: undefined,
     city: "",
+    cityId: undefined,
   });
   const navigate = useNavigate();
 
@@ -66,7 +86,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   useEffect(() => {
     if (!onboardingData?.id || !onboardingData?.countryId) {
       navigate({ to: APP_URL.auth.signup });
-      return
+      return;
     }
   }, [navigate, onboardingData?.id, onboardingData?.countryId]);
 
@@ -96,7 +116,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     ];
 
     return Array.from(new Set(suggestions));
-  }, [data.firstName, data.surname, data.otherNames]);
+  }, [data.firstName, data.surname, FULL_YEAR]);
 
   const [isCheckingNIN, setIsCheckingNIN] = useState(false);
   const [ninError, setNinError] = useState<string | null>(null);
@@ -106,39 +126,58 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const [states, setStates] = useState<{ id: number; value: string; label: string }[]>([]);
-  const [isLoadingStates, setIsLoadingStates] = useState(false);
-  const [statesError, setStatesError] = useState<string | null>(null);
-
-  const [cities, setCities] = useState<{ id: number; value: string; label: string }[]>([]);
-  const [isLoadingCities, setIsLoadingCities] = useState(false);
-  const [citiesError, setCitiesError] = useState<string | null>(null);
-
-  // Cache for cities data: Map<stateId, citiesArray>
-  const citiesCache = useRef<Map<number, { id: number; value: string; label: string }[]>>(new Map());
-
-  // gets the stateId from the selected state, will update when user changes their state of residence,
-  // state id is used to fetch the cities of the selected state
-  const stateId = useMemo(() => {
-    const selectedState = states.find((s) => s.value === data.state)
-    return selectedState?.id
-  }, [states, data.state]);
+  // Sync country from Redux if not already set locally
+  useEffect(() => {
+    if (userCountry && !data.country) {
+      setData((current) => ({
+        ...current,
+        country: userCountry,
+        countryId: onboardingCountryId ?? undefined,
+      }));
+    }
+  }, [userCountry, onboardingCountryId]);
 
   // Function to handle the final submission of onboarding data
   const onFinish = useCallback(async () => {
-    const { firstName, surname, otherNames, gender, dateOfBirth, username, nin } = data;
-    const { email, phoneNumber, password, countryId: onboardingCountryId, id: onboardingId, question1, answer1, question2, answer2 } = onboardingData ?? {};
-
-    // Get city id
-    const selectedCity = cities.find((c) => c.value === data.city);
-    const cityId = selectedCity?.id;
+    const {
+      firstName,
+      surname,
+      otherNames,
+      gender,
+      dateOfBirth,
+      username,
+      nin,
+      stateId,
+      cityId,
+    } = data;
+    const {
+      email,
+      phoneNumber,
+      password,
+      countryId: submissionCountryId,
+      id: onboardingId,
+      question1,
+      answer1,
+      question2,
+      answer2,
+    } = onboardingData ?? {};
 
     if (!onboardingId || onboardingId.length === 0) {
       setSubmitError("You need to go back to the signup page");
       return;
     }
 
-    if (firstName.length < 2 || surname.length < 2 || !gender || !dateOfBirth || username.length < 2 || nin.length < 11 || !onboardingCountryId || !stateId || !onboardingId) {
+    if (
+      firstName.length < 2 ||
+      surname.length < 2 ||
+      !gender ||
+      !dateOfBirth ||
+      username.length < 2 ||
+      nin.length < 11 ||
+      !submissionCountryId ||
+      !stateId ||
+      !onboardingId
+    ) {
       setSubmitError("Missing required parameters for registration.");
       return;
     }
@@ -161,8 +200,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       first_name: firstName.trim(),
       middle_name: otherNames || "",
       gender: gender.toLowerCase(),
-      date_of_birth: `${dateOfBirth.getFullYear()}-${String(dateOfBirth.getMonth() + 1).padStart(2, '0')}-${String(dateOfBirth.getDate()).padStart(2, '0')}`,
-      current_country: onboardingCountryId,
+      date_of_birth: `${dateOfBirth.getFullYear()}-${String(dateOfBirth.getMonth() + 1).padStart(2, "0")}-${String(dateOfBirth.getDate()).padStart(2, "0")}`,
+      current_country: submissionCountryId,
       current_state: stateId,
       current_city: cityId ?? 0,
     };
@@ -174,13 +213,16 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
         navigate({ to: APP_URL.auth.login, replace: true });
 
         // Set registration completion status in authSlice
-        dispatch(updateOnboardingData({
-          registrationCompleted: true,
-          registrationCompletedAt: new Date().toISOString(),
-        }))
-
+        dispatch(
+          updateOnboardingData({
+            registrationCompleted: true,
+            registrationCompletedAt: new Date().toISOString(),
+          }),
+        );
       } else {
-        setSubmitError(result.message || "Registration failed. Please try again.");
+        setSubmitError(
+          result.message || "Registration failed. Please try again.",
+        );
       }
     } catch (error) {
       console.error("An error occurred during final registration", error);
@@ -188,16 +230,19 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     } finally {
       setIsSubmitting(false);
     }
-  }, [data, onboardingData, stateId, cities, navigate]);
+  }, [data, onboardingData, navigate, dispatch]);
 
   // handle step change
-  const onStepChange = useCallback((nextStep: OnboardingStep) => {
-    navigate({
-      to: APP_URL.auth.onboarding,
-      search: { step: nextStep },
-      replace: true,
-    })
-  }, [navigate])
+  const onStepChange = useCallback(
+    (nextStep: OnboardingStep) => {
+      navigate({
+        to: APP_URL.auth.onboarding,
+        search: { step: nextStep },
+        replace: true,
+      });
+    },
+    [navigate],
+  );
 
   // used to navigate to the next step
   const goNext = useCallback(() => {
@@ -221,90 +266,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     }
   }, [currentStepIndex, onStepChange]);
 
-  // Fetch cities from backend when stateId changes, with caching
-  useEffect(() => {
-    if (!stateId) {
-      setCities([]);
-      return;
-    }
-
-    // Check cache first
-    const cachedCities = citiesCache.current.get(stateId);
-    if (cachedCities) {
-      setCities(cachedCities);
-      return;
-    }
-
-    // for fetching the cities
-    const fetchCities = async () => {
-      setIsLoadingCities(true);
-      setCitiesError(null);
-
-      try {
-        const res = await getCities({ data: { stateId } });
-        if (res.success && Array.isArray(res.data.cities)) {
-          const mappedCities = res.data.cities.map((c: { id: number; name: string }) => ({
-            id: c.id,
-            value: c.name,
-            label: c.name,
-          }));
-
-          // Store in cache
-          citiesCache.current.set(stateId, mappedCities);
-
-          // Set cities
-          setCities(mappedCities);
-        } else {
-          setCities([]);
-        }
-      } catch (err) {
-        console.error("Failed to load cities:", err);
-        setCitiesError("An unexpected error occurred while loading cities.");
-      } finally {
-        setIsLoadingCities(false);
-      }
-    };
-
-    fetchCities();
-  }, [stateId]);
-
-  // Fetch states from backend on component mount or when countryId changes
-  useEffect(() => {
-    if (!countryId) return;
-
-    const fetchStates = async () => {
-      setIsLoadingStates(true);
-      setStatesError(null);
-      try {
-        const res = await getStates({ data: { countryId } });
-        if (res.success && Array.isArray(res.data.states)) {
-          const mappedStates = res.data.states.map((s: { id: number; name: string }) => ({
-            id: s.id,
-            value: s.name,
-            label: s.name,
-          }));
-          setStates(mappedStates);
-        } else {
-          setStatesError(res.error || res.message || "Failed to fetch states");
-        }
-      } catch (err) {
-        console.error("Failed to load states:", err);
-        setStatesError("An unexpected error occurred while loading states.");
-      } finally {
-        setIsLoadingStates(false);
-      }
-    };
-
-    fetchStates();
-  }, [countryId]);
-
-  // Sync country from Redux if not already set locally
-  useEffect(() => {
-    if (userCountry && !data.country) {
-      setData((current) => ({ ...current, country: userCountry }));
-    }
-  }, [userCountry]);
-
   // handle username submission for checks if the username already exist
   const handleUsernameSubmit = async () => {
     const username = data.username.trim();
@@ -313,7 +274,9 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     // Check username validation (regex matching the backend validation: ^[a-zA-Z][a-zA-Z0-9_]{2,30}$)
     const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/; // username must start with a letter
     if (!usernameRegex.test(username)) {
-      setUsernameError("Username must start with a letter and be between 3 and 30 characters, underscores not allowed at the end");
+      setUsernameError(
+        "Username must start with a letter and be between 3 and 30 characters, underscores not allowed at the end",
+      );
       return;
     }
 
@@ -330,7 +293,9 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           goNext();
         }
       } else {
-        setUsernameError(res.message || "Failed to verify username. Please try again.");
+        setUsernameError(
+          res.message || "Failed to verify username. Please try again.",
+        );
       }
     } catch (err) {
       console.error("Username check failed:", err);
@@ -370,9 +335,16 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   // if canContinue is true, the user can proceed to the next step
   const canContinue =
     step === "details"
-      ? Boolean(data.firstName && data.surname && data.gender && data.dateOfBirth && data.username)
-      : step === "nin" ? data.nin.length === 11
-        : Boolean(data.country && data.state);
+      ? Boolean(
+          data.firstName &&
+          data.surname &&
+          data.gender &&
+          data.dateOfBirth &&
+          data.username,
+        )
+      : step === "nin"
+        ? data.nin.length === 11
+        : Boolean(data.stateId);
 
   return (
     <OnboardingWrapper>
@@ -418,20 +390,24 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
               }))
             }
           />
-          <GenderCombobox
-            value={data.gender}
-            onChange={(value) =>
+          <SelectGender
+            initialData={data.gender}
+            update={(value) =>
               setData((current) => ({ ...current, gender: value }))
             }
+            buttonText="Gender"
           />
-          <CalendarPopover
-            placeholder="Select date of birth"
-            title="Select date of birth"
-            description="Choose your date of birth."
-            value={data.dateOfBirth}
-            onChange={(value) =>
-              setData((current) => ({ ...current, dateOfBirth: value }))
+          <SelectDate
+            initialData={
+              data.dateOfBirth ? data.dateOfBirth.toISOString() : undefined
             }
+            update={(value) =>
+              setData((current) => ({
+                ...current,
+                dateOfBirth: new Date(value),
+              }))
+            }
+            buttonText="Date of birth"
           />
           <FormInput
             placeholder="Username"
@@ -506,54 +482,64 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
       {step === "location" ? (
         <FlowScreen
-          icon={<MapPinIcon className="size-6 text-primary" strokeWidth={1.8} />}
+          icon={
+            <MapPinIcon className="size-6 text-primary" strokeWidth={1.8} />
+          }
           title="Add your location"
           subtitle="Enter where you are currently located right now."
           onBack={goBack}
           actionLabel="Finish"
-          actionDisabled={!canContinue || isLoadingStates || isLoadingCities || isSubmitting}
+          actionDisabled={!canContinue || isSubmitting}
           actionLoading={isSubmitting}
           onAction={onFinish}
         >
-          <FormError message={submitError || statesError || citiesError} />
-          <CountryCombobox
-            value={data.country}
-            iso2={iso2}
+          <FormError message={submitError} />
+          <SelectCountry
+            fetchCountries={() => getAllCountries()}
+            selectedId={data.countryId}
             disabled={true}
-            onChange={(value) =>
+            update={(val) => {
               setData((current) => ({
                 ...current,
-                country: value,
+                country: val.name,
+                countryId: val.id,
                 state: "",
+                stateId: undefined,
                 city: "",
-              }))
-            }
+                cityId: undefined,
+              }));
+            }}
           />
-          <StateCombobox
-            country={data.country}
-            value={data.state}
-            options={states}
-            disabled={isLoadingStates}
-            placeholder={isLoadingStates ? "Loading states..." : "State of residence"}
-            onChange={(value) =>
+          <SelectState
+            fetchStates={getStates}
+            countryOriginalId={data.countryId}
+            selectedId={data.stateId}
+            disabled={!data.countryId}
+            update={(val) => {
               setData((current) => ({
                 ...current,
-                state: value,
+                state: val.name,
+                stateId: val.id,
                 city: "",
-              }))
-            }
+                cityId: undefined,
+              }));
+            }}
           />
-          <CityCombobox
-            state={data.state}
-            value={data.city}
-            options={cities}
-            disabled={isLoadingCities || !data.state}
-            placeholder={isLoadingCities ? "Loading cities..." : "City of residence"}
-            onChange={(value) => setData((current) => ({ ...current, city: value }))}
+          <SelectCity
+            fetchCities={getCities}
+            stateId={data.stateId}
+            selectedId={data.cityId}
+            disabled={!data.stateId}
+            update={(val) => {
+              setData((current) => ({
+                ...current,
+                city: val.name,
+                cityId: val.id,
+              }));
+            }}
           />
         </FlowScreen>
       ) : null}
-
     </OnboardingWrapper>
   );
 }
@@ -570,7 +556,17 @@ type FlowScreenProps = {
   children: ReactNode;
 };
 
-function FlowScreen({ icon, title, subtitle, onBack, actionLabel, actionDisabled, actionLoading, onAction, children }: FlowScreenProps) {
+function FlowScreen({
+  icon,
+  title,
+  subtitle,
+  onBack,
+  actionLabel,
+  actionDisabled,
+  actionLoading,
+  onAction,
+  children,
+}: FlowScreenProps) {
   return (
     <>
       <OnboardingHeader

@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
+import { showFeedbackToast } from "../practice/page-components/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuth } from "#/hooks/useAuth";
 import { PageHeader } from "#/components/Headers";
@@ -33,6 +34,7 @@ type MediaFile = {
 
 function UploadResultFlow() {
   const navigate = useNavigate();
+  const search = Route.useSearch() as any;
   const { user, selectedElectionGroup, selectedAssignment, pollingUnitId } =
     useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -359,9 +361,21 @@ function UploadResultFlow() {
               variant="outline"
               size="xl"
               className="w-full rounded-full border-2 border-neutral-200 text-neutral-700 font-bold h-14"
-              onClick={() => sheetImageRef.current?.click()}
+              onClick={() => {
+                if (search.isPractice) {
+                  const dummyFile = new File(["dummy"], "practice.jpg", { type: "image/jpeg" });
+                  setResultSheetImage({
+                    url: "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp",
+                    type: "image",
+                    file: dummyFile,
+                  });
+                  setSubStep(3);
+                } else {
+                  sheetImageRef.current?.click();
+                }
+              }}
             >
-              + Take another picture
+              + {search.isPractice ? "Take another picture (simulate)" : "Take another picture"}
             </Button>
 
             <div className="mt-2 pointer-events-none">
@@ -409,9 +423,32 @@ function UploadResultFlow() {
             className="w-full rounded-full h-14 text-[16px]"
             onClick={() => {
               if (subStep === 2) {
-                sheetImageRef.current?.click();
+                if (search.isPractice) {
+                  const dummyFile = new File(["dummy"], "practice.jpg", { type: "image/jpeg" });
+                  setResultSheetImage({
+                    url: "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp",
+                    type: "image",
+                    file: dummyFile,
+                  });
+                  setSubStep(3);
+                } else {
+                  sheetImageRef.current?.click();
+                }
               } else if (subStep === 3) {
-                submitMutation.mutate();
+                if (search.isPractice) {
+                  const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
+                  showFeedbackToast(true, failedAttempts);
+                  navigate({
+                    to: "/practice",
+                    search: {
+                      page: "completed",
+                      taskId: search.taskId,
+                      isPractice: "true",
+                    } as any,
+                  });
+                } else {
+                  submitMutation.mutate();
+                }
               }
             }}
             disabled={isSubmitting}
@@ -419,7 +456,7 @@ function UploadResultFlow() {
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : subStep === 2 ? (
-              "+ Upload Result"
+              search.isPractice ? "+ Upload Result (simulate)" : "+ Upload Result"
             ) : (
               "Upload Result"
             )}

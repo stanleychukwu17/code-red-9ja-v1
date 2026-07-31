@@ -10,6 +10,7 @@ export interface AuthProps {
   password?: string;
   confirmPassword?: string;
   id?: string;
+  accessToken?: string;
   changePasswordId?: string;
   changeUserFid?: number;
   question1?: number;

@@ -40,7 +40,7 @@ export const SelectGender = ({
       onOpenChange={setOpen}
       placeholder="Select gender"
       align="start"
-      className={className}
+      className={cn(className)}
       trigger={
         <Button
           variant="select"
@@ -65,6 +65,7 @@ export const SelectGender = ({
         getName={(item) => item.label}
         handleSelect={handleSelect}
         selectedId={selectedItem}
+        disableSearch
       />
     </SelectResponsiveWrapper>
   );

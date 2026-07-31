@@ -884,6 +884,170 @@ func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 	return exists > 0
 }
 
+type SignupResult struct {
+	ID           string    `json:"id"`
+	AccessToken  string    `json:"accessToken"`
+	RefreshToken string    `json:"refreshToken"`
+}
+
+func (s *AuthService) Signup(ctx context.Context, email, phone, password string, countryID int16) (SignupResult, error) {
+	// Check if email exists
+	if email != "" && s.CheckEmail(ctx, email) {
+		return SignupResult{}, errors.New("email already exists")
+	}
+
+	// Check if phone exists
+	if s.CheckPhone(ctx, phone) {
+		return SignupResult{}, errors.New("phone already exists")
+	}
+
+	// Validate phone
+	country_dts, err := s.bodiesService.CheckCountry(ctx, countryID)
+	if err != nil {
+		return SignupResult{}, err
+	}
+
+	e164Phone, err := s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	if err != nil {
+		return SignupResult{}, err
+	}
+
+	// Hash password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return SignupResult{}, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// insert into database
+	params := queries.CreateUserParams{
+		Email:          pgtype.Text{String: email, Valid: email != ""},
+		Phone:          pgtype.Text{String: e164Phone, Valid: true},
+		PasswordHash:   string(hashedPassword),
+		CurrentCountry: countryID,
+		CurrentState:   37, // Default state
+	}
+
+	user_id, err := s.queries.CreateUser(ctx, params)
+	if err != nil {
+		return SignupResult{}, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// fake id generator
+	fakeID := utils.GenerateFakeID(user_id)
+
+	// Update user fake ID
+	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{
+		ID:     user_id,
+		FakeID: pgtype.Int8{Int64: fakeID, Valid: true},
+	})
+	if err != nil {
+		return SignupResult{}, fmt.Errorf("failed to update user fake ID: %w", err)
+	}
+
+	// Initialize basic wallet
+	go func() {
+		bgCtx := context.Background()
+		registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
+		if userErr == nil {
+			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
+				slog.Error("failed to create user wallet during signup", "user_id", user_id, "err", walletErr)
+			}
+		}
+	}()
+
+	// Generate session and tokens (same pattern as Login)
+	sessionID := uuid.NewString()
+	timezone, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
+	now := time.Now().In(timezone)
+	sessionData := map[string]any{
+		"SessionID": sessionID,
+		"FakeID":    fakeID,
+		"TimeAdded": now.Format(time.RFC3339),
+	}
+	jsonSessionData, _ := json.Marshal(sessionData)
+
+	// No roles assigned yet for new users
+	var roleCodes []string
+
+	accessToken, err := utils.GenerateToken(user_id, fakeID, "", roleCodes, s.jwtSecret, s.jwtAccessExp, 0)
+	if err != nil {
+		return SignupResult{}, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	randStr, err := utils.GenerateRandomString()
+	if err != nil {
+		return SignupResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	pipe := s.rdb.TxPipeline()
+	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, randStr.HashedToken)
+	pipe.Set(ctx, redisRefreshKey, jsonSessionData, s.jwtRefreshExp)
+	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+	pipe.SAdd(ctx, redisLoginSessionKey, randStr.HashedToken)
+	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp)
+	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
+	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
+	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp)
+	if _, err = pipe.Exec(ctx); err != nil {
+		return SignupResult{}, fmt.Errorf("failed to store session: %w", err)
+	}
+
+	return SignupResult{
+		ID:           strconv.FormatInt(user_id, 10),
+		AccessToken:  accessToken,
+		RefreshToken: randStr.RandomString,
+	}, nil
+}
+
+// CompleteOnboarding finalises a newly registered user's profile with all data collected during the onboarding flow.
+// It updates the user row, saves NIN + username to Redis/DB, stores security questions, and sets account status to 'active'.
+func (s *AuthService) CompleteOnboarding(
+	ctx context.Context,
+	userID int64,
+	fakeID int64,
+	params queries.UpdateOnboardingProfileParams,
+	nin string,
+	q1 int16, a1 string,
+	q2 int16, a2 string,
+) error {
+	// 1. Update the users row with all onboarding fields
+	if err := s.queries.UpdateOnboardingProfile(ctx, params); err != nil {
+		return fmt.Errorf("update profile: %w", err)
+	}
+
+	// 2. Persist username, email, NIN to Redis for fast lookups
+	if err := s.SaveSomeUserRegistrationDetails(ctx, params.Username.String, "", nin, userID, fakeID); err != nil {
+		return fmt.Errorf("save registration details: %w", err)
+	}
+
+	// 3. Save security questions
+	hashedAnswer1, err := bcrypt.GenerateFromPassword([]byte(strings.ToLower(strings.TrimSpace(a1))), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash answer1: %w", err)
+	}
+	hashedAnswer2, err := bcrypt.GenerateFromPassword([]byte(strings.ToLower(strings.TrimSpace(a2))), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("hash answer2: %w", err)
+	}
+
+	_, err = s.queries.CreateUserSecurityQuestions(ctx, queries.CreateUserSecurityQuestionsParams{
+		UserFid:   fakeID,
+		Nin:       nin,
+		Question1: q1,
+		Answer1:   string(hashedAnswer1),
+		Question2: q2,
+		Answer2:   string(hashedAnswer2),
+	})
+	if err != nil {
+		return fmt.Errorf("save security questions: %w", err)
+	}
+
+	// 4. Invalidate the Redis user-info cache so the next read is fresh
+	s.UpdateCachedUserInfo(ctx, fakeID)
+
+	return nil
+}
+
 // ValidatePhoneForCountry checks:
 // 1. valid phone number format
 // 2. matches the given ISO country code (e.g. "NG", "US")

@@ -245,7 +245,9 @@ export function LGAElectionSupervisorPage() {
             }}
           />
         )}
-        {daysLeft === 0 && <DidYouVoteCard />}
+        {daysLeft === 0 && (
+          <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
+        )}
 
         {/* <UploadResultCard />
         <RequestPayoutCard /> */}
@@ -256,7 +258,9 @@ export function LGAElectionSupervisorPage() {
         {activeTab === "Tasks" && (
           <LgaSupervisorTasksTab isElectionDay={daysLeft === 0} />
         )}
-        <GiveUpdateFloatingButton />
+        <GiveUpdateFloatingButton
+          onClick={() => navigate({ to: "/give-update" })}
+        />
       </HomeBody>
     </div>
   );
