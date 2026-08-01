@@ -502,25 +502,84 @@ type PhonePayload struct {
 }
 
 // UpdateUserPhoneNumbers creates or updates multiple phone numbers for a user.
-func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64, phones []PhonePayload) error {
+func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []PhonePayload) error {
+	// Count how many new phone numbers (where ID is 0) the user is attempting to add
+	// and ensure no more than 1 phone number is set as default
+	newPhonesCount := 0
+	defaultPhonesCount := 0
+	
 	for _, p := range phones {
-		onWhatsapp := pgtype.Text{String: p.OnWhatsapp, Valid: p.OnWhatsapp != ""}
+		if p.IsDefault {
+			defaultPhonesCount++
+		}
+		if p.ID == 0 {
+			// checks if the phone-number already exist
+			if s.CheckPhone(ctx, p.Phone) {
+				return fmt.Errorf("phone number already exists")
+			}
+			newPhonesCount++
+		}
+	}
+
+	if defaultPhonesCount <= 0 {
+		return fmt.Errorf("at least one phone number must be set as default")
+	}
+	if defaultPhonesCount > 1 {
+		return fmt.Errorf("only one phone number can be set as default")
+	}
+
+	// If there are new phone numbers, ensure that adding them doesn't exceed the max limit of 5
+	if newPhonesCount > 0 {
+		// Fetch the total count of both active and inactive phone numbers for this user
+		currentCount, err := s.queries.CountAllUserPhoneNumbers(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("failed to check current phone numbers: %w", err)
+		}
+
+		// Reject the request if the total would exceed the 5 phone number limit
+		if int(currentCount)+newPhonesCount > 5 {
+			return fmt.Errorf("maximum of 5 phone numbers reached, if you'd like to add more, please contact the customer support")
+		}
+	}
+
+	// Update or create phone numbers
+	for _, p := range phones {
+		whatsappVal := "no"
+		if p.OnWhatsapp == "yes" {
+			whatsappVal = "yes"
+		}
+		onWhatsapp := pgtype.Text{String: whatsappVal, Valid: true}
 		isDefault := pgtype.Bool{Bool: p.IsDefault, Valid: true}
 
+		// if p.ID == 0, it means the phone number is new, so create it
 		if p.ID == 0 {
+			if p.Phone == "" {
+				return fmt.Errorf("phone number cannot be empty")
+			}
+
+			// create the phone-number in the postgres db
 			_, err := s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
-				UserID:    userID,
-				Phone:     fmt.Sprintf("+%s%s", p.Phonecode, p.RawInput),
-				Phonecode: p.Phonecode,
-				RawInput:  p.RawInput,
-				IsDefault: isDefault,
+				UserID:     userID,
+				Phone:      p.Phone, // Should be fully formatted E.164
+				Phonecode:  p.Phonecode,
+				RawInput:   p.RawInput,
+				OnWhatsapp: onWhatsapp,
+				IsDefault:  isDefault,
 			})
 			if err != nil {
 				return err
 			}
+
+			// Cache the new phone number to fakeID mapping
+			err = s.rdb.Set(ctx, db.RedisPhoneFakeID+p.Phone, fakeID, 0).Err()
+			if err != nil {
+				return err
+			}
 		} else {
+			// update the user's phone-number in the postgres db
 			err := s.queries.UpdatePhoneNumber(ctx, queries.UpdatePhoneNumberParams{
 				ID:         p.ID,
+				UserID:     userID,
 				OnWhatsapp: onWhatsapp,
 				IsDefault:  isDefault,
 			})
@@ -530,7 +589,7 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 		}
 	}
 
-	// Invalidate cache
+	// Invalidate the active cached user phone-numbers
 	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
 	s.rdb.Del(ctx, userPhoneNumbersKey)
 
@@ -538,8 +597,20 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 }
 
 // DeleteUserPhoneNumber removes a specific phone number record by its ID.
-func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
-	return s.queries.DeleteUserPhoneNumber(ctx, id)
+func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error {
+	err := s.queries.DeleteUserPhoneNumber(ctx, queries.DeleteUserPhoneNumberParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the active cached user phone-numbers
+	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
+	s.rdb.Del(ctx, userPhoneNumbersKey)
+
+	return nil
 }
 
 // UpdateUserIsVerified updates the verified status of a user and invalidates their cache.
@@ -547,6 +618,17 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 	err := s.queries.UpdateUserIsVerified(ctx, queries.UpdateUserIsVerifiedParams{
 		ID:         userID,
 		IsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("isVerified: ", isVerified)
+	fmt.Println("UserID: ", userID)
+
+	err = s.queries.UpdateUserPhoneNumberIsVerified(ctx, queries.UpdateUserPhoneNumberIsVerifiedParams{
+		UserID:          userID,
+		OwnerIsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
 	})
 	if err != nil {
 		return err
@@ -678,4 +760,91 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 
 	return nil
+}
+
+// function: check if the username already exist in redis and in the postgres db
+func (s *UsersService) CheckUsername(ctx context.Context, username string) bool {
+	cacheKey := db.RedisUsernameFakeID + username
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
+}
+
+// function: checks if the email already exists in redis and in the postgres db
+func (s *UsersService) CheckEmail(ctx context.Context, email string) bool {
+	cacheKey := db.RedisEmailFakeID + email
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
+}
+
+// function: checks if the phone exists in redis and in the postgres db
+func (s *UsersService) CheckPhone(ctx context.Context, phone string) bool {
+	cacheKey := db.RedisPhoneFakeID + phone
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	// fallback: check the users_phone_numbers table
+	fakeID, err = s.queries.GetFakeIDByAdditionalPhone(ctx, phone)
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
+}
+
+// CheckNIN function checks if the nin already exists in the database
+func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
+	cacheKey := db.RedisNINFakeID + nin
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByNIN(ctx, nin)
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }

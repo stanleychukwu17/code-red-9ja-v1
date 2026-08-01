@@ -42,3 +42,19 @@ func (q *Queries) UpdateUserIsVerified(ctx context.Context, arg UpdateUserIsVeri
 	_, err := q.db.Exec(ctx, updateUserIsVerified, arg.ID, arg.IsVerified)
 	return err
 }
+
+const updateUserPhoneNumberIsVerified = `-- name: UpdateUserPhoneNumberIsVerified :exec
+UPDATE users_phone_numbers
+SET owner_is_verified = $2
+WHERE user_id = $1
+`
+
+type UpdateUserPhoneNumberIsVerifiedParams struct {
+	UserID          int64       `json:"user_id"`
+	OwnerIsVerified pgtype.Bool `json:"owner_is_verified"`
+}
+
+func (q *Queries) UpdateUserPhoneNumberIsVerified(ctx context.Context, arg UpdateUserPhoneNumberIsVerifiedParams) error {
+	_, err := q.db.Exec(ctx, updateUserPhoneNumberIsVerified, arg.UserID, arg.OwnerIsVerified)
+	return err
+}

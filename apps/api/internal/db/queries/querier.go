@@ -40,6 +40,7 @@ type Querier interface {
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
 	CheckUserHasAnyRole(ctx context.Context, userID int64) (bool, error)
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
+	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)
 	CreateApplication(ctx context.Context, arg CreateApplicationParams) (PartyApplication, error)
 	CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error)
 	CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error)
@@ -97,7 +98,7 @@ type Querier interface {
 	DeleteUser(ctx context.Context, id int64) error
 	DeleteUserBankAccount(ctx context.Context, arg DeleteUserBankAccountParams) error
 	DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context, arg DeleteUserDidNotVoteReasonByElectionGroupParams) error
-	DeleteUserPhoneNumber(ctx context.Context, id int64) error
+	DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhoneNumberParams) error
 	DeleteUserRoles(ctx context.Context, userID int64) error
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
@@ -133,6 +134,7 @@ type Querier interface {
 	GetElectionGroupWardStats(ctx context.Context, arg GetElectionGroupWardStatsParams) (ElectionGroupWard, error)
 	GetElectionInstanceByID(ctx context.Context, id int64) (Election, error)
 	GetEligibleElectionsForPollingUnit(ctx context.Context, arg GetEligibleElectionsForPollingUnitParams) ([]Election, error)
+	GetFakeIDByAdditionalPhone(ctx context.Context, phone string) (pgtype.Int8, error)
 	GetFakeIDByEmail(ctx context.Context, email pgtype.Text) (pgtype.Int8, error)
 	GetFakeIDByNIN(ctx context.Context, nin string) (pgtype.Int8, error)
 	GetFakeIDByPhone(ctx context.Context, phone pgtype.Text) (pgtype.Int8, error)
@@ -376,6 +378,7 @@ type Querier interface {
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)
 	UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error)
 	UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error)
+	UpdatePartyIsVerified(ctx context.Context, arg UpdatePartyIsVerifiedParams) error
 	UpdatePartyStateAllowances(ctx context.Context, arg UpdatePartyStateAllowancesParams) (Party, error)
 	UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error
 	UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error)
@@ -391,8 +394,10 @@ type Querier interface {
 	UpdateUserBankAccount(ctx context.Context, arg UpdateUserBankAccountParams) (UserBankAccount, error)
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 	UpdateUserHasRole(ctx context.Context, arg UpdateUserHasRoleParams) error
+	UpdateUserIsVerified(ctx context.Context, arg UpdateUserIsVerifiedParams) error
 	UpdateUserParty(ctx context.Context, arg UpdateUserPartyParams) error
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
+	UpdateUserPhoneNumberIsVerified(ctx context.Context, arg UpdateUserPhoneNumberIsVerifiedParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error)
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error

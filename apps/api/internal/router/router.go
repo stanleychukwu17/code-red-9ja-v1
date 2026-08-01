@@ -57,6 +57,7 @@ import (
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
 	partyapplications "free9ja/api/internal/service/party_applications"
+	permissionsservice "free9ja/api/internal/service/permissions"
 	puassignments "free9ja/api/internal/service/polling_unit_assignments"
 	puresults "free9ja/api/internal/service/polling_unit_results"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
@@ -111,6 +112,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	statesService := statesservice.NewStatesService(q, rdb)
 	pollingUnitUpdatesService := puupdates.NewService(q, pool)
 	officesService := officesservice.NewOfficesService(q, rdb)
+	permissionsService := permissionsservice.NewPermissionsService()
 	electionStatsService := electionstats.NewElectionStatsService(q)
 	partyApplicationsService := partyapplications.NewService(q, pool, rdb)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
@@ -134,7 +136,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
 
-	authHandler := authhandler.NewHandler(authService, utilsInstance)
+	authHandler := authhandler.NewHandler(authService, usersService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, utilsInstance)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
@@ -147,7 +149,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
-	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, utilsInstance)
+	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
@@ -213,7 +215,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                  // Make superAdmin endpoint
 
 	// for seeds
-	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers) // Seed users endpoint
+	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)   // Seed users endpoint
 	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins) // Seed admins endpoint
 
 	// Banks
@@ -409,7 +411,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/admin/users/{id}", usersHandler.DeleteUser)
 		r.Get("/api/v1/admin/users/{id}/phones", usersHandler.GetUserPhoneNumbers)
 		r.Put("/api/v1/admin/users/{id}/phones", usersHandler.UpdateUserPhoneNumbers)
-		r.Delete("/api/v1/admin/users/phones/{id}", usersHandler.DeleteUserPhoneNumber)
+		r.Delete("/api/v1/admin/users/phones", usersHandler.DeleteUserPhoneNumber)
 		r.Get("/api/v1/users/me/wallet", usersHandler.GetMyWallet)
 		r.Get("/api/v1/users/me/wallet/transactions", usersHandler.ListMyWalletTransactions)
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)
@@ -445,7 +447,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/slots/price", partiesHandler.GetPartySlotPrice)
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesHandler.BuySlots)
 		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
-		
+
 		r.Post("/api/v1/parties/{id}/join", partiesHandler.JoinParty)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
 		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateStateAllowances)

@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"free9ja/api/internal/db"
+	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
-	phonenumbers "github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -35,6 +35,11 @@ type UsersService interface {
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
+	UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []usersservice.PhonePayload) error
+	CheckUsername(ctx context.Context, username string) bool
+	CheckEmail(ctx context.Context, email string) bool
+	CheckPhone(ctx context.Context, phone string) bool
+	CheckNIN(ctx context.Context, nin string) bool
 }
 
 type PartyService interface {
@@ -105,8 +110,6 @@ type LoginUser struct {
 	CurrentWard       int32                                    `json:"current_ward"`
 	CurrentCity       int32                                    `json:"current_city"`
 	Address           string                                   `json:"address"`
-	WhatsappPhone     string                                   `json:"whatsapp_phone"`
-	DataPhone         string                                   `json:"data_phone"`
 	EducationalStatus string                                   `json:"educational_status"`
 	HighestDegree     string                                   `json:"highest_degree"`
 	GraduationYear    string                                   `json:"graduation_year"`
@@ -153,7 +156,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		}
 
 		// validate phone number using the provided iso2
-		_, err = s.ValidatePhoneForCountry(identifier, iso2)
+		_, err = utils.ValidatePhoneForCountry(identifier, iso2)
 		if err != nil {
 			return LoginResult{}, err
 		}
@@ -297,8 +300,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			CurrentLga:      user.CurrentLga.Int32,
 			CurrentWard:     user.CurrentWard.Int32,
 			CurrentCity:     user.CurrentCity.Int32,
-			WhatsappPhone:   user.WhatsappPhone.String,
-			DataPhone:       user.DataPhone.String,
 			VotersCardImage: user.VotersCardImage.String,
 			Party:           partyObj,
 		},
@@ -397,8 +398,6 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		CurrentLga:      user.CurrentLga.Int32,
 		CurrentWard:     user.CurrentWard.Int32,
 		CurrentCity:     user.CurrentCity.Int32,
-		WhatsappPhone:   user.WhatsappPhone.String,
-		DataPhone:       user.DataPhone.String,
 		VotersCardImage: user.VotersCardImage.String,
 		Party:           partyObj,
 	}
@@ -654,7 +653,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 
 	// check phone country validation
 	phone := params.Phone.String
-	formattedPhone, err := s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	formattedPhone, err := utils.ValidatePhoneForCountry(phone, country_dts.Iso2)
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -683,26 +682,26 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// checks if the username already exist
-	username_exist := s.CheckUsername(ctx, username)
+	username_exist := s.usersService.CheckUsername(ctx, username)
 	if username_exist {
 		return RegisterResult{}, errors.New("username already exists")
 	}
 
 	// email checks
 	email := strings.TrimSpace(strings.ToLower(params.Email.String))
-	email_exist := s.CheckEmail(ctx, email)
+	email_exist := s.usersService.CheckEmail(ctx, email)
 	if email_exist {
 		return RegisterResult{}, errors.New("email already exists")
 	}
 
 	// phone checks
-	phone_exist := s.CheckPhone(ctx, formattedPhone)
+	phone_exist := s.usersService.CheckPhone(ctx, formattedPhone)
 	if phone_exist {
 		return RegisterResult{}, errors.New("phone already exists")
 	}
 
 	// nin check
-	nin_check := s.CheckNIN(ctx, nin)
+	nin_check := s.usersService.CheckNIN(ctx, nin)
 	if nin_check {
 		return RegisterResult{}, errors.New("nin already exists")
 	}
@@ -751,7 +750,14 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	}
 
 	// save the user phone number
-	err = s.SaveUserPhone(ctx, user_id, fake_id, formattedPhone, params.Phone.String, country_dts.Phonecode)
+	err = s.usersService.UpdateUserPhoneNumbers(ctx, user_id, fake_id, []usersservice.PhonePayload{
+		{
+			Phone:     formattedPhone,
+			RawInput:  params.Phone.String,
+			Phonecode: country_dts.Phonecode,
+			IsDefault: true,
+		},
+	})
 	if err != nil {
 		return RegisterResult{}, err
 	}
@@ -828,96 +834,7 @@ func CleanUsername(input string) (string, error) {
 	return clean, nil
 }
 
-// function: check if the username already exist in redis and in the postgres db
-func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
-	exists, _ := s.rdb.Exists(ctx, db.RedisUsernameFakeID+username).Result()
-	if exists > 0 {
-		return true
-	}
 
-	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
-	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, db.RedisUsernameFakeID+username, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
-	}
-
-	return false
-}
-
-// function: checks if the email already exists in redis and in the postgres db
-func (s *AuthService) CheckEmail(ctx context.Context, email string) bool {
-	exists, _ := s.rdb.Exists(ctx, db.RedisEmailFakeID+email).Result()
-	if exists > 0 {
-		return true
-	}
-
-	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
-	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, db.RedisEmailFakeID+email, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
-	}
-
-	return false
-}
-
-// function: checks if the phone exists in redis and in the postgres db
-func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool {
-	exists, _ := s.rdb.Exists(ctx, db.RedisPhoneFakeID+phone).Result()
-	if exists > 0 {
-		return true
-	}
-
-	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
-	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, db.RedisPhoneFakeID+phone, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
-	}
-
-	return false
-}
-
-// CheckNIN function checks if the nin already exists in the database
-func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
-	exists, _ := s.rdb.Exists(ctx, db.RedisNINFakeID+nin).Result()
-	if exists > 0 {
-		return true
-	}
-
-	fakeID, err := s.queries.GetFakeIDByNIN(ctx, nin)
-	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, db.RedisNINFakeID+nin, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
-	}
-
-	return false
-}
-
-// ValidatePhoneForCountry checks:
-// 1. valid phone number format
-// 2. matches the given ISO country code (e.g. "NG", "US")
-// 3. returns normalized E.164 format if valid
-func (s *AuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) {
-	// Parse number (second arg can be empty if phone is already in E.164)
-	num, err := phonenumbers.Parse(phone, country_code)
-	if err != nil {
-		return "", fmt.Errorf("invalid phone format: %w", err)
-	}
-
-	// Check if it's a valid number globally
-	if !phonenumbers.IsValidNumber(num) {
-		return "", fmt.Errorf("invalid phone number")
-	}
-
-	// Ensure it matches the expected country_code
-	if !phonenumbers.IsValidNumberForRegion(num, country_code) {
-		return "", fmt.Errorf("phone number does not match country %s", country_code)
-	}
-
-	// Normalize to E.164 format
-	formatted := phonenumbers.Format(num, phonenumbers.E164)
-
-	return formatted, nil
-}
 
 // SaveSomeUserRegistrationDetails saves the user's registration details (username, email, nin) to Redis & DB
 func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error {
@@ -950,28 +867,6 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 	return nil
 }
 
-// SaveUserPhone saves the user's phone number to Redis & DB
-func (s *AuthService) SaveUserPhone(ctx context.Context, userID, fakeID int64, phoneE164, rawInput, phonecode string) error {
-	if phoneE164 != "" {
-		err := s.rdb.Set(ctx, db.RedisPhoneFakeID+phoneE164, fakeID, 0).Err()
-		if err != nil {
-			return err
-		}
-
-		_, err = s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
-			Phone:     phoneE164,
-			Phonecode: phonecode,
-			RawInput:  rawInput,
-			UserID:    userID,
-			IsDefault: pgtype.Bool{Bool: true, Valid: true},
-		})
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // RegisterPhaseSignUpResult represents the structure for the response from the initial sign-up phase
 type RegisterPhaseSignUpResult struct {
 	ID string `json:"id"`
@@ -981,7 +876,7 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 	// email checks
 	if email != "" {
 		email = strings.TrimSpace(strings.ToLower(email))
-		if s.CheckEmail(ctx, email) {
+		if s.usersService.CheckEmail(ctx, email) {
 			return RegisterPhaseSignUpResult{}, errors.New("email already exists")
 		}
 	}
@@ -993,13 +888,13 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 	}
 
 	// check phone country validation
-	e164, err := s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	e164, err := utils.ValidatePhoneForCountry(phone, country_dts.Iso2)
 	if err != nil {
 		return RegisterPhaseSignUpResult{}, err
 	}
 
 	// phone checks
-	if s.CheckPhone(ctx, e164) {
+	if s.usersService.CheckPhone(ctx, e164) {
 		return RegisterPhaseSignUpResult{}, errors.New("phone already exists")
 	}
 
@@ -1190,7 +1085,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 
 	// email checks
 	email = strings.TrimSpace(strings.ToLower(email))
-	if email != "" && s.CheckEmail(ctx, email) {
+	if email != "" && s.usersService.CheckEmail(ctx, email) {
 		return RegisterResult{}, errors.New("email already exists")
 	}
 

@@ -20,8 +20,7 @@ import (
 type AuthService interface {
 	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (auth.RegisterResult, error)
 	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
-	CheckNIN(ctx context.Context, nin string) bool
-	CheckUsername(ctx context.Context, username string) bool
+
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
@@ -33,19 +32,27 @@ type AuthService interface {
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 }
 
+// UsersService interface defines the methods from UsersService that the auth handler needs
+type UsersService interface {
+	CheckNIN(ctx context.Context, nin string) bool
+	CheckUsername(ctx context.Context, username string) bool
+}
+
 // Handler struct holds the dependencies for the auth handler
 type Handler struct {
-	authService AuthService
-	validate    *validator.Validate
-	utils       *utils.Utils
+	authService  AuthService
+	usersService UsersService
+	validate     *validator.Validate
+	utils        *utils.Utils
 }
 
 // NewHandler creates a new instance of the auth handler
-func NewHandler(authService AuthService, utils *utils.Utils) *Handler {
+func NewHandler(authService AuthService, usersService UsersService, utils *utils.Utils) *Handler {
 	return &Handler{
-		authService: authService,
-		validate:    validator.New(),
-		utils:       utils,
+		authService:  authService,
+		usersService: usersService,
+		validate:     validator.New(),
+		utils:        utils,
 	}
 }
 
@@ -216,7 +223,7 @@ func (h *Handler) CheckNin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists := h.authService.CheckNIN(r.Context(), req.Nin)
+	exists := h.usersService.CheckNIN(r.Context(), req.Nin)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "NIN check completed", map[string]interface{}{
 		"exists": exists,
@@ -259,7 +266,7 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// checks if the username exist
-	exists := h.authService.CheckUsername(r.Context(), req.Username)
+	exists := h.usersService.CheckUsername(r.Context(), req.Username)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Username check completed", map[string]interface{}{
 		"exists": exists,

@@ -15,8 +15,9 @@ import {
   DialogPadding,
 } from "../dialog";
 import { Input } from "../input";
-import { useForm, useStore } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Loader2, Plus, ChevronDown, Trash2 } from "lucide-react";
 import { SelectGender } from "../selects/gender-select";
 import { SelectDate } from "../selects/date-select";
@@ -107,8 +108,6 @@ export function UserFormDialog({
   const [avatarUrl, setAvatarUrl] = React.useState("");
   const [isUploading, setIsUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-
-  // console.log(user)
 
   const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">("basic");
   const [createdUser, setCreatedUser] = React.useState<UserResult | null>(null);
@@ -736,7 +735,7 @@ export function UserFormDialog({
             onClose={onClose}
             onSuccess={() => {
               if (mode === "create") setActiveTab("phones");
-              else onClose();
+              else if (onSuccess) onSuccess(activeUser);
             }}
           />
         )}
@@ -748,7 +747,9 @@ export function UserFormDialog({
             loadUserPhoneNumber={loadUserPhoneNumber}
             getAllCountries={getAllCountries}
             onClose={onClose}
-            onSuccess={() => { onClose(); }}
+            onSuccess={() => {
+              if (onSuccess) onSuccess(activeUser);
+            }}
           />
         )}
       </DialogContent>
@@ -763,19 +764,22 @@ export function UserFormDialog({
 // The MoreInfoTab
 function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSuccess }: any) {
   const [error, setError] = React.useState<string | null>(null);
-  const [occupations, setOccupations] = React.useState<any[]>([]);
 
-  React.useEffect(() => {
-    if (getOccupations) {
-      getOccupations().then((res: any) => {
-        if (res?.success && res?.data) {
-          // Assuming data is an array of {id, name} or {data: {occupations}}
-          const list = res.data.occupations || res.data || [];
-          setOccupations(list);
-        }
-      }).catch(console.error);
-    }
-  }, [getOccupations]);
+  const { data: occupationsData, isLoading: isLoadingOccupations } = useQuery({
+    queryKey: ["occupations"],
+    queryFn: async () => {
+      if (!getOccupations) return [];
+      const res = await getOccupations();
+      if (res?.success && res?.data) {
+        // Assuming data is an array of {id, name} or {data: {occupations}}
+        return res.data.occupations || res.data || [];
+      }
+      return [];
+    },
+    enabled: !!getOccupations,
+  });
+
+  const occupations = occupationsData || [];
 
   const form = useForm({
     defaultValues: {
@@ -989,10 +993,11 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
   const [error, setError] = React.useState<string | null>(null);
   const [residentCountryPhoneCode, setResidentCountryPhoneCode] = React.useState<string | null>(null);
   const userCountry = user.current_country;
+  const queryClient = useQueryClient();
 
   // Fetch phone numbers asynchronously when the tab mounts.
   // The query uses fake_id (or id as fallback) as the unique query key identifier.
-  const { data: userPhoneNumbers, isLoading, refetch } = useQuery({
+  const { data: userPhoneNumbers, isLoading, refetch, error: queryError } = useQuery({
     queryKey: ["user-phonenumbers", user?.fake_id],
 
     // query function that fetches the number 
@@ -1008,6 +1013,11 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
 
     // disable refresh
     staleTime: Infinity,
+    retry: (failureCount, error) => {
+      // Do not retry if the error is a permission/forbidden error
+      if (error.message.includes("Forbidden")) return false;
+      return failureCount < 3;
+    },
   });
 
   // Fetch all countries to be able to extract the user current country international phone code
@@ -1057,29 +1067,45 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
 
   // Remove phone number
   const handleRemovePhoneNumber = async (index: number, phoneObj: any, field: any) => {
-    console.log("delete number")
-    return;
-    // If the phone object has a valid ID (> 0), it is already saved on the server.
-    // We must call the backend API to physically delete it from the database.
+    setError(null);
+
     if (phoneObj.id && Number(phoneObj.id) > 0) {
+      // Ensure the user cannot delete an active phone number before calling the backend
+      if (phoneObj.is_default === true || phoneObj.is_default?.Bool === true) {
+        setError("Cannot delete an active phone number");
+        return;
+      }
+
       if (deleteUserPhoneNumber) {
         try {
-          const res = await deleteUserPhoneNumber({ data: { id: phoneObj.id } });
-          if (res && res.success === false) {
-            console.error("Failed to delete phone number:", res.message);
+          const res = await deleteUserPhoneNumber({ data: { id: phoneObj.id, user_fid: user.fake_id } });
+          if (!res.success) {
+            setError(res.message || "Failed to delete phone number");
+            return;
+          } else if (res.data?.phones) {
+            // Update the tanstack query cache with the freshly returned phones list
+            queryClient.setQueryData(["user-phonenumbers", user?.fake_id], res.data.phones);
+
+            // Sync the local form state with the latest from the server
+            field.handleChange(res.data.phones);
+
+            // toast on successful deletion
+            toast.success("Phone number deleted successfully");
           }
-        } catch (error) {
-          console.error("Error deleting phone number:", error);
+        } catch (error: any) {
+          setError(error.message || "Error deleting phone number");
+          return;
         }
       } else {
-        console.warn("deleteUserPhoneNumber function is not provided");
+        setError("deleteUserPhoneNumber function is not provided");
+        return;
       }
+    } else {
+      // For unsaved rows (id <= 0), simply remove it from the local form state slice
+      const newPhones = [...field.state.value];
+      newPhones.splice(index, 1);
+      field.handleChange(newPhones);
     }
-
-    // Always remove the row from the local form state so the UI updates instantly
-    const newPhones = [...field.state.value];
-    newPhones.splice(index, 1);
-    field.handleChange(newPhones);
   };
 
   // mutation for saving phone numbers back to the server
@@ -1102,8 +1128,9 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
       if (!res?.success) throw new Error(res?.message || "Failed to save phone numbers");
       return res.data;
     },
-    onSuccess: () => {
-      refetch();
+    onSuccess: (response) => {
+      queryClient.setQueryData(["user-phonenumbers", user?.fake_id], response?.phones || []);
+      toast.success("Phone numbers updated successfully");
       onSuccess?.();
     },
     onError: (err: any) => {
@@ -1138,7 +1165,7 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
     >
       <div className="flex-1 overflow-y-auto min-h-0">
         <DialogPadding className="space-y-6 pb-6 pt-4">
-          <TinyError error={error} />
+          <TinyError error={error || (queryError as Error)?.message} />
 
           <div className="flex flex-col gap-4">
             <form.Field

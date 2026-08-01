@@ -85,7 +85,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 	for _, u := range users {
 		eg.Go(func() error {
 			// check if email already exit, if yes, we can skip this user onto the next
-			if s.authService.CheckEmail(ctx, u.Email) {
+			if s.usersService.CheckEmail(ctx, u.Email) {
 				return nil
 			}
 
@@ -146,12 +146,14 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 
 				iso2 = country.Iso2
 				phonecode = country.Phonecode
-				formattedPhone, err = s.authService.ValidatePhoneForCountry(rawPhoneInput, iso2)
+				formattedPhone, err = utils.ValidatePhoneForCountry(rawPhoneInput, iso2)
 				if err != nil {
 					return fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
 				}
 				phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
 			}
+
+			isVerifiedVal := u.IsVerified && u.VerificationTypeID != nil
 
 			// user params
 			params := queries.SeedUserParams{
@@ -174,7 +176,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				AccountStatus:   pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
 				PartyID:         partyIDVal,
 				IsPolitician:    pgtype.Bool{Bool: u.IsPolitician, Valid: true},
-				IsVerified:      pgtype.Bool{Bool: u.IsVerified, Valid: true},
+				IsVerified:      pgtype.Bool{Bool: isVerifiedVal, Valid: true},
 			}
 
 			// save the users
@@ -223,7 +225,14 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 
 			// save the user phone number
 			if formattedPhone != "" {
-				_ = s.authService.SaveUserPhone(ctx, newUserID, newUserFakeID, formattedPhone, rawPhoneInput, phonecode)
+				_ = s.usersService.UpdateUserPhoneNumbers(ctx, newUserID, newUserFakeID, []usersservice.PhonePayload{
+					{
+						Phone:     formattedPhone,
+						RawInput:  rawPhoneInput,
+						Phonecode: phonecode,
+						IsDefault: true,
+					},
+				})
 			}
 
 			// update user verification type, this will add a verification badge for the user

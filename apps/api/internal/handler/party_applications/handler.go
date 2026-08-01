@@ -59,8 +59,6 @@ type SubmitApplicationRequest struct {
 	CurrentWard      int32   `json:"current_ward"`
 	CurrentCity      int32   `json:"current_city"`
 
-	WhatsappPhone     string `json:"whatsapp_phone"`
-	DataPhone         string `json:"data_phone"`
 	EducationalStatus string `json:"educational_status"`
 	HighestDegree     string `json:"highest_degree"`
 	GraduationYear    string `json:"graduation_year"`
@@ -123,8 +121,6 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		CurrentLga:        req.CurrentLga,
 		CurrentWard:       req.CurrentWard,
 		CurrentCity:       req.CurrentCity,
-		WhatsappPhone:     req.WhatsappPhone,
-		DataPhone:         req.DataPhone,
 		EducationalStatus: req.EducationalStatus,
 		HighestDegree:     req.HighestDegree,
 		GraduationYear:    req.GraduationYear,

@@ -4,11 +4,15 @@ const (
 	// -- Modules --
 	ModuleAdmin      = "admin"       // Represents the administration module of the system
 	ModulePartyAdmin = "party_admin" // Represents the party administration module of the system
+	ModuleUsers      = "users"       // Represents the users module of the system
 
 	// -- Actions --
-	ActionAssignPageVerification = "assign_page_verification" // Action when a verification badge is assigned to a user's page
-	ActionRemovePageVerification = "remove_page_verification" // Action when a verification badge is removed from a user's page
-	ActionUpdateUserRoles        = "update_user_roles"        // Action for updating a user's roles
+	ActionAssignPageVerification = "assign_page_verification"  // Action when a verification badge is assigned to a user's page
+	ActionRemovePageVerification = "remove_page_verification"  // Action when a verification badge is removed from a user's page
+	ActionUpdateUserRoles        = "update_user_roles"         // Action for updating a user's roles
+	ActionUpdateUserPhoneNumbers = "update_user_phone_numbers" // Action for updating a user's phone numbers
+	ActionViewUserPhoneNumbers   = "view_user_phone_numbers"   // Action when a user's phone numbers are viewed
+	ActionDeleteUserPhoneNumber  = "delete_user_phone_number"  // Action when a user's phone number is deleted
 
 	// -- Actor Roles --
 	ActorRoleAdmin      = "admin"       // A standard administrative user

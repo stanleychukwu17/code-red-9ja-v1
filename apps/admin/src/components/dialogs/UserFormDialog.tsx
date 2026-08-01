@@ -4,6 +4,7 @@ import { getStates } from "#/lib/server/states";
 import { getParties, getPresignedUploadURL, confirmFileUpload, } from "#/lib/server/parties";
 import { registerCandidate } from "#/lib/server/auth/auth";
 import { updateUser, getUserPhoneNumbers, deleteUserPhoneNumber, updateUserPhoneNumbers } from "#/lib/server/users";
+import { getOccupations } from "#/lib/server/occupations";
 
 export type { UserResult };
 
@@ -28,7 +29,7 @@ export function UserFormDialog(
       deleteUserPhoneNumber={deleteUserPhoneNumber}
       updateUserPhoneNumbers={updateUserPhoneNumbers}
     // updateUserMoreInfo={...} // TODO: implement and pass this API
-    // getOccupations={...} // TODO: implement and pass this API
+    getOccupations={getOccupations}
     />
   );
 }

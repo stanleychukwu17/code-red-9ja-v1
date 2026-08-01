@@ -1003,8 +1003,6 @@ type User struct {
 	MiddleName      pgtype.Text        `json:"middle_name"`
 	Gender          pgtype.Text        `json:"gender"`
 	DateOfBirth     pgtype.Date        `json:"date_of_birth"`
-	WhatsappPhone   pgtype.Text        `json:"whatsapp_phone"`
-	DataPhone       pgtype.Text        `json:"data_phone"`
 	VotersCardImage pgtype.Text        `json:"voters_card_image"`
 	CurrentCountry  int16              `json:"current_country"`
 	CurrentState    int16              `json:"current_state"`
@@ -1115,14 +1113,15 @@ type UsersNin struct {
 }
 
 type UsersPhoneNumber struct {
-	ID         int64       `json:"id"`
-	UserID     int64       `json:"user_id"`
-	Phone      string      `json:"phone"`
-	RawInput   string      `json:"raw_input"`
-	Phonecode  string      `json:"phonecode"`
-	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
-	IsDefault  pgtype.Bool `json:"is_default"`
-	IsActive   pgtype.Bool `json:"is_active"`
+	ID              int64       `json:"id"`
+	UserID          int64       `json:"user_id"`
+	OwnerIsVerified pgtype.Bool `json:"owner_is_verified"`
+	Phone           string      `json:"phone"`
+	RawInput        string      `json:"raw_input"`
+	Phonecode       string      `json:"phonecode"`
+	OnWhatsapp      pgtype.Text `json:"on_whatsapp"`
+	IsDefault       pgtype.Bool `json:"is_default"`
+	IsActive        pgtype.Bool `json:"is_active"`
 }
 
 type Ward struct {

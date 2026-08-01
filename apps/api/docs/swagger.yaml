@@ -347,8 +347,6 @@ definitions:
         type: integer
       current_ward:
         type: integer
-      data_phone:
-        type: string
       date_of_birth:
         type: string
       education_level:
@@ -394,8 +392,6 @@ definitions:
       username:
         type: string
       voters_card_image:
-        type: string
-      whatsapp_phone:
         type: string
     type: object
   big.Int:
@@ -910,8 +906,6 @@ definitions:
         type: integer
       current_ward:
         type: integer
-      data_phone:
-        type: string
       educational_status:
         type: string
       election_group_id:
@@ -933,8 +927,6 @@ definitions:
       school_name:
         type: string
       voters_card_image:
-        type: string
-      whatsapp_phone:
         type: string
     type: object
   pgtype.Bool:
@@ -1351,8 +1343,6 @@ definitions:
         type: integer
       current_ward:
         $ref: '#/definitions/pgtype.Int4'
-      data_phone:
-        $ref: '#/definitions/pgtype.Text'
       date_of_birth:
         $ref: '#/definitions/pgtype.Date'
       email:
@@ -1404,8 +1394,6 @@ definitions:
           $ref: '#/definitions/queries.GetPageVerificationsRow'
         type: array
       voters_card_image:
-        $ref: '#/definitions/pgtype.Text'
-      whatsapp_phone:
         $ref: '#/definitions/pgtype.Text'
     type: object
   seedservice.PartyAdminsData:
@@ -1714,6 +1702,13 @@ definitions:
     - last_name
     type: object
   usershandler.UpdateUserPhoneNumbersRequest:
+    properties:
+      phones:
+        items:
+          $ref: '#/definitions/usersservice.PhonePayload'
+        type: array
+      user_fid:
+        type: integer
     type: object
   usershandler.UpdateUserRolesRequest:
     properties:
@@ -1737,6 +1732,21 @@ definitions:
       bank_code:
         type: string
       narration:
+        type: string
+    type: object
+  usersservice.PhonePayload:
+    properties:
+      id:
+        type: integer
+      is_default:
+        type: boolean
+      on_whatsapp:
+        type: string
+      phone:
+        type: string
+      phonecode:
+        type: string
+      raw_input:
         type: string
     type: object
   utils.ErrorResponse:
@@ -1992,7 +2002,7 @@ paths:
       summary: Update user phone numbers
       tags:
       - Users
-  /admin/users/phones/{id}:
+  /admin/users/phones:
     delete:
       description: Deletes a specific user phone number by its ID
       parameters:

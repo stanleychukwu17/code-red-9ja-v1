@@ -26,8 +26,8 @@ VALUES ($1, $2)
 RETURNING id;
 
 -- name: CreatePhoneNumber :one
-INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, is_default)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsapp, is_default)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
 
 -- name: UpdateUserFakeID :exec
@@ -104,10 +104,9 @@ WHERE
   AND (sqlc.narg('search')::text IS NULL OR (
       u.first_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
       u.last_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      u.middle_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      u.email ILIKE '%' || sqlc.narg('search')::text || '%' OR
       u.username ILIKE '%' || sqlc.narg('search')::text || '%'
   ))
+  AND (sqlc.narg('account_status')::text[] IS NULL OR u.account_status = ANY(sqlc.narg('account_status')::text[]))
 ORDER BY u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 
@@ -204,16 +203,20 @@ WHERE user_id = $1 LIMIT 1;
 
 -- name: GetUserPhoneNumbersByUserID :many
 SELECT * FROM users_phone_numbers
-WHERE user_id = $1 AND is_active = true ORDER BY id DESC;
+WHERE user_id = $1 AND is_active = true ORDER BY id ASC;
+
+-- name: CountAllUserPhoneNumbers :one
+SELECT count(*) FROM users_phone_numbers
+WHERE user_id = $1;
 
 -- name: DeleteUserPhoneNumber :exec
 UPDATE users_phone_numbers
 SET is_active = false
-WHERE id = $1;
+WHERE id = $1 AND user_id = $2;
 -- name: UpdatePhoneNumber :exec
 UPDATE users_phone_numbers
 SET on_whatsapp = $2, is_default = $3
-WHERE id = $1;
+WHERE id = $1 AND user_id = $4;
 
 -- name: CreateUserBankAccount :one
 INSERT INTO user_bank_accounts (
@@ -251,6 +254,12 @@ WHERE email = $1 LIMIT 1;
 -- name: GetFakeIDByPhone :one
 SELECT fake_id FROM users
 WHERE phone = $1 LIMIT 1;
+
+-- name: GetFakeIDByAdditionalPhone :one
+SELECT u.fake_id
+FROM users u
+JOIN users_phone_numbers pn ON u.id = pn.user_id
+WHERE pn.phone = $1 LIMIT 1;
 
 -- name: GetFakeIDByUserID :one
 SELECT fake_id FROM users

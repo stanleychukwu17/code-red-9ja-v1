@@ -148,7 +148,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/admin/users/phones/{id}": {
+        "/admin/users/phones": {
             "delete": {
                 "security": [
                     {
@@ -9372,9 +9372,6 @@ const docTemplate = `{
                 "current_ward": {
                     "type": "integer"
                 },
-                "data_phone": {
-                    "type": "string"
-                },
                 "date_of_birth": {
                     "type": "string"
                 },
@@ -9442,9 +9439,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "voters_card_image": {
-                    "type": "string"
-                },
-                "whatsapp_phone": {
                     "type": "string"
                 }
             }
@@ -10237,9 +10231,6 @@ const docTemplate = `{
                 "current_ward": {
                     "type": "integer"
                 },
-                "data_phone": {
-                    "type": "string"
-                },
                 "educational_status": {
                     "type": "string"
                 },
@@ -10271,9 +10262,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "voters_card_image": {
-                    "type": "string"
-                },
-                "whatsapp_phone": {
                     "type": "string"
                 }
             }
@@ -10906,9 +10894,6 @@ const docTemplate = `{
                 "current_ward": {
                     "$ref": "#/definitions/pgtype.Int4"
                 },
-                "data_phone": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
                 "date_of_birth": {
                     "$ref": "#/definitions/pgtype.Date"
                 },
@@ -10985,9 +10970,6 @@ const docTemplate = `{
                     }
                 },
                 "voters_card_image": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "whatsapp_phone": {
                     "$ref": "#/definitions/pgtype.Text"
                 }
             }
@@ -11456,7 +11438,18 @@ const docTemplate = `{
             }
         },
         "usershandler.UpdateUserPhoneNumbersRequest": {
-            "type": "object"
+            "type": "object",
+            "properties": {
+                "phones": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/usersservice.PhonePayload"
+                    }
+                },
+                "user_fid": {
+                    "type": "integer"
+                }
+            }
         },
         "usershandler.UpdateUserRolesRequest": {
             "type": "object",
@@ -11491,6 +11484,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "narration": {
+                    "type": "string"
+                }
+            }
+        },
+        "usersservice.PhonePayload": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "on_whatsapp": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "phonecode": {
+                    "type": "string"
+                },
+                "raw_input": {
                     "type": "string"
                 }
             }

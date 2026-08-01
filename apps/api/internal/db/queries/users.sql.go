@@ -72,6 +72,18 @@ func (q *Queries) CheckReferralCodeExists(ctx context.Context, referralCode pgty
 	return exists, err
 }
 
+const countAllUserPhoneNumbers = `-- name: CountAllUserPhoneNumbers :one
+SELECT count(*) FROM users_phone_numbers
+WHERE user_id = $1
+`
+
+func (q *Queries) CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, countAllUserPhoneNumbers, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const createCandidatePlaceholder = `-- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
   email, password_hash, last_name, first_name, middle_name,
@@ -158,17 +170,18 @@ func (q *Queries) CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMor
 }
 
 const createPhoneNumber = `-- name: CreatePhoneNumber :one
-INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, is_default)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsapp, is_default)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id
 `
 
 type CreatePhoneNumberParams struct {
-	UserID    int64       `json:"user_id"`
-	Phone     string      `json:"phone"`
-	Phonecode string      `json:"phonecode"`
-	RawInput  string      `json:"raw_input"`
-	IsDefault pgtype.Bool `json:"is_default"`
+	UserID     int64       `json:"user_id"`
+	Phone      string      `json:"phone"`
+	Phonecode  string      `json:"phonecode"`
+	RawInput   string      `json:"raw_input"`
+	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
+	IsDefault  pgtype.Bool `json:"is_default"`
 }
 
 func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error) {
@@ -177,6 +190,7 @@ func (q *Queries) CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberPa
 		arg.Phone,
 		arg.Phonecode,
 		arg.RawInput,
+		arg.OnWhatsapp,
 		arg.IsDefault,
 	)
 	var id int64
@@ -370,11 +384,16 @@ func (q *Queries) DeleteUserBankAccount(ctx context.Context, arg DeleteUserBankA
 const deleteUserPhoneNumber = `-- name: DeleteUserPhoneNumber :exec
 UPDATE users_phone_numbers
 SET is_active = false
-WHERE id = $1
+WHERE id = $1 AND user_id = $2
 `
 
-func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, deleteUserPhoneNumber, id)
+type DeleteUserPhoneNumberParams struct {
+	ID     int64 `json:"id"`
+	UserID int64 `json:"user_id"`
+}
+
+func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhoneNumberParams) error {
+	_, err := q.db.Exec(ctx, deleteUserPhoneNumber, arg.ID, arg.UserID)
 	return err
 }
 
@@ -385,6 +404,20 @@ DELETE FROM user_roles WHERE user_id = $1
 func (q *Queries) DeleteUserRoles(ctx context.Context, userID int64) error {
 	_, err := q.db.Exec(ctx, deleteUserRoles, userID)
 	return err
+}
+
+const getFakeIDByAdditionalPhone = `-- name: GetFakeIDByAdditionalPhone :one
+SELECT u.fake_id
+FROM users u
+JOIN users_phone_numbers pn ON u.id = pn.user_id
+WHERE pn.phone = $1 LIMIT 1
+`
+
+func (q *Queries) GetFakeIDByAdditionalPhone(ctx context.Context, phone string) (pgtype.Int8, error) {
+	row := q.db.QueryRow(ctx, getFakeIDByAdditionalPhone, phone)
+	var fake_id pgtype.Int8
+	err := row.Scan(&fake_id)
+	return fake_id, err
 }
 
 const getFakeIDByEmail = `-- name: GetFakeIDByEmail :one
@@ -508,7 +541,7 @@ func (q *Queries) GetUserBankAccountsByUserID(ctx context.Context, userID int64)
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -528,8 +561,6 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
-		&i.WhatsappPhone,
-		&i.DataPhone,
 		&i.VotersCardImage,
 		&i.CurrentCountry,
 		&i.CurrentState,
@@ -577,8 +608,8 @@ func (q *Queries) GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype
 }
 
 const getUserPhoneNumbersByUserID = `-- name: GetUserPhoneNumbersByUserID :many
-SELECT id, user_id, phone, raw_input, phonecode, on_whatsapp, is_default, is_active FROM users_phone_numbers
-WHERE user_id = $1 AND is_active = true ORDER BY id DESC
+SELECT id, user_id, owner_is_verified, phone, raw_input, phonecode, on_whatsapp, is_default, is_active FROM users_phone_numbers
+WHERE user_id = $1 AND is_active = true ORDER BY id ASC
 `
 
 func (q *Queries) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error) {
@@ -593,6 +624,7 @@ func (q *Queries) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64)
 		if err := rows.Scan(
 			&i.ID,
 			&i.UserID,
+			&i.OwnerIsVerified,
 			&i.Phone,
 			&i.RawInput,
 			&i.Phonecode,
@@ -729,20 +761,20 @@ WHERE
   AND ($4::text IS NULL OR (
       u.first_name ILIKE '%' || $4::text || '%' OR
       u.last_name ILIKE '%' || $4::text || '%' OR
-      u.middle_name ILIKE '%' || $4::text || '%' OR
-      u.email ILIKE '%' || $4::text || '%' OR
       u.username ILIKE '%' || $4::text || '%'
   ))
+  AND ($5::text[] IS NULL OR u.account_status = ANY($5::text[]))
 ORDER BY u.id DESC
-LIMIT $5::int
+LIMIT $6::int
 `
 
 type ListUsersParams struct {
-	Cursor    pgtype.Int8 `json:"cursor"`
-	PartyID   pgtype.Int2 `json:"party_id"`
-	RoleCodes []string    `json:"role_codes"`
-	Search    pgtype.Text `json:"search"`
-	LimitNum  int32       `json:"limit_num"`
+	Cursor        pgtype.Int8 `json:"cursor"`
+	PartyID       pgtype.Int2 `json:"party_id"`
+	RoleCodes     []string    `json:"role_codes"`
+	Search        pgtype.Text `json:"search"`
+	AccountStatus []string    `json:"account_status"`
+	LimitNum      int32       `json:"limit_num"`
 }
 
 type ListUsersRow struct {
@@ -761,6 +793,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 		arg.PartyID,
 		arg.RoleCodes,
 		arg.Search,
+		arg.AccountStatus,
 		arg.LimitNum,
 	)
 	if err != nil {
@@ -908,17 +941,23 @@ func (q *Queries) UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMor
 const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
 UPDATE users_phone_numbers
 SET on_whatsapp = $2, is_default = $3
-WHERE id = $1
+WHERE id = $1 AND user_id = $4
 `
 
 type UpdatePhoneNumberParams struct {
 	ID         int64       `json:"id"`
 	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
 	IsDefault  pgtype.Bool `json:"is_default"`
+	UserID     int64       `json:"user_id"`
 }
 
 func (q *Queries) UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error {
-	_, err := q.db.Exec(ctx, updatePhoneNumber, arg.ID, arg.OnWhatsapp, arg.IsDefault)
+	_, err := q.db.Exec(ctx, updatePhoneNumber,
+		arg.ID,
+		arg.OnWhatsapp,
+		arg.IsDefault,
+		arg.UserID,
+	)
 	return err
 }
 

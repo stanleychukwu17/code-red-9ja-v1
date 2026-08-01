@@ -15,6 +15,8 @@ import (
 
 	"free9ja/api/internal/service/audit"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	permissionsservice "free9ja/api/internal/service/permissions"
+	usersservice "free9ja/api/internal/service/users"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -44,7 +46,8 @@ type UsersService interface {
 	ProvisionMissingWallets(ctx context.Context) (int, int, error)
 
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
-	DeleteUserPhoneNumber(ctx context.Context, id int64) error
+	UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []usersservice.PhonePayload) error
+	DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error
 	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
@@ -58,23 +61,30 @@ type BodiesService interface {
 	GetLocationNames(ctx context.Context, countryID, stateID int16, cityID int32) (string, string, string)
 }
 
+// PermissionsService interface defines the methods needed from the permissions service
+type PermissionsService interface {
+	CheckUserModificationPermission(claims *utils.JWTClaims, userDetails queries.UserWithPlaces) (bool, permissionsservice.UserModificationPermissions, error)
+}
+
 // Handler holds dependencies for the users handler
 type Handler struct {
-	usersService  UsersService
-	auditService  audit.AuditService
-	bodiesService BodiesService
-	validate      *validator.Validate
-	utils         *utils.Utils
+	usersService       UsersService
+	auditService       audit.AuditService
+	bodiesService      BodiesService
+	permissionsService PermissionsService
+	validate           *validator.Validate
+	utils              *utils.Utils
 }
 
 // NewHandler creates a new instance of the users handler
-func NewHandler(usersService UsersService, auditService audit.AuditService, bodiesService BodiesService, utilsInstance *utils.Utils) *Handler {
+func NewHandler(usersService UsersService, auditService audit.AuditService, bodiesService BodiesService, permissionsService PermissionsService, utilsInstance *utils.Utils) *Handler {
 	return &Handler{
-		usersService:  usersService,
-		auditService:  auditService,
-		bodiesService: bodiesService,
-		validate:      validator.New(),
-		utils:         utilsInstance,
+		usersService:       usersService,
+		auditService:       auditService,
+		bodiesService:      bodiesService,
+		permissionsService: permissionsService,
+		validate:           validator.New(),
+		utils:              utilsInstance,
 	}
 }
 
@@ -304,12 +314,20 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	role := r.URL.Query().Get("role")
 	partyIDStr := r.URL.Query().Get("party_id")
 	search := r.URL.Query().Get("search")
+	accountStatus := r.URL.Query().Get("account_status")
 	limit, cursor := parsePaginationParams(r)
 
 	// split the roles into slice of string, inCase we are trying to get multiple roles at the same
 	var roleSlice []string
 	if role != "" {
 		roleSlice = strings.Split(role, ",")
+	}
+
+	var accountStatusSlice []string
+	if accountStatus != "" {
+		accountStatusSlice = strings.Split(accountStatus, ",")
+	} else {
+		accountStatusSlice = []string{"just_registered", "placeholder", "active", "inactive"}
 	}
 
 	var partyID int64
@@ -348,7 +366,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	// 5. Build query parameters
 	arg := queries.ListUsersParams{
-		LimitNum: int32(limit),
+		LimitNum:      int32(limit),
+		AccountStatus: accountStatusSlice,
 	}
 	if cursor > 0 {
 		arg.Cursor = pgtype.Int8{Int64: cursor, Valid: true}
@@ -635,6 +654,12 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /admin/users/{id}/phones [get]
 func (h *Handler) GetUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	// get the id from the url
 	idStr := chi.URLParam(r, "id")
 	userFakeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -643,14 +668,21 @@ func (h *Handler) GetUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// get the user details using the fake id
-	user, err := h.usersService.GetUserByFakeID(r.Context(), userFakeID)
+	userDetails, err := h.usersService.GetUserByFakeID(r.Context(), userFakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
 	// the user ID
-	userID := user.ID
+	userID := userDetails.ID
+
+	// check permissions to edit a user account or view user's phone numbers
+	hasPermission, perms, err := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
+	if !hasPermission {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
 
 	// get the user phone numbers using the user id
 	phones, err := h.usersService.GetUserPhoneNumbersByUserID(r.Context(), userID)
@@ -659,13 +691,26 @@ func (h *Handler) GetUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// audit log if viewer is not the account owner
+	if !perms.IsOwnerOfAccount {
+		h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+			Action:     db.ActionViewUserPhoneNumbers,
+			ActorID:    claims.UserID,
+			ActorRole:  pgtype.Text{String: strings.Join(claims.Roles, ","), Valid: true},
+			EntityType: db.EntityTypeUser,
+			EntityID:   fmt.Sprintf("%d", userDetails.ID),
+		})
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Phone numbers retrieved successfully", map[string]interface{}{
 		"phone_numbers": phones,
 	})
 }
 
 type UpdateUserPhoneNumbersRequest struct {
-	// Phones []usersservice.PhonePayload `json:"phones"`
+	UserFid int64                       `json:"user_fid"`
+	Phones  []usersservice.PhonePayload `json:"phones"`
 }
 
 // UpdateUserPhoneNumbers handles PUT /api/v1/admin/users/{id}/phones
@@ -682,6 +727,12 @@ type UpdateUserPhoneNumbersRequest struct {
 // @Security     BearerAuth
 // @Router       /admin/users/{id}/phones [put]
 func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	// Extract and parse user ID from URL
 	idStr := chi.URLParam(r, "id")
 	userFakeID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -689,25 +740,121 @@ func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	// Decode the request body payload
 	var req UpdateUserPhoneNumbersRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body")
 		return
 	}
 
-	_, err = h.usersService.GetUserByFakeID(r.Context(), userFakeID)
+	// Fetch target user details
+	userDetails, err := h.usersService.GetUserByFakeID(r.Context(), userFakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
-	// err = h.usersService.UpdateUserPhoneNumbers(r.Context(), user.ID, req.Phones)
-	// if err != nil {
-	// 	h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update phone numbers: "+err.Error())
-	// 	return
-	// }
+	// Verify requester has permission to modify this user
+	hasPermission, perms, err := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
+	if !hasPermission {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Phone numbers updated successfully", nil)
+	// fetch old phone numbers before update for audit logging
+	oldPhones, err := h.usersService.GetUserPhoneNumbersByUserID(r.Context(), userDetails.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get old phone numbers: "+err.Error())
+		return
+	}
+
+	// Ensure exactly one phone number is marked as default
+	if len(req.Phones) > 0 {
+		// Fetch country details for phone validation
+		if userDetails.CurrentCountry == 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "User country is not set")
+			return
+		}
+		country, err := h.bodiesService.CheckCountry(r.Context(), userDetails.CurrentCountry)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get country details")
+			return
+		}
+
+		// validate phone numbers
+		defaultCount := 0
+		for i := range req.Phones {
+			if req.Phones[i].IsDefault {
+				defaultCount++
+			}
+
+			// clean and validate phone number
+			formattedPhone, err := utils.ValidatePhoneForCountry(req.Phones[i].RawInput, country.Iso2)
+			if err != nil {
+				h.utils.RespondError(w, http.StatusBadRequest, fmt.Sprintf("Invalid phone number format for %s", req.Phones[i].RawInput))
+				return
+			}
+
+			// update the phone number with the formatted phone number
+			req.Phones[i].Phone = formattedPhone
+			req.Phones[i].Phonecode = country.Phonecode
+		}
+
+		// ensure at least one phone number is marked as default
+		if defaultCount == 0 {
+			h.utils.RespondError(w, http.StatusBadRequest, "At least one phone number must be marked as default")
+			return
+		}
+		if defaultCount > 1 {
+			h.utils.RespondError(w, http.StatusBadRequest, "Only one phone number can be marked as default")
+			return
+		}
+
+		// Update phone numbers in the database
+		err = h.usersService.UpdateUserPhoneNumbers(r.Context(), userDetails.ID, userFakeID, req.Phones)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update phone numbers: "+err.Error())
+			return
+		}
+	}
+
+	// fetch updated phone numbers from the database
+	updatedPhones, err := h.usersService.GetUserPhoneNumbersByUserID(r.Context(), userDetails.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get updated phone numbers: "+err.Error())
+		return
+	}
+
+	// Audit log the update
+	oldValues, _ := json.Marshal(oldPhones)
+	newValues, _ := json.Marshal(updatedPhones)
+	module := db.ModuleUsers
+	if !perms.IsOwnerOfAccount {
+		module = db.ModuleAdmin
+	}
+
+	// save the log
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: module, Valid: true},
+		Action:     db.ActionUpdateUserPhoneNumbers,
+		ActorID:    claims.UserID,
+		ActorRole:  pgtype.Text{String: strings.Join(claims.Roles, ","), Valid: true},
+		EntityType: db.EntityTypeUser,
+		EntityID:   fmt.Sprintf("%d", userDetails.ID),
+		OldValues:  oldValues,
+		NewValues:  newValues,
+	})
+
+	// return phone numbers for UI to update the cached version
+	h.utils.RespondSuccess(w, http.StatusOK, "Phone numbers updated successfully", map[string]interface{}{
+		"phones":   updatedPhones,
+		"user_fid": userFakeID,
+	})
+}
+
+type DeleteUserPhoneNumberRequest struct {
+	PhoneID int64 `json:"phone_id" validate:"required"`
+	UserFid int64 `json:"user_fid" validate:"required"`
 }
 
 // DeleteUserPhoneNumber handles DELETE /api/v1/admin/users/phones/{id}
@@ -720,22 +867,107 @@ func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request)
 // @Failure      400  {object}  map[string]interface{}
 // @Failure      500  {object}  map[string]interface{}
 // @Security     BearerAuth
-// @Router       /admin/users/phones/{id} [delete]
+// @Router       /admin/users/phones [delete]
 func (h *Handler) DeleteUserPhoneNumber(w http.ResponseWriter, r *http.Request) {
-	idStr := chi.URLParam(r, "id")
-	phoneID, err := strconv.ParseInt(idStr, 10, 64)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid phone number ID format")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
-	err = h.usersService.DeleteUserPhoneNumber(r.Context(), phoneID)
+	var req DeleteUserPhoneNumberRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// fetch user details by fake id
+	userDetails, err := h.usersService.GetUserByFakeID(r.Context(), req.UserFid)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	// check permissions
+	hasPermission, perms, err := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
+	if !hasPermission {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// get list of phone numbers
+	phones, err := h.usersService.GetUserPhoneNumbersByUserID(r.Context(), userDetails.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch user phone numbers: "+err.Error())
+		return
+	}
+
+	// validate it's not the only number
+	if len(phones) <= 1 {
+		h.utils.RespondError(w, http.StatusBadRequest, "Cannot delete the only phone number associated with the account")
+		return
+	}
+
+	// find the phone number and validate it's not active
+	var targetPhone *queries.UsersPhoneNumber
+	for i := range phones {
+		if phones[i].ID == req.PhoneID {
+			targetPhone = &phones[i]
+			break
+		}
+	}
+
+	// if the phone number is not found, return an error
+	if targetPhone == nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Phone number not found")
+		return
+	}
+
+	// if the phone number is active, return an error
+	if targetPhone.IsDefault.Bool {
+		h.utils.RespondError(w, http.StatusBadRequest, "Cannot delete an active phone number")
+		return
+	}
+
+	// delete the phone number
+	err = h.usersService.DeleteUserPhoneNumber(r.Context(), req.PhoneID, userDetails.ID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete phone number: "+err.Error())
 		return
 	}
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Phone number deleted successfully", nil)
+	// fetch updated phone numbers from the database
+	updatedPhones, err := h.usersService.GetUserPhoneNumbersByUserID(r.Context(), userDetails.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get updated phone numbers: "+err.Error())
+		return
+	}
+
+	// log the activity that the phone number was deleted
+	module := db.ModuleUsers
+	if !perms.IsOwnerOfAccount {
+		module = db.ModuleAdmin
+	}
+	oldValues, _ := json.Marshal(targetPhone)
+	newValues, _ := json.Marshal(updatedPhones)
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: module, Valid: true},
+		Action:     db.ActionDeleteUserPhoneNumber,
+		ActorID:    claims.UserID,
+		ActorRole:  pgtype.Text{String: strings.Join(claims.Roles, ","), Valid: true},
+		EntityType: db.EntityTypeUser,
+		EntityID:   fmt.Sprintf("%d", userDetails.ID),
+		OldValues:  oldValues,
+		NewValues:  newValues,
+	})
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Phone number deleted successfully", map[string]interface{}{
+		"phones":   updatedPhones,
+		"user_fid": req.UserFid,
+	})
 }
 
 // MakeUserSuperAdminRequest represents the request to promote a user

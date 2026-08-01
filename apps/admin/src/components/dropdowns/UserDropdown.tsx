@@ -101,10 +101,6 @@ export const UserDropdown = ({
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
         user={userDetails}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["users-list"] });
-          refetch?.();
-        }}
       />
 
       <UserRoleDialog
@@ -112,8 +108,7 @@ export const UserDropdown = ({
         onClose={() => setOpenRoleDialog(false)}
         user={userDetails}
         onSuccess={() => {
-          setOpenRoleDialog(false)
-          // queryClient.invalidateQueries({ queryKey: ["users-list"] });
+          // setOpenRoleDialog(false)
         }}
       />
 
@@ -124,7 +119,6 @@ export const UserDropdown = ({
         forWho="user"
         onSuccess={() => {
           setOpenBadgeDialog(false)
-          // queryClient.invalidateQueries({ queryKey: ["users-list"] });
         }}
       />
 

@@ -15,8 +15,6 @@ CREATE TABLE users (
   gender VARCHAR(10) CHECK (gender IN ('male', 'female')),
   date_of_birth DATE,
 
-  whatsapp_phone VARCHAR(25),
-  data_phone VARCHAR(25),
   voters_card_image VARCHAR(255),
 
   current_country SMALLINT REFERENCES c_countries(id) NOT NULL,
@@ -63,6 +61,13 @@ CREATE INDEX idx_users_polling_unit_id ON users(polling_unit_id);
 CREATE INDEX idx_users_is_politician ON users(is_politician);
 CREATE INDEX idx_users_account_status ON users(account_status);
 
+-- pg_trgm extension and indexes for fast ILIKE searches
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX idx_users_first_name_trgm ON users USING gin (first_name gin_trgm_ops);
+CREATE INDEX idx_users_last_name_trgm ON users USING gin (last_name gin_trgm_ops);
+CREATE INDEX idx_users_username_trgm ON users USING gin (username gin_trgm_ops);
+
+
 -- USER BANK ACCOUNTS TABLE
 CREATE TABLE user_bank_accounts (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -87,6 +92,7 @@ CREATE TABLE users_nin (
 CREATE TABLE users_phone_numbers (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  owner_is_verified BOOLEAN DEFAULT false,
   phone VARCHAR(25) UNIQUE NOT NULL,
   raw_input VARCHAR(25) NOT NULL,
   phonecode VARCHAR(10) NOT NULL,

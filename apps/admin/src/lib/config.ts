@@ -172,9 +172,10 @@ export const API_URL = {
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
   userRoles: (id: string | number) => `${api}/admin/users/${id}/roles`,
   userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
-  manageUserPhoneNumber: (id: string | number) => `${api}/admin/users/phones/${id}`,
+  manageUserPhoneNumber: () => `${api}/admin/users/phones`,
   users: `${api}/users`,
   recalculateBodies: `${api}/bodies/recalculate`,
   verificationTypes: `${api}/verifications/types`,
   adminVerifications: `${api}/admin/verifications`,
+  occupations: `${api}/occupations`,
 };

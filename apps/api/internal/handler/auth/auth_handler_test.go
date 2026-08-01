@@ -24,6 +24,20 @@ type MockAuthService struct {
 	mock.Mock
 }
 
+type MockUsersService struct {
+	mock.Mock
+}
+
+func (m *MockUsersService) CheckNIN(ctx context.Context, nin string) bool {
+	args := m.Called(ctx, nin)
+	return args.Bool(0)
+}
+
+func (m *MockUsersService) CheckUsername(ctx context.Context, username string) bool {
+	args := m.Called(ctx, username)
+	return args.Bool(0)
+}
+
 func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (authservice.RegisterResult, error) {
 	args := m.Called(ctx, params, nin, onboardingID, question1, answer1, question2, answer2)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
@@ -112,21 +126,6 @@ func (m *MockAuthService) MakeUserSuperAdmin(ctx context.Context, username strin
 	return args.Error(0)
 }
 
-func (m *MockAuthService) CheckEmail(ctx context.Context, email string) bool {
-	args := m.Called(ctx, email)
-	return args.Bool(0)
-}
-
-func (m *MockAuthService) CheckPhone(ctx context.Context, phone string) bool {
-	args := m.Called(ctx, phone)
-	return args.Bool(0)
-}
-
-func (m *MockAuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) {
-	args := m.Called(phone, country_code)
-	return args.String(0), args.Error(1)
-}
-
 func (m *MockAuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error {
 	args := m.Called(ctx, username, email, nin, userID, fakeID)
 	return args.Error(0)
@@ -152,7 +151,7 @@ func TestRegister(t *testing.T) {
 		// Create a new instance of the MockAuthService
 		mockService := new(MockAuthService)
 		// Create a new instance of the AuthHandler with the mock service and utils instance
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		// Create a RegisterRequest with valid data
 		reqBody := authhandler.RegisterRequest{
@@ -208,7 +207,7 @@ func TestRegister(t *testing.T) {
 		mockService := new(MockAuthService)
 
 		// Create a new instance of the AuthHandler with the mock service and utils instance
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		// Create a new HTTP request with invalid JSON body
 		req, _ := http.NewRequest("POST", "/auth/register", bytes.NewBufferString("invalid json"))
@@ -229,7 +228,7 @@ func TestRegister(t *testing.T) {
 		// Create a new instance of the MockAuthService
 		mockService := new(MockAuthService)
 		// Create a new instance of the AuthHandler with the mock service and utils instance
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		// Create a RegisterRequest with missing required fields
 		reqBody := authhandler.RegisterRequest{
@@ -259,7 +258,7 @@ func TestRegister(t *testing.T) {
 		// Create a new instance of the MockAuthService
 		mockService := new(MockAuthService)
 		// Create a new instance of the AuthHandler with the mock service and utils instance
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		// Create a RegisterRequest with an invalid date format
 		reqBody := authhandler.RegisterRequest{
@@ -301,7 +300,7 @@ func TestRegister(t *testing.T) {
 		// Create a new instance of the MockAuthService
 		mockService := new(MockAuthService)
 		// Create a new instance of the AuthHandler with the mock service and utils instance
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		// Create a RegisterRequest with valid data
 		reqBody := authhandler.RegisterRequest{
@@ -351,7 +350,7 @@ func TestAdminLogin(t *testing.T) {
 
 	t.Run("successful admin login", func(t *testing.T) {
 		mockService := new(MockAuthService)
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		reqBody := authhandler.AdminLoginRequest{
 			IdentifierType: "email",
@@ -391,7 +390,7 @@ func TestChangePasswordByEmail(t *testing.T) {
 
 	t.Run("successful password change", func(t *testing.T) {
 		mockService := new(MockAuthService)
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		reqBody := authhandler.ChangePasswordByEmailRequest{
 			Email:    "user@example.com",
@@ -415,7 +414,7 @@ func TestChangePasswordByEmail(t *testing.T) {
 
 	t.Run("validation failure - short password", func(t *testing.T) {
 		mockService := new(MockAuthService)
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		reqBody := authhandler.ChangePasswordByEmailRequest{
 			Email:    "user@example.com",
@@ -434,7 +433,7 @@ func TestChangePasswordByEmail(t *testing.T) {
 
 	t.Run("service failure - user not found", func(t *testing.T) {
 		mockService := new(MockAuthService)
-		handler := authhandler.NewHandler(mockService, utilsInstance)
+		handler := authhandler.NewHandler(mockService, new(MockUsersService), utilsInstance)
 
 		reqBody := authhandler.ChangePasswordByEmailRequest{
 			Email:    "notfound@example.com",

@@ -199,8 +199,6 @@ SELECT
   u.current_city,
   uba.account_number AS bank_account_number,
   uba.bank_code AS bank_code,
-  u.whatsapp_phone,
-  u.data_phone,
   up.educational_status,
   up.highest_degree,
   up.graduation_year,
@@ -281,8 +279,6 @@ type ListApplicationsRow struct {
 	CurrentCity       pgtype.Int4        `json:"current_city"`
 	BankAccountNumber pgtype.Text        `json:"bank_account_number"`
 	BankCode          pgtype.Text        `json:"bank_code"`
-	WhatsappPhone     pgtype.Text        `json:"whatsapp_phone"`
-	DataPhone         pgtype.Text        `json:"data_phone"`
 	EducationalStatus pgtype.Text        `json:"educational_status"`
 	HighestDegree     pgtype.Text        `json:"highest_degree"`
 	GraduationYear    pgtype.Text        `json:"graduation_year"`
@@ -343,8 +339,6 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.CurrentCity,
 			&i.BankAccountNumber,
 			&i.BankCode,
-			&i.WhatsappPhone,
-			&i.DataPhone,
 			&i.EducationalStatus,
 			&i.HighestDegree,
 			&i.GraduationYear,
@@ -473,15 +467,13 @@ SET
   current_state = $6,
   current_lga = $7,
   current_city = $8,
-  whatsapp_phone = $9,
-  data_phone = $10,
-  current_ward = $11,
-  phone = COALESCE(NULLIF($12::varchar, ''), phone),
-  polling_unit_id = $13,
-  address = COALESCE(NULLIF($14::varchar, ''), address),
+  current_ward = $9,
+  phone = COALESCE(NULLIF($10::varchar, ''), phone),
+  polling_unit_id = $11,
+  address = COALESCE(NULLIF($12::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -493,8 +485,6 @@ type UpdateUserAgentDetailsParams struct {
 	CurrentState    int16       `json:"current_state"`
 	CurrentLga      pgtype.Int4 `json:"current_lga"`
 	CurrentCity     pgtype.Int4 `json:"current_city"`
-	WhatsappPhone   pgtype.Text `json:"whatsapp_phone"`
-	DataPhone       pgtype.Text `json:"data_phone"`
 	CurrentWard     pgtype.Int4 `json:"current_ward"`
 	Phone           string      `json:"phone"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
@@ -511,8 +501,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.CurrentState,
 		arg.CurrentLga,
 		arg.CurrentCity,
-		arg.WhatsappPhone,
-		arg.DataPhone,
 		arg.CurrentWard,
 		arg.Phone,
 		arg.PollingUnitID,
@@ -532,8 +520,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
-		&i.WhatsappPhone,
-		&i.DataPhone,
 		&i.VotersCardImage,
 		&i.CurrentCountry,
 		&i.CurrentState,
@@ -563,7 +549,7 @@ WITH inserted AS (
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
+RETURNING id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
@@ -582,8 +568,6 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User
 		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
-		&i.WhatsappPhone,
-		&i.DataPhone,
 		&i.VotersCardImage,
 		&i.CurrentCountry,
 		&i.CurrentState,
