@@ -88,8 +88,8 @@ func BuildKey(folder, originalName, uniqueID string) string {
 	ext := filepath.Ext(originalName)
 	base := strings.TrimSuffix(originalName, ext)
 
-	// Sanitise: replace anything that isn't alphanumeric / hyphen / underscore
-	sanitised := strings.Map(func(r rune) rune {
+	// sanitized: replace anything that isn't alphanumeric / hyphen / underscore
+	sanitized := strings.Map(func(r rune) rune {
 		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
 			(r >= '0' && r <= '9') || r == '-' || r == '_' {
 			return r
@@ -98,15 +98,15 @@ func BuildKey(folder, originalName, uniqueID string) string {
 	}, base)
 
 	// Collapse multiple consecutive hyphens and trim to 60 chars
-	for strings.Contains(sanitised, "--") {
-		sanitised = strings.ReplaceAll(sanitised, "--", "-")
+	for strings.Contains(sanitized, "--") {
+		sanitized = strings.ReplaceAll(sanitized, "--", "-")
 	}
-	sanitised = strings.Trim(sanitised, "-")
-	if len(sanitised) > 60 {
-		sanitised = sanitised[:60]
+	sanitized = strings.Trim(sanitized, "-")
+	if len(sanitized) > 60 {
+		sanitized = sanitized[:60]
 	}
-	if sanitised == "" {
-		sanitised = "file"
+	if sanitized == "" {
+		sanitized = "file"
 	}
 
 	date := time.Now().UTC().Format("2006-01-02")
@@ -115,7 +115,7 @@ func BuildKey(folder, originalName, uniqueID string) string {
 		folder = "uploads"
 	}
 
-	return fmt.Sprintf("%s/%s/%s-%s%s", folder, date, sanitised, uniqueID, ext)
+	return fmt.Sprintf("%s/%s/%s-%s%s", folder, date, sanitized, uniqueID, ext)
 }
 
 // PresignedUploadURL returns a pre-signed PUT URL that the client can use

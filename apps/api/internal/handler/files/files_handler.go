@@ -116,8 +116,10 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		folder = "uploads"
 	}
 
+	// Generate a unique object key for R2 (e.g., folder/date/sanitized-name-uuid.ext)
 	key := r2service.BuildKey(folder, req.OriginalName, uuid.New().String())
 
+	// Request a presigned URL that allows the client to upload directly to R2
 	const presignTTL = 15 * time.Minute
 	presignURL, err := h.r2.PresignedUploadURL(r.Context(), key, req.MimeType, presignTTL)
 	if err != nil {
@@ -125,6 +127,7 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Determine the public URL where the file will be accessible after a successful upload
 	publicURL := h.r2.PublicURL(key)
 
 	// Resolve the authenticated user from the JWT claims (optional — set null if absent).

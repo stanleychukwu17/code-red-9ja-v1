@@ -18,7 +18,7 @@ import { Input } from "../input";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Plus, ChevronDown, Trash2 } from "lucide-react";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { SelectGender } from "../selects/gender-select";
 import { SelectDate } from "../selects/date-select";
 import { SelectCountry } from "../selects/country-select";
@@ -345,8 +345,10 @@ export function UserFormDialog({
     setError(null);
 
     try {
+      // 1. Convert image to WebP format for optimized storage
       const file = await convertToWebP(rawFile);
 
+      // 2. Request a presigned URL from our API to upload directly to cloud storage
       const res = await getPresignedUploadURL({
         data: {
           original_name: file.name,
@@ -363,20 +365,23 @@ export function UserFormDialog({
 
       const { upload_url, public_url, file_id } = res.data;
 
+      // 3. Upload the file directly to cloud storage using the presigned URL
       const putRes = await fetch(upload_url, {
         method: "PUT",
-        headers: {
-          "Content-Type": file.type,
-        },
+        headers: { "Content-Type": file.type },
         body: file,
       });
 
+      // 4. Confirm or reject the upload status with our API
       if (!putRes.ok) {
         await confirmFileUpload({ data: { id: file_id, success: false } });
         throw new Error("Failed to upload image file to storage");
       }
 
+      // If upload successful, confirm with backend
       await confirmFileUpload({ data: { id: file_id, success: true } });
+
+      // 5. Update the UI with the new avatar URL
       setAvatarUrl(public_url);
     } catch (err: any) {
       setError(err.message || "An error occurred during file upload");
