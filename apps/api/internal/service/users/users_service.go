@@ -374,34 +374,9 @@ func (s *UsersService) GetUserVerification(ctx context.Context, userID int64) (q
 	return s.queries.GetUserVerification(ctx, userID)
 }
 
-// DeleteUser removes a user by ID and invalidates their user info cache.
-func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) error {
-	// err := s.queries.DeleteUser(ctx, id)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// Invalidate the cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
-	return nil
-}
-
-// AdminUpdateUser allows admins to perform a comprehensive update of user details.
-func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int16, email string) error {
-	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
-		ID:             id,
-		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
-		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
-		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
-		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
-		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
-		CurrentCountry: countryID,
-		CurrentState:   stateID,
-		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
-		PartyID:        pgtype.Int2{Int16: int16(partyID), Valid: partyID != 0},
-		Email:          pgtype.Text{String: email, Valid: email != ""},
-		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
-	})
+// DeleteUserAccount removes a user by ID and invalidates their user info cache.
+func (s *UsersService) DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error {
+	err := s.queries.DeleteUser(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -442,10 +417,41 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	return profile, nil
 }
 
+// AdminUpdateUser allows admins to perform a comprehensive update of user details.
+func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
+	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
+		ID:             id,
+		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
+		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
+		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
+		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
+		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		CurrentCountry: countryID,
+		CurrentState:   stateID,
+		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
+		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	return nil
+}
+
 // UpdateUserProfileDetails updates extended educational and demographic information for a user.
-func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel string) error {
+func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error {
+	var pgOccupationID pgtype.Int2
+	if occupationID != nil {
+		pgOccupationID = pgtype.Int2{Int16: *occupationID, Valid: true}
+	} else {
+		pgOccupationID = pgtype.Int2{Valid: false}
+	}
+
 	err := s.queries.UpdateMoreInfoAboutThisUser(ctx, queries.UpdateMoreInfoAboutThisUserParams{
 		UserID:            userID,
+		OccupationID:      pgOccupationID,
 		EducationalStatus: pgtype.Text{String: educationalStatus, Valid: educationalStatus != ""},
 		HighestDegree:     pgtype.Text{String: highestDegree, Valid: highestDegree != ""},
 		GraduationYear:    pgtype.Text{String: graduationYear, Valid: graduationYear != ""},
@@ -453,6 +459,7 @@ func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int6
 		Religion:          pgtype.Text{String: religion, Valid: religion != ""},
 		MaritalStatus:     pgtype.Text{String: maritalStatus, Valid: maritalStatus != ""},
 		EducationLevel:    pgtype.Text{String: educationLevel, Valid: educationLevel != ""},
+		Address:           pgtype.Text{String: address, Valid: address != ""},
 	})
 	if err != nil {
 		return err
@@ -507,7 +514,7 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 	// and ensure no more than 1 phone number is set as default
 	newPhonesCount := 0
 	defaultPhonesCount := 0
-	
+
 	for _, p := range phones {
 		if p.IsDefault {
 			defaultPhonesCount++
