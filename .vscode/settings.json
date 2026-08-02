@@ -71,6 +71,7 @@
     "pollingagent",
     "pollingunitshandler",
     "pollingunitsservice",
+    "presign",
     "promauto",
     "promhttp",
     "puassignments",
