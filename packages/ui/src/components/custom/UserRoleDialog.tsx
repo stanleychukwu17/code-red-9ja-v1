@@ -119,6 +119,7 @@ export function UserRoleDialog({
 
       // Trigger success callback
       onSuccess?.();
+      onClose();
     },
     onError: (err: any) => {
       // Display error message to the user if the mutation fails
