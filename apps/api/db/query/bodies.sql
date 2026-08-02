@@ -243,3 +243,7 @@ WHERE id = 1;
 
 -- name: GetNationalMetrics :one
 SELECT * FROM national_metrics WHERE id = 1 LIMIT 1;
+
+-- name: GetOccupations :many
+SELECT id, category, name FROM occupations
+ORDER BY category ASC, name ASC;
