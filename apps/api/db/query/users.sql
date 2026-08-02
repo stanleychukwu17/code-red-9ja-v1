@@ -111,7 +111,8 @@ ORDER BY u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 
 -- name: DeleteUser :exec
-DELETE FROM users
+UPDATE users
+SET account_status = 'deleted'
 WHERE id = $1;
 
 -- name: SeedUser :one
@@ -124,7 +125,6 @@ INSERT INTO users (
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 RETURNING id;
 
-
 -- name: AdminUpdateUser :exec
 UPDATE users
 SET first_name = $2,
@@ -135,9 +135,7 @@ SET first_name = $2,
     current_country = $7,
     current_state = $8,
     current_city = $9,
-    party_id = $10,
-    email = $11,
-    state_of_origin = $12,
+    state_of_origin = $10,
     updated_at = NOW()
 WHERE id = $1;
 
