@@ -102,22 +102,23 @@ function DialogContent({
 
 function DialogHeader({
   title,
+  description,
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: React.HTMLAttributes<HTMLDivElement> & { title?: React.ReactNode; description?: React.ReactNode }) {
   return (
-    // <div
-    //   data-slot="dialog-header"
-    //   className={cn("flex flex-col gap-1.5 text-left", className)}
-    //   {...props}
-    // />
     <div
-      className="flex items-center justify-between px-6 pr-4 pt-4"
+      className={cn("flex items-start justify-between px-6 pr-4 pt-4", className)}
       {...props}
     >
-      <DialogPrimitive.Title className="text-[20px] font-medium text-c-80 tracking-tight">
-        {title}
-      </DialogPrimitive.Title>
+      <div className="flex flex-col gap-1 text-left">
+        <DialogPrimitive.Title className="text-[20px] font-medium text-c-80 tracking-tight">
+          {title}
+        </DialogPrimitive.Title>
+        {description && (
+          <p className="text-c-60 text-sm">{description}</p>
+        )}
+      </div>
       <DialogClose asChild>
         <button
           className="size-10 flex items-center justify-center rounded-full text-c-50 hover:bg-c-5 hover:text-c-80 transition-colors duration-150 cursor-pointer"

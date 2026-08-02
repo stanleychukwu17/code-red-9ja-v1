@@ -22,7 +22,6 @@ import {
   PageHeader,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { getPageHeader } from "#/lib/shared/meta";
-import { cn } from "@repo/ui/lib/utils";
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute(

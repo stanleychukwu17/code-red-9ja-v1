@@ -40,7 +40,7 @@ type PartiesService interface {
 	UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error)
 	// Allowance methods
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
-	UpdateStateAllowances(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
+	UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 }
 
 type Handler struct {
@@ -884,7 +884,7 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// UpdateStateAllowances godoc
+// UpdateAgentPaymentAllocation godoc
 // @Summary      Update polling agent payment settings per state
 // @Description  Saves the polling agent allowance budget settings per state (Same pay or Custom per state) for a party
 // @Tags         Parties
@@ -895,7 +895,7 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 // @Success      200  {object} map[string]interface{} "Allowances configuration updated successfully"
 // @Security     BearerAuth
 // @Router       /parties/{id}/allowances/settings [put]
-func (h *Handler) UpdateStateAllowances(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateAgentPaymentAllocation(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -909,7 +909,7 @@ func (h *Handler) UpdateStateAllowances(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	party, err := h.partiesService.UpdateStateAllowances(r.Context(), int16(partyID), bodyBytes)
+	party, err := h.partiesService.UpdateAgentPaymentAllocation(r.Context(), int16(partyID), bodyBytes)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return

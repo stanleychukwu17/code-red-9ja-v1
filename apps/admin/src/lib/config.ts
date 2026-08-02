@@ -18,19 +18,24 @@ export const APP_URL = {
   elections: "/elections",
   bodies: "/bodies/states",
   users: {
-    admins: "/users/admin"
+    admins: "/users/admin",
   },
   parties: "/parties",
   applications: "/applications",
   notifications: "/notifications",
+  logs: "/logs",
+  settings: {
+    general: "/settings",
+    partyadmin: "/settings/partyadmin",
+  },
 };
 
-const web = `${WEB_DNS}`
+const web = `${WEB_DNS}`;
 export const WEB_URL = {
   users: {
-    profile: (username: string) => `${web}/users/profile/${username}`
-  }
-}
+    profile: (username: string) => `${web}/users/profile/${username}`,
+  },
+};
 
 const api = `${API_BASE}/api/v1`;
 export const API_URL = {
@@ -144,11 +149,14 @@ export const API_URL = {
   states: `${api}/states`,
   stateById: (id: string | number) => `${api}/states/${id}`,
   senatorialDistricts: `${api}/senatorial-districts`,
-  senatorialDistrictById: (id: string | number) => `${api}/senatorial-districts/${id}`,
+  senatorialDistrictById: (id: string | number) =>
+    `${api}/senatorial-districts/${id}`,
   federalConstituencies: `${api}/federal-constituencies`,
-  federalConstituencyById: (id: string | number) => `${api}/federal-constituencies/${id}`,
+  federalConstituencyById: (id: string | number) =>
+    `${api}/federal-constituencies/${id}`,
   stateAssemblyConstituencies: `${api}/state-assembly-constituencies`,
-  stateAssemblyConstituencyById: (id: string | number) => `${api}/state-assembly-constituencies/${id}`,
+  stateAssemblyConstituencyById: (id: string | number) =>
+    `${api}/state-assembly-constituencies/${id}`,
   wards: `${api}/wards`,
   wardById: (id: string | number) => `${api}/wards/${id}`,
   pollingUnits: `${api}/polling-units`,
@@ -157,7 +165,8 @@ export const API_URL = {
   electionGroupById: (id: string | number) => `${api}/election-groups/${id}`,
   elections: `${api}/elections`,
   electionById: (id: string | number) => `${api}/elections/${id}`,
-  electionCandidates: (id: string | number) => `${api}/elections/${id}/candidates`,
+  electionCandidates: (id: string | number) =>
+    `${api}/elections/${id}/candidates`,
   electionsNationwide: `${api}/elections/nationwide`,
   electionsState: `${api}/elections/state`,
   electionsSenatorialDistrict: `${api}/elections/senatorial-district`,
@@ -169,7 +178,12 @@ export const API_URL = {
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
   userRoles: (id: string | number) => `${api}/admin/users/${id}/roles`,
   userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
-  manageUserPhoneNumber: (id: string | number) => `${api}/admin/users/phones/${id}`,
+  manageUserPhoneNumber: (id: string | number) =>
+    `${api}/admin/users/phones/${id}`,
   users: `${api}/users`,
   recalculateBodies: `${api}/bodies/recalculate`,
+  systemSettings: {
+    get: (key: string) => `${api}/admin/settings/${key}`,
+    update: (key: string) => `${api}/admin/settings/${key}`,
+  },
 };

@@ -16,7 +16,7 @@ UPDATE parties
 SET slots = slots + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, agent_payment_allocation, created_at, updated_at
 `
 
 type AddPartySlotsParams struct {
@@ -38,7 +38,7 @@ func (q *Queries) AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (P
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AllowanceBalanceKobo,
-		&i.StateAllowances,
+		&i.AgentPaymentAllocation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -50,7 +50,7 @@ UPDATE parties
 SET slots = slots - $1,
     updated_at = NOW()
 WHERE id = $2 AND slots >= $1
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, agent_payment_allocation, created_at, updated_at
 `
 
 type DeductPartySlotsParams struct {
@@ -72,7 +72,7 @@ func (q *Queries) DeductPartySlots(ctx context.Context, arg DeductPartySlotsPara
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AllowanceBalanceKobo,
-		&i.StateAllowances,
+		&i.AgentPaymentAllocation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -101,7 +101,7 @@ UPDATE parties
 SET discount_percentage = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, agent_payment_allocation, created_at, updated_at
 `
 
 type UpdatePartyDiscountParams struct {
@@ -123,7 +123,7 @@ func (q *Queries) UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscou
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AllowanceBalanceKobo,
-		&i.StateAllowances,
+		&i.AgentPaymentAllocation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -132,18 +132,22 @@ func (q *Queries) UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscou
 
 const updateSystemSetting = `-- name: UpdateSystemSetting :one
 UPDATE system_settings
-SET value = $2, updated_at = NOW()
+SET 
+    value = $2, 
+    description = COALESCE($3, description),
+    updated_at = NOW()
 WHERE key = $1
 RETURNING key, value, description, created_at, updated_at
 `
 
 type UpdateSystemSettingParams struct {
-	Key   string `json:"key"`
-	Value []byte `json:"value"`
+	Key         string      `json:"key"`
+	Value       []byte      `json:"value"`
+	Description pgtype.Text `json:"description"`
 }
 
 func (q *Queries) UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error) {
-	row := q.db.QueryRow(ctx, updateSystemSetting, arg.Key, arg.Value)
+	row := q.db.QueryRow(ctx, updateSystemSetting, arg.Key, arg.Value, arg.Description)
 	var i SystemSetting
 	err := row.Scan(
 		&i.Key,

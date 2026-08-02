@@ -15,7 +15,7 @@ import { ResultModeToggle } from "./components/-result-mode-toggle";
 export function HomePageHeader({
   activeTab,
 }: {
-  activeTab: "main" | "election-day";
+  activeTab: "main" | "readiness" | "election-day";
 }) {
   const { partyShortName } = useParams({ strict: false });
   const {
@@ -37,6 +37,11 @@ export function HomePageHeader({
       id: "main",
       label: "Main",
       href: APP_URL.partyRoutes.home((partyShortName as string) || "party"),
+    },
+    {
+      id: "readiness",
+      label: "Readiness",
+      href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/readiness`,
     },
     {
       id: "election-day",

@@ -444,7 +444,7 @@ const PercentageInput = React.forwardRef<
       <div className="relative">
         <input
           ref={ref}
-          type="text"
+          type="number"
           className={cn(
             inputClassName,
             "pr-8",

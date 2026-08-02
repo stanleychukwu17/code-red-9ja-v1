@@ -520,12 +520,12 @@ func (_m *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int64
 	return r0, r1
 }
 
-// UpdateStateAllowances provides a mock function with given fields: ctx, partyID, allowancesJSON
-func (_m *PartiesService) UpdateStateAllowances(ctx context.Context, partyID int64, allowancesJSON []byte) (queries.Party, error) {
+// UpdateAgentPaymentAllocation provides a mock function with given fields: ctx, partyID, allowancesJSON
+func (_m *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, partyID int64, allowancesJSON []byte) (queries.Party, error) {
 	ret := _m.Called(ctx, partyID, allowancesJSON)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateStateAllowances")
+		panic("no return value specified for UpdateAgentPaymentAllocation")
 	}
 
 	var r0 queries.Party

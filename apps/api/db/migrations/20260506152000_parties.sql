@@ -10,7 +10,7 @@ CREATE TABLE parties (
   is_verified BOOLEAN DEFAULT false,
   discount_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
   allowance_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (allowance_balance_kobo >= 0),
-  state_allowances JSONB NOT NULL DEFAULT '{}'::jsonb,
+  agent_payment_allocation JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

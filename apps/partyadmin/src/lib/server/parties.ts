@@ -179,7 +179,7 @@ export const depositPartyAllowance = createServerFn({ method: "POST" })
   });
 
 export const updatePartyStateAllowances = createServerFn({ method: "POST" })
-  .inputValidator((data: { partyID: string | number; allowances: Record<string, number> }) => data)
+  .inputValidator((data: { partyID: string | number; allowances: Record<string, Record<string, number>> }) => data)
   .handler(async ({ data: { partyID, allowances } }) => {
     try {
       const response = await apiFetch(`${API_URL.parties}/${partyID}/allowances/settings`, {

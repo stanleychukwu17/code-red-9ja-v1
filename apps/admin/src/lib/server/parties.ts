@@ -106,3 +106,21 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
       return { success: false, message: "Failed to confirm file upload" };
     }
   });
+
+export const updatePartyStateAllowances = createServerFn({ method: "POST" })
+  .inputValidator((data: { partyID: string | number; allowances: Record<string, Record<string, number>> }) => data)
+  .handler(async ({ data: { partyID, allowances } }) => {
+    try {
+      const response = await apiFetch(`${API_URL.parties}/${partyID}/allowances/settings`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(allowances),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to update state allowances: " + (error as Error).message };
+    }
+  });

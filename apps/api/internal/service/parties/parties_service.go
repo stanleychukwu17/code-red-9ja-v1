@@ -617,16 +617,16 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 	return updatedParty, nil
 }
 
-// UpdateStateAllowances updates the state-by-state polling agent payment settings for a party.
-func (s *PartiesService) UpdateStateAllowances(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
+// UpdateAgentPaymentAllocation updates the state-by-state polling agent payment settings for a party.
+func (s *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
 	// Simple validation to ensure valid JSON is supplied
 	var temp map[string]any
 	if err := json.Unmarshal(allowancesJSON, &temp); err != nil {
 		return queries.Party{}, fmt.Errorf("invalid allowances configuration: %w", err)
 	}
 
-	return s.queries.UpdatePartyStateAllowances(ctx, queries.UpdatePartyStateAllowancesParams{
-		StateAllowances: allowancesJSON,
+	return s.queries.UpdatePartyAgentPaymentAllocation(ctx, queries.UpdatePartyAgentPaymentAllocationParams{
+		AgentPaymentAllocation: allowancesJSON,
 		ID:              partyID,
 	})
 }

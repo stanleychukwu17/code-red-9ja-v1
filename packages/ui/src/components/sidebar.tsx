@@ -17,6 +17,7 @@ import {
 } from "./sheet";
 import { Skeleton } from "./skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
+import SidebarIcon from "../icons/navbar/sidebar-icon";
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
@@ -277,7 +278,7 @@ function SidebarTrigger({
           <img src={img} alt="Trigger Icon" className="size-full" />
         </div>
       ) : (
-        <PanelLeftIcon className="cn-rtl-flip" />
+        <SidebarIcon />
       )}
 
       <span className="sr-only">Toggle Sidebar</span>

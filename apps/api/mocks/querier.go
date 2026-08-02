@@ -6200,26 +6200,26 @@ func (_m *Querier) UpdatePartyDiscount(ctx context.Context, arg queries.UpdatePa
 	return r0, r1
 }
 
-// UpdatePartyStateAllowances provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdatePartyStateAllowances(ctx context.Context, arg queries.UpdatePartyStateAllowancesParams) (queries.Party, error) {
+// UpdatePartyAgentPaymentAllocation provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpdatePartyAgentPaymentAllocation(ctx context.Context, arg queries.UpdatePartyAgentPaymentAllocationParams) (queries.Party, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdatePartyStateAllowances")
+		panic("no return value specified for UpdatePartyAgentPaymentAllocation")
 	}
 
 	var r0 queries.Party
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyStateAllowancesParams) (queries.Party, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyAgentPaymentAllocationParams) (queries.Party, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyStateAllowancesParams) queries.Party); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdatePartyAgentPaymentAllocationParams) queries.Party); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Get(0).(queries.Party)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdatePartyStateAllowancesParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdatePartyAgentPaymentAllocationParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)

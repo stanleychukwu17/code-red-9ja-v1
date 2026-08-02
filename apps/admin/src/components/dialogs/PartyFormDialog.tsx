@@ -136,7 +136,11 @@ export function PartyFormDialog({
 
   // TanStack Query Mutation for saving/creating/updating a party
   const saveMutation = useMutation({
-    mutationFn: async (values: { acronym: string; fullName: string; displayOrder: number }) => {
+    mutationFn: async (values: {
+      acronym: string;
+      fullName: string;
+      displayOrder: number;
+    }) => {
       let res;
       if (mode === "update") {
         if (!party?.id) {
@@ -222,7 +226,8 @@ export function PartyFormDialog({
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     errorMsg={
-                      field.state.meta.isTouched && field.state.meta.errors.length
+                      field.state.meta.isTouched &&
+                      field.state.meta.errors.length
                         ? (field.state.meta.errors[0] as string)
                         : undefined
                     }
@@ -250,7 +255,8 @@ export function PartyFormDialog({
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
                     errorMsg={
-                      field.state.meta.isTouched && field.state.meta.errors.length
+                      field.state.meta.isTouched &&
+                      field.state.meta.errors.length
                         ? (field.state.meta.errors[0] as string)
                         : undefined
                     }
@@ -278,7 +284,8 @@ export function PartyFormDialog({
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     errorMsg={
-                      field.state.meta.isTouched && field.state.meta.errors.length
+                      field.state.meta.isTouched &&
+                      field.state.meta.errors.length
                         ? (field.state.meta.errors[0] as string)
                         : undefined
                     }

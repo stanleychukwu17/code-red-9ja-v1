@@ -39,7 +39,7 @@ export interface PartyDetails {
   logo?: string;
   slots?: number;
   allowanceBalanceKobo?: number;
-  stateAllowances?: Record<string, number>;
+  agentPaymentAllocation?: Record<string, number>;
 }
 
 export interface BackendParty {
@@ -49,7 +49,7 @@ export interface BackendParty {
   logo?: string;
   slots?: number;
   allowance_balance_kobo?: number;
-  state_allowances?: Record<string, number>;
+  agent_payment_allocation?: Record<string, number>;
   created_at?: string;
   updated_at?: string;
 }
@@ -78,7 +78,7 @@ export interface UserDetails {
     logo?: string;
     slots?: number;
     allowance_balance_kobo?: number;
-    state_allowances?: Record<string, number>;
+    agent_payment_allocation?: Record<string, number>;
     created_at?: string;
     updated_at?: string;
   };
@@ -117,7 +117,7 @@ export const usePartyDetails = (): PartyDetails | null => {
         logo: fetchedParty.logo,
         slots: fetchedParty.slots || 0,
         allowanceBalanceKobo: fetchedParty.allowance_balance_kobo || 0,
-        stateAllowances: fetchedParty.state_allowances || {},
+        agentPaymentAllocation: fetchedParty.agent_payment_allocation || {},
       }
     : user?.party?.short_name
       ? {
@@ -127,7 +127,7 @@ export const usePartyDetails = (): PartyDetails | null => {
           logo: user.party.logo,
           slots: user.party.slots || 0,
           allowanceBalanceKobo: user.party.allowance_balance_kobo || 0,
-          stateAllowances: user.party.state_allowances || {},
+          agentPaymentAllocation: user.party.agent_payment_allocation || {},
         }
       : user?.party_id
         ? {
@@ -136,7 +136,7 @@ export const usePartyDetails = (): PartyDetails | null => {
             name: "",
             slots: 0,
             allowanceBalanceKobo: 0,
-            stateAllowances: {},
+            agentPaymentAllocation: {},
           }
         : null;
 

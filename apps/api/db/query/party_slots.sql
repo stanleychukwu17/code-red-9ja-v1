@@ -3,7 +3,10 @@ SELECT * FROM system_settings WHERE key = $1;
 
 -- name: UpdateSystemSetting :one
 UPDATE system_settings
-SET value = $2, updated_at = NOW()
+SET 
+    value = $2, 
+    description = COALESCE(sqlc.narg('description'), description),
+    updated_at = NOW()
 WHERE key = $1
 RETURNING *;
 

@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSuperadminRouteImport } from './routes/auth/superadmin'
@@ -16,8 +17,11 @@ import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedBodiesRouteImport } from './routes/_authenticated/bodies'
+import { Route as SettingsPartyadminIndexRouteImport } from './routes/settings/partyadmin/index'
+import { Route as SettingsGeneralIndexRouteImport } from './routes/settings/_general/index'
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
+import { Route as AuthenticatedLogsIndexRouteImport } from './routes/_authenticated/logs/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/home/index'
 import { Route as AuthenticatedElectionsIndexRouteImport } from './routes/_authenticated/elections/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
@@ -34,6 +38,11 @@ import { Route as AuthenticatedBodiesPollingUnitsRouteImport } from './routes/_a
 import { Route as AuthenticatedBodiesLgasRouteImport } from './routes/_authenticated/bodies/lgas'
 import { Route as AuthenticatedBodiesFederalConstituenciesRouteImport } from './routes/_authenticated/bodies/federal-constituencies'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -68,6 +77,16 @@ const AuthenticatedBodiesRoute = AuthenticatedBodiesRouteImport.update({
   path: '/bodies',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const SettingsPartyadminIndexRoute = SettingsPartyadminIndexRouteImport.update({
+  id: '/partyadmin/',
+  path: '/partyadmin/',
+  getParentRoute: () => SettingsRoute,
+} as any)
+const SettingsGeneralIndexRoute = SettingsGeneralIndexRouteImport.update({
+  id: '/_general/',
+  path: '/',
+  getParentRoute: () => SettingsRoute,
+} as any)
 const AuthenticatedPartiesIndexRoute =
   AuthenticatedPartiesIndexRouteImport.update({
     id: '/parties/',
@@ -80,6 +99,11 @@ const AuthenticatedNotificationsIndexRoute =
     path: '/notifications/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedLogsIndexRoute = AuthenticatedLogsIndexRouteImport.update({
+  id: '/logs/',
+  path: '/logs/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedHomeIndexRoute = AuthenticatedHomeIndexRouteImport.update({
   id: '/home/',
   path: '/home/',
@@ -169,6 +193,7 @@ const AuthenticatedBodiesFederalConstituenciesRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/settings': typeof SettingsRouteWithChildren
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/users': typeof AuthenticatedUsersRouteWithChildren
@@ -189,8 +214,11 @@ export interface FileRoutesByFullPath {
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/elections/': typeof AuthenticatedElectionsIndexRoute
   '/home/': typeof AuthenticatedHomeIndexRoute
+  '/logs/': typeof AuthenticatedLogsIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/parties/': typeof AuthenticatedPartiesIndexRoute
+  '/settings/': typeof SettingsGeneralIndexRoute
+  '/settings/partyadmin/': typeof SettingsPartyadminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -213,13 +241,17 @@ export interface FileRoutesByTo {
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/elections': typeof AuthenticatedElectionsIndexRoute
   '/home': typeof AuthenticatedHomeIndexRoute
+  '/logs': typeof AuthenticatedLogsIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/parties': typeof AuthenticatedPartiesIndexRoute
+  '/settings': typeof SettingsGeneralIndexRoute
+  '/settings/partyadmin': typeof SettingsPartyadminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/settings': typeof SettingsRouteWithChildren
   '/_authenticated/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/_authenticated/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/_authenticated/users': typeof AuthenticatedUsersRouteWithChildren
@@ -240,13 +272,17 @@ export interface FileRoutesById {
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/elections/': typeof AuthenticatedElectionsIndexRoute
   '/_authenticated/home/': typeof AuthenticatedHomeIndexRoute
+  '/_authenticated/logs/': typeof AuthenticatedLogsIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
+  '/settings/_general/': typeof SettingsGeneralIndexRoute
+  '/settings/partyadmin/': typeof SettingsPartyadminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/settings'
     | '/bodies'
     | '/elections'
     | '/users'
@@ -267,8 +303,11 @@ export interface FileRouteTypes {
     | '/applications/'
     | '/elections/'
     | '/home/'
+    | '/logs/'
     | '/notifications/'
     | '/parties/'
+    | '/settings/'
+    | '/settings/partyadmin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -291,12 +330,16 @@ export interface FileRouteTypes {
     | '/applications'
     | '/elections'
     | '/home'
+    | '/logs'
     | '/notifications'
     | '/parties'
+    | '/settings'
+    | '/settings/partyadmin'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
+    | '/settings'
     | '/_authenticated/bodies'
     | '/_authenticated/elections'
     | '/_authenticated/users'
@@ -317,19 +360,30 @@ export interface FileRouteTypes {
     | '/_authenticated/applications/'
     | '/_authenticated/elections/'
     | '/_authenticated/home/'
+    | '/_authenticated/logs/'
     | '/_authenticated/notifications/'
     | '/_authenticated/parties/'
+    | '/settings/_general/'
+    | '/settings/partyadmin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  SettingsRoute: typeof SettingsRouteWithChildren
   AuthLoginRoute: typeof AuthLoginRoute
   AuthSuperadminRoute: typeof AuthSuperadminRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -379,6 +433,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBodiesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/settings/partyadmin/': {
+      id: '/settings/partyadmin/'
+      path: '/partyadmin'
+      fullPath: '/settings/partyadmin/'
+      preLoaderRoute: typeof SettingsPartyadminIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
+    '/settings/_general/': {
+      id: '/settings/_general/'
+      path: '/'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsGeneralIndexRouteImport
+      parentRoute: typeof SettingsRoute
+    }
     '/_authenticated/parties/': {
       id: '/_authenticated/parties/'
       path: '/parties'
@@ -391,6 +459,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications/'
       preLoaderRoute: typeof AuthenticatedNotificationsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/logs/': {
+      id: '/_authenticated/logs/'
+      path: '/logs'
+      fullPath: '/logs/'
+      preLoaderRoute: typeof AuthenticatedLogsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/home/': {
@@ -566,6 +641,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRouteWithChildren
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
+  AuthenticatedLogsIndexRoute: typeof AuthenticatedLogsIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
 }
@@ -576,6 +652,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedUsersRoute: AuthenticatedUsersRouteWithChildren,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
+  AuthenticatedLogsIndexRoute: AuthenticatedLogsIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
 }
@@ -584,9 +661,24 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface SettingsRouteChildren {
+  SettingsGeneralIndexRoute: typeof SettingsGeneralIndexRoute
+  SettingsPartyadminIndexRoute: typeof SettingsPartyadminIndexRoute
+}
+
+const SettingsRouteChildren: SettingsRouteChildren = {
+  SettingsGeneralIndexRoute: SettingsGeneralIndexRoute,
+  SettingsPartyadminIndexRoute: SettingsPartyadminIndexRoute,
+}
+
+const SettingsRouteWithChildren = SettingsRoute._addFileChildren(
+  SettingsRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  SettingsRoute: SettingsRouteWithChildren,
   AuthLoginRoute: AuthLoginRoute,
   AuthSuperadminRoute: AuthSuperadminRoute,
 }

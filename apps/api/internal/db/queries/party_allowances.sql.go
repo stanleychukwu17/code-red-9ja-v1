@@ -14,7 +14,7 @@ UPDATE parties
 SET allowance_balance_kobo = allowance_balance_kobo + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, agent_payment_allocation, created_at, updated_at
 `
 
 type DepositPartyAllowanceParams struct {
@@ -36,28 +36,28 @@ func (q *Queries) DepositPartyAllowance(ctx context.Context, arg DepositPartyAll
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AllowanceBalanceKobo,
-		&i.StateAllowances,
+		&i.AgentPaymentAllocation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const updatePartyStateAllowances = `-- name: UpdatePartyStateAllowances :one
+const updatePartyAgentPaymentAllocation = `-- name: UpdatePartyAgentPaymentAllocation :one
 UPDATE parties
-SET state_allowances = $1,
+SET agent_payment_allocation = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, agent_payment_allocation, created_at, updated_at
 `
 
-type UpdatePartyStateAllowancesParams struct {
-	StateAllowances []byte `json:"state_allowances"`
-	ID              int16  `json:"id"`
+type UpdatePartyAgentPaymentAllocationParams struct {
+	AgentPaymentAllocation []byte `json:"agent_payment_allocation"`
+	ID                     int16  `json:"id"`
 }
 
-func (q *Queries) UpdatePartyStateAllowances(ctx context.Context, arg UpdatePartyStateAllowancesParams) (Party, error) {
-	row := q.db.QueryRow(ctx, updatePartyStateAllowances, arg.StateAllowances, arg.ID)
+func (q *Queries) UpdatePartyAgentPaymentAllocation(ctx context.Context, arg UpdatePartyAgentPaymentAllocationParams) (Party, error) {
+	row := q.db.QueryRow(ctx, updatePartyAgentPaymentAllocation, arg.AgentPaymentAllocation, arg.ID)
 	var i Party
 	err := row.Scan(
 		&i.ID,
@@ -70,7 +70,7 @@ func (q *Queries) UpdatePartyStateAllowances(ctx context.Context, arg UpdatePart
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AllowanceBalanceKobo,
-		&i.StateAllowances,
+		&i.AgentPaymentAllocation,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

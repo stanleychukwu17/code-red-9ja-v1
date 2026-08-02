@@ -9,8 +9,8 @@ import LoadingCircleIcon from "../icons/loading-circle-icon";
 
 const buttonVariants = cva(
   `
-  inline-flex font-medium items-center justify-center gap-1.5 py-6 whitespace-nowrap rounded-xl ring-offset-background
-  transition duration-200 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+  inline-flex font-medium items-center justify-center gap-1.5 whitespace-nowrap rounded-xl ring-offset-background
+  transition duration-300 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
   disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg]:text-black/50
   dark:[&_svg]:text-white cursor-pointer`,
   {
@@ -18,7 +18,8 @@ const buttonVariants = cva(
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary-accent",
         secondary: "bg-secondary text-foreground hover:bg-secondary/80",
-        black: "bg-c-90 text-white hover:bg-c-100 [&_svg]:text-white",
+        black:
+          "bg-c-90 hover:bg-[#111] text-white dark:text-black/80 [&_svg]:text-white",
         green: "bg-light-green text-white hover:bg-light-green/95",
         tertiary:
           "bg-[#F6F8FA] dark:bg-[#1c1d1f] dark:hover:bg-[#292c33] text-c-90 font-medium border-0.8 border-border hover:bg-[#F1F3F5]",
@@ -47,12 +48,12 @@ const buttonVariants = cva(
           "bg-hover-3 hover:bg-hover-5 [&_svg]:size-5 [&_svg]:text-c-60 hover:[&_svg]:text-c-80",
       },
       size: {
-        default: "h-10 px-2.5",
+        default: "h-12 px-2.5",
         select:
-          "h-[56px] md:h-10 px-3 md:px-2.5 text-lg md:text-base rounded-2xl md:rounded-xl",
+          "h-[56px] md:h-12 px-3 md:px-2.5 text-lg md:text-base rounded-2xl md:rounded-xl",
         bullet: "h-10 px-3",
-        xs: "h-8 px-5",
-        sm: "h-9 px-7",
+        xs: "h-8 px-5 rounded-lg",
+        sm: "h-9 px-7 rounded-[10px]",
         lg: "h-10 px-7",
         xl: "h-11 px-8",
         "2xl": "h-12 md:h-14 px-6",

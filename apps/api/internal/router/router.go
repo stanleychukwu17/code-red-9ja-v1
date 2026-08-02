@@ -437,7 +437,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/parties/{id}/slots/price", partiesHandler.GetPartySlotPrice)
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesHandler.BuySlots)
 		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
-		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateStateAllowances)
+		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocation)
 		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.DepositTest)
 
 		// polling unit assignments routes

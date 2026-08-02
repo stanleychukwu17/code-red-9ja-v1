@@ -17,6 +17,8 @@ import UserIcon from "@repo/ui/icons/navbar/user-icon";
 import UserSolidIcon from "@repo/ui/icons/navbar/user-solid-icon";
 import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
 import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
+import BrickIcon from "@repo/ui/icons/navbar/brick-icon";
+import BrickSolidIcon from "@repo/ui/icons/navbar/brick-solid-icon";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -103,6 +105,13 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     icon: <NotificationIcon className={ICON_CLASS} />,
     selectedIcon: <NotificationSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.notifications,
+  },
+  {
+    id: "logs",
+    label: "Logs",
+    icon: <BrickIcon className={ICON_CLASS} />,
+    selectedIcon: <BrickSolidIcon className={SELECTED_ICON_CLASS} />,
+    href: APP_URL.logs,
   },
 ];
 

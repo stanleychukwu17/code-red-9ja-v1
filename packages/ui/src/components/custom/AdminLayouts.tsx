@@ -397,7 +397,7 @@ export function HeaderTabs({
   return (
     <div
       className={cn(
-        "flex bg-[#e9ecef] p-1 rounded-xl w-fit gap-1 select-none items-center h-11",
+        "flex bg-[#e9ecef] dark:bg-white/10 p-1 rounded-xl w-fit gap-1 select-none items-center h-11",
         containerClassName,
       )}
     >
@@ -506,6 +506,63 @@ export function StatSection({
           {children}
         </div>
       )}
+    </div>
+  );
+}
+
+export function ReadinessStatSection({
+  title,
+  children,
+  headerAction,
+  onFormatToggle,
+  isShortened,
+}: {
+  title: string;
+  children: ReactNode;
+  headerAction?: ReactNode;
+  onFormatToggle?: () => void;
+  isShortened?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  const ExpandOrShorten = () => (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onFormatToggle?.();
+      }}
+      className={cn(
+        "text-xs text-orange transition-colors font-medium cursor-pointer bg-orange/10 px-2.5 py-1 rounded-full",
+        isShortened && "bg-c-20 text-c-80",
+      )}
+    >
+      {isShortened ? "Expand" : "Shorten"}
+    </button>
+  );
+
+  return (
+    <div className="bg-c-5/50 rounded-[20px] p-2 space-y-2 shadow-xs">
+      <div
+        className="h-12 flex items-center justify-between px-3 hover:bg-c-7 rounded-xl transition duration-200 cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="h-11 flex items-center justify-between">
+          <h3 className="font-bold text-c-80">{title}</h3>
+        </div>
+        <div className="flex items-center gap-3">
+          {onFormatToggle && <ExpandOrShorten />}
+          {headerAction}
+          <div
+            className={cn(
+              "transition-transform duration-200",
+              !isOpen && "rotate-90",
+            )}
+          >
+            <ArrowDownIcon className="size-7" />
+          </div>
+        </div>
+      </div>
+      {isOpen && <div>{children}</div>}
     </div>
   );
 }

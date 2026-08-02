@@ -705,19 +705,19 @@ type PagesVerified struct {
 }
 
 type Party struct {
-	ID                   int16              `json:"id"`
-	ShortName            string             `json:"short_name"`
-	Name                 string             `json:"name"`
-	Logo                 string             `json:"logo"`
-	DisplayOrder         int32              `json:"display_order"`
-	Status               string             `json:"status"`
-	Slots                int32              `json:"slots"`
-	IsVerified           pgtype.Bool        `json:"is_verified"`
-	DiscountPercentage   pgtype.Numeric     `json:"discount_percentage"`
-	AllowanceBalanceKobo int64              `json:"allowance_balance_kobo"`
-	StateAllowances      []byte             `json:"state_allowances"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	ID                     int16              `json:"id"`
+	ShortName              string             `json:"short_name"`
+	Name                   string             `json:"name"`
+	Logo                   string             `json:"logo"`
+	DisplayOrder           int32              `json:"display_order"`
+	Status                 string             `json:"status"`
+	Slots                  int32              `json:"slots"`
+	IsVerified             pgtype.Bool        `json:"is_verified"`
+	DiscountPercentage     pgtype.Numeric     `json:"discount_percentage"`
+	AllowanceBalanceKobo   int64              `json:"allowance_balance_kobo"`
+	AgentPaymentAllocation []byte             `json:"agent_payment_allocation"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyApplication struct {

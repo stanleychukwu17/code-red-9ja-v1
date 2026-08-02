@@ -104,8 +104,8 @@ export function ObjectiveTile({
 }: {
   isCompleted: boolean;
   title: string;
-  rightText?: string;
-  rightText2?: string;
+  rightText?: string | React.ReactNode;
+  rightText2?: string | React.ReactNode;
   onClick?: () => void;
 }) {
   const TodoIcon = () => (
@@ -121,12 +121,18 @@ export function ObjectiveTile({
   return (
     <div
       onClick={onClick}
-      className="w-full flex items-center justify-between px-4 h-14 gap-2 transition text-[15px]"
+      className="w-full flex items-center justify-between px-4 md:px-8 h-14 gap-2 transition text-[15px] md:text-base"
     >
       <TodoIcon />
       <p className="text-white w-full">{title}</p>
-      {rightText && <p className="text-white shrink-0">{rightText}</p>}
-      {rightText2 && <p className="text-white/50 shrink-0">{rightText2}</p>}
+      {rightText && (
+        <p className="text-white shrink-0 md:w-32 text-right">{rightText}</p>
+      )}
+      {rightText2 && (
+        <p className="text-white/50 shrink-0 md:w-28 text-right">
+          {rightText2}
+        </p>
+      )}
     </div>
   );
 }

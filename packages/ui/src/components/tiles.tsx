@@ -14,7 +14,7 @@ export type TileHeaderProps = {
 
 export function TileHeader({ children }: TileHeaderProps) {
   return (
-    <div className="h-10 border-y border-border flex items-center justify-between gap-5 md:gap-20 px-3 text-[15px]">
+    <div className="h-10 border-y border-border flex items-center justify-between gap-5 md:gap-20 px-3 text-[15px] sticky top-0 bg-background/80 backdrop-blur-xl">
       {children}
     </div>
   );
