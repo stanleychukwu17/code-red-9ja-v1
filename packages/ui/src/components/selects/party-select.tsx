@@ -39,7 +39,7 @@ export const SelectParty = ({ update, errorMsg, selectedId, className, align = "
 
   // Fetch parties using react-query for caching and state management
   const { data, isLoading } = useQuery<PartiesResponse>({
-    queryKey: ["parties-select"],
+    queryKey: ["parties"],
     queryFn: async () => {
       const res = await fetchParties();
       if (res && res.success && res.data) return res;
