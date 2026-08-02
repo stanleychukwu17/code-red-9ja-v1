@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
 	httpSwagger "github.com/swaggo/http-swagger"
 
@@ -149,7 +150,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
 	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
-	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, utilsInstance)
+	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
@@ -182,11 +183,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	}
 
 	// Core middleware
-	mainRouter.Use(corsMiddleware)
-	mainRouter.Use(middleware.RequestID)
-	mainRouter.Use(middleware.RealIP)
-	mainRouter.Use(requestLoggerMiddleware)
-	mainRouter.Use(middleware.Recoverer)
+	mainRouter.Use(corsMiddleware)                     // Handles Cross-Origin Resource Sharing
+	mainRouter.Use(middleware.RequestID)               // Injects a unique request ID into the context
+	mainRouter.Use(middleware.RealIP)                  // Sets the real IP address from proxy headers (e.g. X-Forwarded-For)
+	mainRouter.Use(requestLoggerMiddleware)            // Logs the start and end time of each HTTP request
+	mainRouter.Use(apimiddleware.PrometheusMiddleware) // Tracks metrics for Prometheus (request duration, counts)
+	mainRouter.Use(middleware.Recoverer)               // Recovers from panics without crashing the entire server
 
 	// Swagger documentation (Dev only)
 	if os.Getenv("ENV") != "production" {
@@ -198,6 +200,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// API v1 routes
 	mainRouter.Get(utils.ApiUrls.Root, handler.Root)     // Root endpoint
 	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
+	mainRouter.Get("/metrics", promhttp.Handler().ServeHTTP) // Prometheus metrics
 
 	// for auths
 	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp)         // Register first phase
@@ -223,6 +226,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/banks/validate", usersHandler.ValidateBankAccount)
 
 	// political & geographic bodies
+	mainRouter.Get("/api/v1/getOccupations", bodiesHandler.GetOccupations)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetAll, bodiesHandler.GetCountries)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetStates, bodiesHandler.GetStates)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetCities, bodiesHandler.GetCities)
@@ -408,7 +412,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put(utils.ApiUrls.Users.UpdateProfile, usersHandler.UpdateProfile)
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)
-		r.Delete("/api/v1/admin/users/{id}", usersHandler.DeleteUser)
+		r.Get("/api/v1/admin/users/{id}/more-info", usersHandler.AdminGetUserMoreInfo)
+		r.Put("/api/v1/admin/users/{id}/more-info", usersHandler.AdminUpdateUserMoreInfo)
+		r.Delete("/api/v1/admin/users/{id}", usersHandler.DeleteUserAccount)
 		r.Get("/api/v1/admin/users/{id}/phones", usersHandler.GetUserPhoneNumbers)
 		r.Put("/api/v1/admin/users/{id}/phones", usersHandler.UpdateUserPhoneNumbers)
 		r.Delete("/api/v1/admin/users/phones", usersHandler.DeleteUserPhoneNumber)

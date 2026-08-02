@@ -170,6 +170,7 @@ export const API_URL = {
   electionsWard: `${api}/elections/ward`,
   adminUsers: `${api}/admin/users`,
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
+  manageUserMoreInfo: (id: string | number) => `${api}/admin/users/${id}/more-info`,
   userRoles: (id: string | number) => `${api}/admin/users/${id}/roles`,
   userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
   manageUserPhoneNumber: () => `${api}/admin/users/phones`,
@@ -177,5 +178,5 @@ export const API_URL = {
   recalculateBodies: `${api}/bodies/recalculate`,
   verificationTypes: `${api}/verifications/types`,
   adminVerifications: `${api}/admin/verifications`,
-  occupations: `${api}/occupations`,
+  occupations: `${api}/getOccupations`,
 };
