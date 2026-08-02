@@ -108,7 +108,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
   // mutation: remove verification
   const removeMutation = useMutation({
     mutationFn: async ({ verification_type_id, id }: { verification_type_id: number; id: number }) => {
-      // besure that the id we're trying to delete is among the list of the user verfification
+      // be-sure that the id we're trying to delete is among the list of the user verification
       const v = activeVerifications.find(activeVrf => activeVrf.id === id && activeVrf.verification_type_id === verification_type_id);
 
       if (v && v.page_type && v.page_id > 0) {
