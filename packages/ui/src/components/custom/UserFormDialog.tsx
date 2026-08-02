@@ -77,6 +77,7 @@ export interface UserFormDialogProps {
   registerCandidate: (args: { data: any }) => Promise<any>;
   updateUser: (args: { data: any }) => Promise<any>;
   updateUserMoreInfo?: (args: { data: any }) => Promise<any>;
+  getUserMoreInfo?: (args: { data: any }) => Promise<any>;
   updateUserPhoneNumbers?: (args: { data: any }) => Promise<any>;
   deleteUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   loadUserPhoneNumber?: (args: { data: any }) => Promise<any>;
@@ -100,6 +101,7 @@ export function UserFormDialog({
   registerCandidate,
   updateUser,
   updateUserMoreInfo,
+  getUserMoreInfo,
   updateUserPhoneNumbers,
   deleteUserPhoneNumber,
   loadUserPhoneNumber,
@@ -108,6 +110,7 @@ export function UserFormDialog({
   const [avatarUrl, setAvatarUrl] = React.useState("");
   const [isUploading, setIsUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">("basic");
   const [createdUser, setCreatedUser] = React.useState<UserResult | null>(null);
@@ -116,7 +119,7 @@ export function UserFormDialog({
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Mutation to handle the form submission.
+  // Saving of the user basic info.
   // Validates all required fields and calls either updateUser or registerCandidate based on the mode.
   const saveMutation = useMutation({
     mutationFn: async (values: any) => {
@@ -128,15 +131,18 @@ export function UserFormDialog({
       if (!values.residenceStateId) throw new Error("Residence state is required");
       if (!values.originCountryId) throw new Error("Country of origin is required");
       if (!values.originStateId) throw new Error("State of origin is required");
+      if (mode === "create" && !values.email) throw new Error("Email is required");
 
-      const formattedDob = values.dateOfBirth.split("T")[0]; // formatted date of birth
+      // formatted date of birth
+      const formattedDob = values.dateOfBirth.split("T")[0];
 
       let res: any;
+      // if mode == "update", means updating an existing account, else creating a placeholder account
       if (mode === "update") {
         res = await updateUser({
           data: {
             id: user.fake_id,
-            email: values.email.trim(),
+            email: values.email ? values.email.trim() : "",
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
@@ -152,7 +158,7 @@ export function UserFormDialog({
       } else {
         res = await registerCandidate({
           data: {
-            email: values.email.trim(),
+            email: values.email ? values.email.trim() : "",
             password: values.password,
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
@@ -169,57 +175,56 @@ export function UserFormDialog({
         });
       }
 
-      console.log("RESPONSE:", res);
-
       if (!res.success) {
         throw new Error(res.message || `Failed to ${mode} user`);
       }
 
-      return {
-        id: mode === "update" ? user?.id : res.data.id,
-        fake_id:
-          mode === "update" ? user?.fake_id || user?.fakeId : res.data.fake_id,
-        firstName: values.firstName.trim(),
-        lastName: values.lastName.trim(),
-        partyId: values.partyId,
-      };
+      return res
     },
-    onSuccess: async (data) => {
-      let partyLogo = "";
-      let partyShortNameVal = "";
-      try {
-        const partiesRes = await getParties();
-        if (partiesRes.success && partiesRes.data?.parties) {
-          const partyObj = partiesRes.data.parties.find(
-            (p: any) => Number(p.id) === Number(data.partyId),
+    onSuccess: async (res) => {
+      if (mode === "update") {
+        const updatedDetails = res.data?.updatedUserDetails;
+        if (updatedDetails) {
+          queryClient.setQueriesData(
+            { queryKey: ["users-list"] },
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                pages: oldData.pages.map((page: any) => {
+                  return {
+                    ...page,
+                    data: {
+                      ...page.data,
+                      users: page.data?.users?.map((u: any) =>
+                        u.fake_id === updatedDetails.fake_id ? updatedDetails : u
+                      ) || []
+                    }
+                  };
+                })
+              };
+            }
           );
-          if (partyObj) {
-            partyLogo = partyObj.logo;
-            partyShortNameVal = partyObj.short_name;
-          }
+
+          onSuccess?.(updatedDetails);
         }
-      } catch (err) {
-        console.error("Failed to load party details for callback", err);
-      }
 
-      const result: UserResult = {
-        id: data.id,
-        fake_id: data.fake_id,
-        first_name: `${data.firstName} ${data.lastName}`,
-        last_name: data.lastName,
-        party_logo: partyLogo,
-        party_short_name: partyShortNameVal,
-        party_id: data.partyId,
-        avatar_url: avatarUrl || undefined,
-      };
-
-      onSuccess?.(result);
-
-      if (mode === "create") {
+        toast.success("User updated successfully");
+        onClose(); // closes the edit form
+      } else {
+        const result: UserResult = {
+          id: res.data?.id,
+          fake_id: res.data?.fake_id,
+          first_name: res.data?.first_name || res.data?.firstName || "",
+          last_name: res.data?.last_name || res.data?.lastName || "",
+          party_short_name: "",
+          party_logo: "",
+          party_id: res.data?.partyId,
+          avatar_url: avatarUrl || undefined,
+        };
+        onSuccess?.(result);
         setCreatedUser(result);
         setActiveTab("more");
-      } else {
-        onClose();
       }
     },
     onError: (err: any) => {
@@ -249,35 +254,35 @@ export function UserFormDialog({
     },
   });
 
+  // load political parties
+  const { data: partiesData } = useQuery({
+    queryKey: ["parties"],
+    queryFn: async () => {
+      const res = await getParties();
+      if (res && res.success && res.data) return res.data.parties;
+      return [];
+    },
+    staleTime: Infinity,
+    enabled: open && partyId === undefined && !!partyShortName,
+  });
+
   // Effect to automatically resolve the party ID if only a party short name was provided
   React.useEffect(() => {
-    const resolvePartyId = async () => {
-      if (open && partyId === undefined && partyShortName) {
-        try {
-          const partiesRes = await getParties();
-          if (partiesRes.success && partiesRes.data?.parties) {
-            const partyObj = partiesRes.data.parties.find(
-              (p: any) =>
-                p.short_name?.toLowerCase() === partyShortName.toLowerCase(),
-            );
-            if (partyObj) {
-              form.setFieldValue("partyId", partyObj.id);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to resolve party ID from short name", err);
-        }
-      }
-    };
-    resolvePartyId();
-  }, [open, partyId, partyShortName, getParties]);
+    if (open && partyId === undefined && partyShortName && partiesData) {
+      const partyObj = partiesData.find((p: any) => {
+        return p.short_name?.toLowerCase() === partyShortName.toLowerCase();
+      });
+
+      // if party found, auto select the user party
+      if (partyObj) form.setFieldValue("partyId", partyObj.id);
+    }
+  }, [open, partyId, partyShortName, partiesData, form]);
 
   // Effect to initialize the form fields whenever the dialog opens.
   // It populates data for 'update' mode and resets fields for 'create' mode.
   React.useEffect(() => {
     if (open) {
-      const isPartyLocked =
-        partyId !== undefined || partyShortName !== undefined;
+      const isPartyLocked = partyId !== undefined || partyShortName !== undefined;
 
       if (mode === "update" && user) {
         form.setFieldValue("firstName", user.first_name || "");
@@ -291,12 +296,10 @@ export function UserFormDialog({
         form.setFieldValue("originCountryId", 161);
         form.setFieldValue("originStateId", user.state_of_origin || undefined);
         form.setFieldValue(
-          "partyId",
-          isPartyLocked
-            ? (partyId ?? user.party_id)
-            : user.party_id || undefined,
+          "partyId", isPartyLocked ? (partyId ?? user.party_id) : user.party_id || undefined,
         );
-        form.setFieldValue("email", user.email || "");
+        // form.setFieldValue("email", user.email || ""); // we replace the userEmail from the backend with ---
+        form.setFieldValue("email", "");
         form.setFieldValue("password", "");
         setAvatarUrl(user.avatar || "");
       } else {
@@ -325,6 +328,7 @@ export function UserFormDialog({
     partyShortName,
   ]);
 
+  // Trigger the file input click:
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
@@ -375,13 +379,13 @@ export function UserFormDialog({
       await confirmFileUpload({ data: { id: file_id, success: true } });
       setAvatarUrl(public_url);
     } catch (err: any) {
-      console.error(err);
       setError(err.message || "An error occurred during file upload");
     } finally {
       setIsUploading(false);
     }
   };
 
+  // Delete user's profile image:
   const handleRemoveImage = () => {
     setAvatarUrl("");
     if (fileInputRef.current) {
@@ -456,13 +460,7 @@ export function UserFormDialog({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept="image/*"
-                        className="hidden"
-                      />
+                      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                       <button
                         type="button"
                         onClick={handleUploadClick}
@@ -676,39 +674,47 @@ export function UserFormDialog({
                   </div>
                 )}
 
-                {/* Email and Password */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[14px] text-c-50">Email</label>
-                    <form.Field
-                      name="email"
-                      children={(field: any) => (
-                        <Input
-                          type="email"
-                          placeholder="Enter email"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          errorMsg={field.state.meta.errors?.join(", ")}
-                        />
-                      )}
-                    />
+                {/* Email and Password (Only on Create) */}
+                {mode === "create" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[14px] text-c-50">Email</label>
+                      <form.Field
+                        name="email"
+                        validators={{
+                          onChange: ({ value }: any) => {
+                            if (!value) return "Email is required";
+                            return undefined;
+                          },
+                        }}
+                        children={(field: any) => (
+                          <Input
+                            type="email"
+                            placeholder="Enter email"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            errorMsg={field.state.meta.errors?.join(", ")}
+                          />
+                        )}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[14px] text-c-50">Password</label>
+                      <form.Field
+                        name="password"
+                        children={(field: any) => (
+                          <Input
+                            type="password"
+                            placeholder="Enter password"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            errorMsg={field.state.meta.errors?.join(", ")}
+                          />
+                        )}
+                      />
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[14px] text-c-50">Password</label>
-                    <form.Field
-                      name="password"
-                      children={(field: any) => (
-                        <Input
-                          type="password"
-                          placeholder="Enter password"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          errorMsg={field.state.meta.errors?.join(", ")}
-                        />
-                      )}
-                    />
-                  </div>
-                </div>
+                )}
               </DialogPadding>
             </div>
             {error && (
@@ -731,6 +737,7 @@ export function UserFormDialog({
           <MoreInfoTab
             user={activeUser}
             updateUserMoreInfo={updateUserMoreInfo}
+            getUserMoreInfo={getUserMoreInfo}
             getOccupations={getOccupations}
             onClose={onClose}
             onSuccess={() => {
@@ -761,10 +768,14 @@ export function UserFormDialog({
 // SUB-COMPONENTS
 // =======================
 
-// The MoreInfoTab
-function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSuccess }: any) {
+// The MoreInfoTab component handles updating the user's secondary profile information,
+// including their occupation, educational status, and demographic details.
+function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations, onClose, onSuccess }: any) {
   const [error, setError] = React.useState<string | null>(null);
+  const queryClient = useQueryClient();
 
+  // Fetch the list of available occupations from the API using React Query.
+  // This depends on the getOccupations function being passed as a prop.
   const { data: occupationsData, isLoading: isLoadingOccupations } = useQuery({
     queryKey: ["occupations"],
     queryFn: async () => {
@@ -776,28 +787,87 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
       }
       return [];
     },
+
     enabled: !!getOccupations,
   });
 
   const occupations = occupationsData || [];
 
+  // Group the flat list of occupations by their 'category' property
+  // to render them logically in the `<optgroup>` segments of the dropdown.
+  const groupedOccupations = React.useMemo(() => {
+    const groups = occupations.reduce((acc: any, o: any) => {
+      const category = o.category || "Other";
+
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(o);
+      return acc;
+    }, {});
+
+    return Object.keys(groups).map((category) => ({
+      category,
+      items: groups[category],
+    }));
+  }, [occupations]);
+
+  // Fetch existing MoreInfo data from backend
+  const { data: serverMoreInfo } = useQuery({
+    queryKey: ["userMoreInfo", user?.fake_id],
+    queryFn: async () => {
+      if (!getUserMoreInfo || !user) return null;
+      const res = await getUserMoreInfo({ data: user.fake_id || user.id });
+
+      if (res?.success && res?.data) {
+        return res.data.more_info || res.data;
+      }
+      return null;
+    },
+    enabled: !!getUserMoreInfo && !!user,
+  });
+
+  // Combine server fetched more info with user.profile
+  const initialMoreInfo = React.useMemo(() => {
+    return {
+      ...(user?.profile || {}),
+      ...(serverMoreInfo || {})
+    };
+  }, [user?.profile, serverMoreInfo]);
+
+  // Initialize the TanStack form for the More Info tab, populating default values
+  // from the existing user profile if it's an update operation.
   const form = useForm({
     defaultValues: {
-      occupation_id: user?.profile?.occupation_id ? String(user.profile.occupation_id) : "",
-      educational_status: user?.profile?.educational_status || "",
-      highest_degree: user?.profile?.highest_degree || "",
-      graduation_year: user?.profile?.graduation_year || "",
-      school_name: user?.profile?.school_name || "",
-      religion: user?.profile?.religion || "",
-      marital_status: user?.profile?.marital_status || "",
-      education_level: user?.profile?.education_level || "",
-      address: user?.profile?.address || "",
+      occupation_id: initialMoreInfo.occupation_id ? String(initialMoreInfo.occupation_id) : "",
+      educational_status: initialMoreInfo.educational_status || "",
+      highest_degree: initialMoreInfo.highest_degree || "",
+      graduation_year: initialMoreInfo.graduation_year || "",
+      school_name: initialMoreInfo.school_name || "",
+      religion: initialMoreInfo.religion || "",
+      marital_status: initialMoreInfo.marital_status || "",
+      education_level: initialMoreInfo.education_level || "",
+      address: initialMoreInfo.address || "",
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
     },
   });
 
+  // Reinitialize form when data arrives
+  React.useEffect(() => {
+    if (serverMoreInfo) {
+      form.setFieldValue("occupation_id", serverMoreInfo.occupation_id ? String(serverMoreInfo.occupation_id) : "");
+      form.setFieldValue("educational_status", serverMoreInfo.educational_status || "");
+      form.setFieldValue("highest_degree", serverMoreInfo.highest_degree || "");
+      form.setFieldValue("graduation_year", serverMoreInfo.graduation_year || "");
+      form.setFieldValue("school_name", serverMoreInfo.school_name || "");
+      form.setFieldValue("religion", serverMoreInfo.religion || "");
+      form.setFieldValue("marital_status", serverMoreInfo.marital_status || "");
+      form.setFieldValue("education_level", serverMoreInfo.education_level || "");
+      form.setFieldValue("address", serverMoreInfo.address || "");
+    }
+  }, [serverMoreInfo, occupationsData, form]);
+
+  // saveMutation handles the API call to persist the updated additional info to the backend.
   const saveMutation = useMutation({
     mutationFn: async (values: any) => {
       if (!updateUserMoreInfo) {
@@ -812,14 +882,21 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
       if (!res?.success) throw new Error(res?.message || "Failed to save profile");
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      if (data?.more_info) {
+        queryClient.setQueryData(["userMoreInfo", user?.fake_id], data.more_info);
+      }
+      toast.success("Additional info updated successfully!");
       onSuccess?.();
+      onClose();
     },
     onError: (err: any) => {
       setError(err.message || "An error occurred.");
     },
   });
 
+  // renderSelect is a utility function that abstracts the rendering logic for a standard
+  // select dropdown input within the form, handling the field state and change events.
   const renderSelect = (name: string, label: string, options: { label: string, value: string }[]) => (
     <div className="flex flex-col gap-1.5">
       <label className="text-[14px] text-c-50">{label}</label>
@@ -866,8 +943,14 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
                     className="flex h-11 w-full rounded-[10px] border border-[#dfdfdf] bg-[#fdfdfd] px-4 text-[14px] text-black outline-none transition focus:border-black appearance-none"
                   >
                     <option value="">Select Occupation</option>
-                    {occupations.map((o: any) => (
-                      <option key={o.id} value={o.id}>{o.name || o.title}</option>
+                    {groupedOccupations.map((group: any) => (
+                      <optgroup key={group.category} label={group.category}>
+                        {group.items.map((o: any) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name || o.title}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 )}
