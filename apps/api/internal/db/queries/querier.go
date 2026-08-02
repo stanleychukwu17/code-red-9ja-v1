@@ -153,6 +153,7 @@ type Querier interface {
 	GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
 	GetNonVotingReasons(ctx context.Context) ([]NonVotingReason, error)
+	GetOccupations(ctx context.Context) ([]Occupation, error)
 	GetOfficeByID(ctx context.Context, id int64) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
 	// ============================================================

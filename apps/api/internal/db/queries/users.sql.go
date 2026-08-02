@@ -21,9 +21,7 @@ SET first_name = $2,
     current_country = $7,
     current_state = $8,
     current_city = $9,
-    party_id = $10,
-    email = $11,
-    state_of_origin = $12,
+    state_of_origin = $10,
     updated_at = NOW()
 WHERE id = $1
 `
@@ -38,8 +36,6 @@ type AdminUpdateUserParams struct {
 	CurrentCountry int16       `json:"current_country"`
 	CurrentState   int16       `json:"current_state"`
 	CurrentCity    pgtype.Int4 `json:"current_city"`
-	PartyID        pgtype.Int2 `json:"party_id"`
-	Email          pgtype.Text `json:"email"`
 	StateOfOrigin  pgtype.Int2 `json:"state_of_origin"`
 }
 
@@ -54,8 +50,6 @@ func (q *Queries) AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams
 		arg.CurrentCountry,
 		arg.CurrentState,
 		arg.CurrentCity,
-		arg.PartyID,
-		arg.Email,
 		arg.StateOfOrigin,
 	)
 	return err
@@ -357,7 +351,8 @@ func (q *Queries) CreateUserVerification(ctx context.Context, arg CreateUserVeri
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-DELETE FROM users
+UPDATE users
+SET account_status = 'deleted'
 WHERE id = $1
 `
 

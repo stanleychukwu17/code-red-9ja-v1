@@ -631,6 +631,31 @@ func (q *Queries) GetNationalMetrics(ctx context.Context) (NationalMetric, error
 	return i, err
 }
 
+const getOccupations = `-- name: GetOccupations :many
+SELECT id, category, name FROM occupations
+ORDER BY category ASC, name ASC
+`
+
+func (q *Queries) GetOccupations(ctx context.Context) ([]Occupation, error) {
+	rows, err := q.db.Query(ctx, getOccupations)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Occupation
+	for rows.Next() {
+		var i Occupation
+		if err := rows.Scan(&i.ID, &i.Category, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getPollingUnitByID = `-- name: GetPollingUnitByID :one
 SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
 WHERE id = $1 LIMIT 1
