@@ -32,9 +32,10 @@ type UsersService interface {
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
+	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error
 	ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error)
-	DeleteUser(ctx context.Context, id int64, fakeID int64) error
-	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int16, email string) error
+	DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error
+	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
 
 	GetBanks(ctx context.Context) ([]monnifyclient.Bank, error)
 	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
@@ -66,23 +67,30 @@ type PermissionsService interface {
 	CheckUserModificationPermission(claims *utils.JWTClaims, userDetails queries.UserWithPlaces) (bool, permissionsservice.UserModificationPermissions, error)
 }
 
+// PartiesService interface defines the methods needed from the parties service
+type PartiesService interface {
+	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
+}
+
 // Handler holds dependencies for the users handler
 type Handler struct {
 	usersService       UsersService
 	auditService       audit.AuditService
 	bodiesService      BodiesService
 	permissionsService PermissionsService
+	partiesService     PartiesService
 	validate           *validator.Validate
 	utils              *utils.Utils
 }
 
 // NewHandler creates a new instance of the users handler
-func NewHandler(usersService UsersService, auditService audit.AuditService, bodiesService BodiesService, permissionsService PermissionsService, utilsInstance *utils.Utils) *Handler {
+func NewHandler(usersService UsersService, auditService audit.AuditService, bodiesService BodiesService, permissionsService PermissionsService, partiesService PartiesService, utilsInstance *utils.Utils) *Handler {
 	return &Handler{
 		usersService:       usersService,
 		auditService:       auditService,
 		bodiesService:      bodiesService,
 		permissionsService: permissionsService,
+		partiesService:     partiesService,
 		validate:           validator.New(),
 		utils:              utilsInstance,
 	}
@@ -421,8 +429,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DeleteUser handles DELETE /api/v1/admin/users/{id}
-func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
+// DeleteUserAccount handles DELETE /api/v1/admin/users/{id}
+func (h *Handler) DeleteUserAccount(w http.ResponseWriter, r *http.Request) {
 	// Extract the user's JWT claims from the request context to identify the requester
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
@@ -438,60 +446,102 @@ func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the target user's details from the database using their public (fake) ID
-	user, err := h.usersService.GetUserByFakeID(r.Context(), id)
+	userDetails, err := h.usersService.GetUserByFakeID(r.Context(), id)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
-	// Permission checks: verify that the requester is an admin or a party admin
-	isAdmin := claims.HasRole("admin")
-	isPartyAdmin := claims.HasRole("party_admin")
-	if !isAdmin && !isPartyAdmin {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+	// Permission checks using PermissionsService
+	allowed, perms, permErr := h.permissionsService.CheckUserModificationPermission(claims, userDetails)
+	if !allowed {
+		if permErr != nil {
+			h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
+		} else {
+			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+		}
 		return
 	}
 
-	// Additional restrictions apply if the requester is a party admin but not a super admin
-	if isPartyAdmin && !isAdmin {
-		// Fetch the requester's own user details to determine their party affiliation
-		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
-			return
-		}
-
-		// Party admin can only delete users belonging to their own party
-		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int16 != currUser.PartyID.Int16 {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only delete members of your own party")
-			return
-		}
-
-		// Party admin cannot delete administrative accounts (e.g. other admins)
-		uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
-		isAdmin := false
-		for _, ur := range uRoles.RolesCode {
-			if ur == "admin" {
-				isAdmin = true
-				break
-			}
-		}
-		if isAdmin {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you cannot delete administrative accounts")
-			return
-		}
-	}
-
 	// Proceed with soft-deleting the user from the database
-	err = h.usersService.DeleteUser(r.Context(), user.ID, user.FakeID.Int64)
+	err = h.usersService.DeleteUserAccount(r.Context(), userDetails.ID, userDetails.FakeID.Int64)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete user: "+err.Error())
 		return
 	}
 
+	// marshal the old user details to JSON for logging
+	oldValuesJSON, _ := json.Marshal(userDetails)
+
+	// Create a copy of the user and set account_status to 'deleted' to represent new values
+	updatedUserDetails := userDetails
+	updatedUserDetails.AccountStatus.String = "deleted"
+	updatedUserDetails.AccountStatus.Valid = true
+	newValuesJSON, _ := json.Marshal(updatedUserDetails)
+
+	// Derive the module name and actor role dynamically based on the verified permissions
+	moduleName, actorRole := perms.GetAuditActorInfo()
+
+	// --- Audit Logging ---
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Action:     db.ActionDeleteUserAccount,
+		Module:     audit.StringToText(moduleName),
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(userDetails.ID, 10),
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
+	// ---------------------
+
 	h.utils.RespondSuccess(w, http.StatusOK, "User deleted successfully", nil)
 }
 
+// AdminGetUserMoreInfo handles GET /api/v1/admin/users/{id}/more-info
+func (h *Handler) AdminGetUserMoreInfo(w http.ResponseWriter, r *http.Request) {
+	// Parse the target user's fake ID from the URL parameters
+	fakeIDStr := chi.URLParam(r, "id")
+	fakeID, err := strconv.ParseInt(fakeIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid fake ID")
+		return
+	}
+
+	// Extract and validate the JWT claims of the admin making the request
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	// Retrieve the target user's details from the database using their fake ID
+	targetUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), fakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Target user not found")
+		return
+	}
+
+	// Verify that the requesting admin has sufficient permissions to view/modify this user
+	hasPermission, _, permErr := h.permissionsService.CheckUserModificationPermission(claims, targetUserDetails)
+	if !hasPermission {
+		h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
+		return
+	}
+
+	// Fetch the extended profile information (occupation, education, address, etc.) for the user
+	moreInfo, err := h.usersService.GetMoreInfoAboutThisUser(r.Context(), targetUserDetails.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve user's more info")
+		return
+	}
+
+	// Return the extended profile information to the client
+	h.utils.RespondSuccess(w, http.StatusOK, "More info retrieved successfully", map[string]interface{}{
+		"more_info": moreInfo,
+	})
+}
+
+// AdminUpdateUserRequest represents the request payload for updating user basic info
 type AdminUpdateUserRequest struct {
 	Avatar         string `json:"avatar" validate:"omitempty"`
 	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
@@ -503,7 +553,6 @@ type AdminUpdateUserRequest struct {
 	CurrentState   int16  `json:"current_state" validate:"required"`
 	CurrentCity    int32  `json:"current_city" validate:"omitempty"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
-	Email          string `json:"email" validate:"required,email"`
 }
 
 // AdminUpdateUser handles PUT /api/v1/admin/users/{id}
@@ -523,7 +572,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch the target user's current details from the database
-	user, err := h.usersService.GetUserByFakeID(r.Context(), fakeID)
+	targetUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), fakeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
@@ -542,55 +591,24 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Permission checks:
-	isAdmin := claims.HasAnyRole("super_admin", "admin")
-	isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
-	if !isAdmin && !isPartyAdmin {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+	// Permission checks using permissionsService
+	hasPermission, perms, permErr := h.permissionsService.CheckUserModificationPermission(claims, targetUserDetails)
+	if !hasPermission {
+		h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
 		return
 	}
 
-	// If the user is a party admin, add extra permissions check
-	if isPartyAdmin && !isAdmin {
-		// Get the requesting user's details
-		currUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
-			return
-		}
-
-		// Party admin can only edit users belonging to their own party
-		if !user.PartyID.Valid || !currUser.PartyID.Valid || user.PartyID.Int16 != currUser.PartyID.Int16 {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only edit members of your own party")
-			return
-		}
-
-		// Party admin cannot change a user's party to another party
-		if req.PartyID != int64(currUser.PartyID.Int16) {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only assign members to your own party")
-			return
-		}
-
-		// Party admin cannot edit an admin user
-		uRoles, _ := h.usersService.GetUserRoles(r.Context(), user.ID)
-		isAdmin := false
-		for _, ur := range uRoles.RolesCode {
-			if ur == "admin" || ur == "super_admin" {
-				isAdmin = true
-				break
-			}
-		}
-		if isAdmin {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you cannot edit administrative accounts")
-			return
-		}
+	// Ensure that if the target user already has a party, the party cannot be changed
+	if targetUserDetails.PartyID.Valid && req.PartyID != int64(targetUserDetails.PartyID.Int16) {
+		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party cannot be changed")
+		return
 	}
 
 	// update the user
 	err = h.usersService.AdminUpdateUser(
 		r.Context(),
-		user.ID,
-		user.FakeID.Int64,
+		targetUserDetails.ID,
+		targetUserDetails.FakeID.Int64,
 		req.FirstName,
 		req.LastName,
 		req.MiddleName,
@@ -600,46 +618,163 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		req.CurrentState,
 		req.CurrentCity,
 		req.StateOfOrigin,
-		int16(req.PartyID),
-		req.Email,
 	)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update user: "+err.Error())
 		return
 	}
 
-	// --- Audit Logging ---
-	if h.auditService != nil {
-		oldValuesJSON, _ := json.Marshal(user)
-
-		// Fetch the new user state for accurate logging
-		newUser, err := h.usersService.GetUserByFakeID(r.Context(), user.FakeID.Int64)
-		var newValuesJSON []byte
-		if err == nil {
-			newValuesJSON, _ = json.Marshal(newUser)
-		} else {
-			// Fallback to request data if fetch fails
-			newValuesJSON, _ = json.Marshal(req)
+	// if the partyID is fresh (i.e assigning a partyID to a user)
+	if !targetUserDetails.PartyID.Valid && req.PartyID > 0 {
+		err = h.partiesService.JoinParty(r.Context(), int16(req.PartyID), 0, targetUserDetails.ID, targetUserDetails.FakeID.Int64)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to join party: "+err.Error())
+			return
 		}
-
-		roleContext := "unknown"
-		if len(claims.Roles) > 0 {
-			roleContext = strings.Join(claims.Roles, ",")
-		}
-
-		_ = h.auditService.LogAction(r.Context(), queries.InsertAuditLogParams{
-			ActorID:    claims.UserID,
-			ActorRole:  audit.StringToText(roleContext),
-			Action:     "UPDATE",
-			EntityType: "USER",
-			EntityID:   strconv.FormatInt(user.ID, 10),
-			OldValues:  oldValuesJSON,
-			NewValues:  newValuesJSON,
-		})
 	}
+
+	// Fetch the new user state for accurate logging
+	updatedUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), targetUserDetails.FakeID.Int64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get user: "+err.Error())
+		return
+	}
+
+	// marshal the old user details to JSON for logging
+	oldValuesJSON, _ := json.Marshal(targetUserDetails)
+	newValuesJSON, _ := json.Marshal(updatedUserDetails)
+
+	// Derive the module name and actor role dynamically based on the verified permissions
+	// This ensures the audit log accurately reflects the context of the modification
+	moduleName, actorRole := perms.GetAuditActorInfo()
+
+	// --- Audit Logging ---
+	// Asynchronously insert the audit log to prevent blocking the API response
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Action:     db.ActionUpdateUser,
+		Module:     audit.StringToText(moduleName),
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(targetUserDetails.ID, 10),
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
 	// ---------------------
 
-	h.utils.RespondSuccess(w, http.StatusOK, "User updated successfully", nil)
+	h.utils.RespondSuccess(w, http.StatusOK, "User updated successfully", map[string]interface{}{
+		"updatedUserDetails": updatedUserDetails,
+	})
+}
+
+// AdminUpdateUserMoreInfoRequest represents the request payload for updating user more info
+type AdminUpdateUserMoreInfoRequest struct {
+	OccupationID      *int16 `json:"occupation_id" validate:"omitempty"`
+	EducationalStatus string `json:"educational_status" validate:"omitempty"`
+	EducationLevel    string `json:"education_level" validate:"omitempty"`
+	HighestDegree     string `json:"highest_degree" validate:"omitempty"`
+	GraduationYear    string `json:"graduation_year" validate:"omitempty"`
+	SchoolName        string `json:"school_name" validate:"omitempty"`
+	Religion          string `json:"religion" validate:"omitempty"`
+	MaritalStatus     string `json:"marital_status" validate:"omitempty"`
+	Address           string `json:"address" validate:"omitempty"`
+}
+
+// AdminUpdateUserMoreInfo handles PUT /api/v1/admin/users/{id}/more-info
+func (h *Handler) AdminUpdateUserMoreInfo(w http.ResponseWriter, r *http.Request) {
+	// Extract the user's JWT claims from the request context
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	// Parse the target user ID from the URL parameters
+	fakeIdStr := chi.URLParam(r, "id")
+	fakeID, err := strconv.ParseInt(fakeIdStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	// Fetch the target user's current details from the database
+	targetUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), fakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	// Decode the JSON request body into the AdminUpdateUserMoreInfoRequest struct
+	var req AdminUpdateUserMoreInfoRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	// Validate the decoded request struct based on validation tags
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	// Permission checks using permissionsService
+	hasPermission, perms, permErr := h.permissionsService.CheckUserModificationPermission(claims, targetUserDetails)
+	if !hasPermission {
+		h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
+		return
+	}
+
+	// Capture old values for audit logging
+	oldMoreInfo, _ := h.usersService.GetMoreInfoAboutThisUser(r.Context(), targetUserDetails.ID)
+	oldValuesJSON, _ := json.Marshal(oldMoreInfo)
+
+	// update the user more info
+	err = h.usersService.UpdateUserProfileDetails(
+		r.Context(),
+		targetUserDetails.ID,
+		req.OccupationID,
+		req.EducationalStatus,
+		req.HighestDegree,
+		req.GraduationYear,
+		req.SchoolName,
+		req.Religion,
+		req.MaritalStatus,
+		req.EducationLevel,
+		req.Address,
+	)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update user profile: "+err.Error())
+		return
+	}
+
+	// Determine module name and actor role for audit logging
+	moduleName, actorRole := perms.GetAuditActorInfo()
+
+	// Fetch the updated more info to return back to the client
+	updatedMoreInfo, err := h.usersService.GetMoreInfoAboutThisUser(r.Context(), targetUserDetails.ID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve updated user profile: "+err.Error())
+		return
+	}
+
+	newValuesJSON, _ := json.Marshal(updatedMoreInfo)
+
+	// --- Audit Logging ---
+	// Asynchronously insert the audit log to prevent blocking the API response
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Action:     db.ActionUpdateUserMoreInfo,
+		Module:     audit.StringToText(moduleName),
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeUser,
+		EntityID:   strconv.FormatInt(targetUserDetails.ID, 10),
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
+	// ---------------------
+
+	h.utils.RespondSuccess(w, http.StatusOK, "User profile updated successfully", map[string]interface{}{
+		"more_info": updatedMoreInfo,
+	})
 }
 
 // GetUserPhoneNumbers handles GET /api/v1/admin/users/{id}/phones
@@ -693,11 +828,12 @@ func (h *Handler) GetUserPhoneNumbers(w http.ResponseWriter, r *http.Request) {
 
 	// audit log if viewer is not the account owner
 	if !perms.IsOwnerOfAccount {
+		moduleName, actorRole := perms.GetAuditActorInfo()
 		h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+			Module:     audit.StringToText(moduleName),
 			Action:     db.ActionViewUserPhoneNumbers,
 			ActorID:    claims.UserID,
-			ActorRole:  pgtype.Text{String: strings.Join(claims.Roles, ","), Valid: true},
+			ActorRole:  audit.StringToText(actorRole),
 			EntityType: db.EntityTypeUser,
 			EntityID:   fmt.Sprintf("%d", userDetails.ID),
 		})
@@ -828,17 +964,14 @@ func (h *Handler) UpdateUserPhoneNumbers(w http.ResponseWriter, r *http.Request)
 	// Audit log the update
 	oldValues, _ := json.Marshal(oldPhones)
 	newValues, _ := json.Marshal(updatedPhones)
-	module := db.ModuleUsers
-	if !perms.IsOwnerOfAccount {
-		module = db.ModuleAdmin
-	}
+	moduleName, actorRole := perms.GetAuditActorInfo()
 
 	// save the log
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     pgtype.Text{String: module, Valid: true},
+		Module:     audit.StringToText(moduleName),
 		Action:     db.ActionUpdateUserPhoneNumbers,
 		ActorID:    claims.UserID,
-		ActorRole:  pgtype.Text{String: strings.Join(claims.Roles, ","), Valid: true},
+		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   fmt.Sprintf("%d", userDetails.ID),
 		OldValues:  oldValues,
@@ -947,17 +1080,14 @@ func (h *Handler) DeleteUserPhoneNumber(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// log the activity that the phone number was deleted
-	module := db.ModuleUsers
-	if !perms.IsOwnerOfAccount {
-		module = db.ModuleAdmin
-	}
+	moduleName, actorRole := perms.GetAuditActorInfo()
 	oldValues, _ := json.Marshal(targetPhone)
 	newValues, _ := json.Marshal(updatedPhones)
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
-		Module:     pgtype.Text{String: module, Valid: true},
+		Module:     audit.StringToText(moduleName),
 		Action:     db.ActionDeleteUserPhoneNumber,
 		ActorID:    claims.UserID,
-		ActorRole:  pgtype.Text{String: strings.Join(claims.Roles, ","), Valid: true},
+		ActorRole:  audit.StringToText(actorRole),
 		EntityType: db.EntityTypeUser,
 		EntityID:   fmt.Sprintf("%d", userDetails.ID),
 		OldValues:  oldValues,
@@ -1085,9 +1215,20 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	if hasPartyAdmin && req.PartyID == nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: party_id is required when assigning party_admin role")
-		return
+
+	// if a party admin is to be assigned, the user must be a member of the PartyID provided
+	if hasPartyAdmin {
+		// party_id is required when assigning party_admin role
+		if req.PartyID == nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: party_id is required when assigning party_admin role")
+			return
+		}
+
+		// user must belong to the specified party to be assigned a party admin role
+		if !userDetails.PartyID.Valid || int64(userDetails.PartyID.Int16) != *req.PartyID {
+			h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: user must belong to the specified party to be assigned a party admin role")
+			return
+		}
 	}
 
 	//--start-- Check if they are trying to delete the super_admin role
@@ -1154,6 +1295,7 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// get new userDetails
 	freshUserDetails, err := h.usersService.GetUserByFakeID(r.Context(), *req.UserFakeID)
 
 	// Log the action asynchronously
