@@ -43,6 +43,46 @@ export const updateUser = createServerFn({ method: "POST" })
     }
   });
 
+// Updates user's more info in the API
+export const updateUserMoreInfo = createServerFn({ method: "POST" })
+  .inputValidator((data: any) => data)
+  .handler(async ({ data: { user_id, ...body } }) => {
+    try {
+      // Clean up string values (e.g. occupation_id)
+      const payload: any = { ...body };
+      if (payload.occupation_id) {
+        payload.occupation_id = Number(payload.occupation_id);
+      }
+
+      const response = await apiFetch(API_URL.manageUserMoreInfo(user_id), {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to update user more info: " + (error as Error).message };
+    }
+  });
+
+// Gets user's more info from the API
+export const getUserMoreInfo = createServerFn({ method: "GET" })
+  .inputValidator((id: number | string) => id)
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(API_URL.manageUserMoreInfo(data), {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to get user's more info: " + (error as Error).message };
+    }
+  });
+
 // Deletes a user from the API based on the provided ID
 export const deleteUser = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
