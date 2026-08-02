@@ -4,6 +4,7 @@ import (
 	"errors"
 	"slices"
 
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
 )
@@ -22,6 +23,24 @@ type PermissionsService struct {
 
 func NewPermissionsService() *PermissionsService {
 	return &PermissionsService{}
+}
+
+// GetAuditActorInfo returns the corresponding audit module and actor role based on permissions
+func (p *UserModificationPermissions) GetAuditActorInfo() (moduleName string, actorRole string) {
+	if p.IsOwnerOfAccount {
+		moduleName = db.ModuleUsers
+		actorRole = db.ActorRoleUser
+	} else if p.IsBothAdmin {
+		moduleName = db.ModuleAdmin
+		actorRole = db.ActorRoleAdmin
+	} else if p.IsPartyAdminWithRights {
+		moduleName = db.ModulePartyAdmin
+		actorRole = db.ActorRolePartyAdmin
+	} else {
+		moduleName = db.ModuleUsers
+		actorRole = db.ActorRoleUser
+	}
+	return moduleName, actorRole
 }
 
 // CheckUserModificationPermission verifies if the requester (identified by claims) has the necessary
