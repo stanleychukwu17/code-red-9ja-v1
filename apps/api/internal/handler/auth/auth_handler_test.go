@@ -38,6 +38,11 @@ func (m *MockUsersService) CheckUsername(ctx context.Context, username string) b
 	return args.Bool(0)
 }
 
+func (m *MockUsersService) CheckEmail(ctx context.Context, email string) bool {
+	args := m.Called(ctx, email)
+	return args.Bool(0)
+}
+
 func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (authservice.RegisterResult, error) {
 	args := m.Called(ctx, params, nin, onboardingID, question1, answer1, question2, answer2)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
@@ -106,8 +111,8 @@ func (m *MockAuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsR
 	return args.Get(0).([]queries.ListAdminsRow), args.Error(1)
 }
 
-func (m *MockAuthService) RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar string, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (authservice.RegisterResult, error) {
-	args := m.Called(ctx, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel, dob, countryID, stateID, currentCity, stateOfOrigin, partyID)
+func (m *MockAuthService) RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (authservice.RegisterResult, error) {
+	args := m.Called(ctx, email, password, firstName, lastName, middleName, username, gender, avatar, dob, countryID, stateID, currentCity, stateOfOrigin, partyID)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
