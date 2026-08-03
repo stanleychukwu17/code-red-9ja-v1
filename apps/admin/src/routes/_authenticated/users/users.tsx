@@ -11,6 +11,7 @@ import {
 import { UsersTable } from "#/components/Tables";
 import { USERS_TABS } from "./-data";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
+import { AdminUsersSearchFilterDialog } from "#/components/dialogs/AdminUsersSearchFilterDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getUsersList } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";
@@ -26,6 +27,7 @@ export const Route = createFileRoute("/_authenticated/users/users")({
 function RouteComponent() {
   // State to control the visibility of the "Add User" form dialog
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
@@ -107,7 +109,7 @@ function RouteComponent() {
         onChange={(e) => setSearchQuery(e.target.value)}
         rightComponent={
           <>
-            <FilterButton />
+            <FilterButton onClick={() => setIsFilterOpen(true)} />
             {/* Opens the "Add User" dialog when clicked */}
             <AddButton onClick={() => setIsFormOpen(true)} />
           </>
@@ -160,6 +162,10 @@ function RouteComponent() {
         onClose={() => setIsFormOpen(false)}
         // Refetch the data when a user is successfully added so the table updates
         onSuccess={() => refetch()}
+      />
+      <AdminUsersSearchFilterDialog 
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
       />
     </Layout>
   );
