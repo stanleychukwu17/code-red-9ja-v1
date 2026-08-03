@@ -100,7 +100,7 @@ func newApp(ctx context.Context, cfg *config.Config) *App {
 	// Initialize worker
 	q := queries.New(pool)
 	distributor := worker.NewRedisTaskDistributor(redisOpt)
-	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg)
+	processor := worker.NewRedisTaskProcessor(redisOpt, q, pool, rdb, distributor, cfg, nil) // r2Svc will be passed after initialization
 
 	// Initialize router
 	r := router.New(cfg, pool, rdb, distributor)
