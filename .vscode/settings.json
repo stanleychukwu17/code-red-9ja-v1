@@ -1,10 +1,13 @@
 {
   "cSpell.words": [
+    "apikey",
     "apimiddleware",
+    "Asynq",
     "authhandler",
     "blkid",
     "bodieshandler",
     "bodiesservice",
+    "BYSCORE",
     "Certbot",
     "chimiddleware",
     "chukwu",
@@ -31,6 +34,7 @@
     "Geolocation",
     "godoc",
     "godotenv",
+    "hibiken",
     "hostnames",
     "jackc",
     "keepalive",
@@ -111,6 +115,8 @@
     "VITE",
     "wardshandler",
     "wardsservice",
-    "webhookshandler"
+    "webhookshandler",
+    "ZRANGE",
+    "ZSET"
   ]
 }
