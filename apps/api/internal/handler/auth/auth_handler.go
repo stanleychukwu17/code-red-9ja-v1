@@ -27,7 +27,7 @@ type AuthService interface {
 	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
 	ChangePasswordByEmail(ctx context.Context, email, newPassword string) error
 	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
-	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
+	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 }
@@ -36,6 +36,7 @@ type AuthService interface {
 type UsersService interface {
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
+	CheckEmail(ctx context.Context, email string) bool
 }
 
 // Handler struct holds the dependencies for the auth handler
@@ -647,6 +648,7 @@ type RegisterCandidatePlaceholderRequest struct {
 	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
 	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
 	MiddleName     string `json:"middle_name" validate:"omitempty,min=2,max=30"`
+	Username       string `json:"username" validate:"omitempty,min=3,max=30"`
 	Gender         string `json:"gender" validate:"required,oneof=male female"`
 	DateOfBirth    string `json:"date_of_birth" validate:"required"` // Expects YYYY-MM-DD
 	CurrentCountry int16  `json:"current_country" validate:"required"`
@@ -655,8 +657,6 @@ type RegisterCandidatePlaceholderRequest struct {
 	StateOfOrigin  int16  `json:"state_of_origin" validate:"omitempty"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
-	Role           string `json:"role" validate:"required,oneof=admin party_admin user"`
-	RoleLevel      string `json:"role_level" validate:"required,oneof=super_admin admin member placeholder pollingagent user"`
 }
 
 // @Summary Register a new candidate user with placeholder status
@@ -687,67 +687,52 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if req.Role == "party_admin" && req.PartyID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: Key: 'RegisterCandidatePlaceholderRequest.PartyID' Error:Field validation for 'PartyID' failed on the 'required' tag")
-		return
-	}
-
 	// Permission checks
-	isAdmin := claims.HasRole("admin")
-	isPartyAdmin := claims.HasRole("party_admin") || claims.HasRole("super_party_admin")
+	isAdmin := claims.HasAnyRole("admin", "super_admin")
+	isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
 	if !isAdmin && !isPartyAdmin {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
-
 	if isPartyAdmin && !isAdmin {
-		currUser, err := h.authService.GetUserDetailsByFakeID(r.Context(), claims.FakeID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
-			return
-		}
-
 		// A party admin can only register users for their own party
-		if !currUser.PartyID.Valid || currUser.PartyID.Int16 != int16(req.PartyID) {
+		if claims.PartyID == 0 || claims.PartyID != int16(req.PartyID) {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only add members to your own party")
 			return
 		}
-
-		// A party admin cannot create admin accounts
-		if strings.ToLower(req.Role) == "admin" {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party admins cannot create administrative accounts")
-			return
-		}
 	}
 
-	// Validate role and role level combination
-	isValidCombo := false
-	switch req.Role {
-	case "admin":
-		if req.RoleLevel == "super_admin" || req.RoleLevel == "admin" {
-			isValidCombo = true
-		}
-	case "party_admin":
-		if req.RoleLevel == "admin" || req.RoleLevel == "member" || req.RoleLevel == "placeholder" {
-			isValidCombo = true
-		}
-	case "user":
-		if req.RoleLevel == "pollingagent" || req.RoleLevel == "user" {
-			isValidCombo = true
-		}
-	}
-
-	if !isValidCombo {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid role ("+req.Role+") and role level ("+req.RoleLevel+") combination")
-		return
-	}
-
+	// Validate and parse DateOfBirth
 	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date format for date_of_birth. Use YYYY-MM-DD")
 		return
 	}
 
+	// Validate email
+	if req.Email != "" {
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+		if h.usersService.CheckEmail(r.Context(), req.Email) {
+			h.utils.RespondError(w, http.StatusConflict, "Email already exists")
+			return
+		}
+	}
+
+	// Validate and clean username
+	if req.Username != "" {
+		cleanUsername, err := auth.CleanUsername(req.Username)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
+			h.utils.RespondError(w, http.StatusConflict, "Username already exists")
+			return
+		}
+		req.Username = cleanUsername
+	}
+
+	// Register user
 	result, err := h.authService.RegisterCandidatePlaceholder(
 		r.Context(),
 		req.Email,
@@ -755,10 +740,9 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		req.FirstName,
 		req.LastName,
 		req.MiddleName,
+		req.Username,
 		req.Gender,
 		req.Avatar,
-		req.Role,
-		req.RoleLevel,
 		dob,
 		req.CurrentCountry,
 		req.CurrentState,
@@ -774,6 +758,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 	h.utils.RespondSuccess(w, http.StatusCreated, "Candidate placeholder registered successfully", map[string]interface{}{
 		"id":      result.UserID,
 		"fake_id": result.FakeID,
+		"user":    result.User,
 	})
 }
 

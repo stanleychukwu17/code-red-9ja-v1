@@ -14,6 +14,7 @@ import (
 	"free9ja/api/internal/db"
 
 	"free9ja/api/internal/service/audit"
+	authservice "free9ja/api/internal/service/auth"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	usersservice "free9ja/api/internal/service/users"
@@ -35,7 +36,7 @@ type UsersService interface {
 	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error
 	ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error)
 	DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error
-	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
+	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
 
 	GetBanks(ctx context.Context) ([]monnifyclient.Bank, error)
 	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
@@ -51,6 +52,8 @@ type UsersService interface {
 	DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error
 	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
+	CheckUsername(ctx context.Context, username string) bool
+	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
 }
 
@@ -210,7 +213,7 @@ type UpdateProfileRequest struct {
 // @Success      200      {object}  map[string]interface{}
 // @Failure      400      {object}  map[string]interface{}
 // @Failure      401      {object}  map[string]interface{}
-// @Failure      442      {object}  map[string]interface{}
+// @Failure      442      {object}  map[string]interface{}k
 // @Security     BearerAuth
 // @Router       /users/profile [put]
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -547,6 +550,7 @@ type AdminUpdateUserRequest struct {
 	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
 	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
 	MiddleName     string `json:"middle_name" validate:"omitempty,max=30"`
+	Username       string `json:"username" validate:"omitempty,max=30"`
 	Gender         string `json:"gender" validate:"required,oneof=male female"`
 	StateOfOrigin  int16  `json:"state_of_origin"`
 	CurrentCountry int16  `json:"current_country" validate:"required"`
@@ -591,6 +595,27 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	usernameChanged := false
+	var oldUsername string
+
+	// Check if the username is being changed and if it already exists
+	if req.Username != "" && req.Username != targetUserDetails.Username.String {
+		cleanUsername, err := authservice.CleanUsername(req.Username)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+
+		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
+			h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
+			return
+		}
+
+		req.Username = cleanUsername
+		usernameChanged = true
+		oldUsername = targetUserDetails.Username.String
+	}
+
 	// Permission checks using permissionsService
 	hasPermission, perms, permErr := h.permissionsService.CheckUserModificationPermission(claims, targetUserDetails)
 	if !hasPermission {
@@ -612,6 +637,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		req.FirstName,
 		req.LastName,
 		req.MiddleName,
+		req.Username,
 		req.Gender,
 		req.Avatar,
 		req.CurrentCountry,
@@ -624,7 +650,13 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// if the partyID is fresh (i.e assigning a partyID to a user)
+	// invalidate the old username cache if it changed
+	if usernameChanged && oldUsername != "" {
+		h.usersService.InvalidateUsernameCache(r.Context(), oldUsername)
+		h.usersService.CheckUsername(r.Context(), req.Username)
+	}
+
+	// if the partyID is fresh, send a request for the user to be a member of the partyID received
 	if !targetUserDetails.PartyID.Valid && req.PartyID > 0 {
 		err = h.partiesService.JoinParty(r.Context(), int16(req.PartyID), 0, targetUserDetails.ID, targetUserDetails.FakeID.Int64)
 		if err != nil {
