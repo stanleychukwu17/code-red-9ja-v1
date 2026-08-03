@@ -40,11 +40,12 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   );
 }
 
-export function FilterButton() {
+export function FilterButton({ onClick }: { onClick?: () => void }) {
   return (
     <Button
       size="icon-xl"
       variant="outline"
+      onClick={onClick}
       className="size-10 p-0 flex items-center justify-center rounded-full transition hover:[&_svg]:text-c-90"
     >
       <SlidersHorizontal className="size-5 text-c-70" />
