@@ -82,6 +82,7 @@ export interface UserFormDialogProps {
   deleteUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   loadUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   getOccupations?: () => Promise<any>;
+  deleteFile?: (args: { data: { id: string | number } }) => Promise<any>;
 }
 
 export function UserFormDialog({
@@ -106,8 +107,10 @@ export function UserFormDialog({
   deleteUserPhoneNumber,
   loadUserPhoneNumber,
   getOccupations,
+  deleteFile,
 }: UserFormDialogProps) {
   const [avatarUrl, setAvatarUrl] = React.useState("");
+  const [uploadedFileId, setUploadedFileId] = React.useState<number | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -383,6 +386,7 @@ export function UserFormDialog({
 
       // 5. Update the UI with the new avatar URL
       setAvatarUrl(public_url);
+      setUploadedFileId(file_id);
     } catch (err: any) {
       setError(err.message || "An error occurred during file upload");
     } finally {
@@ -391,10 +395,20 @@ export function UserFormDialog({
   };
 
   // Delete user's profile image:
-  const handleRemoveImage = () => {
+  const handleRemoveImage = async () => {
     setAvatarUrl("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+    
+    // Attempt to delete the orphaned file if it was uploaded during this session
+    if (uploadedFileId && deleteFile) {
+      try {
+        await deleteFile({ data: { id: uploadedFileId } });
+        setUploadedFileId(null);
+      } catch (err) {
+        console.error("Failed to delete orphaned image:", err);
+      }
     }
   };
 
