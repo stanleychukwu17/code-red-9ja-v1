@@ -361,6 +361,12 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 
 	// Invalidate the cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
+	// Remove the uploaded avatar from pending_uploads if an avatar was provided, so it doesn't get cleaned up
+	if avatar != "" {
+		_ = s.rdb.ZRem(ctx, "pending_uploads", avatar).Err()
+	}
+
 	return nil
 }
 
@@ -418,12 +424,13 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 }
 
 // AdminUpdateUser allows admins to perform a comprehensive update of user details.
-func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
+func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
 	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
 		ID:             id,
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
 		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
 		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
+		Username:       pgtype.Text{String: username, Valid: username != ""},
 		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
 		CurrentCountry: countryID,
@@ -787,6 +794,12 @@ func (s *UsersService) CheckUsername(ctx context.Context, username string) bool 
 	}
 
 	return false
+}
+
+// InvalidateUsernameCache deletes a specific username from Redis
+func (s *UsersService) InvalidateUsernameCache(ctx context.Context, username string) {
+	cacheKey := db.RedisUsernameFakeID + username
+	s.rdb.Del(ctx, cacheKey)
 }
 
 // function: checks if the email already exists in redis and in the postgres db
