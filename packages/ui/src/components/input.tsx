@@ -11,7 +11,7 @@ import { Button } from "./button";
 import LoadingCircleIcon from "../icons/loading-circle-icon";
 import CheckIcon from "../icons/check-icon";
 
-const inputClassName = `group flex items-center gap-2 text-lg md:text-base h-14 md:h-11 w-full rounded-xl bg-black/5 px-4 py-6
+const inputClassName = `group flex items-center gap-2 text-lg md:text-base h-14 md:h-11 w-full rounded-xl bg-black/5 px-4
   transition-colors duration-200 file:border-0 file:bg-transparent ring-inset file:text-foreground placeholder:text-c-60
   dark:bg-black/30 dark:hover:bg-black/90
   focus-visible:outline-hidden focus-within:ring-c-80 focus-within:ring-1 focus-within:hover:ring-c-80
@@ -526,6 +526,96 @@ const SuffixInput = ({
   );
 };
 
+// ─── MoneyInput ──────────────────────────────────────────────────────────────
+// Formats numbers with commas as the user types. Exposes raw numeric value
+// via `onValueChange`. The currency symbol is rendered as a leading decoration
+// inside the same pill so it visually fuses with the input text.
+
+type MoneyInputProps = Omit<
+  React.ComponentProps<"input">,
+  "value" | "onChange" | "type"
+> & {
+  /** The raw numeric value (stored in kobo, naira, etc. — whatever the caller decides). */
+  value: number;
+  /** Called with the new numeric value on every change. */
+  onValueChange: (value: number) => void;
+  /** The currency symbol rendered to the left of the number (e.g. "₦", "$"). */
+  symbol?: string;
+  errorMsg?: string;
+  containerClassName?: string;
+};
+
+const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
+  (
+    {
+      value,
+      onValueChange,
+      symbol = "₦",
+      className,
+      containerClassName,
+      errorMsg,
+      disabled,
+      ...props
+    },
+    ref,
+  ) => {
+    // Format a raw number to a locale string with commas, no decimals.
+    const format = (n: number) => (n === 0 ? "" : n.toLocaleString("en-NG"));
+
+    const [display, setDisplay] = React.useState<string>(format(value));
+
+    // Keep display in sync when value changes externally.
+    React.useEffect(() => {
+      setDisplay(format(value));
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Strip everything except digits.
+      const digits = e.target.value.replace(/[^0-9]/g, "");
+      const num = digits === "" ? 0 : parseInt(digits, 10);
+      setDisplay(digits === "" ? "" : num.toLocaleString("en-NG"));
+      onValueChange(num);
+    };
+
+    const handleBlur = () => {
+      // Re-format cleanly on blur.
+      setDisplay(format(value));
+    };
+
+    return (
+      <div className={cn("space-y-1 w-fit", containerClassName)}>
+        <div
+          className={cn(
+            inputClassName,
+            "gap-1 px-3",
+            errorMsg && "border border-red",
+            disabled && "opacity-50 cursor-not-allowed",
+            className,
+          )}
+        >
+          <span className="shrink-0 text-c-50 font-medium select-none">
+            {symbol}
+          </span>
+          <input
+            ref={ref}
+            type="text"
+            inputMode="numeric"
+            value={display}
+            onChange={handleChange}
+            onBlur={handleBlur}
+            disabled={disabled}
+            autoComplete="off"
+            className="w-full bg-transparent outline-none placeholder:text-c-60 font-semibold text-c-90"
+            {...props}
+          />
+        </div>
+        <InputErrorText text={errorMsg} />
+      </div>
+    );
+  },
+);
+MoneyInput.displayName = "MoneyInput";
+
 export {
   FancyInput,
   FancyTextarea,
@@ -540,4 +630,5 @@ export {
   Textarea,
   TextareaComment,
   TextareaInput,
+  MoneyInput,
 };

@@ -8,7 +8,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { Input } from "@repo/ui/components/input";
 import { useForm } from "@tanstack/react-form";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -16,49 +16,73 @@ import {
   AccordionTrigger,
 } from "@repo/ui/components/accordion";
 import * as React from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 
 export type TargetData = {
   pollingUnitAgent: number;
-  wardSupervisor: number;
-  lgaSupervisor: number;
-  stateSupervisor: number;
+  wardElectionSupervisor: number;
+  lgaElectionSupervisor: number;
+  stateElectionSupervisor: number;
 };
 
 export function TargetFormDialog({
   open,
   onClose,
-  defaultValues,
-  onSubmit,
-  isPending,
-  error,
+  partyId,
+  fetchTargets,
+  updateTargets,
+  onSuccess,
 }: {
   open: boolean;
   onClose: () => void;
-  defaultValues?: TargetData;
-  onSubmit: (values: TargetData) => void;
-  isPending?: boolean;
-  error?: string | null;
+  partyId: string | number;
+  fetchTargets: (partyId: string | number) => Promise<TargetData | null>;
+  updateTargets: (partyId: string | number, values: TargetData) => Promise<any>;
+  onSuccess?: () => void;
 }) {
+  const { data: targets, isLoading } = useQuery({
+    queryKey: ["party-agent-targets", partyId],
+    queryFn: () => fetchTargets(partyId),
+    enabled: open,
+  });
+  console.log("Targets:", targets);
+
+  const mutation = useMutation({
+    mutationFn: (values: TargetData) => updateTargets(partyId, values),
+    onSuccess: () => {
+      onSuccess?.();
+    },
+  });
+
   const form = useForm({
-    defaultValues: defaultValues || {
-      pollingUnitAgent: 2,
-      wardSupervisor: 2,
-      lgaSupervisor: 2,
-      stateSupervisor: 1,
+    defaultValues: {
+      pollingUnitAgent: 1,
+      wardElectionSupervisor: 1,
+      lgaElectionSupervisor: 1,
+      stateElectionSupervisor: 1,
     },
     onSubmit: async ({ value }) => {
-      onSubmit(value);
+      mutation.mutate(value);
     },
   });
 
   React.useEffect(() => {
-    if (open && defaultValues) {
-      form.setFieldValue("pollingUnitAgent", defaultValues.pollingUnitAgent);
-      form.setFieldValue("wardSupervisor", defaultValues.wardSupervisor);
-      form.setFieldValue("lgaSupervisor", defaultValues.lgaSupervisor);
-      form.setFieldValue("stateSupervisor", defaultValues.stateSupervisor);
+    if (open && targets) {
+      form.setFieldValue("pollingUnitAgent", targets.pollingUnitAgent ?? 1);
+      form.setFieldValue(
+        "wardElectionSupervisor",
+        targets.wardElectionSupervisor ?? 1,
+      );
+      form.setFieldValue(
+        "lgaElectionSupervisor",
+        targets.lgaElectionSupervisor ?? 1,
+      );
+      form.setFieldValue(
+        "stateElectionSupervisor",
+        targets.stateElectionSupervisor ?? 1,
+      );
     }
-  }, [open, defaultValues]);
+  }, [open, targets]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -78,9 +102,9 @@ export function TargetFormDialog({
               real-time coalition of final results.
             </p>
 
-            {error && (
+            {mutation.isError && (
               <div className="p-3 text-[14px] font-medium text-red-600 bg-red-50 rounded-xl">
-                {error}
+                {(mutation.error as Error)?.message || "An error occurred"}
               </div>
             )}
 
@@ -92,7 +116,6 @@ export function TargetFormDialog({
                   </span>
                 </AccordionTrigger>
                 <AccordionContent className="bg-purple/10 px-4 pb-4 rounded-b-xl">
-                  {/* Using a placeholder for the explanation content based on the screenshot */}
                   <div className="aspect-[16/9] w-full bg-black/5 rounded-lg flex items-center justify-center overflow-hidden">
                     <img
                       src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2000&auto=format&fit=crop"
@@ -111,12 +134,15 @@ export function TargetFormDialog({
                   label: "Polling Agent per polling unit",
                 },
                 {
-                  name: "wardSupervisor",
+                  name: "wardElectionSupervisor",
                   label: "Ward Supervisor per ward",
                 },
-                { name: "lgaSupervisor", label: "LGA Supervisor per lga" },
                 {
-                  name: "stateSupervisor",
+                  name: "lgaElectionSupervisor",
+                  label: "LGA Supervisor per lga",
+                },
+                {
+                  name: "stateElectionSupervisor",
                   label: "State Supervisor per state",
                 },
               ].map((item) => (
@@ -136,6 +162,7 @@ export function TargetFormDialog({
                           field.handleChange(Number(e.target.value))
                         }
                         className="w-[100px] md:h-10"
+                        disabled={isLoading || mutation.isPending}
                       />
                     </div>
                   )}
@@ -150,8 +177,8 @@ export function TargetFormDialog({
               children={([canSubmit]) => (
                 <Button
                   type="submit"
-                  disabled={!canSubmit || isPending}
-                  loading={isPending}
+                  disabled={!canSubmit || isLoading || mutation.isPending}
+                  loading={isLoading || mutation.isPending}
                   variant="secondary"
                   size="3xl"
                 >

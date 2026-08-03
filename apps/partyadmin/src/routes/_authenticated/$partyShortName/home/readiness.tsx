@@ -9,16 +9,32 @@ import {
 import { HomePageHeader } from "./-header";
 import { ElectionScopeSelector } from "./components/-election-scope-selector";
 import { useAppContext } from "#/hooks/useAppContext";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
-import { getPartyWallet } from "#/lib/server/parties";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getPartyWallet,
+  updatePartyStateAllowances,
+  getPartyAgentPaymentAllocation,
+  getPlans,
+  createMarketingCampaign,
+  getPartyAgentTargets,
+  updatePartyAgentTargets,
+  depositPartyAllowance,
+} from "#/lib/server/parties";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
-import { SetAgentPaymentDialog } from "@repo/ui/components/dialogs/set-agent-payment-dialog";
+import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "@repo/ui/lib/utils";
 import { getStates } from "#/lib/server/countries";
-import { updatePartyStateAllowances } from "#/lib/server/parties";
 import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
+import { useServerFn } from "@tanstack/react-start";
+import { getElectionGroups } from "#/lib/server/election_groups";
+import { getElectionsByGroup } from "#/lib/server/elections";
+import {
+  AgentMarketingSetupDialog,
+  type AgentMarketingSetupValue,
+} from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
+import { DepositAgentPaymentDialog } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
 import {
   LeaderboardCardWrapper,
   ObjectiveTile,
@@ -36,7 +52,7 @@ export const Route = createFileRoute(
 });
 
 function ReadinessComponent() {
-  const { party } = useAppContext();
+  const { party, selectedElectionGroup, selectedElection } = useAppContext();
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -44,6 +60,31 @@ function ReadinessComponent() {
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = React.useState(false);
   const [isTargetDialogOpen, setIsTargetDialogOpen] = React.useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
+  const [isPaymentPending, setIsPaymentPending] = React.useState(false);
+  const [isMarketingDialogOpen, setIsMarketingDialogOpen] =
+    React.useState(false);
+
+  const fetchGroups = useServerFn(getElectionGroups);
+  const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
+  const fetchPlans = useServerFn(getPlans);
+  const submitCampaign = useServerFn(createMarketingCampaign);
+
+  const fetchElectionsWrapper = async (args: any) => {
+    if (!args.data.electionGroupId)
+      return {
+        success: true,
+        data: { elections: [] },
+        meta: { has_more: false },
+      };
+    return await fetchElectionsByGroup({ data: args.data.electionGroupId });
+  };
+
+  const fetchMarketingPlansWrapper = async (args: any) => {
+    return await fetchPlans({
+      data: { type: args?.data?.type ?? "agent-campaign", isActive: true },
+    });
+  };
 
   const { data: walletRes, refetch: refetchWallet } = useQuery({
     queryKey: ["partyWallet", partyId],
@@ -103,28 +144,6 @@ function ReadinessComponent() {
         "Zamfara",
       ];
 
-  const paymentMutation = useMutation({
-    mutationFn: async (allowances: Record<string, Record<string, number>>) => {
-      const res = await updatePartyStateAllowances({
-        data: { partyID: partyId!, allowances },
-      });
-      if (!res.success) {
-        throw new Error(res.message || "Failed to update allowances");
-      }
-      return res.data;
-    },
-    onSuccess: () => {
-      if (partyId) {
-        queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-      }
-      toast.success("Agent payment budget saved successfully!");
-      setIsBudgetDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "An unexpected error occurred");
-    },
-  });
-
   const handleSlotsPurchased = () => {
     refetchWallet();
     if (partyId) {
@@ -143,8 +162,8 @@ function ReadinessComponent() {
           <ReadinessProgressCard />
           <RequiredActionsSection
             onBuySlots={() => setIsSlotsDialogOpen(true)}
-            onDepositStipend={() => setIsBudgetDialogOpen(true)}
-            onDepositMarketing={() => setIsWalletDialogOpen(true)}
+            onDepositPayment={() => setIsPaymentDialogOpen(true)}
+            onDepositMarketing={() => setIsMarketingDialogOpen(true)}
           />
           <SubTabsSection />
         </div>
@@ -156,7 +175,7 @@ function ReadinessComponent() {
             slots={party?.slots || 0}
           />
           <TargetCard />
-          <AgentStipendCard
+          <AgentPaymentCard
             onEdit={() => setIsBudgetDialogOpen(true)}
             party={party}
           />
@@ -179,22 +198,131 @@ function ReadinessComponent() {
         onSuccess={handleSlotsPurchased}
       />
 
-      <SetAgentPaymentDialog
+      <AgentPaymentAllocationFormDialog
         open={isBudgetDialogOpen}
         onClose={() => setIsBudgetDialogOpen(false)}
-        defaultValues={party?.agentPaymentAllocation as any}
-        onSubmit={(values) => paymentMutation.mutate(values as any)}
-        isPending={paymentMutation.isPending}
-        statesList={[]}
+        partyId={partyId!}
+        fetchAllocation={async (id) => {
+          const res = await getPartyAgentPaymentAllocation({ data: id });
+          return res?.data?.agent_payment_allocation ?? null;
+        }}
+        updateAllocation={async (id, values) => {
+          const res = await updatePartyStateAllowances({
+            data: { partyID: id, allowances: values as any },
+          });
+          if (!res.success) throw new Error(res.message || "Failed to update");
+          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+          toast.success("Agent payment budget saved!");
+          return res.data;
+        }}
+        onSuccess={() => setIsBudgetDialogOpen(false)}
       />
 
       <TargetFormDialog
         open={isTargetDialogOpen}
         onClose={() => setIsTargetDialogOpen(false)}
-        onSubmit={(values) => {
-          // TODO: hook up to mutation when endpoint is ready
-          console.log("Targets submitted", values);
-          setIsTargetDialogOpen(false);
+        partyId={partyId!}
+        fetchTargets={async (id) => {
+          const res = await getPartyAgentTargets({ data: id });
+          return res?.data?.targets ?? null;
+        }}
+        updateTargets={async (id, values) => {
+          const res = await updatePartyAgentTargets({
+            data: { partyID: id, targets: values },
+          });
+          if (!res.success) throw new Error(res.message || "Failed to update");
+          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+          toast.success("Agent targets saved!");
+          return res.data;
+        }}
+        onSuccess={() => setIsTargetDialogOpen(false)}
+      />
+
+      <DepositAgentPaymentDialog
+        open={isPaymentDialogOpen}
+        onClose={() => setIsPaymentDialogOpen(false)}
+        walletBalanceNaira={(wallet?.balance_kobo ?? 0) / 100}
+        agentPaymentBalanceNaira={(party?.agentPaymentBalanceKobo ?? 0) / 100}
+        partyId={partyId}
+        electionGroupId={selectedElectionGroup?.id}
+        fetchElectionGroups={fetchGroups}
+        isPending={isPaymentPending}
+        onSubmit={async (amountKobo) => {
+          if (!partyId) return;
+          setIsPaymentPending(true);
+          try {
+            const res = await depositPartyAllowance({
+              data: { partyID: partyId, amountKobo },
+            });
+            if (res?.success) {
+              toast.success("Agent payment deposited!");
+              refetchWallet();
+              queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+              setIsPaymentDialogOpen(false);
+            } else {
+              toast.error(res?.message ?? "Failed to deposit agent payment");
+            }
+          } finally {
+            setIsPaymentPending(false);
+          }
+        }}
+      />
+
+      <AgentMarketingSetupDialog
+        open={isMarketingDialogOpen}
+        onClose={() => setIsMarketingDialogOpen(false)}
+        isPending={false}
+        partyId={partyId}
+        fetchElectionGroups={fetchGroups}
+        fetchElection={fetchElectionsWrapper}
+        fetchPlans={fetchMarketingPlansWrapper}
+        states={statesList}
+        defaultValue={
+          {
+            electionGroupId: selectedElectionGroup?.id
+              ? String(selectedElectionGroup.id)
+              : "",
+            electionId: selectedElection?.id ? String(selectedElection.id) : "",
+            planId: "",
+            targetMode: "custom",
+            states: [],
+            durationUnit: "days",
+            durationValue: 5,
+          } satisfies Partial<AgentMarketingSetupValue>
+        }
+        onSubmit={async (values) => {
+          if (!partyId) return;
+          const durationInDays =
+            values.durationUnit === "months"
+              ? values.durationValue * 30
+              : values.durationValue;
+          // budget = plan.price (NGN) × duration_in_days × number_of_states
+          // The API expects budget as a plain number (NGN, not kobo)
+          // We compute it client-side from the selected plan already stored in the dialog
+          // The dialog exposes planId so we fetch price from the plans cache if needed;
+          // for now we pass the total as 0 and let the backend compute from plan_id × duration × states.length
+          // (backend service already calculates wallet debit from plan price)
+          const statesForApi =
+            values.targetMode === "all" ? statesList : values.states;
+          const res = await submitCampaign({
+            data: {
+              partyId,
+              electionGroupId: Number(values.electionGroupId),
+              electionId: Number(values.electionId),
+              planId: Number(values.planId),
+              type: "agent-campaign",
+              states: statesForApi,
+              durationInDays,
+              budget: 0, // backend deducts correct amount from wallet via plan price
+            },
+          });
+          if (res?.success) {
+            toast.success("Marketing campaign created successfully!");
+            setIsMarketingDialogOpen(false);
+            refetchWallet();
+          } else {
+            toast.error(res?.message ?? "Failed to create marketing campaign");
+          }
         }}
       />
     </DashboardLayout>
@@ -306,11 +434,11 @@ function RoleProgressRow({
 
 function RequiredActionsSection({
   onBuySlots,
-  onDepositStipend,
+  onDepositPayment,
   onDepositMarketing,
 }: {
   onBuySlots: () => void;
-  onDepositStipend: () => void;
+  onDepositPayment: () => void;
   onDepositMarketing: () => void;
 }) {
   return (
@@ -325,16 +453,16 @@ function RequiredActionsSection({
           onClick={onBuySlots}
         />
         <ActionBanner
-          title="Deposit Agent Stipend"
-          description="Deposit party agent election day stipend."
-          buttonLabel="Deposit Agent Stipend"
+          title="Deposit Agent Payment"
+          description="Deposit party agent election day payment."
+          buttonLabel="Deposit Agent Payment"
           bgClass="bg-purple/20"
-          onClick={onDepositStipend}
+          onClick={onDepositPayment}
         />
         <ActionBanner
-          title="Deposit Marketing Funds"
-          description="Acquire agents for the upcoming election by depositing funds for Free9ja marketing."
-          buttonLabel="Deposit Marketing Funds"
+          title="Setup Agent Marketing"
+          description="Acquire agents for the upcoming election. This is the fastest way to get agents for your party (Highly Recommended)."
+          buttonLabel="Setup Agent Marketing"
           bgClass="bg-[#0984E3]/20"
           onClick={onDepositMarketing}
         />
@@ -363,12 +491,12 @@ function ActionBanner({
         bgClass,
       )}
     >
-      <FancyAgentIcon className="size-6" />
+      <FancyAgentIcon className="shrink-0 size-6" />
       <div className="space-y-1 w-full">
         <h3 className="font-semibold text-lg text-c-90">{title}</h3>
         <p className="text-c-70 text-sm">{description}</p>
       </div>
-      <Button onClick={onClick} variant="black" size="sm" className="px-6">
+      <Button onClick={onClick} variant="black" size="lg" className="px-4">
         {buttonLabel}
       </Button>
     </div>
@@ -573,7 +701,7 @@ function ActivitiesSubTabContent() {
 function TransactionsSubTabContent() {
   const transactions = [
     {
-      type: "Agent Stipend: Deposited",
+      type: "Agent Payment: Deposited",
       time: "2m ago",
       amount: "-₦50,000,000",
       status: "Successful",
@@ -662,7 +790,7 @@ function FinancialOverallCard({
         <div className="h-px bg-border w-full" />
       </div>
       <FinancialRow label="Slots" value={slots.toLocaleString()} />
-      <FinancialRow label="Agent Stipend" value="₦176M" />
+      <FinancialRow label="Agent Payment" value="₦176M" />
       <FinancialRow label="Marketing Funds" value="₦200M" />
     </ReadinessStatSection>
   );
@@ -681,30 +809,93 @@ function FinancialRow({ label, value }: { label: string; value: string }) {
 }
 
 function TargetCard() {
+  const { party } = useAppContext();
+  const partyId = party?.id;
+
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const fetchTargetsFn = useServerFn(getPartyAgentTargets);
+  const updateTargetsFn = useServerFn(updatePartyAgentTargets);
+  const queryClient = useQueryClient();
+
+  const handleFetchTargets = async (id: string | number) => {
+    const res = await fetchTargetsFn({ data: id });
+    console.log("FETCH TARGETS RES", res);
+    return res?.data?.targets || res?.data || null;
+  };
+
+  const handleUpdateTargets = async (id: string | number, values: any) => {
+    return await updateTargetsFn({
+      data: {
+        partyID: id,
+        targets: values,
+      },
+    });
+  };
+
+  const { data: serverTargets } = useQuery({
+    queryKey: ["party-agent-targets", partyId],
+    queryFn: () => handleFetchTargets(partyId!),
+    enabled: !!partyId,
+  });
+
   const targets = [
-    { role: "Polling Agent per unit", count: "2" },
-    { role: "Ward Supervisor per ward", count: "2" },
-    { role: "LGA Supervisor per lga", count: "2" },
-    { role: "State Supervisor per state", count: "1" },
+    {
+      role: "Polling Agent per unit",
+      count: serverTargets?.pollingUnitAgent?.toString() ?? "2",
+    },
+    {
+      role: "Ward Supervisor per ward",
+      count: serverTargets?.wardElectionSupervisor?.toString() ?? "2",
+    },
+    {
+      role: "LGA Supervisor per lga",
+      count: serverTargets?.lgaElectionSupervisor?.toString() ?? "2",
+    },
+    {
+      role: "State Supervisor per state",
+      count: serverTargets?.stateElectionSupervisor?.toString() ?? "1",
+    },
   ];
 
   return (
-    <ReadinessStatSection
-      title="Target"
-      headerAction={
-        <Button
-          variant="outline"
-          size="xs"
-          className="hover:bg-background hover:text-green"
-        >
-          Edit
-        </Button>
-      }
-    >
-      {targets.map((t, i) => (
-        <SimpleStatTile key={i} label={t.role} value={t.count} />
-      ))}
-    </ReadinessStatSection>
+    <>
+      <ReadinessStatSection
+        title="Target"
+        headerAction={
+          <Button
+            variant="outline"
+            size="xs"
+            className="hover:bg-background hover:text-green"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDialogOpen(true);
+            }}
+          >
+            Edit
+          </Button>
+        }
+      >
+        {targets.map((t, i) => (
+          <SimpleStatTile key={i} label={t.role} value={t.count} />
+        ))}
+      </ReadinessStatSection>
+
+      {partyId && (
+        <TargetFormDialog
+          open={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          partyId={partyId}
+          fetchTargets={handleFetchTargets}
+          updateTargets={handleUpdateTargets}
+          onSuccess={() => {
+            setIsDialogOpen(false);
+            queryClient.invalidateQueries({
+              queryKey: ["party-agent-targets", partyId],
+            });
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -726,18 +917,18 @@ function SimpleStatTile({
   );
 }
 
-function AgentStipendCard({
+function AgentPaymentCard({
   onEdit,
   party,
 }: {
   onEdit: () => void;
   party: any;
 }) {
-  const defaultStipend =
+  const defaultPayment =
     (party?.agentPaymentAllocation?.default || 5000000) / 100;
 
-  const stipends = [
-    { role: "Polling Agent", amount: `₦${defaultStipend.toLocaleString()}` },
+  const payments = [
+    { role: "Polling Agent", amount: `₦${defaultPayment.toLocaleString()}` },
     { role: "Ward Supervisor", amount: "₦70,000" },
     { role: "LGA Supervisor", amount: "₦100,000" },
     { role: "State Supervisor", amount: "₦500,000" },
@@ -745,18 +936,19 @@ function AgentStipendCard({
 
   return (
     <ReadinessStatSection
-      title="Agent Stipend"
+      title="Agent Payment"
       headerAction={
         <Button
           variant="outline"
           size="xs"
           className="hover:bg-background hover:text-green"
+          onClick={onEdit}
         >
           Edit
         </Button>
       }
     >
-      {stipends.map((s, i) => (
+      {payments.map((s, i) => (
         <SimpleStatTile key={i} label={s.role} value={s.amount} />
       ))}
     </ReadinessStatSection>

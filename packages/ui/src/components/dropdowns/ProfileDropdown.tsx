@@ -4,9 +4,9 @@ import { DropdownMenuItem } from "../dropdown-menu";
 import SettingsIcon from "../../icons/navbar/settings-icon";
 import { LogOut, Monitor, Moon, Sun } from "lucide-react";
 import { cn } from "../../lib/utils";
-import SunIcon from "../../icons/sun-icon";
-import MoonIcon from "../../icons/moon-icon";
-import SystemIcon from "../../icons/system-icon";
+import FancySunIcon from "../../icons/fancy-sun-icon";
+import FancyMoonIcon from "../../icons/fancy-moon-icon";
+import FancySystemIcon from "../../icons/fancysystem-icon";
 
 export function ProfileDropdown({
   onLogout,
@@ -58,7 +58,7 @@ export function ProfileDropdown({
             )}
             title="Light Mode"
           >
-            <SunIcon className="size-6" />
+            <FancySunIcon className="size-6" />
           </button>
           <button
             onClick={() => setTheme("dark")}
@@ -70,7 +70,7 @@ export function ProfileDropdown({
             )}
             title="Dark Mode"
           >
-            <MoonIcon className="size-6" />
+            <FancyMoonIcon className="size-6" />
           </button>
           <button
             onClick={() => setTheme("auto")}
@@ -82,7 +82,7 @@ export function ProfileDropdown({
             )}
             title="System Mode"
           >
-            <SystemIcon className="size-6" />
+            <FancySystemIcon className="size-6" />
           </button>
         </div>
       </div>

@@ -40,6 +40,31 @@ export const API_URL = {
   getLGAs: `${api}/lgas`,
   getWards: `${api}/wards`,
   parties: `${api}/parties`,
+  partyById: (id: string | number) => `${api}/parties/${id}`,
+  partyWallet: (id: string | number) => `${api}/parties/${id}/wallet`,
+  partyWalletWithdraw: (id: string | number) =>
+    `${api}/parties/${id}/wallet/withdraw`,
+  partyWalletTransactions: (
+    id: string | number,
+    limit?: number,
+    offset?: number,
+  ) => {
+    const params = new URLSearchParams();
+    if (limit !== undefined) params.append("limit", String(limit));
+    if (offset !== undefined) params.append("offset", String(offset));
+    const qs = params.toString();
+    return `${api}/parties/${id}/wallet/transactions${qs ? `?${qs}` : ""}`;
+  },
+  partyWalletDepositTest: (id: string | number) =>
+    `${api}/parties/${id}/wallet/deposit-test`,
+  partySlotPrice: (id: string | number) => `${api}/parties/${id}/slots/price`,
+  partySlotsBuy: (id: string | number) => `${api}/parties/${id}/slots/buy`,
+  partyAgentPaymentDeposits: (id: string | number) =>
+    `${api}/parties/${id}/agent-payment-deposits`,
+  partyAgentPaymentAllocations: (id: string | number) =>
+    `${api}/parties/${id}/agent-payment-allocations`,
+  partyAgentTargets: (id: string | number) =>
+    `${api}/parties/${id}/agent-targets`,
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
   users: `${api}/users`,
@@ -130,4 +155,13 @@ export const API_URL = {
       return `${api}/election-groups/${id}/stats/wards/${wardId}${qs}`;
     },
   },
+  plans: (type?: string, isActive?: boolean) => {
+    const params = new URLSearchParams();
+    if (type) params.set('type', type);
+    if (isActive !== undefined) params.set('is_active', String(isActive));
+    const qs = params.toString();
+    return `${api}/plans${qs ? `?${qs}` : ''}`;
+  },
+  partyMarketingCampaigns: (id: string | number) =>
+    `${api}/parties/${id}/agent-marketing-campaigns`,
 };

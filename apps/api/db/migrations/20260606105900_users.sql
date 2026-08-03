@@ -25,6 +25,7 @@ CREATE TABLE users (
   current_city INT REFERENCES c_cities(id),
   address VARCHAR(255),
 
+  country_of_origin SMALLINT REFERENCES c_countries(id),
   state_of_origin SMALLINT REFERENCES c_states(id),
 
   voters_card_image VARCHAR(255),

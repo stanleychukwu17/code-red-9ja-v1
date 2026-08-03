@@ -321,7 +321,7 @@ function WalletSlotsAllowanceSection({
     React.useState(false);
 
   const allowanceVal = (
-    (party?.allowanceBalanceKobo ?? 0) / 100
+    (party?.agentPaymentBalanceKobo ?? 0) / 100
   ).toLocaleString("en-NG", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,

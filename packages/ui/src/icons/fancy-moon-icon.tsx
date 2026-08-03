@@ -1,6 +1,6 @@
 import { SVGProps } from "react";
 
-const MoonIcon = (props: SVGProps<SVGSVGElement>) => {
+const FancyMoonIcon = (props: SVGProps<SVGSVGElement>) => {
   return (
     <svg
       width="24"
@@ -54,4 +54,4 @@ const MoonIcon = (props: SVGProps<SVGSVGElement>) => {
   );
 };
 
-export default MoonIcon;
+export default FancyMoonIcon;

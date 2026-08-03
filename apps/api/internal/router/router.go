@@ -235,6 +235,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/parties/{id}", partiesHandler.GetParty)
 	mainRouter.Get("/api/v1/parties/{id}/wallet", partiesHandler.GetPartyWallet)
 
+	// marketing plans (public — anyone can browse available plans)
+	mainRouter.Get("/api/v1/plans", partiesHandler.GetPlans)
+
 	// page verifications public routes
 	mainRouter.Get("/api/v1/verifications/types", pageVerificationsHandler.ListVerificationTypes)
 	mainRouter.Get("/api/v1/verifications/{pageType}/{pageID}", pageVerificationsHandler.GetPageVerifications)
@@ -312,6 +315,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// slot pricing settings
 		r.Get("/api/v1/admin/settings/slot-price", partiesHandler.GetGlobalSlotPrice)
 		r.Put("/api/v1/admin/settings/slot-price", partiesHandler.UpdateGlobalSlotPrice)
+
+		// marketing plan admin mutations (plan data management is admin-only)
+		r.Post("/api/v1/plans", partiesHandler.CreatePlan)
+		r.Put("/api/v1/plans/{id}", partiesHandler.UpdatePlan)
+		r.Delete("/api/v1/plans/{id}", partiesHandler.DeletePlan)
+		r.Patch("/api/v1/plans/{id}/display-order", partiesHandler.UpdatePlanDisplayOrder)
 
 		// page verifications admin mutations
 		r.Post("/api/v1/admin/verifications", pageVerificationsHandler.AssignVerification)
@@ -436,9 +445,16 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesHandler.WithdrawFromPartyWallet)
 		r.Get("/api/v1/parties/{id}/slots/price", partiesHandler.GetPartySlotPrice)
 		r.Post("/api/v1/parties/{id}/slots/buy", partiesHandler.BuySlots)
-		r.Post("/api/v1/parties/{id}/allowances/deposit", partiesHandler.DepositAllowance)
-		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocation)
+		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
+		r.Get("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.GetAgentPaymentAllocation)
+		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocation)
+		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
+		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
 		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.DepositTest)
+		
+		// Marketing Campaigns
+		r.Post("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.CreatePartyMarketingCampaign)
+		r.Get("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.GetPartyMarketingCampaigns)
 
 		// polling unit assignments routes
 		r.Post("/api/v1/polling-unit-assignments", pollingUnitAssignmentsHandler.CreateAssignment)

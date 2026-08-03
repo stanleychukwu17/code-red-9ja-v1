@@ -69,7 +69,6 @@ export function HomePageHeader({
             setSelectedElection(election);
           }}
           partyId={partyId}
-          // className="h-12 rounded-[12px] bg-c-20 border-0 hover:bg-c-10 ring-0 hover:ring-0 shadow-none hover:shadow-none focus:ring-0 focus-visible:ring-0 px-5 text-[18px] text-c-80"
         />
       </div>
     </div>

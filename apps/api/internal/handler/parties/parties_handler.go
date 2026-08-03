@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/utils"
-	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -15,6 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type PartiesService interface {
@@ -24,6 +24,7 @@ type PartiesService interface {
 	ListParties(ctx context.Context) ([]queries.Party, error)
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
+	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
 	// Wallet methods
 	GetPartyWallet(ctx context.Context, partyID int16) (queries.PartyWallet, error)
 	GetPartyWalletTransactions(ctx context.Context, partyID int16, limit, offset int32) ([]queries.PartyWalletTransaction, error)
@@ -41,6 +42,20 @@ type PartiesService interface {
 	// Allowance methods
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
 	UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
+	GetAgentPaymentAllocation(ctx context.Context, partyID int16) (json.RawMessage, error)
+	// Marketing methods
+	GetMarketingPlansByType(ctx context.Context, campaignType queries.MarketingCampaignType) ([]queries.Plan, error)
+	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
+	GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error)
+	// Plan admin methods
+	GetPlans(ctx context.Context, typeFilter string, isActiveFilter string) ([]queries.Plan, error)
+	UpdatePlanDisplayOrder(ctx context.Context, arg queries.UpdatePlanDisplayOrderParams) (queries.Plan, error)
+	CreatePlan(ctx context.Context, arg queries.CreatePlanParams) (queries.Plan, error)
+	UpdatePlan(ctx context.Context, arg queries.UpdatePlanParams) (queries.Plan, error)
+	DeletePlan(ctx context.Context, id int32) error
+	// Agent target methods
+	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error)
+	GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error)
 }
 
 type Handler struct {
@@ -884,14 +899,31 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// agentPaymentConfig is the shape of a single role entry in agent_payment_allocation.
+type agentPaymentConfig struct {
+	Default int64            `json:"default"`
+	States  map[string]int64 `json:"states"`
+}
+
+// agentPaymentAllocation mirrors the documented shape of the agent_payment_allocation column.
+type agentPaymentAllocation struct {
+	PollingAgent              agentPaymentConfig `json:"pollingAgent"`
+	WardElectionSupervisor    agentPaymentConfig `json:"wardElectionSupervisor"`
+	LgaElectionSupervisor     agentPaymentConfig `json:"lgaElectionSupervisor"`
+	StateElectionSupervisor   agentPaymentConfig `json:"stateElectionSupervisor"`
+}
+
 // UpdateAgentPaymentAllocation godoc
-// @Summary      Update polling agent payment settings per state
-// @Description  Saves the polling agent allowance budget settings per state (Same pay or Custom per state) for a party
+// @Summary      Update agent payment allocation
+// @Description  Saves the polling agent allowance budget settings per role and state for a party.
+//               Body must be a JSON object with keys: pollingAgent, wardElectionSupervisor,
+//               lgaElectionSupervisor, stateElectionSupervisor. Each key holds
+//               {"default": <kobo amount>, "states": {"<state_name>": <kobo amount>}}.
 // @Tags         Parties
 // @Accept       json
 // @Produce      json
-// @Param        id path int true "Party ID"
-// @Param        request body string true "JSON mapping of state names to kobo payment amounts"
+// @Param        id      path int                      true "Party ID"
+// @Param        request body agentPaymentAllocation   true "Agent payment allocation payload"
 // @Success      200  {object} map[string]interface{} "Allowances configuration updated successfully"
 // @Security     BearerAuth
 // @Router       /parties/{id}/allowances/settings [put]
@@ -903,9 +935,16 @@ func (h *Handler) UpdateAgentPaymentAllocation(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	bodyBytes, err := io.ReadAll(r.Body)
+	var payload agentPaymentAllocation
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	// Re-encode to canonical JSON so the stored bytes always match the documented shape.
+	bodyBytes, err := json.Marshal(payload)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Failed to read request body")
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to encode allocation")
 		return
 	}
 
@@ -917,6 +956,34 @@ func (h *Handler) UpdateAgentPaymentAllocation(w http.ResponseWriter, r *http.Re
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Allowances configuration updated successfully", map[string]interface{}{
 		"party": party,
+	})
+}
+
+// GetAgentPaymentAllocation godoc
+// @Summary      Get agent payment allocation
+// @Description  Returns the current agent_payment_allocation for a party as a parsed JSON object.
+// @Tags         Parties
+// @Produce      json
+// @Param        id path int true "Party ID"
+// @Success      200  {object} map[string]interface{} "Allocation fetched successfully"
+// @Security     BearerAuth
+// @Router       /parties/{id}/allowances/settings [get]
+func (h *Handler) GetAgentPaymentAllocation(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	allocation, err := h.partiesService.GetAgentPaymentAllocation(r.Context(), int16(partyID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Allocation fetched successfully", map[string]interface{}{
+		"agent_payment_allocation": allocation,
 	})
 }
 
@@ -975,5 +1042,461 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Wallet funded successfully", map[string]interface{}{
 		"wallet_id": wallet.ID,
+	})
+}
+
+// CreateMarketingCampaignRequest is the request payload for creating a marketing campaign
+type CreateMarketingCampaignRequest struct {
+	ElectionGroupID int32   `json:"election_group_id"`
+	ElectionID      int32   `json:"election_id"`
+	PlanID          int32   `json:"plan_id"`
+	Type            string  `json:"type"`
+	States          []byte  `json:"states"`
+	DurationInDays  int32   `json:"duration_in_days"`
+	Budget          float64 `json:"budget"`
+}
+
+// GetMarketingPlansByType godoc
+// @Summary      Get plans by type
+// @Description  Returns all active marketing plans of the specified type (e.g. agent-campaign)
+// @Tags         Marketing
+// @Produce      json
+// @Param        type query string false "Campaign type" default(agent-campaign)
+// @Success      200  {object} map[string]interface{} "Marketing plans retrieved successfully"
+// @Security     BearerAuth
+// @Router       /agent-marketing-plans [get]
+func (h *Handler) GetMarketingPlansByType(w http.ResponseWriter, r *http.Request) {
+	campaignTypeStr := r.URL.Query().Get("type")
+	if campaignTypeStr == "" {
+		campaignTypeStr = "agent-campaign"
+	}
+
+	campaignType := queries.MarketingCampaignType(campaignTypeStr)
+
+	plans, err := h.partiesService.GetMarketingPlansByType(r.Context(), campaignType)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to Get plans: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Marketing plans retrieved successfully", map[string]interface{}{
+		"plans": plans,
+	})
+}
+
+// CreatePartyMarketingCampaign godoc
+// @Summary      Create a marketing campaign for a party
+// @Description  Creates a new agent marketing campaign for the specified party, deducting the budget from their wallet
+// @Tags         Marketing
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Party ID"
+// @Param        request body CreateMarketingCampaignRequest true "Create marketing campaign payload"
+// @Success      200  {object} map[string]interface{} "Marketing campaign created successfully"
+// @Security     BearerAuth
+// @Router       /parties/{id}/agent-marketing-campaigns [post]
+func (h *Handler) CreatePartyMarketingCampaign(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	var req CreateMarketingCampaignRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	var budgetNumeric pgtype.Numeric
+	if err := budgetNumeric.Scan(fmt.Sprintf("%.2f", req.Budget)); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid budget format: "+err.Error())
+		return
+	}
+
+	var zeroNumeric pgtype.Numeric
+	_ = zeroNumeric.Scan("0.00")
+
+	arg := queries.CreatePartyMarketingCampaignParams{
+		PartyID:         int32(partyID),
+		ElectionGroupID: req.ElectionGroupID,
+		ElectionID:      req.ElectionID,
+		PlanID:          req.PlanID,
+		Type:            queries.MarketingCampaignType(req.Type),
+		States:          req.States,
+		DurationInDays:  req.DurationInDays,
+		Budget:          budgetNumeric,
+		AmountSpent:     zeroNumeric,
+		Status:          queries.MarketingCampaignStatusPending,
+	}
+
+	campaign, err := h.partiesService.CreatePartyMarketingCampaign(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create marketing campaign: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Marketing campaign created successfully", map[string]interface{}{
+		"campaign": campaign,
+	})
+}
+
+// GetPartyMarketingCampaigns godoc
+// @Summary      Get marketing campaigns for a party
+// @Description  Returns all marketing campaigns associated with the specified party
+// @Tags         Marketing
+// @Produce      json
+// @Param        id path int true "Party ID"
+// @Success      200  {object} map[string]interface{} "Marketing campaigns retrieved successfully"
+// @Security     BearerAuth
+// @Router       /parties/{id}/agent-marketing-campaigns [get]
+func (h *Handler) GetPartyMarketingCampaigns(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	campaigns, err := h.partiesService.GetPartyMarketingCampaigns(r.Context(), int32(partyID))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get marketing campaigns: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Marketing campaigns retrieved successfully", map[string]interface{}{
+		"campaigns": campaigns,
+	})
+}
+
+type CreatePlanRequest struct {
+	Name                 string   `json:"name"`
+	Description          string   `json:"description"`
+	Price                float64  `json:"price"`
+	Type                 string   `json:"type"`
+	Features             []string `json:"features"`
+	ScopesRecommendation []string `json:"scopes_recommendation"`
+	ColorHex             string   `json:"color_hex"`
+}
+
+// CreatePlan godoc
+// @Summary      Create a marketing plan
+// @Description  Creates a new marketing plan (admin only)
+// @Tags         Plans
+// @Accept       json
+// @Produce      json
+// @Param        request body CreatePlanRequest true "Create Plan payload"
+// @Success      201  {object} map[string]interface{} "Plan created successfully"
+// @Security     BearerAuth
+// @Router       /plans [post]
+// CreatePlan creates a new marketing plan (admin only).
+func (h *Handler) CreatePlan(w http.ResponseWriter, r *http.Request) {
+	var req CreatePlanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	var priceNumeric pgtype.Numeric
+	if err := priceNumeric.Scan(fmt.Sprintf("%.2f", req.Price)); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid price format: "+err.Error())
+		return
+	}
+
+	featuresJSON, err := json.Marshal(req.Features)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid features: "+err.Error())
+		return
+	}
+	scopesJSON, err := json.Marshal(req.ScopesRecommendation)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid scopes_recommendation: "+err.Error())
+		return
+	}
+
+	colorHex := pgtype.Text{}
+	if req.ColorHex != "" {
+		colorHex = pgtype.Text{String: req.ColorHex, Valid: true}
+	}
+
+	plan, err := h.partiesService.CreatePlan(r.Context(), queries.CreatePlanParams{
+		Name:                 req.Name,
+		Description:          req.Description,
+		Price:                priceNumeric,
+		Type:                 queries.MarketingCampaignType(req.Type),
+		Features:             featuresJSON,
+		ScopesRecommendation: scopesJSON,
+		ColorHex:             colorHex,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create plan: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusCreated, "Plan created successfully", map[string]interface{}{
+		"plan": plan,
+	})
+}
+
+type UpdatePlanRequest struct {
+	Name                 string   `json:"name"`
+	Description          string   `json:"description"`
+	Price                float64  `json:"price"`
+	Type                 string   `json:"type"`
+	Features             []string `json:"features"`
+	ScopesRecommendation []string `json:"scopes_recommendation"`
+	ColorHex             string   `json:"color_hex"`
+	IsActive             bool     `json:"is_active"`
+}
+
+// UpdatePlan godoc
+// @Summary      Update a marketing plan
+// @Description  Updates an existing marketing plan (admin only)
+// @Tags         Plans
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Plan ID"
+// @Param        request body UpdatePlanRequest true "Update Plan payload"
+// @Success      200  {object} map[string]interface{} "Plan updated successfully"
+// @Security     BearerAuth
+// @Router       /plans/{id} [put]
+func (h *Handler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid plan ID: "+err.Error())
+		return
+	}
+
+	var req UpdatePlanRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	var priceNumeric pgtype.Numeric
+	if err := priceNumeric.Scan(fmt.Sprintf("%.2f", req.Price)); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid price format: "+err.Error())
+		return
+	}
+
+	featuresJSON, err := json.Marshal(req.Features)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid features: "+err.Error())
+		return
+	}
+	scopesJSON, err := json.Marshal(req.ScopesRecommendation)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid scopes_recommendation: "+err.Error())
+		return
+	}
+
+	colorHex := pgtype.Text{}
+	if req.ColorHex != "" {
+		colorHex = pgtype.Text{String: req.ColorHex, Valid: true}
+	}
+
+	plan, err := h.partiesService.UpdatePlan(r.Context(), queries.UpdatePlanParams{
+		ID:                   int32(id),
+		Name:                 req.Name,
+		Description:          req.Description,
+		Price:                priceNumeric,
+		Type:                 queries.MarketingCampaignType(req.Type),
+		Features:             featuresJSON,
+		ScopesRecommendation: scopesJSON,
+		ColorHex:             colorHex,
+		IsActive:             req.IsActive,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update plan: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Plan updated successfully", map[string]interface{}{
+		"plan": plan,
+	})
+}
+
+// DeletePlan godoc
+// @Summary      Delete a marketing plan
+// @Description  Deletes an existing marketing plan (admin only)
+// @Tags         Plans
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Plan ID"
+// @Success      200  {object} map[string]interface{} "Plan deleted successfully"
+// @Security     BearerAuth
+// @Router       /plans/{id} [delete]
+func (h *Handler) DeletePlan(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid plan ID: "+err.Error())
+		return
+	}
+
+	if err := h.partiesService.DeletePlan(r.Context(), int32(id)); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete plan: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Plan deleted successfully", nil)
+}
+
+// GetPlans godoc
+// @Summary      Get plans
+// @Description  Retrieves marketing plans. Optionally filter by ?type= (e.g. agent-campaign) and ?is_active= (true/false).
+// @Tags         Plans
+// @Produce      json
+// @Param        type      query string  false "Campaign type filter (e.g. agent-campaign)"
+// @Param        is_active query boolean false "Filter by active status"
+// @Success      200  {object} map[string]interface{} "Plans retrieved successfully"
+// @Router       /plans [get]
+func (h *Handler) GetPlans(w http.ResponseWriter, r *http.Request) {
+	typeFilter := r.URL.Query().Get("type")
+	isActiveFilter := r.URL.Query().Get("is_active")
+
+	plans, err := h.partiesService.GetPlans(r.Context(), typeFilter, isActiveFilter)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get plans: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Plans retrieved successfully", map[string]interface{}{
+		"plans": plans,
+	})
+}
+
+// UpdatePlanDisplayOrderRequest is the request payload for reordering a plan
+type UpdatePlanDisplayOrderRequest struct {
+	DisplayOrder int32 `json:"display_order"`
+}
+
+// UpdatePlanDisplayOrder godoc
+// @Summary      Update a plan's display order
+// @Description  Updates the display_order of a specific plan (admin only)
+// @Tags         Plans
+// @Accept       json
+// @Produce      json
+// @Param        id      path int                          true "Plan ID"
+// @Param        request body UpdatePlanDisplayOrderRequest true "Display order payload"
+// @Success      200  {object} map[string]interface{} "Plan display order updated"
+// @Security     BearerAuth
+// @Router       /plans/{id}/display-order [patch]
+func (h *Handler) UpdatePlanDisplayOrder(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid plan ID: "+err.Error())
+		return
+	}
+
+	var req UpdatePlanDisplayOrderRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	plan, err := h.partiesService.UpdatePlanDisplayOrder(r.Context(), queries.UpdatePlanDisplayOrderParams{
+		ID:           int32(id),
+		DisplayOrder: req.DisplayOrder,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update plan display order: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Plan display order updated successfully", map[string]interface{}{
+		"plan": plan,
+	})
+}
+
+// UpdateAgentTargetsRequest is the request payload for updating agent acquisition targets
+type UpdateAgentTargetsRequest struct {
+	PollingUnitAgent        int32 `json:"pollingUnitAgent"`
+	WardElectionSupervisor  int32 `json:"wardElectionSupervisor"`
+	LgaElectionSupervisor   int32 `json:"lgaElectionSupervisor"`
+	StateElectionSupervisor int32 `json:"stateElectionSupervisor"`
+}
+
+// UpdateAgentAcquisitionTargets godoc
+// @Summary      Update party agent acquisition targets
+// @Description  Updates the agent acquisition targets for a party
+// @Tags         Parties
+// @Accept       json
+// @Produce      json
+// @Param        id      path int                       true "Party ID"
+// @Param        request body UpdateAgentTargetsRequest true "Targets payload"
+// @Success      200  {object} map[string]interface{} "Agent targets updated successfully"
+// @Security     BearerAuth
+// @Router       /parties/{id}/agent-targets [patch]
+func (h *Handler) UpdateAgentAcquisitionTargets(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	var req UpdateAgentTargetsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	targetsJSON, err := json.Marshal(req)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to marshal targets: "+err.Error())
+		return
+	}
+
+	party, err := h.partiesService.UpdatePartyAgentAcquisitionTargets(r.Context(), queries.UpdatePartyAgentAcquisitionTargetsParams{
+		ID:                      int16(id),
+		AgentAcquisitionTargets: targetsJSON,
+	})
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update agent targets: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Agent targets updated successfully", map[string]interface{}{
+		"party": party,
+	})
+}
+
+// GetAgentAcquisitionTargets godoc
+// @Summary      Get party agent acquisition targets
+// @Description  Retrieves the agent acquisition targets for a party
+// @Tags         Parties
+// @Produce      json
+// @Param        id      path int true "Party ID"
+// @Success      200  {object} UpdateAgentTargetsRequest "Agent targets retrieved successfully"
+// @Security     BearerAuth
+// @Router       /parties/{id}/agent-targets [get]
+func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID: "+err.Error())
+		return
+	}
+
+	targetsJSON, err := h.partiesService.GetPartyAgentAcquisitionTargets(r.Context(), int16(id))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to get agent targets: "+err.Error())
+		return
+	}
+	
+	// Unmarshal to struct to match expected shape
+	var targets UpdateAgentTargetsRequest
+	if err := json.Unmarshal(targetsJSON, &targets); err != nil {
+        h.utils.RespondError(w, http.StatusInternalServerError, "Failed to parse targets")
+        return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Agent targets retrieved successfully", map[string]interface{}{
+		"targets": targets,
 	})
 }

@@ -52,8 +52,10 @@ type Querier interface {
 	CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMoreInfoAboutThisUserParams) (int64, error)
 	CreateOffice(ctx context.Context, arg CreateOfficeParams) (Office, error)
 	CreateParty(ctx context.Context, arg CreatePartyParams) (Party, error)
+	CreatePartyMarketingCampaign(ctx context.Context, arg CreatePartyMarketingCampaignParams) (PartyMarketingCampaign, error)
 	CreatePartyWallet(ctx context.Context, arg CreatePartyWalletParams) (PartyWallet, error)
 	CreatePhoneNumber(ctx context.Context, arg CreatePhoneNumberParams) (int64, error)
+	CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error)
 	CreatePollingUnit(ctx context.Context, arg CreatePollingUnitParams) (PollingUnit, error)
 	CreatePollingUnitUpdate(ctx context.Context, arg CreatePollingUnitUpdateParams) (PollingUnitUpdate, error)
 	CreateSenatorialDistrict(ctx context.Context, arg CreateSenatorialDistrictParams) (SenatorialDistrict, error)
@@ -83,6 +85,7 @@ type Querier interface {
 	DeleteLGA(ctx context.Context, id int32) error
 	DeleteOffice(ctx context.Context, id int64) error
 	DeleteParty(ctx context.Context, id int16) error
+	DeletePlan(ctx context.Context, id int32) error
 	DeletePollingUnit(ctx context.Context, id int32) error
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	DeleteState(ctx context.Context, id int16) error
@@ -132,6 +135,7 @@ type Querier interface {
 	GetLGASupervisorCount(ctx context.Context, arg GetLGASupervisorCountParams) (int32, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]Lga, error)
 	GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLgaSupervisorByElectionGroupParams) (LgaElectionSupervisor, error)
+	GetMarketingPlansByType(ctx context.Context, type_ MarketingCampaignType) ([]Plan, error)
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
 	GetNonVotingReasons(ctx context.Context) ([]NonVotingReason, error)
@@ -149,9 +153,14 @@ type Querier interface {
 	GetPartyByID(ctx context.Context, id int16) (Party, error)
 	GetPartyByShortName(ctx context.Context, shortName string) (Party, error)
 	GetPartyElectionGroupCoverageDistribution(ctx context.Context, arg GetPartyElectionGroupCoverageDistributionParams) ([]GetPartyElectionGroupCoverageDistributionRow, error)
+	GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]GetPartyMarketingCampaignsRow, error)
 	GetPartyWalletByAccountReference(ctx context.Context, accountReference string) (PartyWallet, error)
 	GetPartyWalletByID(ctx context.Context, id int64) (PartyWallet, error)
 	GetPartyWalletByPartyID(ctx context.Context, partyID int16) (PartyWallet, error)
+	GetPlanByID(ctx context.Context, id int32) (Plan, error)
+	// Pass empty string '' to skip a filter.
+	// $1 = type filter ('' = all types), $2 = is_active filter ('' = all, 'true'/'false' to filter)
+	GetPlans(ctx context.Context, arg GetPlansParams) ([]Plan, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit, error)
 	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
@@ -354,9 +363,12 @@ type Querier interface {
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)
 	UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) error
 	UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error)
+	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (Party, error)
 	UpdatePartyAgentPaymentAllocation(ctx context.Context, arg UpdatePartyAgentPaymentAllocationParams) (Party, error)
 	UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error)
 	UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error
+	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)
+	UpdatePlanDisplayOrder(ctx context.Context, arg UpdatePlanDisplayOrderParams) (Plan, error)
 	UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error)
 	UpdatePollingUnitResult(ctx context.Context, arg UpdatePollingUnitResultParams) (PollingUnitResult, error)
 	UpdateResultStatus(ctx context.Context, arg UpdateResultStatusParams) (PollingUnitResult, error)

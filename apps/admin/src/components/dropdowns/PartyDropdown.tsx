@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteParty } from "#/lib/server/parties";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  deleteParty,
+  updatePartyStateAllowances,
+  getPartyAgentPaymentAllocation,
+} from "#/lib/server/parties";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
@@ -9,11 +13,11 @@ import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { PartyFormDialog } from "../dialogs/PartyFormDialog";
 import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
-import { SetAgentPaymentDialog } from "@repo/ui/components/dialogs/set-agent-payment-dialog";
+import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
 import type { PartyType } from "../tiles/party-tile";
-import { updatePartyStateAllowances } from "#/lib/server/parties";
 import { toast } from "sonner";
 import { Wallet } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 
 interface PartyDropdownProps {
   data: PartyType;
@@ -27,35 +31,6 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
   const [openPaymentDialog, setOpenPaymentDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
   const queryClient = useQueryClient();
-
-  const statesList = [
-    "Abia", "Abuja FCT", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi",
-    "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi",
-    "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna",
-    "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa",
-    "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
-    "Sokoto", "Taraba", "Yobe", "Zamfara",
-  ];
-
-  const paymentMutation = useMutation({
-    mutationFn: async (allowances: Record<string, Record<string, number>>) => {
-      const res = await updatePartyStateAllowances({
-        data: { partyID: data.id, allowances },
-      });
-      if (!res.success) {
-        throw new Error(res.message || "Failed to update allowances");
-      }
-      return res.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["parties"] });
-      toast.success("Agent payment budget saved successfully!");
-      setOpenPaymentDialog(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "An unexpected error occurred");
-    },
-  });
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
@@ -133,13 +108,23 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
         }}
       />
 
-      <SetAgentPaymentDialog
+      <AgentPaymentAllocationFormDialog
         open={openPaymentDialog}
         onClose={() => setOpenPaymentDialog(false)}
-        defaultValues={(data as any).agent_payment_allocation}
-        onSubmit={(values) => paymentMutation.mutate(values as any)}
-        isPending={paymentMutation.isPending}
-        statesList={statesList}
+        partyId={data.id}
+        fetchAllocation={async (partyId) => {
+          const res = await getPartyAgentPaymentAllocation({ data: partyId });
+          return res?.data?.agent_payment_allocation ?? null;
+        }}
+        updateAllocation={async (partyId, values) => {
+          const res = await updatePartyStateAllowances({
+            data: { partyID: partyId, allowances: values as any },
+          });
+          if (!res.success) throw new Error(res.message || "Failed to update");
+          queryClient.invalidateQueries({ queryKey: ["parties"] });
+          toast.success("Agent payment budget saved!");
+          return res.data;
+        }}
       />
 
       <DeleteAlertDialog

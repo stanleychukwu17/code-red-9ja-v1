@@ -2,8 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
 import { apiFetch } from "./fetch";
 
-export const getParties = createServerFn({ method: "GET" })
-  .handler(async () => {
+export const getParties = createServerFn({ method: "GET" }).handler(
+  async () => {
     try {
       const response = await apiFetch(API_URL.parties);
       const resData = await response.json();
@@ -11,7 +11,8 @@ export const getParties = createServerFn({ method: "GET" })
     } catch (error) {
       return { success: false, message: "Failed to fetch parties from API" };
     }
-  });
+  },
+);
 
 export const getPartyById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
@@ -26,7 +27,14 @@ export const getPartyById = createServerFn({ method: "GET" })
   });
 
 export const createParty = createServerFn({ method: "POST" })
-  .inputValidator((data: { short_name: string; name: string; logo: string; display_order?: number }) => data)
+  .inputValidator(
+    (data: {
+      short_name: string;
+      name: string;
+      logo: string;
+      display_order?: number;
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.parties, {
@@ -39,12 +47,23 @@ export const createParty = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to create party: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to create party: " + (error as Error).message,
+      };
     }
   });
 
 export const updateParty = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string | number; short_name: string; name: string; logo: string; display_order?: number }) => data)
+  .inputValidator(
+    (data: {
+      id: string | number;
+      short_name: string;
+      name: string;
+      logo: string;
+      display_order?: number;
+    }) => data,
+  )
   .handler(async ({ data: { id, ...body } }) => {
     try {
       const response = await apiFetch(API_URL.partyById(id), {
@@ -57,7 +76,10 @@ export const updateParty = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to update party: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to update party: " + (error as Error).message,
+      };
     }
   });
 
@@ -71,12 +93,23 @@ export const deleteParty = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to delete party: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to delete party: " + (error as Error).message,
+      };
     }
   });
 
 export const getPresignedUploadURL = createServerFn({ method: "POST" })
-  .inputValidator((data: { original_name: string; mime_type: string; file_size: number; folder?: string; is_public?: boolean }) => data)
+  .inputValidator(
+    (data: {
+      original_name: string;
+      mime_type: string;
+      file_size: number;
+      folder?: string;
+      is_public?: boolean;
+    }) => data,
+  )
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.uploadUrl, {
@@ -89,7 +122,10 @@ export const getPresignedUploadURL = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to get upload URL: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to get upload URL: " + (error as Error).message,
+      };
     }
   });
 
@@ -97,9 +133,12 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string | number; success: boolean }) => data)
   .handler(async ({ data: { id, success } }) => {
     try {
-      const response = await apiFetch(`${API_URL.confirmUpload(id)}?success=${success}`, {
-        method: "POST",
-      });
+      const response = await apiFetch(
+        `${API_URL.confirmUpload(id)}?success=${success}`,
+        {
+          method: "POST",
+        },
+      );
       const resData = await response.json();
       return resData;
     } catch (error) {
@@ -108,19 +147,49 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
   });
 
 export const updatePartyStateAllowances = createServerFn({ method: "POST" })
-  .inputValidator((data: { partyID: string | number; allowances: Record<string, Record<string, number>> }) => data)
+  .inputValidator(
+    (data: {
+      partyID: string | number;
+      allowances: Record<string, Record<string, number>>;
+    }) => data,
+  )
   .handler(async ({ data: { partyID, allowances } }) => {
     try {
-      const response = await apiFetch(`${API_URL.parties}/${partyID}/allowances/settings`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await apiFetch(
+        `${API_URL.parties}/${partyID}/agent-payment-allocationsations`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(allowances),
         },
-        body: JSON.stringify(allowances),
-      });
+      );
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to update state allowances: " + (error as Error).message };
+      return {
+        success: false,
+        message:
+          "Failed to update agent payment allocations: " +
+          (error as Error).message,
+      };
+    }
+  });
+
+export const getPartyAgentPaymentAllocation = createServerFn({ method: "GET" })
+  .inputValidator((partyId: string | number) => partyId)
+  .handler(async ({ data: partyId }) => {
+    try {
+      const response = await apiFetch(
+        `${API_URL.parties}/${partyId}/agent-payment-allocationsations`,
+      );
+      const resData = await response.json();
+      return resData; // { success, data: { agent_payment_allocation: {...} } }
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch agent payment allocation",
+      };
     }
   });

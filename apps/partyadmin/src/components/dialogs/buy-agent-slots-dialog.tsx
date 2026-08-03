@@ -11,9 +11,18 @@ import { Package, Loader2 } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getPartySlotPrice, buyPartySlots } from "#/lib/server/parties";
 import { toast } from "sonner";
+import { DescriptiveText } from "@repo/ui/components/custom/Texts";
+import FancyBillIcon from "@repo/ui/icons/fancy-bill-icon";
+import { cn } from "@repo/ui/lib/utils";
+import FancySadEmojiIcon from "@repo/ui/icons/fancy-sad-emoji-icon";
+import FancyHappyEmojiIcon from "@repo/ui/icons/fancy-happy-emoji-icon";
+import { PartyWalletBalance } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
 
 function formatNaira(amount: number) {
-  return `₦${amount.toLocaleString("en-NG", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `₦${amount.toLocaleString("en-NG", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 }
 
 export function BuyAgentSlotsDialog({
@@ -38,12 +47,14 @@ export function BuyAgentSlotsDialog({
     enabled: !!partyId && open,
   });
 
-  const pricePerSlot = priceRes?.success && priceRes?.data?.unit_price_kobo !== undefined
-    ? priceRes.data.unit_price_kobo / 100
-    : 1000; // fallback to 1000 NGN if loading/error
+  const pricePerSlot =
+    priceRes?.success && priceRes?.data?.unit_price_kobo !== undefined
+      ? priceRes.data.unit_price_kobo / 100
+      : 1000; // fallback to 1000 NGN if loading/error
 
   const buySlotsMutation = useMutation({
-    mutationFn: (variables: { partyID: number; quantity: number }) => buyPartySlots({ data: variables }),
+    mutationFn: (variables: { partyID: number; quantity: number }) =>
+      buyPartySlots({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
         toast.success(`Successfully purchased ${slots} slots!`);
@@ -55,9 +66,8 @@ export function BuyAgentSlotsDialog({
     },
     onError: (error: any) => {
       toast.error(error.message || "An unexpected error occurred");
-    }
+    },
   });
-
 
   const walletBalanceNaira = walletBalanceKobo / 100;
   const totalCost = slots * pricePerSlot;
@@ -78,29 +88,10 @@ export function BuyAgentSlotsDialog({
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white">
         {/* Header */}
-        <DialogHeader title="Buy polling agent slots" />
+        <DialogHeader title="Buy slots" />
 
         <DialogPadding className="space-y-3 pb-6">
-          {/* Blue info banner */}
-          <div className="flex items-start gap-3 rounded-xl bg-[#edf3ff] px-4 py-3">
-            <Package className="size-5 shrink-0 text-[#3182ce] mt-0.5" />
-            <p className="leading-[1.6] text-sm text-[#2b6cb0]">
-              Slots let you accept and assign polling agents to polling units
-              for a specific election. Polling agents provide live election-day
-              updates to administrators and upload polling unit results.
-            </p>
-          </div>
-
-          {/* Green info banner */}
-          <div className="flex items-start gap-3 rounded-xl bg-[#edfff6] px-4 py-3">
-            <Package className="size-5 shrink-0 text-[#22c55e] mt-0.5" />
-            <p className="leading-[1.6] text-sm text-[#166534]">
-              Free9ja aggregates results uploaded by polling agents on election
-              day and displays the result in real time, giving you an accurate
-              view of the final outcome as it develops.{" "}
-              <strong className="font-bold">No Glitch.</strong>
-            </p>
-          </div>
+          <DescriptiveText text="Slots allow you accept and assign polling agents to polling units and supervisors to their respective areas for upcoming elections." />
 
           {/* Slots number input */}
           <div className="py-6 flex flex-col items-center gap-2">
@@ -120,61 +111,68 @@ export function BuyAgentSlotsDialog({
           </div>
 
           {/* Pricing breakdown */}
-          <div className="rounded-xl bg-[#f7f7f7] px-5 py-1 space-y-0 divide-y divide-dashed divide-c-10">
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <span className="text-base text-c-60">💱</span>
-                <span className="text-[15px] text-c-70">
-                  Price per slot for a polling agent
-                </span>
-              </div>
-              <span className="text-[15px] font-semibold text-c-80">
-                {isPriceLoading ? (
-                  <Loader2 className="size-4 animate-spin text-[#9b7b49]" />
-                ) : (
-                  formatNaira(pricePerSlot)
+          <div className="rounded-xl bg-c-5 px-5 py-1 space-y-0 divide-y divide-dashed divide-c-30">
+            <div className="h-12 flex items-center gap-3">
+              <FancyBillIcon className="shrink-0 size-5" />
+              <p className="text-base text-c-70 w-full">
+                Price per slot for a polling agent
+              </p>
+              <span
+                className={cn(
+                  "text-base font-semibold text-c-80",
+                  isPriceLoading && "animate-pulse",
                 )}
+              >
+                {!isPriceLoading && <>{formatNaira(pricePerSlot)}</>}
               </span>
             </div>
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <span className="text-base text-c-60">💱</span>
-                <span className="text-[15px] text-c-70">
-                  Price for {slots.toLocaleString()} slot
-                  {slots !== 1 ? "s" : ""}
-                </span>
-              </div>
-              <span className="text-[15px] font-semibold text-[#22c55e]">
-                {isPriceLoading ? (
-                  <Loader2 className="size-4 animate-spin text-[#22c55e]" />
-                ) : (
-                  formatNaira(totalCost)
+            <div className="h-12 flex items-center gap-3">
+              <FancyBillIcon className="shrink-0 size-5" />
+              <p className="text-base text-c-70 w-full">
+                Price for {slots.toLocaleString()} slot
+                {slots !== 1 ? "s" : ""}
+              </p>
+              <span
+                className={cn(
+                  "text-base font-semibold text-green",
+                  isPriceLoading && "animate-pulse",
                 )}
+              >
+                {!isPriceLoading && <>{formatNaira(totalCost)}</>}
               </span>
             </div>
           </div>
 
           {/* Insufficient balance warning */}
           {!isPriceLoading && isInsufficient && (
-            <div className="rounded-xl bg-[#fff1f1] px-5 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-xl">😢</span>
-                <span className="text-[15px] font-medium text-c-70">
-                  Insufficient wallet balance
-                </span>
-              </div>
-              <span className="text-[15px] font-semibold text-[#e53e3e] whitespace-nowrap">
-                {formatNaira(deficit)}.00
-              </span>
-            </div>
+            <PartyWalletBalance
+              icon={<FancySadEmojiIcon className="shrink-0 size-6" />}
+              label="Insufficient wallet balance"
+              value={formatNaira(deficit)}
+              className="bg-red/20"
+              valueClassName="text-red"
+            />
+          )}
+          {!isPriceLoading && !isInsufficient && (
+            <PartyWalletBalance
+              icon={<FancyHappyEmojiIcon className="shrink-0 size-6" />}
+              label="Wallet balance"
+              value={formatNaira(walletBalanceNaira)}
+              className="bg-secondary/20"
+            />
           )}
         </DialogPadding>
 
         {/* Footer */}
         <DialogFooter>
           <Button
-            className="bg-[#22c55e] hover:bg-[#16a34a] text-white rounded-[14px] px-7 h-11 text-[16px] font-bold border-none shadow-none transition-colors duration-150"
-            disabled={slots === 0 || isInsufficient || buySlotsMutation.isPending || isPriceLoading}
+            variant="secondary"
+            disabled={
+              slots === 0 ||
+              isInsufficient ||
+              buySlotsMutation.isPending ||
+              isPriceLoading
+            }
             onClick={handleBuySlots}
           >
             {buySlotsMutation.isPending ? (

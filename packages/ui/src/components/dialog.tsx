@@ -60,7 +60,7 @@ function DialogContent({
         data-slot="dialog-content"
         aria-describedby={undefined}
         className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-2 border bg-background p-5 shadow-lg duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-open:slide-in-from-left-1/2 data-open:slide-in-from-top-1/2 data-closed:slide-out-to-left-1/2 data-closed:slide-out-to-top-1/2 rounded-[24px]",
+          "fixed left-[50%] top-[50%] z-50 w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-2 border bg-background shadow-lg duration-200 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-open:slide-in-from-left-1/2 data-open:slide-in-from-top-1/2 data-closed:slide-out-to-left-1/2 data-closed:slide-out-to-top-1/2 rounded-[24px] max-h-[95svh] flex flex-col overflow-hidden",
           className,
         )}
         onPointerDownOutside={(e) => {
@@ -105,19 +105,23 @@ function DialogHeader({
   description,
   className,
   ...props
-}: React.HTMLAttributes<HTMLDivElement> & { title?: React.ReactNode; description?: React.ReactNode }) {
+}: React.HTMLAttributes<HTMLDivElement> & {
+  title?: React.ReactNode;
+  description?: React.ReactNode;
+}) {
   return (
     <div
-      className={cn("flex items-start justify-between px-6 pr-4 pt-4", className)}
+      className={cn(
+        "flex items-center justify-between px-5 pr-4 pt-4",
+        className,
+      )}
       {...props}
     >
       <div className="flex flex-col gap-1 text-left">
         <DialogPrimitive.Title className="text-[20px] font-medium text-c-80 tracking-tight">
           {title}
         </DialogPrimitive.Title>
-        {description && (
-          <p className="text-c-60 text-sm">{description}</p>
-        )}
+        {description && <p className="text-c-60 text-sm">{description}</p>}
       </div>
       <DialogClose asChild>
         <button
@@ -137,7 +141,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
       data-slot="dialog-footer"
       className={cn(
         // "flex flex-row justify-end gap-2 border-t pt-4 mt-2",
-        "flex justify-end px-6 pb-3 pt-3 gap-3 border-t# border-border",
+        "flex justify-end px-5 pb-3 pt-3 gap-3 border-t# border-border",
         className,
       )}
       {...props}
@@ -181,12 +185,18 @@ function DialogPadding({
   children: React.ReactNode;
   className?: string;
 }) {
-  return <div className={cn("px-5", className)}>{children}</div>;
+  return (
+    <div
+      className={cn("relative px-5 flex-1 min-h-0 overflow-y-auto", className)}
+    >
+      {children}
+    </div>
+  );
 }
 
 const DialogToolbelt = ({ children }: { children: React.ReactNode }) => {
   return (
-    <DialogPadding className="flex items-center gap-2.5 pt-1.5 pb-3 shrink-0 flex-wrap">
+    <DialogPadding className="relative flex px-8 flex-1 min-h-0 overflow-y-auto gap-2.5 pt-1.5 pb-3 shrink-0 flex-wrap">
       {children}
     </DialogPadding>
   );

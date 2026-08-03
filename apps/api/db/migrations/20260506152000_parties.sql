@@ -9,8 +9,11 @@ CREATE TABLE parties (
   slots INTEGER NOT NULL DEFAULT 0 CHECK (slots >= 0),
   is_verified BOOLEAN DEFAULT false,
   discount_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
-  allowance_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (allowance_balance_kobo >= 0),
+  agent_payment_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (agent_payment_balance_kobo >= 0),
+  -- {"pollingAgent":{default: 2000, states: {lagos: 2500, ...all state's custom pay}},"lgaElectionSupervisor":{},"wardElectionSupervisor":{},"stateElectionSupervisor":{}}
   agent_payment_allocation JSONB NOT NULL DEFAULT '{}'::jsonb,
+  -- {"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}
+  agent_acquisition_targets JSONB NOT NULL DEFAULT '{"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

@@ -9,17 +9,20 @@ import { cn } from "../../lib/utils";
 import { Button } from "../button";
 import { LoadingSelect } from "./loading-select";
 
-export interface ElectionGroup {
+export interface Election {
   id: number;
   name: string;
   election_date?: string;
+  election_group_name?: string;
+  office_name?: string;
+  scope?: string;
 }
 
-interface ElectionGroupsResponse {
+interface ElectionResponse {
   success: boolean;
   message: string;
   data: {
-    election_groups: ElectionGroup[];
+    elections: Election[];
   };
   meta: {
     next_cursor: string;
@@ -33,19 +36,26 @@ const formatDate = (dateStr?: string) => {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };
 
-export const SelectElectionGroup = ({
+export const SelectElection = ({
   update,
-  errorMsg,
   selectedId,
   disabled,
   partyId,
   className,
   align = "start",
-  fetchElectionGroups,
-}: SelectProps<ElectionGroup, number> & {
+  fetchElection,
+  electionGroupId,
+  errorMsg,
+}: SelectProps<Election, number> & {
   partyId?: number;
-  fetchElectionGroups: (args: {
-    data: { partyId?: number; limit?: number; cursor?: string };
+  electionGroupId?: number | string;
+  fetchElection: (args: {
+    data: {
+      partyId?: number;
+      electionGroupId?: number | string;
+      limit?: number;
+      cursor?: string;
+    };
   }) => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
@@ -53,17 +63,24 @@ export const SelectElectionGroup = ({
   const [desktopSearch, setDesktopSearch] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
 
-  const [selectedItem, setSelectedItem] = useState<ElectionGroup | undefined>(undefined);
+  const [selectedItem, setSelectedItem] = useState<Election | undefined>(
+    undefined,
+  );
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
-    useInfiniteQuery<ElectionGroupsResponse>({
-      queryKey: ["election-groups-select", partyId],
+    useInfiniteQuery<ElectionResponse>({
+      queryKey: ["elections-select", partyId, electionGroupId],
       queryFn: async ({ pageParam }) => {
-        const res = await fetchElectionGroups({
-          data: { partyId, limit: 50, cursor: pageParam as string },
+        const res = await fetchElection({
+          data: {
+            partyId,
+            electionGroupId,
+            limit: 50,
+            cursor: pageParam as string,
+          },
         });
         if (res && res.success && res.data) return res;
-        throw new Error(res?.message || "Failed to fetch election groups");
+        throw new Error(res?.message || "Failed to fetch elections");
       },
       initialPageParam: "",
       getNextPageParam: (lastPage) => {
@@ -71,27 +88,35 @@ export const SelectElectionGroup = ({
           return lastPage.meta.next_cursor || "";
         return undefined;
       },
+      enabled: !!electionGroupId,
     });
 
-  const electionGroups = data
-    ? data.pages.flatMap((page) => page.data?.election_groups || [])
+  const elections = data
+    ? data.pages.flatMap((page) => page.data?.elections || [])
     : [];
 
   useEffect(() => {
     if (selectedId && hasNextPage && !isFetchingNextPage && !isLoading) {
-      const found = electionGroups.some((eg) => String(eg.id) === String(selectedId));
+      const found = elections.some((e) => String(e.id) === String(selectedId));
       if (!found) fetchNextPage();
     }
-  }, [selectedId, electionGroups, hasNextPage, isFetchingNextPage, isLoading, fetchNextPage]);
+  }, [
+    selectedId,
+    elections,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+    fetchNextPage,
+  ]);
 
   useEffect(() => {
     if (selectedId) {
-      const eg = electionGroups.find((eg) => String(eg.id) === String(selectedId));
-      if (eg) setSelectedItem(eg);
+      const e = elections.find((e) => String(e.id) === String(selectedId));
+      if (e) setSelectedItem(e);
     } else {
       setSelectedItem(undefined);
     }
-  }, [selectedId, electionGroups]);
+  }, [selectedId, elections]);
 
   useEffect(() => {
     if (!open) {
@@ -99,14 +124,18 @@ export const SelectElectionGroup = ({
     }
   }, [open]);
 
-  const handleSelect = (eg: ElectionGroup) => {
-    setSelectedItem(eg);
-    update(eg);
+  const handleSelect = (election: Election) => {
+    setSelectedItem(election);
+    update(election);
     setOpen(false);
   };
 
-  const getStatus = (): "CanLoadMore" | "LoadingMore" | "LoadingFirstPage" | "Exhausted" => {
-    if (isLoading && electionGroups.length === 0) return "LoadingFirstPage";
+  const getStatus = ():
+    | "CanLoadMore"
+    | "LoadingMore"
+    | "LoadingFirstPage"
+    | "Exhausted" => {
+    if (isLoading && elections.length === 0) return "LoadingFirstPage";
     if (isFetchingNextPage) return "LoadingMore";
     return hasNextPage ? "CanLoadMore" : "Exhausted";
   };
@@ -115,30 +144,33 @@ export const SelectElectionGroup = ({
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   };
 
-  const desktopFiltered = electionGroups.filter((eg) =>
-    eg.name.toLowerCase().includes(desktopSearch.toLowerCase()),
+  const desktopFiltered = elections.filter((e) =>
+    e.name.toLowerCase().includes(desktopSearch.toLowerCase()),
   );
-  const mobileFiltered = electionGroups.filter((eg) =>
-    eg.name.toLowerCase().includes(mobileSearch.toLowerCase()),
+  const mobileFiltered = elections.filter((e) =>
+    e.name.toLowerCase().includes(mobileSearch.toLowerCase()),
   );
 
+  const displayText =
+    selectedItem?.name ||
+    (isLoading && !selectedItem ? "Loading..." : "Select Election");
   const currentSelectedId = selectedItem?.id
     ? `${selectedItem.id}`
     : selectedId
       ? `${selectedId}`
       : undefined;
 
-  const getId = (item: ElectionGroup) => `${item.id}`;
-  const getName = (item: ElectionGroup) => item.name;
-  const getExtra = (item: ElectionGroup) => formatDate(item.election_date);
+  const getId = (item: Election) => `${item.id}`;
+  const getName = (item: Election) => item.name;
+  const getExtra = (item: Election) => formatDate(item.election_date);
 
-  if (electionGroups.length === 0 && isLoading && !disabled) {
+  if (elections.length === 0 && isLoading && !disabled) {
     return (
       <LoadingSelect
         open={open}
         setOpen={setOpen}
         errorMsg={errorMsg}
-        placeholder="Election Group"
+        placeholder="Election"
         className={className}
         align={align}
       />
@@ -177,7 +209,7 @@ export const SelectElectionGroup = ({
     <SelectResponsiveWrapper
       open={open}
       onOpenChange={setOpen}
-      placeholder="Select Election Group"
+      placeholder="Select Election"
       align={align}
       className={className}
       trigger={
@@ -193,7 +225,7 @@ export const SelectElectionGroup = ({
           disabled={disabled}
         >
           <p className="whitespace-normal text-left line-clamp-1">
-            {selectedItem ? selectedItem.name : "Select Election Group"}
+            {selectedItem ? selectedItem.name : "Select Election"}
           </p>
           <ArrowDownIcon className="ml-auto text-c-80 shrink-0" />
         </Button>

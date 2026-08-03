@@ -1,6 +1,6 @@
 import { SVGProps } from "react";
 
-const SystemIcon = (props: SVGProps<SVGSVGElement>) => {
+const FancySystemIcon = (props: SVGProps<SVGSVGElement>) => {
   return (
     <svg
       width="24"
@@ -38,4 +38,4 @@ const SystemIcon = (props: SVGProps<SVGSVGElement>) => {
   );
 };
 
-export default SystemIcon;
+export default FancySystemIcon;

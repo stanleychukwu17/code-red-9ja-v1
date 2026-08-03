@@ -11,19 +11,19 @@ import (
 
 const depositPartyAllowance = `-- name: DepositPartyAllowance :one
 UPDATE parties
-SET allowance_balance_kobo = allowance_balance_kobo + $1,
+SET agent_payment_balance_kobo = agent_payment_balance_kobo + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, agent_payment_allocation, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at
 `
 
 type DepositPartyAllowanceParams struct {
-	AllowanceBalanceKobo int64 `json:"allowance_balance_kobo"`
-	ID                   int16 `json:"id"`
+	AgentPaymentBalanceKobo int64 `json:"agent_payment_balance_kobo"`
+	ID                      int16 `json:"id"`
 }
 
 func (q *Queries) DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error) {
-	row := q.db.QueryRow(ctx, depositPartyAllowance, arg.AllowanceBalanceKobo, arg.ID)
+	row := q.db.QueryRow(ctx, depositPartyAllowance, arg.AgentPaymentBalanceKobo, arg.ID)
 	var i Party
 	err := row.Scan(
 		&i.ID,
@@ -35,8 +35,9 @@ func (q *Queries) DepositPartyAllowance(ctx context.Context, arg DepositPartyAll
 		&i.Slots,
 		&i.IsVerified,
 		&i.DiscountPercentage,
-		&i.AllowanceBalanceKobo,
+		&i.AgentPaymentBalanceKobo,
 		&i.AgentPaymentAllocation,
+		&i.AgentAcquisitionTargets,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -48,7 +49,7 @@ UPDATE parties
 SET agent_payment_allocation = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, agent_payment_allocation, created_at, updated_at
+RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at
 `
 
 type UpdatePartyAgentPaymentAllocationParams struct {
@@ -69,8 +70,9 @@ func (q *Queries) UpdatePartyAgentPaymentAllocation(ctx context.Context, arg Upd
 		&i.Slots,
 		&i.IsVerified,
 		&i.DiscountPercentage,
-		&i.AllowanceBalanceKobo,
+		&i.AgentPaymentBalanceKobo,
 		&i.AgentPaymentAllocation,
+		&i.AgentAcquisitionTargets,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

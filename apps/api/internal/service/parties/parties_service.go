@@ -603,7 +603,7 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 
 	// Add to allowance balance directly in parties table
 	updatedParty, err := txQueries.DepositPartyAllowance(ctx, queries.DepositPartyAllowanceParams{
-		AllowanceBalanceKobo: amountKobo,
+		AgentPaymentBalanceKobo: amountKobo,
 		ID:                   partyID,
 	})
 	if err != nil {
@@ -631,6 +631,18 @@ func (s *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, party
 	})
 }
 
+// GetAgentPaymentAllocation returns the agent_payment_allocation JSON for a party.
+func (s *PartiesService) GetAgentPaymentAllocation(ctx context.Context, partyID int16) (json.RawMessage, error) {
+	party, err := s.queries.GetPartyByID(ctx, partyID)
+	if err != nil {
+		return nil, fmt.Errorf("party not found: %w", err)
+	}
+	if len(party.AgentPaymentAllocation) == 0 {
+		return json.RawMessage("{}"), nil
+	}
+	return json.RawMessage(party.AgentPaymentAllocation), nil
+}
+
 func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error {
 	err := s.queries.UpdatePartyIsVerified(ctx, queries.UpdatePartyIsVerifiedParams{
 		ID:         partyID,
@@ -648,3 +660,128 @@ func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int1
 	
 	return nil
 }
+
+// GetMarketingPlansByType returns marketing plans of a specific type
+func (s *PartiesService) GetMarketingPlansByType(ctx context.Context, campaignType queries.MarketingCampaignType) ([]queries.Plan, error) {
+	return s.queries.GetMarketingPlansByType(ctx, campaignType)
+}
+
+// CreatePartyMarketingCampaign creates a marketing campaign and deducts the budget from the party wallet
+func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error) {
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.queries.WithTx(tx)
+
+	// 1. Get the party wallet to check balance
+	wallet, err := qtx.GetPartyWalletByPartyID(ctx, int16(arg.PartyID))
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get party wallet: %w", err)
+	}
+
+	// Convert pgtype.Numeric budget to int64 kobo (budget is in NGN, multiply by 100)
+	budgetFloat, err := arg.Budget.Float64Value()
+	if err != nil || !budgetFloat.Valid {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("invalid budget value")
+	}
+	budgetKobo := int64(budgetFloat.Float64 * 100)
+
+	if wallet.BalanceKobo < budgetKobo {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("insufficient wallet balance: have %d kobo, need %d kobo", wallet.BalanceKobo, budgetKobo)
+	}
+
+	// 2. Debit the wallet balance
+	updatedWallet, err := qtx.DebitPartyWallet(ctx, queries.DebitPartyWalletParams{
+		BalanceKobo: budgetKobo,
+		ID:          wallet.ID,
+	})
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to debit wallet: %w", err)
+	}
+
+	// 3. Record the debit transaction
+	txRef := fmt.Sprintf("MC-%d-%s", arg.PartyID, time.Now().Format("20060102150405"))
+	_, err = qtx.CreateWalletTransaction(ctx, queries.CreateWalletTransactionParams{
+		WalletID:             wallet.ID,
+		TransactionReference: txRef,
+		Type:                 "debit",
+		TransactionCategory:  "marketing_campaign",
+		AmountKobo:           budgetKobo,
+		BalanceAfterKobo:     updatedWallet.BalanceKobo,
+		PayerName:            pgTextFromString(""),
+		PayerAccountNumber:   pgTextFromString(""),
+		PayerBankCode:        pgTextFromString(""),
+		Narration:            pgTextFromString("Payment for marketing campaign"),
+		RawPayload:           nil,
+	})
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to record wallet transaction: %w", err)
+	}
+
+	// 4. Create the marketing campaign record
+	campaign, err := qtx.CreatePartyMarketingCampaign(ctx, arg)
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to create marketing campaign: %w", err)
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return campaign, nil
+}
+
+// GetPartyMarketingCampaigns retrieves all marketing campaigns for a party
+func (s *PartiesService) GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error) {
+	return s.queries.GetPartyMarketingCampaigns(ctx, partyID)
+}
+
+// CreatePlan creates a new marketing plan (admin only).
+func (s *PartiesService) CreatePlan(ctx context.Context, arg queries.CreatePlanParams) (queries.Plan, error) {
+	return s.queries.CreatePlan(ctx, arg)
+}
+
+// UpdatePlan updates an existing marketing plan (admin only).
+func (s *PartiesService) UpdatePlan(ctx context.Context, arg queries.UpdatePlanParams) (queries.Plan, error) {
+	return s.queries.UpdatePlan(ctx, arg)
+}
+
+// DeletePlan deletes a marketing plan by ID (admin only).
+func (s *PartiesService) DeletePlan(ctx context.Context, id int32) error {
+	return s.queries.DeletePlan(ctx, id)
+}
+
+// GetPlans retrieves marketing plans with optional filters.
+func (s *PartiesService) GetPlans(ctx context.Context, typeFilter string, isActiveFilter string) ([]queries.Plan, error) {
+	arg := queries.GetPlansParams{
+		Column1: typeFilter,
+		Column2: isActiveFilter,
+	}
+	return s.queries.GetPlans(ctx, arg)
+}
+
+// UpdatePlanDisplayOrder updates a plan's display order (admin only).
+func (s *PartiesService) UpdatePlanDisplayOrder(ctx context.Context, arg queries.UpdatePlanDisplayOrderParams) (queries.Plan, error) {
+	return s.queries.UpdatePlanDisplayOrder(ctx, arg)
+}
+
+// UpdatePartyAgentAcquisitionTargets updates the agent acquisition targets of a party.
+func (s *PartiesService) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error) {
+	return s.queries.UpdatePartyAgentAcquisitionTargets(ctx, arg)
+}
+
+// GetPartyAgentAcquisitionTargets returns the agent_acquisition_targets JSON for a party.
+func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, partyID int16) (json.RawMessage, error) {
+	party, err := s.queries.GetPartyByID(ctx, partyID)
+	if err != nil {
+		return nil, fmt.Errorf("party not found: %w", err)
+	}
+	if len(party.AgentAcquisitionTargets) == 0 {
+		return json.RawMessage("{}"), nil
+	}
+	return json.RawMessage(party.AgentAcquisitionTargets), nil
+}
+

@@ -4,6 +4,7 @@ package mocks
 
 import (
 	context "context"
+	encodingjson "encoding/json"
 
 	mock "github.com/stretchr/testify/mock"
 
@@ -541,6 +542,36 @@ func (_m *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, part
 
 	if rf, ok := ret.Get(1).(func(context.Context, int64, []byte) error); ok {
 		r1 = rf(ctx, partyID, allowancesJSON)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// GetAgentPaymentAllocation provides a mock function with given fields: ctx, partyID
+func (_m *PartiesService) GetAgentPaymentAllocation(ctx context.Context, partyID int16) (encodingjson.RawMessage, error) {
+	ret := _m.Called(ctx, partyID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetAgentPaymentAllocation")
+	}
+
+	var r0 encodingjson.RawMessage
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int16) (encodingjson.RawMessage, error)); ok {
+		return rf(ctx, partyID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int16) encodingjson.RawMessage); ok {
+		r0 = rf(ctx, partyID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(encodingjson.RawMessage)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int16) error); ok {
+		r1 = rf(ctx, partyID)
 	} else {
 		r1 = ret.Error(1)
 	}

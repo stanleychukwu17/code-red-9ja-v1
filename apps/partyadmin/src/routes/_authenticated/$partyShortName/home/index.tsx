@@ -11,10 +11,14 @@ import { RECENT_APPLICATIONS } from "./-dummy_data";
 import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
-import { SetAgentPaymentDialog } from "@repo/ui/components/dialogs/set-agent-payment-dialog";
-import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppContext } from "#/hooks/useAppContext";
-import { getPartyWallet, updatePartyStateAllowances } from "#/lib/server/parties";
+import {
+  getPartyWallet,
+  updatePartyStateAllowances,
+  getPartyAgentPaymentAllocation,
+} from "#/lib/server/parties";
 import { getStates } from "#/lib/server/countries";
 import { toast } from "sonner";
 import { HomePageHeader } from "./-header";
@@ -161,39 +165,49 @@ function HomeBillboard() {
   });
 
   const statesList = statesRes?.data?.states?.length
-    ? statesRes.data.states.map((s: any) => s.name).sort((a: string, b: string) => a.localeCompare(b))
+    ? statesRes.data.states
+        .map((s: any) => s.name)
+        .sort((a: string, b: string) => a.localeCompare(b))
     : [
-        "Abia", "Abuja FCT", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi",
-        "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi",
-        "Edo", "Ekiti", "Enugu", "Gombe", "Imo", "Jigawa", "Kaduna",
-        "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa",
-        "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers",
-        "Sokoto", "Taraba", "Yobe", "Zamfara",
+        "Abia",
+        "Abuja FCT",
+        "Adamawa",
+        "Akwa Ibom",
+        "Anambra",
+        "Bauchi",
+        "Bayelsa",
+        "Benue",
+        "Borno",
+        "Cross River",
+        "Delta",
+        "Ebonyi",
+        "Edo",
+        "Ekiti",
+        "Enugu",
+        "Gombe",
+        "Imo",
+        "Jigawa",
+        "Kaduna",
+        "Kano",
+        "Katsina",
+        "Kebbi",
+        "Kogi",
+        "Kwara",
+        "Lagos",
+        "Nasarawa",
+        "Niger",
+        "Ogun",
+        "Ondo",
+        "Osun",
+        "Oyo",
+        "Plateau",
+        "Rivers",
+        "Sokoto",
+        "Taraba",
+        "Yobe",
+        "Zamfara",
       ];
 
-  const paymentMutation = useMutation({
-    mutationFn: async (allowances: Record<string, Record<string, number>>) => {
-      const res = await updatePartyStateAllowances({
-        data: { partyID: partyId!, allowances },
-      });
-      if (!res.success) {
-        throw new Error(res.message || "Failed to update allowances");
-      }
-      return res.data;
-    },
-    onSuccess: () => {
-      if (partyId) {
-        queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-      }
-      toast.success("Agent payment budget saved successfully!");
-      setIsBudgetDialogOpen(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "An unexpected error occurred");
-    },
-  });
-
-  // Dynamic budget calculation:
   const allowances = party?.agentPaymentAllocation || {};
   const defaultKobo =
     allowances["default"] !== undefined ? allowances["default"] : 2000000;
@@ -286,13 +300,24 @@ function HomeBillboard() {
         onSuccess={handleSlotsPurchased}
       />
 
-      <SetAgentPaymentDialog
+      <AgentPaymentAllocationFormDialog
         open={isBudgetDialogOpen}
         onClose={() => setIsBudgetDialogOpen(false)}
-        defaultValues={party?.agentPaymentAllocation as any}
-        onSubmit={(values) => paymentMutation.mutate(values as any)}
-        isPending={paymentMutation.isPending}
-        statesList={[]}
+        partyId={partyId!}
+        fetchAllocation={async (id) => {
+          const res = await getPartyAgentPaymentAllocation({ data: id });
+          return res?.data?.agent_payment_allocation ?? null;
+        }}
+        updateAllocation={async (id, values) => {
+          const res = await updatePartyStateAllowances({
+            data: { partyID: id, allowances: values as any },
+          });
+          if (!res.success) throw new Error(res.message || "Failed to update");
+          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+          toast.success("Agent payment budget saved!");
+          return res.data;
+        }}
+        onSuccess={() => setIsBudgetDialogOpen(false)}
       />
     </section>
   );

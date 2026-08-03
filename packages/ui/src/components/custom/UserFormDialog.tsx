@@ -1,6 +1,6 @@
 /**
  * UserFormDialog Component
- * 
+ *
  * A comprehensive dialog component used for creating and updating user profiles.
  * It handles form state, profile image uploads, and cascading location selection (Country -> State -> City).
  * This component is designed to be reusable across different parts of the application.
@@ -41,7 +41,7 @@ export interface UserResult {
 
 /**
  * Props for the UserFormDialog component.
- * It accepts various server functions (APIs) as props to fetch dropdown data 
+ * It accepts various server functions (APIs) as props to fetch dropdown data
  * and handle submissions, making the component highly reusable and backend-agnostic.
  */
 export interface UserFormDialogProps {
@@ -109,7 +109,9 @@ export function UserFormDialog({
 
   // console.log(user)
 
-  const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">("basic");
+  const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">(
+    "basic",
+  );
   const [createdUser, setCreatedUser] = React.useState<UserResult | null>(null);
 
   const activeUser = mode === "update" ? user : createdUser;
@@ -124,9 +126,12 @@ export function UserFormDialog({
       if (!values.lastName) throw new Error("Last name is required");
       if (!values.gender) throw new Error("Gender is required");
       if (!values.dateOfBirth) throw new Error("Date of birth is required");
-      if (!values.residenceCountryId) throw new Error("Residence country is required");
-      if (!values.residenceStateId) throw new Error("Residence state is required");
-      if (!values.originCountryId) throw new Error("Country of origin is required");
+      if (!values.residenceCountryId)
+        throw new Error("Residence country is required");
+      if (!values.residenceStateId)
+        throw new Error("Residence state is required");
+      if (!values.originCountryId)
+        throw new Error("Country of origin is required");
       if (!values.originStateId) throw new Error("State of origin is required");
 
       const formattedDob = values.dateOfBirth.split("T")[0]; // formatted date of birth
@@ -144,7 +149,9 @@ export function UserFormDialog({
             avatar: avatarUrl,
             current_country: Number(values.residenceCountryId),
             current_state: Number(values.residenceStateId),
-            current_city: values.residenceCityId ? Number(values.residenceCityId) : undefined,
+            current_city: values.residenceCityId
+              ? Number(values.residenceCityId)
+              : undefined,
             state_of_origin: Number(values.originStateId),
             party_id: values.partyId ? Number(values.partyId) : undefined,
           },
@@ -161,7 +168,9 @@ export function UserFormDialog({
             date_of_birth: formattedDob,
             current_country: Number(values.residenceCountryId),
             current_state: Number(values.residenceStateId),
-            current_city: values.residenceCityId ? Number(values.residenceCityId) : undefined,
+            current_city: values.residenceCityId
+              ? Number(values.residenceCityId)
+              : undefined,
             state_of_origin: Number(values.originStateId),
             party_id: values.partyId ? Number(values.partyId) : undefined,
             avatar: avatarUrl,
@@ -317,13 +326,7 @@ export function UserFormDialog({
       }
       setError(null);
     }
-  }, [
-    open,
-    mode,
-    user,
-    partyId,
-    partyShortName,
-  ]);
+  }, [open, mode, user, partyId, partyShortName]);
 
   const handleUploadClick = () => {
     fileInputRef.current?.click();
@@ -402,21 +405,36 @@ export function UserFormDialog({
           <div className="flex border-b border-[#e0e0e0] px-6 gap-6 shrink-0 mt-2">
             <button
               type="button"
-              className={cn("pb-2 text-[14px] font-medium border-b-2 transition", activeTab === "basic" ? "border-black text-black" : "border-transparent text-c-50 hover:text-black")}
+              className={cn(
+                "pb-2 text-[14px] font-medium border-b-2 transition",
+                activeTab === "basic"
+                  ? "border-black text-black"
+                  : "border-transparent text-c-50 hover:text-black",
+              )}
               onClick={() => setActiveTab("basic")}
             >
               Basic Info
             </button>
             <button
               type="button"
-              className={cn("pb-2 text-[14px] font-medium border-b-2 transition", activeTab === "more" ? "border-black text-black" : "border-transparent text-c-50 hover:text-black")}
+              className={cn(
+                "pb-2 text-[14px] font-medium border-b-2 transition",
+                activeTab === "more"
+                  ? "border-black text-black"
+                  : "border-transparent text-c-50 hover:text-black",
+              )}
               onClick={() => setActiveTab("more")}
             >
               More Info
             </button>
             <button
               type="button"
-              className={cn("pb-2 text-[14px] font-medium border-b-2 transition", activeTab === "phones" ? "border-black text-black" : "border-transparent text-c-50 hover:text-black")}
+              className={cn(
+                "pb-2 text-[14px] font-medium border-b-2 transition",
+                activeTab === "phones"
+                  ? "border-black text-black"
+                  : "border-transparent text-c-50 hover:text-black",
+              )}
               onClick={() => setActiveTab("phones")}
             >
               Phone Numbers
@@ -424,7 +442,10 @@ export function UserFormDialog({
           </div>
         )}
 
-        <div style={{ display: activeTab === "basic" ? "flex" : "none" }} className="flex flex-col flex-1 overflow-hidden">
+        <div
+          style={{ display: activeTab === "basic" ? "flex" : "none" }}
+          className="flex flex-col flex-1 overflow-hidden"
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -552,7 +573,9 @@ export function UserFormDialog({
                     />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label className="text-[14px] text-c-50">Date of birth</label>
+                    <label className="text-[14px] text-c-50">
+                      Date of birth
+                    </label>
                     <form.Field
                       name="dateOfBirth"
                       children={(field: any) => (
@@ -569,12 +592,18 @@ export function UserFormDialog({
 
                 {/* State of Origin */}
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] text-c-50">State of Origin</label>
+                  <label className="text-[14px] text-c-50">
+                    State of Origin
+                  </label>
                   <form.Field
                     name="originStateId"
                     children={(field: any) => (
                       <SelectState
-                        selectedId={field.state.value !== undefined ? String(field.state.value) : undefined}
+                        selectedId={
+                          field.state.value !== undefined
+                            ? String(field.state.value)
+                            : undefined
+                        }
                         update={(item) => field.handleChange(item.id)}
                         countryOriginalId={161}
                         fetchStates={getStates}
@@ -595,7 +624,11 @@ export function UserFormDialog({
                       name="residenceCountryId"
                       children={(field: any) => (
                         <SelectCountry
-                          selectedId={field.state.value !== undefined ? String(field.state.value) : undefined}
+                          selectedId={
+                            field.state.value !== undefined
+                              ? String(field.state.value)
+                              : undefined
+                          }
                           update={(item) => {
                             field.handleChange(item.id);
                             form.setFieldValue("residenceStateId", undefined);
@@ -618,10 +651,17 @@ export function UserFormDialog({
                           name="residenceCountryId"
                           children={(countryField: any) => (
                             <SelectState
-                              selectedId={field.state.value !== undefined ? String(field.state.value) : undefined}
+                              selectedId={
+                                field.state.value !== undefined
+                                  ? String(field.state.value)
+                                  : undefined
+                              }
                               update={(item) => {
                                 field.handleChange(item.id);
-                                form.setFieldValue("residenceCityId", undefined);
+                                form.setFieldValue(
+                                  "residenceCityId",
+                                  undefined,
+                                );
                               }}
                               countryOriginalId={countryField.state.value}
                               fetchStates={getStates}
@@ -644,7 +684,11 @@ export function UserFormDialog({
                           name="residenceStateId"
                           children={(stateField: any) => (
                             <SelectCity
-                              selectedId={field.state.value !== undefined ? String(field.state.value) : undefined}
+                              selectedId={
+                                field.state.value !== undefined
+                                  ? String(field.state.value)
+                                  : undefined
+                              }
                               update={(item) => field.handleChange(item.id)}
                               stateId={stateField.state.value}
                               fetchCities={getCities}
@@ -666,7 +710,11 @@ export function UserFormDialog({
                       name="partyId"
                       children={(field: any) => (
                         <SelectParty
-                          selectedId={field.state.value !== undefined ? String(field.state.value) : undefined}
+                          selectedId={
+                            field.state.value !== undefined
+                              ? String(field.state.value)
+                              : undefined
+                          }
                           update={(item) => field.handleChange(item.id)}
                           fetchParties={getParties}
                           errorMsg={field.state.meta.errors?.join(", ")}
@@ -724,8 +772,12 @@ export function UserFormDialog({
                 disabled={saveMutation.isPending}
                 className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
               >
-                {saveMutation.isPending && (<Loader2 className="size-4 animate-spin" />)}
-                {mode === "update" ? "Save Basic Info" : "Create User & Continue"}
+                {saveMutation.isPending && (
+                  <Loader2 className="size-4 animate-spin" />
+                )}
+                {mode === "update"
+                  ? "Save Basic Info"
+                  : "Create User & Continue"}
               </Button>
             </DialogFooter>
           </form>
@@ -751,7 +803,9 @@ export function UserFormDialog({
             loadUserPhoneNumber={loadUserPhoneNumber}
             getAllCountries={getAllCountries}
             onClose={onClose}
-            onSuccess={() => { onClose(); }}
+            onSuccess={() => {
+              onClose();
+            }}
           />
         )}
       </DialogContent>
@@ -764,25 +818,35 @@ export function UserFormDialog({
 // =======================
 
 // The MoreInfoTab
-function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSuccess }: any) {
+function MoreInfoTab({
+  user,
+  updateUserMoreInfo,
+  getOccupations,
+  onClose,
+  onSuccess,
+}: any) {
   const [error, setError] = React.useState<string | null>(null);
   const [occupations, setOccupations] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     if (getOccupations) {
-      getOccupations().then((res: any) => {
-        if (res?.success && res?.data) {
-          // Assuming data is an array of {id, name} or {data: {occupations}}
-          const list = res.data.occupations || res.data || [];
-          setOccupations(list);
-        }
-      }).catch(console.error);
+      getOccupations()
+        .then((res: any) => {
+          if (res?.success && res?.data) {
+            // Assuming data is an array of {id, name} or {data: {occupations}}
+            const list = res.data.occupations || res.data || [];
+            setOccupations(list);
+          }
+        })
+        .catch(console.error);
     }
   }, [getOccupations]);
 
   const form = useForm({
     defaultValues: {
-      occupation_id: user?.profile?.occupation_id ? String(user.profile.occupation_id) : "",
+      occupation_id: user?.profile?.occupation_id
+        ? String(user.profile.occupation_id)
+        : "",
       educational_status: user?.profile?.educational_status || "",
       highest_degree: user?.profile?.highest_degree || "",
       graduation_year: user?.profile?.graduation_year || "",
@@ -808,7 +872,8 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
           ...values,
         },
       });
-      if (!res?.success) throw new Error(res?.message || "Failed to save profile");
+      if (!res?.success)
+        throw new Error(res?.message || "Failed to save profile");
       return res.data;
     },
     onSuccess: () => {
@@ -819,7 +884,11 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
     },
   });
 
-  const renderSelect = (name: string, label: string, options: { label: string, value: string }[]) => (
+  const renderSelect = (
+    name: string,
+    label: string,
+    options: { label: string; value: string }[],
+  ) => (
     <div className="flex flex-col gap-1.5">
       <label className="text-[14px] text-c-50">{label}</label>
       <form.Field
@@ -832,7 +901,9 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
           >
             <option value="">Select {label}</option>
             {options.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
             ))}
           </select>
         )}
@@ -870,7 +941,9 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
                   >
                     <option value="">Select Occupation</option>
                     {occupations.map((o: any) => (
-                      <option key={o.id} value={o.id}>{o.name || o.title}</option>
+                      <option key={o.id} value={o.id}>
+                        {o.name || o.title}
+                      </option>
                     ))}
                   </select>
                 )}
@@ -974,14 +1047,15 @@ function MoreInfoTab({ user, updateUserMoreInfo, getOccupations, onClose, onSucc
           disabled={saveMutation.isPending}
           className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
         >
-          {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+          {saveMutation.isPending && (
+            <Loader2 className="size-4 animate-spin" />
+          )}
           Save & Continue
         </Button>
       </DialogFooter>
     </form>
   );
 }
-
 
 type phoneType = {
   id: string | number;
@@ -990,28 +1064,44 @@ type phoneType = {
   raw_input: string;
   on_whatsapp: "yes" | "no";
   is_default: boolean;
-}
+};
 // The PhoneNumbersTab
-function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, loadUserPhoneNumber, getAllCountries, onClose, onSuccess }: any) {
+function PhoneNumbersTab({
+  user,
+  updateUserPhoneNumbers,
+  deleteUserPhoneNumber,
+  loadUserPhoneNumber,
+  getAllCountries,
+  onClose,
+  onSuccess,
+}: any) {
   const [error, setError] = React.useState<string | null>(null);
-  const [residentCountryPhoneCode, setResidentCountryPhoneCode] = React.useState<string | null>(null);
+  const [residentCountryPhoneCode, setResidentCountryPhoneCode] =
+    React.useState<string | null>(null);
   const userCountry = user.current_country;
 
   // Fetch phone numbers asynchronously when the tab mounts.
   // The query uses fake_id (or id as fallback) as the unique query key identifier.
-  const { data: userPhoneNumbers, isLoading, refetch } = useQuery({
+  const {
+    data: userPhoneNumbers,
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ["user-phonenumbers", user?.fake_id],
 
-    // query function that fetches the number 
+    // query function that fetches the number
     queryFn: async () => {
       if (!loadUserPhoneNumber) return null;
-      const res = await loadUserPhoneNumber({ data: { user_id: user?.fake_id } });
-      if (!res?.success) throw new Error(res?.message || "Failed to load phone numbers");
+      const res = await loadUserPhoneNumber({
+        data: { user_id: user?.fake_id },
+      });
+      if (!res?.success)
+        throw new Error(res?.message || "Failed to load phone numbers");
       return res.data?.phone_numbers || [];
     },
 
     // Only run the query if the load function is provided and we have a valid user ID
-    enabled: !!loadUserPhoneNumber && !!(user?.fake_id),
+    enabled: !!loadUserPhoneNumber && !!user?.fake_id,
 
     // disable refresh
     staleTime: Infinity,
@@ -1046,16 +1136,26 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
   // Determine the default initial state for the phone numbers array
   const initialPhones: phoneType[] = React.useMemo(() => {
     // 1. Prioritize freshly fetched data from TanStack Query
-    if (userPhoneNumbers && userPhoneNumbers.length > 0) return userPhoneNumbers;
+    if (userPhoneNumbers && userPhoneNumbers.length > 0)
+      return userPhoneNumbers;
 
     // 2. Default to a single empty row template
-    return [{ id: 0, phone: "", phonecode: "", raw_input: "", on_whatsapp: "no", is_default: false }];
+    return [
+      {
+        id: 0,
+        phone: "",
+        phonecode: "",
+        raw_input: "",
+        on_whatsapp: "no",
+        is_default: false,
+      },
+    ];
   }, [userPhoneNumbers]);
 
   // form management for phone numbers
   const form = useForm({
     defaultValues: {
-      phones: initialPhones
+      phones: initialPhones,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value.phones);
@@ -1063,15 +1163,21 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
   });
 
   // Remove phone number
-  const handleRemovePhoneNumber = async (index: number, phoneObj: any, field: any) => {
-    console.log("delete number")
+  const handleRemovePhoneNumber = async (
+    index: number,
+    phoneObj: any,
+    field: any,
+  ) => {
+    console.log("delete number");
     return;
     // If the phone object has a valid ID (> 0), it is already saved on the server.
     // We must call the backend API to physically delete it from the database.
     if (phoneObj.id && Number(phoneObj.id) > 0) {
       if (deleteUserPhoneNumber) {
         try {
-          const res = await deleteUserPhoneNumber({ data: { id: phoneObj.id } });
+          const res = await deleteUserPhoneNumber({
+            data: { id: phoneObj.id },
+          });
           if (res && res.success === false) {
             console.error("Failed to delete phone number:", res.message);
           }
@@ -1093,7 +1199,9 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
   const saveMutation = useMutation({
     mutationFn: async (values: phoneType[]) => {
       // Clean up the payload by omitting any empty rows the user didn't fill out
-      const validPhones = values.filter((p: phoneType) => p.raw_input?.trim() !== "");
+      const validPhones = values.filter(
+        (p: phoneType) => p.raw_input?.trim() !== "",
+      );
       if (validPhones.length === 0) return { success: true };
 
       if (!updateUserPhoneNumbers) {
@@ -1106,7 +1214,8 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
           phones: validPhones,
         },
       });
-      if (!res?.success) throw new Error(res?.message || "Failed to save phone numbers");
+      if (!res?.success)
+        throw new Error(res?.message || "Failed to save phone numbers");
       return res.data;
     },
     onSuccess: () => {
@@ -1156,18 +1265,27 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
               name="phones"
               children={(field: any) => (
                 <div className="flex flex-col gap-3">
-
                   {field.state.value.map((phoneObj: any, index: number) => (
                     // each of the phone number wrapper
-                    <div key={index} data-id={phoneObj.id} className="flex flex-col gap-1.5 w-full">
-
+                    <div
+                      key={index}
+                      data-id={phoneObj.id}
+                      className="flex flex-col gap-1.5 w-full"
+                    >
                       {/* Header - show only for the first phone number */}
                       {index === 0 && (
                         <div className="flex items-center gap-3 w-full px-1">
-                          <label className="text-[14px] text-c-50 flex-1">Phone Number</label>
-                          <label className="text-[14px] text-c-50 w-[140px]">WhatsApp?</label>
-                          <label className="text-[14px] text-c-50 w-[60px] text-center">Default?</label>
-                          <div className="w-11"></div> {/* Spacer for delete button */}
+                          <label className="text-[14px] text-c-50 flex-1">
+                            Phone Number
+                          </label>
+                          <label className="text-[14px] text-c-50 w-[140px]">
+                            WhatsApp?
+                          </label>
+                          <label className="text-[14px] text-c-50 w-[60px] text-center">
+                            Default?
+                          </label>
+                          <div className="w-11"></div>{" "}
+                          {/* Spacer for delete button */}
                         </div>
                       )}
 
@@ -1177,9 +1295,16 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
                         <div className="flex items-center h-11 flex-1 rounded-[10px] border border-[#dfdfdf] bg-[#fdfdfd] focus-within:border-black transition overflow-hidden">
                           <span
                             className="px-3 text-[14px] text-gray-500 bg-gray-50 border-r border-[#dfdfdf] h-full flex items-center shrink-0"
-                            style={{ cursor: !!phoneObj.id && Number(phoneObj.id) > 0 ? 'not-allowed' : 'default' }}
+                            style={{
+                              cursor:
+                                !!phoneObj.id && Number(phoneObj.id) > 0
+                                  ? "not-allowed"
+                                  : "default",
+                            }}
                           >
-                            {phoneObj.phonecode ? `+${phoneObj.phonecode}` : `+${residentCountryPhoneCode}`}
+                            {phoneObj.phonecode
+                              ? `+${phoneObj.phonecode}`
+                              : `+${residentCountryPhoneCode}`}
                           </span>
                           <input
                             type="text"
@@ -1192,7 +1317,12 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
                               field.handleChange(newPhones);
                             }}
                             className="flex-1 h-full px-3 text-[14px] text-black outline-none bg-transparent min-w-0 disabled:cursor-"
-                            style={{ cursor: !!phoneObj.id && Number(phoneObj.id) > 0 ? 'not-allowed' : 'default' }}
+                            style={{
+                              cursor:
+                                !!phoneObj.id && Number(phoneObj.id) > 0
+                                  ? "not-allowed"
+                                  : "default",
+                            }}
                           />
                         </div>
 
@@ -1221,7 +1351,7 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
                             onChange={(e) => {
                               const newPhones = [...field.state.value];
                               // Enforce that only one phone number can be the default at a time
-                              newPhones.forEach(p => p.is_default = false);
+                              newPhones.forEach((p) => (p.is_default = false));
                               newPhones[index].is_default = true;
                               field.handleChange(newPhones);
                             }}
@@ -1233,7 +1363,9 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
                         {/* Delete Button */}
                         <button
                           type="button"
-                          onClick={() => handleRemovePhoneNumber(index, phoneObj, field)}
+                          onClick={() =>
+                            handleRemovePhoneNumber(index, phoneObj, field)
+                          }
                           className="h-11 w-11 text-red-500 hover:bg-red-50 rounded-[10px] transition flex items-center justify-center shrink-0 border border-transparent hover:border-red-100"
                           title="Remove"
                         >
@@ -1246,7 +1378,15 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
                   <button
                     type="button"
                     onClick={() => {
-                      field.handleChange([...field.state.value, { id: 0, phone: "", on_whatsapp: "no", is_default: false }]);
+                      field.handleChange([
+                        ...field.state.value,
+                        {
+                          id: 0,
+                          phone: "",
+                          on_whatsapp: "no",
+                          is_default: false,
+                        },
+                      ]);
                     }}
                     className="text-[#00cf79] font-medium text-[14px] text-left hover:underline w-fit mt-2"
                   >
@@ -1271,7 +1411,9 @@ function PhoneNumbersTab({ user, updateUserPhoneNumbers, deleteUserPhoneNumber, 
           disabled={saveMutation.isPending}
           className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
         >
-          {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
+          {saveMutation.isPending && (
+            <Loader2 className="size-4 animate-spin" />
+          )}
           Save Finish
         </Button>
       </DialogFooter>

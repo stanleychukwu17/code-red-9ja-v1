@@ -364,7 +364,7 @@ func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (U
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at, country_of_origin FROM users
+SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, whatsapp_phone, data_phone, current_country, current_state, current_lga, current_ward, current_city, address, country_of_origin, state_of_origin, voters_card_image, bank_account_number, bank_code, is_politician, is_verified, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -392,6 +392,7 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.CurrentWard,
 		&i.CurrentCity,
 		&i.Address,
+		&i.CountryOfOrigin,
 		&i.StateOfOrigin,
 		&i.VotersCardImage,
 		&i.BankAccountNumber,
@@ -405,7 +406,6 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.AccountStatus,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.CountryOfOrigin,
 	)
 	return i, err
 }
