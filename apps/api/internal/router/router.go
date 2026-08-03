@@ -179,7 +179,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	if r2Err != nil {
 		slog.Warn("R2 service not configured — file upload endpoints will be unavailable", "reason", r2Err)
 	} else {
-		filesHandler = fileshandler.NewHandler(q, r2Svc, utilsInstance)
+		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance)
 	}
 
 	// Core middleware
