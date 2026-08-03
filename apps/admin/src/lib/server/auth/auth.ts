@@ -7,7 +7,7 @@ import {
   logoutUserImpl,
   refreshUserTokenImpl,
 } from "#/lib/server/auth/auth.server";
-import { apiFetch } from "#/lib/server/fetch";
+import { apiFetch, handleResponse } from "#/lib/server/fetch";
 
 // Sends a POST request to the server to log in an admin with their email, username or phone and password.
 export const loginAdmin = createServerFn({ method: "POST" })
@@ -61,41 +61,14 @@ export const registerCandidate = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-      };
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
       const response = await apiFetch(API_URL.auth.registerCandidate, {
         method: "POST",
-        headers,
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
-      const text = await response.text();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: text || `HTTP error ${response.status}`,
-        };
-      }
-
-      try {
-        const result = JSON.parse(text);
-        return result;
-      } catch (err) {
-        return { success: true, data: text }; // Fallback if raw text success
-      }
+      return await handleResponse(response);
     } catch (error) {
-      console.error("Register candidate error:", error);
       return {
         success: false,
         message:
@@ -118,27 +91,11 @@ export const makeSuperadminFn = createServerFn({ method: "POST" })
         body: JSON.stringify(data),
       });
 
-      const text = await response.text();
-
-      if (!response.ok) {
-        return {
-          success: false,
-          message: text || `HTTP error ${response.status}`,
-        };
-      }
-
-      try {
-        const result = JSON.parse(text);
-        return result;
-      } catch (err) {
-        return { success: true, data: text };
-      }
+      return await handleResponse(response);
     } catch (error) {
-      console.error("Make superadmin error:", error);
       return {
         success: false,
-        message:
-          error instanceof Error ? error.message : "An unknown error occurred",
+        message: error instanceof Error ? error.message : "An unknown error occurred",
       };
     }
   });
@@ -147,25 +104,12 @@ export const makeSuperadminFn = createServerFn({ method: "POST" })
 export const getAdminUsers = createServerFn({ method: "GET" }).handler(
   async () => {
     try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-      const headers: Record<string, string> = {};
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] =
-          `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
       const response = await apiFetch(API_URL.adminUsers, {
         method: "GET",
-        headers,
       });
 
-      const result = await response.json();
-      return result;
+      return await handleResponse(response);
     } catch (error) {
-      console.error("Fetch admin users error:", error);
       return {
         success: false,
         message: "An unexpected error occurred during fetching admin users",
