@@ -144,6 +144,7 @@ type Querier interface {
 	GetFederalConstituencyByID(ctx context.Context, id int32) (FederalConstituency, error)
 	GetFileByID(ctx context.Context, id int64) (File, error)
 	GetFileByKey(ctx context.Context, fileKey string) (File, error)
+	GetFileByPublicUrl(ctx context.Context, publicUrl string) (File, error)
 	GetLGAByID(ctx context.Context, id int32) (Lga, error)
 	// Returns the current count of LGA supervisors for a party in a given lga+election group.
 	GetLGASupervisorCount(ctx context.Context, arg GetLGASupervisorCountParams) (int32, error)
@@ -156,6 +157,7 @@ type Querier interface {
 	GetOccupations(ctx context.Context) ([]Occupation, error)
 	GetOfficeByID(ctx context.Context, id int64) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
+	GetOrphanedFilesForFallbackCleanup(ctx context.Context) ([]GetOrphanedFilesForFallbackCleanupRow, error)
 	// ============================================================
 	// QUERY: get current party agents_count in a PU for a given party
 	// Used by Go before calling the upsert to compute unique_pu_delta.

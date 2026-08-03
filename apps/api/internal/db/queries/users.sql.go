@@ -16,12 +16,13 @@ UPDATE users
 SET first_name = $2,
     last_name = $3,
     middle_name = $4,
-    gender = $5,
-    avatar = $6,
-    current_country = $7,
-    current_state = $8,
-    current_city = $9,
-    state_of_origin = $10,
+    username = $5,
+    gender = $6,
+    avatar = $7,
+    current_country = $8,
+    current_state = $9,
+    current_city = $10,
+    state_of_origin = $11,
     updated_at = NOW()
 WHERE id = $1
 `
@@ -31,6 +32,7 @@ type AdminUpdateUserParams struct {
 	FirstName      pgtype.Text `json:"first_name"`
 	LastName       pgtype.Text `json:"last_name"`
 	MiddleName     pgtype.Text `json:"middle_name"`
+	Username       pgtype.Text `json:"username"`
 	Gender         pgtype.Text `json:"gender"`
 	Avatar         pgtype.Text `json:"avatar"`
 	CurrentCountry int16       `json:"current_country"`
@@ -45,6 +47,7 @@ func (q *Queries) AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams
 		arg.FirstName,
 		arg.LastName,
 		arg.MiddleName,
+		arg.Username,
 		arg.Gender,
 		arg.Avatar,
 		arg.CurrentCountry,
@@ -80,17 +83,18 @@ func (q *Queries) CountAllUserPhoneNumbers(ctx context.Context, userID int64) (i
 
 const createCandidatePlaceholder = `-- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
-  email, password_hash, last_name, first_name, middle_name,
+  email, password_hash, username, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_city, state_of_origin,
   party_id, avatar, account_status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'placeholder')
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'placeholder')
 RETURNING id
 `
 
 type CreateCandidatePlaceholderParams struct {
 	Email          pgtype.Text `json:"email"`
 	PasswordHash   string      `json:"password_hash"`
+	Username       pgtype.Text `json:"username"`
 	LastName       pgtype.Text `json:"last_name"`
 	FirstName      pgtype.Text `json:"first_name"`
 	MiddleName     pgtype.Text `json:"middle_name"`
@@ -108,6 +112,7 @@ func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCand
 	row := q.db.QueryRow(ctx, createCandidatePlaceholder,
 		arg.Email,
 		arg.PasswordHash,
+		arg.Username,
 		arg.LastName,
 		arg.FirstName,
 		arg.MiddleName,
