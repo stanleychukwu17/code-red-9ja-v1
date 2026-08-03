@@ -9182,6 +9182,11 @@ const docTemplate = `{
                 },
                 "state_of_origin": {
                     "type": "integer"
+                },
+                "username": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "minLength": 3
                 }
             }
         },

@@ -198,6 +198,10 @@ definitions:
         type: string
       state_of_origin:
         type: integer
+      username:
+        maxLength: 30
+        minLength: 3
+        type: string
     required:
     - current_country
     - current_state
