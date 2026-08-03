@@ -44,6 +44,7 @@ type UsersService interface {
 
 type PartyService interface {
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
+	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
 }
 
 type BodiesService interface {
@@ -223,6 +224,12 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	if status == "suspended" || status == "banned" || status == "deleted" || status == "inactive" {
 		return LoginResult{}, fmt.Errorf("your account is %s", status)
 	}
+	if status == "placeholder" {
+		return LoginResult{}, errors.New(`
+			Your account is not activated, you cannot login into a placeholder account. Please contact an
+			admin to activate your account
+		`)
+	}
 
 	// create session details
 	sessionID := uuid.NewString()
@@ -235,6 +242,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 	jsonSessionData, _ := json.Marshal(sessionData)
 
+	// if user has a valid partyID, we fetch the party details
 	var partyObj *queries.PartyBasicInfoWithVerifications
 	partyID := user.PartyID.Int16
 	if partyID != 0 {
@@ -600,6 +608,7 @@ type RedisOnboardingData struct {
 type RegisterResult struct {
 	UserID int64
 	FakeID int64
+	User   *queries.UserWithPlaces
 }
 
 func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (RegisterResult, error) {
@@ -795,7 +804,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		slog.Error("failed to fetch user details to create wallet", "user_id", user_id, "err", userErr)
 	}
 
-	return RegisterResult{UserID: user_id, FakeID: fake_id}, nil
+	return RegisterResult{UserID: user_id, FakeID: fake_id, User: &registeredUser}, nil
 }
 
 // CleanUsername normalizes and validates a username based on:
@@ -833,8 +842,6 @@ func CleanUsername(input string) (string, error) {
 
 	return clean, nil
 }
-
-
 
 // SaveSomeUserRegistrationDetails saves the user's registration details (username, email, nin) to Redis & DB
 func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error {
@@ -1070,7 +1077,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID strin
 // RegisterCandidatePlaceholder creates a new candidate user in the system with placeholder status
 func (s *AuthService) RegisterCandidatePlaceholder(
 	ctx context.Context,
-	email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string,
+	email, password, firstName, lastName, middleName, username, gender, avatar string,
 	dob time.Time,
 	countryID, stateID int16,
 	currentCity int32,
@@ -1095,13 +1102,13 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
 		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
+		Username:       pgtype.Text{String: username, Valid: username != ""},
 		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
 		DateOfBirth:    pgtype.Date{Time: dob, Valid: !dob.IsZero()},
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: currentCity, Valid: currentCity != 0},
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
-		PartyID:        pgtype.Int2{Int16: int16(partyID), Valid: partyID != 0},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
 	}
 
@@ -1117,20 +1124,27 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		return RegisterResult{}, err
 	}
 
-	if role != "" {
-		_ = s.usersService.AssignUserRole(ctx, userID, fakeID, role, 0)
-	}
-
 	// save some of the user details to our db & also to redis(using pipeline)
-	err = s.SaveSomeUserRegistrationDetails(ctx, "", email, "", userID, fakeID)
+	err = s.SaveSomeUserRegistrationDetails(ctx, username, email, "", userID, fakeID)
 	if err != nil {
 		return RegisterResult{}, err
 	}
 
-	// fetch user details to cache it in Redis
-	_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
+	// if partyID is provided, we add the new user to the party provided
+	if partyID != 0 {
+		err = s.partyService.JoinParty(ctx, int16(partyID), 0, userID, fakeID)
+		if err != nil {
+			return RegisterResult{}, err
+		}
+	}
 
-	return RegisterResult{UserID: userID, FakeID: fakeID}, nil
+	// fetch user details to cache it in Redis
+	user, err := s.GetUserDetailsByFakeID(ctx, fakeID)
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	return RegisterResult{UserID: userID, FakeID: fakeID, User: &user}, nil
 }
 
 // ListAdmins fetches all administrative users from the database
