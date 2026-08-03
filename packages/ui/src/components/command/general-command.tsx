@@ -106,7 +106,7 @@ export function GeneralCommand<T>({
   return (
     <Command shouldFilter={status === undefined} className="w-full">
       {!disableSearch && (
-        <div className="mx-2">
+        <div className="mx-2 mt-2">
           <IconInput
             placeholder="Search..."
             onChange={(e) => setSearch(e.target.value)} // capture search value

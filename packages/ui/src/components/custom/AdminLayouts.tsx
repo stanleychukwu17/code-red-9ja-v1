@@ -484,7 +484,7 @@ export function StatSection({
   return (
     <div className="bg-c-5/50 rounded-[20px] px-2 py-2 space-y-2 shadow-xs cursor-pointer">
       <div
-        className="h-12 flex items-center justify-between px-3 hover:bg-c-7 rounded-xl transition duration-200"
+        className="h-12 flex items-center justify-between px-3 hover:bg-c-7 rounded-xl transition duration-300"
         onClick={() => setIsOpen(!isOpen)}
       >
         <h2 className="text-sm font-bold text-c-50 tracking-wide">{title}</h2>
@@ -541,9 +541,9 @@ export function ReadinessStatSection({
   );
 
   return (
-    <div className="bg-c-5/50 rounded-[20px] p-2 space-y-2 shadow-xs">
+    <div className="bg-c-5/50 rounded-[20px] p-2 space-y-1 shadow-xs">
       <div
-        className="h-12 flex items-center justify-between px-3 hover:bg-c-7 rounded-xl transition duration-200 cursor-pointer"
+        className="h-12 flex items-center justify-between px-3 hover:bg-c-7 rounded-xl transition duration-300 cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
       >
         <div className="h-11 flex items-center justify-between">

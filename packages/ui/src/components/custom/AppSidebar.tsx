@@ -182,7 +182,7 @@ export function AppSidebar({
 
   return (
     <Sidebar collapsible="icon" className="md:data-[side=left]:left-0">
-      <div className="bg-sidebar-mobile md:bg-sidebar flex h-full flex-col px-4 py-7">
+      <div className="bg-sidebar-mobile md:bg-sidebar flex h-full flex-col px-4 pt-7">
         <LogoComponent
           logoIcon={logoIcon}
           logoText={logoText}

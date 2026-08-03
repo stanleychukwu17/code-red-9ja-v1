@@ -124,7 +124,7 @@ export function ObjectiveTile({
       className="w-full flex items-center justify-between px-4 md:px-8 h-14 gap-2 transition text-[15px] md:text-base"
     >
       <TodoIcon />
-      <p className="text-white w-full">{title}</p>
+      <p className="text-white w-full md:pl-2">{title}</p>
       {rightText && (
         <p className="text-white shrink-0 md:w-32 text-right">{rightText}</p>
       )}

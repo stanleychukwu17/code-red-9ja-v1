@@ -52,7 +52,7 @@ const buttonVariants = cva(
         select:
           "h-[56px] md:h-12 px-3 md:px-2.5 text-lg md:text-base rounded-2xl md:rounded-xl",
         bullet: "h-10 px-3",
-        xs: "h-8 px-5 rounded-lg",
+        xs: "h-8 text-[15px] px-4 rounded-lg",
         sm: "h-9 px-7 rounded-[10px]",
         lg: "h-10 px-7",
         xl: "h-11 px-8",
