@@ -128,6 +128,7 @@ export function UserFormDialog({
     mutationFn: async (values: any) => {
       if (!values.firstName) throw new Error("First name is required");
       if (!values.lastName) throw new Error("Last name is required");
+      if (!values.username) throw new Error("Username is required");
       if (!values.gender) throw new Error("Gender is required");
       if (!values.dateOfBirth) throw new Error("Date of birth is required");
       if (!values.residenceCountryId) throw new Error("Residence country is required");
@@ -135,6 +136,7 @@ export function UserFormDialog({
       if (!values.originCountryId) throw new Error("Country of origin is required");
       if (!values.originStateId) throw new Error("State of origin is required");
       if (mode === "create" && !values.email) throw new Error("Email is required");
+      if (mode === "create" && !values.password) throw new Error("Password is required");
 
       // formatted date of birth
       const formattedDob = values.dateOfBirth.split("T")[0];
@@ -146,6 +148,7 @@ export function UserFormDialog({
           data: {
             id: user.fake_id,
             email: values.email ? values.email.trim() : "",
+            username: values.username.trim(),
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
@@ -163,6 +166,7 @@ export function UserFormDialog({
           data: {
             email: values.email ? values.email.trim() : "",
             password: values.password,
+            username: values.username.trim(),
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
@@ -179,6 +183,7 @@ export function UserFormDialog({
       }
 
       if (!res.success) {
+        console.log("bug", res.message.message)
         throw new Error(res.message || `Failed to ${mode} user`);
       }
 
@@ -215,22 +220,39 @@ export function UserFormDialog({
         toast.success("User updated successfully");
         onClose(); // closes the edit form
       } else {
-        const result: UserResult = {
-          id: res.data?.id,
-          fake_id: res.data?.fake_id,
-          first_name: res.data?.first_name || res.data?.firstName || "",
-          last_name: res.data?.last_name || res.data?.lastName || "",
-          party_short_name: "",
-          party_logo: "",
-          party_id: res.data?.partyId,
-          avatar_url: avatarUrl || undefined,
-        };
-        onSuccess?.(result);
-        setCreatedUser(result);
+        const newUser = res.data?.user;
+        if (newUser) {
+          queryClient.setQueriesData(
+            { queryKey: ["users-list"] },
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                pages: oldData.pages.map((page: any, idx: number) => {
+                  if (idx === 0) {
+                    return {
+                      ...page,
+                      data: {
+                        ...page.data,
+                        users: [newUser, ...(page.data?.users || [])]
+                      }
+                    };
+                  }
+                  return page;
+                })
+              };
+            }
+          );
+
+          onSuccess?.(newUser);
+          setCreatedUser(newUser);
+        }
+
         setActiveTab("more");
       }
     },
     onError: (err: any) => {
+      console.log("see error", err.message)
       setError(err.message || "Something went wrong. Please try again.");
     },
   });
@@ -241,6 +263,7 @@ export function UserFormDialog({
       firstName: "",
       lastName: "",
       middleName: "",
+      username: "",
       gender: "",
       dateOfBirth: "",
       residenceCountryId: undefined as number | undefined,
@@ -291,6 +314,7 @@ export function UserFormDialog({
         form.setFieldValue("firstName", user.first_name || "");
         form.setFieldValue("lastName", user.last_name || "");
         form.setFieldValue("middleName", user.middle_name || "");
+        form.setFieldValue("username", user.username || "");
         form.setFieldValue("gender", user.gender || "");
         form.setFieldValue("dateOfBirth", user.date_of_birth || "");
         form.setFieldValue("residenceCountryId", user.current_country);
@@ -301,7 +325,7 @@ export function UserFormDialog({
         form.setFieldValue(
           "partyId", isPartyLocked ? (partyId ?? user.party_id) : user.party_id || undefined,
         );
-        // form.setFieldValue("email", user.email || ""); // we replace the userEmail from the backend with ---
+        // form.setFieldValue("email", user.email || ""); // we replaced the userEmail from the backend with ---
         form.setFieldValue("email", "");
         form.setFieldValue("password", "");
         setAvatarUrl(user.avatar || "");
@@ -309,6 +333,7 @@ export function UserFormDialog({
         form.setFieldValue("firstName", "");
         form.setFieldValue("lastName", "");
         form.setFieldValue("middleName", "");
+        form.setFieldValue("username", "");
         form.setFieldValue("gender", "");
         form.setFieldValue("dateOfBirth", "");
         form.setFieldValue("residenceCountryId", undefined);
@@ -400,7 +425,7 @@ export function UserFormDialog({
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-    
+
     // Attempt to delete the orphaned file if it was uploaded during this session
     if (uploadedFileId && deleteFile) {
       try {
@@ -535,22 +560,50 @@ export function UserFormDialog({
                   </div>
                 </div>
 
-                {/* Other names */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] text-c-50">
-                    Other names (Optional)
-                  </label>
-                  <form.Field
-                    name="middleName"
-                    children={(field: any) => (
-                      <Input
-                        type="text"
-                        placeholder="Other names"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      />
-                    )}
-                  />
+                {/* Other names and Username */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[14px] text-c-50">
+                      Other names (Optional)
+                    </label>
+                    <form.Field
+                      name="middleName"
+                      children={(field: any) => (
+                        <Input
+                          type="text"
+                          placeholder="Other names"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[14px] text-c-50">Username</label>
+                    <form.Field
+                      name="username"
+                      validators={{
+                        onChange: ({ value }) => {
+                          if (!value) return undefined;
+                          const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/;
+                          if (!usernameRegex.test(value)) {
+                            return "Invalid username format";
+                          }
+                          return undefined;
+                        },
+                      }}
+                      children={(field: any) => (
+                        <Input
+                          type="text"
+                          placeholder="Username"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          errorMsg={field.state.meta.errors?.join(", ")}
+                        />
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Gender and DOB */}
