@@ -117,7 +117,6 @@ export function OfficesTable({ items }: { items: OfficeType[] }) {
 }
 
 export function StatesTable({ items }: { items: StateType[] }) {
-  console.log("STATES:", items);
   return (
     <div>
       <StateTableHeader />
@@ -148,7 +147,6 @@ export function FederalConstituenciesTable({
 }: {
   items: FederalConstituencyType[];
 }) {
-  console.log({ FED: items });
   return (
     <div>
       <FederalConstituencyTableHeader />
@@ -166,7 +164,6 @@ export function StateConstituenciesTable({
 }: {
   items: StateConstituencyType[];
 }) {
-  console.log({ STATE: items });
 
   return (
     <div>
