@@ -18,16 +18,19 @@ SET
   uploaded_at = CASE WHEN $1::boolean THEN NOW() ELSE NULL END,
   updated_at  = NOW()
 WHERE id = $2
+  AND status = 'uploading'
+  AND (uploaded_by = $3 OR $3::bigint IS NULL)
 RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at
 `
 
 type ConfirmUploadParams struct {
-	Success bool  `json:"success"`
-	ID      int64 `json:"id"`
+	Success    bool        `json:"success"`
+	ID         int64       `json:"id"`
+	UploadedBy pgtype.Int8 `json:"uploaded_by"`
 }
 
 func (q *Queries) ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error) {
-	row := q.db.QueryRow(ctx, confirmUpload, arg.Success, arg.ID)
+	row := q.db.QueryRow(ctx, confirmUpload, arg.Success, arg.ID, arg.UploadedBy)
 	var i File
 	err := row.Scan(
 		&i.ID,
@@ -187,46 +190,6 @@ func (q *Queries) GetFileByPublicUrl(ctx context.Context, publicUrl string) (Fil
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const getOrphanedFilesForFallbackCleanup = `-- name: GetOrphanedFilesForFallbackCleanup :many
-SELECT f.id, f.file_key, f.public_url
-FROM files f
-WHERE
-  f.status != 'deleted'
-  AND f.created_at < NOW() - INTERVAL '24 HOURS'
-  AND NOT EXISTS (
-    SELECT 1 FROM users u WHERE u.avatar = f.public_url OR u.voters_card_image = f.public_url
-  )
-  AND NOT EXISTS (
-    SELECT 1 FROM parties p WHERE p.logo = f.public_url
-  )
-`
-
-type GetOrphanedFilesForFallbackCleanupRow struct {
-	ID        int64  `json:"id"`
-	FileKey   string `json:"file_key"`
-	PublicUrl string `json:"public_url"`
-}
-
-func (q *Queries) GetOrphanedFilesForFallbackCleanup(ctx context.Context) ([]GetOrphanedFilesForFallbackCleanupRow, error) {
-	rows, err := q.db.Query(ctx, getOrphanedFilesForFallbackCleanup)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetOrphanedFilesForFallbackCleanupRow
-	for rows.Next() {
-		var i GetOrphanedFilesForFallbackCleanupRow
-		if err := rows.Scan(&i.ID, &i.FileKey, &i.PublicUrl); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const hardDeleteFile = `-- name: HardDeleteFile :exec
