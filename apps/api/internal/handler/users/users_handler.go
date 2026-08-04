@@ -32,11 +32,11 @@ type UsersService interface {
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
-	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
+	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error
 	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error
 	ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error)
 	DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error
-	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
+	AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error
 
 	GetBanks(ctx context.Context) ([]monnifyclient.Bank, error)
 	ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error)
@@ -198,6 +198,7 @@ type UpdateProfileRequest struct {
 	MiddleName     string `json:"middle_name" validate:"omitempty,max=30"`
 	Gender         string `json:"gender" validate:"required,oneof=male female"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
+	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`
 	CurrentCountry int16  `json:"current_country" validate:"required"`
 	CurrentState   int16  `json:"current_state" validate:"required"`
 	CurrentCity    int32  `json:"current_city" validate:"omitempty"`
@@ -213,7 +214,7 @@ type UpdateProfileRequest struct {
 // @Success      200      {object}  map[string]interface{}
 // @Failure      400      {object}  map[string]interface{}
 // @Failure      401      {object}  map[string]interface{}
-// @Failure      442      {object}  map[string]interface{}k
+// @Failure      442      {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /users/profile [put]
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
@@ -239,6 +240,11 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if len(req.Avatar) == 0 && req.AvatarFileId == nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Avatar File ID is required")
+		return
+	}
+
 	err = h.usersService.UpdateUserProfile(
 		r.Context(),
 		user.ID,
@@ -248,6 +254,7 @@ func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
 		req.MiddleName,
 		req.Gender,
 		req.Avatar,
+		req.AvatarFileId,
 		req.CurrentCountry,
 		req.CurrentState,
 		req.CurrentCity,
@@ -547,6 +554,7 @@ func (h *Handler) AdminGetUserMoreInfo(w http.ResponseWriter, r *http.Request) {
 // AdminUpdateUserRequest represents the request payload for updating user basic info
 type AdminUpdateUserRequest struct {
 	Avatar         string `json:"avatar" validate:"omitempty"`
+	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`
 	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
 	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
 	MiddleName     string `json:"middle_name" validate:"omitempty,max=30"`
@@ -640,6 +648,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		req.Username,
 		req.Gender,
 		req.Avatar,
+		req.AvatarFileId,
 		req.CurrentCountry,
 		req.CurrentState,
 		req.CurrentCity,
