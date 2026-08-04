@@ -103,16 +103,8 @@ func (m *MockAuthService) ForgotPassword(ctx context.Context, changePasswordID s
 	return args.Error(0)
 }
 
-func (m *MockAuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
-	args := m.Called(ctx)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).([]queries.ListAdminsRow), args.Error(1)
-}
-
-func (m *MockAuthService) RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (authservice.RegisterResult, error) {
-	args := m.Called(ctx, email, password, firstName, lastName, middleName, username, gender, avatar, dob, countryID, stateID, currentCity, stateOfOrigin, partyID)
+func (m *MockAuthService) RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (authservice.RegisterResult, error) {
+	args := m.Called(ctx, email, password, firstName, lastName, middleName, username, gender, avatar, avatarFileId, dob, countryID, stateID, currentCity, stateOfOrigin, partyID)
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
