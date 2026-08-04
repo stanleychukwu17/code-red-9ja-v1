@@ -220,19 +220,16 @@ export const API_URL = {
   electionsLga: `${api}/elections/lga`,
   electionsWard: `${api}/elections/ward`,
 
-  adminUsers: `${api}/admin/users`,
+
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
 
   users: `${api}/users`,
   pollingAgentApplications: `${api}/party-applications`,
   pollingAgentRecommendations: `${api}/party-applications/recommendations`,
 
-  approveApplication: (id: string | number) =>
-    `${api}/party-applications/${id}/approve`,
-  rejectApplication: (id: string | number) =>
-    `${api}/party-applications/${id}/reject`,
-  cancelApplication: (id: string | number) =>
-    `${api}/party-applications/${id}/cancel`,
+  approveApplication: (id: string | number) => `${api}/party-applications/${id}/approve`,
+  rejectApplication: (id: string | number) => `${api}/party-applications/${id}/reject`,
+  cancelApplication: (id: string | number) => `${api}/party-applications/${id}/cancel`,
 
   pollingUnitAssignments: `${api}/polling-unit-assignments`,
   updateAssignmentTracking: (id: string | number) =>
