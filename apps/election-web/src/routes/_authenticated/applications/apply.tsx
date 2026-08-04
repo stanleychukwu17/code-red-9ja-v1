@@ -12,6 +12,7 @@ import {
   getPresignedUploadURL,
 } from "#/lib/server/parties";
 import { getPollingUnits } from "#/lib/server/polling_units";
+import { getUserMe } from "#/lib/server/users";
 import { getPageHeader } from "#/lib/shared/meta";
 import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -79,16 +80,10 @@ function ApplyPage() {
     user?.whatsapp_phone || "",
   );
   const [dataPhone, setDataPhone] = useState<string>(user?.data_phone || "");
-  const [educationalStatus, setEducationalStatus] = useState<string>(
-    user?.educational_status || "",
-  );
-  const [highestDegree, setHighestDegree] = useState(
-    user?.highest_degree || "",
-  );
-  const [graduationYear, setGraduationYear] = useState(
-    user?.graduation_year || "",
-  );
-  const [schoolName, setSchoolName] = useState(user?.school_name || "");
+  const [educationalStatus, setEducationalStatus] = useState<string>("");
+  const [highestDegree, setHighestDegree] = useState<string>("");
+  const [graduationYear, setGraduationYear] = useState<string>("");
+  const [schoolName, setSchoolName] = useState<string>("");
 
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
   const [isAccountValid, setIsAccountValid] = useState(
@@ -105,6 +100,24 @@ function ApplyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // React Query calls
+  const { data: userProfile } = useQuery({
+    queryKey: ["userProfileMe"],
+    queryFn: async () => {
+      const res = await getUserMe();
+      return res?.success && res.data?.user?.profile ? res.data.user.profile : null;
+    },
+    staleTime: Infinity,
+  });
+
+  useEffect(() => {
+    if (userProfile) {
+      if (userProfile.educational_status) setEducationalStatus(userProfile.educational_status);
+      if (userProfile.highest_degree) setHighestDegree(userProfile.highest_degree);
+      if (userProfile.graduation_year) setGraduationYear(userProfile.graduation_year);
+      if (userProfile.school_name) setSchoolName(userProfile.school_name);
+    }
+  }, [userProfile]);
+
   const { data: parties = [], isLoading: partiesLoading } = useQuery({
     queryKey: ["parties"],
     queryFn: async () => {
