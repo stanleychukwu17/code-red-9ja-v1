@@ -179,7 +179,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	if r2Err != nil {
 		slog.Warn("R2 service not configured — file upload endpoints will be unavailable", "reason", r2Err)
 	} else {
-		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance)
+		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService)
 	}
 
 	// Core middleware
@@ -198,8 +198,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	}
 
 	// API v1 routes
-	mainRouter.Get(utils.ApiUrls.Root, handler.Root)     // Root endpoint
-	mainRouter.Get(utils.ApiUrls.Health, handler.Health) // Health check
+	mainRouter.Get(utils.ApiUrls.Root, handler.Root)         // Root endpoint
+	mainRouter.Get(utils.ApiUrls.Health, handler.Health)     // Health check
 	mainRouter.Get("/metrics", promhttp.Handler().ServeHTTP) // Prometheus metrics
 
 	// for auths
@@ -314,7 +314,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			utilsInstance.RespondSuccess(w, http.StatusOK, "Welcome to the Admin Dashboard!", nil)
 		})
 
-		r.Get("/api/v1/admin/users", authHandler.ListAdmins)
 		r.Post("/api/v1/auth/roles/update", usersHandler.UpdateUserRoles)
 		r.Post("/api/v1/bodies/recalculate", bodiesHandler.RecalculateBodyMetrics)
 

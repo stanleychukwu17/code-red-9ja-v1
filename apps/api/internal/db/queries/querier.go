@@ -157,7 +157,6 @@ type Querier interface {
 	GetOccupations(ctx context.Context) ([]Occupation, error)
 	GetOfficeByID(ctx context.Context, id int64) (Office, error)
 	GetOfficeByName(ctx context.Context, name string) (Office, error)
-	GetOrphanedFilesForFallbackCleanup(ctx context.Context) ([]GetOrphanedFilesForFallbackCleanupRow, error)
 	// ============================================================
 	// QUERY: get current party agents_count in a PU for a given party
 	// Used by Go before calling the upsert to compute unique_pu_delta.
@@ -226,7 +225,6 @@ type Querier interface {
 	IncrementPartyElectionGroupResultCount(ctx context.Context, arg IncrementPartyElectionGroupResultCountParams) error
 	IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
-	ListAdmins(ctx context.Context) ([]ListAdminsRow, error)
 	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
