@@ -81,8 +81,6 @@ func New(cfg Config) (*R2Service, error) {
 }
 
 // BuildKey constructs a deterministic storage key for an uploaded file.
-// Format: {folder}/{YYYY-MM-DD}/{sanitised-filename}-{uuid}.{ext}
-//
 // For example: "party-logos/2026-06-06/apc-logo-<uuid>.png"
 func BuildKey(folder, originalName, uniqueID string) string {
 	ext := filepath.Ext(originalName)
@@ -97,11 +95,13 @@ func BuildKey(folder, originalName, uniqueID string) string {
 		return '-'
 	}, base)
 
-	// Collapse multiple consecutive hyphens and trim to 60 chars
+	// Collapse multiple consecutive hyphens
 	for strings.Contains(sanitized, "--") {
 		sanitized = strings.ReplaceAll(sanitized, "--", "-")
 	}
 	sanitized = strings.Trim(sanitized, "-")
+
+	// trim to 60 chars
 	if len(sanitized) > 60 {
 		sanitized = sanitized[:60]
 	}
@@ -109,12 +109,16 @@ func BuildKey(folder, originalName, uniqueID string) string {
 		sanitized = "file"
 	}
 
-	date := time.Now().UTC().Format("2006-01-02")
+	// folder cannot be empty
 	folder = strings.Trim(folder, "/")
 	if folder == "" {
 		folder = "uploads"
 	}
 
+	// date format: 2006-01-02 -> YYYY-MM-DD
+	date := time.Now().UTC().Format("2006-01-02")
+
+	// Format: {folder}/{YYYY-MM-DD}/{sanitized-filename}-{uuid}.{ext}
 	return fmt.Sprintf("%s/%s/%s-%s%s", folder, date, sanitized, uniqueID, ext)
 }
 
