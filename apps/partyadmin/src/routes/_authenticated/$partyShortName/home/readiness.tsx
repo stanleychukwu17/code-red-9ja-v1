@@ -292,6 +292,7 @@ function ReadinessComponent() {
         }
         onSubmit={async (values) => {
           if (!partyId) return;
+          console.log("FORM SUBMITTED:", values);
           const durationInDays =
             values.durationUnit === "months"
               ? values.durationValue * 30
@@ -306,14 +307,14 @@ function ReadinessComponent() {
             values.targetMode === "all" ? statesList : values.states;
           const res = await submitCampaign({
             data: {
-              partyId,
+              budget: values.budget ?? 0,
+              durationInDays: durationInDays,
               electionGroupId: Number(values.electionGroupId),
               electionId: Number(values.electionId),
               planId: Number(values.planId),
-              type: "agent-campaign",
+              partyId: partyId,
               states: statesForApi,
-              durationInDays,
-              budget: 0, // backend deducts correct amount from wallet via plan price
+              type: "agent-campaign",
             },
           });
           if (res?.success) {

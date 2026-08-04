@@ -1,4 +1,4 @@
-﻿import * as React from "react";
+import * as React from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -12,17 +12,22 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { SelectElectionGroup } from "../selects/election-group-select";
 import { SelectElection } from "../selects/election-select";
 import { Label } from "../input";
+import CheckStrokeIcon from "../../icons/check-stroke-icon";
 
-export type MarketingPlan = {
-  id: string;
+/** Raw plan shape as returned by the API. */
+export type ApiPlan = {
+  id: number;
   name: string;
-  subtitle: string;
+  description: string;
   price: number;
-  priceLabel?: string;
+  type: string;
   features: string[];
-  colorHex?: string;
-  accentClassName?: string;
-  recommended?: boolean;
+  scopes_recommendation: string[];
+  color_hex?: string;
+  is_active: boolean;
+  display_order: number;
+  created_at: string;
+  updated_at: string;
 };
 
 export type ElectionOption = {
@@ -38,6 +43,7 @@ export type AgentMarketingSetupValue = {
   states: string[];
   durationUnit: "days" | "months";
   durationValue: number;
+  budget?: number;
 };
 
 type Props = {
@@ -64,17 +70,21 @@ const DEFAULT_VALUE: AgentMarketingSetupValue = {
   durationValue: 5,
 };
 
-function mapApiPlan(p: any): MarketingPlan {
-  return {
-    id: String(p.id),
-    name: p.name,
-    subtitle: p.description ?? "",
-    price: typeof p.price === "string" ? parseFloat(p.price) : Number(p.price),
-    priceLabel: "/ day / state",
-    features: Array.isArray(p.features) ? p.features : [],
-    colorHex: p.color_hex ?? undefined,
-    recommended: p.recommended ?? false,
-  };
+/** Convert a hex color string to rgba() with the given alpha (0–1). */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace("#", "");
+  const full =
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  if (isNaN(r) || isNaN(g) || isNaN(b)) return hex;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 function formatMoney(value: number) {
@@ -141,27 +151,96 @@ function Chip({
   );
 }
 
+function PlanCard({
+  plan,
+  active,
+  onSelect,
+  electionScope,
+}: {
+  plan: ApiPlan;
+  active: boolean;
+  onSelect: () => void;
+  electionScope?: string;
+}) {
+  console.log("PLAN:", plan);
+  const accent = plan.color_hex ?? "#744B3E";
+  const price =
+    typeof plan.price === "string"
+      ? parseFloat(plan.price)
+      : Number(plan.price);
+  const features = Array.isArray(plan.features) ? plan.features : [];
+  const isRecommended =
+    !!electionScope &&
+    Array.isArray(plan.scopes_recommendation) &&
+    plan.scopes_recommendation.includes(electionScope);
+
+  return (
+    <div
+      onClick={onSelect}
+      style={{ backgroundColor: !active ? hexToRgba(accent, 0.1) : "" }}
+      className={cn(
+        "relative flex-shrink-0 w-[360px] rounded-[24px] p-5 text-left transition-all cursor-pointer",
+        active ? "ring-3 ring-c-80" : "",
+      )}
+    >
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <p
+            className="text-[17px] font-semibold w-full"
+            style={{ color: accent }}
+          >
+            {plan.name}
+          </p>
+          {isRecommended && (
+            <span className="rounded-full bg-[#FFE9D4] px-3 py-1 text-[12px] font-semibold text-[#FF8A00]">
+              Recommended
+            </span>
+          )}
+        </div>
+
+        <p className="leading-5 text-c-50">{plan.description}</p>
+      </div>
+
+      <div className="mt-3 flex items-end gap-1.5 font-medium">
+        <span className="text-[2rem] tracking-[-0.04em] text-c-90">
+          {formatMoney(price)}
+        </span>
+        <span className="text-c-50 mb-1.5">/ day / state</span>
+      </div>
+
+      <div className="mt-3">
+        {features.map((feature) => (
+          <div
+            key={feature}
+            className="h-10 flex items-center gap-3 leading-5 text-c-80"
+          >
+            <CheckStrokeIcon
+              className="shrink-0 size-6"
+              style={{ color: accent }}
+            />
+            <span>{feature}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function PlanList({
   plans,
   selectedId,
   onSelect,
   isLoading,
+  electionScope,
+  scrollRef,
 }: {
-  plans: MarketingPlan[];
+  plans: ApiPlan[];
   selectedId: string;
   onSelect: (id: string) => void;
   isLoading: boolean;
+  electionScope?: string;
+  scrollRef: React.RefObject<HTMLDivElement | null>;
 }) {
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-
-  const scroll = (dir: "left" | "right") => {
-    if (!scrollRef.current) return;
-    scrollRef.current.scrollBy({
-      left: dir === "left" ? -300 : 300,
-      behavior: "smooth",
-    });
-  };
-
   if (isLoading) {
     return (
       <div className="flex gap-4">
@@ -176,84 +255,40 @@ function PlanList({
   }
 
   return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={() => scroll("left")}
-        className="absolute left-0 top-1/2 z-10 -translate-x-4 -translate-y-1/2 grid size-10 place-items-center rounded-full bg-white shadow-md text-c-50 hover:text-c-90 transition-colors"
-        aria-label="Scroll left"
-      >
-        <ChevronLeft className="size-5" />
-      </button>
-      <button
-        type="button"
-        onClick={() => scroll("right")}
-        className="absolute right-0 top-1/2 z-10 translate-x-4 -translate-y-1/2 grid size-10 place-items-center rounded-full bg-white shadow-md text-c-50 hover:text-c-90 transition-colors"
-        aria-label="Scroll right"
-      >
-        <ChevronRight className="size-5" />
-      </button>
-
-      <div
-        ref={scrollRef}
-        className="flex gap-4 overflow-x-auto pb-2 scroll-smooth"
-        style={{ scrollbarWidth: "none" }}
-      >
-        {plans.map((plan) => {
-          const active = selectedId === plan.id;
-          const accent = plan.colorHex ?? "#744B3E";
-          return (
-            <button
-              key={plan.id}
-              type="button"
-              onClick={() => onSelect(plan.id)}
-              className={cn(
-                "relative flex-shrink-0 w-[240px] min-h-[270px] rounded-[24px] px-5 py-5 text-left transition-all",
-                active
-                  ? "bg-[#E9E7FF] shadow-[0_12px_34px_rgba(106,104,255,0.12)]"
-                  : "bg-[#FAFAFA] hover:bg-[#f5f5f5]",
-              )}
-            >
-              {plan.recommended && (
-                <span className="absolute right-4 top-4 rounded-full bg-[#FFE9D4] px-3 py-1 text-[12px] font-semibold text-[#FF8A00]">
-                  Recommended
-                </span>
-              )}
-              <p
-                className="text-[17px] font-semibold"
-                style={{ color: active ? "#4153FF" : accent }}
-              >
-                {plan.name}
-              </p>
-              <p className="mt-1.5 text-[13px] leading-5 text-c-60">
-                {plan.subtitle}
-              </p>
-              <div className="mt-3 flex items-end gap-1.5">
-                <span className="text-[22px] font-semibold tracking-[-0.04em] text-c-90">
-                  {formatMoney(plan.price)}
-                </span>
-              </div>
-              <p className="text-[12px] text-c-50 mb-3">
-                {plan.priceLabel ?? "/ day / state"}
-              </p>
-              <div className="space-y-2">
-                {plan.features.map((feature) => (
-                  <div
-                    key={feature}
-                    className="flex items-start gap-2 text-[12px] leading-5 text-c-80"
-                  >
-                    <span className="text-[13px] leading-none text-current shrink-0">
-                      ✓
-                    </span>
-                    <span>{feature}</span>
-                  </div>
-                ))}
-              </div>
-            </button>
-          );
-        })}
-      </div>
+    <div
+      ref={scrollRef}
+      className="flex gap-4 overflow-x-auto pb-2 scroll-smooth p-4"
+      style={{ scrollbarWidth: "none" }}
+    >
+      {plans.map((plan) => (
+        <PlanCard
+          key={plan.id}
+          plan={plan}
+          active={selectedId === String(plan.id)}
+          onSelect={() => onSelect(String(plan.id))}
+          electionScope={electionScope}
+        />
+      ))}
     </div>
+  );
+}
+
+function IconButton({
+  icon,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="size-12 shrink-0 flex items-center justify-center rounded-full bg-c-5 transition-colors hover:ring-1 hover:ring-c-80 cursor-pointer"
+      aria-label="Scroll left or right"
+    >
+      {icon}
+    </button>
   );
 }
 
@@ -270,8 +305,12 @@ export function AgentMarketingSetupDialog({
   defaultValue,
   initialStep = 1,
 }: Props) {
-  const [plans, setPlans] = React.useState<MarketingPlan[]>([]);
+  const planScrollRef = React.useRef<HTMLDivElement>(null);
+  const [plans, setPlans] = React.useState<ApiPlan[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(false);
+  const [electionScope, setElectionScope] = React.useState<string | undefined>(
+    undefined,
+  );
 
   const [step, setStep] = React.useState<1 | 2 | 3>(initialStep);
   const [selectedGroupName, setSelectedGroupName] = React.useState(
@@ -291,13 +330,13 @@ export function AgentMarketingSetupDialog({
     setPlansLoading(true);
     fetchPlans({ data: { type: "agent-campaign" } })
       .then((res: any) => {
-        const raw: any[] = res?.data?.plans ?? [];
-        const mapped = raw.map(mapApiPlan);
-        setPlans(mapped);
-        if (mapped.length > 0) {
+        const raw: ApiPlan[] = res?.data?.plans ?? [];
+        setPlans(raw);
+        const firstPlan = raw[0];
+        if (firstPlan) {
           setValue((prev) => ({
             ...prev,
-            planId: prev.planId || mapped[0].id,
+            planId: prev.planId || String(firstPlan.id),
           }));
         }
       })
@@ -320,7 +359,13 @@ export function AgentMarketingSetupDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const selectedPlan = plans.find((p) => p.id === value.planId) ?? plans[0];
+  const selectedPlan =
+    plans.find((p) => String(p.id) === value.planId) ?? plans[0];
+  const selectedPlanPrice = selectedPlan
+    ? typeof selectedPlan.price === "string"
+      ? parseFloat(selectedPlan.price)
+      : Number(selectedPlan.price)
+    : 0;
 
   const durationInDays =
     value.durationUnit === "months"
@@ -331,7 +376,7 @@ export function AgentMarketingSetupDialog({
       ? Math.max(1, states.length)
       : Math.max(1, value.states.length);
   const currentTotal =
-    (selectedPlan?.price ?? 0) * Math.max(1, durationInDays) * statesCount;
+    selectedPlanPrice * Math.max(1, durationInDays) * statesCount;
 
   const canContinueStep1 =
     value.electionGroupId.length > 0 &&
@@ -386,6 +431,7 @@ export function AgentMarketingSetupDialog({
                     }
                     update={(election) => {
                       setSelectedElectionName(election.name);
+                      setElectionScope(election.scope);
                       setValue((prev) => ({
                         ...prev,
                         electionId: String(election.id),
@@ -397,11 +443,33 @@ export function AgentMarketingSetupDialog({
                 </label>
               </div>
 
-              <div>
-                <h3 className="text-[34px] font-semibold tracking-[-0.04em] text-c-90">
-                  Choose a Plan
-                </h3>
-                <p className="mt-2 max-w-[520px] text-[18px] leading-7 text-c-60">
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-[34px] font-semibold tracking-[-0.04em] text-c-90 w-full">
+                    Choose a Plan
+                  </h3>
+                  <div className="flex items-center gap-3">
+                    <IconButton
+                      icon={<ChevronLeft className="size-7" />}
+                      onClick={() =>
+                        planScrollRef.current?.scrollBy({
+                          left: -368,
+                          behavior: "smooth",
+                        })
+                      }
+                    />
+                    <IconButton
+                      icon={<ChevronRight className="size-7" />}
+                      onClick={() =>
+                        planScrollRef.current?.scrollBy({
+                          left: 368,
+                          behavior: "smooth",
+                        })
+                      }
+                    />
+                  </div>
+                </div>
+                <p className="text-[17px] leading-6 text-c-60">
                   Choose a plan that allows you acquire more election agents
                   ahead of the upcoming election.
                 </p>
@@ -412,6 +480,8 @@ export function AgentMarketingSetupDialog({
                 selectedId={value.planId}
                 onSelect={(id) => setValue((prev) => ({ ...prev, planId: id }))}
                 isLoading={plansLoading}
+                electionScope={electionScope}
+                scrollRef={planScrollRef}
               />
             </div>
           )}
@@ -514,7 +584,7 @@ export function AgentMarketingSetupDialog({
                   >
                     −
                   </button>
-                  <div className="flex items-end gap-1 text-center min-w-[160px] justify-center">
+                  <div className="flex items-end gap-2 text-center min-w-[160px] justify-center">
                     <span className="text-[72px] font-semibold leading-none tracking-[-0.06em] text-c-90">
                       {value.durationValue}
                     </span>
@@ -536,7 +606,7 @@ export function AgentMarketingSetupDialog({
                     +
                   </button>
                 </div>
-                <p className="text-[15px] text-c-50">
+                <p className="text-lg text-c-50">
                   {statesCount} state{statesCount !== 1 ? "s" : ""} ×{" "}
                   {durationInDays} day{durationInDays !== 1 ? "s" : ""}
                 </p>
@@ -547,39 +617,40 @@ export function AgentMarketingSetupDialog({
 
         {/* Footer */}
         <DialogFooter className="mt-2 border-t border-c-10 px-8 py-6">
-          <div className="flex w-full flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="flex w-full flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-2">
-              <p className="text-[18px] font-semibold text-[#7B4A35]">
+              <p
+                className={cn("text-[18px] font-semibold text-[#7B4A35]")}
+                style={{ color: selectedPlan?.color_hex ?? "" }}
+              >
                 {step === 1
                   ? (selectedPlan?.name ?? "—")
                   : `Total (${formatDurationLabel(value.durationValue, value.durationUnit)})`}
               </p>
               <div className="flex flex-wrap items-end gap-1">
                 <span className="text-[34px] font-semibold tracking-[-0.04em] text-c-90">
-                  {step === 3
-                    ? formatMoney(currentTotal)
-                    : formatMoney(selectedPlan?.price ?? 0)}
+                  {step === 1 && formatMoney(selectedPlanPrice)}
+                  {step === 2 && formatMoney(selectedPlanPrice * statesCount)}
+                  {step === 3 && formatMoney(currentTotal)}
                 </span>
                 <span className="pb-1 text-[18px] text-c-50">
-                  {step !== 3
-                    ? (selectedPlan?.priceLabel ?? "/ day / state")
-                    : ""}
+                  {step === 1 && "/ day / state"}
+                  {step === 2 &&
+                    `/ day / ${statesCount} state${statesCount === 1 ? "" : "s"}`}
+                  {step === 3 &&
+                    `/ ${durationInDays} days / ${statesCount} state${statesCount === 1 ? "" : "s"}`}
                 </span>
               </div>
               <p className="text-[16px] text-c-60">
-                {selectedPlan?.subtitle ?? ""}
+                {selectedPlan?.description}
               </p>
-              {step === 1 && (
-                <p className="text-[14px] text-c-50">
-                  {selectedGroupName} — {selectedElectionName}
-                </p>
-              )}
             </div>
 
             <div className="flex w-full flex-col gap-3 md:w-[300px]">
               {step === 1 ? (
                 <Button
-                  className="h-[60px] rounded-[18px] bg-c-90 text-[18px] font-semibold text-white hover:bg-black"
+                  variant="black"
+                  className="h-[60px] rounded-[18px] text-[18px] font-semibold text-white"
                   onClick={() => setStep(2)}
                   disabled={!canContinueStep1}
                 >
@@ -588,7 +659,8 @@ export function AgentMarketingSetupDialog({
               ) : step === 2 ? (
                 <>
                   <Button
-                    className="h-[60px] rounded-[18px] bg-c-90 text-[18px] font-semibold text-white hover:bg-black"
+                    variant="black"
+                    className="h-[60px] rounded-[18px] text-[18px] font-semibold text-white"
                     onClick={() => setStep(3)}
                     disabled={!canContinueStep2}
                   >
@@ -605,8 +677,9 @@ export function AgentMarketingSetupDialog({
               ) : (
                 <>
                   <Button
-                    className="h-[60px] rounded-[18px] bg-[#16E07E] text-[18px] font-semibold text-c-90 hover:bg-[#10cf72]"
-                    onClick={() => onSubmit(value)}
+                    variant="secondary"
+                    className="h-[60px] rounded-[18px] text-[18px] font-semibold"
+                    onClick={() => onSubmit({ ...value, budget: currentTotal })}
                     disabled={!!isPending}
                   >
                     {isPending ? "Saving..." : "Save & Deposit Total"}

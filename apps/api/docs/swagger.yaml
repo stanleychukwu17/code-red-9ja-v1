@@ -1,4 +1,6991 @@
+basePath: /api/v1
+definitions:
+  authhandler.AdminLoginData:
+    properties:
+      accessToken:
+        type: string
+      refreshToken:
+        type: string
+      user:
+        $ref: '#/definitions/authservice.LoginUser'
+    type: object
+  authhandler.AdminLoginRequest:
+    properties:
+      identifier:
+        maxLength: 50
+        minLength: 2
+        type: string
+      identifierType:
+        enum:
+        - email
+        - username
+        - phone
+        type: string
+      iso2:
+        type: string
+      password:
+        minLength: 4
+        type: string
+    required:
+    - identifier
+    - identifierType
+    - password
+    type: object
+  authhandler.AdminLoginResponse:
+    properties:
+      data:
+        $ref: '#/definitions/authhandler.AdminLoginData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  authhandler.AssignRoleRequest:
+    properties:
+      role:
+        type: string
+      user_id:
+        type: integer
+    required:
+    - role
+    - user_id
+    type: object
+  authhandler.ChangePasswordByEmailRequest:
+    properties:
+      email:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  authhandler.CheckNINRequest:
+    properties:
+      nin:
+        type: string
+    required:
+    - nin
+    type: object
+  authhandler.CheckUsernameRequest:
+    properties:
+      username:
+        maxLength: 30
+        minLength: 2
+        type: string
+    required:
+    - username
+    type: object
+  authhandler.ForgotPasswordRequest:
+    properties:
+      change_password_id:
+        type: string
+      confirmPassword:
+        type: string
+      password:
+        minLength: 5
+        type: string
+      user_fid:
+        type: integer
+    required:
+    - change_password_id
+    - confirmPassword
+    - password
+    - user_fid
+    type: object
+  authhandler.LoginRequest:
+    properties:
+      country:
+        type: string
+      identifier:
+        description: accepts email, username or phone
+        maxLength: 50
+        minLength: 2
+        type: string
+      identifierType:
+        enum:
+        - email
+        - username
+        - phone
+        type: string
+      iso2:
+        type: string
+      password:
+        minLength: 4
+        type: string
+    required:
+    - country
+    - identifier
+    - identifierType
+    - password
+    type: object
+  authhandler.LogoutRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  authhandler.MakeUserSuperAdminRequest:
+    properties:
+      name:
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
+  authhandler.PartyLoginRequest:
+    properties:
+      identifier:
+        maxLength: 50
+        minLength: 2
+        type: string
+      identifierType:
+        enum:
+        - email
+        - username
+        - phone
+        type: string
+      iso2:
+        type: string
+      password:
+        minLength: 4
+        type: string
+    required:
+    - identifier
+    - identifierType
+    - password
+    type: object
+  authhandler.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  authhandler.RegisterCandidatePlaceholderRequest:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        description: Expects YYYY-MM-DD
+        type: string
+      email:
+        type: string
+      first_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      last_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      middle_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      party_id:
+        type: integer
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      role:
+        enum:
+        - admin
+        - party_admin
+        - user
+        type: string
+      role_level:
+        enum:
+        - super_admin
+        - admin
+        - member
+        - placeholder
+        - pollingagent
+        - user
+        type: string
+      state_of_origin:
+        type: integer
+    required:
+    - current_country
+    - current_state
+    - date_of_birth
+    - first_name
+    - gender
+    - last_name
+    - password
+    - role
+    - role_level
+    type: object
+  authhandler.RegisterPhaseSignUpRequest:
+    properties:
+      confirmPassword:
+        type: string
+      country:
+        type: string
+      countryId:
+        type: integer
+      email:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      phoneNumber:
+        type: string
+    required:
+    - confirmPassword
+    - country
+    - countryId
+    - password
+    - phoneNumber
+    type: object
+  authhandler.RegisterRequest:
+    properties:
+      answer1:
+        maxLength: 30
+        minLength: 2
+        type: string
+      answer2:
+        maxLength: 30
+        minLength: 2
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        description: Expects YYYY-MM-DD
+        type: string
+      email:
+        type: string
+      first_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      last_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      middle_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      nin:
+        type: string
+      onboarding_id:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      phone:
+        maxLength: 15
+        minLength: 5
+        type: string
+      question1:
+        type: integer
+      question2:
+        type: integer
+      referred_by_code:
+        maxLength: 15
+        type: string
+      username:
+        maxLength: 30
+        minLength: 2
+        type: string
+    required:
+    - answer1
+    - answer2
+    - current_country
+    - current_state
+    - date_of_birth
+    - first_name
+    - gender
+    - last_name
+    - nin
+    - onboarding_id
+    - password
+    - phone
+    - question1
+    - question2
+    - username
+    type: object
+  authhandler.SignupRequest:
+    properties:
+      countryId:
+        type: integer
+      email:
+        type: string
+      password:
+        maxLength: 72
+        minLength: 5
+        type: string
+      phoneNumber:
+        type: string
+    required:
+    - countryId
+    - password
+    - phoneNumber
+    type: object
+  authhandler.UpdateUserRolesRequest:
+    properties:
+      party_id:
+        type: integer
+      roles:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      user_fake_id:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - roles
+    - user_id
+    type: object
+  authhandler.VerifySecurityQuestionsRequest:
+    properties:
+      answer1:
+        type: string
+      answer2:
+        type: string
+      nin:
+        type: string
+      question1:
+        type: integer
+      question2:
+        type: integer
+    required:
+    - answer1
+    - answer2
+    - nin
+    - question1
+    - question2
+    type: object
+  authservice.LoginUser:
+    properties:
+      account_status:
+        type: string
+      address:
+        type: string
+      avatar:
+        type: string
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      data_phone:
+        type: string
+      date_of_birth:
+        type: string
+      education_level:
+        type: string
+      educational_status:
+        type: string
+      email:
+        type: string
+      fake_id:
+        type: integer
+      first_name:
+        type: string
+      gender:
+        type: string
+      graduation_year:
+        type: string
+      highest_degree:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      marital_status:
+        type: string
+      middle_name:
+        type: string
+      party:
+        $ref: '#/definitions/queries.GetPartyBasicInfoRow'
+      party_id:
+        type: integer
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      religion:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      school_name:
+        type: string
+      username:
+        type: string
+      voters_card_image:
+        type: string
+      whatsapp_phone:
+        type: string
+    type: object
+  authservice.SeedUserRequest:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        type: string
+      education_level:
+        type: string
+      email:
+        type: string
+      fake_id:
+        type: integer
+      first_name:
+        type: string
+      gender:
+        type: string
+      home_address:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      marital_status:
+        type: string
+      middle_name:
+        type: string
+      occupation_id:
+        type: integer
+      password:
+        type: string
+      phone:
+        type: string
+      religion:
+        type: string
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+    type: object
+  bodieshandler.CityResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  bodieshandler.CountryResponse:
+    properties:
+      id:
+        type: integer
+      iso2:
+        type: string
+      name:
+        type: string
+      phone_code:
+        type: string
+    type: object
+  bodieshandler.GetCitiesData:
+    properties:
+      cities:
+        items:
+          $ref: '#/definitions/bodieshandler.CityResponse'
+        type: array
+    type: object
+  bodieshandler.GetCitiesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/bodieshandler.GetCitiesData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/bodieshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  bodieshandler.GetCountriesData:
+    properties:
+      countries:
+        items:
+          $ref: '#/definitions/bodieshandler.CountryResponse'
+        type: array
+    type: object
+  bodieshandler.GetCountriesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/bodieshandler.GetCountriesData'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
+  bodieshandler.GetLGAsData:
+    properties:
+      lgas:
+        items:
+          $ref: '#/definitions/bodieshandler.LGAResponse'
+        type: array
+    type: object
+  bodieshandler.GetLGAsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/bodieshandler.GetLGAsData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/bodieshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  bodieshandler.GetStatesData:
+    properties:
+      states:
+        items:
+          $ref: '#/definitions/bodieshandler.StateResponse'
+        type: array
+    type: object
+  bodieshandler.GetStatesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/bodieshandler.GetStatesData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/bodieshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  bodieshandler.LGAResponse:
+    properties:
+      abbreviation:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+    type: object
+  bodieshandler.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  bodieshandler.StateResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  electiongroupshandler.CreateElectionGroupRequest:
+    properties:
+      election_date:
+        type: string
+      elections_count:
+        type: integer
+      name:
+        type: string
+      rank:
+        type: integer
+      states_count:
+        type: integer
+    type: object
+  electiongroupshandler.UpdateElectionGroupRequest:
+    properties:
+      election_date:
+        type: string
+      elections_count:
+        type: integer
+      name:
+        type: string
+      rank:
+        type: integer
+      states_count:
+        type: integer
+    type: object
+  electiongroupshandler.UpsertPartyElectionGroupStatsRequest:
+    properties:
+      elections_contesting:
+        type: integer
+      party_id:
+        type: integer
+      polling_agents_coverage:
+        items:
+          type: integer
+        type: array
+    type: object
+  electionshandler.CreateElectionRequest:
+    properties:
+      candidates_count:
+        type: integer
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      office_id:
+        type: integer
+      senatorial_district_id:
+        type: integer
+      state_constituency_id:
+        type: integer
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
+    type: object
+  electionshandler.CreateFederalConstituencyElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_ids:
+        items:
+          type: integer
+        type: array
+      office_id:
+        type: integer
+    type: object
+  electionshandler.CreateLgaElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      lga_ids:
+        items:
+          type: integer
+        type: array
+      office_id:
+        type: integer
+    type: object
+  electionshandler.CreateNationwideElectionRequest:
+    properties:
+      candidates:
+        items:
+          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
+        type: array
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+    type: object
+  electionshandler.CreateSenatorialDistrictElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      senatorial_district_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  electionshandler.CreateStateConstituencyElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      state_constituency_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  electionshandler.CreateStateElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      state_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  electionshandler.CreateWardElectionRequest:
+    properties:
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      office_id:
+        type: integer
+      ward_ids:
+        items:
+          type: integer
+        type: array
+    type: object
+  electionshandler.ElectionCandidateInput:
+    properties:
+      candidate_id:
+        type: integer
+      party_id:
+        type: integer
+      party_short_name:
+        type: string
+    required:
+    - candidate_id
+    - party_id
+    - party_short_name
+    type: object
+  electionshandler.SyncCandidatesRequest:
+    properties:
+      candidates:
+        items:
+          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
+        type: array
+    type: object
+  electionshandler.UpdateElectionRequest:
+    properties:
+      candidates_count:
+        type: integer
+      election_date:
+        type: string
+      election_group_id:
+        type: integer
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      office_id:
+        type: integer
+      senatorial_district_id:
+        type: integer
+      state_constituency_id:
+        type: integer
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
+    type: object
+  federalconstituencieshandler.CreateFederalConstituencyRequest:
+    properties:
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      state_id:
+        type: integer
+    type: object
+  federalconstituencieshandler.FederalConstituencyResponse:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      senatorial_district_name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+    type: object
+  federalconstituencieshandler.GetFederalConstituenciesData:
+    properties:
+      constituencies:
+        items:
+          $ref: '#/definitions/federalconstituencieshandler.FederalConstituencyResponse'
+        type: array
+    type: object
+  federalconstituencieshandler.GetFederalConstituenciesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/federalconstituencieshandler.GetFederalConstituenciesData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/federalconstituencieshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  federalconstituencieshandler.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  federalconstituencieshandler.UpdateFederalConstituencyRequest:
+    properties:
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      state_id:
+        type: integer
+    type: object
+  fileshandler.GenerateUploadURLRequest:
+    properties:
+      file_size:
+        type: integer
+      folder:
+        type: string
+      is_public:
+        type: boolean
+      mime_type:
+        type: string
+      original_name:
+        type: string
+    type: object
+  officeshandler.CreateOfficeRequest:
+    properties:
+      election:
+        type: string
+      name:
+        type: string
+      rank:
+        type: integer
+      scope:
+        type: string
+    type: object
+  officeshandler.UpdateOfficeRequest:
+    properties:
+      election:
+        type: string
+      name:
+        type: string
+      rank:
+        type: integer
+      scope:
+        type: string
+    type: object
+  partieshandler.BuySlotsRequest:
+    properties:
+      quantity:
+        type: integer
+    type: object
+  partieshandler.CreateMarketingCampaignRequest:
+    properties:
+      budget:
+        type: number
+      duration_in_days:
+        type: integer
+      election_group_id:
+        type: integer
+      election_id:
+        type: integer
+      plan_id:
+        type: integer
+      states:
+        items:
+          type: string
+        type: array
+      type:
+        type: string
+    type: object
+  partieshandler.CreatePartyRequest:
+    properties:
+      display_order:
+        type: integer
+      logo:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+    type: object
+  partieshandler.CreatePlanRequest:
+    properties:
+      color_hex:
+        type: string
+      description:
+        type: string
+      features:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      scopes_recommendation:
+        items:
+          type: string
+        type: array
+      type:
+        type: string
+    type: object
+  partieshandler.DepositAllowanceRequest:
+    properties:
+      amount_kobo:
+        type: integer
+    type: object
+  partieshandler.SetPartyDiscountRequest:
+    properties:
+      discount_percentage:
+        type: number
+    type: object
+  partieshandler.SetSlotPriceRequest:
+    properties:
+      price_kobo:
+        type: integer
+    type: object
+  partieshandler.UpdateAgentTargetsRequest:
+    properties:
+      lgaElectionSupervisor:
+        type: integer
+      pollingUnitAgent:
+        type: integer
+      stateElectionSupervisor:
+        type: integer
+      wardElectionSupervisor:
+        type: integer
+    type: object
+  partieshandler.UpdatePartyRequest:
+    properties:
+      display_order:
+        type: integer
+      logo:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+    type: object
+  partieshandler.UpdatePlanDisplayOrderRequest:
+    properties:
+      display_order:
+        type: integer
+    type: object
+  partieshandler.UpdatePlanRequest:
+    properties:
+      color_hex:
+        type: string
+      description:
+        type: string
+      features:
+        items:
+          type: string
+        type: array
+      is_active:
+        type: boolean
+      name:
+        type: string
+      price:
+        type: number
+      scopes_recommendation:
+        items:
+          type: string
+        type: array
+      type:
+        type: string
+    type: object
+  partieshandler.WithdrawRequest:
+    properties:
+      amount_kobo:
+        description: AmountKobo is the withdrawal amount in Kobo (1 NGN = 100 Kobo).
+        type: integer
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      narration:
+        type: string
+    type: object
+  partieshandler.agentPaymentAllocation:
+    properties:
+      lgaElectionSupervisor:
+        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+      pollingAgent:
+        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+      stateElectionSupervisor:
+        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+      wardElectionSupervisor:
+        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+    type: object
+  partieshandler.agentPaymentConfig:
+    properties:
+      default:
+        type: integer
+      states:
+        additionalProperties:
+          format: int64
+          type: integer
+        type: object
+    type: object
+  partyapplicationshandler.ApproveApplicationRequest:
+    properties:
+      lga_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      role_type:
+        type: string
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
+    type: object
+  partyapplicationshandler.RejectApplicationRequest:
+    properties:
+      reason:
+        type: string
+    type: object
+  partyapplicationshandler.SubmitApplicationRequest:
+    properties:
+      address:
+        type: string
+      avatar:
+        type: string
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      data_phone:
+        type: string
+      educational_status:
+        type: string
+      election_group_id:
+        type: integer
+      election_group_ids:
+        items:
+          type: integer
+        type: array
+      graduation_year:
+        type: string
+      highest_degree:
+        type: string
+      party_id:
+        type: integer
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      school_name:
+        type: string
+      voters_card_image:
+        type: string
+      whatsapp_phone:
+        type: string
+    type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Text:
+    properties:
+      string:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  pgtype.Timestamptz:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  polling_unit_updates.CreateUpdateRequest:
+    properties:
+      assignment_id:
+        type: integer
+      election_group_id:
+        type: integer
+      is_report:
+        type: boolean
+      media_urls:
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      report_types:
+        items:
+          type: string
+        type: array
+    type: object
+  pollingunitshandler.CreatePollingUnitRequest:
+    properties:
+      abbreviation:
+        type: string
+      delimitation:
+        type: string
+      formatted_address:
+        type: string
+      google_place_id:
+        type: string
+      latitude:
+        type: number
+      lga_id:
+        type: integer
+      longitude:
+        type: number
+      name:
+        type: string
+      precise_location:
+        type: string
+      registration_area_id:
+        type: integer
+      remark:
+        type: string
+      state_id:
+        type: integer
+      units:
+        type: string
+      ward_id:
+        type: integer
+    type: object
+  pollingunitshandler.GetPollingUnitsData:
+    properties:
+      polling_units:
+        items:
+          $ref: '#/definitions/pollingunitshandler.PollingUnitResponse'
+        type: array
+    type: object
+  pollingunitshandler.GetPollingUnitsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/pollingunitshandler.GetPollingUnitsData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/pollingunitshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  pollingunitshandler.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  pollingunitshandler.PollingUnitResponse:
+    properties:
+      abbreviation:
+        type: string
+      delimitation:
+        type: string
+      formatted_address:
+        type: string
+      google_place_id:
+        type: string
+      id:
+        type: integer
+      latitude:
+        type: number
+      lga_id:
+        type: integer
+      lga_name:
+        type: string
+      longitude:
+        type: number
+      name:
+        type: string
+      precise_location:
+        type: string
+      registration_area_id:
+        type: integer
+      remark:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+      units:
+        type: string
+      ward_id:
+        type: integer
+      ward_name:
+        type: string
+    type: object
+  pollingunitshandler.UpdatePollingUnitRequest:
+    properties:
+      abbreviation:
+        type: string
+      delimitation:
+        type: string
+      formatted_address:
+        type: string
+      google_place_id:
+        type: string
+      latitude:
+        type: number
+      lga_id:
+        type: integer
+      longitude:
+        type: number
+      name:
+        type: string
+      precise_location:
+        type: string
+      registration_area_id:
+        type: integer
+      remark:
+        type: string
+      state_id:
+        type: integer
+      units:
+        type: string
+      ward_id:
+        type: integer
+    type: object
+  puassignmentshandler.CreateAssignmentRequest:
+    properties:
+      election_group_id:
+        type: integer
+      fake_id:
+        type: integer
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      role_type:
+        type: string
+    type: object
+  puassignmentshandler.UpdateAssignmentTrackingRequest:
+    properties:
+      arrival_video_url:
+        type: string
+      arrived_at:
+        type: string
+      election_ended_at:
+        type: string
+      election_ended_video_url:
+        type: string
+      election_started_at:
+        type: string
+      election_started_video_url:
+        type: string
+    type: object
+  queries.GetPartyBasicInfoRow:
+    properties:
+      id:
+        type: integer
+      logo:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+    type: object
+  senatorialdistrictshandler.CreateSenatorialDistrictRequest:
+    properties:
+      coalition_center:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  senatorialdistrictshandler.GetSenatorialDistrictsData:
+    properties:
+      districts:
+        items:
+          $ref: '#/definitions/senatorialdistrictshandler.SenatorialDistrictResponse'
+        type: array
+    type: object
+  senatorialdistrictshandler.GetSenatorialDistrictsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/senatorialdistrictshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  senatorialdistrictshandler.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  senatorialdistrictshandler.SenatorialDistrictResponse:
+    properties:
+      coalition_center:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+    type: object
+  senatorialdistrictshandler.UpdateSenatorialDistrictRequest:
+    properties:
+      coalition_center:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest:
+    properties:
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      state_id:
+        type: integer
+    type: object
+  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData:
+    properties:
+      constituencies:
+        items:
+          $ref: '#/definitions/stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse'
+        type: array
+    type: object
+  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/stateassemblyconstituencieshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  stateassemblyconstituencieshandler.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse:
+    properties:
+      federal_constituency_id:
+        type: integer
+      federal_constituency_name:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      senatorial_district_name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+    type: object
+  stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest:
+    properties:
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      state_id:
+        type: integer
+    type: object
+  stateshandler.CreateStateRequest:
+    properties:
+      country_code:
+        type: string
+      country_id:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  stateshandler.UpdateStateRequest:
+    properties:
+      country_code:
+        type: string
+      country_id:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  system_settings.SystemSettingResponse:
+    properties:
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      description:
+        $ref: '#/definitions/pgtype.Text'
+      key:
+        type: string
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      value:
+        items:
+          type: integer
+        type: array
+    type: object
+  system_settings.UpdateSystemSettingRequest:
+    properties:
+      description:
+        type: string
+      value:
+        items:
+          type: integer
+        type: array
+    required:
+    - value
+    type: object
+  usershandler.GetUsersData:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/usershandler.UserResponse'
+        type: array
+    type: object
+  usershandler.GetUsersResponse:
+    properties:
+      data:
+        $ref: '#/definitions/usershandler.GetUsersData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/usershandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  usershandler.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  usershandler.UpdateProfileRequest:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_state:
+        type: integer
+      first_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      last_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      middle_name:
+        maxLength: 30
+        type: string
+    required:
+    - current_country
+    - current_state
+    - first_name
+    - gender
+    - last_name
+    type: object
+  usershandler.UpdateUserPhoneNumbersRequest:
+    type: object
+  usershandler.UserResponse:
+    properties:
+      account_status:
+        type: string
+      address:
+        type: string
+      avatar:
+        type: string
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      city_name:
+        type: string
+      country_name:
+        type: string
+      created_at:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      data_phone:
+        type: string
+      date_of_birth:
+        type: string
+      education_level:
+        type: string
+      educational_status:
+        type: string
+      email:
+        type: string
+      email_verified:
+        type: boolean
+      fake_id:
+        type: integer
+      first_name:
+        type: string
+      gender:
+        type: string
+      graduation_year:
+        type: string
+      highest_degree:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      marital_status:
+        type: string
+      middle_name:
+        type: string
+      nin_verified:
+        type: boolean
+      party_id:
+        type: integer
+      phone:
+        type: string
+      phone_verified:
+        type: boolean
+      polling_unit_id:
+        type: integer
+      religion:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      school_name:
+        type: string
+      state_name:
+        type: string
+      state_of_origin:
+        type: integer
+      updated_at:
+        type: string
+      username:
+        type: string
+      voters_card_image:
+        type: string
+      voters_card_verified:
+        type: boolean
+      whatsapp_phone:
+        type: string
+    type: object
+  usershandler.UserWithdrawRequest:
+    properties:
+      amount_kobo:
+        type: integer
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      narration:
+        type: string
+    type: object
+  utils.ErrorResponse:
+    properties:
+      data: {}
+      message:
+        example: Error message description
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  utils.SuccessResponse:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      message:
+        example: Operation successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  wardshandler.CreateWardRequest:
+    properties:
+      abbreviation:
+        type: string
+      lga_id:
+        type: integer
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  wardshandler.GetWardsData:
+    properties:
+      wards:
+        items:
+          $ref: '#/definitions/wardshandler.WardResponse'
+        type: array
+    type: object
+  wardshandler.GetWardsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/wardshandler.GetWardsData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/wardshandler.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  wardshandler.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  wardshandler.UpdateWardRequest:
+    properties:
+      abbreviation:
+        type: string
+      lga_id:
+        type: integer
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  wardshandler.WardResponse:
+    properties:
+      id:
+        type: integer
+      lga_id:
+        type: integer
+      lga_name:
+        type: string
+      name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+    type: object
+host: localhost:4100
 info:
-  contact: {}
-paths: {}
+  contact:
+    email: support@swagger.io
+    name: API Support
+    url: http://www.swagger.io/support
+  description: API for the Free9ja platform.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Free9ja API
+  version: "1.0"
+paths:
+  /admin/parties/{id}/discount:
+    put:
+      consumes:
+      - application/json
+      description: Sets the slot discount percentage for a political party (Admin
+        only)
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Discount request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.SetPartyDiscountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Party discount updated
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Set customized slot discount for a party
+      tags:
+      - Admin Parties
+  /admin/settings/{key}:
+    get:
+      consumes:
+      - application/json
+      description: Get a system setting by key
+      parameters:
+      - description: Setting Key
+        in: path
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/system_settings.SystemSettingResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a system setting
+      tags:
+      - System Settings
+    put:
+      consumes:
+      - application/json
+      description: Update a system setting by key
+      parameters:
+      - description: Setting Key
+        in: path
+        name: key
+        required: true
+        type: string
+      - description: Update System Setting Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/system_settings.UpdateSystemSettingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/system_settings.SystemSettingResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a system setting
+      tags:
+      - System Settings
+  /admin/settings/slot-price:
+    get:
+      description: Retrieves the global, app-wide price of a single polling unit slot
+        in Kobo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Global slot price retrieved
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get global slot price
+      tags:
+      - Admin Settings
+    put:
+      consumes:
+      - application/json
+      description: Updates the global, app-wide price of a single polling unit slot
+        in Kobo (Admin only)
+      parameters:
+      - description: Slot Price request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.SetSlotPriceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Global slot price updated
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update global slot price
+      tags:
+      - Admin Settings
+  /admin/users/{id}/phones:
+    get:
+      description: Fetches the list of phone numbers for a user
+      parameters:
+      - description: User ID or Fake ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user phone numbers
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Create or update phone numbers for a user
+      parameters:
+      - description: User Fake ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Phones
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/usershandler.UpdateUserPhoneNumbersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user phone numbers
+      tags:
+      - Users
+  /admin/users/phones/{id}:
+    delete:
+      description: Deletes a specific user phone number by its ID
+      parameters:
+      - description: Phone Number ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a user phone number
+      tags:
+      - Users
+  /agent-marketing-plans:
+    get:
+      description: Returns all active marketing plans of the specified type (e.g.
+        agent-campaign)
+      parameters:
+      - default: agent-campaign
+        description: Campaign type
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Marketing plans retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get plans by type
+      tags:
+      - Marketing
+  /auth/admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates an admin and returns access and refresh tokens
+      parameters:
+      - description: Admin login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authhandler.AdminLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login admin user
+      tags:
+      - Auth
+  /auth/assign-role:
+    post:
+      consumes:
+      - application/json
+      description: Assigns a specific role (like party_admin) to an existing user
+      parameters:
+      - description: Role assignment details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.AssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Assign a role to a user
+      tags:
+      - Auth
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Resets a user's password using their email address and a new password,
+        invalidating active sessions
+      parameters:
+      - description: Email and new password details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.ChangePasswordByEmailRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Change password by email
+      tags:
+      - Auth
+  /auth/check_nin:
+    post:
+      consumes:
+      - application/json
+      description: Checks if the National Identification Number (NIN) already exists
+      parameters:
+      - description: NIN to check
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.CheckNINRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check NIN
+      tags:
+      - Auth
+  /auth/check_username:
+    post:
+      consumes:
+      - application/json
+      description: Checks if the username already exists
+      parameters:
+      - description: Username to check
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.CheckUsernameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Check Username
+      tags:
+      - Auth
+  /auth/forgot_password:
+    post:
+      consumes:
+      - application/json
+      description: Handles resetting the user's password
+      parameters:
+      - description: New password details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.ForgotPasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Forgot password
+      tags:
+      - Auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a user and returns access and refresh tokens
+      parameters:
+      - description: Login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login user
+      tags:
+      - Auth
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: Handles the user logout by removing the session
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.LogoutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Logout user
+      tags:
+      - Auth
+  /auth/partyapp/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticates a party member and returns access and refresh tokens
+      parameters:
+      - description: Party login credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.PartyLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/authhandler.AdminLoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login party member user
+      tags:
+      - Auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Handles token rotation using a valid refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Refresh Token
+      tags:
+      - Auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user account with full details
+      parameters:
+      - description: Registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new user
+      tags:
+      - Auth
+  /auth/register_candidate:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new candidate placeholder user account
+      parameters:
+      - description: Candidate registration details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RegisterCandidatePlaceholderRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register a new candidate user with placeholder status
+      tags:
+      - Auth
+  /auth/roles/update:
+    post:
+      consumes:
+      - application/json
+      description: Replaces all roles for an existing user and optionally sets their
+        party ID if party_admin is included
+      parameters:
+      - description: Role update details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.UpdateUserRolesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update all roles for a user
+      tags:
+      - Auth
+  /auth/seed:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers testing users from formatted JSON data
+      parameters:
+      - description: List of users to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/authservice.SeedUserRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Users seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed users
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed testing users
+      tags:
+      - Auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Handles the basic user registration (phone, email, password, country)
+      parameters:
+      - description: Basic sign-up details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.SignupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Basic sign-up
+      tags:
+      - Auth
+  /auth/superadmin:
+    post:
+      consumes:
+      - application/json
+      description: Promotes a user to superadmin if their username is in the pre-approved
+        list
+      parameters:
+      - description: Superadmin promotion details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.MakeUserSuperAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Make a user superadmin
+      tags:
+      - Auth
+  /auth/verify_security_questions:
+    post:
+      consumes:
+      - application/json
+      description: Checks the answers to security questions and returns a unique ID
+        if successful
+      parameters:
+      - description: Security questions and answers
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.VerifySecurityQuestionsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Verify security questions
+      tags:
+      - Auth
+  /banks:
+    get:
+      consumes:
+      - application/json
+      description: Returns a list of real Nigerian banks from Monnify
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banks fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch banks
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get list of banks
+      tags:
+      - Banks
+  /banks/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validates account number and bank code via Monnify, returning the
+        account name
+      parameters:
+      - description: Account Number
+        in: query
+        name: accountNumber
+        required: true
+        type: string
+      - description: Bank Code
+        in: query
+        name: bankCode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account validated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Missing parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Validation failed
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Validate bank account
+      tags:
+      - Banks
+  /countries:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a list of all countries with their ISO2 codes, phone codes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bodieshandler.GetCountriesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get all countries
+      tags:
+      - Bodies
+  /countries/{countryID}/states:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all states for a specific country by its ID with cursor
+        pagination
+      parameters:
+      - description: Country ID
+        in: path
+        name: countryID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bodieshandler.GetStatesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get states by country ID
+      tags:
+      - Bodies
+  /election-groups:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a paginated list of election groups using cursor pagination
+      parameters:
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      - description: Party ID for stats
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election groups fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List election groups
+      tags:
+      - ElectionGroups
+    post:
+      consumes:
+      - application/json
+      description: Creates a new election group with name, rank, counts, and election
+        date
+      parameters:
+      - description: Create Election Group payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electiongroupshandler.CreateElectionGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Election group created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new election group
+      tags:
+      - ElectionGroups
+  /election-groups/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes an election group from the database by ID
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election group deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Election group not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete an election group
+      tags:
+      - ElectionGroups
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single election group using its ID
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election group fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Election group not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get election group by ID
+      tags:
+      - ElectionGroups
+    put:
+      consumes:
+      - application/json
+      description: Modifies name, rank, counts, or election date of an existing election
+        group
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Election Group payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electiongroupshandler.UpdateElectionGroupRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election group updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Election group not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update an election group
+      tags:
+      - ElectionGroups
+  /election-groups/{id}/elections:
+    get:
+      description: Fetches the list of elections associated with a specific election
+        group ID
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Elections fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid election group ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List elections for an election group
+      tags:
+      - ElectionGroups
+  /election-groups/{id}/party-stats:
+    put:
+      consumes:
+      - application/json
+      description: Upserts party-specific statistics for an election group
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Upsert Stats payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Stats upserted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Upsert party election group stats
+      tags:
+      - ElectionGroups
+  /election-groups/{id}/vote-status:
+    get:
+      description: Returns the vote status (voted, did_not_vote, none) and associated
+        data (votes or reason).
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get user's vote status for an election group
+      tags:
+      - Elections
+  /elections:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a paginated list of elections using cursor pagination
+      parameters:
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Elections fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List elections
+      tags:
+      - Elections
+    post:
+      consumes:
+      - application/json
+      description: Creates a new election with name, candidates count, date, group
+        ID, and type ID
+      parameters:
+      - description: Create Election payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Election created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new election
+      tags:
+      - Elections
+  /elections/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes an election from the database by ID
+      parameters:
+      - description: Election ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Election not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete an election
+      tags:
+      - Elections
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single election using its ID
+      parameters:
+      - description: Election ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Election not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get election by ID
+      tags:
+      - Elections
+    put:
+      consumes:
+      - application/json
+      description: Modifies name, candidates count, date, group ID, or type ID of
+        an existing election
+      parameters:
+      - description: Election ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Election payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.UpdateElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Election updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Election not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update an election
+      tags:
+      - Elections
+  /elections/{id}/candidates:
+    get:
+      description: Fetches the list of candidates associated with a specific election
+        ID
+      parameters:
+      - description: Election ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Candidates fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid election ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get detailed candidates for an election
+      tags:
+      - Elections
+    post:
+      consumes:
+      - application/json
+      description: Overwrites/synchronizes the list of candidate IDs associated with
+        a specific election ID
+      parameters:
+      - description: Election ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Candidate IDs payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.SyncCandidatesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Candidates synced successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or election ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Sync candidates for an election
+      tags:
+      - Elections
+  /elections/eligible:
+    get:
+      description: Returns all elections eligible for a given polling unit and election
+        group, each enriched with their list of candidates (name, avatar, party info).
+        Candidates may be empty if none have been set up.
+      parameters:
+      - description: Election Group ID
+        in: query
+        name: election_group_id
+        required: true
+        type: integer
+      - description: Polling Unit ID
+        in: query
+        name: polling_unit_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Eligible elections fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Missing or invalid query parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get eligible elections with candidates for a polling unit
+      tags:
+      - Elections
+  /elections/federal-constituency:
+    post:
+      consumes:
+      - application/json
+      description: Creates elections for selected federal constituencies with auto-generated
+        names, grouped together
+      parameters:
+      - description: Create Federal Constituency Elections payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateFederalConstituencyElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Federal constituency elections created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create federal constituency elections
+      tags:
+      - Elections
+  /elections/lga:
+    post:
+      consumes:
+      - application/json
+      description: Creates elections for selected LGAs with auto-generated names,
+        grouped together
+      parameters:
+      - description: Create LGA Elections payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateLgaElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: LGA elections created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create LGA elections
+      tags:
+      - Elections
+  /elections/nationwide:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new nationwide election with auto-generated names and
+        associated candidates
+      parameters:
+      - description: Create Nationwide Election payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateNationwideElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Nationwide election created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new nationwide election
+      tags:
+      - Elections
+  /elections/senatorial-district:
+    post:
+      consumes:
+      - application/json
+      description: Creates elections for selected senatorial districts with auto-generated
+        names, grouped together
+      parameters:
+      - description: Create Senatorial District Elections payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateSenatorialDistrictElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Senatorial district elections created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create senatorial district elections
+      tags:
+      - Elections
+  /elections/state:
+    post:
+      consumes:
+      - application/json
+      description: Creates elections for selected states with auto-generated names,
+        grouped together
+      parameters:
+      - description: Create State Elections payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateStateElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: State elections created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create state elections
+      tags:
+      - Elections
+  /elections/state-constituency:
+    post:
+      consumes:
+      - application/json
+      description: Creates elections for selected state constituencies with auto-generated
+        names, grouped together
+      parameters:
+      - description: Create State Constituency Elections payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateStateConstituencyElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: State constituency elections created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create state constituency elections
+      tags:
+      - Elections
+  /elections/ward:
+    post:
+      consumes:
+      - application/json
+      description: Creates elections for selected Wards with auto-generated names,
+        grouped together
+      parameters:
+      - description: Create Ward Elections payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/electionshandler.CreateWardElectionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Ward elections created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create Ward elections
+      tags:
+      - Elections
+  /federal-constituencies:
+    get:
+      consumes:
+      - application/json
+      description: Fetches federal constituencies with optional state_id and senatorial_district_id
+        filtering and cursor pagination
+      parameters:
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      - description: Senatorial District ID to filter by
+        in: query
+        name: senatorial_district_id
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/federalconstituencieshandler.GetFederalConstituenciesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get federal constituencies
+      tags:
+      - Federal Constituencies
+    post:
+      consumes:
+      - application/json
+      description: Creates a federal constituency under a state and senatorial district
+      parameters:
+      - description: Create request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/federalconstituencieshandler.CreateFederalConstituencyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Federal constituency created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new federal constituency
+      tags:
+      - Federal Constituencies
+  /federal-constituencies/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a federal constituency from the database by its ID
+      parameters:
+      - description: Federal Constituency ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Federal constituency deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Federal constituency not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a federal constituency
+      tags:
+      - Federal Constituencies
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single federal constituency using its unique
+        database ID
+      parameters:
+      - description: Federal Constituency ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Federal constituency fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Federal constituency not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a federal constituency by ID
+      tags:
+      - Federal Constituencies
+    put:
+      consumes:
+      - application/json
+      description: Modifies the details of an existing federal constituency
+      parameters:
+      - description: Federal Constituency ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/federalconstituencieshandler.UpdateFederalConstituencyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Federal constituency updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Federal constituency not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a federal constituency
+      tags:
+      - Federal Constituencies
+  /files:
+    get:
+      description: Returns a cursor-paginated list of uploaded files, newest first.
+      parameters:
+      - description: Cursor (ID of last record on previous page)
+        in: query
+        name: cursor
+        type: integer
+      - description: Page size (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Filter by folder name
+        in: query
+        name: folder
+        type: string
+      - description: Filter by uploader user ID
+        in: query
+        name: uploaded_by
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Files fetched
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List files (cursor-paginated)
+      tags:
+      - Files
+  /files/{id}:
+    delete:
+      description: Soft-deletes the file record in the database, then removes the
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File deleted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: File not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a file
+      tags:
+      - Files
+    get:
+      description: Returns the stored metadata for a single uploaded file.
+      parameters:
+      - description: File ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File fetched
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: File not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get file metadata by ID
+      tags:
+      - Files
+  /files/{id}/confirm:
+    post:
+      description: Marks a pending file record as 'uploaded' or 'failed' after the
+      parameters:
+      - description: File ID returned by upload-url
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: 'Set to false if the upload failed (default: true)'
+        in: query
+        name: success
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: File status updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Confirm file upload status
+      tags:
+      - Files
+  /files/upload-url:
+    post:
+      consumes:
+      - application/json
+      description: Creates a file record and returns a 15-minute presigned PUT URL.
+      parameters:
+      - description: Upload URL request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/fileshandler.GenerateUploadURLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Upload URL generated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Generate a presigned upload URL
+      tags:
+      - Files
+  /lgas:
+    get:
+      consumes:
+      - application/json
+      description: Fetches LGAs with optional state_id filtering
+      parameters:
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bodieshandler.GetLGAsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get local government areas (LGAs)
+      tags:
+      - Bodies
+  /offices:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a paginated list of offices using cursor pagination
+      parameters:
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Offices fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List offices
+      tags:
+      - Offices
+    post:
+      consumes:
+      - application/json
+      description: Creates a new office with name, office, scope, and rank
+      parameters:
+      - description: Create Office payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/officeshandler.CreateOfficeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Office created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new office
+      tags:
+      - Offices
+  /offices/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes an office from the database by ID
+      parameters:
+      - description: Office ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Office deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Office not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete an office
+      tags:
+      - Offices
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single office using its ID
+      parameters:
+      - description: Office ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Office fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Office not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get office by ID
+      tags:
+      - Offices
+    put:
+      consumes:
+      - application/json
+      description: Modifies name, election, scope, or rank of an existing office
+      parameters:
+      - description: Office ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Office payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/officeshandler.UpdateOfficeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Office updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Office not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update an office
+      tags:
+      - Offices
+  /parties:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a paginated list of political parties ordered by ID using
+        cursor pagination
+      parameters:
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      - description: 'Order by field (default: display_order, enum: display_order,
+          name, short_name)'
+        in: query
+        name: order_by
+        type: string
+      - description: 'Order direction (default: ASC, enum: ASC, DESC)'
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Parties fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List all political parties
+      tags:
+      - Parties
+    post:
+      consumes:
+      - application/json
+      description: Creates a political party with a unique short name, full name,
+        and logo
+      parameters:
+      - description: Create Party request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.CreatePartyRequest'
+      produces:
+      - application/json
+      responses:
+        "210":
+          description: Party created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new political party
+      tags:
+      - Parties
+  /parties/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a political party from the database by its ID
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Party deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Party not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a political party
+      tags:
+      - Parties
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single political party using its unique
+        database ID
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Party fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Party not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a political party by ID
+      tags:
+      - Parties
+    put:
+      consumes:
+      - application/json
+      description: Modifies the short name, full name, or logo URL of an existing
+        political party
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Party request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.UpdatePartyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Party updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Party not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a political party
+      tags:
+      - Parties
+  /parties/{id}/agent-marketing-campaigns:
+    get:
+      description: Returns all marketing campaigns associated with the specified party
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Marketing campaigns retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get marketing campaigns for a party
+      tags:
+      - Marketing
+    post:
+      consumes:
+      - application/json
+      description: Creates a new agent marketing campaign for the specified party,
+        deducting the budget from their wallet
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Create marketing campaign payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.CreateMarketingCampaignRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Marketing campaign created successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a marketing campaign for a party
+      tags:
+      - Marketing
+  /parties/{id}/agent-targets:
+    get:
+      description: Retrieves the agent acquisition targets for a party
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Agent targets retrieved successfully
+          schema:
+            $ref: '#/definitions/partieshandler.UpdateAgentTargetsRequest'
+      security:
+      - BearerAuth: []
+      summary: Get party agent acquisition targets
+      tags:
+      - Parties
+    patch:
+      consumes:
+      - application/json
+      description: Updates the agent acquisition targets for a party
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Targets payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.UpdateAgentTargetsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Agent targets updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update party agent acquisition targets
+      tags:
+      - Parties
+  /parties/{id}/allowances/deposit:
+    post:
+      consumes:
+      - application/json
+      description: Debits a party's main wallet balance and deposits it to their polling
+        agent allowance budget
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Deposit Allowance request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.DepositAllowanceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Allowance deposited successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Deposit money to polling agent allowance budget
+      tags:
+      - Parties
+  /parties/{id}/allowances/settings:
+    get:
+      description: Returns the current agent_payment_allocation for a party as a parsed
+        JSON object.
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Allocation fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get agent payment allocation
+      tags:
+      - Parties
+    put:
+      consumes:
+      - application/json
+      description: Saves the polling agent allowance budget settings per role and
+        state for a party.
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Agent payment allocation payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.agentPaymentAllocation'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Allowances configuration updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update agent payment allocation
+      tags:
+      - Parties
+  /parties/{id}/slots/buy:
+    post:
+      consumes:
+      - application/json
+      description: Deducts from a party's wallet and increases their polling unit
+        assignment slot balance
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Buy Slots request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.BuySlotsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Slots purchased successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Buy slots for a party
+      tags:
+      - Parties
+  /parties/{id}/slots/price:
+    get:
+      description: Calculates the customized price of a single slot for a political
+        party, accounting for their discount
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Party slot price retrieved
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get party slot price
+      tags:
+      - Parties
+  /parties/{id}/wallet:
+    get:
+      consumes:
+      - application/json
+      description: Returns the reserved virtual account details and current balance
+        (in Kobo) for a political party. The account_numbers field contains one or
+        more bank account numbers that donors can transfer funds to directly.
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Wallet fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Wallet not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a party's wallet
+      tags:
+      - Parties
+    post:
+      consumes:
+      - application/json
+      description: Manually provisions a Monnify reserved virtual account for a party
+        that does not yet have a wallet. Idempotent — returns an error if the party
+        already has a wallet.
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Wallet created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Party not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Wallet already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a wallet for a party (admin)
+      tags:
+      - Parties
+  /parties/{id}/wallet/deposit-test:
+    post:
+      consumes:
+      - application/json
+      description: Directly credits a party's wallet balance (useful in sandbox/testing)
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Deposit request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.DepositAllowanceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Wallet funded successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Simulate deposit to party wallet
+      tags:
+      - Parties
+  /parties/{id}/wallet/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of credit/debit transactions for a party's
+        wallet, ordered newest first. Accessible by admins only.
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Number of results (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transactions fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID or pagination parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Wallet not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List a party's wallet transactions
+      tags:
+      - Parties
+  /parties/{id}/wallet/withdraw:
+    post:
+      consumes:
+      - application/json
+      description: Debits the party wallet balance and records a pending withdrawal
+        transaction. The party member must be authenticated.
+      parameters:
+      - description: Party ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Withdrawal payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.WithdrawRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Withdrawal recorded
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "402":
+          description: Insufficient funds
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Party or wallet not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Withdraw from a party wallet
+      tags:
+      - Parties
+  /parties/public:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a list of political parties ordered by ID, returns only
+        basic fields.
+      parameters:
+      - description: 'Order by field (default: display_order, enum: display_order,
+          name, short_name)'
+        in: query
+        name: order_by
+        type: string
+      - description: 'Order direction (default: ASC, enum: ASC, DESC)'
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Parties fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List public political parties
+      tags:
+      - Parties
+  /parties/wallets/provision-missing:
+    post:
+      consumes:
+      - application/json
+      description: Iterates over all existing political parties and provisions a Monnify
+        reserved account wallet for any party that currently lacks one. Used primarily
+        for testing and manual recovery.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Provisioning details
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Provision missing wallets for political parties
+      tags:
+      - Parties
+  /plans:
+    get:
+      description: Retrieves marketing plans. Optionally filter by ?type= (e.g. agent-campaign)
+        and ?is_active= (true/false).
+      parameters:
+      - description: Campaign type filter (e.g. agent-campaign)
+        in: query
+        name: type
+        type: string
+      - description: Filter by active status
+        in: query
+        name: is_active
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plans retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get plans
+      tags:
+      - Plans
+    post:
+      consumes:
+      - application/json
+      description: Creates a new marketing plan (admin only)
+      parameters:
+      - description: Create Plan payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.CreatePlanRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Plan created successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a marketing plan
+      tags:
+      - Plans
+  /plans/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an existing marketing plan (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a marketing plan
+      tags:
+      - Plans
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing marketing plan (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Plan payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.UpdatePlanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a marketing plan
+      tags:
+      - Plans
+  /plans/{id}/display-order:
+    patch:
+      consumes:
+      - application/json
+      description: Updates the display_order of a specific plan (admin only)
+      parameters:
+      - description: Plan ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Display order payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partieshandler.UpdatePlanDisplayOrderRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Plan display order updated
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a plan's display order
+      tags:
+      - Plans
+  /polling-agent-applications:
+    get:
+      consumes:
+      - application/json
+      description: 'Fetches a list of polling agent applications. Scoped: Party admins
+        can only view applications for their own party.'
+      parameters:
+      - description: Filter by Party ID
+        in: query
+        name: party_id
+        type: integer
+      - description: Filter by Election Group ID
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by Status (pending, accepted, rejected)
+        in: query
+        name: status
+        type: string
+      - description: Pagination Limit (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination Offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Applications fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List polling agent applications
+      tags:
+      - PollingAgentApplications
+    post:
+      consumes:
+      - application/json
+      description: Allows an authenticated user to submit an application to become
+        a polling agent for a party and election group. Updates the user's profile
+        with agent details.
+      parameters:
+      - description: Submit Application payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partyapplicationshandler.SubmitApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Application submitted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Already applied for this election group
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit a polling agent application
+      tags:
+      - PollingAgentApplications
+  /polling-agent-applications/{id}:
+    get:
+      consumes:
+      - application/json
+      description: 'Retrieves detailed info of an application by ID. Scoped: Party
+        admins can only view if it belongs to their own party.'
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Application retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Application not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a specific polling agent application
+      tags:
+      - PollingAgentApplications
+  /polling-agent-applications/{id}/approve:
+    post:
+      consumes:
+      - application/json
+      description: 'Accepts the application, assigns the applicant to the specified
+        polling unit, and elevates the user''s role to polling agent. Scoped: Party
+        admins can only approve for their own party.'
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Approval payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partyapplicationshandler.ApproveApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Application approved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Constraint conflict (already assigned/processed)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Approve a polling agent application
+      tags:
+      - PollingAgentApplications
+  /polling-agent-applications/{id}/cancel:
+    post:
+      description: Cancels the application. Only the owner of the application can
+        cancel it.
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Application cancelled successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Application already processed
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Cancel a polling agent application
+      tags:
+      - PollingAgentApplications
+  /polling-agent-applications/{id}/reject:
+    post:
+      consumes:
+      - application/json
+      description: 'Rejects the application with a reason. Scoped: Party admins can
+        only reject for their own party.'
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Rejection payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/partyapplicationshandler.RejectApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Application rejected successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Application already processed
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Reject a polling agent application
+      tags:
+      - PollingAgentApplications
+  /polling-agent-applications/recommendations:
+    get:
+      description: Returns the applicant's submitted polling unit plus the 2 lowest-agent-count
+        polling units in the same LGA for the party/election group.
+      parameters:
+      - description: Party ID
+        in: query
+        name: party_id
+        required: true
+        type: integer
+      - description: Election Group ID
+        in: query
+        name: election_group_id
+        required: true
+        type: integer
+      - description: LGA ID of the applicant
+        in: query
+        name: lga_id
+        required: true
+        type: integer
+      - description: The polling unit the applicant originally applied for
+        in: query
+        name: polling_unit_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get polling unit recommendations for an application
+      tags:
+      - PollingAgentApplications
+  /polling-unit-assignments:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a list of assignments with optional filters for election_group_id,
+        party_id, polling_unit_id, and user_id. Supports pagination.
+      parameters:
+      - description: Filter by Election Group ID
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by Party ID
+        in: query
+        name: party_id
+        type: integer
+      - description: Filter by Polling Unit ID
+        in: query
+        name: polling_unit_id
+        type: integer
+      - description: Filter by User ID
+        in: query
+        name: user_id
+        type: integer
+      - description: Pagination Limit (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination Offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Assignments fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List polling unit assignments
+      tags:
+      - PollingUnitAssignments
+    post:
+      consumes:
+      - application/json
+      description: Creates a polling unit assignment. Role level enforcement ensures
+        party admins can only assign users for their own party.
+      parameters:
+      - description: Create Assignment payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/puassignmentshandler.CreateAssignmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Assignment created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Constraint conflict (already assigned)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign a user to a polling unit for an election group
+      tags:
+      - PollingUnitAssignments
+  /polling-unit-assignments/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes/revokes a polling unit assignment.
+      parameters:
+      - description: Assignment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Assignment deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Assignment not found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete an assignment
+      tags:
+      - PollingUnitAssignments
+    get:
+      consumes:
+      - application/json
+      description: Retrieves an assignment record by its ID.
+      parameters:
+      - description: Assignment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Assignment fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Assignment not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get details of a specific assignment
+      tags:
+      - PollingUnitAssignments
+  /polling-unit-assignments/{id}/tracking:
+    patch:
+      consumes:
+      - application/json
+      description: Allows agents to submit verification videos and times. Users can
+        only update their own assignments.
+      parameters:
+      - description: Assignment ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Tracking payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/puassignmentshandler.UpdateAssignmentTrackingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Assignment tracking updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Permission denied
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Assignment not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update polling unit assignment tracking (arrival, phases)
+      tags:
+      - PollingUnitAssignments
+  /polling-unit-updates:
+    get:
+      consumes:
+      - application/json
+      description: Fetches a list of polling unit updates using cursor-based pagination
+      parameters:
+      - description: Filter by Election Group ID
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by Party ID
+        in: query
+        name: party_id
+        type: integer
+      - description: Filter by Polling Unit ID
+        in: query
+        name: polling_unit_id
+        type: integer
+      - description: Filter by User ID
+        in: query
+        name: user_id
+        type: integer
+      - description: Filter by State ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Filter by LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Filter by Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: Filter by Is Report
+        in: query
+        name: is_report
+        type: boolean
+      - description: Cursor (ID to paginate from)
+        in: query
+        name: cursor
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List Polling Unit Updates
+      tags:
+      - Updates
+    post:
+      consumes:
+      - application/json
+      description: Submit an update or report for a polling unit
+      parameters:
+      - description: Update Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/polling_unit_updates.CreateUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create Polling Unit Update
+      tags:
+      - Updates
+  /polling-units:
+    get:
+      consumes:
+      - application/json
+      description: Fetches polling units with optional ward_id, lga_id, and state_id
+        filtering and cursor pagination
+      parameters:
+      - description: Ward ID to filter by
+        in: query
+        name: ward_id
+        type: integer
+      - description: LGA ID to filter by
+        in: query
+        name: lga_id
+        type: integer
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/pollingunitshandler.GetPollingUnitsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get polling units
+      tags:
+      - Polling Units
+    post:
+      consumes:
+      - application/json
+      description: Creates a polling unit under state, LGA, and ward
+      parameters:
+      - description: Create request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pollingunitshandler.CreatePollingUnitRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Polling unit created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new polling unit
+      tags:
+      - Polling Units
+  /polling-units/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a polling unit from the database by its ID
+      parameters:
+      - description: Polling Unit ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Polling unit deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Polling unit not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a polling unit
+      tags:
+      - Polling Units
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single polling unit using its unique database
+        ID
+      parameters:
+      - description: Polling Unit ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Polling unit fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Polling unit not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a polling unit by ID
+      tags:
+      - Polling Units
+    put:
+      consumes:
+      - application/json
+      description: Modifies the details of an existing polling unit
+      parameters:
+      - description: Polling Unit ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pollingunitshandler.UpdatePollingUnitRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Polling unit updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Polling unit not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a polling unit
+      tags:
+      - Polling Units
+  /senatorial-districts:
+    get:
+      consumes:
+      - application/json
+      description: Fetches senatorial districts with optional stateID filtering and
+        cursor pagination
+      parameters:
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get senatorial districts
+      tags:
+      - Senatorial Districts
+    post:
+      consumes:
+      - application/json
+      description: Creates a senatorial district under a specific state
+      parameters:
+      - description: Create request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/senatorialdistrictshandler.CreateSenatorialDistrictRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Senatorial district created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new senatorial district
+      tags:
+      - Senatorial Districts
+  /senatorial-districts/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a senatorial district from the database by its ID
+      parameters:
+      - description: Senatorial District ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Senatorial district deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Senatorial district not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a senatorial district
+      tags:
+      - Senatorial Districts
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single senatorial district using its unique
+        database ID
+      parameters:
+      - description: Senatorial District ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Senatorial district fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Senatorial district not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a senatorial district by ID
+      tags:
+      - Senatorial Districts
+    put:
+      consumes:
+      - application/json
+      description: Modifies the details of an existing senatorial district
+      parameters:
+      - description: Senatorial District ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/senatorialdistrictshandler.UpdateSenatorialDistrictRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Senatorial district updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Senatorial district not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a senatorial district
+      tags:
+      - Senatorial Districts
+  /state-assembly-constituencies:
+    post:
+      consumes:
+      - application/json
+      description: Creates a state assembly constituency under state, district, fed
+        constituency, and LGA
+      parameters:
+      - description: Create request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: State assembly constituency created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new state assembly constituency
+      tags:
+      - State Assembly Constituencies
+  /state-assembly-constituencies/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a state assembly constituency from the database by its
+        ID
+      parameters:
+      - description: State Assembly Constituency ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State assembly constituency deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State assembly constituency not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a state assembly constituency
+      tags:
+      - State Assembly Constituencies
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single state assembly constituency using
+        its unique database ID
+      parameters:
+      - description: State Assembly Constituency ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State assembly constituency fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State assembly constituency not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a state assembly constituency by ID
+      tags:
+      - State Assembly Constituencies
+    put:
+      consumes:
+      - application/json
+      description: Modifies the details of an existing state assembly constituency
+      parameters:
+      - description: State Assembly Constituency ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State assembly constituency updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State assembly constituency not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a state assembly constituency
+      tags:
+      - State Assembly Constituencies
+  /state-constituencies:
+    get:
+      consumes:
+      - application/json
+      description: Fetches state constituencies with optional state_id and federal_constituency_id
+        filtering and cursor pagination
+      parameters:
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      - description: Federal Constituency ID to filter by
+        in: query
+        name: federal_constituency_id
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get state constituencies
+      tags:
+      - State Assembly Constituencies
+  /states:
+    post:
+      consumes:
+      - application/json
+      description: Creates a state under a specific country
+      parameters:
+      - description: Create State request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/stateshandler.CreateStateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: State created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new state
+      tags:
+      - States
+  /states/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a state from the database by its ID
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a state
+      tags:
+      - States
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single state using its unique database ID
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a state by ID
+      tags:
+      - States
+    put:
+      consumes:
+      - application/json
+      description: Modifies the details of an existing state
+      parameters:
+      - description: State ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update State request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/stateshandler.UpdateStateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: State updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: State not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a state
+      tags:
+      - States
+  /states/{stateID}/cities:
+    get:
+      consumes:
+      - application/json
+      description: Fetches all cities for a specific state by its ID
+      parameters:
+      - description: State ID
+        in: path
+        name: stateID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/bodieshandler.GetCitiesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get cities by state ID
+      tags:
+      - Bodies
+  /users:
+    get:
+      description: Fetches the list of all registered users with role filtering and
+        cursor-based pagination
+      parameters:
+      - description: Role (admin, party_admin, user)
+        in: query
+        name: role
+        type: string
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/usershandler.GetUsersResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List users
+      tags:
+      - Users
+  /users/{id}/wallet:
+    post:
+      consumes:
+      - application/json
+      description: Manually provisions a Monnify reserved virtual account for a user
+        that does not yet have a wallet.
+      parameters:
+      - description: User Fake ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Wallet created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: User not found
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Wallet already exists
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a wallet for a user (admin / recovery)
+      tags:
+      - Users
+  /users/me:
+    get:
+      consumes:
+      - application/json
+      description: Fetches the profile details of the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/usershandler.UserResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Users
+  /users/me/wallet:
+    get:
+      consumes:
+      - application/json
+      description: Returns the virtual account details and current balance (in Kobo)
+        for the logged-in user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Wallet fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Wallet not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current user's wallet
+      tags:
+      - Users
+  /users/me/wallet/transactions:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of credit/debit transactions for the logged-in
+        user's wallet, ordered newest first.
+      parameters:
+      - description: Number of results (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset for pagination (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Transactions fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Wallet not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List current user's wallet transactions
+      tags:
+      - Users
+  /users/me/wallet/withdraw:
+    post:
+      consumes:
+      - application/json
+      description: Debits the user's wallet balance and records a withdrawal transaction.
+      parameters:
+      - description: Withdrawal payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/usershandler.UserWithdrawRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Withdrawal recorded
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "402":
+          description: Insufficient funds
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Wallet not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Withdraw from current user's wallet
+      tags:
+      - Users
+  /users/profile:
+    put:
+      consumes:
+      - application/json
+      description: Updates the profile of the currently authenticated user
+      parameters:
+      - description: Profile update parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/usershandler.UpdateProfileRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "442":
+          description: ""
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - Users
+  /users/wallets/provision-missing:
+    post:
+      consumes:
+      - application/json
+      description: Iterates over all existing users and provisions a Monnify reserved
+        account wallet for any user that currently lacks one. Used primarily for testing
+        and manual recovery.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Provisioning details
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Provision missing wallets for users
+      tags:
+      - Users
+  /wards:
+    get:
+      consumes:
+      - application/json
+      description: Fetches wards with optional lga_id and state_id filtering and cursor
+        pagination
+      parameters:
+      - description: LGA ID to filter by
+        in: query
+        name: lga_id
+        type: integer
+      - description: State ID to filter by
+        in: query
+        name: state_id
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID of last record)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/wardshandler.GetWardsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get wards
+      tags:
+      - Wards
+    post:
+      consumes:
+      - application/json
+      description: Creates a ward under state and LGA
+      parameters:
+      - description: Create request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/wardshandler.CreateWardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Ward created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or missing fields
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Create a new ward
+      tags:
+      - Wards
+  /wards/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Removes a ward from the database by its ID
+      parameters:
+      - description: Ward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ward deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ward not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Delete a ward
+      tags:
+      - Wards
+    get:
+      consumes:
+      - application/json
+      description: Retrieves details of a single ward using its unique database ID
+      parameters:
+      - description: Ward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ward fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ward not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get a ward by ID
+      tags:
+      - Wards
+    put:
+      consumes:
+      - application/json
+      description: Modifies the details of an existing ward
+      parameters:
+      - description: Ward ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/wardshandler.UpdateWardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Ward updated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid payload or ID parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (Admin only)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Ward not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Update a ward
+      tags:
+      - Wards
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer " followed by your access token.
+    in: header
+    name: Authorization
+    type: apiKey
+  RefreshToken:
+    description: Type your refresh token.
+    in: header
+    name: RefreshToken
+    type: apiKey
 swagger: "2.0"

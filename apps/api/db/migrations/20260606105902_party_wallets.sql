@@ -35,7 +35,7 @@ CREATE TABLE party_wallet_transactions (
   payer_bank_code          VARCHAR(20),
   narration                TEXT,
   transaction_category VARCHAR(50) NOT NULL DEFAULT 'wallet_funding'
-    CHECK (transaction_category IN ('wallet_funding', 'wallet_withdrawal', 'slot_purchase', 'allowance_deposit')),
+    CHECK (transaction_category IN ('wallet_funding', 'wallet_withdrawal', 'slot_purchase', 'allowance_deposit', 'marketing_campaign')),
   -- Full raw webhook payload stored for audit / dispute resolution
   raw_payload              JSONB,
   created_at               TIMESTAMPTZ DEFAULT NOW()

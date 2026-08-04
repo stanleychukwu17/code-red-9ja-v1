@@ -54,11 +54,13 @@ INSERT INTO party_marketing_campaigns (
     type,
     states,
     duration_in_days,
+    start_date,
+    end_date,
     budget,
     amount_spent,
     status
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10
 )
 RETURNING *;
 

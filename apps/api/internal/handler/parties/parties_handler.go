@@ -1047,13 +1047,13 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 
 // CreateMarketingCampaignRequest is the request payload for creating a marketing campaign
 type CreateMarketingCampaignRequest struct {
-	ElectionGroupID int32   `json:"election_group_id"`
-	ElectionID      int32   `json:"election_id"`
-	PlanID          int32   `json:"plan_id"`
-	Type            string  `json:"type"`
-	States          []byte  `json:"states"`
-	DurationInDays  int32   `json:"duration_in_days"`
-	Budget          float64 `json:"budget"`
+	ElectionGroupID int32           `json:"election_group_id"`
+	ElectionID      int32           `json:"election_id"`
+	PlanID          int32           `json:"plan_id"`
+	Type            string          `json:"type"`
+	States          json.RawMessage `json:"states" swaggertype:"array,string"`
+	DurationInDays  int32           `json:"duration_in_days"`
+	Budget          float64         `json:"budget"`
 }
 
 // GetMarketingPlansByType godoc
@@ -1345,6 +1345,48 @@ func (h *Handler) DeletePlan(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Plan deleted successfully", nil)
 }
 
+// PlanResponse is the JSON-friendly representation of a Plan with JSONB fields decoded.
+type PlanResponse struct {
+	ID                   int32                   `json:"id"`
+	Name                 string                  `json:"name"`
+	Description          string                  `json:"description"`
+	Price                pgtype.Numeric          `json:"price"`
+	Type                 queries.MarketingCampaignType `json:"type"`
+	Features             json.RawMessage         `json:"features"`
+	ScopesRecommendation json.RawMessage         `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text             `json:"color_hex"`
+	IsActive             bool                    `json:"is_active"`
+	DisplayOrder         int32                   `json:"display_order"`
+	CreatedAt            pgtype.Timestamptz      `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz      `json:"updated_at"`
+}
+
+// mapPlanToResponse converts a queries.Plan to PlanResponse, decoding the JSONB []byte fields.
+func mapPlanToResponse(p queries.Plan) PlanResponse {
+	features := json.RawMessage(p.Features)
+	if len(features) == 0 {
+		features = json.RawMessage("[]")
+	}
+	scopes := json.RawMessage(p.ScopesRecommendation)
+	if len(scopes) == 0 {
+		scopes = json.RawMessage("[]")
+	}
+	return PlanResponse{
+		ID:                   p.ID,
+		Name:                 p.Name,
+		Description:          p.Description,
+		Price:                p.Price,
+		Type:                 p.Type,
+		Features:             features,
+		ScopesRecommendation: scopes,
+		ColorHex:             p.ColorHex,
+		IsActive:             p.IsActive,
+		DisplayOrder:         p.DisplayOrder,
+		CreatedAt:            p.CreatedAt,
+		UpdatedAt:            p.UpdatedAt,
+	}
+}
+
 // GetPlans godoc
 // @Summary      Get plans
 // @Description  Retrieves marketing plans. Optionally filter by ?type= (e.g. agent-campaign) and ?is_active= (true/false).
@@ -1364,8 +1406,13 @@ func (h *Handler) GetPlans(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	resp := make([]PlanResponse, len(plans))
+	for i, p := range plans {
+		resp[i] = mapPlanToResponse(p)
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Plans retrieved successfully", map[string]interface{}{
-		"plans": plans,
+		"plans": resp,
 	})
 }
 
