@@ -24,7 +24,6 @@ export const assignVerifications = createServerFn({ method: "POST" })
 
       return await handleResponse(response);
     } catch (error: any) {
-      console.log("error", error?.message)
       return { success: false, message: error?.message || "Failed to assign verifications" };
     }
   });
@@ -46,7 +45,6 @@ export const removeVerification = createServerFn({ method: "POST" })
 
       return await handleResponse(response);
     } catch (error: any) {
-      console.log("error", error?.message)
       return { success: false, message: error?.message || "Failed to remove verification" };
     }
   });
