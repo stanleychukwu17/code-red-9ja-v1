@@ -27,8 +27,7 @@ type AuthService interface {
 	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
 	ChangePasswordByEmail(ctx context.Context, email, newPassword string) error
 	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
-	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
-	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
+	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 }
 
@@ -657,6 +656,7 @@ type RegisterCandidatePlaceholderRequest struct {
 	StateOfOrigin  int16  `json:"state_of_origin" validate:"omitempty"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
+	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`
 }
 
 // @Summary Register a new candidate user with placeholder status
@@ -743,6 +743,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		req.Username,
 		req.Gender,
 		req.Avatar,
+		req.AvatarFileId,
 		dob,
 		req.CurrentCountry,
 		req.CurrentState,
@@ -759,18 +760,5 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		"id":      result.UserID,
 		"fake_id": result.FakeID,
 		"user":    result.User,
-	})
-}
-
-// ListAdmins handles requests to list all administrative users
-func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
-	admins, err := h.authService.ListAdmins(r.Context())
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve admins: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Admins retrieved successfully", map[string]interface{}{
-		"admins": admins,
 	})
 }
