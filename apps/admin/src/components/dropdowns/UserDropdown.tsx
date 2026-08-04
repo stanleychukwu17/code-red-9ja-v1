@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteUser } from "#/lib/server/users";
+import { deleteUser, deleteFile } from "#/lib/server/users";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
@@ -131,6 +131,7 @@ export const UserDropdown = ({
         open={openEditDialog}
         onClose={() => setOpenEditDialog(false)}
         user={userDetails}
+        deleteFile={deleteFile}
       />
 
       <UserRoleDialog

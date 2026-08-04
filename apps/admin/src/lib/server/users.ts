@@ -16,7 +16,6 @@ export const getUsersList = createServerFn({ method: "GET" })
       if (data?.party_id) params.append("party_id", String(data.party_id));
       if (data?.search) params.append("search", data.search);
       const qs = params.toString();
-      // console.log("getUsersList qs:", qs, "data:", data);
 
       const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
       const resData = await response.json();
@@ -159,5 +158,25 @@ export const updateUserPhoneNumbers = createServerFn({ method: "POST" })
       return resData;
     } catch (error) {
       return { success: false, message: "Failed to update phone numbers: " + (error as Error).message };
+    }
+  });
+
+// Deletes a file (like user avatar)
+export const deleteFile = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string | number; user_fake_id?: string | number; type?: string }) => data)
+  .handler(async ({ data: { id, user_fake_id, type } }) => {
+    try {
+      const params = new URLSearchParams();
+      if (user_fake_id) params.append("user_fake_id", String(user_fake_id));
+      if (type) params.append("type", type);
+      const qs = params.toString();
+
+      const response = await apiFetch(`${API_URL.deleteFile(id)}${qs ? `?${qs}` : ""}`, {
+        method: "DELETE",
+      });
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to delete file: " + (error as Error).message };
     }
   });

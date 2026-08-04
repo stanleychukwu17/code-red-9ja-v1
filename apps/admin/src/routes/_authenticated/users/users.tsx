@@ -13,7 +13,7 @@ import { USERS_TABS } from "./-data";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
 import { AdminUsersSearchFilterDialog } from "#/components/dialogs/AdminUsersSearchFilterDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getUsersList } from "#/lib/server/users";
+import { getUsersList, deleteFile } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 
@@ -46,7 +46,6 @@ function RouteComponent() {
 
     // queryFn is the function that actually fetches the data
     queryFn: async ({ pageParam }) => {
-      // console.log("SEARCH:", debouncedSearchQuery);
       const res = await getUsersList({
         data: {
           limit: 20,
@@ -54,7 +53,6 @@ function RouteComponent() {
           search: debouncedSearchQuery || undefined,
         },
       });
-      // console.log("RES:", res);
 
       if (res && res.success && res.data) {
         return res;
@@ -162,8 +160,9 @@ function RouteComponent() {
         onClose={() => setIsFormOpen(false)}
         // Refetch the data when a user is successfully added so the table updates
         onSuccess={() => refetch()}
+        deleteFile={deleteFile}
       />
-      <AdminUsersSearchFilterDialog 
+      <AdminUsersSearchFilterDialog
         open={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
       />

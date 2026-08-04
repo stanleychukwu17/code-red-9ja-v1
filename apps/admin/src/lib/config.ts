@@ -142,6 +142,7 @@ export const API_URL = {
   partyById: (id: string | number) => `${api}/parties/${id}`,
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
+  deleteFile: (id: string | number) => `${api}/files/${id}`,
   offices: `${api}/offices`,
   officeById: (id: string | number) => `${api}/offices/${id}`,
   states: `${api}/states`,
@@ -168,7 +169,7 @@ export const API_URL = {
   electionsStateConstituency: `${api}/elections/state-constituency`,
   electionsLga: `${api}/elections/lga`,
   electionsWard: `${api}/elections/ward`,
-  adminUsers: `${api}/admin/users`,
+
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
   manageUserMoreInfo: (id: string | number) => `${api}/admin/users/${id}/more-info`,
   userRoles: (id: string | number) => `${api}/admin/users/${id}/roles`,
