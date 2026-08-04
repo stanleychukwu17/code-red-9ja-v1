@@ -82,7 +82,7 @@ export interface UserFormDialogProps {
   deleteUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   loadUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   getOccupations?: () => Promise<any>;
-  deleteFile?: (args: { data: { id: string | number } }) => Promise<any>;
+  deleteFile?: (args: { data: { id: string | number; user_fake_id?: string | number; type?: string } }) => Promise<any>;
 }
 
 export function UserFormDialog({
@@ -111,7 +111,9 @@ export function UserFormDialog({
 }: UserFormDialogProps) {
   const [avatarUrl, setAvatarUrl] = React.useState("");
   const [uploadedFileId, setUploadedFileId] = React.useState<number | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = React.useState<File | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
+
   const [error, setError] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -141,6 +143,49 @@ export function UserFormDialog({
       // formatted date of birth
       const formattedDob = values.dateOfBirth.split("T")[0];
 
+      let finalAvatarUrl = avatarUrl;
+      let finalFileId = uploadedFileId || (user as any)?.avatar_file_id || undefined;
+
+      if (selectedAvatarFile) {
+        setIsUploading(true);
+        try {
+          // 1. Request a presigned URL from the API for uploading the avatar
+          const uploadRes = await getPresignedUploadURL({
+            data: {
+              original_name: selectedAvatarFile.name,
+              mime_type: selectedAvatarFile.type,
+              file_size: selectedAvatarFile.size,
+              folder: "avatars",
+              is_public: true,
+            },
+          });
+          if (!uploadRes.success || !uploadRes.data) throw new Error(uploadRes.message || "Failed to initiate file upload");
+
+          const { upload_url, public_url, file_id } = uploadRes.data;
+
+          // 2. Upload the file directly to R2 storage via the presigned URL
+          const putRes = await fetch(upload_url, {
+            method: "PUT",
+            headers: { "Content-Type": selectedAvatarFile.type },
+            body: selectedAvatarFile,
+          });
+
+          if (!putRes.ok) {
+            // Revert/reject the file confirmation in the DB if the upload failed
+            await confirmFileUpload({ data: { id: file_id, success: false } });
+            throw new Error("Failed to upload image file to storage");
+          }
+
+          // 3. Confirm successful upload with the backend to finalize the file status
+          await confirmFileUpload({ data: { id: file_id, success: true } });
+          
+          finalAvatarUrl = public_url;
+          finalFileId = file_id;
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
       let res: any;
       // if mode == "update", means updating an existing account, else creating a placeholder account
       if (mode === "update") {
@@ -153,7 +198,8 @@ export function UserFormDialog({
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
             gender: values.gender.toLowerCase(),
-            avatar: avatarUrl,
+            avatar: finalAvatarUrl,
+            avatar_file_id: finalFileId,
             current_country: Number(values.residenceCountryId),
             current_state: Number(values.residenceStateId),
             current_city: values.residenceCityId ? Number(values.residenceCityId) : undefined,
@@ -177,7 +223,8 @@ export function UserFormDialog({
             current_city: values.residenceCityId ? Number(values.residenceCityId) : undefined,
             state_of_origin: Number(values.originStateId),
             party_id: values.partyId ? Number(values.partyId) : undefined,
-            avatar: avatarUrl,
+            avatar: finalAvatarUrl,
+            avatar_file_id: finalFileId,
           },
         });
       }
@@ -329,6 +376,8 @@ export function UserFormDialog({
         form.setFieldValue("email", "");
         form.setFieldValue("password", "");
         setAvatarUrl(user.avatar || "");
+        setUploadedFileId((user as any)?.avatar_file_id || undefined);
+        setSelectedAvatarFile(null);
       } else {
         form.setFieldValue("firstName", "");
         form.setFieldValue("lastName", "");
@@ -345,6 +394,8 @@ export function UserFormDialog({
         form.setFieldValue("email", "");
         form.setFieldValue("password", "");
         setAvatarUrl("");
+        setUploadedFileId(null);
+        setSelectedAvatarFile(null);
       }
       setError(null);
     }
@@ -361,79 +412,43 @@ export function UserFormDialog({
     fileInputRef.current?.click();
   };
 
-  // Handles the profile image upload process:
-  // 1. Converts the selected image to WebP
-  // 2. Fetches a presigned upload URL
-  // 3. Uploads the file to the storage provider
+  // Handles the profile image selection process:
+  // 1. Converts the selected image to WebP for optimization
+  // 2. Saves it in local state (deferred upload until form save)
+  // 3. Generates a local preview URL for immediate UI feedback
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFile = e.target.files?.[0];
     if (!rawFile) return;
 
-    setIsUploading(true);
-    setError(null);
-
     try {
-      // 1. Convert image to WebP format for optimized storage
       const file = await convertToWebP(rawFile);
-
-      // 2. Request a presigned URL from our API to upload directly to cloud storage
-      const res = await getPresignedUploadURL({
-        data: {
-          original_name: file.name,
-          mime_type: file.type,
-          file_size: file.size,
-          folder: "avatars",
-          is_public: true,
-        },
-      });
-
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to initiate file upload");
-      }
-
-      const { upload_url, public_url, file_id } = res.data;
-
-      // 3. Upload the file directly to cloud storage using the presigned URL
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-
-      // 4. Confirm or reject the upload status with our API
-      if (!putRes.ok) {
-        await confirmFileUpload({ data: { id: file_id, success: false } });
-        throw new Error("Failed to upload image file to storage");
-      }
-
-      // If upload successful, confirm with backend
-      await confirmFileUpload({ data: { id: file_id, success: true } });
-
-      // 5. Update the UI with the new avatar URL
-      setAvatarUrl(public_url);
-      setUploadedFileId(file_id);
+      setSelectedAvatarFile(file);
+      setAvatarUrl(URL.createObjectURL(file));
+      setError(null);
     } catch (err: any) {
-      setError(err.message || "An error occurred during file upload");
-    } finally {
-      setIsUploading(false);
+      setError(err.message || "Failed to process image");
     }
   };
 
-  // Delete user's profile image:
   const handleRemoveImage = async () => {
+    if (uploadedFileId && uploadedFileId > 0 && deleteFile) {
+      try {
+        await deleteFile({
+          data: {
+            id: uploadedFileId,
+            user_fake_id: activeUser?.fake_id,
+            type: "user_avatar",
+          }
+        });
+      } catch (err: any) {
+        console.error("Failed to delete file from server:", err);
+      }
+    }
     setAvatarUrl("");
+    setSelectedAvatarFile(null);
+    setUploadedFileId(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
-    }
-
-    // Attempt to delete the orphaned file if it was uploaded during this session
-    if (uploadedFileId && deleteFile) {
-      try {
-        await deleteFile({ data: { id: uploadedFileId } });
-        setUploadedFileId(null);
-      } catch (err) {
-        console.error("Failed to delete orphaned image:", err);
-      }
     }
   };
 

@@ -255,7 +255,7 @@ type Querier interface {
 	// condition becomes true, effectively skipping that filter.
 	// This allows us to use a single dynamic query instead of writing multiple separate queries.
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUsersRow, error)
-	ListUsersWithoutWallet(ctx context.Context) ([]User, error)
+	ListUsersWithoutWallet(ctx context.Context) ([]ListUsersWithoutWalletRow, error)
 	ListVerificationTypes(ctx context.Context) ([]PageVerificationType, error)
 	ListWalletTransactions(ctx context.Context, arg ListWalletTransactionsParams) ([]PartyWalletTransaction, error)
 	MarkFileDeleted(ctx context.Context, id int64) (File, error)
