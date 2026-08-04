@@ -185,29 +185,3 @@ export const registerCandidate = createServerFn({ method: "POST" })
       return { success: false, message: "An unexpected error occurred during candidate registration: " + (error as Error).message };
     }
   });
-
-// Fetches all admin users
-export const getAdminUsers = createServerFn({ method: "GET" })
-  .handler(async () => {
-    try {
-      const { getCookie } = await import("@tanstack/react-start/server");
-      const accessToken = getCookie("access_token");
-      const refreshToken = getCookie("refresh_token");
-      const headers: Record<string, string> = {};
-      if (accessToken) {
-        headers["Authorization"] = `Bearer ${accessToken}`;
-        headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-      }
-
-      const response = await fetch(API_URL.adminUsers, {
-        method: "GET",
-        headers,
-      });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error("Fetch admin users error:", error);
-      return { success: false, message: "An unexpected error occurred during fetching admin users" };
-    }
-  });
