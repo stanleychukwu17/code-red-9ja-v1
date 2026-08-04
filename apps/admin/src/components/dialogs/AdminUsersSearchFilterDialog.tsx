@@ -10,6 +10,10 @@ import { Button } from "@repo/ui/components/button";
 import { useQuery } from "@tanstack/react-query";
 import { getParties } from "#/lib/server/parties";
 import { Loader2 } from "lucide-react";
+import { SelectCountry } from "@repo/ui/components/selects/country-select";
+import { SelectState } from "@repo/ui/components/selects/state-select";
+import { getAllCountries } from "#/lib/server/countries";
+import { getStates } from "#/lib/server/states";
 
 export interface AdminUsersSearchFilterDialogProps {
   open: boolean;
@@ -21,19 +25,40 @@ const ROLES = [
   { label: "Admin", value: "admin" },
   { label: "Party Admin", value: "party_admin" },
   { label: "Super Party Admin", value: "super_party_admin" },
-  { label: "User", value: "user" },
 ];
 
 const STATUSES = [
+  { label: "Just Registered", value: "just_registered" },
+  { label: "Placeholder", value: "placeholder" },
   { label: "Active", value: "active" },
   { label: "Inactive", value: "inactive" },
   { label: "Suspended", value: "suspended" },
+  { label: "Banned", value: "banned" },
+  { label: "Deleted", value: "deleted" },
+];
+
+// Verification types matching DB migration
+const VERIFICATION_TYPES = [
+  { label: "Verified Individual", value: "vip_verified" },
+  { label: "Verified Celebrity", value: "celebrity_verified" },
+  { label: "Verified Political Party", value: "political_party_verified" },
+  { label: "Verified Politician", value: "politician_verified" },
+  { label: "Verified Organization", value: "organization_verified" },
+  { label: "Verified Business", value: "business_verified" },
+  { label: "Verified Party National Official", value: "national_official_verified" },
+  { label: "Verified Party Zonal Official", value: "zonal_official_verified" },
+  { label: "Verified Party State Official", value: "state_official_verified" },
+  { label: "Verified Party LGA Official", value: "lga_official_verified" },
+  { label: "Verified Party Ward Official", value: "ward_official_verified" },
 ];
 
 export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearchFilterDialogProps) {
   const [selectedParties, setSelectedParties] = React.useState<number[]>([]);
   const [selectedRoles, setSelectedRoles] = React.useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>([]);
+  const [selectedVerificationTypes, setSelectedVerificationTypes] = React.useState<string[]>([]);
+  const [selectedCountryId, setSelectedCountryId] = React.useState<string | undefined>(undefined);
+  const [selectedStateIds, setSelectedStateIds] = React.useState<string[]>([]);
 
   const { data: parties, isLoading: isLoadingParties } = useQuery({
     queryKey: ["parties"],
@@ -67,9 +92,26 @@ export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearch
     );
   };
 
+  const toggleVerificationType = (val: string) => {
+    setSelectedVerificationTypes(prev =>
+      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+    );
+  };
+
+  const updateCountry = (item: any) => {
+    setSelectedCountryId(String(item.id));
+    setSelectedStateIds([]);
+  };
+
+  const toggleState = (val: string) => {
+    setSelectedStateIds(prev =>
+      prev.includes(val) ? prev.filter(s => s !== val) : [...prev, val]
+    );
+  };
+
   const handleApply = () => {
     // TODO: Pass these filters back to the parent component when the API supports them
-    console.log("Applying filters:", { selectedParties, selectedRoles, selectedStatuses });
+    console.log("Applying filters:", { selectedParties, selectedRoles, selectedStatuses, selectedVerificationTypes, selectedCountryId, selectedStateIds });
     onClose();
   };
 
@@ -77,6 +119,9 @@ export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearch
     setSelectedParties([]);
     setSelectedRoles([]);
     setSelectedStatuses([]);
+    setSelectedVerificationTypes([]);
+    setSelectedCountryId(undefined);
+    setSelectedStateIds([]);
   };
 
   return (
@@ -95,7 +140,7 @@ export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearch
                 Loading parties...
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3 max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
+              <div className="grid grid-cols-1 gap-3 max-h-50 overflow-y-auto pr-2 custom-scrollbar">
                 {partiesArray.map((party: any) => (
                   <label key={party.id} className="flex items-center gap-3 cursor-pointer group">
                     <div className="shrink-0 flex items-center">
@@ -108,10 +153,10 @@ export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearch
                     </div>
                     <div className="flex items-center gap-2">
                       {party.logo && (
-                        <img 
-                          src={party.logo} 
-                          alt={party.short_name} 
-                          className="size-5 rounded-full object-cover shrink-0" 
+                        <img
+                          src={party.logo}
+                          alt={party.short_name}
+                          className="size-5 rounded-full object-cover shrink-0"
                         />
                       )}
                       <span className="text-[14px] text-c-80 group-hover:text-black transition">
@@ -143,6 +188,54 @@ export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearch
               ))}
             </div>
           </div>
+
+          <div className="h-px bg-[#f0f0f0] w-full" />
+
+          {/* Verification Type Filter */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-c-90 text-[15px]">Verification Type</h4>
+            <div className="flex flex-col gap-3">
+              {VERIFICATION_TYPES.map((vt) => (
+                <label key={vt.value} className="flex items-center gap-3 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    className="size-4.5 rounded border-[#dfdfdf] text-[#00cf79] focus:ring-[#00cf79] cursor-pointer shrink-0"
+                    checked={selectedVerificationTypes.includes(vt.value)}
+                    onChange={() => toggleVerificationType(vt.value)}
+                  />
+                  <span className="text-[14px] text-c-80 group-hover:text-black transition">{vt.label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="h-px bg-[#f0f0f0] w-full" />
+
+          {/* Country Filter */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-c-90 text-[15px]">Residence Country</h4>
+            <SelectCountry
+              selectedId={selectedCountryId}
+              update={updateCountry}
+              fetchCountries={getAllCountries}
+              errorMsg={undefined}
+            />
+          </div>
+
+          <div className="h-px bg-[#f0f0f0] w-full" />
+
+          {/* State Filter */}
+          <div className="space-y-4">
+            <h4 className="font-semibold text-c-90 text-[15px]">Residence State</h4>
+            <SelectState
+              selectedId={selectedStateIds.length > 0 ? selectedStateIds[0] : undefined}
+              update={(item) => toggleState(String(item.id))}
+              countryOriginalId={selectedCountryId ? Number(selectedCountryId) : undefined}
+              fetchStates={getStates}
+              disabled={!selectedCountryId}
+              errorMsg={undefined}
+            />
+          </div>
+
 
           <div className="h-px bg-[#f0f0f0] w-full" />
 
