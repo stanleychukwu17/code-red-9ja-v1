@@ -90,36 +90,28 @@ func NewAuthService(
 }
 
 type LoginUser struct {
-	ID                int64                                    `json:"id"`
-	FakeID            int64                                    `json:"fake_id"`
-	Email             string                                   `json:"email"`
-	Username          string                                   `json:"username"`
-	FirstName         string                                   `json:"first_name"`
-	LastName          string                                   `json:"last_name"`
-	MiddleName        string                                   `json:"middle_name"`
-	Gender            string                                   `json:"gender"`
-	DateOfBirth       string                                   `json:"date_of_birth"`
-	Avatar            string                                   `json:"avatar"`
-	Phone             string                                   `json:"phone"`
-	Roles             []string                                 `json:"roles"`
-	AccountStatus     string                                   `json:"account_status"`
-	PartyID           int16                                    `json:"party_id,omitempty"`
-	PollingUnitID     int32                                    `json:"polling_unit_id,omitempty"`
-	CurrentCountry    int16                                    `json:"current_country"`
-	CurrentState      int16                                    `json:"current_state"`
-	CurrentLga        int32                                    `json:"current_lga"`
-	CurrentWard       int32                                    `json:"current_ward"`
-	CurrentCity       int32                                    `json:"current_city"`
-	Address           string                                   `json:"address"`
-	EducationalStatus string                                   `json:"educational_status"`
-	HighestDegree     string                                   `json:"highest_degree"`
-	GraduationYear    string                                   `json:"graduation_year"`
-	SchoolName        string                                   `json:"school_name"`
-	VotersCardImage   string                                   `json:"voters_card_image"`
-	Religion          string                                   `json:"religion"`
-	MaritalStatus     string                                   `json:"marital_status"`
-	EducationLevel    string                                   `json:"education_level"`
-	Party             *queries.PartyBasicInfoWithVerifications `json:"party,omitempty"`
+	ID              int64                                    `json:"id"`
+	FakeID          int64                                    `json:"fake_id"`
+	Email           string                                   `json:"email"`
+	Username        string                                   `json:"username"`
+	FirstName       string                                   `json:"first_name"`
+	LastName        string                                   `json:"last_name"`
+	MiddleName      string                                   `json:"middle_name"`
+	Gender          string                                   `json:"gender"`
+	DateOfBirth     string                                   `json:"date_of_birth"`
+	Avatar          string                                   `json:"avatar"`
+	Phone           string                                   `json:"phone"`
+	Roles           []string                                 `json:"roles"`
+	AccountStatus   string                                   `json:"account_status"`
+	PartyID         int16                                    `json:"party_id,omitempty"`
+	PollingUnitID   int32                                    `json:"polling_unit_id,omitempty"`
+	CurrentCountry  int16                                    `json:"current_country"`
+	CurrentState    int16                                    `json:"current_state"`
+	CurrentLga      int32                                    `json:"current_lga"`
+	CurrentWard     int32                                    `json:"current_ward"`
+	CurrentCity     int32                                    `json:"current_city"`
+	VotersCardImage string                                   `json:"voters_card_image"`
+	Party           *queries.PartyBasicInfoWithVerifications `json:"party,omitempty"`
 }
 type LoginResult struct {
 	AccessToken  string
@@ -313,16 +305,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		},
 	}
 
-	profile, _ := s.usersService.GetMoreInfoAboutThisUser(ctx, user.ID)
-	loginResult.User.EducationalStatus = profile.EducationalStatus.String
-	loginResult.User.HighestDegree = profile.HighestDegree.String
-	loginResult.User.GraduationYear = profile.GraduationYear.String
-	loginResult.User.SchoolName = profile.SchoolName.String
-	loginResult.User.Religion = profile.Religion.String
-	loginResult.User.MaritalStatus = profile.MaritalStatus.String
-	loginResult.User.EducationLevel = profile.EducationLevel.String
-	loginResult.User.Address = profile.Address.String
-
 	return loginResult, nil
 }
 
@@ -332,6 +314,12 @@ type RefreshResult struct {
 	User         LoginUser `json:"user"`
 }
 
+type TokenSessionData struct {
+	FakeID    int64  `json:"FakeID"`
+	SessionID string `json:"SessionID"`
+	TimeAdded string `json:"TimeAdded"`
+}
+
 // Refresh validates the refresh token and returns a new set of tokens
 func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (RefreshResult, error) {
 	// init logger
@@ -339,51 +327,73 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 
 	// hash the refresh token
 	hashed := utils.HashToken(refreshToken)
-	pipe := s.rdb.TxPipeline()
 
 	// use token to fetch jwt session details from redis
-	RedisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, hashed)
-	sessionDts, err := s.rdb.Get(ctx, RedisTokenKey).Result()
+	currentRedisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, hashed)
+	sessionDts, err := s.rdb.Get(ctx, currentRedisTokenKey).Result()
 	if err != nil {
 		return RefreshResult{}, errors.New("invalid or expired refresh token")
 	}
 
 	// unmarshal the session details
-	var sessionData map[string]any
+	var sessionData TokenSessionData
 	err = json.Unmarshal([]byte(sessionDts), &sessionData)
 	if err != nil {
 		return RefreshResult{}, errors.New("having issues with unpacking token details")
 	}
 
-	// get some info from the session details
-	userFid := int64(sessionData["FakeID"].(float64))
-	sessionID := sessionData["SessionID"].(string)
-	timeAdded := sessionData["TimeAdded"].(string)
-	redisSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+	// Parse the RFC3339 string back into a time.Time
+	parsedTime, err := time.Parse(time.RFC3339, sessionData.TimeAdded)
+	if err != nil {
+		return RefreshResult{}, fmt.Errorf("error parsing time: %v", err)
+	}
 
-	// get the user details using the userFid
-	user, err := s.GetUserDetailsByFakeID(ctx, userFid)
+	// will only acquire lock after 10 minutes of the token being generated
+	// this is to avoid concurrent token generation and speed up the process
+	// this is a grace period for the token rotation
+	isGracePeriod := time.Since(parsedTime) < 10*time.Minute
+
+	// acquire lock before expensive DB queries if time expired
+	if !isGracePeriod {
+		// Redis key for user login lock
+		lockKey := fmt.Sprintf("%s%d", db.RedisJwtUserLoginLocked, sessionData.FakeID)
+
+		// acquire lock
+		result, err := s.rdb.SetArgs(ctx, lockKey, "yes", redis.SetArgs{
+			TTL:  10 * time.Second,
+			Mode: "NX", // only set if not exists
+		}).Result()
+
+		// check if lock was acquired
+		if errors.Is(err, redis.Nil) {
+			return RefreshResult{}, errors.New("token generation in progress")
+		}
+
+		// check for other errors
+		if err != nil {
+			return RefreshResult{}, err
+		}
+
+		// check if lock was acquired
+		if result != "OK" {
+			return RefreshResult{}, errors.New("token generation in progress")
+		}
+
+		// release the lock after successful re-assignment of tokens
+		defer s.rdb.Del(ctx, lockKey)
+	}
+
+	// get the user details using the FakeID
+	user, err := s.GetUserDetailsByFakeID(ctx, sessionData.FakeID)
 	if err != nil {
 		return RefreshResult{}, errors.New("user not found")
 	}
 
-	// destructure some of the user info
-	accountStatus := user.AccountStatus.String
-	username := user.Username.String
-
-	// party details
-	var partyObj *queries.PartyBasicInfoWithVerifications
-	if user.PartyID.Valid {
-		partyObj = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
-	}
+	// get user party id
 	var userPartyID int16
 	if user.PartyID.Valid {
 		userPartyID = user.PartyID.Int16
 	}
-
-	// user role details
-	userRolesData, _ := s.usersService.GetUserRoles(ctx, user.ID)
-	userRoleCodes := userRolesData.RolesCode
 
 	// user details
 	userDetails := LoginUser{
@@ -397,7 +407,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Gender:          user.Gender.String,
 		Avatar:          user.Avatar.String,
 		Phone:           user.Phone.String,
-		Roles:           userRoleCodes,
+		Roles:           user.Roles.RolesCode,
 		AccountStatus:   user.AccountStatus.String,
 		PartyID:         userPartyID,
 		PollingUnitID:   user.PollingUnitID.Int32,
@@ -407,78 +417,34 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		CurrentWard:     user.CurrentWard.Int32,
 		CurrentCity:     user.CurrentCity.Int32,
 		VotersCardImage: user.VotersCardImage.String,
-		Party:           partyObj,
+		Party:           user.PartyBasicInfo,
 	}
 
-	profile, _ := s.usersService.GetMoreInfoAboutThisUser(ctx, user.ID)
-	userDetails.EducationalStatus = profile.EducationalStatus.String
-	userDetails.HighestDegree = profile.HighestDegree.String
-	userDetails.GraduationYear = profile.GraduationYear.String
-	userDetails.SchoolName = profile.SchoolName.String
-	userDetails.Religion = profile.Religion.String
-	userDetails.MaritalStatus = profile.MaritalStatus.String
-	userDetails.EducationLevel = profile.EducationLevel.String
-	userDetails.Address = profile.Address.String
-
-	// Parse the RFC3339 string back into a time.Time
-	parsedTime, err := time.Parse(time.RFC3339, timeAdded)
-	if err != nil {
-		return RefreshResult{}, fmt.Errorf("error parsing time: %v", err)
-	}
-
-	// Compare with current time
-	if time.Since(parsedTime) < 10*time.Minute {
+	// if time is still within the grace period, return the user details
+	if isGracePeriod {
 		return RefreshResult{
 			User: userDetails,
 		}, nil
 	}
 
-	// check if generation of accessToken and refreshToken is locked
-	lockKey := fmt.Sprintf("%s%d", db.RedisJwtUserLoginLocked, userFid)
-	isLocked, _ := s.rdb.Get(ctx, lockKey).Result()
-	if isLocked == "yes" {
-		return RefreshResult{}, errors.New("token generation in progress")
-	}
-
-	// lock generation of new keys
-	result, err := s.rdb.SetArgs(ctx, lockKey, "yes", redis.SetArgs{
-		TTL:  10 * time.Second,
-		Mode: "NX",
-	}).Result()
-	if err != nil {
-		return RefreshResult{}, err
-	}
-	if result != "OK" {
-		return RefreshResult{}, errors.New("token generation in progress")
-	}
-
-	// unlock generation of new keys after 10 seconds
-	defer s.rdb.Del(ctx, lockKey)
-
-	// delete old token (rotation)
-	s.rdb.Del(ctx, RedisTokenKey)            // deletes the token
-	s.rdb.SRem(ctx, redisSessionKey, hashed) // deletes the token from the list of session tokens
-
 	// Verify account status
+	accountStatus := user.AccountStatus.String
 	if accountStatus == "suspended" || accountStatus == "banned" || accountStatus == "deleted" || accountStatus == "inactive" {
 		return RefreshResult{}, errors.New("your account is not active")
 	}
+	if accountStatus == "placeholder" {
+		return RefreshResult{}, errors.New("Placeholder account cannot be logged in")
+	}
 
 	// update the time of this new accessToken generated
-	loc, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
-	now := time.Now().In(loc)
-	sessionData["TimeAdded"] = now.Format(time.RFC3339)
+	now := time.Now().UTC()
+	sessionData.TimeAdded = now.Format(time.RFC3339)
 
 	//convert to json
 	jsonSessionData, _ := json.Marshal(sessionData)
 
-	var partyID int16
-	if user.PartyID.Valid {
-		partyID = user.PartyID.Int16
-	}
-
 	// Generate a new Access Token
-	newAccessToken, err := utils.GenerateToken(user.ID, userFid, username, userRoleCodes, s.jwtSecret, s.jwtAccessExp, partyID)
+	newAccessToken, err := utils.GenerateToken(user.ID, sessionData.FakeID, user.Username.String, user.Roles.RolesCode, s.jwtSecret, s.jwtAccessExp, userPartyID)
 	if err != nil {
 		return RefreshResult{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
@@ -489,13 +455,21 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		return RefreshResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
 	}
 
+	// Redis session key
+	redisSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionData.SessionID)
+	pipe := s.rdb.TxPipeline()
+
+	// expire old token (rotation grace period) and cleanup session tokens
+	pipe.Expire(ctx, currentRedisTokenKey, 1*time.Minute) // keeps the token for 1 minute for concurrent requests
+	pipe.SRem(ctx, redisSessionKey, hashed)               // deletes the token from the list of session tokens
+
 	// Store the new refresh token, but we use the hashed string as the key
 	newRedisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, refresh.HashedToken)
 	pipe.Set(ctx, newRedisTokenKey, jsonSessionData, s.jwtRefreshExp)
 
 	// add the new refresh token to the session SET
 	pipe.SAdd(ctx, redisSessionKey, refresh.HashedToken)
-	pipe.Expire(ctx, redisSessionKey, s.jwtRefreshExp)
+	pipe.Expire(ctx, redisSessionKey, s.jwtRefreshExp) // let the whole set expire in s.jwtRefreshExp
 
 	// execute the pipeline
 	_, err = pipe.Exec(ctx)
@@ -505,16 +479,14 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	}
 
 	// logs token refreshed successfully
-	log.Info(logger.EventTokenRefreshSuccess, "user_id", userFid)
+	log.Info(logger.EventTokenRefreshSuccess, "user_id", sessionData.FakeID)
 
 	// set the response data
-	response := RefreshResult{
+	return RefreshResult{
 		AccessToken:  newAccessToken,
 		RefreshToken: refresh.RandomString,
 		User:         userDetails,
-	}
-
-	return response, nil
+	}, nil
 }
 
 // Logout invalidates the refresh token by removing the session from Redis
@@ -1078,6 +1050,7 @@ func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID strin
 func (s *AuthService) RegisterCandidatePlaceholder(
 	ctx context.Context,
 	email, password, firstName, lastName, middleName, username, gender, avatar string,
+	avatarFileId *int64,
 	dob time.Time,
 	countryID, stateID int16,
 	currentCity int32,
@@ -1096,6 +1069,12 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		return RegisterResult{}, errors.New("email already exists")
 	}
 
+	// re-assert the avatar_file_id to pgtype
+	avatarFileIdPg := pgtype.Int8{Valid: false}
+	if avatarFileId != nil {
+		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
+	}
+
 	params := queries.CreateCandidatePlaceholderParams{
 		Email:          pgtype.Text{String: email, Valid: email != ""},
 		PasswordHash:   string(hashedPassword),
@@ -1110,6 +1089,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		CurrentCity:    pgtype.Int4{Int32: currentCity, Valid: currentCity != 0},
 		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		AvatarFileID:   avatarFileIdPg,
 	}
 
 	// creates the user's new account in our database
@@ -1117,6 +1097,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	if err != nil {
 		return RegisterResult{}, err
 	}
+
 	// generate a fake_id using the user_id and update the user fake_id
 	fakeID := utils.GenerateFakeID(userID)
 	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: userID, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
@@ -1145,9 +1126,4 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	}
 
 	return RegisterResult{UserID: userID, FakeID: fakeID, User: &user}, nil
-}
-
-// ListAdmins fetches all administrative users from the database
-func (s *AuthService) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
-	return s.queries.ListAdmins(ctx)
 }
