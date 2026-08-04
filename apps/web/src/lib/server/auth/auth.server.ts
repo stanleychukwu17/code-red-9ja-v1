@@ -76,53 +76,63 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
 
 // Refreshes the user's access token by sending a POST request to the server with the user's refresh token.
 export const refreshUserTokenImpl = createServerOnlyFn(async () => {
-  // Get the refresh token from the cookies
-  const refreshToken = getCookie("refresh_token");
+  try {
+    // Get the refresh token from the cookies
+    const refreshToken = getCookie("refresh_token");
 
-  // If no refresh token is found, return an error
-  if (!refreshToken) {
-    return respondError("No refresh token found");
-  }
-
-  // Calls the API to refresh the user token
-  const response = await apiFetch(API_URL.auth.refresh, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ refreshToken }),
-  });
-
-  const result = await response.json();
-
-  // If the refresh is successful, set the new access and refresh tokens in the cookies and delete them from the result
-  if (result.success) {
-    if (result.data?.refreshToken && result.data?.accessToken) {
-      setAuthCookies({ refreshToken: result.data.refreshToken, accessToken: result.data.accessToken });
-      delete result.data.refreshToken;
-      delete result.data.accessToken;
+    // If no refresh token is found, return an error
+    if (!refreshToken) {
+      return { status: "error", message: "No refresh token found" };
     }
 
-    // If the result has a user, set the user details cookie
-    if (result.data?.user) {
-      setUserDetailsCookie(result.data.user)
-    }
-  } else {
-    // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
-    const logOutConditions = [
-      "invalid or expired refresh token",
-      "user not found",
-      "your account is not active"
-    ]
+    // Calls the API to refresh the user token
+    const response = await apiFetch(API_URL.auth.refresh, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refreshToken }),
+    });
 
-    if (logOutConditions.includes(result?.message)) {
-      console.log("cleared cookies because of this result", result)
-      clearAuthCookies();
+    const result = await response.json();
+
+    // If the refresh is successful, set the new access and refresh tokens in the cookies
+    if (result.success && result.data) {
+      const { accessToken, refreshToken: newRefreshToken, user } = result.data;
+      if (newRefreshToken && accessToken) {
+        setAuthCookies({ refreshToken: newRefreshToken, accessToken });
+      }
+
+      // If the result has a user, set the user details cookie
+      if (user) {
+        setUserDetailsCookie(user);
+      }
+      return { status: "success", user };
     } else {
-      console.log("other errors for token error", result)
-    }
-  }
+      // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
+      const logOutConditions = [
+        "invalid or expired refresh token",
+        "user not found",
+        "your account is not active",
+      ];
 
-  return respondSuccess(result);
-})
+      if (logOutConditions.includes(result?.message)) {
+        console.log("cleared cookies because of this result", result);
+        clearAuthCookies();
+      } else {
+        console.log("other errors for token error", result);
+      }
+
+      return {
+        status: "error",
+        message: result?.message || "Failed to refresh token",
+      };
+    }
+  } catch (error) {
+    return {
+      status: "error",
+      message: "Connection error. Please try again later. " + (error as Error)?.message,
+    };
+  }
+});
 
 // Checks if a refresh token exists in the cookies
 export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {

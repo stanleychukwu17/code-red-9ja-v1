@@ -94,45 +94,46 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
     });
 
     const result = await response.json();
-    // console.log("from refresh", result)
 
-    // If the refresh is successful, set the new access and refresh tokens in the cookies and delete them from the result
+    // If the refresh is successful, set the new access and refresh tokens in the cookies
     if (result.success && result.data) {
-      const { refreshToken: newRefreshToken, accessToken: newAccessToken, user } = result.data;
-      if (newRefreshToken && newAccessToken) {
-        setAuthCookies({ refreshToken: newRefreshToken, accessToken: newAccessToken });
-        delete result.data.refreshToken;
-        delete result.data.accessToken;
+      const { accessToken, refreshToken: newRefreshToken, user } = result.data;
+      if (newRefreshToken && accessToken) {
+        setAuthCookies({ refreshToken: newRefreshToken, accessToken });
       }
 
       // If the result has a user, set the user details cookie
       if (user) {
         setUserDetailsCookie(user);
       }
+      return { status: "success", user };
     } else {
       // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
       const logOutConditions = [
         "invalid or expired refresh token",
         "user not found",
-        "your account is not active"
-      ]
+        "your account is not active",
+      ];
 
       if (logOutConditions.includes(result?.message)) {
-        console.log("cleared cookies because of this result", result)
+        console.log("cleared cookies because of this result", result);
         clearAuthCookies();
       } else {
-        console.log("other errors for token error", result)
+        console.log("other errors for token error", result);
       }
-    }
 
-    return result;
+      return {
+        status: "error",
+        message: result?.message || "Failed to refresh token",
+      };
+    }
   } catch (error) {
     return {
       status: "error",
       message: "Connection error. Please try again later. " + (error as Error)?.message,
     };
   }
-})
+});
 
 // Checks if a refresh token exists in the cookies
 export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {

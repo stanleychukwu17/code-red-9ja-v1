@@ -138,6 +138,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       } else {
         console.log("other errors for token error", result);
       }
+
       return {
         status: "error",
         message: result?.message || "Failed to refresh token",

@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useAppDispatch } from "#/redux/hooks";
 import { refreshUserToken } from "#/lib/server/auth/auth";
 import { updateAuthState } from "#/redux/slice/authSlice";
+import { useQuery } from "@tanstack/react-query";
 
 // This component is used to restore the auth session on page refresh,
 // It will automatically refresh the accessToken and refreshToken every 14 minutes
@@ -10,30 +10,21 @@ import { updateAuthState } from "#/redux/slice/authSlice";
 export default function LoadAuthSession() {
   const dispatch = useAppDispatch();
 
-  const { isError } = useQuery({
+  const { data: response, error } = useQuery({
     queryKey: ["authSession"],
-    queryFn: async () => {
-      const response = await refreshUserToken();
-      if (response.success && response.data?.user) {
-        dispatch(updateAuthState({ user: response.data.user }));
-        return response.data.user;
-      }
-      throw new Error(response.message || "Failed to refresh token");
-    },
-    refetchInterval: 14 * 60 * 1000,
-    retry: false,
-    refetchOnWindowFocus: false,
+    queryFn: refreshUserToken,
+    refetchInterval: 14 * 60 * 1000, // 14minutes interval since the jwt token expire in 15mins
   });
 
   useEffect(() => {
     dispatch(updateAuthState({ userHydrated: true }));
-  }, [dispatch]);
 
-  useEffect(() => {
-    if (isError) {
+    if (response?.status === "success" && response.user) {
+      dispatch(updateAuthState({ user: response.user }));
+    } else if (error || response?.status === "error") {
       dispatch(updateAuthState({ user: null }));
     }
-  }, [isError, dispatch]);
+  }, [response, error, dispatch]);
 
   return null;
 }
