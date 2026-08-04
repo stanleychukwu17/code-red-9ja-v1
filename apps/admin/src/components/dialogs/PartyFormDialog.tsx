@@ -120,7 +120,6 @@ export function PartyFormDialog({
 
       setLogoUrl(public_url);
     } catch (err: any) {
-      console.error(err);
       setError(err.message || "An error occurred during file upload");
     } finally {
       setIsUploading(false);
