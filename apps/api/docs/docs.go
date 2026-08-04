@@ -9113,6 +9113,9 @@ const docTemplate = `{
                 "avatar": {
                     "type": "string"
                 },
+                "avatar_file_id": {
+                    "type": "integer"
+                },
                 "current_city": {
                     "type": "integer"
                 },
@@ -10830,6 +10833,9 @@ const docTemplate = `{
                 "avatar": {
                     "$ref": "#/definitions/pgtype.Text"
                 },
+                "avatar_file_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
                 "city_name": {
                     "type": "string"
                 },
@@ -11364,6 +11370,9 @@ const docTemplate = `{
             "properties": {
                 "avatar": {
                     "type": "string"
+                },
+                "avatar_file_id": {
+                    "type": "integer"
                 },
                 "current_city": {
                     "type": "integer"

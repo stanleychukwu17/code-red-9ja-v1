@@ -9107,6 +9107,9 @@
                 "avatar": {
                     "type": "string"
                 },
+                "avatar_file_id": {
+                    "type": "integer"
+                },
                 "current_city": {
                     "type": "integer"
                 },
@@ -10824,6 +10827,9 @@
                 "avatar": {
                     "$ref": "#/definitions/pgtype.Text"
                 },
+                "avatar_file_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
                 "city_name": {
                     "type": "string"
                 },
@@ -11358,6 +11364,9 @@
             "properties": {
                 "avatar": {
                     "type": "string"
+                },
+                "avatar_file_id": {
+                    "type": "integer"
                 },
                 "current_city": {
                     "type": "integer"

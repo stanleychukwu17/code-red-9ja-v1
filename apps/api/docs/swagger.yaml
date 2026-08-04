@@ -147,6 +147,8 @@ definitions:
     properties:
       avatar:
         type: string
+      avatar_file_id:
+        type: integer
       current_city:
         type: integer
       current_country:
@@ -1298,6 +1300,8 @@ definitions:
         $ref: '#/definitions/pgtype.Text'
       avatar:
         $ref: '#/definitions/pgtype.Text'
+      avatar_file_id:
+        $ref: '#/definitions/pgtype.Int8'
       city_name:
         type: string
       country_name:
@@ -1643,6 +1647,8 @@ definitions:
     properties:
       avatar:
         type: string
+      avatar_file_id:
+        type: integer
       current_city:
         type: integer
       current_country:
