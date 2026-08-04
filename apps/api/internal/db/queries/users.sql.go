@@ -19,10 +19,11 @@ SET first_name = $2,
     username = $5,
     gender = $6,
     avatar = $7,
-    current_country = $8,
-    current_state = $9,
-    current_city = $10,
-    state_of_origin = $11,
+    avatar_file_id = $8,
+    current_country = $9,
+    current_state = $10,
+    current_city = $11,
+    state_of_origin = $12,
     updated_at = NOW()
 WHERE id = $1
 `
@@ -35,6 +36,7 @@ type AdminUpdateUserParams struct {
 	Username       pgtype.Text `json:"username"`
 	Gender         pgtype.Text `json:"gender"`
 	Avatar         pgtype.Text `json:"avatar"`
+	AvatarFileID   pgtype.Int8 `json:"avatar_file_id"`
 	CurrentCountry int16       `json:"current_country"`
 	CurrentState   int16       `json:"current_state"`
 	CurrentCity    pgtype.Int4 `json:"current_city"`
@@ -50,6 +52,7 @@ func (q *Queries) AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams
 		arg.Username,
 		arg.Gender,
 		arg.Avatar,
+		arg.AvatarFileID,
 		arg.CurrentCountry,
 		arg.CurrentState,
 		arg.CurrentCity,
@@ -85,9 +88,9 @@ const createCandidatePlaceholder = `-- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
   email, password_hash, username, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_city, state_of_origin,
-  party_id, avatar, account_status
+  party_id, avatar, avatar_file_id, account_status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'placeholder')
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'placeholder')
 RETURNING id
 `
 
@@ -106,6 +109,7 @@ type CreateCandidatePlaceholderParams struct {
 	StateOfOrigin  pgtype.Int2 `json:"state_of_origin"`
 	PartyID        pgtype.Int2 `json:"party_id"`
 	Avatar         pgtype.Text `json:"avatar"`
+	AvatarFileID   pgtype.Int8 `json:"avatar_file_id"`
 }
 
 func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCandidatePlaceholderParams) (int64, error) {
@@ -124,6 +128,7 @@ func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCand
 		arg.StateOfOrigin,
 		arg.PartyID,
 		arg.Avatar,
+		arg.AvatarFileID,
 	)
 	var id int64
 	err := row.Scan(&id)
@@ -541,7 +546,7 @@ func (q *Queries) GetUserBankAccountsByUserID(ctx context.Context, userID int64)
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT id, fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
+SELECT id, fake_id, email, avatar, avatar_file_id, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, referral_code, referred_by_code, account_status, created_at, updated_at FROM users
 WHERE fake_id = $1 LIMIT 1
 `
 
@@ -553,6 +558,7 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (User
 		&i.FakeID,
 		&i.Email,
 		&i.Avatar,
+		&i.AvatarFileID,
 		&i.Phone,
 		&i.Username,
 		&i.PasswordHash,
@@ -683,69 +689,6 @@ func (q *Queries) GetUserVerification(ctx context.Context, userID int64) (UserVe
 		&i.UpdatedAt,
 	)
 	return i, err
-}
-
-const listAdmins = `-- name: ListAdmins :many
-SELECT u.id, u.fake_id, u.email, u.phone, u.username, u.first_name, u.last_name, u.gender, u.date_of_birth, u.current_country, u.current_state, u.current_city, u.account_status, u.created_at, u.updated_at
-FROM users u
-JOIN user_roles ur ON u.id = ur.user_id
-JOIN roles r ON ur.role_id = r.id
-WHERE r.code = 'admin'
-ORDER BY u.id DESC
-`
-
-type ListAdminsRow struct {
-	ID             int64              `json:"id"`
-	FakeID         pgtype.Int8        `json:"fake_id"`
-	Email          pgtype.Text        `json:"email"`
-	Phone          pgtype.Text        `json:"phone"`
-	Username       pgtype.Text        `json:"username"`
-	FirstName      pgtype.Text        `json:"first_name"`
-	LastName       pgtype.Text        `json:"last_name"`
-	Gender         pgtype.Text        `json:"gender"`
-	DateOfBirth    pgtype.Date        `json:"date_of_birth"`
-	CurrentCountry int16              `json:"current_country"`
-	CurrentState   int16              `json:"current_state"`
-	CurrentCity    pgtype.Int4        `json:"current_city"`
-	AccountStatus  pgtype.Text        `json:"account_status"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
-}
-
-func (q *Queries) ListAdmins(ctx context.Context) ([]ListAdminsRow, error) {
-	rows, err := q.db.Query(ctx, listAdmins)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ListAdminsRow
-	for rows.Next() {
-		var i ListAdminsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.FakeID,
-			&i.Email,
-			&i.Phone,
-			&i.Username,
-			&i.FirstName,
-			&i.LastName,
-			&i.Gender,
-			&i.DateOfBirth,
-			&i.CurrentCountry,
-			&i.CurrentState,
-			&i.CurrentCity,
-			&i.AccountStatus,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const listUsers = `-- name: ListUsers :many
@@ -998,17 +941,19 @@ func (q *Queries) UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAge
 const updateUserAvatar = `-- name: UpdateUserAvatar :exec
 UPDATE users
 SET avatar = $2,
+    avatar_file_id = $3,
     updated_at = NOW()
 WHERE id = $1
 `
 
 type UpdateUserAvatarParams struct {
-	ID     int64       `json:"id"`
-	Avatar pgtype.Text `json:"avatar"`
+	ID           int64       `json:"id"`
+	Avatar       pgtype.Text `json:"avatar"`
+	AvatarFileID pgtype.Int8 `json:"avatar_file_id"`
 }
 
 func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error {
-	_, err := q.db.Exec(ctx, updateUserAvatar, arg.ID, arg.Avatar)
+	_, err := q.db.Exec(ctx, updateUserAvatar, arg.ID, arg.Avatar, arg.AvatarFileID)
 	return err
 }
 
@@ -1103,9 +1048,10 @@ SET first_name = $2,
     middle_name = $4,
     gender = $5,
     avatar = $6,
-    current_country = $7,
-    current_state = $8,
-    current_city = $9,
+    avatar_file_id = $7,
+    current_country = $8,
+    current_state = $9,
+    current_city = $10,
     updated_at = NOW()
 WHERE id = $1
 `
@@ -1117,6 +1063,7 @@ type UpdateUserProfileParams struct {
 	MiddleName     pgtype.Text `json:"middle_name"`
 	Gender         pgtype.Text `json:"gender"`
 	Avatar         pgtype.Text `json:"avatar"`
+	AvatarFileID   pgtype.Int8 `json:"avatar_file_id"`
 	CurrentCountry int16       `json:"current_country"`
 	CurrentState   int16       `json:"current_state"`
 	CurrentCity    pgtype.Int4 `json:"current_city"`
@@ -1130,6 +1077,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		arg.MiddleName,
 		arg.Gender,
 		arg.Avatar,
+		arg.AvatarFileID,
 		arg.CurrentCountry,
 		arg.CurrentState,
 		arg.CurrentCity,

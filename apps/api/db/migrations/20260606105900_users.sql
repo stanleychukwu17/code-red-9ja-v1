@@ -6,6 +6,7 @@ CREATE TABLE users (
   fake_id BIGINT UNIQUE,
   email VARCHAR(255) UNIQUE,
   avatar VARCHAR(1000),
+  avatar_file_id BIGINT,
   phone VARCHAR(25) UNIQUE,
   username VARCHAR(30) UNIQUE,
   password_hash VARCHAR(100) NOT NULL,

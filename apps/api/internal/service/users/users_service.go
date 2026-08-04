@@ -343,7 +343,12 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 }
 
 // UpdateUserProfile updates basic user profile details and invalidates the user info cache.
-func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error {
+func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error {
+	avatarFileIdPg := pgtype.Int8{Valid: false}
+	if avatarFileId != nil {
+		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
+	}
+
 	err := s.queries.UpdateUserProfile(ctx, queries.UpdateUserProfileParams{
 		ID:             id,
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
@@ -351,6 +356,7 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
 		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		AvatarFileID:   avatarFileIdPg,
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
@@ -361,12 +367,6 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 
 	// Invalidate the cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
-
-	// Remove the uploaded avatar from pending_uploads if an avatar was provided, so it doesn't get cleaned up
-	if avatar != "" {
-		_ = s.rdb.ZRem(ctx, "pending_uploads", avatar).Err()
-	}
-
 	return nil
 }
 
@@ -424,7 +424,12 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 }
 
 // AdminUpdateUser allows admins to perform a comprehensive update of user details.
-func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
+func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
+	avatarFileIdPg := pgtype.Int8{Valid: false}
+	if avatarFileId != nil {
+		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
+	}
+
 	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
 		ID:             id,
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
@@ -433,6 +438,7 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 		Username:       pgtype.Text{String: username, Valid: username != ""},
 		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		AvatarFileID:   avatarFileIdPg,
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},

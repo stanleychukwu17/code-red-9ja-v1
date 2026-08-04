@@ -995,6 +995,7 @@ type User struct {
 	FakeID          pgtype.Int8        `json:"fake_id"`
 	Email           pgtype.Text        `json:"email"`
 	Avatar          pgtype.Text        `json:"avatar"`
+	AvatarFileID    pgtype.Int8        `json:"avatar_file_id"`
 	Phone           pgtype.Text        `json:"phone"`
 	Username        pgtype.Text        `json:"username"`
 	PasswordHash    string             `json:"password_hash"`
