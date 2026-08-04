@@ -178,7 +178,7 @@ export function PartyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
         <DialogHeader
           title={mode === "update" ? "Edit Party" : "Create Party"}
         />
@@ -310,7 +310,7 @@ export function PartyFormDialog({
                     type="button"
                     disabled={isUploading}
                     onClick={handleUploadClick}
-                    className="flex h-11 items-center gap-2 rounded-[12px] bg-[#1a1a1a] hover:bg-[#000] disabled:bg-[#ccc] disabled:cursor-not-allowed px-4 text-[15px] font-semibold text-white transition cursor-pointer"
+                    className="flex h-11 items-center gap-2 rounded-12 bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] disabled:cursor-not-allowed px-4 text-[15px] font-semibold text-white transition cursor-pointer"
                   >
                     <Plus className="size-5" />
                     <span>{isUploading ? "Uploading..." : "Upload image"}</span>
@@ -319,7 +319,7 @@ export function PartyFormDialog({
                     <button
                       type="button"
                       onClick={handleRemoveImage}
-                      className="flex h-11 items-center rounded-[12px] border border-[#dfdfdf] px-4 text-[15px] font-semibold text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
+                      className="flex h-11 items-center rounded-12 border border-[#dfdfdf] px-4 text-[15px] font-semibold text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
                     >
                       Remove image
                     </button>
