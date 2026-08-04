@@ -266,6 +266,7 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 		Logo:         logo,
 		DisplayOrder: displayOrder,
 	})
+
 	return party, err
 }
 
