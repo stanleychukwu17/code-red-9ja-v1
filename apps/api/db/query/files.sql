@@ -30,6 +30,8 @@ SET
   uploaded_at = CASE WHEN sqlc.arg(success)::boolean THEN NOW() ELSE NULL END,
   updated_at  = NOW()
 WHERE id = sqlc.arg(id)
+  AND status = 'uploading'
+  AND (uploaded_by = sqlc.arg(uploaded_by) OR sqlc.arg(uploaded_by)::bigint IS NULL)
 RETURNING *;
 
 -- name: GetFileByID :one
@@ -37,6 +39,9 @@ SELECT * FROM files WHERE id = $1 AND status != 'deleted';
 
 -- name: GetFileByKey :one
 SELECT * FROM files WHERE file_key = $1 AND status != 'deleted';
+
+-- name: GetFileByPublicUrl :one
+SELECT * FROM files WHERE public_url = $1 AND status != 'deleted';
 
 -- name: ListFiles :many
 SELECT * FROM files
