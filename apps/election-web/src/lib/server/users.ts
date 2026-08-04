@@ -72,3 +72,14 @@ export const deleteUser = createServerFn({ method: "POST" })
       return { success: false, message: "Failed to delete user: " + (error as Error).message };
     }
   });
+
+export const getUserMe = createServerFn({ method: "GET" })
+  .handler(async () => {
+    try {
+      const response = await apiFetch(`${API_URL.users}/me`);
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return { success: false, message: "Failed to fetch user profile: " + (error as Error).message };
+    }
+  });
