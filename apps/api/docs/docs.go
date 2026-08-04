@@ -9107,9 +9107,7 @@ const docTemplate = `{
                 "first_name",
                 "gender",
                 "last_name",
-                "password",
-                "role",
-                "role_level"
+                "password"
             ],
             "properties": {
                 "avatar": {
@@ -9160,25 +9158,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 72,
                     "minLength": 5
-                },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "admin",
-                        "party_admin",
-                        "user"
-                    ]
-                },
-                "role_level": {
-                    "type": "string",
-                    "enum": [
-                        "super_admin",
-                        "admin",
-                        "member",
-                        "placeholder",
-                        "pollingagent",
-                        "user"
-                    ]
                 },
                 "state_of_origin": {
                     "type": "integer"
@@ -9356,9 +9335,6 @@ const docTemplate = `{
                 "account_status": {
                     "type": "string"
                 },
-                "address": {
-                    "type": "string"
-                },
                 "avatar": {
                     "type": "string"
                 },
@@ -9380,12 +9356,6 @@ const docTemplate = `{
                 "date_of_birth": {
                     "type": "string"
                 },
-                "education_level": {
-                    "type": "string"
-                },
-                "educational_status": {
-                    "type": "string"
-                },
                 "email": {
                     "type": "string"
                 },
@@ -9398,19 +9368,10 @@ const docTemplate = `{
                 "gender": {
                     "type": "string"
                 },
-                "graduation_year": {
-                    "type": "string"
-                },
-                "highest_degree": {
-                    "type": "string"
-                },
                 "id": {
                     "type": "integer"
                 },
                 "last_name": {
-                    "type": "string"
-                },
-                "marital_status": {
                     "type": "string"
                 },
                 "middle_name": {
@@ -9428,17 +9389,11 @@ const docTemplate = `{
                 "polling_unit_id": {
                     "type": "integer"
                 },
-                "religion": {
-                    "type": "string"
-                },
                 "roles": {
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
-                },
-                "school_name": {
-                    "type": "string"
                 },
                 "username": {
                     "type": "string"

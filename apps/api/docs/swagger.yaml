@@ -181,21 +181,6 @@ definitions:
         maxLength: 72
         minLength: 5
         type: string
-      role:
-        enum:
-        - admin
-        - party_admin
-        - user
-        type: string
-      role_level:
-        enum:
-        - super_admin
-        - admin
-        - member
-        - placeholder
-        - pollingagent
-        - user
-        type: string
       state_of_origin:
         type: integer
       username:
@@ -210,8 +195,6 @@ definitions:
     - gender
     - last_name
     - password
-    - role
-    - role_level
     type: object
   authhandler.RegisterPhaseSignUpRequest:
     properties:
@@ -337,8 +320,6 @@ definitions:
     properties:
       account_status:
         type: string
-      address:
-        type: string
       avatar:
         type: string
       current_city:
@@ -353,10 +334,6 @@ definitions:
         type: integer
       date_of_birth:
         type: string
-      education_level:
-        type: string
-      educational_status:
-        type: string
       email:
         type: string
       fake_id:
@@ -365,15 +342,9 @@ definitions:
         type: string
       gender:
         type: string
-      graduation_year:
-        type: string
-      highest_degree:
-        type: string
       id:
         type: integer
       last_name:
-        type: string
-      marital_status:
         type: string
       middle_name:
         type: string
@@ -385,14 +356,10 @@ definitions:
         type: string
       polling_unit_id:
         type: integer
-      religion:
-        type: string
       roles:
         items:
           type: string
         type: array
-      school_name:
-        type: string
       username:
         type: string
       voters_card_image:
