@@ -99,21 +99,3 @@ export const makeSuperadminFn = createServerFn({ method: "POST" })
       };
     }
   });
-
-// Fetches all admin users
-export const getAdminUsers = createServerFn({ method: "GET" }).handler(
-  async () => {
-    try {
-      const response = await apiFetch(API_URL.adminUsers, {
-        method: "GET",
-      });
-
-      return await handleResponse(response);
-    } catch (error) {
-      return {
-        success: false,
-        message: "An unexpected error occurred during fetching admin users",
-      };
-    }
-  },
-);
