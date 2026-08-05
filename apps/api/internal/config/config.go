@@ -34,7 +34,7 @@ type RedisConfig struct {
 }
 
 // R2Config holds Cloudflare R2 object-storage credentials and bucket settings.
-// These are used to initialise the S3-compatible R2 client for presigned uploads.
+// These are used to initialize the S3-compatible R2 client for presigned uploads.
 type R2Config struct {
 	AccountID       string // Cloudflare Account ID (required)
 	AccessKeyID     string // R2 API token access key (required)
@@ -43,6 +43,8 @@ type R2Config struct {
 	// PublicURL is the custom domain or r2.dev URL used to build public object URLs.
 	// e.g. "https://files.free9ja.com" or "https://pub-xxx.r2.dev"
 	PublicURL string
+	ZoneID    string // Cloudflare Zone ID for Edge Cache purging
+	APIToken  string // Cloudflare API Token for Edge Cache purging
 }
 
 // MonnifyConfig holds credentials for the Monnify payment gateway.
@@ -200,6 +202,8 @@ func LoadConfig() (*Config, error) {
 			SecretAccessKey: GetEnv("R2_SECRET_ACCESS_KEY", ""),
 			BucketName:      GetEnv("R2_BUCKET_NAME", ""),
 			PublicURL:       GetEnv("R2_PUBLIC_URL", ""),
+			ZoneID:          GetEnv("CLOUDFLARE_ZONE_ID", ""),
+			APIToken:        GetEnv("CLOUDFLARE_API_TOKEN", ""),
 		},
 		Monnify: MonnifyConfig{
 			BaseURL:      GetEnv("MONNIFY_BASE_URL", "https://sandbox.monnify.com"),

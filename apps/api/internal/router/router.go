@@ -172,6 +172,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			SecretAccessKey: cfg.R2.SecretAccessKey,
 			BucketName:      cfg.R2.BucketName,
 			PublicURL:       cfg.R2.PublicURL,
+			ZoneID:          cfg.R2.ZoneID,
+			APIToken:        cfg.R2.APIToken,
 		})
 	} else {
 		r2Err = errors.New("no config provided")
