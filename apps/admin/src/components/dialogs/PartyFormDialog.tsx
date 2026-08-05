@@ -1,4 +1,4 @@
-import * as React from "react";
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -34,11 +34,11 @@ export function PartyFormDialog({
   onSuccess?: () => void;
 }) {
   const queryClient = useQueryClient();
-  const [logoUrl, setLogoUrl] = React.useState("");
-  const [isUploading, setIsUploading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [logoUrl, setLogoUrl] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // TanStack Form configuration
   const form = useForm({
@@ -52,7 +52,7 @@ export function PartyFormDialog({
     },
   });
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (open) {
       if (mode === "update" && party) {
         form.setFieldValue("acronym", party.short_name || "");
