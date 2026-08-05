@@ -19,6 +19,7 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/utils"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -32,6 +33,7 @@ import (
 
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	ResetUserAvatar(ctx context.Context, userID int64, fakeID int64) error
 }
 
 // FilesDB is the narrow interface for file-related database operations.
@@ -384,12 +386,8 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 
 		// if the user avatar file ID is the same as the file ID
 		if user.AvatarFileID.Valid && user.AvatarFileID.Int64 == id {
-			// update the user avatar file ID to NULL
-			_ = h.db.UpdateUserAvatar(r.Context(), queries.UpdateUserAvatarParams{
-				ID:           user.ID,
-				Avatar:       pgtype.Text{Valid: false},
-				AvatarFileID: pgtype.Int8{Valid: false},
-			})
+			// update the user avatar file ID to NULL and invalidate user cache
+			_ = h.usersService.ResetUserAvatar(r.Context(), user.ID, userFakeID)
 		}
 	}
 
@@ -407,9 +405,20 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Purge from R2; only hard-delete the DB row once the bucket object is gone.
-	// If R2 deletion fails we swallow the error — a cleanup job can handle it later.
+	// If R2 deletion fails we log the error — a cleanup job can handle it later.
 	if err = h.r2.DeleteObject(r.Context(), file.FileKey); err == nil {
 		_ = h.db.HardDeleteFile(r.Context(), id)
+
+		// Asynchronously purge Cloudflare Edge CDN cache
+		go func(key string) {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			if purgeErr := h.r2.PurgeCloudflareCache(ctx, key); purgeErr != nil {
+				slog.Error("failed to purge cloudflare edge cache", "fileKey", key, "error", purgeErr)
+			}
+		}(file.FileKey)
+	} else {
+		slog.ErrorContext(r.Context(), "failed to delete file from r2", "fileKey", file.FileKey, "error", err)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "File deleted successfully", nil)

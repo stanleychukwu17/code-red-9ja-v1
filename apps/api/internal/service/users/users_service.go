@@ -453,6 +453,22 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 	return nil
 }
 
+// ResetUserAvatar clears the user's avatar and invalidates their cached user info.
+func (s *UsersService) ResetUserAvatar(ctx context.Context, userID int64, fakeID int64) error {
+	err := s.queries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
+		ID:           userID,
+		Avatar:       pgtype.Text{Valid: false},
+		AvatarFileID: pgtype.Int8{Valid: false},
+	})
+	if err != nil {
+		return err
+	}
+
+	// invalidate the cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	return nil
+}
+
 // UpdateUserProfileDetails updates extended educational and demographic information for a user.
 func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error {
 	var pgOccupationID pgtype.Int2
