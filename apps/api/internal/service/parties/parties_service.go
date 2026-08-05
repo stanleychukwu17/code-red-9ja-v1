@@ -70,11 +70,17 @@ func (s *PartiesService) SetUsersService(us UsersService) {
 
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
-func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
+func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error) {
+	var logoFileIDPg pgtype.Int8
+	if logoFileID != nil {
+		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
+	}
+
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 		ShortName:    shortName,
 		Name:         name,
 		Logo:         logo,
+		LogoFileID:   logoFileIDPg,
 		DisplayOrder: displayOrder,
 	})
 	if err != nil {
@@ -90,6 +96,9 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 			_ = walletErr
 		}
 	}
+
+	// Invalidate parties listings cache
+	s.InvalidateListParties(ctx)
 
 	return party, nil
 }
@@ -250,20 +259,31 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 
 	// Save to Redis
 	if partyData, err := json.Marshal(parties); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
+		s.rdb.Set(ctx, redisKey, partyData, db.RedisTwoYearsTTL)
 	}
 
 	return parties, nil
 }
 
+// InvalidateListParties invalidates the cached list of parties.
+func (s *PartiesService) InvalidateListParties(ctx context.Context) error {
+	return s.rdb.Del(ctx, db.RedisPartiesList).Err()
+}
+
 // UpdateParty modifies the short name, name, and logo of an existing party.
-func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
+func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error) {
 	defer s.InvalidatePartyCache(ctx, int16(id))
+	var logoFileIDPg pgtype.Int8
+	if logoFileID != nil {
+		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
+	}
+
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
 		ID:           int16(id),
 		ShortName:    shortName,
 		Name:         name,
 		Logo:         logo,
+		LogoFileID:   logoFileIDPg,
 		DisplayOrder: displayOrder,
 	})
 

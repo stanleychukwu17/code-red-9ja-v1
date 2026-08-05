@@ -16,7 +16,7 @@ UPDATE parties
 SET slots = slots + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type AddPartySlotsParams struct {
@@ -32,6 +32,7 @@ func (q *Queries) AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (P
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.LogoFileID,
 		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
@@ -50,7 +51,7 @@ UPDATE parties
 SET slots = slots - $1,
     updated_at = NOW()
 WHERE id = $2 AND slots >= $1
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type DeductPartySlotsParams struct {
@@ -66,6 +67,7 @@ func (q *Queries) DeductPartySlots(ctx context.Context, arg DeductPartySlotsPara
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.LogoFileID,
 		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,
@@ -101,7 +103,7 @@ UPDATE parties
 SET discount_percentage = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, allowance_balance_kobo, state_allowances, created_at, updated_at
 `
 
 type UpdatePartyDiscountParams struct {
@@ -117,6 +119,7 @@ func (q *Queries) UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscou
 		&i.ShortName,
 		&i.Name,
 		&i.Logo,
+		&i.LogoFileID,
 		&i.DisplayOrder,
 		&i.Status,
 		&i.Slots,

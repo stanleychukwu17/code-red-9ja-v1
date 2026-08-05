@@ -35,6 +35,7 @@ type Querier interface {
 	AdjustElectionGroupWardWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupWardWardSupervisorCountsParams) error
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
 	AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error
+	CheckFileOwner(ctx context.Context, arg CheckFileOwnerParams) (bool, error)
 	CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIfPageHasAnyVerificationParams) (bool, error)
 	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)

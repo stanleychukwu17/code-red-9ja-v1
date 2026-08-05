@@ -5,7 +5,19 @@ import { apiFetch } from "./fetch";
 // Returns users from the API based on the provided data
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { role?: string; limit?: number; cursor?: string | number; party_id?: number; search?: string } | undefined) => data,
+    (data: { 
+      role?: string; 
+      limit?: number; 
+      cursor?: string | number; 
+      party_id?: number; 
+      search?: string;
+      parties?: number[];
+      roles?: string[];
+      statuses?: string[];
+      verificationTypes?: string[];
+      countryId?: string;
+      stateIds?: string[];
+    } | undefined) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -15,6 +27,14 @@ export const getUsersList = createServerFn({ method: "GET" })
       if (data?.cursor) params.append("cursor", String(data.cursor));
       if (data?.party_id) params.append("party_id", String(data.party_id));
       if (data?.search) params.append("search", data.search);
+      
+      if (data?.parties?.length) params.append("parties", data.parties.join(","));
+      if (data?.roles?.length) params.append("roles", data.roles.join(","));
+      if (data?.statuses?.length) params.append("statuses", data.statuses.join(","));
+      if (data?.verificationTypes?.length) params.append("verification_types", data.verificationTypes.join(","));
+      if (data?.countryId) params.append("country_id", data.countryId);
+      if (data?.stateIds?.length) params.append("state_ids", data.stateIds.join(","));
+      
       const qs = params.toString();
 
       const response = await apiFetch(`${API_URL.users}${qs ? `?${qs}` : ""}`);
@@ -163,11 +183,12 @@ export const updateUserPhoneNumbers = createServerFn({ method: "POST" })
 
 // Deletes a file (like user avatar)
 export const deleteFile = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string | number; user_fake_id?: string | number; type?: string }) => data)
-  .handler(async ({ data: { id, user_fake_id, type } }) => {
+  .inputValidator((data: { id: string | number; user_fake_id?: string | number; party_id?: string | number; type?: string }) => data)
+  .handler(async ({ data: { id, user_fake_id, party_id, type } }) => {
     try {
       const params = new URLSearchParams();
       if (user_fake_id) params.append("user_fake_id", String(user_fake_id));
+      if (party_id) params.append("party_id", String(party_id));
       if (type) params.append("type", type);
       const qs = params.toString();
 

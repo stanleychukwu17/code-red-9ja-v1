@@ -29,11 +29,13 @@ function RouteComponent() {
       }
       throw new Error(res?.message || "Failed to load parties");
     },
+    staleTime: Infinity
   });
 
   // Dialog state for creating a new party
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
 
+  // opens the partyForm Dialog
   const handleCreateClick = () => {
     setCreateDialogOpen(true);
   };

@@ -752,6 +752,8 @@ definitions:
         type: string
       original_name:
         type: string
+      owner_id:
+        type: integer
     type: object
   officeshandler.CreateOfficeRequest:
     properties:
@@ -802,6 +804,8 @@ definitions:
         type: integer
       logo:
         type: string
+      logo_file_id:
+        type: integer
       name:
         type: string
       short_name:
@@ -828,6 +832,8 @@ definitions:
         type: integer
       logo:
         type: string
+      logo_file_id:
+        type: integer
       name:
         type: string
       short_name:
@@ -1273,6 +1279,8 @@ definitions:
         $ref: '#/definitions/pgtype.Bool'
       logo:
         type: string
+      logo_file_id:
+        $ref: '#/definitions/pgtype.Int8'
       name:
         type: string
       short_name:

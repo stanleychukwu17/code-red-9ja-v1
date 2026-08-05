@@ -26,7 +26,7 @@ export const getPartyById = createServerFn({ method: "GET" })
   });
 
 export const createParty = createServerFn({ method: "POST" })
-  .inputValidator((data: { short_name: string; name: string; logo: string; display_order?: number }) => data)
+  .inputValidator((data: { short_name: string; name: string; logo: string; logo_file_id?: number; display_order?: number }) => data)
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.parties, {
@@ -44,7 +44,7 @@ export const createParty = createServerFn({ method: "POST" })
   });
 
 export const updateParty = createServerFn({ method: "POST" })
-  .inputValidator((data: { id: string | number; short_name: string; name: string; logo: string; display_order?: number }) => data)
+  .inputValidator((data: { id: string | number; short_name: string; name: string; logo: string; logo_file_id?: number; display_order?: number }) => data)
   .handler(async ({ data: { id, ...body } }) => {
     try {
       const response = await apiFetch(API_URL.partyById(id), {
@@ -76,7 +76,7 @@ export const deleteParty = createServerFn({ method: "POST" })
   });
 
 export const getPresignedUploadURL = createServerFn({ method: "POST" })
-  .inputValidator((data: { original_name: string; mime_type: string; file_size: number; folder?: string; is_public?: boolean }) => data)
+  .inputValidator((data: { original_name: string; mime_type: string; file_size: number; folder?: string; is_public?: boolean; owner_id?: number }) => data)
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.uploadUrl, {

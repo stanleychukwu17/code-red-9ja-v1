@@ -48,6 +48,7 @@ type FilesDB interface {
 	ListFiles(ctx context.Context, arg queries.ListFilesParams) ([]queries.File, error)
 	MarkFileDeleted(ctx context.Context, id int64) (queries.File, error)
 	HardDeleteFile(ctx context.Context, id int64) error
+	CheckFileOwner(ctx context.Context, arg queries.CheckFileOwnerParams) (bool, error)
 }
 
 // Handler holds the dependencies needed to service file-related HTTP requests.
@@ -75,6 +76,7 @@ type GenerateUploadURLRequest struct {
 	FileSize     int64  `json:"file_size"`
 	Folder       string `json:"folder"`
 	IsPublic     bool   `json:"is_public"`
+	OwnerID      *int64 `json:"owner_id"`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -144,14 +146,17 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 	// e.g. "https://cdn.free9ja.com/uploads/2026-08-04/my-image-<uuid>.png"
 	publicURL := h.r2.PublicURL(key)
 
-	// Resolve the authenticated user from the JWT claims (optional — set null if absent).
-	// If the DB lookup fails (e.g. admin accounts whose fake_id is not set), we log a warning
-	// and continue — uploadedBy remains null. This is intentional: the JWT has already been
-	// verified by AuthMiddleware so we trust the caller is authenticated.
+	// Resolve uploadedBy from authenticated JWT claims.
 	uploadedBy := pgtype.Int8{Valid: false}
 	claims, _ := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if claims != nil && claims.UserID > 0 {
 		uploadedBy = pgtype.Int8{Int64: claims.UserID, Valid: true}
+	}
+
+	// Resolve ownerID from explicit request parameter (or leave null if omitted).
+	ownerID := pgtype.Int8{Valid: false}
+	if req.OwnerID != nil && *req.OwnerID > 0 {
+		ownerID = pgtype.Int8{Int64: *req.OwnerID, Valid: true}
 	}
 
 	// creates the file record in the database
@@ -164,6 +169,7 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		Folder:       folder,
 		IsPublic:     req.IsPublic,
 		UploadedBy:   uploadedBy,
+		OwnerID:      ownerID,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create file record: "+err.Error())

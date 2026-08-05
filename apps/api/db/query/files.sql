@@ -8,7 +8,8 @@ INSERT INTO files (
   folder,
   is_public,
   status,
-  uploaded_by
+  uploaded_by,
+  owner_id
 )
 VALUES (
   sqlc.arg(original_name),
@@ -19,7 +20,8 @@ VALUES (
   sqlc.arg(folder),
   sqlc.arg(is_public),
   'uploading',
-  sqlc.arg(uploaded_by)
+  sqlc.arg(uploaded_by),
+  sqlc.arg(owner_id)
 )
 RETURNING *;
 
@@ -61,3 +63,9 @@ RETURNING *;
 
 -- name: HardDeleteFile :exec
 DELETE FROM files WHERE id = $1;
+
+-- name: CheckFileOwner :one
+SELECT EXISTS (
+    SELECT 1 FROM files
+    WHERE id = $1 AND owner_id = $2 AND status != 'deleted'
+);

@@ -1,6 +1,6 @@
 -- name: CreateParty :one
-INSERT INTO parties (short_name, name, logo, display_order)
-VALUES ($1, $2, $3, $4)
+INSERT INTO parties (short_name, name, logo, logo_file_id, display_order)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetPartyByID :one
@@ -19,8 +19,8 @@ ORDER BY display_order ASC, name ASC;
 
 -- name: UpdateParty :one
 UPDATE parties
-SET short_name = $1, name = $2, logo = $3, display_order = $4, updated_at = NOW()
-WHERE id = $5
+SET short_name = $1, name = $2, logo = $3, logo_file_id = $4, display_order = $5, updated_at = NOW()
+WHERE id = $6
 RETURNING *;
 
 -- name: DeleteParty :exec

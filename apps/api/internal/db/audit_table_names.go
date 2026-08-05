@@ -7,6 +7,7 @@ const (
 	ModuleUsers      = "users"       // Represents the users module of the system
 
 	// -- Actions --
+	ActionCreateParty            = "create_party"              // Action for creating a new party
 	ActionAssignPageVerification = "assign_page_verification"  // Action when a verification badge is assigned to a user's page
 	ActionRemovePageVerification = "remove_page_verification"  // Action when a verification badge is removed from a user's page
 	ActionUpdateUser             = "update_user"               // Action for updating a user's general profile

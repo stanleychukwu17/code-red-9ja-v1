@@ -11,7 +11,7 @@ import {
 import { UsersTable } from "#/components/Tables";
 import { USERS_TABS } from "./-data";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
-import { AdminUsersSearchFilterDialog } from "#/components/dialogs/AdminUsersSearchFilterDialog";
+import { AdminUsersSearchFilterDialog, type UsersFilters } from "#/components/dialogs/AdminUsersSearchFilterDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { getUsersList, deleteFile } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";
@@ -30,6 +30,13 @@ function RouteComponent() {
   const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
+  const [filters, setFilters] = React.useState<UsersFilters>({
+    parties: [],
+    roles: [],
+    statuses: [],
+    verificationTypes: [],
+    stateIds: [],
+  });
 
   // useInfiniteQuery handles fetching data in pages for infinite scrolling
   const {
@@ -42,7 +49,7 @@ function RouteComponent() {
     refetch,
   } = useInfiniteQuery({
     // queryKey uniquely identifies this query in the cache
-    queryKey: ["users-list", "user", debouncedSearchQuery],
+    queryKey: ["users-list", "user", debouncedSearchQuery, filters],
 
     // queryFn is the function that actually fetches the data
     queryFn: async ({ pageParam }) => {
@@ -51,6 +58,12 @@ function RouteComponent() {
           limit: 20,
           cursor: pageParam,
           search: debouncedSearchQuery || undefined,
+          parties: filters.parties.length > 0 ? filters.parties : undefined,
+          roles: filters.roles.length > 0 ? filters.roles : undefined,
+          statuses: filters.statuses.length > 0 ? filters.statuses : undefined,
+          verificationTypes: filters.verificationTypes.length > 0 ? filters.verificationTypes : undefined,
+          countryId: filters.countryId || undefined,
+          stateIds: filters.stateIds.length > 0 ? filters.stateIds : undefined,
         },
       });
 
@@ -165,6 +178,9 @@ function RouteComponent() {
       <AdminUsersSearchFilterDialog
         open={isFilterOpen}
         onClose={() => setIsFilterOpen(false)}
+        onApply={(newFilters) => {
+          setFilters(newFilters);
+        }}
       />
     </Layout>
   );

@@ -9998,6 +9998,9 @@ const docTemplate = `{
                 },
                 "original_name": {
                     "type": "string"
+                },
+                "owner_id": {
+                    "type": "integer"
                 }
             }
         },
@@ -10075,6 +10078,9 @@ const docTemplate = `{
                 "logo": {
                     "type": "string"
                 },
+                "logo_file_id": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -10115,6 +10121,9 @@ const docTemplate = `{
                 },
                 "logo": {
                     "type": "string"
+                },
+                "logo_file_id": {
+                    "type": "integer"
                 },
                 "name": {
                     "type": "string"
@@ -10791,6 +10800,9 @@ const docTemplate = `{
                 },
                 "logo": {
                     "type": "string"
+                },
+                "logo_file_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
                 },
                 "name": {
                     "type": "string"

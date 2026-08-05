@@ -157,6 +157,7 @@ export function UserFormDialog({
               file_size: selectedAvatarFile.size,
               folder: "avatars",
               is_public: true,
+              owner_id: user?.fake_id ? Number(user.fake_id) : undefined,
             },
           });
           if (!uploadRes.success || !uploadRes.data) throw new Error(uploadRes.message || "Failed to initiate file upload");
@@ -181,6 +182,9 @@ export function UserFormDialog({
 
           finalAvatarUrl = public_url;
           finalFileId = file_id;
+          setSelectedAvatarFile(null)
+          setAvatarUrl(public_url)
+          setUploadedFileId(file_id)
         } finally {
           setIsUploading(false);
         }

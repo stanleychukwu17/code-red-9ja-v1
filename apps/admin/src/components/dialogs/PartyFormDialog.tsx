@@ -16,6 +16,7 @@ import {
   getPresignedUploadURL,
   confirmFileUpload,
 } from "#/lib/server/parties";
+import { deleteFile } from "#/lib/server/users";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { convertToWebP } from "@repo/ui/lib/image";
@@ -35,7 +36,9 @@ export function PartyFormDialog({
 }) {
   const queryClient = useQueryClient();
   const [logoUrl, setLogoUrl] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  const [selectedInputLogo, setSelectedInputLogo] = useState<File | null>(null);
+  const [logoFileId, setLogoFileId] = useState<number | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,75 +62,60 @@ export function PartyFormDialog({
         form.setFieldValue("fullName", party.name || "");
         form.setFieldValue("displayOrder", party.display_order ?? 999);
         setLogoUrl(party.logo || "");
+        setLogoFileId(party.logo_file_id ?? null);
       } else {
         form.setFieldValue("acronym", "");
         form.setFieldValue("fullName", "");
         form.setFieldValue("displayOrder", 999);
         setLogoUrl("");
+        setLogoFileId(null);
       }
+
+      setSelectedInputLogo(null);
       setError(null);
     }
   }, [open, mode, party]);
 
+  // Opens the file input dialog to allow user select party logo
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
+  // Handle the file selection and conversion to WebP
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFile = e.target.files?.[0];
     if (!rawFile) return;
 
-    setIsUploading(true);
-    setError(null);
-
     try {
-      // Convert to WebP first
       const file = await convertToWebP(rawFile);
-
-      // 1. Get presigned R2 upload URL
-      const res = await getPresignedUploadURL({
-        data: {
-          original_name: file.name,
-          mime_type: file.type,
-          file_size: file.size,
-          folder: "parties",
-          is_public: true,
-        },
-      });
-
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to initiate file upload");
-      }
-
-      const { upload_url, public_url, file_id } = res.data;
-
-      // 2. PUT file content directly to R2 bucket
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type,
-        },
-        body: file,
-      });
-
-      if (!putRes.ok) {
-        await confirmFileUpload({ data: { id: file_id, success: false } });
-        throw new Error("Failed to upload image file to storage");
-      }
-
-      // 3. Confirm file upload status
-      await confirmFileUpload({ data: { id: file_id, success: true } });
-
-      setLogoUrl(public_url);
+      setSelectedInputLogo(file);
+      setLogoUrl(URL.createObjectURL(file));
+      setError(null);
     } catch (err: any) {
-      setError(err.message || "An error occurred during file upload");
-    } finally {
-      setIsUploading(false);
+      setError(err.message || "Failed to process image");
     }
   };
 
-  const handleRemoveImage = () => {
+  // Handle the removal of the party logo
+  const handleRemoveImage = async () => {
+    if (logoFileId && logoFileId > 0 && deleteFile) {
+      try {
+        await deleteFile({
+          data: {
+            id: logoFileId,
+            party_id: party?.id,
+            type: "party_log",
+          }
+        });
+      } catch (err: any) {
+        console.error("Failed to delete file from server:", err);
+      }
+    }
+
     setLogoUrl("");
+    setSelectedInputLogo(null);
+    setLogoFileId(null);
+
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -136,6 +124,59 @@ export function PartyFormDialog({
   // TanStack Query Mutation for saving/creating/updating a party
   const saveMutation = useMutation({
     mutationFn: async (values: { acronym: string; fullName: string; displayOrder: number }) => {
+      let finalLogoUrl = logoUrl;
+      let finalFileId = logoFileId;
+
+      // Upload the party logo if a new one was selected
+      if (selectedInputLogo) {
+        setIsUploadingLogo(true);
+
+        try {
+          // 1. Get presigned R2 upload URL
+          const res = await getPresignedUploadURL({
+            data: {
+              original_name: selectedInputLogo.name,
+              mime_type: selectedInputLogo.type,
+              file_size: selectedInputLogo.size,
+              folder: "parties",
+              is_public: true,
+              owner_id: party?.id,
+            },
+          });
+
+          if (!res.success || !res.data) {
+            throw new Error(res.message || "Failed to initiate file upload");
+          }
+
+          const { upload_url, public_url, file_id } = res.data;
+
+          // 2. PUT file content directly to R2 bucket
+          const putRes = await fetch(upload_url, {
+            method: "PUT",
+            headers: {
+              "Content-Type": selectedInputLogo.type,
+            },
+            body: selectedInputLogo,
+          });
+
+          if (!putRes.ok) {
+            await confirmFileUpload({ data: { id: file_id, success: false } });
+            throw new Error("Failed to upload image file to storage");
+          }
+
+          // 3. Confirm file upload status
+          await confirmFileUpload({ data: { id: file_id, success: true } });
+
+          finalLogoUrl = public_url;
+          finalFileId = file_id;
+          setSelectedInputLogo(null)
+          setLogoUrl(public_url)
+          setLogoFileId(file_id)
+        } finally {
+          setIsUploadingLogo(false);
+        }
+      }
+
       let res;
       if (mode === "update") {
         if (!party?.id) {
@@ -146,7 +187,8 @@ export function PartyFormDialog({
             id: party.id,
             short_name: values.acronym.trim().toUpperCase(),
             name: values.fullName.trim(),
-            logo: logoUrl,
+            logo: finalLogoUrl,
+            logo_file_id: finalFileId ?? undefined,
             display_order: values.displayOrder,
           },
         });
@@ -155,7 +197,8 @@ export function PartyFormDialog({
           data: {
             short_name: values.acronym.trim().toUpperCase(),
             name: values.fullName.trim(),
-            logo: logoUrl,
+            logo: finalLogoUrl,
+            logo_file_id: finalFileId ?? undefined,
             display_order: values.displayOrder,
           },
         });
@@ -299,7 +342,7 @@ export function PartyFormDialog({
                       alt="Logo preview"
                       className="size-full object-cover"
                     />
-                  ) : isUploading ? (
+                  ) : isUploadingLogo ? (
                     <Loader2 className="size-8 animate-spin text-c-50" />
                   ) : (
                     <Umbrella className="size-12 shrink-0" />
@@ -308,12 +351,12 @@ export function PartyFormDialog({
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    disabled={isUploading}
+                    disabled={isUploadingLogo}
                     onClick={handleUploadClick}
                     className="flex h-11 items-center gap-2 rounded-12 bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] disabled:cursor-not-allowed px-4 text-[15px] font-semibold text-white transition cursor-pointer"
                   >
                     <Plus className="size-5" />
-                    <span>{isUploading ? "Uploading..." : "Upload image"}</span>
+                    <span>{isUploadingLogo ? "Uploading..." : "Upload image"}</span>
                   </button>
                   {logoUrl && (
                     <button
@@ -335,7 +378,7 @@ export function PartyFormDialog({
               children={([canSubmit]) => (
                 <Button
                   type="submit"
-                  disabled={!canSubmit || saveMutation.isPending || isUploading}
+                  disabled={!canSubmit || saveMutation.isPending || isUploadingLogo}
                   loading={saveMutation.isPending}
                   variant="secondary"
                   size="xl"

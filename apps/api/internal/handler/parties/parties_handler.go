@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	"free9ja/api/internal/service/audit"
+	"free9ja/api/internal/service/files"
 	"free9ja/api/internal/utils"
 	"io"
 	"net/http"
@@ -19,12 +22,12 @@ import (
 )
 
 type PartiesService interface {
-	CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error)
+	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error)
 	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
-	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error)
+	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	// Wallet methods
 	GetPartyWallet(ctx context.Context, partyID int16) (queries.PartyWallet, error)
@@ -50,18 +53,22 @@ type PartiesService interface {
 
 type Handler struct {
 	partiesService PartiesService
+	auditService   audit.AuditService
+	filesService   files.FilesService
 	utils          *utils.Utils
 }
 
-func NewHandler(partiesService PartiesService, utils *utils.Utils) *Handler {
+func NewHandler(partiesService PartiesService, auditService audit.AuditService, filesService files.FilesService, utils *utils.Utils) *Handler {
 	return &Handler{
 		partiesService: partiesService,
+		auditService:   auditService,
+		filesService:   filesService,
 		utils:          utils,
 	}
 }
 
 func parsePaginationParams(r *http.Request) (int, int64) {
-	limit := 20
+	limit := 50
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			if l > 100 {
@@ -99,6 +106,7 @@ type CreatePartyRequest struct {
 	ShortName    string `json:"short_name"`
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
+	LogoFileID   *int64 `json:"logo_file_id"`
 	DisplayOrder int32  `json:"display_order"`
 }
 
@@ -106,6 +114,7 @@ type UpdatePartyRequest struct {
 	ShortName    string `json:"short_name"`
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
+	LogoFileID   *int64 `json:"logo_file_id"`
 	DisplayOrder int32  `json:"display_order"`
 }
 
@@ -123,22 +132,67 @@ type UpdatePartyRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties [post]
 func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
+	var actorID int64
+	var actorRole string
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if ok && claims != nil {
+		actorID = claims.UserID
+		actorRole = db.ActorRoleAdmin
+	}
+
+	// 1. Decode the request payload
 	var req CreatePartyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// 2. Validate required fields
 	if req.ShortName == "" || req.Name == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "short_name and name are required")
 		return
 	}
 
-	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, req.DisplayOrder)
+	// 3. If a logo file was uploaded, fetch its details and use the public URL
+	if req.LogoFileID != nil {
+		file, err := h.filesService.GetFileByID(r.Context(), *req.LogoFileID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
+			return
+		}
+		if file.Status != "uploaded" {
+			h.utils.RespondError(w, http.StatusBadRequest, "Logo file upload is not complete")
+			return
+		}
+
+		if file.UploadedBy.Int64 != claims.UserID {
+			h.utils.RespondError(w, http.StatusBadRequest, "You are not authorized to use this file")
+			return
+		}
+
+		// Automatically set the Logo URL from the file record
+		req.Logo = file.PublicUrl
+	}
+
+	// 4. Create the party in the database and provision a wallet via Monnify
+	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create party: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	newValuesJSON, _ := json.Marshal(party)
+
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionCreateParty,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeParty,
+		EntityID:   strconv.FormatInt(int64(party.ID), 10),
+		NewValues:  newValuesJSON,
+	})
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Party created successfully", map[string]interface{}{
 		"party": party,
@@ -320,13 +374,26 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if req.LogoFileID != nil {
+		file, err := h.filesService.GetFileByID(r.Context(), *req.LogoFileID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
+			return
+		}
+		if file.Status != "uploaded" {
+			h.utils.RespondError(w, http.StatusBadRequest, "Logo file upload is not complete")
+			return
+		}
+		req.Logo = file.PublicUrl
+	}
+
 	// Verify party exists
 	if party := h.partiesService.GetPartyInfo(r.Context(), int16(id)); party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
-	updatedParty, err := h.partiesService.UpdateParty(r.Context(), id, req.ShortName, req.Name, req.Logo, req.DisplayOrder)
+	updatedParty, err := h.partiesService.UpdateParty(r.Context(), id, req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
 		return

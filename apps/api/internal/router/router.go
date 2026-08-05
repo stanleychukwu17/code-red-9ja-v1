@@ -54,6 +54,7 @@ import (
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
+	filesservice "free9ja/api/internal/service/files"
 	officesservice "free9ja/api/internal/service/offices"
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
@@ -131,6 +132,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
 	seedService := seedservice.NewSeedService(q, rdb, authService, bodiesService, usersService, partiesService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
+	filesService := filesservice.NewFilesService(q)
 
 	usersService.SetPageVerificationsService(pageVerificationsService)
 	usersService.SetPartyService(partiesService)
@@ -139,7 +141,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	authHandler := authhandler.NewHandler(authService, usersService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
-	partiesHandler := partieshandler.NewHandler(partiesService, utilsInstance)
+	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, q, utilsInstance)
 	stateAssemblyConstituenciesHandler := stateassemblyconstituencieshandler.NewHandler(stateAssemblyConstituenciesService, q, utilsInstance)

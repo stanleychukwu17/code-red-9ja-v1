@@ -15,9 +15,19 @@ import { SelectState } from "@repo/ui/components/selects/state-select";
 import { getAllCountries } from "#/lib/server/countries";
 import { getStates } from "#/lib/server/states";
 
+export interface UsersFilters {
+  parties: number[];
+  roles: string[];
+  statuses: string[];
+  verificationTypes: string[];
+  countryId?: string;
+  stateIds: string[];
+}
+
 export interface AdminUsersSearchFilterDialogProps {
   open: boolean;
   onClose: () => void;
+  onApply: (filters: UsersFilters) => void;
 }
 
 const ROLES = [
@@ -52,7 +62,7 @@ const VERIFICATION_TYPES = [
   { label: "Verified Party Ward Official", value: "ward_official_verified" },
 ];
 
-export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearchFilterDialogProps) {
+export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUsersSearchFilterDialogProps) {
   const [selectedParties, setSelectedParties] = React.useState<number[]>([]);
   const [selectedRoles, setSelectedRoles] = React.useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>([]);
@@ -110,8 +120,14 @@ export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearch
   };
 
   const handleApply = () => {
-    // TODO: Pass these filters back to the parent component when the API supports them
-    console.log("Applying filters:", { selectedParties, selectedRoles, selectedStatuses, selectedVerificationTypes, selectedCountryId, selectedStateIds });
+    onApply({
+      parties: selectedParties,
+      roles: selectedRoles,
+      statuses: selectedStatuses,
+      verificationTypes: selectedVerificationTypes,
+      countryId: selectedCountryId,
+      stateIds: selectedStateIds,
+    });
     onClose();
   };
 
@@ -269,12 +285,8 @@ export function AdminUsersSearchFilterDialog({ open, onClose }: AdminUsersSearch
           >
             Clear All
           </Button>
-          <Button
-            type="button"
-            variant="black"
-            size="2xl"
+          <Button type="button" variant="black" size="2xl" className="flex-1"
             onClick={handleApply}
-            className="flex-1"
           >
             Apply Filters
           </Button>

@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkFileOwner = `-- name: CheckFileOwner :one
+SELECT EXISTS (
+    SELECT 1 FROM files
+    WHERE id = $1 AND owner_id = $2 AND status != 'deleted'
+)
+`
+
+type CheckFileOwnerParams struct {
+	ID      int64       `json:"id"`
+	OwnerID pgtype.Int8 `json:"owner_id"`
+}
+
+func (q *Queries) CheckFileOwner(ctx context.Context, arg CheckFileOwnerParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkFileOwner, arg.ID, arg.OwnerID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const confirmUpload = `-- name: ConfirmUpload :one
 UPDATE files
 SET
@@ -20,7 +39,7 @@ SET
 WHERE id = $2
   AND status = 'uploading'
   AND (uploaded_by = $3 OR $3::bigint IS NULL)
-RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at
+RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at
 `
 
 type ConfirmUploadParams struct {
@@ -43,6 +62,7 @@ func (q *Queries) ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (F
 		&i.IsPublic,
 		&i.Status,
 		&i.UploadedBy,
+		&i.OwnerID,
 		&i.UploadedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -60,7 +80,8 @@ INSERT INTO files (
   folder,
   is_public,
   status,
-  uploaded_by
+  uploaded_by,
+  owner_id
 )
 VALUES (
   $1,
@@ -71,9 +92,10 @@ VALUES (
   $6,
   $7,
   'uploading',
-  $8
+  $8,
+  $9
 )
-RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at
+RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at
 `
 
 type CreateFileParams struct {
@@ -85,6 +107,7 @@ type CreateFileParams struct {
 	Folder       string      `json:"folder"`
 	IsPublic     bool        `json:"is_public"`
 	UploadedBy   pgtype.Int8 `json:"uploaded_by"`
+	OwnerID      pgtype.Int8 `json:"owner_id"`
 }
 
 func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, error) {
@@ -97,6 +120,7 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, e
 		arg.Folder,
 		arg.IsPublic,
 		arg.UploadedBy,
+		arg.OwnerID,
 	)
 	var i File
 	err := row.Scan(
@@ -110,6 +134,7 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, e
 		&i.IsPublic,
 		&i.Status,
 		&i.UploadedBy,
+		&i.OwnerID,
 		&i.UploadedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -118,7 +143,7 @@ func (q *Queries) CreateFile(ctx context.Context, arg CreateFileParams) (File, e
 }
 
 const getFileByID = `-- name: GetFileByID :one
-SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at FROM files WHERE id = $1 AND status != 'deleted'
+SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at FROM files WHERE id = $1 AND status != 'deleted'
 `
 
 func (q *Queries) GetFileByID(ctx context.Context, id int64) (File, error) {
@@ -135,6 +160,7 @@ func (q *Queries) GetFileByID(ctx context.Context, id int64) (File, error) {
 		&i.IsPublic,
 		&i.Status,
 		&i.UploadedBy,
+		&i.OwnerID,
 		&i.UploadedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -143,7 +169,7 @@ func (q *Queries) GetFileByID(ctx context.Context, id int64) (File, error) {
 }
 
 const getFileByKey = `-- name: GetFileByKey :one
-SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at FROM files WHERE file_key = $1 AND status != 'deleted'
+SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at FROM files WHERE file_key = $1 AND status != 'deleted'
 `
 
 func (q *Queries) GetFileByKey(ctx context.Context, fileKey string) (File, error) {
@@ -160,6 +186,7 @@ func (q *Queries) GetFileByKey(ctx context.Context, fileKey string) (File, error
 		&i.IsPublic,
 		&i.Status,
 		&i.UploadedBy,
+		&i.OwnerID,
 		&i.UploadedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -168,7 +195,7 @@ func (q *Queries) GetFileByKey(ctx context.Context, fileKey string) (File, error
 }
 
 const getFileByPublicUrl = `-- name: GetFileByPublicUrl :one
-SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at FROM files WHERE public_url = $1 AND status != 'deleted'
+SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at FROM files WHERE public_url = $1 AND status != 'deleted'
 `
 
 func (q *Queries) GetFileByPublicUrl(ctx context.Context, publicUrl string) (File, error) {
@@ -185,6 +212,7 @@ func (q *Queries) GetFileByPublicUrl(ctx context.Context, publicUrl string) (Fil
 		&i.IsPublic,
 		&i.Status,
 		&i.UploadedBy,
+		&i.OwnerID,
 		&i.UploadedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -202,7 +230,7 @@ func (q *Queries) HardDeleteFile(ctx context.Context, id int64) error {
 }
 
 const listFiles = `-- name: ListFiles :many
-SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at FROM files
+SELECT id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at FROM files
 WHERE
   status != 'deleted'
   AND ($1::bigint = 0 OR id < $1)
@@ -244,6 +272,7 @@ func (q *Queries) ListFiles(ctx context.Context, arg ListFilesParams) ([]File, e
 			&i.IsPublic,
 			&i.Status,
 			&i.UploadedBy,
+			&i.OwnerID,
 			&i.UploadedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -262,7 +291,7 @@ const markFileDeleted = `-- name: MarkFileDeleted :one
 UPDATE files
 SET status = 'deleted', updated_at = NOW()
 WHERE id = $1
-RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, uploaded_at, created_at, updated_at
+RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at
 `
 
 func (q *Queries) MarkFileDeleted(ctx context.Context, id int64) (File, error) {
@@ -279,6 +308,7 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, id int64) (File, error) {
 		&i.IsPublic,
 		&i.Status,
 		&i.UploadedBy,
+		&i.OwnerID,
 		&i.UploadedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,

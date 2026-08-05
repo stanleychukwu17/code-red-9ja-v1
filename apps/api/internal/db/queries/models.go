@@ -507,6 +507,7 @@ type File struct {
 	IsPublic     bool               `json:"is_public"`
 	Status       string             `json:"status"`
 	UploadedBy   pgtype.Int8        `json:"uploaded_by"`
+	OwnerID      pgtype.Int8        `json:"owner_id"`
 	UploadedAt   pgtype.Timestamptz `json:"uploaded_at"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
@@ -618,6 +619,7 @@ type Party struct {
 	ShortName            string             `json:"short_name"`
 	Name                 string             `json:"name"`
 	Logo                 string             `json:"logo"`
+	LogoFileID           pgtype.Int8        `json:"logo_file_id"`
 	DisplayOrder         int32              `json:"display_order"`
 	Status               string             `json:"status"`
 	Slots                int32              `json:"slots"`

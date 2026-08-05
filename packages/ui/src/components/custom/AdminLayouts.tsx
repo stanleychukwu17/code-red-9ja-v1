@@ -5,6 +5,9 @@ import { Ellipsis, SlidersHorizontal } from "lucide-react";
 import type { ReactNode } from "react";
 import PlusIcon from "../../icons/plus-icon";
 
+/**
+ * Types of tabs available in the admin layout navigation
+ */
 export type ActiveTabProps = "groups" | "instances" | "types";
 
 type ElectionsLayoutProps = {
@@ -21,6 +24,10 @@ export type PageHeaderTabProps = {
   onClick?: () => void;
 };
 
+/**
+ * Base layout wrapper for admin pages.
+ * Centers content with a max width and provides consistent spacing.
+ */
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <main
@@ -32,6 +39,10 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * Layout specifically designed for dashboard views.
+ * Similar to base Layout but with larger gap spacing between elements.
+ */
 export function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <main className="mx-auto flex w-full max-w-[1200px] flex-col gap-6 px-5">
@@ -40,6 +51,10 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   );
 }
 
+/**
+ * A standardized filter button component displaying a slider icon.
+ * Used across admin pages to trigger filter menus or modals.
+ */
 export function FilterButton({ onClick }: { onClick?: () => void }) {
   return (
     <Button
@@ -57,6 +72,11 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "../button";
 import ArrowDownIcon from "../../icons/arrow-down-icon";
 
+/**
+ * A multi-purpose 'Add' button that can either trigger a single action
+ * or open a dropdown menu with multiple creation options depending on
+ * the provided props.
+ */
 export function AddButton({
   onClick,
   onAddElection,
@@ -329,6 +349,10 @@ export function AddButton({
   );
 }
 
+/**
+ * A generic search bar component for page headers.
+ * Includes an optional right-aligned component slot for additional actions.
+ */
 export function PageSearchLayer({
   rightComponent,
   placeholder = "Search",
@@ -357,6 +381,10 @@ export function PageSearchLayer({
   );
 }
 
+/**
+ * Standardized page header for admin views.
+ * Displays the page title, navigation tabs, and optional right-aligned actions.
+ */
 export function PageHeader({
   title,
   rightComponent,
@@ -382,6 +410,10 @@ export function PageHeader({
   );
 }
 
+/**
+ * Navigation tabs used within the PageHeader.
+ * Supports both internal routing (via Link) and basic click handlers.
+ */
 export function HeaderTabs({
   activeTab,
   tabs,
@@ -432,6 +464,10 @@ export function HeaderTabs({
   );
 }
 
+/**
+ * A simple display card for statistics.
+ * Shows a label, a value, and an accompanying icon.
+ */
 export function StatCard({
   label,
   value,
@@ -452,6 +488,10 @@ export function StatCard({
   );
 }
 
+/**
+ * A collapsible section container specifically designed for grouping StatCards.
+ * Supports expanding/collapsing content and toggling number formats.
+ */
 export function StatSection({
   title,
   children,
@@ -511,6 +551,9 @@ export function StatSection({
   );
 }
 
+/**
+ * Type definitions for standardized table components
+ */
 export type TableProps = {
   columns: string[];
   rows: Array<{
