@@ -10,19 +10,20 @@ export function ReferralCard({ onClick }: { onClick: () => void }) {
   const { party } = useAuth();
   const referralCode = "DAN-40";
   const [_, copy] = useCopyToClipboard();
+  const partyName = party?.shortName || party?.name || "Accord";
 
   return (
     <GreyCardWrapper>
       <div className="flex items-center justify-between gap-5">
         <AppAvatar src={party?.logo} alt="Party Logo" className="size-5" />
-        <p className="text-sm text-c-50 w-full">{party.shortName}</p>
+        <p className="text-sm text-c-50 w-full">{partyName}</p>
         <p className="text-sm text-c-50 shrink-0 font-semibold">
           Start Making Money
         </p>
       </div>
       <h3 className="text-[26px] leading-8 tracking-tight text-c-80 font-bold">
         Earn up to <span className="text-purple">500k</span> referring people to
-        become polling unit agents for Accord
+        become polling unit agents for {partyName}
       </h3>
 
       <div className="py-2 space-y-1">
@@ -31,7 +32,7 @@ export function ReferralCard({ onClick }: { onClick: () => void }) {
 
           <FancyMoneyBagIcon className="shrink-0 size-4" />
           <p className="text-sm text-c-50 shrink-0 font-semibold">
-            1k per agent
+            1k per agent referred
           </p>
         </div>
         <div

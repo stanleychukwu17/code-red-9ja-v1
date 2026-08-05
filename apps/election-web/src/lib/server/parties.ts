@@ -6,7 +6,7 @@ import { API_URL } from "../config";
 export const getParties = createServerFn({ method: "GET" })
   .handler(async () => {
     try {
-      const response = await apiFetch(API_URL.parties);
+      const response = await apiFetch(API_URL.partiesPublic);
       const resData = await response.json();
       return resData; // Envelope: { success: true, message: "...", data: { parties: [...] } }
     } catch (error) {

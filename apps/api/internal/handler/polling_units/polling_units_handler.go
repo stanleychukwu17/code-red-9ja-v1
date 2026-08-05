@@ -12,6 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	pollingunitsservice "free9ja/api/internal/service/polling_units"
 )
 type PollingUnitsService interface {
 	CreatePollingUnit(ctx context.Context, arg queries.CreatePollingUnitParams) (queries.PollingUnit, error)
@@ -19,6 +20,7 @@ type PollingUnitsService interface {
 	UpdatePollingUnit(ctx context.Context, arg queries.UpdatePollingUnitParams) (queries.PollingUnit, error)
 	DeletePollingUnit(ctx context.Context, id int32) error
 	GetPollingUnits(ctx context.Context, wardID, localGovernmentID, stateID int32) ([]queries.PollingUnit, error)
+	GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int64) ([]pollingunitsservice.PollingUnitWithCapacity, error)
 }
 
 type Handler struct {
@@ -432,6 +434,8 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 // @Param        ward_id              query     int     false  "Ward ID to filter by"
 // @Param        lga_id  query     int     false  "LGA ID to filter by"
 // @Param        state_id             query     int     false  "State ID to filter by"
+// @Param        party_id             query     int     false  "Party ID for capacity check"
+// @Param        election_group_id    query     int     false  "Election Group ID for capacity check"
 // @Param        limit                query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor               query     string  false  "Cursor (ID of last record)"
 // @Success      200                  {object}  GetPollingUnitsResponse
@@ -441,7 +445,69 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 	wardID := parseOptionalQueryInt(r, "ward_id")
 	localGovernmentID := parseOptionalQueryInt(r, "lga_id")
 	stateID := parseOptionalQueryInt(r, "state_id")
+	partyID := int16(parseOptionalQueryInt(r, "party_id"))
+	electionGroupID := int64(parseOptionalQueryInt(r, "election_group_id"))
 	limit, cursor := parsePaginationParams(r)
+
+	if partyID > 0 && electionGroupID > 0 {
+		units, err := h.puService.GetPollingUnitsWithCapacity(r.Context(), wardID, localGovernmentID, stateID, partyID, electionGroupID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units with capacity: "+err.Error())
+			return
+		}
+		
+		orderBy, orderDir := parseSortParams(r, "name", "ASC")
+
+		sort.SliceStable(units, func(i, j int) bool {
+			var less bool
+			if orderBy == "name" {
+				less = units[i].Name < units[j].Name
+			} else {
+				less = units[i].ID < units[j].ID
+			}
+			if orderDir == "DESC" {
+				return !less
+			}
+			return less
+		})
+
+		startIndex := 0
+		if cursor > 0 {
+			for i, pu := range units {
+				if int64(pu.ID) == cursor {
+					startIndex = i + 1
+					break
+				}
+			}
+		}
+
+		var paginated []pollingunitsservice.PollingUnitWithCapacity
+		hasMore := false
+		nextCursor := ""
+
+		if startIndex < len(units) {
+			endIndex := startIndex + limit
+			if endIndex >= len(units) {
+				endIndex = len(units)
+				paginated = units[startIndex:endIndex]
+			} else {
+				paginated = units[startIndex:endIndex]
+				hasMore = true
+				nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
+			}
+		} else {
+			paginated = []pollingunitsservice.PollingUnitWithCapacity{}
+		}
+
+		h.utils.RespondSuccess(w, http.StatusOK, "Polling units fetched successfully", map[string]interface{}{
+			"polling_units": paginated,
+			"meta": map[string]interface{}{
+				"next_cursor": nextCursor,
+				"has_more":    hasMore,
+			},
+		})
+		return
+	}
 
 	units, err := h.puService.GetPollingUnits(r.Context(), wardID, localGovernmentID, stateID)
 	if err != nil {

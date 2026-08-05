@@ -5724,6 +5724,18 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "description": "Party ID for capacity check",
+                        "name": "party_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID for capacity check",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
                         "description": "Limit (default 20, max 100)",
                         "name": "limit",
                         "in": "query"
@@ -6002,6 +6014,280 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/practice-tests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the authenticated user's practice tests. Pass user_id to filter by a specific user (admin use).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Practice Tests"
+                ],
+                "summary": "List practice tests",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by user ID (defaults to self)",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by election group",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (in_progress|completed)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor for pagination",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new in-progress practice test row for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Practice Tests"
+                ],
+                "summary": "Start a practice test session",
+                "parameters": [
+                    {
+                        "description": "Start Practice Test",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/practicetestshandler.StartPracticeTestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/practice-tests/{id}/complete": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Practice Tests"
+                ],
+                "summary": "Mark a practice test as completed",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Practice Test ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Final score",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/practicetestshandler.CompleteTestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/practice-tests/{id}/task": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Practice Tests"
+                ],
+                "summary": "Append a completed task to a practice test",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Practice Test ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Task stats",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/practicetestshandler.AppendTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
                         }
                     }
                 }
@@ -7979,6 +8265,8 @@ const docTemplate = `{
                 "confirmPassword",
                 "country",
                 "countryId",
+                "email",
+                "emailVerificationToken",
                 "password",
                 "phoneNumber"
             ],
@@ -7993,6 +8281,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "email": {
+                    "type": "string"
+                },
+                "emailVerificationToken": {
                     "type": "string"
                 },
                 "password": {
@@ -8110,6 +8401,7 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "countryId",
+                "email",
                 "password",
                 "phoneNumber"
             ],
@@ -8362,6 +8654,9 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "big.Int": {
+            "type": "object"
         },
         "bodieshandler.CityResponse": {
             "type": "object",
@@ -9339,6 +9634,39 @@ const docTemplate = `{
                 "NegativeInfinity"
             ]
         },
+        "pgtype.Int8": {
+            "type": "object",
+            "properties": {
+                "int64": {
+                    "type": "integer",
+                    "format": "int64"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Numeric": {
+            "type": "object",
+            "properties": {
+                "exp": {
+                    "type": "integer",
+                    "format": "int32"
+                },
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "int": {
+                    "$ref": "#/definitions/big.Int"
+                },
+                "naN": {
+                    "type": "boolean"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
         "pgtype.Text": {
             "type": "object",
             "properties": {
@@ -9588,6 +9916,83 @@ const docTemplate = `{
                 },
                 "ward_id": {
                     "type": "integer"
+                }
+            }
+        },
+        "practicetestshandler.AppendTaskRequest": {
+            "type": "object",
+            "properties": {
+                "failed_attempts": {
+                    "type": "integer"
+                },
+                "score": {
+                    "type": "number"
+                },
+                "task_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "practicetestshandler.CompleteTestRequest": {
+            "type": "object",
+            "properties": {
+                "final_score": {
+                    "type": "number"
+                }
+            }
+        },
+        "practicetestshandler.PracticeTestResponse": {
+            "type": "object",
+            "properties": {
+                "completed_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "election_group_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
+                "final_score": {
+                    "$ref": "#/definitions/pgtype.Numeric"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "sequence": {
+                    "type": "integer"
+                },
+                "started_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "task_stats": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "practicetestshandler.StartPracticeTestRequest": {
+            "type": "object",
+            "properties": {
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "role": {
+                    "type": "string"
                 }
             }
         },

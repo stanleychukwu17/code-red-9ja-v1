@@ -205,7 +205,7 @@ function ApplyPage() {
     hasNextPage: hasNextUnits,
     isFetchingNextPage: isFetchingNextUnits,
   } = useInfiniteQuery({
-    queryKey: ["pollingUnits", selectedStateId, selectedLgaId, selectedWardId],
+    queryKey: ["pollingUnits", selectedStateId, selectedLgaId, selectedWardId, selectedPartyId, selectedElectionIds?.[0]],
     queryFn: async ({ pageParam }) => {
       const res = await getPollingUnits({
         data: {
@@ -214,6 +214,8 @@ function ApplyPage() {
           wardId: selectedWardId || undefined,
           limit: 20,
           cursor: pageParam || undefined,
+          partyId: selectedPartyId || undefined,
+          electionGroupId: selectedElectionIds?.[0] || undefined,
         },
       });
       if (res && res.success && res.data) {
@@ -390,7 +392,7 @@ function ApplyPage() {
 
   const handleBackClick = () => {
     if (step === 1) {
-      navigate({ to: "/home" });
+      navigate({ to: "/" });
     } else if (step === 8 && educationalStatus === "none") {
       setStep(6);
     } else {

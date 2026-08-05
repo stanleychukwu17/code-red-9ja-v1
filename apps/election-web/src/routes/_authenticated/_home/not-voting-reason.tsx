@@ -12,14 +12,18 @@ export interface NotVotingReasonSearch {
   reasonId?: number;
 }
 
-export const Route = createFileRoute("/_authenticated/_home/not-voting-reason")({
-  component: NotVotingReasonPage,
-  validateSearch: (search: Record<string, unknown>): NotVotingReasonSearch => {
-    return {
-      reasonId: search.reasonId ? Number(search.reasonId) : undefined,
-    };
+export const Route = createFileRoute("/_authenticated/_home/not-voting-reason")(
+  {
+    component: NotVotingReasonPage,
+    validateSearch: (
+      search: Record<string, unknown>,
+    ): NotVotingReasonSearch => {
+      return {
+        reasonId: search.reasonId ? Number(search.reasonId) : undefined,
+      };
+    },
   },
-});
+);
 
 function NotVotingReasonPage() {
   const navigate = useNavigate();
@@ -45,7 +49,7 @@ function NotVotingReasonPage() {
       });
 
       toast.success("Thank you for letting us know.");
-      navigate({ to: "/home" });
+      navigate({ to: "/" });
     } catch (err: any) {
       toast.error(err.message || "Failed to submit reason");
     } finally {
@@ -55,7 +59,7 @@ function NotVotingReasonPage() {
 
   return (
     <div className="w-full min-h-screen bg-white flex flex-col">
-      <PageHeader title="" onBackClick={() => navigate({ to: "/home" })} />
+      <PageHeader title="" onBackClick={() => navigate({ to: "/" })} />
 
       <div className="px-4 pt-2 flex-1 flex flex-col">
         <h1 className="text-2xl font-bold text-neutral-900 mb-6">

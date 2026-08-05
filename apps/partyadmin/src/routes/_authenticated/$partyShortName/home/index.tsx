@@ -1,147 +1,88 @@
 import * as React from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { APP_URL } from "#/lib/config";
-import { Avatar, AvatarImage } from "@repo/ui/components/avatar";
-import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
-import { cn } from "@repo/ui/lib/utils";
-import { ChevronDown } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
-import { Button } from "@repo/ui/components/button";
-import { RECENT_APPLICATIONS } from "./-dummy_data";
-import { DashboardLayout } from "@repo/ui/components/custom/AdminLayouts";
-import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
-import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
-import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  DashboardLayout,
+  HeaderTabs,
+  ReadinessStatSection,
+} from "@repo/ui/components/custom/AdminLayouts";
+import { HomePageHeader } from "./-header";
+import { ElectionScopeSelector } from "./components/-election-scope-selector";
 import { useAppContext } from "#/hooks/useAppContext";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPartyWallet,
   updatePartyStateAllowances,
   getPartyAgentPaymentAllocation,
+  getPlans,
+  createMarketingCampaign,
+  getPartyAgentTargets,
+  updatePartyAgentTargets,
+  depositPartyAllowance,
 } from "#/lib/server/parties";
+import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
+import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
+import { AgentPaymentAllocationFormDialog } from "@repo/ui/components/dialogs/AgentPaymentAllocationFormDialog";
+import { Button } from "@repo/ui/components/button";
+import { cn } from "@repo/ui/lib/utils";
 import { getStates } from "#/lib/server/countries";
+import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
+import { useServerFn } from "@tanstack/react-start";
+import { getElectionGroups } from "#/lib/server/election_groups";
+import { getElectionsByGroup } from "#/lib/server/elections";
+import {
+  AgentMarketingSetupDialog,
+  type AgentMarketingSetupValue,
+} from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
+import { DepositAgentPaymentDialog } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
+import {
+  LeaderboardCardWrapper,
+  ObjectiveTile,
+} from "@repo/ui/components/cards/leaderboard-card";
 import { toast } from "sonner";
-import { HomePageHeader } from "./-header";
+import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
+import { SelectDateRange } from "@repo/ui/components/selects/date-range-select";
+import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
-  head: () => getPageHeader({ title: "Home" }),
-  component: RouteComponent,
+  head: () => getPageHeader({ title: "Readiness Dashboard" }),
+  component: ReadinessComponent,
 });
 
-function RouteComponent() {
-  return (
-    <DashboardLayout>
-      <HomePageHeader activeTab="main" />
-      <HomeBillboard />
-
-      <section className="grid gap-6 lg:grid-cols-[0.95fr_1.9fr] pb-20">
-        <TodoSection />
-        <RecentApplicationsSection />
-      </section>
-    </DashboardLayout>
-  );
-}
-
-function MetricRow({
-  label,
-  value,
-  note,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  note?: string;
-  valueClassName?: string;
-}) {
-  return (
-    <div className="h-10 flex items-center justify-between gap-4 border-b border-dashed border-c-20 last:border-0 last:pb-0">
-      <div className="flex items-start gap-3">
-        <FancyAgentIcon />
-        <span className="max-w-[330px] leading-7 text-[#242424]">{label}</span>
-      </div>
-      <div className="whitespace-nowrap text-right font-semibold text-c-80">
-        <span className={cn(valueClassName)}>{value}</span>
-        {note ? <span className="text-[#ff2d2d]"> {note}</span> : null}
-      </div>
-    </div>
-  );
-}
-
-function PrimaryAction({
-  children,
-  onClick,
-}: {
-  children: string;
-  onClick?: () => void;
-}) {
-  return (
-    // <button className="h-11 rounded-12 bg-[#232323] px-5 text-[16px] font-semibold text-white transition hover:bg-[#111]">
-    //   {children}
-    // </button>
-    <Button
-      variant="black"
-      size="lg"
-      className="rounded-[12px] font-medium text-sm px-5"
-      onClick={onClick}
-    >
-      {children}
-    </Button>
-  );
-}
-
-function TodoItem({
-  text,
-  buttonLabel,
-}: {
-  text: string;
-  buttonLabel: string;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-start gap-3">
-        <div className="size-6 shrink-0 rounded-full bg-c-10" />
-        <p className="leading-6 text-c-80">{text}</p>
-      </div>
-      <Button
-        variant="default"
-        size="xl"
-        className="w-full rounded-[12px] font-medium text-sm px-5"
-      >
-        {buttonLabel}
-      </Button>
-    </div>
-  );
-}
-
-function ActionPill({
-  children,
-  variant,
-}: {
-  children: string;
-  variant: "accept" | "reject";
-}) {
-  return (
-    <Button
-      className={cn(
-        "h-9 rounded-[10px] px-5 text-[16px] font-semibold transition",
-        variant === "accept"
-          ? "bg-[#10dd84] text-c-80 hover:bg-[#08cf79]"
-          : "bg-[#ececec] text-c-60 hover:bg-[#e6e6e6]",
-      )}
-    >
-      {children}
-    </Button>
-  );
-}
-
-function HomeBillboard() {
-  const { party } = useAppContext();
+function ReadinessComponent() {
+  const { party, selectedElectionGroup, selectedElection } = useAppContext();
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
   const [isWalletDialogOpen, setIsWalletDialogOpen] = React.useState(false);
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
   const [isBudgetDialogOpen, setIsBudgetDialogOpen] = React.useState(false);
+  const [isTargetDialogOpen, setIsTargetDialogOpen] = React.useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = React.useState(false);
+  const [isPaymentPending, setIsPaymentPending] = React.useState(false);
+  const [isMarketingDialogOpen, setIsMarketingDialogOpen] =
+    React.useState(false);
+
+  const fetchGroups = useServerFn(getElectionGroups);
+  const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
+  const fetchPlans = useServerFn(getPlans);
+  const submitCampaign = useServerFn(createMarketingCampaign);
+
+  const fetchElectionsWrapper = async (args: any) => {
+    if (!args.data.electionGroupId)
+      return {
+        success: true,
+        data: { elections: [] },
+        meta: { has_more: false },
+      };
+    return await fetchElectionsByGroup({ data: args.data.electionGroupId });
+  };
+
+  const fetchMarketingPlansWrapper = async (args: any) => {
+    return await fetchPlans({
+      data: { type: args?.data?.type ?? "agent-campaign", isActive: true },
+    });
+  };
 
   const { data: walletRes, refetch: refetchWallet } = useQuery({
     queryKey: ["partyWallet", partyId],
@@ -150,13 +91,6 @@ function HomeBillboard() {
   });
 
   const wallet = walletRes?.data?.wallet;
-
-  const handleSlotsPurchased = () => {
-    refetchWallet();
-    if (partyId) {
-      queryClient.invalidateQueries({ queryKey: ["party", partyId] });
-    }
-  };
 
   const { data: statesRes } = useQuery({
     queryKey: ["nigerianStates"],
@@ -208,79 +142,41 @@ function HomeBillboard() {
         "Zamfara",
       ];
 
-  const allowances = party?.agentPaymentAllocation || {};
-  const defaultKobo =
-    allowances["default"] !== undefined ? allowances["default"] : 2000000;
-  const defaultNaira = defaultKobo / 100;
-
-  const stateValues = Object.entries(allowances)
-    .filter(([key]) => key !== "default")
-    .map(([_, val]) => val / 100);
-
-  let displayBudget = "";
-  if (stateValues.length === 0) {
-    displayBudget = `₦${defaultNaira.toLocaleString("en-NG")} per agent`;
-  } else {
-    const hasOverrides = stateValues.some((val) => val !== defaultNaira);
-    if (!hasOverrides) {
-      displayBudget = `₦${defaultNaira.toLocaleString("en-NG")} per agent`;
-    } else {
-      const allValues = [defaultNaira, ...stateValues];
-      const min = Math.min(...allValues);
-      const max = Math.max(...allValues);
-      if (min === max) {
-        displayBudget = `₦${min.toLocaleString("en-NG")} per agent`;
-      } else {
-        displayBudget = `₦${min.toLocaleString("en-NG")} - ₦${max.toLocaleString("en-NG")} per agent`;
-      }
+  const handleSlotsPurchased = () => {
+    refetchWallet();
+    if (partyId) {
+      queryClient.invalidateQueries({ queryKey: ["party", partyId] });
     }
-  }
+  };
 
   return (
-    <section className="flex w-full gap-20 justify-between rounded-[20px] bg-hover-3 px-10 py-6">
-      <div className="flex-2 flex flex-col gap-5">
-        <h2 className="text-xl font-medium text-c-90">Readiness</h2>
+    <DashboardLayout>
+      <HomePageHeader activeTab="main" />
+      <ElectionScopeSelector />
 
-        <div className="flex items-center gap-6">
-          <div className="relative flex size-32 items-center justify-center rounded-full bg-[conic-gradient(#ffca2b_0_48deg,#ececec_48deg_360deg)]">
-            <div className="size-[40px] rounded-full bg-hover-3" />
-          </div>
-          <div className="text-[100px] font-bold leading-none tracking-[-0.08em] text-c-80">
-            13%
-          </div>
-        </div>
-      </div>
-
-      <div className="flex-3 flex flex-col gap-5">
-        <h2 className="text-xl font-medium tracking-[-0.03em] text-[#202020]">
-          Polling Agents
-        </h2>
-
-        <div className="text-[18px] text-[#222]">
-          <MetricRow label="Polling units with an agent" value="12,004" />
-          <MetricRow
-            label="Polling units without an agent"
-            value="99,634"
-            valueClassName="text-[#ff2d2d]"
-            note="(Very risky)"
+      <div className="grid gap-6 lg:grid-cols-[2fr_1.2fr] items-start pb-20">
+        {/* Left Hand Column */}
+        <div className="space-y-6">
+          <ReadinessProgressCard />
+          <RequiredActionsSection
+            onBuySlots={() => setIsSlotsDialogOpen(true)}
+            onDepositPayment={() => setIsPaymentDialogOpen(true)}
+            onDepositMarketing={() => setIsMarketingDialogOpen(true)}
           />
-          <MetricRow
-            label="Polling Agent Election Payment"
-            value={displayBudget}
-            valueClassName="font-semibold"
-          />
+          <SubTabsSection />
         </div>
 
-        <div className="mt-1 flex flex-wrap gap-3">
-          <PrimaryAction onClick={() => setIsBudgetDialogOpen(true)}>
-            Set Agent Payment Budget
-          </PrimaryAction>
-          <PrimaryAction onClick={() => setIsWalletDialogOpen(true)}>
-            Fund Wallet
-          </PrimaryAction>
-          <PrimaryAction onClick={() => setIsSlotsDialogOpen(true)}>
-            Buy Polling Agent Slots
-          </PrimaryAction>
+        {/* Right Hand Column */}
+        <div className="space-y-6">
+          <FinancialOverallCard
+            walletBalance={wallet?.balance_kobo || 0}
+            slots={party?.slots || 0}
+          />
+          <TargetCard />
+          <AgentPaymentCard
+            onEdit={() => setIsBudgetDialogOpen(true)}
+            party={party}
+          />
         </div>
       </div>
 
@@ -319,103 +215,741 @@ function HomeBillboard() {
         }}
         onSuccess={() => setIsBudgetDialogOpen(false)}
       />
-    </section>
+
+      <TargetFormDialog
+        open={isTargetDialogOpen}
+        onClose={() => setIsTargetDialogOpen(false)}
+        partyId={partyId!}
+        fetchTargets={async (id) => {
+          const res = await getPartyAgentTargets({ data: id });
+          return res?.data?.targets ?? null;
+        }}
+        updateTargets={async (id, values) => {
+          const res = await updatePartyAgentTargets({
+            data: { partyID: id, targets: values },
+          });
+          if (!res.success) throw new Error(res.message || "Failed to update");
+          queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+          toast.success("Agent targets saved!");
+          return res.data;
+        }}
+        onSuccess={() => setIsTargetDialogOpen(false)}
+      />
+
+      <DepositAgentPaymentDialog
+        open={isPaymentDialogOpen}
+        onClose={() => setIsPaymentDialogOpen(false)}
+        walletBalanceNaira={(wallet?.balance_kobo ?? 0) / 100}
+        agentPaymentBalanceNaira={(party?.agentPaymentBalanceKobo ?? 0) / 100}
+        partyId={partyId}
+        electionGroupId={selectedElectionGroup?.id}
+        fetchElectionGroups={fetchGroups}
+        isPending={isPaymentPending}
+        onSubmit={async (amountKobo) => {
+          if (!partyId) return;
+          setIsPaymentPending(true);
+          try {
+            const res = await depositPartyAllowance({
+              data: { partyID: partyId, amountKobo },
+            });
+            if (res?.success) {
+              toast.success("Agent payment deposited!");
+              refetchWallet();
+              queryClient.invalidateQueries({ queryKey: ["party", partyId] });
+              setIsPaymentDialogOpen(false);
+            } else {
+              toast.error(res?.message ?? "Failed to deposit agent payment");
+            }
+          } finally {
+            setIsPaymentPending(false);
+          }
+        }}
+      />
+
+      <AgentMarketingSetupDialog
+        open={isMarketingDialogOpen}
+        onClose={() => setIsMarketingDialogOpen(false)}
+        isPending={false}
+        partyId={partyId}
+        fetchElectionGroups={fetchGroups}
+        fetchElection={fetchElectionsWrapper}
+        fetchPlans={fetchMarketingPlansWrapper}
+        states={statesList}
+        defaultValue={
+          {
+            electionGroupId: selectedElectionGroup?.id
+              ? String(selectedElectionGroup.id)
+              : "",
+            electionId: selectedElection?.id ? String(selectedElection.id) : "",
+            planId: "",
+            targetMode: "custom",
+            states: [],
+            durationUnit: "days",
+            durationValue: 5,
+          } satisfies Partial<AgentMarketingSetupValue>
+        }
+        onSubmit={async (values) => {
+          if (!partyId) return;
+          console.log("FORM SUBMITTED:", values);
+          const durationInDays =
+            values.durationUnit === "months"
+              ? values.durationValue * 30
+              : values.durationValue;
+          // budget = plan.price (NGN) × duration_in_days × number_of_states
+          // The API expects budget as a plain number (NGN, not kobo)
+          // We compute it client-side from the selected plan already stored in the dialog
+          // The dialog exposes planId so we fetch price from the plans cache if needed;
+          // for now we pass the total as 0 and let the backend compute from plan_id × duration × states.length
+          // (backend service already calculates wallet debit from plan price)
+          const statesForApi =
+            values.targetMode === "all" ? statesList : values.states;
+          const res = await submitCampaign({
+            data: {
+              budget: values.budget ?? 0,
+              durationInDays: durationInDays,
+              electionGroupId: Number(values.electionGroupId),
+              electionId: Number(values.electionId),
+              planId: Number(values.planId),
+              partyId: partyId,
+              states: statesForApi,
+              type: "agent-campaign",
+            },
+          });
+          if (res?.success) {
+            toast.success("Marketing campaign created successfully!");
+            setIsMarketingDialogOpen(false);
+            refetchWallet();
+          } else {
+            toast.error(res?.message ?? "Failed to create marketing campaign");
+          }
+        }}
+      />
+    </DashboardLayout>
   );
 }
 
-function TodoSection() {
+function ReadinessProgressCard() {
+  const ReadinessText = ({
+    label,
+    value,
+  }: {
+    label: string;
+    value: string;
+  }) => {
+    return (
+      <p className="text-white font-medium">
+        {label}
+        <span className="text-white/50"> {value}</span>
+      </p>
+    );
+  };
+
   return (
-    <div className="rounded-[24px] bg-[#fafafa] p-6">
-      <div className="mb-5 flex items-center gap-3 text-[22px] font-medium tracking-[-0.03em] text-[#212121]">
-        <span>Todo</span>
-        <span className="font-semibold">12</span>
+    <LeaderboardCardWrapper>
+      <ObjectiveTile
+        isCompleted={false}
+        title="Polling Agent"
+        rightText={<ReadinessText label="22,982" value="/ 174,402" />}
+        rightText2={<ReadinessText label="32%" value="ready" />}
+      />
+      <ObjectiveTile
+        isCompleted={false}
+        title="Ward Election Supervisor"
+        rightText={<ReadinessText label="3,984" value="/ 8,713" />}
+        rightText2={<ReadinessText label="46%" value="ready" />}
+      />
+      <ObjectiveTile
+        isCompleted={false}
+        title="LGA Election Supervisor"
+        rightText={<ReadinessText label="241" value="/ 774" />}
+        rightText2={<ReadinessText label="31%" value="ready" />}
+      />
+      <ObjectiveTile
+        isCompleted={true}
+        title="State Election Supervisor"
+        rightText={<ReadinessText label="37" value="/ 37" />}
+        rightText2={<ReadinessText label="100%" value="ready" />}
+      />
+    </LeaderboardCardWrapper>
+  );
+}
+
+function RoleProgressRow({
+  role,
+  count,
+  max,
+  percent,
+  isComplete,
+}: {
+  role: string;
+  count: string;
+  max: string;
+  percent: number;
+  isComplete?: boolean;
+}) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center gap-4 flex-1">
+        <div
+          className={cn(
+            "size-5 rounded-full flex items-center justify-center shrink-0",
+            isComplete ? "bg-[#06c270]" : "bg-white/20",
+          )}
+        >
+          {isComplete && (
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M10 3L4.5 8.5L2 6"
+                stroke="white"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </div>
+        <span className="text-white/90 font-medium text-[15px]">{role}</span>
       </div>
 
-      <div className="space-y-8">
-        <TodoItem
-          text="Candidates are yet to be provided by your party for 982 elections."
-          buttonLabel="Field candidates"
+      <div className="flex items-center gap-8 justify-between sm:justify-end text-[14px]">
+        <div>
+          <span className="font-semibold">{count}</span>
+          <span className="text-white/40"> / {max}</span>
+        </div>
+        <div className="w-[110px] text-right font-medium">
+          {percent}%{" "}
+          <span className="text-white/40 font-normal">test ready</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RequiredActionsSection({
+  onBuySlots,
+  onDepositPayment,
+  onDepositMarketing,
+}: {
+  onBuySlots: () => void;
+  onDepositPayment: () => void;
+  onDepositMarketing: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold text-c-90">Required Actions</h2>
+      <div className="space-y-4">
+        <ActionBanner
+          title="Buy Slots for Election Agents"
+          description="Slots allow you accept agent requests for upcoming elections."
+          buttonLabel="Buy Slots"
+          bgClass="bg-[#FFDAAA]/50"
+          onClick={onBuySlots}
         />
-        <TodoItem
-          text="To automatically accept agent applications - fund wallet."
-          buttonLabel="Fund wallet"
+        <ActionBanner
+          title="Deposit Agent Payment"
+          description="Deposit party agent election day payment."
+          buttonLabel="Deposit Agent Payment"
+          bgClass="bg-purple/20"
+          onClick={onDepositPayment}
+        />
+        <ActionBanner
+          title="Setup Agent Marketing"
+          description="Acquire agents for the upcoming election. This is the fastest way to get agents for your party (Highly Recommended)."
+          buttonLabel="Setup Agent Marketing"
+          bgClass="bg-[#0984E3]/20"
+          onClick={onDepositMarketing}
         />
       </div>
+    </div>
+  );
+}
 
-      <Button variant="outline" size="xl" className="mt-8 w-full">
-        See all
+function ActionBanner({
+  title,
+  description,
+  buttonLabel,
+  bgClass,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  buttonLabel: string;
+  bgClass: string;
+  onClick?: () => void;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col sm:flex-row sm:items-start justify-between p-5 rounded-[20px] gap-4",
+        bgClass,
+      )}
+    >
+      <FancyAgentIcon className="shrink-0 size-6" />
+      <div className="space-y-1 w-full">
+        <h3 className="font-semibold text-lg text-c-90">{title}</h3>
+        <p className="text-c-70 text-sm">{description}</p>
+      </div>
+      <Button onClick={onClick} variant="black" size="lg" className="px-4">
+        {buttonLabel}
       </Button>
     </div>
   );
 }
 
-import { PartyApplicationDialog } from "#/components/dialogs/party-application-dialog";
-
-function RecentApplicationsSection() {
-  const [selectedApp, setSelectedApp] = React.useState<any>(null);
-  const { partyShortName } = Route.useParams();
+function SubTabsSection() {
+  const [activeTab, setActiveTab] = React.useState<
+    "main" | "activities" | "transactions"
+  >("main");
+  const [dateRange, setDateRange] = React.useState<string>("today");
 
   return (
-    <div className="rounded-[24px] bg-[#fafafa] p-6 space-y-5">
-      <div className="flex items-center justify-between gap-4">
-        <div className="text-[22px] font-medium tracking-[-0.03em] text-[#212121]">
-          Recent Applications
-        </div>
-        <div className="flex items-center gap-8 text-[16px] text-[#777]">
-          <span>35,045 slots left</span>
-          <Link
-            to={APP_URL.partyRoutes.applications(partyShortName) as any}
-            className="text-[#202020] transition hover:opacity-70"
-          >
-            See all
-          </Link>
-        </div>
+    <div className="space-y-6 pt-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <HeaderTabs
+          activeTab={activeTab}
+          tabs={[
+            {
+              id: "main",
+              label: "Main",
+              onClick: () => setActiveTab("main"),
+            },
+            {
+              id: "activities",
+              label: "Activities",
+              onClick: () => setActiveTab("activities"),
+            },
+            {
+              id: "transactions",
+              label: "Transactions",
+              onClick: () => setActiveTab("transactions"),
+            },
+          ]}
+          activeTabClassName="bg-[#222] text-white shadow-sm"
+          containerClassName="h-10"
+        />
+
+        <SelectDateRange
+          selectedId={dateRange}
+          update={(val) => setDateRange(val)}
+          className="h-[42px] rounded-xl max-w-[180px]"
+        />
       </div>
 
-      <div>
-        {RECENT_APPLICATIONS.map((item) => (
-          <div
-            key={item.name}
-            onClick={() =>
-              setSelectedApp({
-                name: item.name,
-                avatar: item.avatar,
-                location: item.location.split(" . ")[0] || item.location,
-                election:
-                  item.location.split(" . ")[1] || "2027 presidential election",
-                voterId: "904284758271",
-              })
-            }
-            className="h-[72px] flex items-center justify-between gap-4 rounded-[18px] cursor-pointer hover:bg-c-5 transition px-3 -mx-3"
-          >
-            <div className="flex min-w-0 items-center gap-4">
-              <Avatar className="size-12 shrink-0">
-                <AvatarImage src={item.avatar} alt={item.name} />
-              </Avatar>
-              <div className="min-w-0 space-y-1">
-                <p className="truncate text-[#202020]">{item.name}</p>
-                <p className="truncate text-sm text-c-50">{item.location}</p>
-              </div>
-            </div>
+      <div className="pt-2">
+        {activeTab === "main" && <MainSubTabContent />}
+        {activeTab === "activities" && <ActivitiesSubTabContent />}
+        {activeTab === "transactions" && <TransactionsSubTabContent />}
+      </div>
+    </div>
+  );
+}
 
-            <div
-              className="flex shrink-0 items-center gap-3"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ActionPill variant="accept">Accept</ActionPill>
-              <ActionPill variant="reject">Reject</ActionPill>
+function SubTab({
+  label,
+  isActive,
+  onClick,
+}: {
+  label: string;
+  isActive: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "px-5 py-2 rounded-[10px] text-[15px] font-medium transition-all",
+        isActive
+          ? "bg-[#333] text-white shadow-sm"
+          : "text-c-60 hover:text-c-90",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+function MainSubTabContent() {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {/* Top Row */}
+      <RoleStatCard
+        role="Total Applications"
+        count="34,890"
+        className="bg-[#f7f7f7] border-0"
+      />
+      <RoleStatCard
+        role="Accepted Agents"
+        count="31,420"
+        className="bg-green/10 border-0 [&_p]:text-green"
+      />
+      <RoleStatCard
+        role="Rejected Agents"
+        count="0"
+        className="bg-red/10 border-0 [&_p]:text-red"
+      />
+
+      {/* Bottom Row */}
+      <RoleStatCard role="Polling Agents" count="31,420" />
+      <RoleStatCard role="Ward Supervisors" count="581" />
+      <RoleStatCard role="LGA Supervisors" count="121" />
+      <RoleStatCard role="State Supervisors" count="5" />
+    </div>
+  );
+}
+
+function RoleStatCard({
+  role,
+  count,
+  className,
+}: {
+  role: string;
+  count: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "col-span-1 border border-border rounded-[20px] p-5 space-y-2",
+        className,
+      )}
+    >
+      <p className="font-semibold text-[15px] text-c-80">{role}</p>
+      <p className="text-[28px] font-medium text-c-90 tracking-[-0.03em]">
+        {count}
+      </p>
+    </div>
+  );
+}
+
+function ActivitiesSubTabContent() {
+  const activities = [
+    {
+      name: "Kamsi Uzorchukwu",
+      role: "Polling Agent",
+      time: "2m ago",
+      amount: "-₦50,000",
+      status: "Accepted",
+      avatar: "https://i.pravatar.cc/150?u=1",
+      roleColor: "text-c-50",
+    },
+    {
+      name: "Maxwel Nnodi",
+      role: "Polling Agent",
+      time: "4m ago",
+      amount: "-₦50,000",
+      status: "Accepted",
+      avatar: "https://i.pravatar.cc/150?u=2",
+      roleColor: "text-c-50",
+    },
+    {
+      name: "Favour Udezue",
+      role: "Ward Supervisor",
+      time: "3h ago",
+      amount: "-₦70,000",
+      status: "Accepted",
+      avatar: "https://i.pravatar.cc/150?u=3",
+      roleColor: "text-[#8b5cf6]",
+    },
+    {
+      name: "Tobi Obafemi",
+      role: "State Supervisor",
+      time: "May 29, 14:56",
+      amount: "-₦500,000",
+      status: "Accepted",
+      avatar: "https://i.pravatar.cc/150?u=4",
+      roleColor: "text-[#00a859]",
+    },
+  ];
+
+  return (
+    <div>
+      {activities.map((a, i) => (
+        <div
+          key={i}
+          className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer"
+        >
+          <img
+            src={a.avatar}
+            alt=""
+            className="size-11 rounded-full object-cover shrink-0"
+          />
+          <div className="space-y-1 w-full">
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-c-90 w-full">{a.name}</p>
+              <p className="shrink-0 font-medium text-c-90">{a.amount}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-c-50 w-full">
+                <span className={a.roleColor}>{a.role}</span> · {a.time}
+              </p>
+              <p className="text-green">{a.status}</p>
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
-      {selectedApp && (
-        <PartyApplicationDialog
-          open={!!selectedApp}
-          onClose={() => setSelectedApp(null)}
-          application={selectedApp}
+function TransactionsSubTabContent() {
+  const transactions = [
+    {
+      type: "Agent Payment: Deposited",
+      time: "2m ago",
+      amount: "-₦50,000,000",
+      status: "Successful",
+      isDeposit: false,
+    },
+    {
+      type: "Slots: Purchased",
+      time: "2m ago",
+      amount: "-₦8,000,000",
+      status: "Successful",
+      isDeposit: false,
+    },
+    {
+      type: "Marketing Funds: Deposited",
+      time: "2m ago",
+      amount: "-₦8,000,000",
+      status: "Successful",
+      isDeposit: false,
+    },
+    {
+      type: "Wallet Balance: Funded",
+      time: "2m ago",
+      amount: "+₦50,000,000",
+      status: "Successful",
+      isDeposit: true,
+    },
+  ];
+
+  return (
+    <div>
+      {transactions.map((t, i) => (
+        <div
+          key={i}
+          className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3"
+        >
+          <div
+            className={cn(
+              "size-11 rounded-full flex items-center justify-center shrink-0",
+              t.isDeposit ? "bg-green/20 text-green" : "bg-c-10 text-c-80",
+            )}
+          >
+            {t.isDeposit ? (
+              <ArrowHandleIcon className="size-4 rotate-90" />
+            ) : (
+              <ArrowHandleIcon className="size-4 -rotate-90" />
+            )}
+          </div>
+          <div className="space-y-1 w-full">
+            <div className="flex items-center gap-2 w-full">
+              <p className="font-medium w-full text-c-90">{t.type}</p>
+              <p
+                className={cn(
+                  "shrink-0 font-semibold",
+                  t.isDeposit ? "text-green" : "text-c-90",
+                )}
+              >
+                {t.amount}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 w-full">
+              <p className="text-sm text-c-50 w-full">{t.time}</p>
+              <p className="shrink-0 text-green">{t.status}</p>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function FinancialOverallCard({
+  walletBalance,
+  slots,
+}: {
+  walletBalance: number;
+  slots: number;
+}) {
+  const balanceNGN = (walletBalance / 100).toLocaleString("en-NG", {
+    maximumFractionDigits: 1,
+  });
+
+  return (
+    <ReadinessStatSection title="Financial Overall">
+      <FinancialRow label="Party Wallet Balance" value={`₦${balanceNGN}`} />
+      <div className="px-3 py-2">
+        <div className="h-px bg-border w-full" />
+      </div>
+      <FinancialRow label="Slots" value={slots.toLocaleString()} />
+      <FinancialRow label="Agent Payment" value="₦176M" />
+      <FinancialRow label="Marketing Funds" value="₦200M" />
+    </ReadinessStatSection>
+  );
+}
+
+function FinancialRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="h-11 px-3 flex items-center gap-5">
+      <p className="text-c-70 w-full">{label}</p>
+      <span className="font-semibold text-[16px] text-c-80">{value}</span>
+      <Button variant="black" className="h-8 px-3 rounded-[10px]">
+        <ArrowHandleIcon className="-rotate-90 size-4" strokeWidth={2} />
+      </Button>
+    </div>
+  );
+}
+
+function TargetCard() {
+  const { party } = useAppContext();
+  const partyId = party?.id;
+
+  const [isDialogOpen, setIsDialogOpen] = React.useState(false);
+  const fetchTargetsFn = useServerFn(getPartyAgentTargets);
+  const updateTargetsFn = useServerFn(updatePartyAgentTargets);
+  const queryClient = useQueryClient();
+
+  const handleFetchTargets = async (id: string | number) => {
+    const res = await fetchTargetsFn({ data: id });
+    console.log("FETCH TARGETS RES", res);
+    return res?.data?.targets || res?.data || null;
+  };
+
+  const handleUpdateTargets = async (id: string | number, values: any) => {
+    return await updateTargetsFn({
+      data: {
+        partyID: id,
+        targets: values,
+      },
+    });
+  };
+
+  const { data: serverTargets } = useQuery({
+    queryKey: ["party-agent-targets", partyId],
+    queryFn: () => handleFetchTargets(partyId!),
+    enabled: !!partyId,
+  });
+
+  const targets = [
+    {
+      role: "Polling Agent per unit",
+      count: serverTargets?.pollingUnitAgent?.toString() ?? "2",
+    },
+    {
+      role: "Ward Supervisor per ward",
+      count: serverTargets?.wardElectionSupervisor?.toString() ?? "2",
+    },
+    {
+      role: "LGA Supervisor per lga",
+      count: serverTargets?.lgaElectionSupervisor?.toString() ?? "2",
+    },
+    {
+      role: "State Supervisor per state",
+      count: serverTargets?.stateElectionSupervisor?.toString() ?? "1",
+    },
+  ];
+
+  return (
+    <>
+      <ReadinessStatSection
+        title="Target"
+        headerAction={
+          <Button
+            variant="outline"
+            size="xs"
+            className="hover:bg-background hover:text-green"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDialogOpen(true);
+            }}
+          >
+            Edit
+          </Button>
+        }
+      >
+        {targets.map((t, i) => (
+          <SimpleStatTile key={i} label={t.role} value={t.count} />
+        ))}
+      </ReadinessStatSection>
+
+      {partyId && (
+        <TargetFormDialog
+          open={isDialogOpen}
+          onClose={() => setIsDialogOpen(false)}
+          partyId={partyId}
+          fetchTargets={handleFetchTargets}
+          updateTargets={handleUpdateTargets}
+          onSuccess={() => {
+            setIsDialogOpen(false);
+            queryClient.invalidateQueries({
+              queryKey: ["party-agent-targets", partyId],
+            });
+          }}
         />
       )}
+    </>
+  );
+}
+
+function SimpleStatTile({
+  icon,
+  label,
+  value,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="h-11 px-3 flex items-center gap-3">
+      {icon ?? <FancyAgentIcon className="shrink-0 size-5" />}
+      <p className="text-c-70 w-full">{label}</p>
+      <span className="font-semibold text-[16px] text-c-90">{value}</span>
     </div>
+  );
+}
+
+function AgentPaymentCard({
+  onEdit,
+  party,
+}: {
+  onEdit: () => void;
+  party: any;
+}) {
+  const defaultPayment =
+    (party?.agentPaymentAllocation?.default || 5000000) / 100;
+
+  const payments = [
+    { role: "Polling Agent", amount: `₦${defaultPayment.toLocaleString()}` },
+    { role: "Ward Supervisor", amount: "₦70,000" },
+    { role: "LGA Supervisor", amount: "₦100,000" },
+    { role: "State Supervisor", amount: "₦500,000" },
+  ];
+
+  return (
+    <ReadinessStatSection
+      title="Agent Payment"
+      headerAction={
+        <Button
+          variant="outline"
+          size="xs"
+          className="hover:bg-background hover:text-green"
+          onClick={onEdit}
+        >
+          Edit
+        </Button>
+      }
+    >
+      {payments.map((s, i) => (
+        <SimpleStatTile key={i} label={s.role} value={s.amount} />
+      ))}
+    </ReadinessStatSection>
   );
 }

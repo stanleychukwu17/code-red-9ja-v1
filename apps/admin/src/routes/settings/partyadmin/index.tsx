@@ -3,6 +3,8 @@ import { Button } from "@repo/ui/components/button";
 import { createFileRoute } from "@tanstack/react-router";
 import { EarningsAllocationDialog } from "#/components/dialogs/EarningsAllocationDialog";
 import { SlotCostDialog } from "#/components/dialogs/SlotCostDialog";
+import { TestRequirementsDialog } from "#/components/dialogs/TestRequirementsDialog";
+import { LiveVotersReferredDialog } from "#/components/dialogs/LiveVotersReferredDialog";
 
 export const Route = createFileRoute("/settings/partyadmin/")({
   component: RouteComponent,
@@ -78,10 +80,16 @@ type SelectedRole = {
 
 function RouteComponent() {
   const [selectedRole, setSelectedRole] = useState<SelectedRole>(null);
+  const [selectedTestRole, setSelectedTestRole] = useState<SelectedRole>(null);
   const [isSlotCostOpen, setIsSlotCostOpen] = useState(false);
+  const [isLiveVotersReferredOpen, setIsLiveVotersReferredOpen] = useState(false);
 
   const handleEdit = (key: string, name: string) => {
     setSelectedRole({ key, name });
+  };
+
+  const handleEditTestRequirements = (key: string, name: string) => {
+    setSelectedTestRole({ key, name });
   };
 
   return (
@@ -92,12 +100,18 @@ function RouteComponent() {
           description="Manage party admin settings"
         />
 
-        <SettingsSection title="Slots">
+        <SettingsSection title="General">
           <SettingsTile
             title="Slots price"
             description="Cost per slot purchase."
             buttonText="Edit"
             onClick={() => setIsSlotCostOpen(true)}
+          />
+          <SettingsTile
+            title="Live Voters Referred"
+            description="Target live voters for agents to refer."
+            buttonText="Edit"
+            onClick={() => setIsLiveVotersReferredOpen(true)}
           />
         </SettingsSection>
         <SettingsSection title="Earnings Allocation">
@@ -140,6 +154,52 @@ function RouteComponent() {
             }
           />
         </SettingsSection>
+        <SettingsSection title="Test Requirements">
+          <SettingsTile
+            title="Polling Agents"
+            description="Election day practice tests settings."
+            buttonText="Edit"
+            onClick={() =>
+              handleEditTestRequirements(
+                "test_requirements_polling_agent",
+                "Polling Agent",
+              )
+            }
+          />
+          <SettingsTile
+            title="Ward Supervisors"
+            description="Election day practice tests settings."
+            buttonText="Edit"
+            onClick={() =>
+              handleEditTestRequirements(
+                "test_requirements_ward_supervisor",
+                "Ward Supervisor",
+              )
+            }
+          />
+          <SettingsTile
+            title="LGA Supervisors"
+            description="Election day practice tests settings."
+            buttonText="Edit"
+            onClick={() =>
+              handleEditTestRequirements(
+                "test_requirements_lga_supervisor",
+                "LGA Supervisor",
+              )
+            }
+          />
+          <SettingsTile
+            title="State Supervisors"
+            description="Election day practice tests settings."
+            buttonText="Edit"
+            onClick={() =>
+              handleEditTestRequirements(
+                "test_requirements_state_supervisor",
+                "State Supervisor",
+              )
+            }
+          />
+        </SettingsSection>
       </main>
 
       {selectedRole && (
@@ -151,9 +211,23 @@ function RouteComponent() {
         />
       )}
 
+      {selectedTestRole && (
+        <TestRequirementsDialog
+          settingKey={selectedTestRole.key}
+          roleName={selectedTestRole.name}
+          open={!!selectedTestRole}
+          onClose={() => setSelectedTestRole(null)}
+        />
+      )}
+
       <SlotCostDialog
         open={isSlotCostOpen}
         onClose={() => setIsSlotCostOpen(false)}
+      />
+
+      <LiveVotersReferredDialog
+        open={isLiveVotersReferredOpen}
+        onClose={() => setIsLiveVotersReferredOpen(false)}
       />
     </div>
   );

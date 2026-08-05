@@ -17,7 +17,9 @@ export function ApplySuccess() {
             <TitleText text="Congrats, Your Application Submitted Successfully!" />
             <DescriptiveText text="If qualified, you'll be accepted shortly." />
           </div>
-          <div className="mt-4"><BossIllustration /></div>
+          <div className="mt-4">
+            <BossIllustration />
+          </div>
         </div>
       </div>
       <StickyFooter>
@@ -26,7 +28,7 @@ export function ApplySuccess() {
           variant="black"
           size="4xl"
           className="w-full rounded-full"
-          onClick={() => navigate({ to: "/home" })}
+          onClick={() => navigate({ to: "/" })}
         >
           Go to Home
         </Button>

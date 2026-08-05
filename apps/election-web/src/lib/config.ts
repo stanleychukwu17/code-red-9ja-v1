@@ -14,6 +14,7 @@ export const APP_URL = {
   },
   home: "/",
   applications: "/applications",
+  referrals: "/referrals",
   notifications: "/notifications",
 };
 
@@ -133,6 +134,8 @@ export const API_URL = {
     stateId?: number,
     limit?: number,
     cursor?: string | number,
+    partyId?: number | string,
+    electionGroupId?: number | string,
   ) => {
     const params = new URLSearchParams();
     if (wardId) params.append("ward_id", String(wardId));
@@ -140,6 +143,8 @@ export const API_URL = {
     if (stateId) params.append("state_id", String(stateId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (partyId) params.append("party_id", String(partyId));
+    if (electionGroupId) params.append("election_group_id", String(electionGroupId));
     const qs = params.toString();
     return `${api}/polling-units${qs ? `?${qs}` : ""}`;
   },
@@ -175,6 +180,7 @@ export const API_URL = {
   lgaById: (id: string | number) => `${api}/lgas/${id}`,
 
   parties: `${api}/parties`,
+  partiesPublic: `${api}/parties/public`,
   partyById: (id: string | number) => `${api}/parties/${id}`,
 
   uploadUrl: `${api}/files/upload-url`,
@@ -268,4 +274,10 @@ export const API_URL = {
     `${api}/polling-unit-results/${id}/vote`,
 
   nationalMetrics: `${api}/bodies/metrics`,
+
+  practiceTests: `${api}/practice-tests`,
+  appendPracticeTestTask: (id: string | number) =>
+    `${api}/practice-tests/${id}/task`,
+  completePracticeTest: (id: string | number) =>
+    `${api}/practice-tests/${id}/complete`,
 };

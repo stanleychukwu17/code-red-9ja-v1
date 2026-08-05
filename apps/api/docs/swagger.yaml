@@ -237,6 +237,8 @@ definitions:
         type: integer
       email:
         type: string
+      emailVerificationToken:
+        type: string
       password:
         maxLength: 72
         minLength: 5
@@ -247,6 +249,8 @@ definitions:
     - confirmPassword
     - country
     - countryId
+    - email
+    - emailVerificationToken
     - password
     - phoneNumber
     type: object
@@ -342,6 +346,7 @@ definitions:
         type: string
     required:
     - countryId
+    - email
     - password
     - phoneNumber
     type: object
@@ -500,6 +505,8 @@ definitions:
         type: integer
       username:
         type: string
+    type: object
+  big.Int:
     type: object
   bodieshandler.CityResponse:
     properties:
@@ -1137,6 +1144,28 @@ definitions:
     - Infinity
     - Finite
     - NegativeInfinity
+  pgtype.Int8:
+    properties:
+      int64:
+        format: int64
+        type: integer
+      valid:
+        type: boolean
+    type: object
+  pgtype.Numeric:
+    properties:
+      exp:
+        format: int32
+        type: integer
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      int:
+        $ref: '#/definitions/big.Int'
+      naN:
+        type: boolean
+      valid:
+        type: boolean
+    type: object
   pgtype.Text:
     properties:
       string:
@@ -1301,6 +1330,56 @@ definitions:
         type: string
       ward_id:
         type: integer
+    type: object
+  practicetestshandler.AppendTaskRequest:
+    properties:
+      failed_attempts:
+        type: integer
+      score:
+        type: number
+      task_id:
+        type: integer
+    type: object
+  practicetestshandler.CompleteTestRequest:
+    properties:
+      final_score:
+        type: number
+    type: object
+  practicetestshandler.PracticeTestResponse:
+    properties:
+      completed_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      election_group_id:
+        $ref: '#/definitions/pgtype.Int8'
+      final_score:
+        $ref: '#/definitions/pgtype.Numeric'
+      id:
+        type: integer
+      role:
+        type: string
+      sequence:
+        type: integer
+      started_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      status:
+        type: string
+      task_stats:
+        items:
+          type: integer
+        type: array
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      user_id:
+        type: integer
+    type: object
+  practicetestshandler.StartPracticeTestRequest:
+    properties:
+      election_group_id:
+        type: integer
+      role:
+        type: string
     type: object
   puassignmentshandler.CreateAssignmentRequest:
     properties:
@@ -5648,6 +5727,14 @@ paths:
         in: query
         name: state_id
         type: integer
+      - description: Party ID for capacity check
+        in: query
+        name: party_id
+        type: integer
+      - description: Election Group ID for capacity check
+        in: query
+        name: election_group_id
+        type: integer
       - description: Limit (default 20, max 100)
         in: query
         name: limit
@@ -5848,6 +5935,174 @@ paths:
       summary: Update a polling unit
       tags:
       - Polling Units
+  /practice-tests:
+    get:
+      description: Returns the authenticated user's practice tests. Pass user_id to
+        filter by a specific user (admin use).
+      parameters:
+      - description: Filter by user ID (defaults to self)
+        in: query
+        name: user_id
+        type: integer
+      - description: Filter by election group
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by status (in_progress|completed)
+        in: query
+        name: status
+        type: string
+      - description: Page size (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: List practice tests
+      tags:
+      - Practice Tests
+    post:
+      consumes:
+      - application/json
+      description: Creates a new in-progress practice test row for the authenticated
+        user
+      parameters:
+      - description: Start Practice Test
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/practicetestshandler.StartPracticeTestRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/practicetestshandler.PracticeTestResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Start a practice test session
+      tags:
+      - Practice Tests
+  /practice-tests/{id}/complete:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Practice Test ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Final score
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/practicetestshandler.CompleteTestRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/practicetestshandler.PracticeTestResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark a practice test as completed
+      tags:
+      - Practice Tests
+  /practice-tests/{id}/task:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: Practice Test ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Task stats
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/practicetestshandler.AppendTaskRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/practicetestshandler.PracticeTestResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Append a completed task to a practice test
+      tags:
+      - Practice Tests
   /senatorial-districts:
     get:
       consumes:

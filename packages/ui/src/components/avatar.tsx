@@ -122,6 +122,37 @@ const AppAvatar = ({
   );
 };
 
+type DoubleAvatarProps = {
+  src1?: string;
+  src2?: string;
+  alt1?: string;
+  alt2?: string;
+  className?: string;
+};
+
+const DoubleAvatar = ({
+  src1,
+  src2,
+  alt1 = "",
+  alt2 = "",
+  className,
+}: DoubleAvatarProps) => {
+  return (
+    <div className={cn("relative flex items-start justify-start size-11", className)}>
+      <img
+        src={src1}
+        alt={alt1}
+        className="absolute top-0 left-0 size-8 rounded-full border-2 border-black object-cover"
+      />
+      <img
+        src={src2}
+        alt={alt2}
+        className="absolute bottom-0 right-0 size-8 rounded-full border-2 border-black object-cover"
+      />
+    </div>
+  );
+};
+
 export {
   Avatar,
   AvatarImage,
@@ -130,4 +161,5 @@ export {
   AvatarGroup,
   AvatarGroupCount,
   AppAvatar,
+  DoubleAvatar,
 };

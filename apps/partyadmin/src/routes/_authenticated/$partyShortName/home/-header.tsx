@@ -39,11 +39,6 @@ export function HomePageHeader({
       href: APP_URL.partyRoutes.home((partyShortName as string) || "party"),
     },
     {
-      id: "readiness",
-      label: "Readiness",
-      href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/readiness`,
-    },
-    {
       id: "election-day",
       label: "Election day",
       href: `${APP_URL.partyRoutes.home((partyShortName as string) || "party")}/election-day`,

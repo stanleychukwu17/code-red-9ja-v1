@@ -1123,6 +1123,21 @@ type UserMoreInfo struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+type UserPracticeTest struct {
+	ID              int64              `json:"id"`
+	UserID          int64              `json:"user_id"`
+	ElectionGroupID pgtype.Int8        `json:"election_group_id"`
+	Role            string             `json:"role"`
+	Sequence        int16              `json:"sequence"`
+	TaskStats       []byte             `json:"task_stats"`
+	FinalScore      pgtype.Numeric     `json:"final_score"`
+	Status          string             `json:"status"`
+	StartedAt       pgtype.Timestamptz `json:"started_at"`
+	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
 type UserRole struct {
 	UserID            int64              `json:"user_id"`
 	RoleID            int16              `json:"role_id"`

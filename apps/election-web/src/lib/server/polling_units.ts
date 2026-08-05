@@ -85,10 +85,10 @@ export const getPollingUnitById = createServerFn({ method: "GET" })
   });
 
 export const getPollingUnits = createServerFn()
-  .inputValidator((data: { wardId?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { wardId, localGovernmentId, stateId, limit, cursor } }) => {
+  .inputValidator((data: { wardId?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number; partyId?: number | string; electionGroupId?: number | string }) => data)
+  .handler(async ({ data: { wardId, localGovernmentId, stateId, limit, cursor, partyId, electionGroupId } }) => {
     try {
-      const response = await apiFetch(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor));
+      const response = await apiFetch(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor, partyId, electionGroupId));
       const data = await response.json();
       return data;
     } catch (error) {

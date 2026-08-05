@@ -29,9 +29,9 @@ import StarIcon from "@repo/ui/icons/star-icon";
 import TwinkleLittleStarIcon from "@repo/ui/icons/twinkle-little-star-icon";
 import { cn } from "@repo/ui/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
-import { PlusIcon } from "lucide-react";
+import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useLocalStorage } from "usehooks-ts";
 import { HomeTabs } from "../../../../components/Tabs";
 import { ArrivalCard } from "../../_home/components/ArrivalCard";
 import { ArrivalDrawer } from "../../_home/components/ArrivalDrawer";
@@ -48,10 +48,13 @@ import { RequestPayoutCard } from "../../_home/components/RequestPayoutCard";
 import { HomeBody } from "../../_home/components/Shared";
 import { UploadResultCard } from "../../_home/components/UploadResultCard";
 import { UploadsTab } from "../../_home/components/UploadsTab";
+import { TaskType, pollingAgentTest } from "./tasks-data";
 import { showFeedbackToast } from "./utils";
-import { TaskType, PracticeTaskType, pollingAgentTest } from "./tasks-data";
-import { useQueryState, parseAsInteger, parseAsStringLiteral } from "nuqs";
-import { useLocalStorage } from "usehooks-ts";
+import {
+  startPracticeTest,
+  appendPracticeTestTask,
+  completePracticeTest,
+} from "#/lib/server/practice_tests";
 
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
@@ -91,6 +94,9 @@ export function PollingAgentPracticePage() {
     number | null
   >(null);
 
+  // practiceTestId is the DB row ID returned by the API on start
+  const [practiceTestId, setPracticeTestId] = useState<number | null>(null);
+
   const [testStats, setTestStats] = useLocalStorage<
     {
       taskId: number;
@@ -110,6 +116,16 @@ export function PollingAgentPracticePage() {
       setTaskId(nextTask.id);
       setCurrentPage("tutorial");
     } else {
+      // All tasks done — complete the test
+      const finalScoreVal =
+        testStats.length > 0
+          ? testStats.reduce((acc, s) => acc + s.score, 0) / testStats.length
+          : 0;
+      if (practiceTestId) {
+        completePracticeTest({
+          data: { practiceTestId, finalScore: Number(finalScoreVal.toFixed(2)) },
+        }).catch(console.error);
+      }
       setCurrentPage("final");
     }
   };
@@ -140,6 +156,19 @@ export function PollingAgentPracticePage() {
         score: taskScore,
       },
     ]);
+
+    // Persist task result to backend
+    if (practiceTestId) {
+      appendPracticeTestTask({
+        data: {
+          practiceTestId,
+          taskId: currentTask.id,
+          score: taskScore,
+          failedAttempts: currentFailedAttempts,
+        },
+      }).catch(console.error);
+    }
+
     setCurrentPage("completed");
   };
 
@@ -157,7 +186,20 @@ export function PollingAgentPracticePage() {
         <WelcomePage
           practiceTestNumber={1}
           potentialPayout={500}
-          onNextClick={() => setCurrentPage("tutorial")}
+          onNextClick={async () => {
+            // Start a new practice test session in the DB
+            try {
+              const res = await startPracticeTest({
+                data: { role: "pollingagent" },
+              });
+              if (res?.success && res?.data?.practice_test?.id) {
+                setPracticeTestId(res.data.practice_test.id);
+              }
+            } catch (e) {
+              console.error("Failed to start practice test", e);
+            }
+            setCurrentPage("tutorial");
+          }}
         />
       )}
 

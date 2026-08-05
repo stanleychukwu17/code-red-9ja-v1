@@ -46,6 +46,8 @@ const buttonVariants = cva(
         deepGrey: "bg-hover-10 hover:bg-hover-15",
         deepGreyIcon:
           "bg-hover-3 hover:bg-hover-5 [&_svg]:size-5 [&_svg]:text-c-60 hover:[&_svg]:text-c-80",
+        leaderboardGrey:
+          "bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]",
       },
       size: {
         default: "h-12 px-2.5",

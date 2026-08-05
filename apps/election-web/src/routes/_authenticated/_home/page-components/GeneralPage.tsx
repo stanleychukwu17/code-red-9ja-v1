@@ -23,6 +23,7 @@ import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton
 import { HomeHeader, HomeHeader2 } from "../components/HomeHeader";
 import { CandidatesLeaderboard } from "../components/Leaderboard";
 import { PracticeTestCard } from "../components/PracticeTestCard";
+import { ReferralCard } from "../components/ReferralCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
@@ -114,9 +115,10 @@ export function GeneralPage() {
               <div className="mb-2 mt-2 px-4">
                 <Button
                   type="button"
+                  variant="leaderboardGrey"
                   size="extra-large"
                   onClick={() => navigate({ to: "/report" })}
-                  className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                  className="w-full"
                 >
                   <ReportIcon className="w-5 h-5 shrink-0" />
                   Report
@@ -137,6 +139,7 @@ export function GeneralPage() {
       <HomeBody>
         {/* {daysLeft !== 0 && <ApplicationsCard />} */}
         <ApplicationsCard />
+        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== 0 && <PracticeTestCard />}
         {daysLeft === 0 && (
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />

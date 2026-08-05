@@ -119,7 +119,7 @@ export function SelectableCard({
   disabled,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: string | ReactNode;
   isSelected: boolean;
   onClick: () => void;
   rightComponent?: ReactNode;

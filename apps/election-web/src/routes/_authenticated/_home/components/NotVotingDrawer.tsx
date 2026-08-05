@@ -46,7 +46,7 @@ export function NotVotingDrawer({
   const handleContinue = () => {
     if (selectedReasonId !== null) {
       navigate({
-        to: "/home/not-voting-reason",
+        to: "//not-voting-reason",
         search: { reasonId: selectedReasonId },
       });
       onOpenChange(false);

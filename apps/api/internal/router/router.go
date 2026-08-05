@@ -38,8 +38,10 @@ import (
 	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
 	stateshandler "free9ja/api/internal/handler/states"
 	supervisorassignmentshandler "free9ja/api/internal/handler/supervisor_assignments"
+	systemsettingshandler "free9ja/api/internal/handler/system_settings"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
+	practicetestshandler "free9ja/api/internal/handler/practice_tests"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
 	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -147,6 +149,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
 	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
+	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
+	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance)
 
 	// Initialize the R2 service (nil-safe: file endpoints return an error if un-configured)
 	var filesHandler *fileshandler.Handler
@@ -319,6 +323,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/admin/settings/slot-price", partiesHandler.GetGlobalSlotPrice)
 		r.Put("/api/v1/admin/settings/slot-price", partiesHandler.UpdateGlobalSlotPrice)
 
+		// generic system settings
+		r.Get("/api/v1/admin/settings/{key}", systemSettingsHandler.GetSystemSetting)
+		r.Put("/api/v1/admin/settings/{key}", systemSettingsHandler.UpdateSystemSetting)
+
 		// marketing plan admin mutations (plan data management is admin-only)
 		r.Post("/api/v1/plans", partiesHandler.CreatePlan)
 		r.Put("/api/v1/plans/{id}", partiesHandler.UpdatePlan)
@@ -490,6 +498,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/polling-unit-results/{id}", pollingUnitResultsHandler.GetResult)
 		r.Patch("/api/v1/polling-unit-results/{id}/vote", pollingUnitResultsHandler.VoteOnResult)
 		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
+
+		// practice tests routes
+		r.Post("/api/v1/practice-tests", practiceTestsHandler.StartPracticeTest)
+		r.Get("/api/v1/practice-tests", practiceTestsHandler.ListPracticeTests)
+		r.Patch("/api/v1/practice-tests/{id}/task", practiceTestsHandler.AppendTask)
+		r.Patch("/api/v1/practice-tests/{id}/complete", practiceTestsHandler.CompleteTest)
 	})
 
 	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin

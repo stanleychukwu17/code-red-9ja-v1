@@ -133,6 +133,68 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 	return i, err
 }
 
+const listAcceptingParties = `-- name: ListAcceptingParties :many
+SELECT 
+  id, short_name, name, logo, display_order, status, slots, is_verified,
+  discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets,
+  created_at, updated_at
+FROM parties
+WHERE 
+  -- Ensure targets are set
+  agent_acquisition_targets IS NOT NULL 
+  AND agent_acquisition_targets != '{}'::jsonb
+  
+  -- Ensure allocation is set
+  AND agent_payment_allocation IS NOT NULL 
+  AND agent_payment_allocation != '{}'::jsonb
+  
+  -- Ensure balance is sufficient
+  AND agent_payment_balance_kobo > 0
+  AND agent_payment_balance_kobo >= COALESCE(
+    (
+      SELECT MAX((value->>'default')::bigint)
+      FROM jsonb_each(agent_payment_allocation)
+      WHERE value->>'default' IS NOT NULL
+    ), 0
+  )
+ORDER BY display_order ASC, name ASC
+`
+
+func (q *Queries) ListAcceptingParties(ctx context.Context) ([]Party, error) {
+	rows, err := q.db.Query(ctx, listAcceptingParties)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Party
+	for rows.Next() {
+		var i Party
+		if err := rows.Scan(
+			&i.ID,
+			&i.ShortName,
+			&i.Name,
+			&i.Logo,
+			&i.DisplayOrder,
+			&i.Status,
+			&i.Slots,
+			&i.IsVerified,
+			&i.DiscountPercentage,
+			&i.AgentPaymentBalanceKobo,
+			&i.AgentPaymentAllocation,
+			&i.AgentAcquisitionTargets,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listParties = `-- name: ListParties :many
 SELECT id, short_name, name, logo, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at FROM parties
 ORDER BY display_order ASC, name ASC

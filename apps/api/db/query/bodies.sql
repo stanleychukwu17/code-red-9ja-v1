@@ -54,6 +54,27 @@ SELECT * FROM polling_units
 WHERE (sqlc.arg(ward_id)::int = 0 OR ward_id = sqlc.arg(ward_id)) AND (sqlc.arg(lga_id)::int = 0 OR lga_id = sqlc.arg(lga_id)) AND (sqlc.arg(state_id)::int = 0 OR state_id = sqlc.arg(state_id))
 ORDER BY name ASC;
 
+-- name: GetPollingUnitsWithPartyCount :many
+SELECT
+  pu.*,
+  COALESCE(
+    (
+      SELECT COUNT(*)::integer
+      FROM polling_unit_assignments pua
+      WHERE pua.polling_unit_id = pu.id
+        AND pua.party_id = sqlc.arg(party_id)::smallint
+        AND pua.election_group_id = sqlc.arg(election_group_id)::bigint
+        AND pua.role_type = 'polling_agent'
+    ),
+    0
+  )::integer AS agents_count
+FROM polling_units pu
+WHERE (sqlc.arg(ward_id)::int = 0 OR pu.ward_id = sqlc.arg(ward_id)) 
+  AND (sqlc.arg(lga_id)::int = 0 OR pu.lga_id = sqlc.arg(lga_id)) 
+  AND (sqlc.arg(state_id)::int = 0 OR pu.state_id = sqlc.arg(state_id))
+ORDER BY pu.name ASC;
+
+
 -- name: GetStateDetailsByID :one
 SELECT * FROM c_states
 WHERE id = $1 LIMIT 1;

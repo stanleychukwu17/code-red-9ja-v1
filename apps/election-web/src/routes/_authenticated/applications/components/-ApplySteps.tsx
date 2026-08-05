@@ -182,9 +182,17 @@ export const Step2 = ({
             {party.short_name}
           </div>
         )}
-        <span className="text-[16px] text-neutral-900 leading-tight">
-          {party.name} ({party.short_name})
-        </span>
+        <div>
+          <p className="text-[16px] text-neutral-900 leading-tight">
+            {party.name} ({party.short_name})
+          </p>
+          {!party.is_verified && (
+            <span className="text-[13px] text-red-500 font-medium">Not onboarded yet</span>
+          )}
+          {party.is_verified && !party.is_accepting_applications && (
+            <span className="text-[13px] text-orange-500 font-medium">Not accepting applications currently</span>
+          )}
+        </div>
       </div>
       {isSelected && <Check className="size-6" />}
     </div>
@@ -208,7 +216,10 @@ export const Step2 = ({
         ) : filteredParties.length > 0 ? (
           filteredParties.map((party: any) => {
             const isSelected = selectedPartyId === party.id;
-            const isDisabled = lockedPartyId && lockedPartyId !== party.id;
+            const isLocked = lockedPartyId && lockedPartyId !== party.id;
+            const isNotVerified = !party.is_verified;
+            const isNotAccepting = party.is_verified && !party.is_accepting_applications;
+            const isDisabled = isLocked || isNotVerified || isNotAccepting;
 
             return (
               <PartyCard
@@ -217,12 +228,24 @@ export const Step2 = ({
                 isSelected={isSelected}
                 isDisabled={isDisabled}
                 onClick={() => {
-                  if (isDisabled) {
+                  if (isLocked) {
                     toast.error(
                       "You can only change party if your existing application is either rejected or cancelled.",
-                      {
-                        position: "top-center",
-                      },
+                      { position: "top-center" }
+                    );
+                    return;
+                  }
+                  if (isNotVerified) {
+                    toast.error(
+                      "This party has not been onboarded yet. You cannot select it.",
+                      { position: "top-center" }
+                    );
+                    return;
+                  }
+                  if (isNotAccepting) {
+                    toast.error(
+                      "This party is currently not accepting applications.",
+                      { position: "top-center" }
                     );
                     return;
                   }
@@ -487,13 +510,33 @@ export const Step6 = ({
             .map((unit: any) => {
               const isSelected = selectedPollingUnitId === unit.id;
               const wardName = getWardName(unit);
+              const isFull = unit.is_capacity_full;
+
               return (
                 <SelectableCard
                   key={unit.id}
                   title={unit.name}
-                  subtitle={wardName}
+                  subtitle={
+                    <div className="flex flex-col gap-1">
+                      <span>{wardName}</span>
+                      {isFull && (
+                        <span className="text-[13px] text-orange-500 font-medium">
+                          Capacity full for this polling unit
+                        </span>
+                      )}
+                    </div>
+                  }
                   isSelected={isSelected}
-                  onClick={() => setSelectedPollingUnitId(unit.id)}
+                  disabled={isFull}
+                  onClick={() => {
+                    if (isFull) {
+                      toast.error("This polling unit has reached its required number of polling agents.", {
+                        position: "top-center",
+                      });
+                      return;
+                    }
+                    setSelectedPollingUnitId(unit.id);
+                  }}
                 />
               );
             })}

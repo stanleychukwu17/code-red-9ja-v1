@@ -116,6 +116,52 @@ func (s *PollingUnitsService) GetPollingUnits(ctx context.Context, wardID, local
 	}
 }
 
+type PollingUnitWithCapacity struct {
+	queries.GetPollingUnitsWithPartyCountRow
+	IsCapacityFull bool `json:"is_capacity_full"`
+}
+
+func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, wardID, localGovernmentID, stateID int32, partyID int16, electionGroupID int64) ([]PollingUnitWithCapacity, error) {
+	// First, fetch the party to get its agent_acquisition_targets
+	party, err := s.queries.GetPartyByID(ctx, partyID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch party: %w", err)
+	}
+
+	var targets map[string]int
+	if len(party.AgentAcquisitionTargets) > 0 {
+		_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
+	}
+	targetCount := targets["pollingUnitAgent"]
+	if targetCount <= 0 {
+		targetCount = 1 // Default if not found or 0
+	}
+
+	arg := queries.GetPollingUnitsWithPartyCountParams{
+		WardID:          wardID,
+		LgaID:           localGovernmentID,
+		StateID:         stateID,
+		PartyID:         partyID,
+		ElectionGroupID: electionGroupID,
+	}
+
+	dbData, err := s.queries.GetPollingUnitsWithPartyCount(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+
+	var results []PollingUnitWithCapacity
+	for _, row := range dbData {
+		isFull := row.AgentsCount >= int32(targetCount)
+		results = append(results, PollingUnitWithCapacity{
+			GetPollingUnitsWithPartyCountRow: row,
+			IsCapacityFull:                   isFull,
+		})
+	}
+
+	return results, nil
+}
+
 func (s *PollingUnitsService) invalidateCache(ctx context.Context, wardID int32) {
 	redisKey := fmt.Sprintf("%s%d", db.RedisPollingUnitsByWard, wardID)
 	s.rdb.Del(ctx, redisKey)

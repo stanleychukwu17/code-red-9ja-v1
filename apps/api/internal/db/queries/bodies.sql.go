@@ -715,6 +715,105 @@ func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams
 	return items, nil
 }
 
+const getPollingUnitsWithPartyCount = `-- name: GetPollingUnitsWithPartyCount :many
+SELECT
+  pu.id, pu.name, pu.abbreviation, pu.units, pu.delimitation, pu.remark, pu.registration_area_id, pu.ward_id, pu.ward_name, pu.lga_id, pu.lga_name, pu.state_id, pu.state_name, pu.latitude, pu.longitude, pu.precise_location, pu.formatted_address, pu.google_place_id, pu.status,
+  COALESCE(
+    (
+      SELECT COUNT(*)::integer
+      FROM polling_unit_assignments pua
+      WHERE pua.polling_unit_id = pu.id
+        AND pua.party_id = $1::smallint
+        AND pua.election_group_id = $2::bigint
+        AND pua.role_type = 'polling_agent'
+    ),
+    0
+  )::integer AS agents_count
+FROM polling_units pu
+WHERE ($3::int = 0 OR pu.ward_id = $3) 
+  AND ($4::int = 0 OR pu.lga_id = $4) 
+  AND ($5::int = 0 OR pu.state_id = $5)
+ORDER BY pu.name ASC
+`
+
+type GetPollingUnitsWithPartyCountParams struct {
+	PartyID         int16 `json:"party_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	WardID          int32 `json:"ward_id"`
+	LgaID           int32 `json:"lga_id"`
+	StateID         int32 `json:"state_id"`
+}
+
+type GetPollingUnitsWithPartyCountRow struct {
+	ID                 int32         `json:"id"`
+	Name               string        `json:"name"`
+	Abbreviation       pgtype.Text   `json:"abbreviation"`
+	Units              pgtype.Text   `json:"units"`
+	Delimitation       pgtype.Text   `json:"delimitation"`
+	Remark             pgtype.Text   `json:"remark"`
+	RegistrationAreaID pgtype.Int4   `json:"registration_area_id"`
+	WardID             int32         `json:"ward_id"`
+	WardName           string        `json:"ward_name"`
+	LgaID              int32         `json:"lga_id"`
+	LgaName            string        `json:"lga_name"`
+	StateID            int32         `json:"state_id"`
+	StateName          string        `json:"state_name"`
+	Latitude           pgtype.Float8 `json:"latitude"`
+	Longitude          pgtype.Float8 `json:"longitude"`
+	PreciseLocation    pgtype.Text   `json:"precise_location"`
+	FormattedAddress   pgtype.Text   `json:"formatted_address"`
+	GooglePlaceID      pgtype.Text   `json:"google_place_id"`
+	Status             pgtype.Text   `json:"status"`
+	AgentsCount        int32         `json:"agents_count"`
+}
+
+func (q *Queries) GetPollingUnitsWithPartyCount(ctx context.Context, arg GetPollingUnitsWithPartyCountParams) ([]GetPollingUnitsWithPartyCountRow, error) {
+	rows, err := q.db.Query(ctx, getPollingUnitsWithPartyCount,
+		arg.PartyID,
+		arg.ElectionGroupID,
+		arg.WardID,
+		arg.LgaID,
+		arg.StateID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPollingUnitsWithPartyCountRow
+	for rows.Next() {
+		var i GetPollingUnitsWithPartyCountRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Abbreviation,
+			&i.Units,
+			&i.Delimitation,
+			&i.Remark,
+			&i.RegistrationAreaID,
+			&i.WardID,
+			&i.WardName,
+			&i.LgaID,
+			&i.LgaName,
+			&i.StateID,
+			&i.StateName,
+			&i.Latitude,
+			&i.Longitude,
+			&i.PreciseLocation,
+			&i.FormattedAddress,
+			&i.GooglePlaceID,
+			&i.Status,
+			&i.AgentsCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getSenatorialDistrictByID = `-- name: GetSenatorialDistrictByID :one
 SELECT id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM senatorial_districts
 WHERE id = $1 LIMIT 1

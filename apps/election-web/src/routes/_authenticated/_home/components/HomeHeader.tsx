@@ -11,12 +11,21 @@ import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
 import { TitleText } from "@repo/ui/components/custom/Texts";
+import { cn } from "@repo/ui/lib/utils";
 
 interface HomeHeaderProps {
   daysLeft?: number;
+  avatarImage?: string;
+  textClassName?: string;
+  containerClassName?: string;
 }
 
-export function HomeHeader({ daysLeft }: HomeHeaderProps) {
+export function HomeHeader({
+  daysLeft,
+  textClassName,
+  avatarImage,
+  containerClassName,
+}: HomeHeaderProps) {
   const {
     user,
     selectedElectionGroup,
@@ -28,11 +37,16 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
   return (
-    <header className="flex items-center justify-between w-full gap-2 pt-7 pb-2 px-4">
+    <header
+      className={cn(
+        "flex items-center justify-between w-full gap-2 pt-7 pb-2 px-4",
+        containerClassName,
+      )}
+    >
       {/* Left section: Dropdown Selector */}
       <div className="flex items-center gap-2 flex-1">
         <AppAvatar
-          src={user?.avatar}
+          src={avatarImage ?? user?.avatar}
           alt={user?.first_name || "User"}
           className="size-7 shrink-0"
         />
@@ -47,7 +61,7 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
               setSelectedElectionGroup(group);
               setSelectedElection(election);
             }}
-            className="border-none ring-0 text-sm shadow-none bg-transparent hover:bg-transparent px-0 font-semibold text-c-900 p-0 h-auto"
+            className={`border-none ring-0 text-sm shadow-none bg-transparent hover:bg-transparent px-0 font-semibold p-0 h-auto ${textClassName || "text-c-900"}`}
           />
         </div>
       </div>
@@ -64,7 +78,9 @@ export function HomeHeader({ daysLeft }: HomeHeaderProps) {
             </span>
           ))}
         <div className="relative cursor-pointer p-1">
-          <NotificationSolidIcon className="size-7 text-neutral-950 hover:text-neutral-800 transition" />
+          <NotificationSolidIcon
+            className={`size-7 transition ${textClassName || "text-neutral-950 hover:text-neutral-800"}`}
+          />
           {/* Red notification badge */}
           <div className="absolute -top-1 -right-1 bg-red text-white text-sm font-medium rounded-lg px-1 min-w-6 h-5 flex items-center justify-center border-background">
             3

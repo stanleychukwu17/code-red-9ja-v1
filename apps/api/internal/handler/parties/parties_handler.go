@@ -267,25 +267,54 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 	})
 
 	type PartyPublic struct {
-		ID           int16  `json:"id"`
-		ShortName    string `json:"short_name"`
-		Name         string `json:"name"`
-		Logo         string `json:"logo"`
-		DisplayOrder int32  `json:"display_order"`
-		Status       string `json:"status"`
-		IsVerified   bool   `json:"is_verified"`
+		ID                      int16  `json:"id"`
+		ShortName               string `json:"short_name"`
+		Name                    string `json:"name"`
+		Logo                    string `json:"logo"`
+		DisplayOrder            int32  `json:"display_order"`
+		Status                  string `json:"status"`
+		IsVerified              bool   `json:"is_verified"`
+		IsAcceptingApplications bool   `json:"is_accepting_applications"`
 	}
 
 	var publicParties []PartyPublic
 	for _, p := range parties {
+		isAccepting := false
+		if len(p.AgentAcquisitionTargets) > 0 && string(p.AgentAcquisitionTargets) != "{}" && string(p.AgentAcquisitionTargets) != "null" {
+			if len(p.AgentPaymentAllocation) > 0 && string(p.AgentPaymentAllocation) != "{}" && string(p.AgentPaymentAllocation) != "null" {
+				var alloc map[string]struct {
+					Default *int64 `json:"default"`
+				}
+				if err := json.Unmarshal(p.AgentPaymentAllocation, &alloc); err == nil {
+					roles := []string{"pollingAgent", "wardElectionSupervisor", "lgaElectionSupervisor", "stateElectionSupervisor"}
+					var maxDefault int64 = -1
+					hasAllDefaults := true
+					for _, role := range roles {
+						cfg, exists := alloc[role]
+						if !exists || cfg.Default == nil {
+							hasAllDefaults = false
+							break
+						}
+						if *cfg.Default > maxDefault {
+							maxDefault = *cfg.Default
+						}
+					}
+					if hasAllDefaults && maxDefault >= 0 && p.AgentPaymentBalanceKobo >= maxDefault {
+						isAccepting = true
+					}
+				}
+			}
+		}
+
 		publicParties = append(publicParties, PartyPublic{
-			ID:           p.ID,
-			ShortName:    p.ShortName,
-			Name:         p.Name,
-			Logo:         p.Logo,
-			DisplayOrder: p.DisplayOrder,
-			Status:       p.Status,
-			IsVerified:   p.IsVerified.Bool,
+			ID:                      p.ID,
+			ShortName:               p.ShortName,
+			Name:                    p.Name,
+			Logo:                    p.Logo,
+			DisplayOrder:            p.DisplayOrder,
+			Status:                  p.Status,
+			IsVerified:              p.IsVerified.Bool,
+			IsAcceptingApplications: isAccepting,
 		})
 	}
 

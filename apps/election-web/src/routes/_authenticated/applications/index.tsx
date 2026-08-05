@@ -4,7 +4,11 @@ import { useAppSelector } from "#/redux/hooks";
 import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { getApplications, cancelApplication } from "#/lib/server/applications";
 import { getPageHeader } from "#/lib/shared/meta";
-import { PageWrapper } from "#/components/Wrappers";
+import {
+  DarkBodyWrapper,
+  PageWrapper,
+  RoundedTopWrapper,
+} from "#/components/Wrappers";
 import { Button } from "@repo/ui/components/button";
 import { StickyFooter } from "#/components/Footers";
 import { toast } from "sonner";
@@ -74,7 +78,11 @@ const isElectionInPast = (val: any) => {
     if (isNaN(d.getTime())) return false;
     const electionDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const today = new Date();
-    const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const currentDay = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+    );
     return electionDay.getTime() < currentDay.getTime();
   } catch (e) {
     return false;
@@ -374,7 +382,7 @@ function ApplicationsIndexPage() {
 
   return (
     <PageWrapper>
-      <div className="w-full pt-4 flex flex-col flex-1 bg-black/95">
+      <DarkBodyWrapper>
         {/* Header */}
         <PageHeader
           title="Party Agent"
@@ -401,7 +409,7 @@ function ApplicationsIndexPage() {
         </div>
 
         {/* Applications list */}
-        <div className="mt-6 space-y-1 bg-background px-4 pb-8 h-full rounded-t-3xl space-y-5">
+        <RoundedTopWrapper>
           {/* Tabs Selector */}
           <Tabs
             className="mt-6"
@@ -483,8 +491,8 @@ function ApplicationsIndexPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+        </RoundedTopWrapper>
+      </DarkBodyWrapper>
     </PageWrapper>
   );
 }
