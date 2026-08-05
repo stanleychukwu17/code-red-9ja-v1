@@ -178,7 +178,7 @@ export function UserFormDialog({
 
           // 3. Confirm successful upload with the backend to finalize the file status
           await confirmFileUpload({ data: { id: file_id, success: true } });
-          
+
           finalAvatarUrl = public_url;
           finalFileId = file_id;
         } finally {
@@ -444,6 +444,8 @@ export function UserFormDialog({
         console.error("Failed to delete file from server:", err);
       }
     }
+
+    // reset the file inputs
     setAvatarUrl("");
     setSelectedAvatarFile(null);
     setUploadedFileId(null);
