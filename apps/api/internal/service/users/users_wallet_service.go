@@ -4,10 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
-	"strings"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -103,7 +103,7 @@ func (s *UsersService) GetUserWalletByAccountReference(ctx context.Context, acco
 	return s.queries.GetUserWalletByAccountReference(ctx, accountReference)
 }
 
-// CreditUserWallet credits a user's wallet and records the credit transaction (idempotently).
+// CreditUserWallet credits a user's wallet and records the credit transaction (idempotent).
 func (s *UsersService) CreditUserWallet(
 	ctx context.Context,
 	walletID int64,
@@ -147,7 +147,7 @@ func (s *UsersService) CreditUserWallet(
 	return txn, nil
 }
 
-// WithdrawFromUserWallet debits a user's wallet and records the debit transaction (idempotently).
+// WithdrawFromUserWallet debits a user's wallet and records the debit transaction (idempotent).
 func (s *UsersService) WithdrawFromUserWallet(
 	ctx context.Context,
 	userID int64,
@@ -203,15 +203,21 @@ func (s *UsersService) WithdrawFromUserWallet(
 // ProvisionMissingWallets finds all users that do not have a wallet
 // and provisions a Monnify reserved virtual account for each.
 func (s *UsersService) ProvisionMissingWallets(ctx context.Context) (int, int, error) {
-	unwalletedUsers, err := s.queries.ListUsersWithoutWallet(ctx)
+	unWalletUsers, err := s.queries.ListUsersWithoutWallet(ctx)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to fetch users without wallets: %w", err)
 	}
 
 	success := 0
 	failed := 0
-	for _, user := range unwalletedUsers {
-		if _, walletErr := s.CreateUserWallet(ctx, user); walletErr != nil {
+	for _, user := range unWalletUsers {
+		u := queries.User{
+			ID:        user.ID,
+			Email:     user.Email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+		}
+		if _, walletErr := s.CreateUserWallet(ctx, u); walletErr != nil {
 			slog.Warn("failed to provision user wallet",
 				"user_id", user.ID,
 				"err", walletErr)
