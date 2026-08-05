@@ -327,6 +327,7 @@ type Querier interface {
 	RefreshSingleElectionGroupWardStats(ctx context.Context, arg RefreshSingleElectionGroupWardStatsParams) error
 	RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error
 	RemoveUserRole(ctx context.Context, arg RemoveUserRoleParams) error
+	ResetPartyLogo(ctx context.Context, id int16) error
 	RollupElectionFinalResults(ctx context.Context) error
 	RollupFederalConstituencyFinalResults(ctx context.Context) error
 	RollupLGAFinalResults(ctx context.Context) error

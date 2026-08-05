@@ -9,6 +9,7 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/service/files"
+	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
 	"io"
 	"net/http"
@@ -356,24 +357,35 @@ func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/{id} [put]
 func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
+	// Extract user claims to verify authorization
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Parse the party ID from the URL path
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
+	// Decode the JSON request payload
 	var req UpdatePartyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Ensure required fields are provided
 	if req.ShortName == "" || req.Name == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "short_name and name are required")
 		return
 	}
 
+	// If a logo is provided, validate the uploaded file
 	if req.LogoFileID != nil {
 		file, err := h.filesService.GetFileByID(r.Context(), *req.LogoFileID)
 		if err != nil {
@@ -385,15 +397,33 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		req.Logo = file.PublicUrl
+
+		// Ensure the file belongs to the correct party and was uploaded by the current user
+		if file.OwnerID.Int64 != partyID || file.UploadedBy.Int64 != claims.UserID {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
+			return
+		}
+	} else {
+		h.utils.RespondError(w, http.StatusNotFound, "Party needs a logo")
+		return
 	}
 
 	// Verify party exists
-	if party := h.partiesService.GetPartyInfo(r.Context(), int16(id)); party == nil {
+	if party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID)); party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
-	updatedParty, err := h.partiesService.UpdateParty(r.Context(), id, req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
+	// check permissions to delete this party image
+	permsSvc := permissionsservice.NewPermissionsService()
+	allowed, _, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// update the party info
+	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
 		return

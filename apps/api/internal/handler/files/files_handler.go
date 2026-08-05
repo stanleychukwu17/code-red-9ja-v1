@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	permissionsservice "free9ja/api/internal/service/permissions"
 	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/utils"
 	"log/slog"
@@ -36,6 +37,10 @@ type UsersService interface {
 	ResetUserAvatar(ctx context.Context, userID int64, fakeID int64) error
 }
 
+type PartiesService interface {
+	InvalidatePartyCache(ctx context.Context, partyID int16)
+}
+
 // FilesDB is the narrow interface for file-related database operations.
 // Satisfied by *queries.Queries, but mockable in tests.
 type FilesDB interface {
@@ -49,21 +54,24 @@ type FilesDB interface {
 	MarkFileDeleted(ctx context.Context, id int64) (queries.File, error)
 	HardDeleteFile(ctx context.Context, id int64) error
 	CheckFileOwner(ctx context.Context, arg queries.CheckFileOwnerParams) (bool, error)
+	GetPartyByID(ctx context.Context, id int16) (queries.Party, error)
+	ResetPartyLogo(ctx context.Context, id int16) error
 }
 
 // Handler holds the dependencies needed to service file-related HTTP requests.
 type Handler struct {
-	db           FilesDB
-	r2           *r2service.R2Service
-	rdb          *redis.Client
-	utils        *utils.Utils
-	usersService UsersService
+	db             FilesDB
+	r2             *r2service.R2Service
+	rdb            *redis.Client
+	utils          *utils.Utils
+	usersService   UsersService
+	partiesService PartiesService
 }
 
 // NewHandler returns a Handler wired up with the provided database, R2 service, Redis,
 // and shared utilities instance.
-func NewHandler(db FilesDB, r2Svc *r2service.R2Service, rdb *redis.Client, u *utils.Utils, usersSvc UsersService) *Handler {
-	return &Handler{db: db, r2: r2Svc, rdb: rdb, utils: u, usersService: usersSvc}
+func NewHandler(db FilesDB, r2Svc *r2service.R2Service, rdb *redis.Client, u *utils.Utils, usersSvc UsersService, partiesSvc PartiesService) *Handler {
+	return &Handler{db: db, r2: r2Svc, rdb: rdb, utils: u, usersService: usersSvc, partiesService: partiesSvc}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -360,6 +368,12 @@ func (h *Handler) ListFiles(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /files/{id} [delete]
 func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
+	// check permissions
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
 	// the file id
 	id, err := parseID(r, "id")
 	if err != nil {
@@ -367,6 +381,7 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userFakeIDStr := r.URL.Query().Get("user_fake_id") // user_fake_id (string)
+	partyIDStr := r.URL.Query().Get("party_id")        // party_id (string)
 	fileType := r.URL.Query().Get("type")              // type (string)
 
 	// get the user Details, if trying to delete a user avatar
@@ -397,34 +412,76 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Fetch record first so we have the R2 key.
-	file, err := h.db.GetFileByID(r.Context(), id)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "File not found")
-		return
-	}
+	// get the party Details, if trying to delete a party logo
+	if partyIDStr != "" && fileType == "party_logo" {
+		partyID, parseErr := strconv.ParseInt(partyIDStr, 10, 16)
+		if parseErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Error parsing party ID")
+			return
+		}
 
-	// Soft-delete first — prevents any new reads from seeing the record.
-	if _, err = h.db.MarkFileDeleted(r.Context(), id); err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete file: "+err.Error())
-		return
-	}
+		// check permissions to delete this party image
+		permsSvc := permissionsservice.NewPermissionsService()
+		allowed, _, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+		if !allowed {
+			h.utils.RespondError(w, http.StatusForbidden, err.Error())
+			return
+		}
 
-	// Purge from R2; only hard-delete the DB row once the bucket object is gone.
-	// If R2 deletion fails we log the error — a cleanup job can handle it later.
-	if err = h.r2.DeleteObject(r.Context(), file.FileKey); err == nil {
-		_ = h.db.HardDeleteFile(r.Context(), id)
+		// get the party Details
+		party, dbErr := h.db.GetPartyByID(r.Context(), int16(partyID))
+		if dbErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Party details not found")
+			return
+		}
 
-		// Asynchronously purge Cloudflare Edge CDN cache
-		go func(key string) {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if purgeErr := h.r2.PurgeCloudflareCache(ctx, key); purgeErr != nil {
-				slog.Error("failed to purge cloudflare edge cache", "fileKey", key, "error", purgeErr)
+		// if the file_id is available, we check if the file belongs to the party
+		if id > 0 {
+			// if the party logo file ID is not the same as the file ID
+			if !party.LogoFileID.Valid || party.LogoFileID.Int64 != id {
+				h.utils.RespondError(w, http.StatusNotFound, "You can only delete the party's own logo file")
+				return
 			}
-		}(file.FileKey)
-	} else {
-		slog.ErrorContext(r.Context(), "failed to delete file from r2", "fileKey", file.FileKey, "error", err)
+		}
+
+		// update the party logo file ID to NULL
+		_ = h.db.ResetPartyLogo(r.Context(), party.ID)
+
+		// also invalidate party cache (optional, frontend refetch)
+		h.partiesService.InvalidatePartyCache(r.Context(), party.ID)
+	}
+
+	// if the file_id is available, we delete from the r2 bucket
+	if id > 0 {
+		// Fetch record first so we have the R2 key.
+		file, err := h.db.GetFileByID(r.Context(), id)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "File not found")
+			return
+		}
+
+		// Soft-delete first — prevents any new reads from seeing the record.
+		if _, err = h.db.MarkFileDeleted(r.Context(), id); err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete file: "+err.Error())
+			return
+		}
+
+		// Purge from R2; only hard-delete the DB row once the bucket object is gone.
+		// If R2 deletion fails we log the error — a cleanup job can handle it later.
+		if err = h.r2.DeleteObject(r.Context(), file.FileKey); err == nil {
+			_ = h.db.HardDeleteFile(r.Context(), id)
+
+			// Asynchronously purge Cloudflare Edge CDN cache
+			go func(key string) {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if purgeErr := h.r2.PurgeCloudflareCache(ctx, key); purgeErr != nil {
+					slog.Error("failed to purge cloudflare edge cache", "fileKey", key, "error", purgeErr)
+				}
+			}(file.FileKey)
+		} else {
+			slog.ErrorContext(r.Context(), "failed to delete file from r2", "fileKey", file.FileKey, "error", err)
+		}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "File deleted successfully", nil)

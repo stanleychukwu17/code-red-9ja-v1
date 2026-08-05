@@ -330,23 +330,55 @@ type GetUsersData struct {
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	// 1. Parse URL query parameters for filtering and pagination
 	role := r.URL.Query().Get("role")
-	partyIDStr := r.URL.Query().Get("party_id")
+	roles := r.URL.Query().Get("roles")
 	search := r.URL.Query().Get("search")
+
+	// filters
+	partyIDStr := r.URL.Query().Get("party_id")
+	// parties := r.URL.Query().Get("parties")
 	accountStatus := r.URL.Query().Get("account_status")
+	statuses := r.URL.Query().Get("statuses")
+	// verificationTypes := r.URL.Query().Get("verification_types")
+	// countryID := r.URL.Query().Get("country_id")
+	// stateIDs := r.URL.Query().Get("state_ids")
 	limit, cursor := parsePaginationParams(r)
 
 	// split the roles into slice of string, inCase we are trying to get multiple roles at the same
 	var roleSlice []string
-	if role != "" {
+	if roles != "" {
+		roleSlice = strings.Split(roles, ",")
+	} else if role != "" {
 		roleSlice = strings.Split(role, ",")
 	}
 
 	var accountStatusSlice []string
-	if accountStatus != "" {
+	if statuses != "" {
+		accountStatusSlice = strings.Split(statuses, ",")
+	} else if accountStatus != "" {
 		accountStatusSlice = strings.Split(accountStatus, ",")
 	} else {
 		accountStatusSlice = []string{"just_registered", "placeholder", "active", "inactive"}
 	}
+
+	// var partyIDsSlice []string
+	// if parties != "" {
+	// 	partyIDsSlice = strings.Split(parties, ",")
+	// }
+
+	// var verificationTypesSlice []string
+	// if verificationTypes != "" {
+	// 	verificationTypesSlice = strings.Split(verificationTypes, ",")
+	// }
+
+	// var countryIDsSlice []string
+	// if countryID != "" {
+	// 	countryIDsSlice = strings.Split(countryID, ",")
+	// }
+
+	// var stateIDsSlice []string
+	// if stateIDs != "" {
+	// 	stateIDsSlice = strings.Split(stateIDs, ",")
+	// }
 
 	var partyID int64
 	// 2. Retrieve JWT claims from the request context

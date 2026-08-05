@@ -62,3 +62,8 @@ SELECT COUNT(*) FROM party_membership WHERE chapter_id = $1 AND status = 'active
 INSERT INTO party_membership_requests (user_id, party_id, chapter_id)
 VALUES ($1, $2, $3)
 RETURNING *;
+
+-- name: ResetPartyLogo :exec
+UPDATE parties
+SET logo = '', logo_file_id = NULL, updated_at = NOW()
+WHERE id = $1;

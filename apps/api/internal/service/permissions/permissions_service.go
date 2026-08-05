@@ -18,6 +18,13 @@ type UserModificationPermissions struct {
 	IsPartyAdminWithRights bool
 }
 
+type PartyModificationPermissions struct {
+	IsSuperAdmin           bool
+	IsNormalAdmin          bool
+	IsBothAdmin            bool
+	IsPartyAdminWithRights bool
+}
+
 type PermissionsService struct {
 }
 
@@ -39,6 +46,21 @@ func (p *UserModificationPermissions) GetAuditActorInfo() (moduleName string, ac
 	} else {
 		moduleName = db.ModuleUsers
 		actorRole = db.ActorRoleUser
+	}
+	return moduleName, actorRole
+}
+
+// GetAuditActorInfo returns the corresponding audit module and actor role based on permissions
+func (p *PartyModificationPermissions) GetAuditActorInfo() (moduleName string, actorRole string) {
+	if p.IsBothAdmin {
+		moduleName = db.ModuleAdmin
+		actorRole = db.ActorRoleAdmin
+	} else if p.IsPartyAdminWithRights {
+		moduleName = db.ModulePartyAdmin
+		actorRole = db.ActorRolePartyAdmin
+	} else {
+		moduleName = db.ModuleAdmin // fallback
+		actorRole = db.ActorRoleAdmin
 	}
 	return moduleName, actorRole
 }
@@ -75,6 +97,27 @@ func (s *PermissionsService) CheckUserModificationPermission(claims *utils.JWTCl
 	// and the user account status be "placeholder"
 	if !perms.IsOwnerOfAccount && !perms.IsBothAdmin && !perms.IsPartyAdminWithRights {
 		return false, perms, errors.New("Forbidden: not owner of account: insufficient permissions")
+	}
+
+	return true, perms, nil
+}
+
+// CheckPartyModificationPermission verifies if the requester (identified by claims) has the necessary
+// permissions to modify the specified party's details. It enforces the following rules:
+//   - Super admins and normal admins can modify any party.
+//   - Party admins can only modify their own party.
+//
+// If permissions are insufficient, it returns false and an error with the reason.
+func (s *PermissionsService) CheckPartyModificationPermission(claims *utils.JWTClaims, partyID int16) (bool, PartyModificationPermissions, error) {
+	perms := PartyModificationPermissions{
+		IsSuperAdmin:           claims.HasRole("super_admin"),
+		IsNormalAdmin:          claims.HasRole("admin"),
+		IsBothAdmin:            claims.HasAnyRole("admin", "super_admin"),
+		IsPartyAdminWithRights: claims.HasAnyRole("party_admin", "super_party_admin") && claims.PartyID == partyID,
+	}
+
+	if !perms.IsBothAdmin && !perms.IsPartyAdminWithRights {
+		return false, perms, errors.New("Forbidden: insufficient permissions to modify this party")
 	}
 
 	return true, perms, nil

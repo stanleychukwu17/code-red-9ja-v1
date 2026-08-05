@@ -55,6 +55,7 @@ export function PartyFormDialog({
     },
   });
 
+  // resets the form when the dialog is opened or when the party data is changed
   useEffect(() => {
     if (open) {
       if (mode === "update" && party) {
@@ -97,27 +98,31 @@ export function PartyFormDialog({
   };
 
   // Handle the removal of the party logo
-  const handleRemoveImage = async () => {
-    if (logoFileId && logoFileId > 0 && deleteFile) {
+  const handleRemoveImage = async (which: "changing_logo" | "removing_logo") => {
+    if (logoFileId && logoFileId > 0) {
       try {
-        await deleteFile({
-          data: {
-            id: logoFileId,
-            party_id: party?.id,
-            type: "party_log",
+        const res = await deleteFile({ data: { id: logoFileId, party_id: party?.id, type: "party_logo" } });
+        if (!res.success) {
+          throw new Error(res.message || "Failed to delete file");
+        }
+
+        if (which === "removing_logo") {
+          setLogoUrl("");
+          setLogoFileId(null);
+          setSelectedInputLogo(null);
+
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
           }
-        });
+        } else if (which == "changing_logo") {
+          setLogoUrl("");
+          setLogoFileId(null);
+        }
+
+        return res;
       } catch (err: any) {
-        console.error("Failed to delete file from server:", err);
+        setError(err.message || "Failed to delete file");
       }
-    }
-
-    setLogoUrl("");
-    setSelectedInputLogo(null);
-    setLogoFileId(null);
-
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
     }
   };
 
@@ -131,13 +136,22 @@ export function PartyFormDialog({
       if (selectedInputLogo) {
         setIsUploadingLogo(true);
 
+        // party is changing logo, so we need to delete the existing one
+        if (party?.logo_file_id as number > 0) {
+          await handleRemoveImage("changing_logo");
+        }
+
+        if (!selectedInputLogo) {
+          throw new Error("No file selected");
+        }
+
         try {
           // 1. Get presigned R2 upload URL
           const res = await getPresignedUploadURL({
             data: {
-              original_name: selectedInputLogo.name,
-              mime_type: selectedInputLogo.type,
-              file_size: selectedInputLogo.size,
+              original_name: selectedInputLogo?.name as string,
+              mime_type: selectedInputLogo?.type as string,
+              file_size: selectedInputLogo?.size as number,
               folder: "parties",
               is_public: true,
               owner_id: party?.id,
@@ -361,8 +375,8 @@ export function PartyFormDialog({
                   {logoUrl && (
                     <button
                       type="button"
-                      onClick={handleRemoveImage}
-                      className="flex h-11 items-center rounded-12 border border-[#dfdfdf] px-4 text-[15px] font-semibold text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
+                      onClick={() => handleRemoveImage("removing_logo")}
+                      className="hidden h-11 items-center rounded-12 border border-[#dfdfdf] px-4 text-[15px] font-semibold text-red-600 hover:bg-[#fafafa] transition cursor-pointer"
                     >
                       Remove image
                     </button>

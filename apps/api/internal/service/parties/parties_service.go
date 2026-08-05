@@ -98,7 +98,7 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 	}
 
 	// Invalidate parties listings cache
-	s.InvalidateListParties(ctx)
+	s.InvalidatePartyCache(ctx, party.ID)
 
 	return party, nil
 }
@@ -177,7 +177,7 @@ func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *
 
 	// Save to Redis
 	if partyData, err := json.Marshal(party); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
+		s.rdb.Set(ctx, redisKey, partyData, db.RedisOneYearTTL)
 	}
 
 	return &party
@@ -211,7 +211,7 @@ func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queri
 
 		// Save to Redis
 		if partyData, err := json.Marshal(party); err == nil {
-			s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
+			s.rdb.Set(ctx, redisKey, partyData, db.RedisOneYearTTL)
 		}
 		return &party
 	}
@@ -265,11 +265,6 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 	return parties, nil
 }
 
-// InvalidateListParties invalidates the cached list of parties.
-func (s *PartiesService) InvalidateListParties(ctx context.Context) error {
-	return s.rdb.Del(ctx, db.RedisPartiesList).Err()
-}
-
 // UpdateParty modifies the short name, name, and logo of an existing party.
 func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error) {
 	defer s.InvalidatePartyCache(ctx, int16(id))
@@ -287,12 +282,13 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 		DisplayOrder: displayOrder,
 	})
 
+	s.InvalidatePartyCache(ctx, int16(id))
 	return party, err
 }
 
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
-	defer s.InvalidatePartyCache(ctx, int16(id))
+	s.InvalidatePartyCache(ctx, int16(id))
 	return s.queries.DeleteParty(ctx, int16(id))
 }
 

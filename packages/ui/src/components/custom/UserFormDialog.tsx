@@ -69,6 +69,7 @@ export interface UserFormDialogProps {
       file_size: number;
       folder?: string;
       is_public?: boolean;
+      owner_id?: number;
     };
   }) => Promise<any>;
   confirmFileUpload: (args: {
@@ -234,7 +235,6 @@ export function UserFormDialog({
       }
 
       if (!res.success) {
-        console.log("bug", res.message.message)
         throw new Error(res.message || `Failed to ${mode} user`);
       }
 

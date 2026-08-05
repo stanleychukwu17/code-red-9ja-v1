@@ -356,6 +356,17 @@ func (q *Queries) RecordPartyMembershipHistory(ctx context.Context, arg RecordPa
 	return err
 }
 
+const resetPartyLogo = `-- name: ResetPartyLogo :exec
+UPDATE parties
+SET logo = '', logo_file_id = NULL, updated_at = NOW()
+WHERE id = $1
+`
+
+func (q *Queries) ResetPartyLogo(ctx context.Context, id int16) error {
+	_, err := q.db.Exec(ctx, resetPartyLogo, id)
+	return err
+}
+
 const updateParty = `-- name: UpdateParty :one
 UPDATE parties
 SET short_name = $1, name = $2, logo = $3, logo_file_id = $4, display_order = $5, updated_at = NOW()
