@@ -6,7 +6,7 @@ import { PollingAgentPage } from "./page-components/PollingAgentPage";
 import { StateElectionSupervisorPage } from "./page-components/StateElectionSupervisorPage";
 import { WardElectionSupervisorPage } from "./page-components/WardElectionSupervisorPage";
 
-export const Route = createFileRoute("/_authenticated/home/")({
+export const Route = createFileRoute("/_authenticated/_home/")({
   component: RouteComponent,
 });
 

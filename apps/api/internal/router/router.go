@@ -190,6 +190,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	// for auths
 	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp)         // Register first phase
 	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                       // Basic signup endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)           // Send email OTP
+	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)       // Verify email OTP
+	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP) // Send forgot-password OTP
 	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                               // Check NIN endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                     // Check Username endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                               // Register endpoint
@@ -431,7 +434,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies", electionStatsHandler.GetFederalConstituencyStats)
 		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
-		
+
 		// Single unit dedicated endpoints
 		r.Get("/api/v1/election-groups/{id}/stats", electionStatsHandler.GetSingleElectionGroupStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}", electionStatsHandler.GetSingleStateStats)
@@ -451,7 +454,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
 		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
 		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.DepositTest)
-		
+
 		// Marketing Campaigns
 		r.Post("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.CreatePartyMarketingCampaign)
 		r.Get("/api/v1/parties/{id}/agent-marketing-campaigns", partiesHandler.GetPartyMarketingCampaigns)

@@ -27,12 +27,12 @@ export const Route = createFileRoute("/auth/onboarding")({
 
   // Validate search params
   validateSearch: (search) => {
-    const step = typeof search.step === "string" ? search.step : "username";
+    const step = typeof search.step === "string" ? search.step : "details";
 
     return {
       step: ONBOARDING_STEPS.includes(step as OnboardingStep)
         ? (step as OnboardingStep)
-        : "username",
+        : "details",
     };
   },
 

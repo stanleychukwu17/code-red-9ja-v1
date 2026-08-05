@@ -12,7 +12,7 @@ export interface NotVotingReasonSearch {
   reasonId?: number;
 }
 
-export const Route = createFileRoute("/_authenticated/home/not-voting-reason")({
+export const Route = createFileRoute("/_authenticated/_home/not-voting-reason")({
   component: NotVotingReasonPage,
   validateSearch: (search: Record<string, unknown>): NotVotingReasonSearch => {
     return {

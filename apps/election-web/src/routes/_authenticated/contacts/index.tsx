@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useState } from "react";
 import { Tabs } from "../../../components/Tabs";
-import { ContactCard } from "../home/components/ContactCard";
+import { ContactCard } from "../_home/components/ContactCard";
 
 export const Route = createFileRoute("/_authenticated/contacts/")({
   component: ContactsPage,
@@ -16,7 +16,9 @@ export const Route = createFileRoute("/_authenticated/contacts/")({
 function ContactsPage() {
   const navigate = useNavigate();
   const { task } = Route.useSearch();
-  const [activeTab, setActiveTab] = useState<"Supervisors" | "Call Agents" | "Recent">("Supervisors");
+  const [activeTab, setActiveTab] = useState<
+    "Supervisors" | "Call Agents" | "Recent"
+  >("Supervisors");
 
   return (
     <div className="w-full min-h-screen bg-white">

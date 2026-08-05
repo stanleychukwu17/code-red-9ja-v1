@@ -146,7 +146,9 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
   } catch (error) {
     return {
       status: "error",
-      message: "Connection error. Please try again later. " + (error as Error)?.message,
+      message:
+        "Connection error. Please try again later. " +
+        (error as Error)?.message,
     };
   }
 });
@@ -189,4 +191,3 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
     clearAuthCookies();
   }
 });
-

@@ -72,7 +72,10 @@ export const signupUserImpl = createServerOnlyFn(async ({ data }) => {
     }
     return result;
   } catch (error) {
-    return { success: false, message: "An unexpected error occurred during signup" };
+    return {
+      success: false,
+      message: "An unexpected error occurred during signup",
+    };
   }
 });
 
@@ -203,7 +206,9 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
   } catch (error) {
     return {
       status: "error",
-      message: "Connection error. Please try again later. " + (error as Error)?.message,
+      message:
+        "Connection error. Please try again later. " +
+        (error as Error)?.message,
     };
   }
 });
@@ -292,3 +297,25 @@ export const resetPasswordImpl = createServerOnlyFn(async ({ data }) => {
     };
   }
 });
+
+// Changes the user's password using their email address
+export const changePasswordByEmailImpl = createServerOnlyFn(
+  async ({ data }: { data: { email: string; password: string } }) => {
+    try {
+      const response = await fetch(API_URL.auth.changePasswordByEmail, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Connection error. Please try again later. " +
+          (error as Error)?.message,
+      };
+    }
+  },
+);

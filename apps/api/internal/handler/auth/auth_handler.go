@@ -19,8 +19,11 @@ import (
 // AuthService interface defines the methods for authentication services
 type AuthService interface {
 	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (auth.RegisterResult, error)
-	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (auth.RegisterPhaseSignUpResult, error)
+	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16, emailVerificationToken string) (auth.RegisterPhaseSignUpResult, error)
 	Signup(ctx context.Context, email, phone, password string, countryID int16) (auth.SignupResult, error)
+	SendSignupEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
+	VerifySignupEmailOTP(ctx context.Context, email, otp string) (auth.EmailOTPResult, error)
+	SendForgotPasswordEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
 	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, nin string, q1 int16, a1 string, q2 int16, a2 string) error
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
@@ -156,12 +159,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 
 // RegisterPhaseSignUpRequest represents the structure for the initial sign-up phase
 type RegisterPhaseSignUpRequest struct {
-	Country         string `json:"country" validate:"required"`
-	CountryID       int16  `json:"countryId" validate:"required"`
-	PhoneNumber     string `json:"phoneNumber" validate:"required"`
-	Email           string `json:"email" validate:"omitempty,email"`
-	Password        string `json:"password" validate:"required,min=5,max=72"`
-	ConfirmPassword string `json:"confirmPassword" validate:"required,eqfield=Password"`
+	Country                string `json:"country" validate:"required"`
+	CountryID              int16  `json:"countryId" validate:"required"`
+	PhoneNumber            string `json:"phoneNumber" validate:"required"`
+	Email                  string `json:"email" validate:"required,email"`
+	Password               string `json:"password" validate:"required,min=5,max=72"`
+	ConfirmPassword        string `json:"confirmPassword" validate:"required,eqfield=Password"`
+	EmailVerificationToken string `json:"emailVerificationToken" validate:"required"`
 }
 
 // RegisterPhaseSignUp godoc
@@ -190,7 +194,7 @@ func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := h.authService.RegisterPhaseSignUp(r.Context(), req.Email, req.PhoneNumber, req.CountryID)
+	result, err := h.authService.RegisterPhaseSignUp(r.Context(), req.Email, req.PhoneNumber, req.CountryID, req.EmailVerificationToken)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -203,10 +207,19 @@ func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 
 // SignupRequest represents the structure for the basic sign-up phase
 type SignupRequest struct {
-	CountryID       int16  `json:"countryId" validate:"required"`
-	PhoneNumber     string `json:"phoneNumber" validate:"required"`
-	Email           string `json:"email" validate:"omitempty,email"`
-	Password        string `json:"password" validate:"required,min=5,max=72"`
+	CountryID   int16  `json:"countryId" validate:"required"`
+	PhoneNumber string `json:"phoneNumber" validate:"required"`
+	Email       string `json:"email" validate:"required,email"`
+	Password    string `json:"password" validate:"required,min=5,max=72"`
+}
+
+type SendSignupEmailOTPRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type VerifySignupEmailOTPRequest struct {
+	Email string `json:"email" validate:"required,email"`
+	OTP   string `json:"otp" validate:"required,len=6,numeric"`
 }
 
 // Signup godoc
@@ -245,7 +258,71 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// CompleteOnboardingRequest represents the full onboarding payload
+func (h *Handler) SendSignupEmailOTP(w http.ResponseWriter, r *http.Request) {
+	var req SendSignupEmailOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+	result, err := h.authService.SendSignupEmailOTP(r.Context(), req.Email)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
+		"message":                result.Message,
+		"emailVerificationToken": result.EmailVerificationToken,
+		"expiresInSeconds":       result.ExpiresInSeconds,
+	})
+}
+
+func (h *Handler) VerifySignupEmailOTP(w http.ResponseWriter, r *http.Request) {
+	var req VerifySignupEmailOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+	result, err := h.authService.VerifySignupEmailOTP(r.Context(), req.Email, req.OTP)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
+		"message":                result.Message,
+		"emailVerificationToken": result.EmailVerificationToken,
+		"expiresInSeconds":       result.ExpiresInSeconds,
+	})
+}
+
+func (h *Handler) SendForgotPasswordEmailOTP(w http.ResponseWriter, r *http.Request) {
+	var req SendSignupEmailOTPRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+	result, err := h.authService.SendForgotPasswordEmailOTP(r.Context(), req.Email)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
+		"message":          result.Message,
+		"expiresInSeconds": result.ExpiresInSeconds,
+	})
+}
+
 type CompleteOnboardingRequest struct {
 	// details step
 	FirstName    string `json:"first_name" validate:"required,min=2,max=30"`

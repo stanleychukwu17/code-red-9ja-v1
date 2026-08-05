@@ -142,7 +142,7 @@ function LoginComponent() {
 
       if (response.success) {
         dispatch(updateAuthState({ user: response.data?.user }));
-        navigate({ to: "/home" });
+        navigate({ to: "/" });
       } else {
         setErrorMsg(response.message || "Invalid email or password.");
       }

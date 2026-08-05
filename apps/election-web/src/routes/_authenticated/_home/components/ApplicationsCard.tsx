@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
 import { useAuth } from "#/hooks/useAuth";
 import MapPinIcon from "@repo/ui/icons/map-pin-icon";
+import { TitleText } from "@repo/ui/components/custom/Texts";
+import { Target } from "lucide-react";
 
 const isElectionInPast = (val: any) => {
   const dateStr = val?.Time || val;
@@ -89,13 +91,25 @@ export function ApplicationsCard() {
 
   return (
     <GreyCardWrapper>
-      <GreyCardTitle
-        label="Become a Polling Unit Agent and earn up to ₦20,000 naira on Election
-        Day."
+      <div className="space-y-2">
+        <GreyCardTopRow
+          title={`Apply now`}
+          icon={<Target className="size-4 text-c-60" />}
+        />
+      </div>
+      <TitleText
+        text={
+          <>
+            Earn <span className="text-purple">₦20k to ₦150k</span> on election
+            day as a polling unit agent.
+          </>
+        }
+        className="text-c-80"
+        size="lg"
       />
       <Button
         type="button"
-        variant="secondary"
+        variant="purple"
         className="rounded-[16px] mt-3 text-lg"
         size="4xl"
         onClick={() => navigate({ to: "/applications/apply" })}

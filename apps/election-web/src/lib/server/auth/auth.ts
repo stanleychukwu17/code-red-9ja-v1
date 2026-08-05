@@ -10,6 +10,7 @@ import {
   verifySecurityQuestionsImpl,
   resetPasswordImpl,
   signupUserImpl,
+  changePasswordByEmailImpl,
 } from "#/lib/server/auth/auth.server";
 
 // Starts the registration process for a new user
@@ -34,6 +35,68 @@ export const startUserRegistration = createServerFn({ method: "POST" })
     }
   });
 
+export const sendSignupEmailOtp = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string }) => data)
+  .handler(async ({ data }) => {
+    console.log("REQUEST OTP DATA:", data);
+    try {
+      const response = await fetch(API_URL.auth.sendSignupEmailOtp, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      console.log("OTP RESULT:", result);
+      return result;
+    } catch (error) {
+      console.error("Send signup OTP error:", error);
+      return {
+        success: false,
+        message: "An unexpected error occurred while sending the OTP",
+      };
+    }
+  });
+
+export const sendForgotPasswordEmailOtp = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const response = await fetch(API_URL.auth.sendForgotPasswordEmailOtp, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Send forgot password OTP error:", error);
+      return {
+        success: false,
+        message: "An unexpected error occurred while sending the OTP",
+      };
+    }
+  });
+
+export const verifySignupEmailOtp = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; otp: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const response = await fetch(API_URL.auth.verifySignupEmailOtp, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      return await response.json();
+    } catch (error) {
+      console.error("Verify signup OTP error:", error);
+      return {
+        success: false,
+        message: "An unexpected error occurred while verifying the OTP",
+      };
+    }
+  });
+
 export const signupUser = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
@@ -49,7 +112,10 @@ export const completeOnboarding = createServerFn({ method: "POST" })
       const accessToken = getCookie("access_token");
 
       if (!accessToken) {
-        return { success: false, message: "Session expired. Please log in again." };
+        return {
+          success: false,
+          message: "Session expired. Please log in again.",
+        };
       }
 
       const response = await fetch(API_URL.auth.completeOnboarding, {
@@ -210,6 +276,14 @@ export const resetPassword = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
     const result = await resetPasswordImpl({ data });
+    return result;
+  });
+
+// Changes user password by email (used in forgot-password flow)
+export const changePasswordByEmail = createServerFn({ method: "POST" })
+  .inputValidator((data: { email: string; password: string }) => data)
+  .handler(async ({ data }) => {
+    const result = await changePasswordByEmailImpl({ data });
     return result;
   });
 

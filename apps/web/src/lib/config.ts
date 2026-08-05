@@ -28,6 +28,8 @@ export const API_URL = {
   health: `${API_BASE}/health`,
   auth: {
     registerPhaseSignUp: `${api}/auth/signup`,
+    sendSignupEmailOtp: `${api}/auth/signup/email-otp`,
+    verifySignupEmailOtp: `${api}/auth/signup/email-otp/verify`,
     checkNin: `${api}/auth/check_nin`,
     checkUsername: `${api}/auth/check_username`,
     register: `${api}/auth/register`,

@@ -16,7 +16,10 @@ import {
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { FormError } from "./_components/-form-error";
 import { getPageHeader } from "#/lib/shared/meta";
-import { checkIfRefreshTokenInCookie, verifySecurityQuestions } from "#/lib/server/auth/auth";
+import {
+  checkIfRefreshTokenInCookie,
+  verifySecurityQuestions,
+} from "#/lib/server/auth/auth";
 import { APP_URL } from "#/lib/config";
 import { useAppDispatch } from "#/redux/hooks";
 import { updateOnboardingData } from "#/redux/slice/authSlice";
@@ -41,7 +44,8 @@ export const Route = createFileRoute("/auth/security-questions")({
     nin: (search.nin as string) || "",
   }),
 
-  head: () => getPageHeader({ title: "Verify your identity", robotsAllowed: "no" }),
+  head: () =>
+    getPageHeader({ title: "Verify your identity", robotsAllowed: "no" }),
 
   component: RouteComponent,
 });
@@ -109,18 +113,15 @@ function RouteComponent() {
       );
       navigate({ to: APP_URL.auth.forgotPassword });
     } else {
-      setServerError(result.message || "Verification failed. Check your answers.");
+      setServerError(
+        result.message || "Verification failed. Check your answers.",
+      );
     }
   };
 
   return (
     <AuthWrapper type="forgot-password">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <h2 className="text-2xl font-bold text-c-90">Verify your identity</h2>
-        <p className="text-sm text-c-60 mb-6">
-          Enter your NIN and answer your security questions to reset your password.
-        </p>
-
         <FormError message={serverError} />
 
         <FormInput
@@ -129,13 +130,20 @@ function RouteComponent() {
           inputMode="numeric"
           maxLength={11}
           {...register("nin", { required: true })}
-          onChange={(e) => setValue("nin", e.target.value.replace(/[^0-9]/g, "").slice(0, 11))}
+          onChange={(e) =>
+            setValue("nin", e.target.value.replace(/[^0-9]/g, "").slice(0, 11))
+          }
         />
 
         {/* Question 1 */}
         <div className="flex flex-col gap-1">
-          <label className="text-sm font-medium text-c-70 mx-2">Security question 1</label>
-          <Select value={question1} onValueChange={(v) => setValue("question1", v)}>
+          <label className="text-sm font-medium text-c-70 mx-2">
+            Security question 1
+          </label>
+          <Select
+            value={question1}
+            onValueChange={(v) => setValue("question1", v)}
+          >
             <SelectTrigger id="sq1-trigger" className="w-full text-[17px]">
               <SelectValue placeholder="Select a question" />
             </SelectTrigger>
@@ -143,7 +151,9 @@ function RouteComponent() {
               <SelectGroup>
                 <SelectLabel>Questions</SelectLabel>
                 {SECURITY_QUESTIONS.map((q) => (
-                  <SelectItem key={q.id} value={q.id}>{q.question}</SelectItem>
+                  <SelectItem key={q.id} value={q.id}>
+                    {q.question}
+                  </SelectItem>
                 ))}
               </SelectGroup>
             </SelectContent>
@@ -158,8 +168,13 @@ function RouteComponent() {
 
         {/* Question 2 */}
         <div className="flex flex-col gap-1 mt-2">
-          <label className="text-sm font-medium text-c-70 mx-2">Security question 2</label>
-          <Select value={question2} onValueChange={(v) => setValue("question2", v)}>
+          <label className="text-sm font-medium text-c-70 mx-2">
+            Security question 2
+          </label>
+          <Select
+            value={question2}
+            onValueChange={(v) => setValue("question2", v)}
+          >
             <SelectTrigger id="sq2-trigger" className="w-full text-[17px]">
               <SelectValue placeholder="Select a question" />
             </SelectTrigger>
@@ -167,7 +182,9 @@ function RouteComponent() {
               <SelectGroup>
                 <SelectLabel>Questions</SelectLabel>
                 {SECURITY_QUESTIONS.map((q) => (
-                  <SelectItem key={q.id} value={q.id}>{q.question}</SelectItem>
+                  <SelectItem key={q.id} value={q.id}>
+                    {q.question}
+                  </SelectItem>
                 ))}
               </SelectGroup>
             </SelectContent>

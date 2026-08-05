@@ -29,9 +29,29 @@ func (m *MockAuthService) Register(ctx context.Context, params queries.CreateUse
 	return args.Get(0).(authservice.RegisterResult), args.Error(1)
 }
 
-func (m *MockAuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (authservice.RegisterPhaseSignUpResult, error) {
-	args := m.Called(ctx, email, phone, countryID)
+func (m *MockAuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16, emailVerificationToken string) (authservice.RegisterPhaseSignUpResult, error) {
+	args := m.Called(ctx, email, phone, countryID, emailVerificationToken)
 	return args.Get(0).(authservice.RegisterPhaseSignUpResult), args.Error(1)
+}
+
+func (m *MockAuthService) SendSignupEmailOTP(ctx context.Context, email string) (authservice.EmailOTPResult, error) {
+	args := m.Called(ctx, email)
+	return args.Get(0).(authservice.EmailOTPResult), args.Error(1)
+}
+
+func (m *MockAuthService) VerifySignupEmailOTP(ctx context.Context, email, otp string) (authservice.EmailOTPResult, error) {
+	args := m.Called(ctx, email, otp)
+	return args.Get(0).(authservice.EmailOTPResult), args.Error(1)
+}
+
+func (m *MockAuthService) Signup(ctx context.Context, email, phone, password string, countryID int16) (authservice.SignupResult, error) {
+	args := m.Called(ctx, email, phone, password, countryID)
+	return args.Get(0).(authservice.SignupResult), args.Error(1)
+}
+
+func (m *MockAuthService) CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, nin string, q1 int16, a1 string, q2 int16, a2 string) error {
+	args := m.Called(ctx, userID, fakeID, params, nin, q1, a1, q2, a2)
+	return args.Error(0)
 }
 
 func (m *MockAuthService) VerifyOtp(ctx context.Context, phone, otp string) error {

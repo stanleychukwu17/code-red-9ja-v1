@@ -10,6 +10,7 @@ import (
 	"free9ja/api/internal/logger"
 	"log/slog"
 	"math/rand"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -19,6 +20,7 @@ import (
 	"free9ja/api/internal/utils"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	phonenumbers "github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
@@ -139,7 +141,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		identifier = strings.TrimSpace(strings.ToLower(identifier))
 		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
 		if fakeIDStr == "" {
-			return LoginResult{}, errors.New("invalid email or password")
+			return LoginResult{}, errors.New("Invalid email or password")
 		}
 
 	case "username":
@@ -709,7 +711,7 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	email := strings.TrimSpace(strings.ToLower(params.Email.String))
 	email_exist := s.CheckEmail(ctx, email)
 	if email_exist {
-		return RegisterResult{}, errors.New("email already exists")
+		return RegisterResult{}, errors.New("Email address already exists")
 	}
 
 	// phone checks
@@ -866,7 +868,7 @@ func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
 	return exists > 0
 }
 
-// function: checks if the email already exists in redis and in the postgres db
+// function: checks if the Email address already exists in redis and in the postgres db
 func (s *AuthService) CheckEmail(ctx context.Context, email string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisEmailFakeID+email).Result()
 	return exists > 0
@@ -885,15 +887,15 @@ func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 }
 
 type SignupResult struct {
-	ID           string    `json:"id"`
-	AccessToken  string    `json:"accessToken"`
-	RefreshToken string    `json:"refreshToken"`
+	ID           string `json:"id"`
+	AccessToken  string `json:"accessToken"`
+	RefreshToken string `json:"refreshToken"`
 }
 
 func (s *AuthService) Signup(ctx context.Context, email, phone, password string, countryID int16) (SignupResult, error) {
 	// Check if email exists
 	if email != "" && s.CheckEmail(ctx, email) {
-		return SignupResult{}, errors.New("email already exists")
+		return SignupResult{}, errors.New("Email address already exists")
 	}
 
 	// Check if phone exists
@@ -929,6 +931,14 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 
 	user_id, err := s.queries.CreateUser(ctx, params)
 	if err != nil {
+		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
+			switch pgErr.ConstraintName {
+			case "users_email_key":
+				return SignupResult{}, errors.New("Email address already exists")
+			case "users_phone_key":
+				return SignupResult{}, errors.New("phone already exists")
+			}
+		}
 		return SignupResult{}, fmt.Errorf("failed to create user: %w", err)
 	}
 
@@ -988,6 +998,13 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
 	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
 	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp)
+	// Store email and phone → fakeID mappings so login-by-email/phone works immediately
+	if email != "" {
+		pipe.Set(ctx, db.RedisEmailFakeID+strings.ToLower(strings.TrimSpace(email)), fakeID, 0)
+	}
+	if e164Phone != "" {
+		pipe.Set(ctx, db.RedisPhoneFakeID+e164Phone, fakeID, 0)
+	}
 	if _, err = pipe.Exec(ctx); err != nil {
 		return SignupResult{}, fmt.Errorf("failed to store session: %w", err)
 	}
@@ -1130,16 +1147,194 @@ func (s *AuthService) SaveUserPhone(ctx context.Context, userID, fakeID int64, p
 
 // RegisterPhaseSignUpResult represents the structure for the response from the initial sign-up phase
 type RegisterPhaseSignUpResult struct {
-	ID string `json:"id"`
+	ID                     string `json:"id"`
+	EmailVerificationToken string `json:"emailVerificationToken,omitempty"`
 }
 
-func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16) (RegisterPhaseSignUpResult, error) {
+const (
+	emailOtpPrefix         = "register:email_otp:"
+	emailOtpVerifiedPrefix = "register:email_otp_verified:"
+	emailOtpTTL            = 10 * time.Minute
+	emailOtpVerifiedTTL    = 30 * time.Minute
+)
+
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func (s *AuthService) emailOtpKey(email string) string {
+	return emailOtpPrefix + normalizeEmail(email)
+}
+
+func (s *AuthService) emailOtpVerifiedKey(email string) string {
+	return emailOtpVerifiedPrefix + normalizeEmail(email)
+}
+
+func (s *AuthService) sendEmailOTP(ctx context.Context, to, otp string) error {
+	from := config.GetEnv("RESEND_FROM_EMAIL", "")
+	apiKey := config.GetEnv("RESEND_API_KEY", "")
+	if from == "" || apiKey == "" {
+		return errors.New("email service is not configured")
+	}
+
+	body := map[string]any{
+		"from":    from,
+		"to":      []string{to},
+		"subject": "Your Free9ja verification code",
+		"html": fmt.Sprintf(`<div style="font-family:Arial,sans-serif;line-height:1.6">
+			<h2>Verify your email</h2>
+			<p>Your verification code is:</p>
+			<div style="font-size:32px;font-weight:700;letter-spacing:6px">%s</div>
+			<p>This code expires in 10 minutes.</p>
+		</div>`, otp),
+	}
+	payload, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.resend.com/emails", strings.NewReader(string(payload)))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "free9ja-api")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("resend email failed: %s", resp.Status)
+	}
+	return nil
+}
+
+type EmailOTPResult struct {
+	Message                string `json:"message"`
+	EmailVerificationToken string `json:"emailVerificationToken,omitempty"`
+	ExpiresInSeconds       int    `json:"expiresInSeconds,omitempty"`
+}
+
+func (s *AuthService) SendSignupEmailOTP(ctx context.Context, email string) (EmailOTPResult, error) {
+	email = normalizeEmail(email)
+	if email == "" {
+		return EmailOTPResult{}, errors.New("email is required")
+	}
+	if s.CheckEmail(ctx, email) {
+		return EmailOTPResult{}, errors.New("Email address already exists")
+	}
+
+	otp, hashedOTP, err := utils.GenerateOTP()
+	if err != nil {
+		return EmailOTPResult{}, err
+	}
+	if err := s.sendEmailOTP(ctx, email, otp); err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	otpData, _ := json.Marshal(map[string]string{"hash": hashedOTP})
+	if err := s.rdb.Set(ctx, s.emailOtpKey(email), otpData, emailOtpTTL).Err(); err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	return EmailOTPResult{
+		Message:          "OTP sent successfully",
+		ExpiresInSeconds: int(emailOtpTTL.Seconds()),
+	}, nil
+}
+
+// SendForgotPasswordEmailOTP sends a one-time code for password reset.
+// Unlike SendSignupEmailOTP, it requires the email to already exist.
+func (s *AuthService) SendForgotPasswordEmailOTP(ctx context.Context, email string) (EmailOTPResult, error) {
+	email = normalizeEmail(email)
+	if email == "" {
+		return EmailOTPResult{}, errors.New("email is required")
+	}
+	if !s.CheckEmail(ctx, email) {
+		return EmailOTPResult{}, errors.New("no account found with that email address")
+	}
+
+	otp, hashedOTP, err := utils.GenerateOTP()
+	if err != nil {
+		return EmailOTPResult{}, err
+	}
+	if err := s.sendEmailOTP(ctx, email, otp); err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	otpData, _ := json.Marshal(map[string]string{"hash": hashedOTP})
+	if err := s.rdb.Set(ctx, s.emailOtpKey(email), otpData, emailOtpTTL).Err(); err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	return EmailOTPResult{
+		Message:          "OTP sent successfully",
+		ExpiresInSeconds: int(emailOtpTTL.Seconds()),
+	}, nil
+}
+
+func (s *AuthService) VerifySignupEmailOTP(ctx context.Context, email, otp string) (EmailOTPResult, error) {
+	email = normalizeEmail(email)
+	if email == "" {
+		return EmailOTPResult{}, errors.New("email is required")
+	}
+
+	raw, err := s.rdb.Get(ctx, s.emailOtpKey(email)).Result()
+	if err != nil {
+		return EmailOTPResult{}, errors.New("otp expired or not found")
+	}
+
+	var stored struct {
+		Hash string `json:"hash"`
+	}
+	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
+		return EmailOTPResult{}, errors.New("invalid otp state")
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(stored.Hash), []byte(strings.TrimSpace(otp))); err != nil {
+		return EmailOTPResult{}, errors.New("invalid otp")
+	}
+
+	verificationToken := uuid.NewString()
+	if err := s.rdb.Set(ctx, s.emailOtpVerifiedKey(email), verificationToken, emailOtpVerifiedTTL).Err(); err != nil {
+		return EmailOTPResult{}, err
+	}
+	_ = s.rdb.Del(ctx, s.emailOtpKey(email)).Err()
+
+	return EmailOTPResult{
+		Message:                "Email verified successfully",
+		EmailVerificationToken: verificationToken,
+		ExpiresInSeconds:       int(emailOtpVerifiedTTL.Seconds()),
+	}, nil
+}
+
+func (s *AuthService) VerifySignupEmailToken(ctx context.Context, email, token string) error {
+	email = normalizeEmail(email)
+	if email == "" || token == "" {
+		return errors.New("email verification is required")
+	}
+
+	stored, err := s.rdb.Get(ctx, s.emailOtpVerifiedKey(email)).Result()
+	if err != nil || stored != token {
+		return errors.New("email verification expired or invalid")
+	}
+	return nil
+}
+
+func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16, emailVerificationToken string) (RegisterPhaseSignUpResult, error) {
 	// email checks
-	if email != "" {
-		email = strings.TrimSpace(strings.ToLower(email))
-		if s.CheckEmail(ctx, email) {
-			return RegisterPhaseSignUpResult{}, errors.New("email already exists")
-		}
+	email = normalizeEmail(email)
+	if email == "" {
+		return RegisterPhaseSignUpResult{}, errors.New("email is required")
+	}
+	if err := s.VerifySignupEmailToken(ctx, email, emailVerificationToken); err != nil {
+		return RegisterPhaseSignUpResult{}, err
+	}
+	if s.CheckEmail(ctx, email) {
+		return RegisterPhaseSignUpResult{}, errors.New("Email address already exists")
 	}
 
 	// country check
@@ -1283,8 +1478,55 @@ func (s *AuthService) VerifySecurityQuestions(ctx context.Context, nin string, q
 
 // ChangePasswordByEmail resets a user's password using their email address
 func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, newPassword string) error {
-	// TODO: Implement the actual password change logic
-	return errors.New("ChangePasswordByEmail is not implemented yet")
+	email = strings.TrimSpace(strings.ToLower(email))
+
+	// 1. Resolve fakeID from Redis via email (same as Login flow)
+	fakeIDStr := s.rdb.Get(ctx, db.RedisEmailFakeID+email).Val()
+	if fakeIDStr == "" {
+		return errors.New("no account found with that email address")
+	}
+
+	fakeID, err := strconv.ParseInt(fakeIDStr, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid account reference: %w", err)
+	}
+
+	// 2. Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	// 3. Update password in DB
+	err = s.queries.UpdateUserPasswordByFid(ctx, queries.UpdateUserPasswordByFidParams{
+		FakeID:       pgtype.Int8{Int64: fakeID, Valid: true},
+		PasswordHash: string(hashedPassword),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update password: %w", err)
+	}
+
+	// 4. Invalidate all active sessions
+	userRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
+	sessions, err := s.rdb.SMembers(ctx, userRedisKey).Result()
+	if err == nil && len(sessions) > 0 {
+		pipe := s.rdb.TxPipeline()
+		for _, sessionID := range sessions {
+			redisSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+			tokens, _ := s.rdb.SMembers(ctx, redisSessionKey).Result()
+			for _, token := range tokens {
+				pipe.Del(ctx, fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, token))
+			}
+			pipe.Del(ctx, redisSessionKey)
+		}
+		pipe.Del(ctx, userRedisKey)
+		_, _ = pipe.Exec(ctx)
+	}
+
+	// 5. Update cached user info
+	_ = s.UpdateCachedUserInfo(ctx, fakeID)
+
+	return nil
 }
 
 func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error {
@@ -1370,7 +1612,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	// email checks
 	email = strings.TrimSpace(strings.ToLower(email))
 	if email != "" && s.CheckEmail(ctx, email) {
-		return RegisterResult{}, errors.New("email already exists")
+		return RegisterResult{}, errors.New("Email address already exists")
 	}
 
 	params := queries.CreateCandidatePlaceholderParams{

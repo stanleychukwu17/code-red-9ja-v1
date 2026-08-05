@@ -39,8 +39,8 @@ import { useDebounceValue } from "usehooks-ts";
 import { FormError } from "./-form-error";
 
 export const ONBOARDING_STEPS = [
-  "username",
   "details",
+  "username",
   "nin",
   "origin",
   "location",
@@ -385,6 +385,16 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   // â”€â”€ Render current step â”€â”€
   return (
     <>
+      {step === "details" && (
+        <DetailsStep
+          data={data}
+          setData={setData}
+          canContinue={canContinue}
+          onBack={goBack}
+          onAction={goNext}
+        />
+      )}
+
       {step === "username" && (
         <UsernameStep
           data={data}
@@ -397,16 +407,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           error={usernameError}
           setError={setUsernameError}
           suggestions={usernameSuggestions}
-        />
-      )}
-
-      {step === "details" && (
-        <DetailsStep
-          data={data}
-          setData={setData}
-          canContinue={canContinue}
-          onBack={goBack}
-          onAction={goNext}
         />
       )}
 
@@ -811,8 +811,8 @@ function ReferralStep({
   return (
     <FlowScreen
       icon={<Users className="size-6 text-primary" strokeWidth={1.8} />}
-      title="Got a referral code?"
-      subtitle="Enter the code of the person who invited you to Free9ja."
+      title="Who told you about Free9ja?"
+      subtitle="Enter code of the person who told you about Free9ja (ask them for it) or skip for now."
       onBack={onBack}
       actionLabel={data.referralCode.trim() ? "Continue" : "Skip for now"}
       actionDisabled={!canContinue}
@@ -920,7 +920,7 @@ type FlowScreenProps = {
   icon: ReactNode;
   title: string;
   subtitle: string;
-  onBack: () => void;
+  onBack?: () => void;
   actionLabel: string;
   actionDisabled?: boolean;
   actionLoading?: boolean;

@@ -12,7 +12,7 @@ export const APP_URL = {
     onboarding: "/auth/onboarding",
     forgotPassword: "/auth/forgot-password",
   },
-  home: "/home",
+  home: "/",
   applications: "/applications",
   notifications: "/notifications",
 };
@@ -23,6 +23,8 @@ export const API_URL = {
 
   auth: {
     registerPhaseSignUp: `${api}/auth/register_phase_signup`,
+    sendSignupEmailOtp: `${api}/auth/signup/email-otp`,
+    verifySignupEmailOtp: `${api}/auth/signup/email-otp/verify`,
     checkNin: `${api}/auth/check_nin`,
     checkUsername: `${api}/auth/check_username`,
     signup: `${api}/auth/signup`,
@@ -34,6 +36,8 @@ export const API_URL = {
     logout: `${api}/auth/logout`,
     verifySecurityQuestions: `${api}/auth/verify_security_questions`,
     forgotPassword: `${api}/auth/forgot_password`,
+    sendForgotPasswordEmailOtp: `${api}/auth/forgot-password/email-otp`,
+    changePasswordByEmail: `${api}/auth/change_password_by_email`,
     registerCandidate: `${api}/auth/register-candidate`,
   },
 

@@ -99,7 +99,7 @@ func TestRegister(t *testing.T) {
 
 		response, respBody := test.SendRequest(t, "POST", url, req)
 		require.Equal(t, response.StatusCode, http.StatusInternalServerError)
-		require.Contains(t, string(respBody), "email already exists")
+		require.Contains(t, string(respBody), "Email address already exists")
 	})
 
 	t.Run("duplicate phone number", func(t *testing.T) {

@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
 export function TitleText({
@@ -5,7 +6,7 @@ export function TitleText({
   size = "lg",
   className,
 }: {
-  text: string;
+  text: string | ReactNode;
   size?: "xl" | "lg" | "md" | "sm" | "xs";
   className?: string;
 }) {
