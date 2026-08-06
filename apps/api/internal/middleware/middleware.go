@@ -49,7 +49,7 @@ func AuthMiddleware(jwtSecret string) func(http.Handler) http.Handler {
 			if err != nil {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"success":false,"message":"Unauthorized: invalid token, please refresh the page and try again"}`))
+				w.Write([]byte(`{"success":false,"message":"Unauthorized: expired token"}`))
 				return
 			}
 

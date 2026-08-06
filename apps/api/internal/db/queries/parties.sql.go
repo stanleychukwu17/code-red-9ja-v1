@@ -134,7 +134,7 @@ func (q *Queries) CreateParty(ctx context.Context, arg CreatePartyParams) (Party
 }
 
 const deleteParty = `-- name: DeleteParty :exec
-DELETE FROM parties WHERE id = $1
+UPDATE parties SET status = 'deleted' WHERE id = $1
 `
 
 func (q *Queries) DeleteParty(ctx context.Context, id int16) error {

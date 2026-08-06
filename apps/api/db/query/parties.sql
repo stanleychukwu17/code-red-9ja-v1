@@ -24,7 +24,7 @@ WHERE id = $6
 RETURNING *;
 
 -- name: DeleteParty :exec
-DELETE FROM parties WHERE id = $1;
+UPDATE parties SET status = 'deleted' WHERE id = $1;
 
 -- name: DeletePartyMembership :many
 DELETE FROM party_membership WHERE user_id = $1 AND party_id = $2 RETURNING chapter_id;

@@ -7,7 +7,7 @@ import {
   logoutUserImpl,
   refreshUserTokenImpl,
 } from "#/lib/server/auth/auth.server";
-import { apiFetch, handleResponse } from "#/lib/server/fetch";
+import { apiFetchJson } from "#/lib/server/fetch";
 
 // Sends a POST request to the server to log in an admin with their email, username or phone and password.
 export const loginAdmin = createServerFn({ method: "POST" })
@@ -61,19 +61,17 @@ export const registerCandidate = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.auth.registerCandidate, {
+      return await apiFetchJson(API_URL.auth.registerCandidate, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
-
-      return await handleResponse(response);
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
         message:
           "An unexpected error occurred during candidate registration: " +
-          (error as Error).message,
+          (error?.message || "Unknown error"),
       };
     }
   });
@@ -83,19 +81,18 @@ export const makeSuperadminFn = createServerFn({ method: "POST" })
   .inputValidator((data: { name: string }) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.auth.superadmin, {
+      return await apiFetchJson(API_URL.auth.superadmin, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-
-      return await handleResponse(response);
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: error instanceof Error ? error.message : "An unknown error occurred",
+        message: error?.message || "An unknown error occurred",
       };
     }
   });
+

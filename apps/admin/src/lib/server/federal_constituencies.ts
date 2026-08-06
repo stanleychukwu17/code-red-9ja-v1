@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const createFederalConstituency = createServerFn({ method: "POST" })
   .inputValidator(
@@ -12,17 +12,15 @@ export const createFederalConstituency = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.federalConstituencies, {
+      return await apiFetchJson(API_URL.federalConstituencies, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to create federal constituency: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to create federal constituency" };
     }
   });
 
@@ -37,17 +35,15 @@ export const updateFederalConstituency = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.federalConstituencyById(id), {
+      return await apiFetchJson(API_URL.federalConstituencyById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to update federal constituency: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to update federal constituency" };
     }
   });
 
@@ -55,13 +51,11 @@ export const deleteFederalConstituency = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.federalConstituencyById(id), {
+      return await apiFetchJson(API_URL.federalConstituencyById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to delete federal constituency: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to delete federal constituency" };
     }
   });
 
@@ -69,11 +63,9 @@ export const getFederalConstituencyById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.federalConstituencyById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch federal constituency details" };
+      return await apiFetchJson(API_URL.federalConstituencyById(id));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch federal constituency details" };
     }
   });
 
@@ -81,10 +73,9 @@ export const getFederalConstituencies = createServerFn()
   .inputValidator((data: { stateId?: number; senatorialDistrictId?: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { stateId, senatorialDistrictId, limit, cursor } }) => {
     try {
-      const response = await apiFetch(API_URL.getFederalConstituencies(stateId, senatorialDistrictId, limit, cursor));
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { status: "failed", error: "Failed to fetch federal constituencies from API" };
+      return await apiFetchJson(API_URL.getFederalConstituencies(stateId, senatorialDistrictId, limit, cursor));
+    } catch (error: any) {
+      return { status: "failed", error: error?.message || "Failed to fetch federal constituencies from API" };
     }
   });
+

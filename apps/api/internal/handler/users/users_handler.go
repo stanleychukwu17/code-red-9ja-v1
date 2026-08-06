@@ -55,6 +55,7 @@ type UsersService interface {
 	CheckUsername(ctx context.Context, username string) bool
 	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
+	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -329,18 +330,18 @@ type GetUsersData struct {
 // @Router       /users [get]
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	// 1. Parse URL query parameters for filtering and pagination
-	role := r.URL.Query().Get("role")
-	roles := r.URL.Query().Get("roles")
-	search := r.URL.Query().Get("search")
+	role := r.URL.Query().Get("role")     // filter by one role
+	roles := r.URL.Query().Get("roles")   // filter by multiple roles
+	search := r.URL.Query().Get("search") // filter by search query
 
 	// filters
 	partyIDStr := r.URL.Query().Get("party_id")
-	// parties := r.URL.Query().Get("parties")
+	parties := r.URL.Query().Get("parties")
 	accountStatus := r.URL.Query().Get("account_status")
 	statuses := r.URL.Query().Get("statuses")
-	// verificationTypes := r.URL.Query().Get("verification_types")
-	// countryID := r.URL.Query().Get("country_id")
-	// stateIDs := r.URL.Query().Get("state_ids")
+	verificationTypes := r.URL.Query().Get("verification_types")
+	countryID := r.URL.Query().Get("country_id")
+	stateIDs := r.URL.Query().Get("state_ids")
 	limit, cursor := parsePaginationParams(r)
 
 	// split the roles into slice of string, inCase we are trying to get multiple roles at the same
@@ -360,25 +361,61 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		accountStatusSlice = []string{"just_registered", "placeholder", "active", "inactive"}
 	}
 
-	// var partyIDsSlice []string
-	// if parties != "" {
-	// 	partyIDsSlice = strings.Split(parties, ",")
-	// }
+	// sorting based on parties
+	var partyIDsSlice []int16
+	if parties != "" {
+		for p := range strings.SplitSeq(parties, ",") {
+			p = strings.TrimSpace(p)
+			if pid, err := strconv.ParseInt(p, 10, 16); err == nil {
+				partyIDsSlice = append(partyIDsSlice, int16(pid))
+			}
+		}
+	}
 
-	// var verificationTypesSlice []string
-	// if verificationTypes != "" {
-	// 	verificationTypesSlice = strings.Split(verificationTypes, ",")
-	// }
+	// sorting based on verification types
+	var verificationTypesSlice []int16
+	if verificationTypes != "" {
+		allTypes, err := h.usersService.ListVerificationTypes(r.Context())
+		if err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch verification types: "+err.Error())
+			return
+		}
 
-	// var countryIDsSlice []string
-	// if countryID != "" {
-	// 	countryIDsSlice = strings.Split(countryID, ",")
-	// }
+		// Create a map for fast lookup: "vip_verified" -> ID
+		typeMap := make(map[string]int16)
+		for _, t := range allTypes {
+			typeMap[t.VerificationType] = t.ID
+		}
 
-	// var stateIDsSlice []string
-	// if stateIDs != "" {
-	// 	stateIDsSlice = strings.Split(stateIDs, ",")
-	// }
+		for v := range strings.SplitSeq(verificationTypes, ",") {
+			v = strings.TrimSpace(v)
+			if id, exists := typeMap[v]; exists {
+				verificationTypesSlice = append(verificationTypesSlice, id)
+			}
+		}
+	}
+
+	// sorting based on country
+	var countryIDsSlice []int16
+	if countryID != "" {
+		for c := range strings.SplitSeq(countryID, ",") {
+			c = strings.TrimSpace(c)
+			if cid, err := strconv.ParseInt(c, 10, 16); err == nil {
+				countryIDsSlice = append(countryIDsSlice, int16(cid))
+			}
+		}
+	}
+
+	// sorting based on state
+	var stateIDsSlice []int16
+	if stateIDs != "" {
+		for s := range strings.SplitSeq(stateIDs, ",") {
+			s = strings.TrimSpace(s)
+			if sid, err := strconv.ParseInt(s, 10, 16); err == nil {
+				stateIDsSlice = append(stateIDsSlice, int16(sid))
+			}
+		}
+	}
 
 	var partyID int64
 	// 2. Retrieve JWT claims from the request context
@@ -394,11 +431,11 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 4. Determine Data Isolation (Party Admin vs Super Admin)
-	if claims.HasAnyRole("party_admin", "super_party_admin") {
+	if claims.HasAnyRole("party_admin", "super_party_admin") && !claims.HasAnyRole("super_admin", "admin") {
 		// If the user is a party admin, restrict their view to their own party's users
 		currentUser, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
 		if err != nil {
-			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch user details: "+err.Error())
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch your details: "+err.Error())
 			return
 		}
 		if currentUser.PartyID.Valid {
@@ -407,6 +444,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "You must be assigned to a party to view users")
 			return
 		}
+
+		partyIDsSlice = []int16{}
 	} else if partyIDStr != "" {
 		// For super_admin/admin: allow filtering by a specific party if provided in the URL
 		if pid, err := strconv.ParseInt(partyIDStr, 10, 64); err == nil {
@@ -424,6 +463,18 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	}
 	if partyID > 0 {
 		arg.PartyID = pgtype.Int2{Int16: int16(partyID), Valid: true}
+	}
+	if len(partyIDsSlice) > 0 {
+		arg.PartyIds = partyIDsSlice
+	}
+	if len(verificationTypesSlice) > 0 {
+		arg.VerificationTypeIds = verificationTypesSlice
+	}
+	if len(countryIDsSlice) > 0 {
+		arg.CountryIds = countryIDsSlice
+	}
+	if len(stateIDsSlice) > 0 {
+		arg.StateIds = stateIDsSlice
 	}
 	if len(roleSlice) > 0 {
 		arg.RoleCodes = roleSlice

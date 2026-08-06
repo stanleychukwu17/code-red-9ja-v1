@@ -90,6 +90,15 @@ SELECT u.id, u.fake_id FROM users u
 WHERE 
   (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
   AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)
+  AND (sqlc.narg('party_ids')::smallint[] IS NULL OR u.party_id = ANY(sqlc.narg('party_ids')::smallint[]))
+  AND (sqlc.narg('verification_type_ids')::smallint[] IS NULL OR (
+      u.is_verified = true AND EXISTS (
+          SELECT 1 FROM pages_verified pv 
+          WHERE pv.page_type = 'user' 
+            AND pv.page_id = u.id 
+            AND pv.verification_type_id = ANY(sqlc.narg('verification_type_ids')::smallint[])
+      )
+  ))
   AND (sqlc.narg('role_codes')::text[] IS NULL OR EXISTS (
       -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
       -- if a user somehow has multiple roles (or just to keep the base query simple).
@@ -101,6 +110,8 @@ WHERE
       u.username ILIKE '%' || sqlc.narg('search')::text || '%'
   ))
   AND (sqlc.narg('account_status')::text[] IS NULL OR u.account_status = ANY(sqlc.narg('account_status')::text[]))
+  AND (sqlc.narg('country_ids')::smallint[] IS NULL OR u.current_country = ANY(sqlc.narg('country_ids')::smallint[]))
+  AND (sqlc.narg('state_ids')::smallint[] IS NULL OR u.current_state = ANY(sqlc.narg('state_ids')::smallint[]))
 ORDER BY u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 

@@ -9,6 +9,8 @@ const (
 
 	// -- Actions --
 	ActionCreateParty            = "create_party"              // Action for creating a new party
+	ActionUpdateParty            = "update_party"              // Action for updating a party
+	ActionDeleteParty            = "delete_party"              // Action for deleting a party
 	ActionAssignPageVerification = "assign_page_verification"  // Action when a verification badge is assigned to a user's page
 	ActionRemovePageVerification = "remove_page_verification"  // Action when a verification badge is removed from a user's page
 	ActionUpdateUser             = "update_user"               // Action for updating a user's general profile
@@ -21,6 +23,7 @@ const (
 	ActionDeleteFile             = "delete_file"               // Action for deleting a file
 
 	// -- Actor Roles --
+	ActorRoleSuperAdmin = "super_admin" // A super administrator of the system
 	ActorRoleAdmin      = "admin"       // A standard administrative user
 	ActorRolePartyAdmin = "party_admin" // An administrator for a specific political party
 	ActorRoleUser       = "user"        // A regular user acting on their own account

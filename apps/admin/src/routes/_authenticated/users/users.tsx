@@ -55,7 +55,7 @@ function RouteComponent() {
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
         data: {
-          limit: 20,
+          limit: 30,
           cursor: pageParam,
           search: debouncedSearchQuery || undefined,
           parties: filters.parties.length > 0 ? filters.parties : undefined,

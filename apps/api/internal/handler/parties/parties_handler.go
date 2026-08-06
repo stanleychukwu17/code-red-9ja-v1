@@ -413,14 +413,15 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify party exists
-	if party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID)); party == nil {
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
+	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
-	// check permissions to delete this party image
+	// check permissions to update this party
 	permsSvc := permissionsservice.NewPermissionsService()
-	allowed, _, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+	allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
 	if !allowed {
 		h.utils.RespondError(w, http.StatusForbidden, err.Error())
 		return
@@ -432,6 +433,32 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	// Capture old and new values for audit logging
+	oldValuesJSON, _ := json.Marshal(party)
+	newValuesJSON, _ := json.Marshal(updatedParty)
+
+	moduleName := db.ModulePartyAdmin
+	actorRole := db.ActorRolePartyAdmin
+	if perms.IsBothAdmin {
+		moduleName = db.ModuleAdmin
+		if perms.IsSuperAdmin {
+			actorRole = db.ActorRoleSuperAdmin
+		} else {
+			actorRole = db.ActorRoleAdmin
+		}
+	}
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(moduleName),
+		Action:     db.ActionUpdateParty,
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeParty,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party updated successfully", map[string]interface{}{
 		"party": updatedParty,
@@ -509,6 +536,11 @@ func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/{id} [delete]
 func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin")
+	if !ok {
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -526,6 +558,20 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete party: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	oldValuesJSON, _ := json.Marshal(map[string]string{"status": "active"})
+	newValuesJSON, _ := json.Marshal(map[string]string{"status": "deleted"})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionDeleteParty,
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(db.ActorRoleSuperAdmin),
+		EntityType: db.EntityTypeParty,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party deleted successfully", nil)
 }

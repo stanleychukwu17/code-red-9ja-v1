@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const createState = createServerFn({ method: "POST" })
   .inputValidator(
@@ -14,17 +14,15 @@ export const createState = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.states, {
+      return await apiFetchJson(API_URL.states, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to create state: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to create state" };
     }
   });
 
@@ -41,17 +39,15 @@ export const updateState = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.stateById(id), {
+      return await apiFetchJson(API_URL.stateById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to update state: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to update state" };
     }
   });
 
@@ -59,13 +55,11 @@ export const deleteState = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.stateById(id), {
+      return await apiFetchJson(API_URL.stateById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to delete state: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to delete state" };
     }
   });
 
@@ -73,11 +67,9 @@ export const getStateById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.stateById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch state details" };
+      return await apiFetchJson(API_URL.stateById(id));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch state details" };
     }
   });
 
@@ -85,23 +77,20 @@ export const getStates = createServerFn()
   .inputValidator((data: { countryId: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { countryId, limit, cursor } }) => {
     try {
-      const response = await apiFetch(API_URL.getStates(countryId, limit, cursor));
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { status: "failed", error: "Failed to fetch states from API, Maybe the backend server is currently down" };
+      return await apiFetchJson(API_URL.getStates(countryId, limit, cursor));
+    } catch (error: any) {
+      return { status: "failed", error: error?.message || "Failed to fetch states from API, Maybe the backend server is currently down" };
     }
   });
 
 export const recalculateBodies = createServerFn({ method: "POST" })
   .handler(async () => {
     try {
-      const response = await apiFetch(API_URL.recalculateBodies, {
+      return await apiFetchJson(API_URL.recalculateBodies, {
         method: "POST",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to recalculate bodies: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to recalculate bodies" };
     }
   });
+

@@ -26,6 +26,7 @@ type BodiesService interface {
 // PageVerificationsService interface defines the methods needed from the page verifications service
 type PageVerificationsService interface {
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
+	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 }
 
 // PartyService interface defines the methods needed from the party service
@@ -69,6 +70,11 @@ func (s *UsersService) GetUserPageVerifications(ctx context.Context, userID int6
 		return nil, fmt.Errorf("page verifications service not configured")
 	}
 	return s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeUser, userID)
+}
+
+// ListVerificationTypes retrieves the list of available verification types.
+func (s *UsersService) ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error) {
+	return s.pageVerificationsService.ListVerificationTypes(ctx)
 }
 
 // GetBanks retrieves a list of available banks via the Monnify client.

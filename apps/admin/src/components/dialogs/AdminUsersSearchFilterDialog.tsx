@@ -70,19 +70,20 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
   const [selectedCountryId, setSelectedCountryId] = React.useState<string | undefined>(undefined);
   const [selectedStateIds, setSelectedStateIds] = React.useState<string[]>([]);
 
-  const { data: parties, isLoading: isLoadingParties } = useQuery({
+  const { data: partiesData, isLoading: isLoadingParties } = useQuery({
     queryKey: ["parties"],
     queryFn: async () => {
       const res = await getParties();
-      if (res && res.success && res.data) {
-        return Array.isArray(res.data) ? res.data : (res.data.parties || []);
+      if (res && res.success) {
+        return res;
       }
-      return [];
+      throw new Error(res?.message || "Failed to load parties");
     },
     enabled: open,
+    staleTime: Infinity,
   });
 
-  const partiesArray = Array.isArray(parties) ? parties : [];
+  const partiesArray = partiesData?.data?.parties || [];
 
   const toggleParty = (id: number) => {
     setSelectedParties(prev =>
@@ -210,7 +211,7 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
           {/* Verification Type Filter */}
           <div className="space-y-4">
             <h4 className="font-semibold text-c-90 text-[15px]">Verification Type</h4>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-3 max-h-50 overflow-y-auto pr-2 custom-scrollbar">
               {VERIFICATION_TYPES.map((vt) => (
                 <label key={vt.value} className="flex items-center gap-3 cursor-pointer group">
                   <input
@@ -227,29 +228,33 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
           <div className="h-px bg-[#f0f0f0] w-full" />
 
           {/* Country Filter */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-c-90 text-[15px]">Residence Country</h4>
-            <SelectCountry
-              selectedId={selectedCountryId}
-              update={updateCountry}
-              fetchCountries={getAllCountries}
-              errorMsg={undefined}
-            />
+          <div className="flex items-center justify-between gap-4">
+            <h4 className="font-semibold text-c-90 text-[15px] shrink-0">Residence Country</h4>
+            <div className="flex-1 max-w-50">
+              <SelectCountry
+                selectedId={selectedCountryId}
+                update={updateCountry}
+                fetchCountries={getAllCountries}
+                errorMsg={undefined}
+              />
+            </div>
           </div>
 
           <div className="h-px bg-[#f0f0f0] w-full" />
 
           {/* State Filter */}
-          <div className="space-y-4">
-            <h4 className="font-semibold text-c-90 text-[15px]">Residence State</h4>
-            <SelectState
-              selectedId={selectedStateIds.length > 0 ? selectedStateIds[0] : undefined}
-              update={(item) => toggleState(String(item.id))}
-              countryOriginalId={selectedCountryId ? Number(selectedCountryId) : undefined}
-              fetchStates={getStates}
-              disabled={!selectedCountryId}
-              errorMsg={undefined}
-            />
+          <div className="flex items-center justify-between gap-4">
+            <h4 className="font-semibold text-c-90 text-[15px] shrink-0">Residence State</h4>
+            <div className="flex-1 max-w-[200px]">
+              <SelectState
+                selectedId={selectedStateIds.length > 0 ? selectedStateIds[0] : undefined}
+                update={(item) => toggleState(String(item.id))}
+                countryOriginalId={selectedCountryId ? Number(selectedCountryId) : undefined}
+                fetchStates={getStates}
+                disabled={!selectedCountryId}
+                errorMsg={undefined}
+              />
+            </div>
           </div>
 
 
@@ -258,7 +263,7 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
           {/* Account Status Filter */}
           <div className="space-y-4">
             <h4 className="font-semibold text-c-90 text-[15px]">Account Status</h4>
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-2 gap-3">
               {STATUSES.map((status) => (
                 <label key={status.value} className="flex items-center gap-3 cursor-pointer group">
                   <input

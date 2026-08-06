@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const createLga = createServerFn({ method: "POST" })
   .inputValidator(
@@ -14,17 +14,15 @@ export const createLga = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.lgas, {
+      return await apiFetchJson(API_URL.lgas, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to create LGA: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to create LGA" };
     }
   });
 
@@ -41,17 +39,15 @@ export const updateLga = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.lgaById(id), {
+      return await apiFetchJson(API_URL.lgaById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to update LGA: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to update LGA" };
     }
   });
 
@@ -59,13 +55,11 @@ export const deleteLga = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.lgaById(id), {
+      return await apiFetchJson(API_URL.lgaById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to delete LGA: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to delete LGA" };
     }
   });
 
@@ -73,11 +67,9 @@ export const getLgaById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.lgaById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch LGA details" };
+      return await apiFetchJson(API_URL.lgaById(id));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch LGA details" };
     }
   });
 
@@ -86,11 +78,10 @@ export const getLGAs = createServerFn()
   .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
-      const response = await fetch(API_URL.getLGAs(stateId, limit, cursor));
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { status: 'failed', error: 'Failed to fetch LGAs from API, Maybe the backend server is currently down' };
+      return await apiFetchJson(API_URL.getLGAs(stateId, limit, cursor));
+    } catch (error: any) {
+      return { status: 'failed', error: error?.message || 'Failed to fetch LGAs from API, Maybe the backend server is currently down' };
     }
   });
+
 

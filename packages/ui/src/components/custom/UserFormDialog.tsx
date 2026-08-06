@@ -122,6 +122,7 @@ export function UserFormDialog({
 
   const activeUser = mode === "update" ? (user || createdUser) : createdUser;
 
+  // the avatar file input ref
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // Saving of the user basic info.

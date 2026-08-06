@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 interface PollingUnitInput {
   name: string;
@@ -23,17 +23,15 @@ export const createPollingUnit = createServerFn({ method: "POST" })
   .inputValidator((data: PollingUnitInput) => data)
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.pollingUnits, {
+      return await apiFetchJson(API_URL.pollingUnits, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to create polling unit: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to create polling unit" };
     }
   });
 
@@ -43,17 +41,15 @@ export const updatePollingUnit = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.pollingUnitById(id), {
+      return await apiFetchJson(API_URL.pollingUnitById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to update polling unit: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to update polling unit" };
     }
   });
 
@@ -61,13 +57,11 @@ export const deletePollingUnit = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.pollingUnitById(id), {
+      return await apiFetchJson(API_URL.pollingUnitById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to delete polling unit: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to delete polling unit" };
     }
   });
 
@@ -75,11 +69,9 @@ export const getPollingUnitById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.pollingUnitById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch polling unit details" };
+      return await apiFetchJson(API_URL.pollingUnitById(id));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch polling unit details" };
     }
   });
 
@@ -87,10 +79,9 @@ export const getPollingUnits = createServerFn()
   .inputValidator((data: { wardId?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { wardId, localGovernmentId, stateId, limit, cursor } }) => {
     try {
-      const response = await apiFetch(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor));
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { status: "failed", error: "Failed to fetch polling units from API" };
+      return await apiFetchJson(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor));
+    } catch (error: any) {
+      return { status: "failed", error: error?.message || "Failed to fetch polling units from API" };
     }
   });
+

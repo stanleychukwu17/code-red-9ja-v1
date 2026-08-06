@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const getOffices = createServerFn({ method: "GET" })
   .inputValidator(
@@ -19,13 +19,11 @@ export const getOffices = createServerFn({ method: "GET" })
     try {
       const limit = data?.limit || 20;
       const cursor = data?.cursor || "";
-      const response = await apiFetch(
+      return await apiFetchJson(
         `${API_URL.offices}?limit=${limit}&cursor=${cursor}`,
       );
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch offices from API" };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch offices from API" };
     }
   });
 
@@ -33,11 +31,9 @@ export const getOfficeById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.officeById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch office details" };
+      return await apiFetchJson(API_URL.officeById(id));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch office details" };
     }
   });
 
@@ -48,19 +44,17 @@ export const createOffice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.offices, {
+      return await apiFetchJson(API_URL.offices, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to create office: " + (error as Error).message,
+        message: error?.message || "Failed to create office",
       };
     }
   });
@@ -77,19 +71,17 @@ export const updateOffice = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.officeById(id), {
+      return await apiFetchJson(API_URL.officeById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to update office: " + (error as Error).message,
+        message: error?.message || "Failed to update office",
       };
     }
   });
@@ -98,15 +90,14 @@ export const deleteOffice = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.officeById(id), {
+      return await apiFetchJson(API_URL.officeById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to delete office: " + (error as Error).message,
+        message: error?.message || "Failed to delete office",
       };
     }
   });
+

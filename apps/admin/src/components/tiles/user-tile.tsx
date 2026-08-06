@@ -10,6 +10,8 @@ import { WEB_URL } from "@/lib/config";
 import { Link } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
+import { Badge } from "@repo/ui/components/badge";
+import { cn } from "@repo/ui/lib/utils";
 
 export type UserType = {
   id: number;
@@ -44,6 +46,61 @@ export type UserType = {
   city_name?: string;
 };
 
+export function UserAccountStatusBadge({ status, className }: { status?: string; className?: string; }) {
+  if (!status) return null;
+
+  const normalized = status.toLowerCase().trim();
+
+  // do not show badge for active accounts
+  if (normalized === "active") return null;
+
+  let variant: "success" | "warning" | "destructive" | "info" | "secondary" | "outline" | "default" = "secondary";
+  let label = status.replace(/_/g, " ");
+
+  switch (normalized) {
+    case "active":
+      variant = "success";
+      label = "Active";
+      break;
+    case "just_registered":
+      variant = "info";
+      label = "Just Registered";
+      break;
+    case "placeholder":
+      variant = "warning";
+      label = "Placeholder";
+      break;
+    case "inactive":
+      variant = "warning";
+      label = "Inactive";
+      break;
+    case "suspended":
+      variant = "destructive";
+      label = "Suspended";
+      break;
+    case "banned":
+      variant = "destructive";
+      label = "Banned";
+      break;
+    case "deleted":
+      variant = "destructive";
+      label = "Deleted";
+      break;
+    default:
+      variant = "outline";
+      break;
+  }
+
+  return (
+    <Badge
+      variant={variant}
+      className={cn("capitalize text-[9px] px-2 py-0 h-4 font-medium leading-none shrink-0", className)}
+    >
+      {label}
+    </Badge>
+  );
+}
+
 const getPgString = (val: any) => {
   if (val && typeof val === "object" && "String" in val) {
     return val.String || "";
@@ -66,6 +123,7 @@ const formatDate = (dateString?: string) => {
   }
 };
 
+// UserTable Tile Header 
 export function UserTableHeader() {
   return (
     <TileHeader>
@@ -83,6 +141,7 @@ export function UserTableHeader() {
   );
 }
 
+// UserTable Tile 
 export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () => void; }) {
   const firstName = getPgString(data.first_name);
   const lastName = getPgString(data.last_name);
@@ -138,8 +197,9 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
               ))
             )}
           </div>
-          <div className="truncate pt-1 pb-0.5 w-full text-[11px] text-c-50">
-            @{username}
+          <div className="pt-1 pb-0.5 w-full text-[11px] text-c-50 flex items-center gap-1.5 overflow-hidden">
+            <span className="truncate">@{username}</span>
+            <UserAccountStatusBadge status={data.account_status} />
           </div>
           {location && (
             <div className="flex items-center gap-1 mt-1 text-[11px] text-c-50 w-full overflow-hidden">
@@ -159,3 +219,4 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
     </TileRow>
   );
 }
+

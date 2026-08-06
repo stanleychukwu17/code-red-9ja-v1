@@ -696,28 +696,43 @@ SELECT u.id, u.fake_id FROM users u
 WHERE 
   ($1::bigint IS NULL OR u.id < $1::bigint)
   AND ($2::smallint IS NULL OR u.party_id = $2::smallint)
-  AND ($3::text[] IS NULL OR EXISTS (
+  AND ($3::smallint[] IS NULL OR u.party_id = ANY($3::smallint[]))
+  AND ($4::smallint[] IS NULL OR (
+      u.is_verified = true AND EXISTS (
+          SELECT 1 FROM pages_verified pv 
+          WHERE pv.page_type = 'user' 
+            AND pv.page_id = u.id 
+            AND pv.verification_type_id = ANY($4::smallint[])
+      )
+  ))
+  AND ($5::text[] IS NULL OR EXISTS (
       -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
       -- if a user somehow has multiple roles (or just to keep the base query simple).
-      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY($3::text[])
+      SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id AND ur.role_code = ANY($5::text[])
   ))
-  AND ($4::text IS NULL OR (
-      u.first_name ILIKE '%' || $4::text || '%' OR
-      u.last_name ILIKE '%' || $4::text || '%' OR
-      u.username ILIKE '%' || $4::text || '%'
+  AND ($6::text IS NULL OR (
+      u.first_name ILIKE '%' || $6::text || '%' OR
+      u.last_name ILIKE '%' || $6::text || '%' OR
+      u.username ILIKE '%' || $6::text || '%'
   ))
-  AND ($5::text[] IS NULL OR u.account_status = ANY($5::text[]))
+  AND ($7::text[] IS NULL OR u.account_status = ANY($7::text[]))
+  AND ($8::smallint[] IS NULL OR u.current_country = ANY($8::smallint[]))
+  AND ($9::smallint[] IS NULL OR u.current_state = ANY($9::smallint[]))
 ORDER BY u.id DESC
-LIMIT $6::int
+LIMIT $10::int
 `
 
 type ListUsersParams struct {
-	Cursor        pgtype.Int8 `json:"cursor"`
-	PartyID       pgtype.Int2 `json:"party_id"`
-	RoleCodes     []string    `json:"role_codes"`
-	Search        pgtype.Text `json:"search"`
-	AccountStatus []string    `json:"account_status"`
-	LimitNum      int32       `json:"limit_num"`
+	Cursor              pgtype.Int8 `json:"cursor"`
+	PartyID             pgtype.Int2 `json:"party_id"`
+	PartyIds            []int16     `json:"party_ids"`
+	VerificationTypeIds []int16     `json:"verification_type_ids"`
+	RoleCodes           []string    `json:"role_codes"`
+	Search              pgtype.Text `json:"search"`
+	AccountStatus       []string    `json:"account_status"`
+	CountryIds          []int16     `json:"country_ids"`
+	StateIds            []int16     `json:"state_ids"`
+	LimitNum            int32       `json:"limit_num"`
 }
 
 type ListUsersRow struct {
@@ -734,9 +749,13 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]ListUse
 	rows, err := q.db.Query(ctx, listUsers,
 		arg.Cursor,
 		arg.PartyID,
+		arg.PartyIds,
+		arg.VerificationTypeIds,
 		arg.RoleCodes,
 		arg.Search,
 		arg.AccountStatus,
+		arg.CountryIds,
+		arg.StateIds,
 		arg.LimitNum,
 	)
 	if err != nil {
