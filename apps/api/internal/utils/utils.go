@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nyaruka/phonenumbers"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 	"golang.org/x/crypto/bcrypt"
@@ -269,4 +270,33 @@ func GetIP(r *http.Request) string {
 	}
 
 	return ip
+}
+
+// ValidatePhoneForCountry checks:
+// 1. valid phone number format
+// 2. matches the given ISO country code (e.g. "NG", "US")
+// 3. returns normalized E.164 format if valid
+func ValidatePhoneForCountry(phone, countryCode string) (string, error) {
+	// Parse number (second arg can be empty if phone is already in E.164)
+	num, err := phonenumbers.Parse(phone, countryCode)
+	if err != nil {
+		return "", fmt.Errorf("invalid phone format: %w", err)
+	}
+
+	// Check if it's a valid number globally
+	if !phonenumbers.IsValidNumber(num) {
+		return "", fmt.Errorf("invalid phone number")
+	}
+
+	// Verify the region code if a specific country code was required
+	if countryCode != "" {
+		regionCode := phonenumbers.GetRegionCodeForNumber(num)
+		if regionCode != strings.ToUpper(countryCode) {
+			return "", fmt.Errorf("phone number does not match expected country %s", countryCode)
+		}
+	}
+
+	// Format to E.164 standard
+	formatted := phonenumbers.Format(num, phonenumbers.E164)
+	return formatted, nil
 }

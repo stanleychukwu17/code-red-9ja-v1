@@ -254,12 +254,9 @@ export const API_URL = {
   pollingAgentApplications: `${api}/party-applications`,
   pollingAgentRecommendations: `${api}/party-applications/recommendations`,
 
-  approveApplication: (id: string | number) =>
-    `${api}/party-applications/${id}/approve`,
-  rejectApplication: (id: string | number) =>
-    `${api}/party-applications/${id}/reject`,
-  cancelApplication: (id: string | number) =>
-    `${api}/party-applications/${id}/cancel`,
+  approveApplication: (id: string | number) => `${api}/party-applications/${id}/approve`,
+  rejectApplication: (id: string | number) => `${api}/party-applications/${id}/reject`,
+  cancelApplication: (id: string | number) => `${api}/party-applications/${id}/cancel`,
 
   pollingUnitAssignments: `${api}/polling-unit-assignments`,
   updateAssignmentTracking: (id: string | number) =>

@@ -4,8 +4,11 @@
 package r2service
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strings"
 	"time"
@@ -23,15 +26,21 @@ type Config struct {
 	BucketName      string // R2 Bucket name
 	// PublicURL is the optional custom domain or r2.dev URL for serving public objects.
 	// e.g. "https://files.free9ja.com" or "https://pub-xxx.r2.dev"
-	PublicURL string
+	PublicURL  string
+	ZoneID     string       // Cloudflare Zone ID for Edge Cache purging
+	APIToken   string       // Cloudflare API Token for Edge Cache purging
+	HTTPClient *http.Client // Optional HTTP client for API calls (defaults to 10s timeout client)
 }
 
 // R2Service wraps the AWS S3 client pre-configured for Cloudflare R2.
 type R2Service struct {
 	client     *s3.Client
 	presigner  *s3.PresignClient
+	httpClient *http.Client
 	bucketName string
 	publicURL  string
+	zoneID     string
+	apiToken   string
 }
 
 // New creates and returns an R2Service from the provided configuration.
@@ -72,24 +81,32 @@ func New(cfg Config) (*R2Service, error) {
 
 	presigner := s3.NewPresignClient(client)
 
+	httpClient := cfg.HTTPClient
+	if httpClient == nil {
+		httpClient = &http.Client{
+			Timeout: 10 * time.Second,
+		}
+	}
+
 	return &R2Service{
 		client:     client,
 		presigner:  presigner,
+		httpClient: httpClient,
 		bucketName: cfg.BucketName,
 		publicURL:  strings.TrimRight(cfg.PublicURL, "/"),
+		zoneID:     cfg.ZoneID,
+		apiToken:   cfg.APIToken,
 	}, nil
 }
 
 // BuildKey constructs a deterministic storage key for an uploaded file.
-// Format: {folder}/{YYYY-MM-DD}/{sanitised-filename}-{uuid}.{ext}
-//
 // For example: "party-logos/2026-06-06/apc-logo-<uuid>.png"
 func BuildKey(folder, originalName, uniqueID string) string {
 	ext := filepath.Ext(originalName)
 	base := strings.TrimSuffix(originalName, ext)
 
-	// Sanitise: replace anything that isn't alphanumeric / hyphen / underscore
-	sanitised := strings.Map(func(r rune) rune {
+	// sanitized: replace anything that isn't alphanumeric / hyphen / underscore
+	sanitized := strings.Map(func(r rune) rune {
 		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') ||
 			(r >= '0' && r <= '9') || r == '-' || r == '_' {
 			return r
@@ -97,25 +114,31 @@ func BuildKey(folder, originalName, uniqueID string) string {
 		return '-'
 	}, base)
 
-	// Collapse multiple consecutive hyphens and trim to 60 chars
-	for strings.Contains(sanitised, "--") {
-		sanitised = strings.ReplaceAll(sanitised, "--", "-")
+	// Collapse multiple consecutive hyphens
+	for strings.Contains(sanitized, "--") {
+		sanitized = strings.ReplaceAll(sanitized, "--", "-")
 	}
-	sanitised = strings.Trim(sanitised, "-")
-	if len(sanitised) > 60 {
-		sanitised = sanitised[:60]
+	sanitized = strings.Trim(sanitized, "-")
+
+	// trim to 60 chars
+	if len(sanitized) > 60 {
+		sanitized = sanitized[:60]
 	}
-	if sanitised == "" {
-		sanitised = "file"
+	if sanitized == "" {
+		sanitized = "file"
 	}
 
-	date := time.Now().UTC().Format("2006-01-02")
+	// folder cannot be empty
 	folder = strings.Trim(folder, "/")
 	if folder == "" {
 		folder = "uploads"
 	}
 
-	return fmt.Sprintf("%s/%s/%s-%s%s", folder, date, sanitised, uniqueID, ext)
+	// date format: 2006-01-02 -> YYYY-MM-DD
+	date := time.Now().UTC().Format("2006-01-02")
+
+	// Format: {folder}/{YYYY-MM-DD}/{sanitized-filename}-{uuid}.{ext}
+	return fmt.Sprintf("%s/%s/%s-%s%s", folder, date, sanitized, uniqueID, ext)
 }
 
 // PresignedUploadURL returns a pre-signed PUT URL that the client can use
@@ -172,4 +195,60 @@ func (s *R2Service) ObjectExists(ctx context.Context, key string) (bool, error) 
 		return false, nil
 	}
 	return true, nil
+}
+
+// PurgeCloudflareCache invalidates the given object key from Cloudflare Edge CDN cache.
+func (s *R2Service) PurgeCloudflareCache(ctx context.Context, key string) error {
+	if s.zoneID == "" || s.apiToken == "" {
+		return nil // Skip if Cloudflare API credentials are not configured
+	}
+
+	fileURL := s.PublicURL(key)
+	payload := map[string][]string{
+		"files": {fileURL},
+	}
+	bodyBytes, err := json.Marshal(payload)
+	if err != nil {
+		return err
+	}
+
+	// Construct the Cloudflare API URL for cache purging
+	url := fmt.Sprintf("https://api.cloudflare.com/client/v4/zones/%s/purge_cache", s.zoneID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(bodyBytes))
+	if err != nil {
+		return err
+	}
+
+	// Add required headers for Cloudflare API authentication
+	req.Header.Set("Authorization", "Bearer "+s.apiToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	// Send the purge request to Cloudflare
+	resp, err := s.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("r2service: purge cache request failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	// Define the response structure for Cloudflare's purge API
+	var purgeResp struct {
+		Success bool `json:"success"`
+		Errors  []struct {
+			Code    int    `json:"code"`
+			Message string `json:"message"`
+		} `json:"errors"`
+	}
+
+	// Decode the JSON response from Cloudflare
+	_ = json.NewDecoder(resp.Body).Decode(&purgeResp)
+
+	// Check if the purge request was successful
+	if !purgeResp.Success || resp.StatusCode >= 400 {
+		if len(purgeResp.Errors) > 0 {
+			return fmt.Errorf("r2service: cloudflare purge failed with HTTP %d (code %d: %s)", resp.StatusCode, purgeResp.Errors[0].Code, purgeResp.Errors[0].Message)
+		}
+		return fmt.Errorf("r2service: cloudflare purge failed with HTTP status %d", resp.StatusCode)
+	}
+
+	return nil
 }

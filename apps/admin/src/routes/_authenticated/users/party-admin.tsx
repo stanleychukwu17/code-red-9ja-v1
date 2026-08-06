@@ -14,6 +14,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { getUsersList } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
+import { AdminUsersSearchFilterDialog, type UsersFilters } from "#/components/dialogs/AdminUsersSearchFilterDialog";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 
 export const Route = createFileRoute("/_authenticated/users/party-admin")({
@@ -23,17 +24,35 @@ export const Route = createFileRoute("/_authenticated/users/party-admin")({
 
 function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
+  const [filters, setFilters] = React.useState<UsersFilters>({
+    parties: [],
+    roles: [],
+    statuses: [],
+    verificationTypes: [],
+    stateIds: [],
+  });
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error, refetch, } = useInfiniteQuery({
     // Unique key for React Query cache
-    queryKey: ["users", "partyadmin", debouncedSearchQuery],
+    queryKey: ["users-list", "partyadmin", debouncedSearchQuery, filters],
 
     // Function to fetch a page of data using the cursor parameter
     queryFn: async ({ pageParam }) => {
       const res = await getUsersList({
-        data: { role: "party_admin,super_party_admin", limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
+        data: {
+          limit: 30,
+          cursor: pageParam,
+          search: debouncedSearchQuery || undefined,
+          roles: ["party_admin", "super_party_admin"],
+          parties: filters.parties.length > 0 ? filters.parties : undefined,
+          statuses: filters.statuses.length > 0 ? filters.statuses : undefined,
+          verificationTypes: filters.verificationTypes.length > 0 ? filters.verificationTypes : undefined,
+          countryId: filters.countryId || undefined,
+          stateIds: filters.stateIds.length > 0 ? filters.stateIds : undefined,
+        },
       });
       if (res && res.success && res.data) {
         return res;
@@ -80,7 +99,7 @@ function RouteComponent() {
         onChange={(e) => setSearchQuery(e.target.value)}
         rightComponent={
           <>
-            <FilterButton />
+            <FilterButton onClick={() => setIsFilterOpen(true)} />
             <AddButton onClick={() => setIsFormOpen(true)} />
           </>
         }
@@ -125,6 +144,13 @@ function RouteComponent() {
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         onSuccess={() => refetch()}
+      />
+      <AdminUsersSearchFilterDialog
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={(newFilters) => {
+          setFilters(newFilters);
+        }}
       />
     </Layout>
   );

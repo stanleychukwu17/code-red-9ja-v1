@@ -29,20 +29,18 @@ func NewService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client) *Serv
 }
 
 type SubmitApplicationInput struct {
-	UserID            int64
-	PartyID           int16
-	ElectionGroupIDs  []int64
-	PollingUnitID     int32
-	Avatar            string
-	VotersCardImage   string
-	CurrentCountry    int16
-	CurrentState      int16
-	CurrentLga        int32
-	CurrentCity       int32
-	CurrentWard       int32
+	UserID           int64
+	PartyID          int16
+	ElectionGroupIDs []int64
+	PollingUnitID    int32
+	Avatar           string
+	VotersCardImage  string
+	CurrentCountry   int16
+	CurrentState     int16
+	CurrentLga       int32
+	CurrentCity      int32
+	CurrentWard      int32
 
-	WhatsappPhone     string
-	DataPhone         string
 	EducationalStatus string
 	HighestDegree     string
 	GraduationYear    string
@@ -74,21 +72,18 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	// Update user agent details
 	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
-		ID:                input.UserID,
-		PartyID:           pgtype.Int2{Int16: int16(int16(input.PartyID)), Valid: true},
-		Avatar:            pgtype.Text{String: input.Avatar, Valid: input.Avatar != ""},
-		VotersCardImage:   pgtype.Text{String: input.VotersCardImage, Valid: input.VotersCardImage != ""},
-		CurrentCountry:    input.CurrentCountry,
-		CurrentState:      int16(input.CurrentState),
-		CurrentLga:        pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
-		CurrentCity:       pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
-
-		WhatsappPhone:     pgtype.Text{String: input.WhatsappPhone, Valid: input.WhatsappPhone != ""},
-		DataPhone:         pgtype.Text{String: input.DataPhone, Valid: input.DataPhone != ""},
-		CurrentWard:       pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
-		Phone:             input.Phone,
-		PollingUnitID:     pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
-		Address:           input.Address,
+		ID:              input.UserID,
+		PartyID:         pgtype.Int2{Int16: int16(int16(input.PartyID)), Valid: true},
+		Avatar:          pgtype.Text{String: input.Avatar, Valid: input.Avatar != ""},
+		VotersCardImage: pgtype.Text{String: input.VotersCardImage, Valid: input.VotersCardImage != ""},
+		CurrentCountry:  input.CurrentCountry,
+		CurrentState:    int16(input.CurrentState),
+		CurrentLga:      pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
+		CurrentCity:     pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
+		CurrentWard:     pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
+		Phone:           input.Phone,
+		PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
+		Address:         input.Address,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user details: %w", err)
@@ -278,7 +273,7 @@ type puGeo struct {
 	stateID             int16
 	stateConstituencyID int32 // nullable – 0 if not set
 	fedConstID          int32 // nullable – 0 if not set
-	senatDistrictID     int32 // nullable – 0 if not set
+	senateDistrictID    int32 // nullable – 0 if not set
 }
 
 // fetchPUGeo fetches full geography for a polling unit by querying
@@ -309,7 +304,7 @@ func fetchPUGeo(ctx context.Context, pool interface {
 		g.fedConstID = v
 	}
 	if v, ok := sdID.(int32); ok {
-		g.senatDistrictID = v
+		g.senateDistrictID = v
 	}
 	return g, nil
 }
@@ -469,11 +464,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
 		}
 
-		// Fetch lga geography for fed_const and senat IDs
-		var lgaFedConstID, lgaSenatID int32
+		// Fetch lga geography for fed_const and senate IDs
+		var lgaFedConstID, lgaSenateID int32
 		_ = s.pool.QueryRow(ctx, `SELECT federal_constituency_id, senatorial_district_id FROM lgas WHERE id = $1 LIMIT 1`,
 			input.LgaID,
-		).Scan(&lgaFedConstID, &lgaSenatID)
+		).Scan(&lgaFedConstID, &lgaSenateID)
 
 		// Uniqueness: was this the first LGA supervisor for this party in this LGA?
 		existingLgaSupCount, countErr := txQueries.GetLGASupervisorCount(ctx, queries.GetLGASupervisorCountParams{
@@ -503,10 +498,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			}
 		}
 		// senatorial_district row
-		if lgaSenatID > 0 {
+		if lgaSenateID > 0 {
 			err = txQueries.AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx, queries.AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams{
 				ElectionGroupID:      egID,
-				SenatorialDistrictID: lgaSenatID,
+				SenatorialDistrictID: lgaSenateID,
 				PartyID:              partyID,
 				Delta:                1,
 				UniqueDelta:          isUniqueLgaSup,
@@ -555,12 +550,12 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 
 		// Fetch full geography from ward + lga
 		var wardStateConstID int32
-		var lgaFedConstID, lgaSenatID int32
+		var lgaFedConstID, lgaSenateID int32
 		_ = s.pool.QueryRow(ctx, `
 			SELECT w.state_assembly_constituency_id, l.federal_constituency_id, l.senatorial_district_id
 			FROM wards w JOIN lgas l ON l.id = w.lga_id
 			WHERE w.id = $1 LIMIT 1`, input.WardID,
-		).Scan(&wardStateConstID, &lgaFedConstID, &lgaSenatID)
+		).Scan(&wardStateConstID, &lgaFedConstID, &lgaSenateID)
 
 		// Uniqueness: first ward supervisor for this party in this ward?
 		existingWardSupCount, countErr := txQueries.GetWardSupervisorCount(ctx, queries.GetWardSupervisorCountParams{
@@ -614,16 +609,16 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			}
 		}
 		// senatorial_district row
-		if lgaSenatID > 0 {
+		if lgaSenateID > 0 {
 			err = txQueries.AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx, queries.AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams{
 				ElectionGroupID:      egID,
-				SenatorialDistrictID: lgaSenatID,
+				SenatorialDistrictID: lgaSenateID,
 				PartyID:              partyID,
 				Delta:                1,
 				UniqueDelta:          isUniqueWardSup,
 			})
 			if err != nil {
-				return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on senat dist: %w", err)
+				return queries.PartyApplication{}, fmt.Errorf("failed to adjust ward supervisor counts on senate dist: %w", err)
 			}
 		}
 		// state row
@@ -666,7 +661,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		// --- Incremental stats update for polling agent ---
 		// 1. Fetch full geography for the polling unit
 		var geo puGeo
-		var wardStateConstID, puFedConstID, puSenatID int32
+		var wardStateConstID, puFedConstID, puSenateID int32
 		geoErr := s.pool.QueryRow(ctx, `
 			SELECT pu.ward_id, pu.lga_id, pu.state_id,
 			       COALESCE(w.state_assembly_constituency_id, 0),
@@ -676,7 +671,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			JOIN wards w ON w.id = pu.ward_id
 			JOIN lgas  l ON l.id = pu.lga_id
 			WHERE pu.id = $1 LIMIT 1`, pollingUnitID,
-		).Scan(&geo.wardID, &geo.lgaID, &geo.stateID, &wardStateConstID, &puFedConstID, &puSenatID)
+		).Scan(&geo.wardID, &geo.lgaID, &geo.stateID, &wardStateConstID, &puFedConstID, &puSenateID)
 
 		if geoErr == nil {
 			// 2. Check current agents_count for this party in this PU BEFORE this insert.
@@ -692,7 +687,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				egID, pollingUnitID, partyID,
 			).Scan(&priorAgentCount)
 			// priorAgentCount now includes the one we just inserted (tx committed later),
-			// but the trigger ran after INSERT so egpu row exists.
+			// but the trigger ran after INSERT so egPu row exists.
 			// If priorAgentCount == 1, this was the first agent for this party in this PU.
 			uniquePuDelta := int32(0)
 			if priorAgentCount <= 1 {
@@ -748,10 +743,10 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 					return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupFederalConstituencyPartyEntry: %v", err)
 				}
 			}
-			if puSenatID > 0 {
+			if puSenateID > 0 {
 				if err = txQueries.UpsertElectionGroupSenatorialDistrictPartyEntry(ctx, queries.UpsertElectionGroupSenatorialDistrictPartyEntryParams{
 					ElectionGroupID:      egID,
-					SenatorialDistrictID: puSenatID,
+					SenatorialDistrictID: puSenateID,
 					PartyID:              partyID,
 					AgentsDelta:          1,
 					UniquePuDelta:        uniquePuDelta,

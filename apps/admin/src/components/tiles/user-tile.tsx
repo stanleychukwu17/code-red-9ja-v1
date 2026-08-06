@@ -10,6 +10,8 @@ import { WEB_URL } from "@/lib/config";
 import { Link } from "@tanstack/react-router";
 import { MapPin } from "lucide-react";
 import { VerificationBadge } from "@repo/ui/components/custom/verification-badge";
+import { Badge } from "@repo/ui/components/badge";
+import { cn } from "@repo/ui/lib/utils";
 
 export type UserType = {
   id: number;
@@ -21,6 +23,7 @@ export type UserType = {
   last_name?: string;
   first_name?: string;
   middle_name?: string;
+  name?: string;
   gender?: string;
   date_of_birth?: string;
   current_country?: number;
@@ -30,21 +33,73 @@ export type UserType = {
   is_politician?: boolean;
   is_verified?: boolean;
   verifications?: any[];
-  roles?: string[];
+  roles?: { roles?: any[]; roles_code?: string[] };
   account_status?: string;
   party_id?: number;
+  party_basic_info?: {
+    logo?: string;
+    [key: string]: any;
+  };
   created_at?: string;
   country_name?: string;
   state_name?: string;
   city_name?: string;
-
-  // Frontend-specific fallback fields
-  role?: any;
-  avatar_url?: string;
-  name?: string;
-  status?: string;
-  dateAdded?: string;
 };
+
+export function UserAccountStatusBadge({ status, className }: { status?: string; className?: string; }) {
+  if (!status) return null;
+
+  const normalized = status.toLowerCase().trim();
+
+  // do not show badge for active accounts
+  if (normalized === "active") return null;
+
+  let variant: "success" | "warning" | "destructive" | "info" | "secondary" | "outline" | "default" = "secondary";
+  let label = status.replace(/_/g, " ");
+
+  switch (normalized) {
+    case "active":
+      variant = "success";
+      label = "Active";
+      break;
+    case "just_registered":
+      variant = "info";
+      label = "Just Registered";
+      break;
+    case "placeholder":
+      variant = "warning";
+      label = "Placeholder";
+      break;
+    case "inactive":
+      variant = "warning";
+      label = "Inactive";
+      break;
+    case "suspended":
+      variant = "destructive";
+      label = "Suspended";
+      break;
+    case "banned":
+      variant = "destructive";
+      label = "Banned";
+      break;
+    case "deleted":
+      variant = "destructive";
+      label = "Deleted";
+      break;
+    default:
+      variant = "outline";
+      break;
+  }
+
+  return (
+    <Badge
+      variant={variant}
+      className={cn("capitalize text-[9px] px-2 py-0 h-4 font-medium leading-none shrink-0", className)}
+    >
+      {label}
+    </Badge>
+  );
+}
 
 const getPgString = (val: any) => {
   if (val && typeof val === "object" && "String" in val) {
@@ -68,6 +123,7 @@ const formatDate = (dateString?: string) => {
   }
 };
 
+// UserTable Tile Header 
 export function UserTableHeader() {
   return (
     <TileHeader>
@@ -75,47 +131,58 @@ export function UserTableHeader() {
         <span className="text-c-90">User</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[140px] hidden md:block">
+        <span className="text-c-50 text-[14px] w-35 hidden md:block">
           Role level
         </span>
-        <span className="text-c-50 text-[14px] w-[150px]">Date added</span>
+        <span className="text-c-50 text-[14px] w-37.5">Date added</span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
     </TileHeader>
   );
 }
 
+// UserTable Tile 
 export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () => void; }) {
   const firstName = getPgString(data.first_name);
   const lastName = getPgString(data.last_name);
   const username = getPgString(data.username);
-  const is_verified = data.is_verified as boolean;
-  const verifications = data.verifications as any[];
+  const verifications = (data.verifications || []) as any[];
 
+  const name = [firstName, lastName].filter(Boolean).join(" ") || username;
+  const createdTime = getPgString(data.created_at);
+  const dateAdded = formatDate(createdTime);
 
-
-  const name = data.name || [firstName, lastName].filter(Boolean).join(" ") || username;
-
-  const rawRoleLevel = data.role || "user";
-  const formattedRoleLevel = rawRoleLevel.charAt(0).toUpperCase() + rawRoleLevel.slice(1);
-
-  const createdTime = data.created_at || "";
-  const dateAdded = data.dateAdded || formatDate(createdTime);
-
-  const avatar = data.avatar || data.avatar_url;
+  const avatar = getPgString(data.avatar);
 
   const state = getPgString(data.state_name);
   const country = getPgString(data.country_name);
   const location = [state, country].filter(Boolean).join(", ");
 
+  let formattedRoleLevel: string = '';
+  if (data.roles?.roles_code && data.roles.roles_code.length > 0) {
+    formattedRoleLevel = data.roles.roles_code.join(", ")
+  } else {
+    formattedRoleLevel = "user"
+  }
+
   return (
     <TileRow className="py-10 border-b">
       <TileLeft>
-        {avatar ? (
-          <img src={avatar} alt={name} className="size-12 rounded-full object-cover shrink-0 border border-c-100/30" />
-        ) : (
-          <NoProfileImageIcon className="size-12 rounded-full " />
-        )}
+        <div className="relative shrink-0">
+          {avatar ? (
+            <img src={avatar} alt={name} className="size-12 rounded-full object-cover border border-c-100/30" />
+          ) : (
+            <NoProfileImageIcon className="size-12 rounded-full " />
+          )}
+          {((data.party_id && data.party_id > 0) || data.party_basic_info) && data.party_basic_info?.logo && (
+            <img
+              src={data.party_basic_info.logo}
+              alt="Party Logo"
+              title={getPgString(data.party_basic_info.name)}
+              className="absolute -bottom-1 -right-1 size-5.5 rounded-full object-cover border-2 border-white dark:border-c-0 shadow-sm"
+            />
+          )}
+        </div>
         <div className="flex flex-col w-full min-w-0">
           <div className="flex items-center w-full overflow-hidden">
             <Link
@@ -124,14 +191,15 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
             >
               <span className="truncate">{name}</span>
             </Link>
-            {is_verified && verifications.length > 0 && (
+            {data.is_verified && verifications.length > 0 && (
               verifications.map((v: any, i: number) => (
                 <VerificationBadge key={`${v.id}-${v.verification_type_id}`} id={v.verification_type_id} title={v.verification_title} />
               ))
             )}
           </div>
-          <div className="truncate pt-1 pb-[2px] w-full text-[11px] text-c-50">
-            @{username}
+          <div className="pt-1 pb-0.5 w-full text-[11px] text-c-50 flex items-center gap-1.5 overflow-hidden">
+            <span className="truncate">@{username}</span>
+            <UserAccountStatusBadge status={data.account_status} />
           </div>
           {location && (
             <div className="flex items-center gap-1 mt-1 text-[11px] text-c-50 w-full overflow-hidden">
@@ -142,12 +210,13 @@ export function UserTableTile({ data, refetch }: { data: UserType; refetch?: () 
         </div>
       </TileLeft>
       <TileRight>
-        <span className="text-[14px] text-c-80 w-[140px]">
+        <span className="text-[13px] text-c-80 w-35 capitalize truncate">
           {formattedRoleLevel || "-"}
         </span>
-        <span className="text-[14px] text-c-70 w-[150px]">{dateAdded}</span>
+        <span className="text-[13px] text-c-70 w-37.5">{dateAdded}</span>
         <UserDropdown data={data} refetch={refetch} className="ml-2" />
       </TileRight>
     </TileRow>
   );
 }
+

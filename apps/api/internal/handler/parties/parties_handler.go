@@ -4,7 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	apimiddleware "free9ja/api/internal/middleware"
+	"free9ja/api/internal/service/audit"
+	"free9ja/api/internal/service/files"
+	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"sort"
@@ -14,15 +19,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type PartiesService interface {
-	CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error)
-	GetPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party
+	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error)
+	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
-	ListParties(ctx context.Context) ([]queries.Party, error)
-	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error)
+	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
+	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
 	// Wallet methods
@@ -41,6 +46,10 @@ type PartiesService interface {
 	UpdatePartyDiscount(ctx context.Context, partyID int16, discountPercentage float64) (queries.Party, error)
 	// Allowance methods
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
+	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
+	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
+	UpdateStateAllowances(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
+	// Membership methods
 	UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 	GetAgentPaymentAllocation(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Marketing methods
@@ -60,18 +69,22 @@ type PartiesService interface {
 
 type Handler struct {
 	partiesService PartiesService
+	auditService   audit.AuditService
+	filesService   files.FilesService
 	utils          *utils.Utils
 }
 
-func NewHandler(partiesService PartiesService, utils *utils.Utils) *Handler {
+func NewHandler(partiesService PartiesService, auditService audit.AuditService, filesService files.FilesService, utils *utils.Utils) *Handler {
 	return &Handler{
 		partiesService: partiesService,
+		auditService:   auditService,
+		filesService:   filesService,
 		utils:          utils,
 	}
 }
 
 func parsePaginationParams(r *http.Request) (int, int64) {
-	limit := 20
+	limit := 50
 	if limitStr := r.URL.Query().Get("limit"); limitStr != "" {
 		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 {
 			if l > 100 {
@@ -109,13 +122,15 @@ type CreatePartyRequest struct {
 	ShortName    string `json:"short_name"`
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
+	LogoFileID   *int64 `json:"logo_file_id"`
 	DisplayOrder int32  `json:"display_order"`
 }
 
 type UpdatePartyRequest struct {
-	ShortName string `json:"short_name"`
+	ShortName    string `json:"short_name"`
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
+	LogoFileID   *int64 `json:"logo_file_id"`
 	DisplayOrder int32  `json:"display_order"`
 }
 
@@ -133,22 +148,71 @@ type UpdatePartyRequest struct {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties [post]
 func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
+	var actorID int64
+	var actorRole string
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if ok && claims != nil {
+		actorID = claims.UserID
+		actorRole = db.ActorRoleAdmin
+	}
+
+	// 1. Decode the request payload
 	var req CreatePartyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// 2. Validate required fields
 	if req.ShortName == "" || req.Name == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "short_name and name are required")
 		return
 	}
 
-	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, req.DisplayOrder)
+	// 3. If a logo file was uploaded, fetch its details and use the public URL
+	if req.LogoFileID != nil {
+		file, err := h.filesService.GetFileByID(r.Context(), *req.LogoFileID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
+			return
+		}
+		if file.Status != "uploaded" {
+			h.utils.RespondError(w, http.StatusBadRequest, "Logo file upload is not complete")
+			return
+		}
+
+		if file.UploadedBy.Int64 != claims.UserID {
+			h.utils.RespondError(w, http.StatusBadRequest, "You are not authorized to use this file")
+			return
+		}
+
+		// Automatically set the Logo URL from the file record
+		req.Logo = file.PublicUrl
+	}
+
+	// 4. Create the party in the database and provision a wallet via Monnify
+	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create party: "+err.Error())
 		return
 	}
+
+	// update the file owner to the new partyID
+	if req.LogoFileID != nil && *req.LogoFileID > 0 {
+		h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, int64(party.ID))
+	}
+
+	// --- Audit Logging ---
+	newValuesJSON, _ := json.Marshal(party)
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionCreateParty,
+		ActorID:    actorID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeParty,
+		EntityID:   strconv.FormatInt(int64(party.ID), 10),
+		NewValues:  newValuesJSON,
+	})
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Party created successfully", map[string]interface{}{
 		"party": party,
@@ -181,11 +245,12 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 
 	sort.SliceStable(parties, func(i, j int) bool {
 		var less bool
-		if orderBy == "name" {
+		switch orderBy {
+		case "name":
 			less = parties[i].Name < parties[j].Name
-		} else if orderBy == "short_name" {
+		case "short_name":
 			less = parties[i].ShortName < parties[j].ShortName
-		} else {
+		default:
 			less = parties[i].DisplayOrder < parties[j].DisplayOrder
 		}
 		if orderDir == "DESC" {
@@ -204,7 +269,7 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var paginated []queries.Party
+	var paginated []queries.PartyWithVerifications
 	hasMore := false
 	nextCursor := ""
 
@@ -219,7 +284,7 @@ func (h *Handler) ListParties(w http.ResponseWriter, r *http.Request) {
 			nextCursor = strconv.FormatInt(int64(paginated[len(paginated)-1].ID), 10)
 		}
 	} else {
-		paginated = []queries.Party{}
+		paginated = []queries.PartyWithVerifications{}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Parties fetched successfully", map[string]interface{}{
@@ -347,7 +412,7 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true})
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(id))
 	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
@@ -355,6 +420,39 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party fetched successfully", map[string]interface{}{
 		"party": party,
+	})
+}
+
+// GetPartyProfile godoc
+// @Summary      Get basic party profile
+// @Description  Get party details by party ID and short name
+// @Tags         Parties
+// @Produce      json
+// @Param        party_id path int true "Party ID"
+// @Param        short_name path string true "Party Short Name"
+// @Success      200  {object}  utils.SuccessResponse{data=queries.PartyWithVerifications}
+// @Router       /parties/{party_id}/{short_name}/profile [get]
+func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "party_id")
+	// shortName := chi.URLParam(r, "short_name") // can be used later for validation if needed
+
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	// get the party basic info
+	party := h.partiesService.GetPartyBasicInfo(r.Context(), int16(partyID))
+	if party == nil {
+		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
+		return
+	}
+
+	// get the national party chapter
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party profile retrieved successfully", map[string]interface{}{
+		"data": party,
 	})
 }
 
@@ -374,39 +472,164 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/{id} [put]
 func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
+	// Extract user claims to verify authorization
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// Parse the party ID from the URL path
 	idStr := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
 		return
 	}
 
+	// Decode the JSON request payload
 	var req UpdatePartyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
+	// Ensure required fields are provided
 	if req.ShortName == "" || req.Name == "" {
 		h.utils.RespondError(w, http.StatusBadRequest, "short_name and name are required")
 		return
 	}
 
+	// If a logo is provided, validate the uploaded file
+	if req.LogoFileID != nil {
+		file, err := h.filesService.GetFileByID(r.Context(), *req.LogoFileID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
+			return
+		}
+		if file.Status != "uploaded" {
+			h.utils.RespondError(w, http.StatusBadRequest, "Logo file upload is not complete")
+			return
+		}
+		req.Logo = file.PublicUrl
+
+		// Ensure the file belongs to the correct party and was uploaded by the current user
+		if file.OwnerID.Int64 != partyID || file.UploadedBy.Int64 != claims.UserID {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
+			return
+		}
+	} else {
+		h.utils.RespondError(w, http.StatusNotFound, "Party needs a logo")
+		return
+	}
+
 	// Verify party exists
-	if party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true}); party == nil {
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
+	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
-	updatedParty, err := h.partiesService.UpdateParty(r.Context(), id, req.ShortName, req.Name, req.Logo, req.DisplayOrder)
+	// check permissions to update this party
+	permsSvc := permissionsservice.NewPermissionsService()
+	allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+	if !allowed {
+		h.utils.RespondError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	// update the party info
+	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
 		return
 	}
 
+	// --- Audit Logging ---
+	// Capture old and new values for audit logging
+	oldValuesJSON, _ := json.Marshal(party)
+	newValuesJSON, _ := json.Marshal(updatedParty)
+
+	moduleName := db.ModulePartyAdmin
+	actorRole := db.ActorRolePartyAdmin
+	if perms.IsBothAdmin {
+		moduleName = db.ModuleAdmin
+		if perms.IsSuperAdmin {
+			actorRole = db.ActorRoleSuperAdmin
+		} else {
+			actorRole = db.ActorRoleAdmin
+		}
+	}
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(moduleName),
+		Action:     db.ActionUpdateParty,
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(actorRole),
+		EntityType: db.EntityTypeParty,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Party updated successfully", map[string]interface{}{
 		"party": updatedParty,
 	})
+}
+
+// JoinParty handles requests to join a party chapter.
+func (h *Handler) JoinParty(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	var req struct {
+		ChapterID int32 `json:"chapter_id"` // 0 will default to national chapter
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	err = h.partiesService.JoinParty(r.Context(), int16(partyID), req.ChapterID, claims.UserID, claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Membership request processed successfully", nil)
+}
+
+// LeaveParty handles requests to leave a party.
+func (h *Handler) LeaveParty(w http.ResponseWriter, r *http.Request) {
+	partyIDStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(partyIDStr, 10, 16)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	err = h.partiesService.LeaveParty(r.Context(), int16(partyID), claims.UserID, claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Left party successfully", nil)
 }
 
 // DeleteParty godoc
@@ -424,6 +647,11 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Router       /parties/{id} [delete]
 func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey, "super_admin")
+	if !ok {
+		return
+	}
+
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -432,7 +660,7 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify party exists
-	if party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true}); party == nil {
+	if party := h.partiesService.GetPartyInfo(r.Context(), int16(id)); party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
@@ -441,6 +669,20 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete party: "+err.Error())
 		return
 	}
+
+	// --- Audit Logging ---
+	oldValuesJSON, _ := json.Marshal(map[string]string{"status": "active"})
+	newValuesJSON, _ := json.Marshal(map[string]string{"status": "deleted"})
+	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+		Module:     audit.StringToText(db.ModuleAdmin),
+		Action:     db.ActionDeleteParty,
+		ActorID:    claims.UserID,
+		ActorRole:  audit.StringToText(db.ActorRoleSuperAdmin),
+		EntityType: db.EntityTypeParty,
+		EntityID:   idStr,
+		OldValues:  oldValuesJSON,
+		NewValues:  newValuesJSON,
+	})
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Party deleted successfully", nil)
 }
@@ -634,13 +876,13 @@ func (h *Handler) CreatePartyWalletHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true})
+	party := h.partiesService.GetPartyInfo(r.Context(), int16(id))
 	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
-	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), *party)
+	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), party.Party)
 	if err != nil {
 		if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 			h.utils.RespondError(w, http.StatusConflict, "This party already has a wallet")

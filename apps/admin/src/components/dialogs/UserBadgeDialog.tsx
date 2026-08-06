@@ -31,26 +31,60 @@ export interface UserBadgeDialogProps {
 
 export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: UserBadgeDialogProps) {
   const queryClient = useQueryClient();
+
   // Compute page's full name for display based on type
   const name = forWho === "user"
-    ? [page?.first_name, page?.last_name].filter(Boolean).join(" ")
+    ? [page?.first_name, page?.last_name].filter(Boolean).join(" ") || "User"
     : page?.name || page?.party_name || "Party";
 
   // list of active verifications attached to the page
   const [activeVerifications, setActiveVerifications] = useState<VerificationType[]>([]);
-
   // Track the currently selected verification type in the dropdown
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>();
-
   // tracks error
   const [error, setError] = useState<string | null>(null);
+
+  // helper to update cache
+  const updateCacheWithNewDetails = (updatedDetails: any) => {
+    if (!updatedDetails) return;
+    if (!(updatedDetails?.first_name?.length > 0 || updatedDetails?.name?.length > 0 || updatedDetails?.party_name?.length > 0)) {
+      return;
+    }
+
+    if (forWho === "user") {
+      // Update users infinite query cache with the new user details
+      // ["users-list"]: is the key prefix we used to fetch all the users lists
+      queryClient.setQueriesData(
+        { queryKey: ["users-list"] },
+        (oldData: any) => {
+          if (!oldData) return oldData;
+          return {
+            ...oldData,
+            pages: oldData.pages.map((page: any) => {
+              return {
+                ...page,
+                data: {
+                  ...page.data,
+                  users: page.data?.users?.map((user: any) => user.fake_id === updatedDetails.fake_id ? updatedDetails : user) || []
+                }
+              }
+            })
+          };
+        }
+      );
+    } else if (forWho === "party") {
+      // Update parties query cache with the new party details
+      queryClient.setQueryData(["parties"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((party: any) => party.id === updatedDetails.id ? updatedDetails : party);
+      });
+    }
+  };
 
   // Reset local state when the dialog is opened
   useEffect(() => {
     if (open) {
-      if (page?.is_verified) {
-        setActiveVerifications(page.verifications);
-      }
+      setActiveVerifications(page?.verifications || []);
 
       setSelectedCategoryId(undefined);
       setError(null);
@@ -71,44 +105,10 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     enabled: open, // only fetch when the dialog is open
   });
 
-  // Handler to add the selected verification type to the local list (moved to select onChange)
-
-  // helper to update cache
-  const updateCacheWithNewDetails = (updatedDetails: any) => {
-    if (!updatedDetails) return;
-    if (!(updatedDetails?.first_name?.length > 0 || updatedDetails?.name?.length > 0 || updatedDetails?.party_name?.length > 0)) {
-      return;
-    }
-
-    if (forWho === "user") {
-      // Update users infinite query cache with the new user details
-      // ["users", "user"]: is the key we used to fetch all the users in /_authenticated/users/users.tsx
-      queryClient.setQueryData(["users", "user"], (oldData: any) => {
-        if (!oldData) return oldData;
-        return {
-          ...oldData,
-          pages: oldData.pages.map((page: any) => ({
-            ...page,
-            data: {
-              ...page.data,
-              users: page.data?.users?.map((user: any) => user.fake_id === updatedDetails.fake_id ? updatedDetails : user) || []
-            }
-          }))
-        };
-      });
-    } else if (forWho === "party") {
-      // Update parties query cache with the new party details
-      queryClient.setQueryData(["parties"], (oldData: any) => {
-        if (!oldData) return oldData;
-        return oldData.map((party: any) => party.id === updatedDetails.id ? updatedDetails : party);
-      });
-    }
-  };
-
-  // mutation to remove verification
+  // mutation: remove verification
   const removeMutation = useMutation({
     mutationFn: async ({ verification_type_id, id }: { verification_type_id: number; id: number }) => {
-      // besure that the id we're trying to delete is among the list of the user verfification
+      // be-sure that the id we're trying to delete is among the list of the user verification
       const v = activeVerifications.find(activeVrf => activeVrf.id === id && activeVrf.verification_type_id === verification_type_id);
 
       if (v && v.page_type && v.page_id > 0) {
@@ -134,7 +134,6 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     onSuccess: (data) => {
       if (data.isDb) {
         toast.success("Verification removed successfully");
-        if (onSuccess) onSuccess();
 
         // update cache using data.response similar to saveMutation
         updateCacheWithNewDetails(data.response?.data?.page_details);
@@ -164,7 +163,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     removeMutation.mutate({ verification_type_id, id });
   };
 
-  // save the verifications to the backend
+  // mutation: save the verifications to the backend
   const saveMutation = useMutation({
     mutationFn: async () => {
       // the verification type ids to send to the backend
@@ -204,6 +203,7 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
     onSuccess: (response) => {
       updateCacheWithNewDetails(response?.data?.page_details);
       toast.success("Verifications updated successfully");
+      onSuccess?.();
     },
 
     onError: (error: Error) => {
@@ -349,7 +349,8 @@ export function UserBadgeDialog({ open, onClose, page, forWho, onSuccess }: User
             type="button"
             onClick={handleSave}
             disabled={saveMutation.isPending}
-            className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
+            // className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
+            className="text-white"
           >
             {saveMutation.isPending && <Loader2 className="size-4 animate-spin" />}
             Save changes

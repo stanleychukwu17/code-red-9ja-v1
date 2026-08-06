@@ -20,15 +20,16 @@ export const Route = createFileRoute("/_authenticated/parties")({
 });
 
 function RouteComponent() {
-  const { data: parties = [], isLoading, error, refetch, } = useQuery<PartyType[]>({
+  const { data: parties, isLoading, error, refetch, } = useQuery<{ data: { parties: PartyType[] } }>({
     queryKey: ["parties"],
     queryFn: async () => {
       const res = await getParties();
-      if (res && res.success && res.data?.parties) {
-        return res.data.parties;
+      if (res && res.success) {
+        return res;
       }
       throw new Error(res?.message || "Failed to load parties");
     },
+    staleTime: Infinity
   });
 
   // Dialog state for creating a new party
@@ -58,12 +59,12 @@ function RouteComponent() {
         <div className="w-full p-6 text-center text-red-600 font-medium">
           {error instanceof Error ? error.message : "Failed to load parties"}
         </div>
-      ) : parties.length === 0 ? (
+      ) : parties?.data?.parties.length === 0 ? (
         <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
           No parties found. Click the + button to add one.
         </div>
       ) : (
-        <PartiesTable items={parties} />
+        <PartiesTable items={parties?.data?.parties || []} />
       )}
 
       {/* Create dialog only — edit/delete now handled by PartyDropdown in each tile */}

@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const createSenatorialDistrict = createServerFn({ method: "POST" })
   .inputValidator(
@@ -13,17 +13,15 @@ export const createSenatorialDistrict = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.senatorialDistricts, {
+      return await apiFetchJson(API_URL.senatorialDistricts, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to create senatorial district: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to create senatorial district" };
     }
   });
 
@@ -39,17 +37,15 @@ export const updateSenatorialDistrict = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.senatorialDistrictById(id), {
+      return await apiFetchJson(API_URL.senatorialDistrictById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to update senatorial district: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to update senatorial district" };
     }
   });
 
@@ -57,13 +53,11 @@ export const deleteSenatorialDistrict = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.senatorialDistrictById(id), {
+      return await apiFetchJson(API_URL.senatorialDistrictById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to delete senatorial district: " + (error as Error).message };
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to delete senatorial district" };
     }
   });
 
@@ -71,11 +65,9 @@ export const getSenatorialDistrictById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.senatorialDistrictById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return { success: false, message: "Failed to fetch senatorial district details" };
+      return await apiFetchJson(API_URL.senatorialDistrictById(id));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch senatorial district details" };
     }
   });
 
@@ -83,10 +75,9 @@ export const getSenatorialDistricts = createServerFn()
   .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
-      const response = await apiFetch(API_URL.getSenatorialDistricts(stateId, limit, cursor));
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      return { status: "failed", error: "Failed to fetch senatorial districts from API" };
+      return await apiFetchJson(API_URL.getSenatorialDistricts(stateId, limit, cursor));
+    } catch (error: any) {
+      return { status: "failed", error: error?.message || "Failed to fetch senatorial districts from API" };
     }
   });
+

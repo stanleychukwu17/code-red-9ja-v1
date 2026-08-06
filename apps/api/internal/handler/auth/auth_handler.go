@@ -8,7 +8,7 @@ import (
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
 	"net/http"
-	"os"
+
 	"strings"
 	"time"
 
@@ -33,35 +33,39 @@ type AuthService interface {
 	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
 	ChangePasswordByEmail(ctx context.Context, email, newPassword string) error
 	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
-	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, gender, avatar, role, roleLevel string, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
-	ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error)
+	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+}
 
-	SeedUsers(ctx context.Context, users []auth.SeedUserRequest) (string, error)
-	MakeUserSuperAdmin(ctx context.Context, username string) error
-
+// UsersService interface defines the methods from UsersService that the auth handler needs
+type UsersService interface {
+	CheckNIN(ctx context.Context, nin string) bool
+	CheckUsername(ctx context.Context, username string) bool
 	CheckEmail(ctx context.Context, email string) bool
-	CheckPhone(ctx context.Context, phone string) bool
-	ValidatePhoneForCountry(phone, country_code string) (string, error)
-	SaveSomeUserRegistrationDetails(ctx context.Context, username, email, nin string, userID int64, fakeID int64) error
-	UpdateCachedUserInfo(ctx context.Context, fakeID int64) error
-	CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error
-	UpdateUserRoles(ctx context.Context, userID int64, roles []string, partyID *int64, whoAssigned int64) error
+}
+
+// FilesService interface defines the methods from FilesService that the auth handler needs
+type FilesService interface {
+	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error)
 }
 
 // Handler struct holds the dependencies for the auth handler
 type Handler struct {
-	authService AuthService
-	validate    *validator.Validate
-	utils       *utils.Utils
+	authService  AuthService
+	usersService UsersService
+	filesService FilesService
+	validate     *validator.Validate
+	utils        *utils.Utils
 }
 
 // NewHandler creates a new instance of the auth handler
-func NewHandler(authService AuthService, utils *utils.Utils) *Handler {
+func NewHandler(authService AuthService, usersService UsersService, filesService FilesService, utils *utils.Utils) *Handler {
 	return &Handler{
-		authService: authService,
-		validate:    validator.New(),
-		utils:       utils,
+		authService:  authService,
+		usersService: usersService,
+		filesService: filesService,
+		validate:     validator.New(),
+		utils:        utils,
 	}
 }
 
@@ -448,7 +452,7 @@ func (h *Handler) CheckNin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists := h.authService.CheckNIN(r.Context(), req.Nin)
+	exists := h.usersService.CheckNIN(r.Context(), req.Nin)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "NIN check completed", map[string]interface{}{
 		"exists": exists,
@@ -491,7 +495,7 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// checks if the username exist
-	exists := h.authService.CheckUsername(r.Context(), req.Username)
+	exists := h.usersService.CheckUsername(r.Context(), req.Username)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Username check completed", map[string]interface{}{
 		"exists": exists,
@@ -872,6 +876,7 @@ type RegisterCandidatePlaceholderRequest struct {
 	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
 	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
 	MiddleName     string `json:"middle_name" validate:"omitempty,min=2,max=30"`
+	Username       string `json:"username" validate:"omitempty,min=3,max=30"`
 	Gender         string `json:"gender" validate:"required,oneof=male female"`
 	DateOfBirth    string `json:"date_of_birth" validate:"required"` // Expects YYYY-MM-DD
 	CurrentCountry int16  `json:"current_country" validate:"required"`
@@ -880,8 +885,7 @@ type RegisterCandidatePlaceholderRequest struct {
 	StateOfOrigin  int16  `json:"state_of_origin" validate:"omitempty"`
 	PartyID        int64  `json:"party_id" validate:"omitempty"`
 	Avatar         string `json:"avatar" validate:"omitempty"`
-	Role           string `json:"role" validate:"required,oneof=admin party_admin user"`
-	RoleLevel      string `json:"role_level" validate:"required,oneof=super_admin admin member placeholder pollingagent user"`
+	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`
 }
 
 // @Summary Register a new candidate user with placeholder status
@@ -912,67 +916,52 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if req.Role == "party_admin" && req.PartyID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: Key: 'RegisterCandidatePlaceholderRequest.PartyID' Error:Field validation for 'PartyID' failed on the 'required' tag")
-		return
-	}
-
 	// Permission checks
-	isAdmin := claims.HasRole("admin")
-	isPartyAdmin := claims.HasRole("party_admin") || claims.HasRole("super_party_admin")
+	isAdmin := claims.HasAnyRole("admin", "super_admin")
+	isPartyAdmin := claims.HasAnyRole("party_admin", "super_party_admin")
 	if !isAdmin && !isPartyAdmin {
 		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
 		return
 	}
-
 	if isPartyAdmin && !isAdmin {
-		currUser, err := h.authService.GetUserDetailsByFakeID(r.Context(), claims.FakeID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: user details not found")
-			return
-		}
-
 		// A party admin can only register users for their own party
-		if !currUser.PartyID.Valid || currUser.PartyID.Int16 != int16(req.PartyID) {
+		if claims.PartyID == 0 || claims.PartyID != int16(req.PartyID) {
 			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: you can only add members to your own party")
 			return
 		}
-
-		// A party admin cannot create admin accounts
-		if strings.ToLower(req.Role) == "admin" {
-			h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party admins cannot create administrative accounts")
-			return
-		}
 	}
 
-	// Validate role and role level combination
-	isValidCombo := false
-	switch req.Role {
-	case "admin":
-		if req.RoleLevel == "super_admin" || req.RoleLevel == "admin" {
-			isValidCombo = true
-		}
-	case "party_admin":
-		if req.RoleLevel == "admin" || req.RoleLevel == "member" || req.RoleLevel == "placeholder" {
-			isValidCombo = true
-		}
-	case "user":
-		if req.RoleLevel == "pollingagent" || req.RoleLevel == "user" {
-			isValidCombo = true
-		}
-	}
-
-	if !isValidCombo {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid role ("+req.Role+") and role level ("+req.RoleLevel+") combination")
-		return
-	}
-
+	// Validate and parse DateOfBirth
 	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date format for date_of_birth. Use YYYY-MM-DD")
 		return
 	}
 
+	// Validate email
+	if req.Email != "" {
+		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
+		if h.usersService.CheckEmail(r.Context(), req.Email) {
+			h.utils.RespondError(w, http.StatusConflict, "Email already exists")
+			return
+		}
+	}
+
+	// Validate and clean username
+	if req.Username != "" {
+		cleanUsername, err := auth.CleanUsername(req.Username)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
+			h.utils.RespondError(w, http.StatusConflict, "Username already exists")
+			return
+		}
+		req.Username = cleanUsername
+	}
+
+	// Register user
 	result, err := h.authService.RegisterCandidatePlaceholder(
 		r.Context(),
 		req.Email,
@@ -980,10 +969,10 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		req.FirstName,
 		req.LastName,
 		req.MiddleName,
+		req.Username,
 		req.Gender,
 		req.Avatar,
-		req.Role,
-		req.RoleLevel,
+		req.AvatarFileId,
 		dob,
 		req.CurrentCountry,
 		req.CurrentState,
@@ -996,213 +985,13 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if req.AvatarFileId != nil && *req.AvatarFileId > 0 {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, result.UserID)
+	}
+
 	h.utils.RespondSuccess(w, http.StatusCreated, "Candidate placeholder registered successfully", map[string]interface{}{
 		"id":      result.UserID,
 		"fake_id": result.FakeID,
+		"user":    result.User,
 	})
-}
-
-// ListAdmins handles requests to list all administrative users
-func (h *Handler) ListAdmins(w http.ResponseWriter, r *http.Request) {
-	admins, err := h.authService.ListAdmins(r.Context())
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve admins: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Admins retrieved successfully", map[string]interface{}{
-		"admins": admins,
-	})
-}
-
-// @Summary Seed testing users
-// @Description Batch registers testing users from formatted JSON data
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body []auth.SeedUserRequest true "List of users to seed"
-// @Success 200 {object} map[string]interface{} "Users seeded successfully"
-// @Failure 400 {object} map[string]interface{} "Invalid request body"
-// @Failure 500 {object} map[string]interface{} "Failed to seed users"
-// @Router /auth/seed [post]
-// SeedUsers handles batch registration of testing users from seed data
-func (h *Handler) SeedUsers(w http.ResponseWriter, r *http.Request) {
-	if os.Getenv("ENV") == "production" {
-		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
-		return
-	}
-
-	var req []auth.SeedUserRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	msg, err := h.authService.SeedUsers(r.Context(), req)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to seed users: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
-}
-
-// MakeUserSuperAdminRequest represents the request to promote a user
-type MakeUserSuperAdminRequest struct {
-	Name string `json:"name" validate:"required,min=3"`
-}
-
-// @Summary Make a user superadmin
-// @Description Promotes a user to superadmin if their username is in the pre-approved list
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body MakeUserSuperAdminRequest true "Superadmin promotion details"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /auth/superadmin [post]
-func (h *Handler) MakeUserSuperAdmin(w http.ResponseWriter, r *http.Request) {
-	var req MakeUserSuperAdminRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
-		return
-	}
-
-	err := h.authService.MakeUserSuperAdmin(r.Context(), req.Name)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to make superadmin: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "User successfully promoted to superadmin", nil)
-}
-
-// AssignRoleRequest represents the request to assign a role to a user
-type AssignRoleRequest struct {
-	UserID int64  `json:"user_id" validate:"required"`
-	Role   string `json:"role" validate:"required"`
-}
-
-// @Summary Assign a role to a user
-// @Description Assigns a specific role (like party_admin) to an existing user
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body AssignRoleRequest true "Role assignment details"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /auth/assign-role [post]
-func (h *Handler) AssignUserRole(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
-		return
-	}
-
-	// Must be an admin or super_admin to assign roles manually
-	if !claims.HasAnyRole("admin", "super_admin") {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions to assign roles")
-		return
-	}
-
-	var req AssignRoleRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
-		return
-	}
-
-	// Call CheckAndAssignRole
-	err := h.authService.CheckAndAssignRole(r.Context(), req.UserID, req.Role, claims.UserID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to assign role: "+err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Role successfully assigned to user", nil)
-}
-
-// UpdateUserRolesRequest represents the request to completely replace a user's roles
-type UpdateUserRolesRequest struct {
-	UserID     int64    `json:"user_id" validate:"required"`
-	UserFakeID *int64   `json:"user_fake_id" validate:"omitempty"`
-	Roles      []string `json:"roles" validate:"required,min=1"`
-	PartyID    *int64   `json:"party_id" validate:"omitempty"`
-}
-
-// @Summary Update all roles for a user
-// @Description Replaces all roles for an existing user and optionally sets their party ID if party_admin is included
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body UpdateUserRolesRequest true "Role update details"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /auth/roles/update [post]
-func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
-		return
-	}
-
-	// Must be an admin or super_admin to update roles manually
-	if !claims.HasAnyRole("admin", "super_admin") {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: insufficient permissions to manage roles")
-		return
-	}
-
-	var req UpdateUserRolesRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.(validator.ValidationErrors)[0].Translate(nil))
-		return
-	}
-
-	// Make sure if they include party_admin they provide a party ID
-	hasPartyAdmin := false
-	for _, role := range req.Roles {
-		if role == "party_admin" || role == "super_party_admin" {
-			hasPartyAdmin = true
-			break
-		}
-	}
-	if hasPartyAdmin && req.PartyID == nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: party_id is required when assigning party_admin role")
-		return
-	}
-
-	// Call UpdateUserRoles
-	err := h.authService.UpdateUserRoles(r.Context(), req.UserID, req.Roles, req.PartyID, claims.UserID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update roles: "+err.Error())
-		return
-	}
-
-	if req.UserFakeID != nil {
-		_ = h.authService.UpdateCachedUserInfo(r.Context(), *req.UserFakeID)
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "User roles successfully updated", nil)
 }

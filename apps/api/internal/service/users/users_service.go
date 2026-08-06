@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	"strconv"
 
 	"sync"
 
@@ -25,11 +26,12 @@ type BodiesService interface {
 // PageVerificationsService interface defines the methods needed from the page verifications service
 type PageVerificationsService interface {
 	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
+	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 }
 
 // PartyService interface defines the methods needed from the party service
 type PartyService interface {
-	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 }
 
 // UsersService provides operations for managing user data, roles, and related services.
@@ -70,6 +72,11 @@ func (s *UsersService) GetUserPageVerifications(ctx context.Context, userID int6
 	return s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeUser, userID)
 }
 
+// ListVerificationTypes retrieves the list of available verification types.
+func (s *UsersService) ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error) {
+	return s.pageVerificationsService.ListVerificationTypes(ctx)
+}
+
 // GetBanks retrieves a list of available banks via the Monnify client.
 func (s *UsersService) GetBanks(ctx context.Context) ([]monnifyclient.Bank, error) {
 	if s.monnify == nil {
@@ -106,7 +113,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	}
 
 	// fetch the user roles
-	var roles []queries.GetUserRolesRow
+	var roles queries.CachedUserRoles
 	if user.HasRole.Valid && user.HasRole.Bool {
 		if r, err := s.GetUserRoles(ctx, user.ID); err == nil {
 			roles = r
@@ -125,7 +132,7 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 	countryName, stateName, cityName := s.bodiesService.GetLocationNames(ctx, user.CurrentCountry, user.CurrentState, user.CurrentCity.Int32)
 
 	// Fetch party basic info if user belongs to a party
-	var partyBasicInfo *queries.GetPartyBasicInfoRow
+	var partyBasicInfo *queries.PartyBasicInfoWithVerifications
 	if user.PartyID.Valid && user.PartyID.Int16 > 0 && s.partyService != nil {
 		partyBasicInfo = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
 	}
@@ -218,7 +225,7 @@ func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) (
 				// Instead, it locks this exact path of code execution.
 				// If Goroutine A is between Lock() and Unlock(), Goroutine B will be paused at Lock()
 				// waiting for the door to open, guaranteeing that only one goroutine modifies the slice at a time.
-				// what ever is inbetween mu.Lock() and mu.Unlock() can only be accessed by one Goroutine at a time
+				// what ever is in-between mu.Lock() and mu.Unlock() can only be accessed by one Goroutine at a time
 				mu.Lock()
 				results[idx] = user
 				mu.Unlock() // allows other Goroutine to continue from mu.Lock()
@@ -242,32 +249,49 @@ func (s *UsersService) InvalidateCachedUserInfo(ctx context.Context, fakeID int6
 	return s.rdb.Del(ctx, userInfoKey).Err()
 }
 
+// InvalidateCachedUserRoles invalidates the cached user roles in Redis.
+// This function should be called anytime a user's roles change.
+func (s *UsersService) InvalidateCachedUserRoles(ctx context.Context, userID int64) error {
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+	return s.rdb.Del(ctx, userRolesKey).Err()
+}
+
 // GetUserRoles fetches the roles assigned to a specific user, utilizing Redis caching.
-func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
+func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error) {
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
 
 	// first redis to see if the roles have been cached
 	rolesJSON, err := s.rdb.Get(ctx, userRolesKey).Result()
 	if err == nil {
-		var roles []queries.GetUserRolesRow
-		if err := json.Unmarshal([]byte(rolesJSON), &roles); err == nil {
-			return roles, nil
+		var cachedRoles queries.CachedUserRoles
+		if err := json.Unmarshal([]byte(rolesJSON), &cachedRoles); err == nil {
+			return cachedRoles, nil
 		}
 	}
 
 	// Fetch from DB if not in Redis
 	roles, err := s.queries.GetUserRoles(ctx, userID)
 	if err != nil {
-		return nil, err
+		return queries.CachedUserRoles{}, err
+	}
+
+	var rolesCode []string
+	for _, r := range roles {
+		rolesCode = append(rolesCode, r.Code)
+	}
+
+	cachedRoles := queries.CachedUserRoles{
+		Roles:     roles,
+		RolesCode: rolesCode,
 	}
 
 	// Cache it in Redis
-	rolesJSONBytes, err := json.Marshal(roles)
+	rolesJSONBytes, err := json.Marshal(cachedRoles)
 	if err == nil {
 		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisFiveYearsTTL) // expires in 5years
 	}
 
-	return roles, nil
+	return cachedRoles, nil
 }
 
 // AssignUserRole assigns a specific role to a user and invalidates the user's role cache.
@@ -286,18 +310,14 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, fakeID 
 		return err
 	}
 
-	// Invalidate the user-roles cache
-	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
-	s.rdb.Del(ctx, userRolesKey)
-
 	// Update the user_table, updates has_role to true
 	_ = s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
 		ID:      userID,
 		HasRole: pgtype.Bool{Bool: true, Valid: true},
 	})
 
-	// Invalidate user info cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the user-roles cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
 
 	return nil
 }
@@ -312,10 +332,6 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 		return err
 	}
 
-	// Invalidate the cache
-	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
-	s.rdb.Del(ctx, userRolesKey)
-
 	// Check if user has any roles left
 	hasRole, err := s.queries.CheckUserHasAnyRole(ctx, userID)
 	if err != nil {
@@ -326,14 +342,19 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 		HasRole: pgtype.Bool{Bool: hasRole, Valid: true},
 	})
 
-	// Invalidate user info cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the roles cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
 
 	return nil
 }
 
 // UpdateUserProfile updates basic user profile details and invalidates the user info cache.
-func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error {
+func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error {
+	avatarFileIdPg := pgtype.Int8{Valid: false}
+	if avatarFileId != nil {
+		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
+	}
+
 	err := s.queries.UpdateUserProfile(ctx, queries.UpdateUserProfileParams{
 		ID:             id,
 		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
@@ -341,6 +362,7 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
 		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
 		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		AvatarFileID:   avatarFileIdPg,
 		CurrentCountry: countryID,
 		CurrentState:   stateID,
 		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
@@ -364,34 +386,9 @@ func (s *UsersService) GetUserVerification(ctx context.Context, userID int64) (q
 	return s.queries.GetUserVerification(ctx, userID)
 }
 
-// DeleteUser removes a user by ID and invalidates their user info cache.
-func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) error {
-	// err := s.queries.DeleteUser(ctx, id)
-	// if err != nil {
-	// 	return err
-	// }
-
-	// Invalidate the cache
-	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
-	return nil
-}
-
-// AdminUpdateUser allows admins to perform a comprehensive update of user details.
-func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int16, email string) error {
-	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
-		ID:             id,
-		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
-		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
-		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
-		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
-		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
-		CurrentCountry: countryID,
-		CurrentState:   stateID,
-		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
-		PartyID:        pgtype.Int2{Int16: int16(partyID), Valid: partyID != 0},
-		Email:          pgtype.Text{String: email, Valid: email != ""},
-		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
-	})
+// DeleteUserAccount removes a user by ID and invalidates their user info cache.
+func (s *UsersService) DeleteUserAccount(ctx context.Context, id int64, fakeID int64) error {
+	err := s.queries.DeleteUser(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -432,10 +429,64 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	return profile, nil
 }
 
+// AdminUpdateUser allows admins to perform a comprehensive update of user details.
+func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
+	avatarFileIdPg := pgtype.Int8{Valid: false}
+	if avatarFileId != nil {
+		avatarFileIdPg = pgtype.Int8{Int64: *avatarFileId, Valid: true}
+	}
+
+	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
+		ID:             id,
+		FirstName:      pgtype.Text{String: firstName, Valid: firstName != ""},
+		LastName:       pgtype.Text{String: lastName, Valid: lastName != ""},
+		MiddleName:     pgtype.Text{String: middleName, Valid: middleName != ""},
+		Username:       pgtype.Text{String: username, Valid: username != ""},
+		Gender:         pgtype.Text{String: gender, Valid: gender != ""},
+		Avatar:         pgtype.Text{String: avatar, Valid: avatar != ""},
+		AvatarFileID:   avatarFileIdPg,
+		CurrentCountry: countryID,
+		CurrentState:   stateID,
+		CurrentCity:    pgtype.Int4{Int32: cityID, Valid: cityID != 0},
+		StateOfOrigin:  pgtype.Int2{Int16: stateOfOrigin, Valid: stateOfOrigin != 0},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	return nil
+}
+
+// ResetUserAvatar clears the user's avatar and invalidates their cached user info.
+func (s *UsersService) ResetUserAvatar(ctx context.Context, userID int64, fakeID int64) error {
+	err := s.queries.UpdateUserAvatar(ctx, queries.UpdateUserAvatarParams{
+		ID:           userID,
+		Avatar:       pgtype.Text{Valid: false},
+		AvatarFileID: pgtype.Int8{Valid: false},
+	})
+	if err != nil {
+		return err
+	}
+
+	// invalidate the cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	return nil
+}
+
 // UpdateUserProfileDetails updates extended educational and demographic information for a user.
-func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel string) error {
+func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error {
+	var pgOccupationID pgtype.Int2
+	if occupationID != nil {
+		pgOccupationID = pgtype.Int2{Int16: *occupationID, Valid: true}
+	} else {
+		pgOccupationID = pgtype.Int2{Valid: false}
+	}
+
 	err := s.queries.UpdateMoreInfoAboutThisUser(ctx, queries.UpdateMoreInfoAboutThisUserParams{
 		UserID:            userID,
+		OccupationID:      pgOccupationID,
 		EducationalStatus: pgtype.Text{String: educationalStatus, Valid: educationalStatus != ""},
 		HighestDegree:     pgtype.Text{String: highestDegree, Valid: highestDegree != ""},
 		GraduationYear:    pgtype.Text{String: graduationYear, Valid: graduationYear != ""},
@@ -443,6 +494,7 @@ func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int6
 		Religion:          pgtype.Text{String: religion, Valid: religion != ""},
 		MaritalStatus:     pgtype.Text{String: maritalStatus, Valid: maritalStatus != ""},
 		EducationLevel:    pgtype.Text{String: educationLevel, Valid: educationLevel != ""},
+		Address:           pgtype.Text{String: address, Valid: address != ""},
 	})
 	if err != nil {
 		return err
@@ -492,25 +544,84 @@ type PhonePayload struct {
 }
 
 // UpdateUserPhoneNumbers creates or updates multiple phone numbers for a user.
-func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64, phones []PhonePayload) error {
+func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []PhonePayload) error {
+	// Count how many new phone numbers (where ID is 0) the user is attempting to add
+	// and ensure no more than 1 phone number is set as default
+	newPhonesCount := 0
+	defaultPhonesCount := 0
+
 	for _, p := range phones {
-		onWhatsapp := pgtype.Text{String: p.OnWhatsapp, Valid: p.OnWhatsapp != ""}
+		if p.IsDefault {
+			defaultPhonesCount++
+		}
+		if p.ID == 0 {
+			// checks if the phone-number already exist
+			if s.CheckPhone(ctx, p.Phone) {
+				return fmt.Errorf("phone number already exists")
+			}
+			newPhonesCount++
+		}
+	}
+
+	if defaultPhonesCount <= 0 {
+		return fmt.Errorf("at least one phone number must be set as default")
+	}
+	if defaultPhonesCount > 1 {
+		return fmt.Errorf("only one phone number can be set as default")
+	}
+
+	// If there are new phone numbers, ensure that adding them doesn't exceed the max limit of 5
+	if newPhonesCount > 0 {
+		// Fetch the total count of both active and inactive phone numbers for this user
+		currentCount, err := s.queries.CountAllUserPhoneNumbers(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("failed to check current phone numbers: %w", err)
+		}
+
+		// Reject the request if the total would exceed the 5 phone number limit
+		if int(currentCount)+newPhonesCount > 5 {
+			return fmt.Errorf("maximum of 5 phone numbers reached, if you'd like to add more, please contact the customer support")
+		}
+	}
+
+	// Update or create phone numbers
+	for _, p := range phones {
+		whatsappVal := "no"
+		if p.OnWhatsapp == "yes" {
+			whatsappVal = "yes"
+		}
+		onWhatsapp := pgtype.Text{String: whatsappVal, Valid: true}
 		isDefault := pgtype.Bool{Bool: p.IsDefault, Valid: true}
 
+		// if p.ID == 0, it means the phone number is new, so create it
 		if p.ID == 0 {
+			if p.Phone == "" {
+				return fmt.Errorf("phone number cannot be empty")
+			}
+
+			// create the phone-number in the postgres db
 			_, err := s.queries.CreatePhoneNumber(ctx, queries.CreatePhoneNumberParams{
-				UserID:    userID,
-				Phone:     fmt.Sprintf("+%s%s", p.Phonecode, p.RawInput),
-				Phonecode: p.Phonecode,
-				RawInput:  p.RawInput,
-				IsDefault: isDefault,
+				UserID:     userID,
+				Phone:      p.Phone, // Should be fully formatted E.164
+				Phonecode:  p.Phonecode,
+				RawInput:   p.RawInput,
+				OnWhatsapp: onWhatsapp,
+				IsDefault:  isDefault,
 			})
 			if err != nil {
 				return err
 			}
+
+			// Cache the new phone number to fakeID mapping
+			err = s.rdb.Set(ctx, db.RedisPhoneFakeID+p.Phone, fakeID, 0).Err()
+			if err != nil {
+				return err
+			}
 		} else {
+			// update the user's phone-number in the postgres db
 			err := s.queries.UpdatePhoneNumber(ctx, queries.UpdatePhoneNumberParams{
 				ID:         p.ID,
+				UserID:     userID,
 				OnWhatsapp: onWhatsapp,
 				IsDefault:  isDefault,
 			})
@@ -520,7 +631,7 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 		}
 	}
 
-	// Invalidate cache
+	// Invalidate the active cached user phone-numbers
 	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
 	s.rdb.Del(ctx, userPhoneNumbersKey)
 
@@ -528,8 +639,20 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 }
 
 // DeleteUserPhoneNumber removes a specific phone number record by its ID.
-func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
-	return s.queries.DeleteUserPhoneNumber(ctx, id)
+func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error {
+	err := s.queries.DeleteUserPhoneNumber(ctx, queries.DeleteUserPhoneNumberParams{
+		ID:     id,
+		UserID: userID,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the active cached user phone-numbers
+	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
+	s.rdb.Del(ctx, userPhoneNumbersKey)
+
+	return nil
 }
 
 // UpdateUserIsVerified updates the verified status of a user and invalidates their cache.
@@ -542,7 +665,234 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 		return err
 	}
 
+	fmt.Println("isVerified: ", isVerified)
+	fmt.Println("UserID: ", userID)
+
+	err = s.queries.UpdateUserPhoneNumberIsVerified(ctx, queries.UpdateUserPhoneNumberIsVerifiedParams{
+		UserID:          userID,
+		OwnerIsVerified: pgtype.Bool{Bool: isVerified, Valid: true},
+	})
+	if err != nil {
+		return err
+	}
+
 	// Invalidate the user info cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
+}
+
+// UpdateUserParty updates the party_id of a user and invalidates their cache.
+// Pass nil for partyID to remove the user from any party.
+func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error {
+	var pID pgtype.Int2
+	if partyID != nil {
+		pID = pgtype.Int2{Int16: *partyID, Valid: true}
+	} else {
+		pID = pgtype.Int2{Valid: false}
+	}
+
+	err := s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+		ID:      userID,
+		PartyID: pID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to update user party: %w", err)
+	}
+
+	// invalidate the user cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
+	return nil
+}
+
+// MakeUserSuperAdmin promotes a specific user to the superadmin role.
+func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) error {
+	allowed := map[string]bool{
+		"stanley": true, "stanley_chukwu": true, "stanleychukwu": true,
+		"daniel": true, "daniel_chukwu": true, "danielchukwu": true,
+	}
+
+	if !allowed[username] {
+		return fmt.Errorf("username not authorized for superadmin promotion")
+	}
+
+	redisKey := fmt.Sprintf("%s%s", db.RedisUsernameFakeID, username)
+	val, err := s.rdb.Get(ctx, redisKey).Result()
+	if err != nil {
+		if err == redis.Nil {
+			return fmt.Errorf("user not found in registry")
+		}
+		return fmt.Errorf("redis error: %w", err)
+	}
+
+	fakeID, err := strconv.ParseInt(val, 10, 64)
+	if err != nil {
+		return fmt.Errorf("invalid fake id in redis: %w", err)
+	}
+
+	user, err := s.GetUserByFakeID(ctx, fakeID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user details: %w", err)
+	}
+
+	// 1. Get user roles
+	rolesData, err := s.GetUserRoles(ctx, user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user roles: %w", err)
+	}
+
+	// 2. Check if the user already has the super_admin role
+	for _, r := range rolesData.RolesCode {
+		if r == "super_admin" {
+			// Already has the role, no need to assign again
+			return nil
+		}
+	}
+
+	// 3. Assign the role in DB
+	err = s.AssignUserRole(ctx, user.ID, fakeID, "super_admin", 0)
+	if err != nil {
+		return fmt.Errorf("failed to assign super_admin role: %w", err)
+	}
+
+	return nil
+}
+
+// UpdateUserRoles replaces a user's roles and optionally sets their party ID.
+func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error {
+	// Get existing roles
+	currentRolesData, err := s.GetUserRoles(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch current roles: %w", err)
+	}
+
+	// Create a map of current roles for quick lookup
+	currentRolesMap := make(map[string]bool)
+	for _, rCode := range currentRolesData.RolesCode {
+		currentRolesMap[rCode] = true
+	}
+
+	// Create a map of new roles for quick lookup
+	newRolesMap := make(map[string]bool)
+	for _, roleCode := range roles {
+		newRolesMap[roleCode] = true
+	}
+
+	// Identify and assign roles to ADD
+	for roleCode := range newRolesMap {
+		if !currentRolesMap[roleCode] {
+			err = s.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
+			if err != nil {
+				return fmt.Errorf("failed to add role %s: %w", roleCode, err)
+			}
+		}
+	}
+
+	// 3. Identify and remove roles to DELETE
+	for roleCode := range currentRolesMap {
+		if !newRolesMap[roleCode] {
+			err = s.RemoveUserRole(ctx, userID, fakeID, roleCode)
+			if err != nil {
+				return fmt.Errorf("failed to remove role %s: %w", roleCode, err)
+			}
+		}
+	}
+
+	// invalidate the user cache here
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
+	return nil
+}
+
+// function: check if the username already exist in redis and in the postgres db
+func (s *UsersService) CheckUsername(ctx context.Context, username string) bool {
+	cacheKey := db.RedisUsernameFakeID + username
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
+}
+
+// InvalidateUsernameCache deletes a specific username from Redis
+func (s *UsersService) InvalidateUsernameCache(ctx context.Context, username string) {
+	cacheKey := db.RedisUsernameFakeID + username
+	s.rdb.Del(ctx, cacheKey)
+}
+
+// function: checks if the email already exists in redis and in the postgres db
+func (s *UsersService) CheckEmail(ctx context.Context, email string) bool {
+	cacheKey := db.RedisEmailFakeID + email
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
+}
+
+// function: checks if the phone exists in redis and in the postgres db
+func (s *UsersService) CheckPhone(ctx context.Context, phone string) bool {
+	cacheKey := db.RedisPhoneFakeID + phone
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	// fallback: check the users_phone_numbers table
+	fakeID, err = s.queries.GetFakeIDByAdditionalPhone(ctx, phone)
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
+}
+
+// CheckNIN function checks if the nin already exists in the database
+func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
+	cacheKey := db.RedisNINFakeID + nin
+
+	// checks the cache first
+	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
+	if exists > 0 {
+		return true
+	}
+
+	// checks the users table
+	fakeID, err := s.queries.GetFakeIDByNIN(ctx, nin)
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }

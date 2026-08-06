@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const getElectionGroups = createServerFn({ method: "GET" })
   .inputValidator(
@@ -24,13 +24,11 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       let url = `${API_URL.electionGroups}?limit=${limit}&cursor=${cursor}`;
       if (orderBy) url += `&order_by=${orderBy}`;
       if (order) url += `&order=${order}`;
-      const response = await fetch(url);
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+      return await apiFetchJson(url);
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to fetch election groups from API",
+        message: error?.message || "Failed to fetch election groups from API",
       };
     }
   });
@@ -39,13 +37,11 @@ export const getElectionGroupById = createServerFn({ method: "GET" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.electionGroupById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+      return await apiFetchJson(API_URL.electionGroupById(id));
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to fetch election group details",
+        message: error?.message || "Failed to fetch election group details",
       };
     }
   });
@@ -62,19 +58,17 @@ export const createElectionGroup = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.electionGroups, {
+      return await apiFetchJson(API_URL.electionGroups, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to create election group: " + (error as Error).message,
+        message: error?.message || "Failed to create election group",
       };
     }
   });
@@ -92,19 +86,17 @@ export const updateElectionGroup = createServerFn({ method: "POST" })
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.electionGroupById(id), {
+      return await apiFetchJson(API_URL.electionGroupById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to update election group: " + (error as Error).message,
+        message: error?.message || "Failed to update election group",
       };
     }
   });
@@ -113,15 +105,14 @@ export const deleteElectionGroup = createServerFn({ method: "POST" })
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.electionGroupById(id), {
+      return await apiFetchJson(API_URL.electionGroupById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to delete election group: " + (error as Error).message,
+        message: error?.message || "Failed to delete election group",
       };
     }
   });
+

@@ -80,6 +80,7 @@ CREATE TABLE elections (
   election_group_name VARCHAR(100) NOT NULL, -- 2027 presidential election
   office_name VARCHAR(100) NOT NULL, -- President, Governor
   scope VARCHAR(50) NOT NULL, -- nationwide, state, senatorial-district, federal-constituency, lga, state-constituency, ward
+  status VARCHAR(30) NOT NULL DEFAULT 'upcoming' CHECK (status IN ('upcoming', 'ongoing', 'ended', 'cancelled')),
 
   candidates_count INT NOT NULL DEFAULT 0,
   reports_count INT NOT NULL DEFAULT 0,
@@ -99,6 +100,17 @@ CREATE TABLE elections (
   )
 );
 
+CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);
+CREATE INDEX idx_elections_state_id ON elections(state_id);
+CREATE INDEX idx_elections_senatorial_district_id ON elections(senatorial_district_id);
+CREATE INDEX idx_elections_federal_constituency_id ON elections(federal_constituency_id);
+CREATE INDEX idx_elections_state_constituency_id ON elections(state_constituency_id);
+CREATE INDEX idx_elections_lga_id ON elections(lga_id);
+CREATE INDEX idx_elections_ward_id ON elections(ward_id);
+CREATE INDEX idx_elections_office_id ON elections(office_id);
+CREATE INDEX idx_elections_rank ON elections(rank);
+CREATE INDEX idx_elections_election_date ON elections(election_date);
+
 CREATE TABLE election_candidates (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   election_id BIGINT REFERENCES elections(id) ON DELETE CASCADE NOT NULL,
@@ -110,6 +122,10 @@ CREATE TABLE election_candidates (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(election_id, candidate_id)
 );
+
+CREATE INDEX idx_election_candidates_election_id ON election_candidates(election_id);
+CREATE INDEX idx_election_candidates_candidate_id ON election_candidates(candidate_id);
+CREATE INDEX idx_election_candidates_party_id ON election_candidates(party_id);
 
 INSERT INTO election_groups (
   id, name, rank, elections_count, states_count, election_date, created_at, updated_at

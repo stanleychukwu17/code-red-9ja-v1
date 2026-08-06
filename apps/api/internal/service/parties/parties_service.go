@@ -3,13 +3,16 @@ package partiesservice
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"log/slog"
+	"strconv"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -25,10 +28,23 @@ func pgTextFromString(s string) pgtype.Text {
 
 // PartiesService manages political parties and their Monnify-backed wallets.
 type PartiesService struct {
-	queries *queries.Queries
-	pool    *pgxpool.Pool
-	rdb     *redis.Client
-	monnify *monnifyclient.Client
+	queries                  *queries.Queries
+	pool                     *pgxpool.Pool
+	rdb                      *redis.Client
+	monnify                  *monnifyclient.Client
+	pageVerificationsService PageVerificationsService
+	usersService             UsersService
+}
+
+// UsersService interface defines the methods needed from the users service
+type UsersService interface {
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
+}
+
+// PageVerificationsService interface defines the methods needed from the page verifications service
+type PageVerificationsService interface {
+	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
 }
 
 // NewPartiesService creates a new PartiesService.
@@ -42,13 +58,29 @@ func NewPartiesService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client
 	}
 }
 
+// SetPageVerificationsService sets the PageVerificationsService to avoid circular dependency in constructor.
+func (s *PartiesService) SetPageVerificationsService(pvs PageVerificationsService) {
+	s.pageVerificationsService = pvs
+}
+
+// SetUsersService sets the UsersService to avoid circular dependency in constructor.
+func (s *PartiesService) SetUsersService(us UsersService) {
+	s.usersService = us
+}
+
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
-func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
+func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error) {
+	var logoFileIDPg pgtype.Int8
+	if logoFileID != nil {
+		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
+	}
+
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
 		ShortName:    shortName,
 		Name:         name,
 		Logo:         logo,
+		LogoFileID:   logoFileIDPg,
 		DisplayOrder: displayOrder,
 	})
 	if err != nil {
@@ -64,6 +96,9 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 			_ = walletErr
 		}
 	}
+
+	// Invalidate parties listings cache
+	s.InvalidatePartyCache(ctx, party.ID)
 
 	return party, nil
 }
@@ -92,7 +127,7 @@ func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Pa
 		return queries.PartyWallet{}, fmt.Errorf("monnify reserved account: %w", err)
 	}
 
-	// Serialise the account numbers slice to JSONB.
+	// Serialize the account numbers slice to JSONB.
 	accountNumbersJSON, err := json.Marshal(resp.AccountNumbers)
 	if err != nil {
 		return queries.PartyWallet{}, fmt.Errorf("marshal account numbers: %w", err)
@@ -111,53 +146,72 @@ func (s *PartiesService) CreatePartyWallet(ctx context.Context, party queries.Pa
 }
 
 // GetPartyBasicInfo retrieves basic party info.
-func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow {
+func (s *PartiesService) GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications {
 	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
 
 	// Try to get from Redis
 	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
 	if err == nil {
-		var party queries.GetPartyBasicInfoRow
+		var party queries.PartyBasicInfoWithVerifications
 		if err := json.Unmarshal([]byte(cachedData), &party); err == nil {
 			return &party
 		}
 	}
 
-	party, err := s.queries.GetPartyBasicInfo(ctx, partyID)
+	partyRow, err := s.queries.GetPartyBasicInfo(ctx, partyID)
 	if err != nil {
 		return nil
 	}
 
+	party := queries.PartyBasicInfoWithVerifications{
+		GetPartyBasicInfoRow: partyRow,
+	}
+
+	// Only fetch verifications if the party is flagged as verified
+	if partyRow.IsVerified.Bool && s.pageVerificationsService != nil {
+		verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
+		if verifications != nil {
+			party.Verifications = verifications
+		}
+	}
+
 	// Save to Redis
 	if partyData, err := json.Marshal(party); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
+		s.rdb.Set(ctx, redisKey, partyData, db.RedisOneYearTTL)
 	}
 
 	return &party
 }
 
 // GetPartyInfo returns a party if the provided optional partyID is valid.
-func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party {
-	if !partyID.Valid {
-		return nil
-	}
-
-	redisKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID.Int64)
+func (s *PartiesService) GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications {
+	redisKey := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
 
 	// Try to get from Redis
 	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
 	if err == nil {
-		var party queries.Party
+		var party queries.PartyWithVerifications
 		if err := json.Unmarshal([]byte(cachedData), &party); err == nil {
 			return &party
 		}
 	}
 
-	party, err := s.queries.GetPartyByID(ctx, int16(partyID.Int64))
+	partyRow, err := s.queries.GetPartyByID(ctx, int16(partyID))
 	if err == nil {
+		party := queries.PartyWithVerifications{
+			Party: partyRow,
+		}
+
+		if partyRow.IsVerified.Bool && s.pageVerificationsService != nil {
+			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(partyID))
+			if verifications != nil {
+				party.Verifications = verifications
+			}
+		}
+
 		// Save to Redis
 		if partyData, err := json.Marshal(party); err == nil {
-			s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
+			s.rdb.Set(ctx, redisKey, partyData, db.RedisOneYearTTL)
 		}
 		return &party
 	}
@@ -170,46 +224,71 @@ func (s *PartiesService) GetPartyByShortName(ctx context.Context, shortName stri
 }
 
 // ListParties returns all parties ordered by ID ascending.
-func (s *PartiesService) ListParties(ctx context.Context) ([]queries.Party, error) {
+func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error) {
 	redisKey := db.RedisPartiesList
 
 	// Try to get from Redis
 	cachedData, err := s.rdb.Get(ctx, redisKey).Result()
 	if err == nil {
-		var parties []queries.Party
+		var parties []queries.PartyWithVerifications
 		if err := json.Unmarshal([]byte(cachedData), &parties); err == nil {
 			return parties, nil
 		}
 	}
 
 	// fetch from db using the status and display order
-	parties, err := s.queries.ListParties(ctx)
+	partyRows, err := s.queries.ListParties(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	var parties []queries.PartyWithVerifications
+	for _, p := range partyRows {
+		party := queries.PartyWithVerifications{
+			Party: p,
+		}
+
+		if p.IsVerified.Bool && s.pageVerificationsService != nil {
+			verifications, _ := s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeParty, int64(p.ID))
+			if verifications != nil {
+				party.Verifications = verifications
+			}
+		}
+		parties = append(parties, party)
+	}
+
 	// Save to Redis
 	if partyData, err := json.Marshal(parties); err == nil {
-		s.rdb.Set(ctx, redisKey, partyData, 24*time.Hour)
+		s.rdb.Set(ctx, redisKey, partyData, db.RedisTwoYearsTTL)
 	}
 
 	return parties, nil
 }
 
 // UpdateParty modifies the short name, name, and logo of an existing party.
-func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error) {
+func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error) {
+	defer s.InvalidatePartyCache(ctx, int16(id))
+	var logoFileIDPg pgtype.Int8
+	if logoFileID != nil {
+		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
+	}
+
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
 		ID:           int16(id),
 		ShortName:    shortName,
 		Name:         name,
 		Logo:         logo,
+		LogoFileID:   logoFileIDPg,
 		DisplayOrder: displayOrder,
 	})
+
+	s.InvalidatePartyCache(ctx, int16(id))
 	return party, err
 }
 
 // DeleteParty removes a party from the database (cascades to party_wallets).
 func (s *PartiesService) DeleteParty(ctx context.Context, id int64) error {
+	s.InvalidatePartyCache(ctx, int16(id))
 	return s.queries.DeleteParty(ctx, int16(id))
 }
 
@@ -353,14 +432,14 @@ func (s *PartiesService) WithdrawFromWallet(
 // ProvisionMissingWallets finds all political parties that do not have a wallet
 // and provisions a Monnify reserved virtual account for each.
 func (s *PartiesService) ProvisionMissingWallets(ctx context.Context) (int, int, error) {
-	unwalletedParties, err := s.queries.ListPartiesWithoutWallet(ctx)
+	PartiesWithNoWallet, err := s.queries.ListPartiesWithoutWallet(ctx)
 	if err != nil {
 		return 0, 0, fmt.Errorf("failed to fetch parties without wallets: %w", err)
 	}
 
 	success := 0
 	failed := 0
-	for _, party := range unwalletedParties {
+	for _, party := range PartiesWithNoWallet {
 		if _, walletErr := s.CreatePartyWallet(ctx, party); walletErr != nil {
 			slog.Warn("failed to provision party wallet",
 				"party_id", party.ID,
@@ -672,10 +751,276 @@ func (s *PartiesService) UpdatePartyIsVerified(ctx context.Context, partyID int1
 	}
 
 	// Invalidate cache
-	redisKey := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
-	s.rdb.Del(ctx, redisKey)
-	redisKeyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
-	s.rdb.Del(ctx, redisKeyInfo)
+	s.InvalidatePartyCache(ctx, partyID)
+
+	return nil
+}
+
+// InvalidatePartyCache invalidates the Redis cache for a given party and the global parties list.
+func (s *PartiesService) InvalidatePartyCache(ctx context.Context, partyID int16) {
+	redisPartyInfo := fmt.Sprintf("%s%d", db.RedisPartyInfo, partyID)
+	redisPartyBasicInfo := fmt.Sprintf("%s%d", db.RedisPartyBasicInfo, partyID)
+
+	s.rdb.Del(ctx, redisPartyInfo)
+	s.rdb.Del(ctx, redisPartyBasicInfo)
+	s.rdb.Del(ctx, db.RedisPartiesList)
+}
+
+// --start-- party chapters
+// GetOrCreateNationalChapter retrieves the national chapter for a party in a specific country,
+// and creates one if it doesn't already exist.
+func (s *PartiesService) GetOrCreateNationalChapter(ctx context.Context, partyID, countryID int16) (int32, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisNationalChapter, partyID, countryID)
+
+	// Try to get from Redis
+	if valStr, err := s.rdb.Get(ctx, cacheKey).Result(); err == nil {
+		if val, err := strconv.ParseInt(valStr, 10, 32); err == nil {
+			return int32(val), nil
+		}
+	}
+
+	natChapterID, err := s.queries.GetNationalChapter(ctx, queries.GetNationalChapterParams{
+		PartyID:   partyID,
+		CountryID: pgtype.Int2{Int16: countryID, Valid: true},
+	})
+
+	if err == nil {
+		// Cache and return
+		_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisTwoYearsTTL).Err()
+		return natChapterID, nil
+	}
+
+	// If not found, create it
+	natChapterID, err = s.queries.CreateNationalChapter(ctx, queries.CreateNationalChapterParams{
+		PartyID:   partyID,
+		CountryID: pgtype.Int2{Int16: countryID, Valid: true},
+	})
+	if err != nil {
+		// If creation failed (likely due to a concurrent duplicate key insert), try fetching it again.
+		// when we called this function as we seeded, it failed with duplicate key insert error
+		if existingChapterID, fetchErr := s.queries.GetNationalChapter(ctx, queries.GetNationalChapterParams{
+			PartyID:   partyID,
+			CountryID: pgtype.Int2{Int16: countryID, Valid: true},
+		}); fetchErr == nil {
+			return existingChapterID, nil
+		}
+		return 0, fmt.Errorf("failed to create national chapter: %w", err)
+	}
+	// Cache and return
+	_ = s.rdb.Set(ctx, cacheKey, natChapterID, db.RedisTwoYearsTTL).Err()
+	return natChapterID, nil
+}
+
+const defaultPartyChapterSettings = `{
+	"join_policy": {
+		"title": "Join policy",
+		"options": [
+			{"display": "auto approve", "value": "auto_approve"},
+			{"display": "manual approve", "value": "manual_approve"}
+		],
+		"default_value": "auto_approve",
+		"value": "auto_approve"
+	}
+}`
+
+// GetOrCreateChapterSettings retrieves the settings for a specific chapter.
+// If the settings do not exist, it creates and returns a default configuration.
+func (s *PartiesService) GetOrCreateChapterSettings(ctx context.Context, partyID int16, chapterID int32) ([]byte, error) {
+	cacheKey := fmt.Sprintf("%s%d:%d", db.RedisChapterSettings, partyID, chapterID)
+
+	// Try to get from Redis
+	if val, err := s.rdb.Get(ctx, cacheKey).Bytes(); err == nil {
+		return val, nil
+	}
+
+	settings, err := s.queries.GetChapterSettings(ctx, queries.GetChapterSettingsParams{
+		PartyID:   partyID,
+		ChapterID: chapterID,
+	})
+	if err == nil {
+		_ = s.rdb.Set(ctx, cacheKey, settings, db.RedisTwoYearsTTL).Err()
+		return settings, nil
+	}
+
+	// Create default settings if they don't exist
+	settings, err = s.queries.CreateChapterSettings(ctx, queries.CreateChapterSettingsParams{
+		PartyID:   partyID,
+		ChapterID: chapterID,
+		Settings:  []byte(defaultPartyChapterSettings),
+	})
+	if err != nil {
+		// If creation failed (likely due to a concurrent duplicate key insert), try fetching it again.
+		// when we called this function as we seeded, it failed with duplicate key insert error
+		if existingSettings, fetchErr := s.queries.GetChapterSettings(ctx, queries.GetChapterSettingsParams{
+			PartyID:   partyID,
+			ChapterID: chapterID,
+		}); fetchErr == nil {
+			return existingSettings, nil
+		}
+		return nil, fmt.Errorf("failed to create default chapter settings: %w", err)
+	}
+
+	_ = s.rdb.Set(ctx, cacheKey, settings, db.RedisTwoYearsTTL).Err()
+	return settings, nil
+}
+
+// GetChapterMemberCount retrieves the number of active members in a chapter.
+// It checks Redis first and falls back to the database if not found.
+func (s *PartiesService) GetChapterMemberCount(ctx context.Context, chapterID int32) (int64, error) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisChapterMemberCount, chapterID)
+
+	// 1. Try to get count from Redis
+	countStr, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		if count, parseErr := strconv.ParseInt(countStr, 10, 64); parseErr == nil {
+			return count, nil
+		}
+	} else if !errors.Is(err, redis.Nil) {
+		slog.Error("Failed to fetch chapter member count from redis", "error", err, "chapterID", chapterID)
+	}
+
+	// 2. Fallback to database
+	count, err := s.queries.GetChapterMemberCount(ctx, chapterID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get chapter member count from db: %w", err)
+	}
+
+	// 3. Cache in Redis
+	err = s.rdb.Set(ctx, cacheKey, count, db.RedisTwoYearsTTL).Err()
+	if err != nil {
+		slog.Error("Failed to cache chapter member count in redis", "error", err, "chapterID", chapterID)
+	}
+
+	return count, nil
+}
+
+// InvalidateChapterMemberCount removes the cached member count for a chapter.
+func (s *PartiesService) InvalidateChapterMemberCount(ctx context.Context, chapterID int32) {
+	cacheKey := fmt.Sprintf("%s%d", db.RedisChapterMemberCount, chapterID)
+	err := s.rdb.Del(ctx, cacheKey).Err()
+	if err != nil {
+		slog.Error("Failed to invalidate chapter member count in redis", "error", err, "chapterID", chapterID)
+	}
+}
+
+//--end-- party chapters
+
+// LeaveParty allows a user to leave their current party.
+func (s *PartiesService) LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error {
+	chapterIDs, err := s.queries.DeletePartyMembership(ctx, queries.DeletePartyMembershipParams{
+		UserID:  userID,
+		PartyID: int32(partyID),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to remove user from party_membership: %w", err)
+	}
+
+	for _, chapterID := range chapterIDs {
+		_ = s.queries.RecordPartyMembershipHistory(ctx, queries.RecordPartyMembershipHistoryParams{
+			UserID:    userID,
+			PartyID:   partyID,
+			ChapterID: chapterID,
+			Action:    "left",
+		})
+		s.InvalidateChapterMemberCount(ctx, chapterID)
+	}
+
+	// Remove the user's active party affiliation from the users table
+	err = s.usersService.UpdateUserParty(ctx, userID, nil, userFid)
+	if err != nil {
+		return fmt.Errorf("failed to clear user party_id: %w", err)
+	}
+
+	return nil
+}
+
+// JoinParty allows a user to become a new party member.
+func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error {
+	// 1. Fetch the user details to check their current party affiliation.
+	user, err := s.usersService.GetUserByFakeID(ctx, userFid)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user details: %w", err)
+	}
+
+	// 2. If the user is already in a party, enforce they leave it first.
+	// This ensures a user can only belong to one party at a time.
+	if user.PartyID.Valid {
+		if err := s.LeaveParty(ctx, user.PartyID.Int16, userID, userFid); err != nil {
+			return fmt.Errorf("failed to leave current party: %w", err)
+		}
+	}
+
+	// 3. Resolve the chapter the user is joining.
+	// If no specific chapter was provided, default to joining the National chapter.
+	var finalChapterID int32 = chapterID
+	if finalChapterID == 0 {
+		countryID := int16(161) // default national chapter should be nigeria
+		natChapterID, err := s.GetOrCreateNationalChapter(ctx, partyID, countryID)
+		if err != nil {
+			return fmt.Errorf("failed to resolve national chapter: %w", err)
+		}
+		finalChapterID = natChapterID
+	}
+
+	// 3a. Retrieve chapter settings. If none exist, create default settings.
+	settings, err := s.GetOrCreateChapterSettings(ctx, partyID, finalChapterID)
+	if err != nil {
+		return fmt.Errorf("failed to retrieve or create chapter settings: %w", err)
+	}
+
+	// 4. Parse settings to determine the join policy.
+	var settingsData struct {
+		JoinPolicy struct {
+			Value string `json:"value"`
+		} `json:"join_policy"`
+	}
+	// Ignore unmarshal errors and fallback to auto_approve if parsing fails
+	_ = json.Unmarshal(settings, &settingsData)
+
+	// if the join policy is manual_approve, create a membership request
+	if settingsData.JoinPolicy.Value == "manual_approve" {
+		_, err = s.queries.AddPartyMembershipRequest(ctx, queries.AddPartyMembershipRequestParams{
+			UserID:    userID,
+			PartyID:   partyID,
+			ChapterID: finalChapterID,
+		})
+
+		if err != nil {
+			var pgErr *pgconn.PgError
+			if errors.As(err, &pgErr) && pgErr.Code == "23505" && pgErr.ConstraintName == "idx_unique_pending_party_req" {
+				return fmt.Errorf("you already have a pending membership request for this chapter")
+			}
+			return fmt.Errorf("failed to create membership request: %w", err)
+		}
+
+		return nil
+	}
+
+	// 5. If auto-approve, insert the new membership record directly.
+	err = s.queries.AddPartyMembership(ctx, queries.AddPartyMembershipParams{
+		UserID:    userID,
+		PartyID:   int32(partyID),
+		ChapterID: finalChapterID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add party membership: %w", err)
+	}
+
+	s.InvalidateChapterMemberCount(ctx, finalChapterID)
+
+	// 6. Log the action in the membership history table for audit trails.
+	_ = s.queries.RecordPartyMembershipHistory(ctx, queries.RecordPartyMembershipHistoryParams{
+		UserID:    userID,
+		PartyID:   partyID,
+		ChapterID: finalChapterID,
+		Action:    "joined",
+	})
+
+	// 7. Update the user's active party affiliation in the users table
+	err = s.usersService.UpdateUserParty(ctx, userID, &partyID, userFid)
+	if err != nil {
+		return fmt.Errorf("failed to update user party_id: %w", err)
+	}
 
 	return nil
 }

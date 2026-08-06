@@ -79,7 +79,6 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   CONSTRAINT uq_election_group_polling_unit UNIQUE (election_group_id, polling_unit_id)
 );
 
-CREATE INDEX idx_egpu_election_group    ON election_group_polling_units(election_group_id);
 CREATE INDEX idx_egpu_polling_unit      ON election_group_polling_units(polling_unit_id);
 CREATE INDEX idx_egpu_state             ON election_group_polling_units(state_id);
 CREATE INDEX idx_egpu_lga               ON election_group_polling_units(lga_id);
@@ -163,7 +162,6 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   CONSTRAINT uq_election_group_ward UNIQUE (election_group_id, ward_id)
 );
 
-CREATE INDEX idx_egw_election_group ON election_group_wards(election_group_id);
 CREATE INDEX idx_egw_ward           ON election_group_wards(ward_id);
 CREATE INDEX idx_egw_lga            ON election_group_wards(lga_id);
 CREATE INDEX idx_egw_state          ON election_group_wards(state_id);
@@ -225,7 +223,6 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   CONSTRAINT uq_election_group_lga UNIQUE (election_group_id, lga_id)
 );
 
-CREATE INDEX idx_eglga_election_group ON election_group_lgas(election_group_id);
 CREATE INDEX idx_eglga_lga            ON election_group_lgas(lga_id);
 CREATE INDEX idx_eglga_state          ON election_group_lgas(state_id);
 
@@ -283,7 +280,6 @@ CREATE TABLE IF NOT EXISTS election_group_state_constituencies (
   CONSTRAINT uq_election_group_state_constituency UNIQUE (election_group_id, state_constituency_id)
 );
 
-CREATE INDEX idx_egsc_election_group     ON election_group_state_constituencies(election_group_id);
 CREATE INDEX idx_egsc_state_constituency ON election_group_state_constituencies(state_constituency_id);
 CREATE INDEX idx_egsc_state              ON election_group_state_constituencies(state_id);
 
@@ -348,7 +344,6 @@ CREATE TABLE IF NOT EXISTS election_group_federal_constituencies (
   CONSTRAINT uq_election_group_federal_constituency UNIQUE (election_group_id, federal_constituency_id)
 );
 
-CREATE INDEX idx_egfc_election_group       ON election_group_federal_constituencies(election_group_id);
 CREATE INDEX idx_egfc_federal_constituency ON election_group_federal_constituencies(federal_constituency_id);
 CREATE INDEX idx_egfc_state                ON election_group_federal_constituencies(state_id);
 
@@ -413,7 +408,6 @@ CREATE TABLE IF NOT EXISTS election_group_senatorial_districts (
   CONSTRAINT uq_election_group_senatorial_district UNIQUE (election_group_id, senatorial_district_id)
 );
 
-CREATE INDEX idx_egsd_election_group      ON election_group_senatorial_districts(election_group_id);
 CREATE INDEX idx_egsd_senatorial_district ON election_group_senatorial_districts(senatorial_district_id);
 CREATE INDEX idx_egsd_state               ON election_group_senatorial_districts(state_id);
 
@@ -456,6 +450,9 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   ward_supervisors_count                           INT NOT NULL DEFAULT 0,
   unique_ward_supervisors_count                    INT NOT NULL DEFAULT 0,
 
+  state_supervisors_count                          INT NOT NULL DEFAULT 0,
+  unique_state_supervisors_count                   INT NOT NULL DEFAULT 0,
+
   senatorial_districts_count                       INT NOT NULL DEFAULT 0,
   federal_constituencies_count                     INT NOT NULL DEFAULT 0,
   lgas_count                                       INT NOT NULL DEFAULT 0,
@@ -470,6 +467,8 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   --   unique_lga_supervisors_count,
   --   ward_supervisors_count,
   --   unique_ward_supervisors_count,
+  --   state_supervisors_count,
+  --   unique_state_supervisors_count,
   -- }
   parties JSONB NOT NULL DEFAULT '[]'::jsonb,
 
@@ -479,7 +478,6 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   CONSTRAINT uq_election_group_state UNIQUE (election_group_id, state_id)
 );
 
-CREATE INDEX idx_egstate_election_group ON election_group_states(election_group_id);
 CREATE INDEX idx_egstate_state          ON election_group_states(state_id);
 
 

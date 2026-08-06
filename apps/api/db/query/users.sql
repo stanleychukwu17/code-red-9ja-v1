@@ -12,11 +12,11 @@ SELECT EXISTS(SELECT 1 FROM users WHERE referral_code = $1);
 
 -- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
-  email, password_hash, last_name, first_name, middle_name,
+  email, password_hash, username, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_city, state_of_origin,
-  party_id, avatar, account_status
+  party_id, avatar, avatar_file_id, account_status
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'placeholder')
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'placeholder')
 RETURNING id;
 
 
@@ -26,8 +26,8 @@ VALUES ($1, $2)
 RETURNING id;
 
 -- name: CreatePhoneNumber :one
-INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, is_default)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsapp, is_default)
+VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
 
 -- name: UpdateUserFakeID :exec
@@ -58,17 +58,10 @@ UPDATE users
 SET account_status = $2
 WHERE id = $1;
 
--- name: ListAdmins :many
-SELECT u.id, u.fake_id, u.email, u.phone, u.username, u.first_name, u.last_name, u.gender, u.date_of_birth, u.current_country, u.current_state, u.current_city, u.account_status, u.created_at, u.updated_at
-FROM users u
-JOIN user_roles ur ON u.id = ur.user_id
-JOIN roles r ON ur.role_id = r.id
-WHERE r.code = 'admin'
-ORDER BY u.id DESC;
-
 -- name: UpdateUserAvatar :exec
 UPDATE users
 SET avatar = $2,
+    avatar_file_id = $3,
     updated_at = NOW()
 WHERE id = $1;
 
@@ -79,9 +72,10 @@ SET first_name = $2,
     middle_name = $4,
     gender = $5,
     avatar = $6,
-    current_country = $7,
-    current_state = $8,
-    current_city = $9,
+    avatar_file_id = $7,
+    current_country = $8,
+    current_state = $9,
+    current_city = $10,
     updated_at = NOW()
 WHERE id = $1;
 
@@ -113,6 +107,15 @@ SELECT u.id, u.fake_id FROM users u
 WHERE 
   (sqlc.narg('cursor')::bigint IS NULL OR u.id < sqlc.narg('cursor')::bigint)
   AND (sqlc.narg('party_id')::smallint IS NULL OR u.party_id = sqlc.narg('party_id')::smallint)
+  AND (sqlc.narg('party_ids')::smallint[] IS NULL OR u.party_id = ANY(sqlc.narg('party_ids')::smallint[]))
+  AND (sqlc.narg('verification_type_ids')::smallint[] IS NULL OR (
+      u.is_verified = true AND EXISTS (
+          SELECT 1 FROM pages_verified pv 
+          WHERE pv.page_type = 'user' 
+            AND pv.page_id = u.id 
+            AND pv.verification_type_id = ANY(sqlc.narg('verification_type_ids')::smallint[])
+      )
+  ))
   AND (sqlc.narg('role_codes')::text[] IS NULL OR EXISTS (
       -- Use EXISTS instead of LEFT JOIN to avoid returning duplicate user rows 
       -- if a user somehow has multiple roles (or just to keep the base query simple).
@@ -121,40 +124,41 @@ WHERE
   AND (sqlc.narg('search')::text IS NULL OR (
       u.first_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
       u.last_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      u.middle_name ILIKE '%' || sqlc.narg('search')::text || '%' OR
-      u.email ILIKE '%' || sqlc.narg('search')::text || '%' OR
       u.username ILIKE '%' || sqlc.narg('search')::text || '%'
   ))
+  AND (sqlc.narg('account_status')::text[] IS NULL OR u.account_status = ANY(sqlc.narg('account_status')::text[]))
+  AND (sqlc.narg('country_ids')::smallint[] IS NULL OR u.current_country = ANY(sqlc.narg('country_ids')::smallint[]))
+  AND (sqlc.narg('state_ids')::smallint[] IS NULL OR u.current_state = ANY(sqlc.narg('state_ids')::smallint[]))
 ORDER BY u.id DESC
 LIMIT sqlc.arg('limit_num')::int;
 
 -- name: DeleteUser :exec
-DELETE FROM users
+UPDATE users
+SET account_status = 'deleted'
 WHERE id = $1;
 
 -- name: SeedUser :one
 INSERT INTO users (
-  fake_id, email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
+  email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
   state_of_origin, voters_card_image,
-  account_status, party_id
+  account_status, party_id, is_politician, is_verified
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 RETURNING id;
-
 
 -- name: AdminUpdateUser :exec
 UPDATE users
 SET first_name = $2,
     last_name = $3,
     middle_name = $4,
-    gender = $5,
-    avatar = $6,
-    current_country = $7,
-    current_state = $8,
-    current_city = $9,
-    party_id = $10,
-    email = $11,
+    username = $5,
+    gender = $6,
+    avatar = $7,
+    avatar_file_id = $8,
+    current_country = $9,
+    current_state = $10,
+    current_city = $11,
     state_of_origin = $12,
     updated_at = NOW()
 WHERE id = $1;
@@ -221,16 +225,20 @@ WHERE user_id = $1 LIMIT 1;
 
 -- name: GetUserPhoneNumbersByUserID :many
 SELECT * FROM users_phone_numbers
-WHERE user_id = $1 AND is_active = true ORDER BY id DESC;
+WHERE user_id = $1 AND is_active = true ORDER BY id ASC;
+
+-- name: CountAllUserPhoneNumbers :one
+SELECT count(*) FROM users_phone_numbers
+WHERE user_id = $1;
 
 -- name: DeleteUserPhoneNumber :exec
 UPDATE users_phone_numbers
 SET is_active = false
-WHERE id = $1;
+WHERE id = $1 AND user_id = $2;
 -- name: UpdatePhoneNumber :exec
 UPDATE users_phone_numbers
 SET on_whatsapp = $2, is_default = $3
-WHERE id = $1;
+WHERE id = $1 AND user_id = $4;
 
 -- name: CreateUserBankAccount :one
 INSERT INTO user_bank_accounts (
@@ -269,6 +277,16 @@ WHERE email = $1 LIMIT 1;
 SELECT fake_id FROM users
 WHERE phone = $1 LIMIT 1;
 
+-- name: GetFakeIDByAdditionalPhone :one
+SELECT u.fake_id
+FROM users u
+JOIN users_phone_numbers pn ON u.id = pn.user_id
+WHERE pn.phone = $1 LIMIT 1;
+
+-- name: GetFakeIDByUserID :one
+SELECT fake_id FROM users
+WHERE id = $1 LIMIT 1;
+
 -- name: GetFakeIDByNIN :one
 SELECT u.fake_id
 FROM users u
@@ -283,3 +301,4 @@ WHERE fake_id = $1 LIMIT 1;
 UPDATE users
 SET has_role = $2
 WHERE id = $1;
+

@@ -30,7 +30,7 @@ func main() {
 
 	q := queries.New(pool)
 
-	// Initialise Monnify client
+	// Initialize Monnify client
 	monnifyClient := monnifyservice.New(monnifyservice.Config{
 		BaseURL:      cfg.Monnify.BaseURL,
 		APIKey:       cfg.Monnify.APIKey,
@@ -45,16 +45,23 @@ func main() {
 	usersSvc := usersservice.NewUsersService(q, nil, monnifyClient, bodiesSvc)
 
 	// Fetch all users that don't yet have a wallet
-	unwalletedUsers, err := q.ListUsersWithoutWallet(ctx)
+	unWalletUsers, err := q.ListUsersWithoutWallet(ctx)
 	if err != nil {
 		slog.Error("failed to fetch users without wallets", "err", err)
 		os.Exit(1)
 	}
 
-	slog.Info("users to wallet", "count", len(unwalletedUsers))
+	slog.Info("users to wallet", "count", len(unWalletUsers))
 
-	for _, user := range unwalletedUsers {
-		wallet, err := usersSvc.CreateUserWallet(ctx, user)
+	for _, user := range unWalletUsers {
+		saveUser := queries.User{
+			ID:        user.ID,
+			Email:     user.Email,
+			FirstName: user.FirstName,
+			LastName:  user.LastName,
+			Username:  user.Username,
+		}
+		wallet, err := usersSvc.CreateUserWallet(ctx, saveUser)
 		if err != nil {
 			slog.Error("failed to create user wallet",
 				"user_id", user.ID,

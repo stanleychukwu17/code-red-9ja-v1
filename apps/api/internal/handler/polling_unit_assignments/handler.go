@@ -26,7 +26,7 @@ type PollingUnitAssignmentsService interface {
 
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
-	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
+	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 }
 
 type Handler struct {
@@ -95,14 +95,14 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 	// Enforce role levels
 	// Platform admin can assign any party. Party admin can only assign for their own party.
 	var finalPartyID int64
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	isPartyAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "party_admin" {
+		if rCode == "party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -222,10 +222,10 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce scoped party-level listing if not platform admin
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 			break
 		}
@@ -288,10 +288,10 @@ func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce visibility restriction: party admins can only view assignments of their own party
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 			break
 		}
@@ -345,14 +345,14 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Enforce scope: party admins can only delete assignments for their own party
-	roles, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	isPartyAdmin := false
-	for _, r := range roles {
-		if r.Code == "admin" {
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" {
 			isPlatformAdmin = true
 		}
-		if r.Code == "party_admin" {
+		if rCode == "party_admin" {
 			isPartyAdmin = true
 		}
 	}

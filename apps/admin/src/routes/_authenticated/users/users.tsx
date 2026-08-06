@@ -11,8 +11,9 @@ import {
 import { UsersTable } from "#/components/Tables";
 import { USERS_TABS } from "./-data";
 import { UserFormDialog } from "#/components/dialogs/UserFormDialog";
+import { AdminUsersSearchFilterDialog, type UsersFilters } from "#/components/dialogs/AdminUsersSearchFilterDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { getUsersList } from "#/lib/server/users";
+import { getUsersList, deleteFile } from "#/lib/server/users";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 
@@ -26,8 +27,16 @@ export const Route = createFileRoute("/_authenticated/users/users")({
 function RouteComponent() {
   // State to control the visibility of the "Add User" form dialog
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [isFilterOpen, setIsFilterOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState("");
   const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
+  const [filters, setFilters] = React.useState<UsersFilters>({
+    parties: [],
+    roles: [],
+    statuses: [],
+    verificationTypes: [],
+    stateIds: [],
+  });
 
   // useInfiniteQuery handles fetching data in pages for infinite scrolling
   const {
@@ -40,19 +49,23 @@ function RouteComponent() {
     refetch,
   } = useInfiniteQuery({
     // queryKey uniquely identifies this query in the cache
-    queryKey: ["users", "user", debouncedSearchQuery],
+    queryKey: ["users-list", "user", debouncedSearchQuery, filters],
 
     // queryFn is the function that actually fetches the data
     queryFn: async ({ pageParam }) => {
-      console.log("SEARCH:", debouncedSearchQuery);
       const res = await getUsersList({
         data: {
-          limit: 20,
+          limit: 30,
           cursor: pageParam,
           search: debouncedSearchQuery || undefined,
+          parties: filters.parties.length > 0 ? filters.parties : undefined,
+          roles: filters.roles.length > 0 ? filters.roles : undefined,
+          statuses: filters.statuses.length > 0 ? filters.statuses : undefined,
+          verificationTypes: filters.verificationTypes.length > 0 ? filters.verificationTypes : undefined,
+          countryId: filters.countryId || undefined,
+          stateIds: filters.stateIds.length > 0 ? filters.stateIds : undefined,
         },
       });
-      console.log("RES:", res);
 
       if (res && res.success && res.data) {
         return res;
@@ -107,7 +120,7 @@ function RouteComponent() {
         onChange={(e) => setSearchQuery(e.target.value)}
         rightComponent={
           <>
-            <FilterButton />
+            <FilterButton onClick={() => setIsFilterOpen(true)} />
             {/* Opens the "Add User" dialog when clicked */}
             <AddButton onClick={() => setIsFormOpen(true)} />
           </>
@@ -159,7 +172,15 @@ function RouteComponent() {
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         // Refetch the data when a user is successfully added so the table updates
-        onSuccess={() => refetch()}
+        onSuccess={() => { }}
+        deleteFile={deleteFile}
+      />
+      <AdminUsersSearchFilterDialog
+        open={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        onApply={(newFilters) => {
+          setFilters(newFilters);
+        }}
       />
     </Layout>
   );

@@ -11,6 +11,7 @@ import (
 
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
+	r2service "free9ja/api/internal/service/r2"
 )
 
 // Task names
@@ -41,9 +42,10 @@ type RedisTaskProcessor struct {
 	rdb             *redis.Client
 	taskDistributor TaskDistributor
 	cfg             *config.Config
+	r2Svc           *r2service.R2Service
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config) TaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config, r2Svc *r2service.R2Service) TaskProcessor {
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
@@ -62,6 +64,7 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 		rdb:             rdb,
 		taskDistributor: distributor,
 		cfg:             cfg,
+		r2Svc:           r2Svc,
 	}
 }
 
@@ -99,6 +102,12 @@ func (processor *RedisTaskProcessor) Start() error {
 		// This cron is a 30-minute safety-net fallback for any missed cascades.
 		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRefreshAllElectionStats)
 	}
+
+	// File Cleanup Worker (runs every hour)
+	// processor.cron.AddFunc("@hourly", processor.ProcessFileCleanup)
+
+	// Fallback Database File Cleanup Worker (runs once a week on Sunday at 2 AM)
+	// processor.cron.AddFunc("0 2 * * 0", processor.ProcessFallbackFileCleanup)
 
 	processor.cron.Start()
 	slog.Info("cron rollup scheduler started")

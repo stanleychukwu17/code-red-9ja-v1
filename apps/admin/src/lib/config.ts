@@ -33,9 +33,12 @@ export const APP_URL = {
 const web = `${WEB_DNS}`;
 export const WEB_URL = {
   users: {
-    profile: (username: string) => `${web}/users/profile/${username}`,
+    profile: (username: string) => `${web}/users/profile/${username}`
   },
-};
+  parties: {
+    profile: (shortName: string, id: number) => `${web}/party/${shortName}/${id}/home`
+  }
+}
 
 const api = `${API_BASE}/api/v1`;
 export const API_URL = {
@@ -144,6 +147,7 @@ export const API_URL = {
   partyById: (id: string | number) => `${api}/parties/${id}`,
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
+  deleteFile: (id: string | number) => `${api}/files/${id}`,
   offices: `${api}/offices`,
   officeById: (id: string | number) => `${api}/offices/${id}`,
   states: `${api}/states`,
@@ -174,8 +178,9 @@ export const API_URL = {
   electionsStateConstituency: `${api}/elections/state-constituency`,
   electionsLga: `${api}/elections/lga`,
   electionsWard: `${api}/elections/ward`,
-  adminUsers: `${api}/admin/users`,
+
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
+  manageUserMoreInfo: (id: string | number) => `${api}/admin/users/${id}/more-info`,
   userRoles: (id: string | number) => `${api}/admin/users/${id}/roles`,
   userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
   manageUserPhoneNumber: (id: string | number) =>
@@ -184,6 +189,7 @@ export const API_URL = {
   recalculateBodies: `${api}/bodies/recalculate`,
   verificationTypes: `${api}/verifications/types`,
   adminVerifications: `${api}/admin/verifications`,
+  occupations: `${api}/getOccupations`,
   systemSettings: {
     get: (key: string) => `${api}/admin/settings/${key}`,
     update: (key: string) => `${api}/admin/settings/${key}`,

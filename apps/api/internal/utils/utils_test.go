@@ -64,3 +64,31 @@ func TestSetupRedisTestContainer(t *testing.T) {
 
 	assert.NotEmpty(t, addr)
 }
+
+func TestValidatePhoneForCountry(t *testing.T) {
+	tests := []struct {
+		name        string
+		phone       string
+		countryCode string
+		expected    string
+		wantErr     bool
+	}{
+		{"valid NG", "+2348012345678", "NG", "+2348012345678", false},
+		{"valid US", "+18012345678", "US", "+18012345678", false},
+		{"invalid format", "12345", "NG", "", true},
+		{"mismatch country", "+18012345678", "NG", "", true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := utils.ValidatePhoneForCountry(tt.phone, tt.countryCode)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ValidatePhoneForCountry() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.expected {
+				t.Errorf("ValidatePhoneForCountry() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}

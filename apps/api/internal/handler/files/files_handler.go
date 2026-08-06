@@ -1,7 +1,7 @@
 // Package fileshandler provides HTTP handlers for managing file uploads via
 // Cloudflare R2. The upload flow uses presigned PUT URLs so files travel
 // directly from the client to R2 — never through the API server — keeping
-// the API latency-free and minimising egress costs.
+// the API latency-free and minimize egress costs.
 //
 // Upload flow:
 //  1. Client calls POST /api/v1/files/upload-url to get a presigned URL.
@@ -15,10 +15,14 @@ package fileshandler
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	"free9ja/api/internal/service/audit"
+	permissionsservice "free9ja/api/internal/service/permissions"
 	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/utils"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,12 +31,23 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 )
+
+type UsersService interface {
+	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	ResetUserAvatar(ctx context.Context, userID int64, fakeID int64) error
+}
+
+type PartiesService interface {
+	InvalidatePartyCache(ctx context.Context, partyID int16)
+}
 
 // FilesDB is the narrow interface for file-related database operations.
 // Satisfied by *queries.Queries, but mockable in tests.
 type FilesDB interface {
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (queries.User, error)
+	UpdateUserAvatar(ctx context.Context, arg queries.UpdateUserAvatarParams) error
 	CreateFile(ctx context.Context, arg queries.CreateFileParams) (queries.File, error)
 	ConfirmUpload(ctx context.Context, arg queries.ConfirmUploadParams) (queries.File, error)
 	GetFileByID(ctx context.Context, id int64) (queries.File, error)
@@ -40,19 +55,26 @@ type FilesDB interface {
 	ListFiles(ctx context.Context, arg queries.ListFilesParams) ([]queries.File, error)
 	MarkFileDeleted(ctx context.Context, id int64) (queries.File, error)
 	HardDeleteFile(ctx context.Context, id int64) error
+	CheckFileOwner(ctx context.Context, arg queries.CheckFileOwnerParams) (bool, error)
+	GetPartyByID(ctx context.Context, id int16) (queries.Party, error)
+	ResetPartyLogo(ctx context.Context, id int16) error
 }
 
 // Handler holds the dependencies needed to service file-related HTTP requests.
 type Handler struct {
-	db    FilesDB
-	r2    *r2service.R2Service
-	utils *utils.Utils
+	db             FilesDB
+	r2             *r2service.R2Service
+	rdb            *redis.Client
+	utils          *utils.Utils
+	usersService   UsersService
+	partiesService PartiesService
+	auditService   audit.AuditService
 }
 
-// NewHandler returns a Handler wired up with the provided database, R2 service,
+// NewHandler returns a Handler wired up with the provided database, R2 service, Redis,
 // and shared utilities instance.
-func NewHandler(db FilesDB, r2Svc *r2service.R2Service, u *utils.Utils) *Handler {
-	return &Handler{db: db, r2: r2Svc, utils: u}
+func NewHandler(db FilesDB, r2Svc *r2service.R2Service, rdb *redis.Client, u *utils.Utils, usersSvc UsersService, partiesSvc PartiesService, auditSvc audit.AuditService) *Handler {
+	return &Handler{db: db, r2: r2Svc, rdb: rdb, utils: u, usersService: usersSvc, partiesService: partiesSvc, auditService: auditSvc}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -65,6 +87,7 @@ type GenerateUploadURLRequest struct {
 	FileSize     int64  `json:"file_size"`
 	Folder       string `json:"folder"`
 	IsPublic     bool   `json:"is_public"`
+	OwnerID      *int64 `json:"owner_id"`
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -74,8 +97,10 @@ type GenerateUploadURLRequest struct {
 // GenerateUploadURL godoc
 // @Summary      Generate a presigned upload URL
 // @Description  Creates a file record and returns a 15-minute presigned PUT URL.
-//               The client uploads the file directly to Cloudflare R2 using that
-//               URL, then calls the confirm endpoint to update the record status.
+//
+//	The client uploads the file directly to Cloudflare R2 using that
+//	URL, then calls the confirm endpoint to update the record status.
+//
 // @Tags         Files
 // @Accept       json
 // @Produce      json
@@ -116,8 +141,11 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		folder = "uploads"
 	}
 
+	// Generate a unique object key for R2 (e.g., folder/date/sanitized-name-uuid.ext)
 	key := r2service.BuildKey(folder, req.OriginalName, uuid.New().String())
 
+	// Request a presigned URL that allows the client to upload directly to R2
+	// e.g. PUT https://<uuid>.r2.dev/uploads/2026-08-04/my-image-<uuid>.png
 	const presignTTL = 15 * time.Minute
 	presignURL, err := h.r2.PresignedUploadURL(r.Context(), key, req.MimeType, presignTTL)
 	if err != nil {
@@ -125,21 +153,24 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Determine the public URL where the file will be accessible after a successful upload
+	// e.g. "https://cdn.free9ja.com/uploads/2026-08-04/my-image-<uuid>.png"
 	publicURL := h.r2.PublicURL(key)
 
-	// Resolve the authenticated user from the JWT claims (optional — set null if absent).
-	// If the DB lookup fails (e.g. admin accounts whose fake_id is not set), we log a warning
-	// and continue — uploadedBy remains null. This is intentional: the JWT has already been
-	// verified by AuthMiddleware so we trust the caller is authenticated.
+	// Resolve uploadedBy from authenticated JWT claims.
 	uploadedBy := pgtype.Int8{Valid: false}
-	if claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims); ok && claims != nil {
-		user, err := h.db.GetUserByFakeID(r.Context(), pgtype.Int8{Int64: claims.FakeID, Valid: true})
-		if err == nil {
-			uploadedBy = pgtype.Int8{Int64: user.ID, Valid: true}
-		}
-		// If err != nil the user lookup failed (e.g. admin with no fake_id) — uploadedBy stays null.
+	claims, _ := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if claims != nil && claims.UserID > 0 {
+		uploadedBy = pgtype.Int8{Int64: claims.UserID, Valid: true}
 	}
 
+	// Resolve ownerID from explicit request parameter (or leave null if omitted).
+	ownerID := pgtype.Int8{Valid: false}
+	if req.OwnerID != nil && *req.OwnerID > 0 {
+		ownerID = pgtype.Int8{Int64: *req.OwnerID, Valid: true}
+	}
+
+	// creates the file record in the database
 	file, err := h.db.CreateFile(r.Context(), queries.CreateFileParams{
 		OriginalName: req.OriginalName,
 		MimeType:     req.MimeType,
@@ -149,12 +180,14 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 		Folder:       folder,
 		IsPublic:     req.IsPublic,
 		UploadedBy:   uploadedBy,
+		OwnerID:      ownerID,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create file record: "+err.Error())
 		return
 	}
 
+	// returns the presigned URL and file details to the client
 	h.utils.RespondSuccess(w, http.StatusOK, "Upload URL generated successfully", map[string]interface{}{
 		"upload_url": presignURL,
 		"file_key":   key,
@@ -167,7 +200,9 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 // ConfirmUpload godoc
 // @Summary      Confirm file upload status
 // @Description  Marks a pending file record as 'uploaded' or 'failed' after the
-//               client finishes writing to R2. Pass ?success=false to mark failure.
+//
+//	client finishes writing to R2. Pass ?success=false to mark failure.
+//
 // @Tags         Files
 // @Produce      json
 // @Security     BearerAuth
@@ -178,31 +213,44 @@ func (h *Handler) GenerateUploadURL(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /files/{id}/confirm [post]
 func (h *Handler) ConfirmUpload(w http.ResponseWriter, r *http.Request) {
+	// Parse the file ID from the URL path
 	id, err := parseID(r, "id")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid file ID")
 		return
 	}
 
+	// Determine if the upload was successful (defaults to true)
 	success := true
 	if r.URL.Query().Get("success") == "false" {
 		success = false
 	}
 
+	// Extract the user ID from the JWT claims to securely verify ownership
+	uploadedBy := pgtype.Int8{Valid: false}
+	claims, _ := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if claims != nil && claims.UserID > 0 {
+		uploadedBy = pgtype.Int8{Int64: claims.UserID, Valid: true}
+	}
+
+	// Update the file status in the database
 	file, err := h.db.ConfirmUpload(r.Context(), queries.ConfirmUploadParams{
-		ID:      id,
-		Success: success,
+		ID:         id,
+		Success:    success,
+		UploadedBy: uploadedBy,
 	})
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to confirm upload: "+err.Error())
 		return
 	}
 
+	// Send an appropriate response based on the outcome
 	msg := "File upload confirmed successfully"
 	if !success {
 		msg = "File upload marked as failed"
 	}
 
+	// send response to client
 	h.utils.RespondSuccess(w, http.StatusOK, msg, map[string]interface{}{
 		"file": file,
 	})
@@ -239,7 +287,9 @@ func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) {
 // ListFiles godoc
 // @Summary      List files (cursor-paginated)
 // @Description  Returns a cursor-paginated list of uploaded files, newest first.
-//               Pass the ID of the last returned item as `cursor` for the next page.
+//
+//	Pass the ID of the last returned item as `cursor` for the next page.
+//
 // @Tags         Files
 // @Produce      json
 // @Security     BearerAuth
@@ -306,9 +356,11 @@ func (h *Handler) ListFiles(w http.ResponseWriter, r *http.Request) {
 // DeleteFile godoc
 // @Summary      Delete a file
 // @Description  Soft-deletes the file record in the database, then removes the
-//               object from Cloudflare R2. If the R2 deletion succeeds the DB
-//               row is hard-deleted. A failed R2 deletion does not cause an
-//               HTTP error — the record is already hidden from the application.
+//
+//	object from Cloudflare R2. If the R2 deletion succeeds the DB
+//	row is hard-deleted. A failed R2 deletion does not cause an
+//	HTTP error — the record is already hidden from the application.
+//
 // @Tags         Files
 // @Produce      json
 // @Security     BearerAuth
@@ -319,29 +371,155 @@ func (h *Handler) ListFiles(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} map[string]interface{} "Internal server error"
 // @Router       /files/{id} [delete]
 func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
-	id, err := parseID(r, "id")
+	// check permissions
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	// permissionsservice
+	permsSvc := permissionsservice.NewPermissionsService()
+	var auditModuleName, auditActorRole string
+
+	// the file id
+	fileID, err := parseID(r, "id")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid file ID")
 		return
 	}
+	userFakeIDStr := r.URL.Query().Get("user_fake_id") // user_fake_id (string)
+	partyIDStr := r.URL.Query().Get("party_id")        // party_id (string)
+	fileType := r.URL.Query().Get("type")              // type (string)
 
-	// Fetch record first so we have the R2 key.
-	file, err := h.db.GetFileByID(r.Context(), id)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "File not found")
-		return
+	// get the user Details, if trying to delete a user avatar
+	if userFakeIDStr != "" && fileType == "user_avatar" {
+		userFakeID, parseErr := strconv.ParseInt(userFakeIDStr, 10, 64)
+		if parseErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Error parsing user FID")
+			return
+		}
+
+		// get the user Details
+		user, dbErr := h.usersService.GetUserByFakeID(r.Context(), userFakeID)
+		if dbErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "User details not found")
+			return
+		}
+
+		// check permissions to modify this user
+		allowed, perms, permErr := permsSvc.CheckUserModificationPermission(claims, user)
+		if !allowed {
+			h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
+			return
+		}
+		auditModuleName, auditActorRole = perms.GetAuditActorInfo()
+
+		// if the user avatar file ID is not the same as the file ID
+		if !user.AvatarFileID.Valid || user.AvatarFileID.Int64 != fileID {
+			if !(perms.IsBothAdmin) {
+				h.utils.RespondError(w, http.StatusNotFound, "You can only delete your own avatar file")
+				return
+			}
+		}
+
+		// if the user avatar file ID is the same as the file ID
+		if user.AvatarFileID.Valid && user.AvatarFileID.Int64 == fileID {
+			// update the user avatar file ID to NULL and invalidate user cache
+			_ = h.usersService.ResetUserAvatar(r.Context(), user.ID, userFakeID)
+		}
 	}
 
-	// Soft-delete first — prevents any new reads from seeing the record.
-	if _, err = h.db.MarkFileDeleted(r.Context(), id); err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete file: "+err.Error())
-		return
+	// get the party Details, if trying to delete a party logo
+	if partyIDStr != "" && fileType == "party_logo" {
+		partyID, parseErr := strconv.ParseInt(partyIDStr, 10, 16)
+		if parseErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Error parsing party ID")
+			return
+		}
+
+		// check permissions to delete this party image
+		allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+		if !allowed {
+			h.utils.RespondError(w, http.StatusForbidden, err.Error())
+			return
+		}
+		auditModuleName, auditActorRole = perms.GetAuditActorInfo()
+
+		// get the party Details
+		party, dbErr := h.db.GetPartyByID(r.Context(), int16(partyID))
+		if dbErr != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Party details not found")
+			return
+		}
+
+		// if the file_id is available, we check if the file belongs to the party
+		if fileID > 0 {
+			// if the party logo file ID is not the same as the file ID
+			if !party.LogoFileID.Valid || party.LogoFileID.Int64 != fileID {
+				h.utils.RespondError(w, http.StatusNotFound, "You can only delete the party's own logo file")
+				return
+			}
+		}
+
+		// update the party logo file ID to NULL
+		_ = h.db.ResetPartyLogo(r.Context(), party.ID)
+
+		// also invalidate party cache (optional, frontend refetch)
+		h.partiesService.InvalidatePartyCache(r.Context(), party.ID)
 	}
 
-	// Purge from R2; only hard-delete the DB row once the bucket object is gone.
-	// If R2 deletion fails we swallow the error — a cleanup job can handle it later.
-	if err = h.r2.DeleteObject(r.Context(), file.FileKey); err == nil {
-		_ = h.db.HardDeleteFile(r.Context(), id)
+	// if the file_id is available, we delete from the r2 bucket
+	if fileID > 0 {
+		// Fetch record first so we have the R2 key.
+		file, err := h.db.GetFileByID(r.Context(), fileID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusNotFound, "File not found")
+			return
+		}
+
+		// Soft-delete first — prevents any new reads from seeing the record.
+		if _, err = h.db.MarkFileDeleted(r.Context(), fileID); err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete file: "+err.Error())
+			return
+		}
+
+		// Purge from R2; only hard-delete the DB row once the bucket object is gone.
+		// If R2 deletion fails we log the error — a cleanup job can handle it later.
+		if err = h.r2.DeleteObject(r.Context(), file.FileKey); err == nil {
+			_ = h.db.HardDeleteFile(r.Context(), fileID)
+
+			// Asynchronously purge Cloudflare Edge CDN cache
+			go func(key string) {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if purgeErr := h.r2.PurgeCloudflareCache(ctx, key); purgeErr != nil {
+					slog.Error("failed to purge cloudflare edge cache", "fileKey", key, "error", purgeErr)
+				}
+			}(file.FileKey)
+
+			// --- Audit Logging ---
+			if auditModuleName == "" {
+				auditModuleName = db.ModuleFiles
+				auditActorRole = db.ActorRoleUser
+				if len(claims.Roles) > 0 {
+					auditActorRole = claims.Roles[0]
+				}
+			}
+
+			oldValuesJSON, _ := json.Marshal(file)
+			h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+				Module:     audit.StringToText(auditModuleName),
+				Action:     db.ActionDeleteFile,
+				ActorID:    claims.UserID,
+				ActorRole:  audit.StringToText(auditActorRole),
+				EntityType: "file",
+				EntityID:   strconv.FormatInt(fileID, 10),
+				OldValues:  oldValuesJSON,
+			})
+		} else {
+			slog.ErrorContext(r.Context(), "failed to delete file from r2", "fileKey", file.FileKey, "error", err)
+		}
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "File deleted successfully", nil)

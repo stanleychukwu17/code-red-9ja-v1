@@ -4,6 +4,7 @@ CREATE TABLE parties (
   short_name VARCHAR(50) UNIQUE NOT NULL,
   name VARCHAR(255) UNIQUE NOT NULL,
   logo VARCHAR(255) NOT NULL DEFAULT '',
+  logo_file_id BIGINT,
   display_order INTEGER NOT NULL DEFAULT 999,
   status VARCHAR(50) NOT NULL DEFAULT 'active',
   slots INTEGER NOT NULL DEFAULT 0 CHECK (slots >= 0),
@@ -46,6 +47,9 @@ INSERT INTO parties (id, short_name, name, logo, display_order) VALUES
     (21, 'NDP', 'National Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/NDP-National-Democratic-Party-5c979c25-27ea-4344-860c-da2ba283f652.webp', 999),
     (22, 'AAC', 'African Action Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/AAC-African-Action-Congress-750daa5b-b723-4e88-95e5-556cd3b2d8d0.webp', 999),
     (23, 'A', 'Accord', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/A-Accord-c5c9260c-1402-4038-8212-3b2d7ffb107a.webp', 999);
+
+-- Sync the identity sequence with the max id to prevent duplicate key errors on new inserts
+SELECT setval(pg_get_serial_sequence('parties', 'id'), (SELECT MAX(id) FROM parties));
 
 -- +goose Down
 DROP INDEX IF EXISTS idx_parties_short_name;

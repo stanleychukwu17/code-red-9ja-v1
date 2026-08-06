@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/logger"
 	"free9ja/api/internal/service/audit"
 	"time"
 
@@ -21,7 +20,7 @@ type UsersService interface {
 
 type PartiesService interface {
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
-	GetPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party
+	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
 }
 
 type PageVerificationsService struct {
@@ -51,6 +50,8 @@ func NewPageVerificationsService(
 // VerifyPage assigns a verification badge to a page (user or party) and updates the is_verified flag.
 func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string, pageID int64, verificationTypeID int16, actorID int64) (queries.PagesVerified, error) {
 	var userDetails *queries.UserWithPlaces
+	var party *queries.PartyWithVerifications
+
 	switch forWho {
 	case db.PageTypeUser:
 		user, err := s.usersService.GetUserByFakeID(ctx, pageID)
@@ -60,7 +61,8 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 		userDetails = &user
 		pageID = user.ID
 	case db.PageTypeParty:
-		if party := s.partiesService.GetPartyInfo(ctx, pgtype.Int8{Int64: pageID, Valid: true}); party == nil {
+		party = s.partiesService.GetPartyInfo(ctx, int16(pageID))
+		if party == nil {
 			return queries.PagesVerified{}, fmt.Errorf("party not found")
 		}
 	default:
@@ -120,31 +122,24 @@ func (s *PageVerificationsService) VerifyPage(ctx context.Context, forWho string
 	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, forWho, pageID)
 	s.rdb.Del(ctx, redisKey)
 
+	// marshal the old data
 	oldValuesData, _ := json.Marshal(pageVerifications)
 
-	// Log the action in a goroutine
-	go func(oldData []byte, entityType string, entityID int64, actor int64) {
-		bgCtx := context.Background()
-		log := logger.FromContext(bgCtx).With("component", logger.ComponentPageVerificationsService)
+	// marshal the new data
+	newPageVerifications, _ := s.GetPageVerifications(ctx, forWho, pageID)
+	newValuesData, _ := json.Marshal(newPageVerifications)
 
-		newPageVerifications, _ := s.GetPageVerifications(bgCtx, entityType, entityID)
-		newValuesData, _ := json.Marshal(newPageVerifications)
-
-		auditParams := queries.InsertAuditLogParams{
-			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-			ActorID:    actor,
-			ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
-			Action:     db.ActionAssignPageVerification,
-			EntityType: entityType,
-			EntityID:   fmt.Sprintf("%d", entityID),
-			OldValues:  oldData,
-			NewValues:  newValuesData,
-		}
-
-		if err := s.auditService.LogAction(bgCtx, auditParams); err != nil {
-			log.Error(logger.EventAuditLogFailed, "error", err, "action", db.ActionAssignPageVerification, "entity_type", entityType, "entity_id", entityID)
-		}
-	}(oldValuesData, forWho, pageID, actorID)
+	// save the old and new data as we log the action of this admin
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		ActorID:    actorID,
+		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
+		Action:     db.ActionAssignPageVerification,
+		EntityType: forWho,
+		EntityID:   fmt.Sprintf("%d", pageID),
+		OldValues:  oldValuesData,
+		NewValues:  newValuesData,
+	})
 
 	return pv, nil
 }
@@ -209,29 +204,21 @@ func (s *PageVerificationsService) RemoveVerification(ctx context.Context, param
 	redisKey := fmt.Sprintf("%s%s:%d", db.RedisPageVerifications, params.PageType, params.PageID)
 	s.rdb.Del(ctx, redisKey)
 
-	// Log the action in a goroutine
-	go func(oldData []byte, entityType string, entityID int64, actor int64) {
-		bgCtx := context.Background()
-		log := logger.FromContext(bgCtx).With("component", logger.ComponentPageVerificationsService)
+	// get all the page verifications after removal
+	newPageVerifications, _ := s.GetPageVerifications(ctx, params.PageType, params.PageID)
+	newValuesData, _ := json.Marshal(newPageVerifications)
 
-		newPageVerifications, _ := s.GetPageVerifications(bgCtx, entityType, entityID)
-		newValuesData, _ := json.Marshal(newPageVerifications)
-
-		auditParams := queries.InsertAuditLogParams{
-			Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
-			ActorID:    actor,
-			ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
-			Action:     db.ActionRemovePageVerification,
-			EntityType: entityType,
-			EntityID:   fmt.Sprintf("%d", entityID),
-			OldValues:  oldData,
-			NewValues:  newValuesData,
-		}
-
-		if err := s.auditService.LogAction(bgCtx, auditParams); err != nil {
-			log.Error(logger.EventAuditLogFailed, "error", err, "action", db.ActionRemovePageVerification, "entity_type", entityType, "entity_id", entityID)
-		}
-	}(oldValuesData, params.PageType, params.PageID, params.ActorID)
+	// save the old and new data as we log the action of this admin
+	s.auditService.LogActionAsync(ctx, queries.InsertAuditLogParams{
+		Module:     pgtype.Text{String: db.ModuleAdmin, Valid: true},
+		ActorID:    params.ActorID,
+		ActorRole:  pgtype.Text{String: db.ActorRoleAdmin, Valid: true},
+		Action:     db.ActionRemovePageVerification,
+		EntityType: params.PageType,
+		EntityID:   fmt.Sprintf("%d", params.PageID),
+		OldValues:  oldValuesData,
+		NewValues:  newValuesData,
+	})
 
 	var pageDetails interface{}
 	switch params.PageType {
@@ -250,8 +237,8 @@ func (s *PageVerificationsService) GetUserDetails(ctx context.Context, fakeID in
 }
 
 // GetPartyDetails retrieves a party's details by their ID
-func (s *PageVerificationsService) GetPartyDetails(ctx context.Context, partyID int64) (*queries.Party, error) {
-	party := s.partiesService.GetPartyInfo(ctx, pgtype.Int8{Int64: partyID, Valid: true})
+func (s *PageVerificationsService) GetPartyDetails(ctx context.Context, partyID int64) (*queries.PartyWithVerifications, error) {
+	party := s.partiesService.GetPartyInfo(ctx, int16(partyID))
 	if party == nil {
 		return nil, fmt.Errorf("party not found")
 	}

@@ -61,8 +61,7 @@ CREATE TABLE polling_unit_results (
 );
 
 -- One result per election per polling unit from a specific user
-CREATE UNIQUE INDEX uq_result_submission
-  ON polling_unit_results (election_id, polling_unit_id, submitted_by);
+CREATE UNIQUE INDEX uq_result_submission ON polling_unit_results (election_id, polling_unit_id, submitted_by);
 
 -- Indexes for common query patterns
 CREATE INDEX idx_pu_results_election       ON polling_unit_results(election_id);
@@ -70,16 +69,8 @@ CREATE INDEX idx_pu_results_election_group ON polling_unit_results(election_grou
 CREATE INDEX idx_pu_results_pu             ON polling_unit_results(polling_unit_id);
 CREATE INDEX idx_pu_results_party_group    ON polling_unit_results(party_id, election_group_id);
 CREATE INDEX idx_pu_results_submitted_by   ON polling_unit_results(submitted_by);
-CREATE INDEX idx_pu_results_state          ON polling_unit_results(state_id);
-CREATE INDEX idx_pu_results_lga            ON polling_unit_results(lga_id);
+CREATE INDEX idx_pu_results_location       ON polling_unit_results(state_id, lga_id, ward_id);
 CREATE INDEX idx_pu_results_status         ON polling_unit_results(status);
-
-
--- Add a lifecycle status to elections so the API knows when to accept result submissions
-ALTER TABLE elections
-  ADD COLUMN status VARCHAR(30) NOT NULL DEFAULT 'upcoming'
-    CHECK (status IN ('upcoming', 'ongoing', 'ended', 'cancelled'));
-
 
 -- ============================================================
 -- election_polling_unit_final_results
@@ -326,12 +317,6 @@ CREATE TABLE election_final_result (
 CREATE UNIQUE INDEX idx_election_final_result_election ON election_final_result (election_id);
 
 -- +goose Down
-ALTER TABLE elections
-  DROP COLUMN IF EXISTS status;
-
-ALTER TABLE polling_unit_assignments
-  DROP COLUMN IF EXISTS results_submitted_count,
-  DROP COLUMN IF EXISTS results_status;
 
 DROP TABLE IF EXISTS election_final_result;
 DROP TABLE IF EXISTS election_state_final_result;

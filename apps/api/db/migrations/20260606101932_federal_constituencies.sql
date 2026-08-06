@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS federal_constituencies (
 );
 
 CREATE INDEX idx_federal_constituencies_name ON federal_constituencies (name);
+CREATE INDEX idx_federal_constituencies_state_id ON federal_constituencies (state_id);
+CREATE INDEX idx_federal_constituencies_senatorial_district_id ON federal_constituencies (senatorial_district_id);
 
 INSERT INTO federal_constituencies (id, name, state_id, state_name, senatorial_district_id, senatorial_district_name) VALUES
 -- ============================================================

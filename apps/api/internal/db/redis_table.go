@@ -5,6 +5,9 @@ import "time"
 const (
 	RedisFiveYearsTTL = 5 * 365 * 24 * time.Hour
 	RedisTwoYearsTTL  = 2 * 365 * 24 * time.Hour
+	RedisOneYearTTL   = 365 * 24 * time.Hour
+	// RedisSixMonthsTTL = 6 * 30 * 24 * time.Hour
+	// RedisOneMonthTTL  = 30 * 24 * time.Hour
 
 	//--START-- for registration
 	// STRING: RedisRegisterOnboarding is the Redis key prefix used to store onboarding data.
@@ -34,14 +37,10 @@ const (
 	//--END--
 
 	//--START-- for user
-	// STRING: user:info:<userFakeID> used to store and retrieve user info.
-	RedisUserInfo = "user:info:"
-	// STRING: user:more_info:<userID> used to store and retrieve user more_info.
-	RedisUserMoreInfo = "user:more_info:"
-	// STRING: user:roles:<userFakeID> used to store and retrieve user roles.
-	RedisUserRoles = "user:roles:"
-	// STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
-	RedisUserPhoneNumbers = "user:phone_numbers:"
+	RedisUserInfo         = "user:info:"          // STRING: user:info:<userFakeID> used to store and retrieve user info.
+	RedisUserMoreInfo     = "user:more_info:"     // STRING: user:more_info:<userID> used to store and retrieve user more_info.
+	RedisUserRoles        = "user:roles:"         // STRING: user:roles:<userFakeID> used to store and retrieve user roles.
+	RedisUserPhoneNumbers = "user:phone_numbers:" // STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
 	//--END--
 
 	//--START-- for countries and states
@@ -58,12 +57,12 @@ const (
 	//--END--
 
 	//--START-- for parties
-	// STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
-	RedisPartiesList = "parties:list"
-	// STRING: "parties:info:<partyID>" is used to store and retrieve party info.
-	RedisPartyInfo = "parties:info:"
-	// STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
-	RedisPartyBasicInfo = "parties:basic_info:"
+	RedisPartiesList        = "parties:list"                   // STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
+	RedisPartyInfo          = "parties:info:"                  // STRING: "parties:info:<partyID>" is used to store and retrieve party info.
+	RedisPartyBasicInfo     = "parties:basic_info:"            // STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
+	RedisChapterMemberCount = "parties:chapter:members_count:" // STRING: "parties:chapter:members_count:<chapterID>" is used to store and retrieve the number of members in each chapter of a party.
+	RedisNationalChapter    = "parties:national_chapter:"      // STRING: "parties:national_chapter:<partyID>:<countryID>" is used to store the national chapter ID.
+	RedisChapterSettings    = "parties:chapter_settings:"      // STRING: "parties:chapter_settings:<partyID>:<chapterID>" is used to store the chapter settings.
 	//--END--
 
 	//--START-- for page verifications & badges

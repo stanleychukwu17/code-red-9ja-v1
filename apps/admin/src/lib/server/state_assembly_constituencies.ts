@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 export const createStateAssemblyConstituency = createServerFn({
   method: "POST",
@@ -16,21 +16,17 @@ export const createStateAssemblyConstituency = createServerFn({
   )
   .handler(async ({ data }) => {
     try {
-      const response = await apiFetch(API_URL.stateAssemblyConstituencies, {
+      return await apiFetchJson(API_URL.stateAssemblyConstituencies, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(data),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message:
-          "Failed to create state assembly constituency: " +
-          (error as Error).message,
+        message: error?.message || "Failed to create state assembly constituency",
       };
     }
   });
@@ -50,21 +46,17 @@ export const updateStateAssemblyConstituency = createServerFn({
   )
   .handler(async ({ data: { id, ...body } }) => {
     try {
-      const response = await apiFetch(API_URL.stateAssemblyConstituencyById(id), {
+      return await apiFetchJson(API_URL.stateAssemblyConstituencyById(id), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message:
-          "Failed to update state assembly constituency: " +
-          (error as Error).message,
+        message: error?.message || "Failed to update state assembly constituency",
       };
     }
   });
@@ -75,17 +67,13 @@ export const deleteStateAssemblyConstituency = createServerFn({
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.stateAssemblyConstituencyById(id), {
+      return await apiFetchJson(API_URL.stateAssemblyConstituencyById(id), {
         method: "DELETE",
       });
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+    } catch (error: any) {
       return {
         success: false,
-        message:
-          "Failed to delete state assembly constituency: " +
-          (error as Error).message,
+        message: error?.message || "Failed to delete state assembly constituency",
       };
     }
   });
@@ -96,13 +84,11 @@ export const getStateAssemblyConstituencyById = createServerFn({
   .inputValidator((id: string | number) => id)
   .handler(async ({ data: id }) => {
     try {
-      const response = await apiFetch(API_URL.stateAssemblyConstituencyById(id));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
+      return await apiFetchJson(API_URL.stateAssemblyConstituencyById(id));
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to fetch state assembly constituency details",
+        message: error?.message || "Failed to fetch state assembly constituency details",
       };
     }
   });
@@ -119,7 +105,7 @@ export const getStateAssemblyConstituencies = createServerFn()
   .handler(
     async ({ data: { stateId, federalConstituencyId, limit, cursor } }) => {
       try {
-        const response = await apiFetch(
+        return await apiFetchJson(
           API_URL.getStateAssemblyConstituencies(
             stateId,
             federalConstituencyId,
@@ -127,13 +113,12 @@ export const getStateAssemblyConstituencies = createServerFn()
             cursor,
           ),
         );
-        const data = await response.json();
-        return data;
-      } catch (error) {
+      } catch (error: any) {
         return {
           status: "failed",
-          error: "Failed to fetch state assembly constituencies from API",
+          error: error?.message || "Failed to fetch state assembly constituencies from API",
         };
       }
     },
   );
+

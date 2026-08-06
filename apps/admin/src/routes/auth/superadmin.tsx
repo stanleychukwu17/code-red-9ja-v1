@@ -37,7 +37,6 @@ function RouteComponent() {
     setLoading(true)
     try {
       const res = await makeSuperadminFn({ data: { name } })
-      console.log(res)
       if (res?.success) {
         toast.success("User successfully promoted to superadmin")
         setSuccess(true)

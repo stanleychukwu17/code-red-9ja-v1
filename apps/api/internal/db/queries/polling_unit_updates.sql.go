@@ -30,7 +30,7 @@ INSERT INTO polling_unit_updates (
   report_types
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15
-) RETURNING id, assignment_id, user_id, polling_unit_id, election_group_id, party_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, message, media_urls, is_report, report_types, created_at, updated_at
+) RETURNING id, assignment_id, user_id, election_group_id, polling_unit_id, party_id, state_id, lga_id, ward_id, senatorial_district_id, federal_constituency_id, state_assembly_constituency_id, message, media_urls, is_report, report_types, created_at, updated_at
 `
 
 type CreatePollingUnitUpdateParams struct {
@@ -74,8 +74,8 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 		&i.ID,
 		&i.AssignmentID,
 		&i.UserID,
-		&i.PollingUnitID,
 		&i.ElectionGroupID,
+		&i.PollingUnitID,
 		&i.PartyID,
 		&i.StateID,
 		&i.LgaID,

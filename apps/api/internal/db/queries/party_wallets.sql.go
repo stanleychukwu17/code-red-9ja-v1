@@ -274,6 +274,7 @@ func (q *Queries) ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
 			&i.ShortName,
 			&i.Name,
 			&i.Logo,
+			&i.LogoFileID,
 			&i.DisplayOrder,
 			&i.Status,
 			&i.Slots,

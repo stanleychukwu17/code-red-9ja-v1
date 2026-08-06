@@ -27,9 +27,9 @@ export const DeleteAlertDialog = ({
 }: DeleteAlertDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-[420px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
+      <DialogContent className="max-w-105 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
         <DialogHeader title="Confirm Delete" />
-        
+
         <DialogPadding className="space-y-3 pb-4">
           <h1 className="text-[18px] font-semibold text-c-80 leading-tight">
             {title ?? "Are you sure you want to delete this?"}

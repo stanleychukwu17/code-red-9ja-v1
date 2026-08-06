@@ -295,21 +295,54 @@ func (q *Queries) ListUserWalletTransactions(ctx context.Context, arg ListUserWa
 }
 
 const listUsersWithoutWallet = `-- name: ListUsersWithoutWallet :many
-SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.whatsapp_phone, u.data_phone, u.current_country, u.current_state, u.current_lga, u.current_ward, u.current_city, u.state_of_origin, u.voters_card_image, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_code, u.account_status, u.created_at, u.updated_at FROM users u
+SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_code, u.account_status, u.created_at, u.updated_at FROM users u
 LEFT JOIN user_wallets uw ON uw.user_id = u.id
 WHERE uw.id IS NULL
 ORDER BY u.id ASC
 `
 
-func (q *Queries) ListUsersWithoutWallet(ctx context.Context) ([]User, error) {
+type ListUsersWithoutWalletRow struct {
+	ID              int64              `json:"id"`
+	FakeID          pgtype.Int8        `json:"fake_id"`
+	Email           pgtype.Text        `json:"email"`
+	Avatar          pgtype.Text        `json:"avatar"`
+	Phone           pgtype.Text        `json:"phone"`
+	Username        pgtype.Text        `json:"username"`
+	PasswordHash    string             `json:"password_hash"`
+	LastName        pgtype.Text        `json:"last_name"`
+	FirstName       pgtype.Text        `json:"first_name"`
+	MiddleName      pgtype.Text        `json:"middle_name"`
+	Gender          pgtype.Text        `json:"gender"`
+	DateOfBirth     pgtype.Date        `json:"date_of_birth"`
+	VotersCardImage pgtype.Text        `json:"voters_card_image"`
+	CurrentCountry  int16              `json:"current_country"`
+	CurrentState    int16              `json:"current_state"`
+	CurrentCity     pgtype.Int4        `json:"current_city"`
+	CurrentLga      pgtype.Int4        `json:"current_lga"`
+	CurrentWard     pgtype.Int4        `json:"current_ward"`
+	Address         pgtype.Text        `json:"address"`
+	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
+	IsPolitician    pgtype.Bool        `json:"is_politician"`
+	IsVerified      pgtype.Bool        `json:"is_verified"`
+	HasRole         pgtype.Bool        `json:"has_role"`
+	PartyID         pgtype.Int2        `json:"party_id"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	ReferralCode    pgtype.Text        `json:"referral_code"`
+	ReferredByCode  pgtype.Text        `json:"referred_by_code"`
+	AccountStatus   pgtype.Text        `json:"account_status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ListUsersWithoutWallet(ctx context.Context) ([]ListUsersWithoutWalletRow, error) {
 	rows, err := q.db.Query(ctx, listUsersWithoutWallet)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	var items []ListUsersWithoutWalletRow
 	for rows.Next() {
-		var i User
+		var i ListUsersWithoutWalletRow
 		if err := rows.Scan(
 			&i.ID,
 			&i.FakeID,
@@ -323,17 +356,15 @@ func (q *Queries) ListUsersWithoutWallet(ctx context.Context) ([]User, error) {
 			&i.MiddleName,
 			&i.Gender,
 			&i.DateOfBirth,
-			&i.WhatsappPhone,
-			&i.DataPhone,
+			&i.VotersCardImage,
 			&i.CurrentCountry,
 			&i.CurrentState,
+			&i.CurrentCity,
 			&i.CurrentLga,
 			&i.CurrentWard,
-			&i.CurrentCity,
 			&i.Address,
 			&i.CountryOfOrigin,
 			&i.StateOfOrigin,
-			&i.VotersCardImage,
 			&i.IsPolitician,
 			&i.IsVerified,
 			&i.HasRole,

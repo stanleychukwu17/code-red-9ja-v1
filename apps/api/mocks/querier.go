@@ -4138,36 +4138,6 @@ func (_m *Querier) InsertAuditLog(ctx context.Context, arg queries.InsertAuditLo
 	return r0, r1
 }
 
-// ListAdmins provides a mock function with given fields: ctx
-func (_m *Querier) ListAdmins(ctx context.Context) ([]queries.ListAdminsRow, error) {
-	ret := _m.Called(ctx)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListAdmins")
-	}
-
-	var r0 []queries.ListAdminsRow
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context) ([]queries.ListAdminsRow, error)); ok {
-		return rf(ctx)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context) []queries.ListAdminsRow); ok {
-		r0 = rf(ctx)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.ListAdminsRow)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
-		r1 = rf(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // ListApplications provides a mock function with given fields: ctx, arg
 func (_m *Querier) ListApplications(ctx context.Context, arg queries.ListApplicationsParams) ([]queries.ListApplicationsRow, error) {
 	ret := _m.Called(ctx, arg)

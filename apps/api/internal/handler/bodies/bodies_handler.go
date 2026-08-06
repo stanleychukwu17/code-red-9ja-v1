@@ -13,6 +13,7 @@ import (
 )
 
 type BodiesService interface {
+	GetOccupations(ctx context.Context) ([]queries.Occupation, error)
 	GetAllCountries(ctx context.Context) ([]queries.ListCountriesRow, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]queries.GetCitiesByStateIDRow, error)
@@ -49,6 +50,19 @@ func parseOptionalQueryInt(r *http.Request, param string) int32 {
 		return 0
 	}
 	return int32(val)
+}
+
+// GetOccupations handles GET /api/v1/getOccupations (or similar)
+func (h *Handler) GetOccupations(w http.ResponseWriter, r *http.Request) {
+	occupations, err := h.bodiesService.GetOccupations(r.Context())
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to retrieve occupations: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Occupations retrieved successfully", map[string]interface{}{
+		"occupations": occupations,
+	})
 }
 
 // GetCountries godoc

@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	"free9ja/api/internal/db"
-	"free9ja/api/internal/db/queries"
 	authhandler "free9ja/api/internal/handler/auth"
 	authservice "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
@@ -228,56 +226,4 @@ func TestCleanUsername(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestValidatePhoneForCountry(t *testing.T) {
-	s := &authservice.AuthService{}
-	tests := []struct {
-		name        string
-		phone       string
-		countryCode string
-		expected    string
-		wantErr     bool
-	}{
-		{"valid NG", "+2348012345678", "NG", "+2348012345678", false},
-		{"valid US", "+18012345678", "US", "+18012345678", false},
-		{"invalid format", "12345", "NG", "", true},
-		{"mismatch country", "+18012345678", "NG", "", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := s.ValidatePhoneForCountry(tt.phone, tt.countryCode)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidatePhoneForCountry() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.expected {
-				t.Errorf("ValidatePhoneForCountry() = %v, want %v", got, tt.expected)
-			}
-		})
-	}
-}
-
-func TestCheckPhone(t *testing.T) {
-	cfg, _ := test.BeforeEach(t)
-	defer test.AfterEach(t)
-	ctx := context.Background()
-
-	app := test.TestNewApp(t, ctx, cfg)
-	defer app.Server.Shutdown(ctx)
-
-	q := queries.New(app.DB)
-	s := authservice.NewAuthService(q, app.RDB, &mockMessagingService{}, nil, nil, nil, "jwt_test_string", 15*time.Minute, 168*time.Hour)
-
-	phone := "+2348011111111"
-
-	// 1. Check before inserting
-	exists := s.CheckPhone(ctx, phone)
-	require.False(t, exists)
-
-	// 2. Insert into redis
-	app.RDB.Set(ctx, db.RedisPhoneFakeID+phone, "123456", 0)
-	exists = s.CheckPhone(ctx, phone)
-	require.True(t, exists)
 }

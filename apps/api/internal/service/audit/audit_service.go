@@ -19,15 +19,16 @@ const (
 
 type AuditService interface {
 	LogAction(ctx context.Context, params queries.InsertAuditLogParams) error
+	LogActionAsync(ctx context.Context, params queries.InsertAuditLogParams)
 }
 
 type auditService struct {
-	q *queries.Queries
+	queries *queries.Queries
 }
 
 func NewAuditService(q *queries.Queries) AuditService {
 	return &auditService{
-		q: q,
+		queries: q,
 	}
 }
 
@@ -79,6 +80,23 @@ func (s *auditService) LogAction(ctx context.Context, params queries.InsertAudit
 
 	// Execute the insertion synchronously for now.
 	// We might consider doing this asynchronously in the future if it becomes a bottleneck.
-	_, err := s.q.InsertAuditLog(ctx, params)
+	_, err := s.queries.InsertAuditLog(ctx, params)
 	return err
+}
+
+// LogActionAsync logs an action to the audit log asynchronously in a goroutine.
+func (s *auditService) LogActionAsync(ctx context.Context, params queries.InsertAuditLogParams) {
+	ipAddress, userAgent := RequestMetadataFromContext(ctx)
+
+	if params.IpAddress == nil {
+		params.IpAddress = ParseIP(ipAddress)
+	}
+	if !params.UserAgent.Valid {
+		params.UserAgent = StringToText(userAgent)
+	}
+
+	go func(p queries.InsertAuditLogParams) {
+		bgCtx := context.Background()
+		_, _ = s.queries.InsertAuditLog(bgCtx, p)
+	}(params)
 }

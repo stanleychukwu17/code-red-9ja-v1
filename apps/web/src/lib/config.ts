@@ -39,7 +39,8 @@ export const API_URL = {
     verifySecurityQuestions: `${api}/auth/verify_security_questions`,
     forgotPassword: `${api}/auth/forgot_password`,
   },
-  getAllCountries: `${api}/countries`,
-  getStates: (countryId: number) => `${api}/countries/${countryId}/states`,
-  getCities: (stateId: number) => `${api}/states/${stateId}/cities`,
-};
+  "getAllCountries": `${api}/countries`,
+  "getStates": (countryId: number) => `${api}/countries/${countryId}/states`,
+  "getCities": (stateId: number) => `${api}/states/${stateId}/cities`,
+  "getPartyProfile": (partyId: number, shortName: string) => `${api}/parties/${partyId}/${shortName}/profile`,
+}

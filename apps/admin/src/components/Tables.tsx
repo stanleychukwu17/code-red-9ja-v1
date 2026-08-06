@@ -117,7 +117,6 @@ export function OfficesTable({ items }: { items: OfficeType[] }) {
 }
 
 export function StatesTable({ items }: { items: StateType[] }) {
-  console.log("STATES:", items);
   return (
     <div>
       <StateTableHeader />
@@ -148,7 +147,6 @@ export function FederalConstituenciesTable({
 }: {
   items: FederalConstituencyType[];
 }) {
-  console.log({ FED: items });
   return (
     <div>
       <FederalConstituencyTableHeader />
@@ -166,7 +164,6 @@ export function StateConstituenciesTable({
 }: {
   items: StateConstituencyType[];
 }) {
-  console.log({ STATE: items });
 
   return (
     <div>
@@ -243,11 +240,12 @@ export function UsersTable({
 }
 
 export function PartiesTable({ items }: { items: PartyType[] }) {
+  const partyList = Array.isArray(items) ? items : [];
   return (
     <div className="w-full">
       <PartyTableHeader />
       <div>
-        {items.map((data) => (
+        {partyList.map((data) => (
           <PartyTableTile key={data.id || data.short_name} data={data} />
         ))}
       </div>

@@ -77,7 +77,7 @@ export const deleteParty = createServerFn({ method: "POST" })
   });
 
 export const getPresignedUploadURL = createServerFn({ method: "POST" })
-  .inputValidator((data: { original_name: string; mime_type: string; file_size: number; folder?: string; is_public?: boolean }) => data)
+  .inputValidator((data: { original_name: string; mime_type: string; file_size: number; folder?: string; is_public?: boolean; owner_id?: number }) => data)
   .handler(async ({ data }) => {
     try {
       const response = await apiFetch(API_URL.uploadUrl, {

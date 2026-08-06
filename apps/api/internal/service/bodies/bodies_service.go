@@ -23,6 +23,10 @@ func NewBodiesService(q *queries.Queries, rdb *redis.Client) *BodiesService {
 	}
 }
 
+func (s *BodiesService) GetOccupations(ctx context.Context) ([]queries.Occupation, error) {
+	return s.queries.GetOccupations(ctx)
+}
+
 // GetAllCountries retrieves a list of all countries, using a cached version if available.
 func (s *BodiesService) GetAllCountries(ctx context.Context) ([]queries.ListCountriesRow, error) {
 	type CountriesResponse struct {

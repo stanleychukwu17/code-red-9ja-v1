@@ -43,7 +43,7 @@ export const SelectCountry = ({
   );
 
   const { data, isLoading } = useQuery<CountriesResponse>({
-    queryKey: ["countries"],
+    queryKey: ["GetAllCountries"],
     queryFn: async () => {
       const res = await fetchCountries();
       if (res && res.success && res.data) return res;

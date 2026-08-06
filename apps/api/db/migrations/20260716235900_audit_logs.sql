@@ -9,7 +9,7 @@ CREATE TABLE audit_logs (
     action VARCHAR(50) NOT NULL, 
 
     -- WHO did it?
-    actor_id BIGINT NOT NULL REFERENCES users(id),
+    actor_id BIGINT NOT NULL,
     actor_role VARCHAR(50), 
     
     -- TO WHAT did they do it?
@@ -27,11 +27,8 @@ CREATE TABLE audit_logs (
 );
 
 CREATE INDEX idx_audit_logs_module ON audit_logs(module);
-CREATE INDEX idx_audit_logs_actor_id ON audit_logs(actor_id);
-CREATE INDEX idx_audit_logs_actor_role ON audit_logs(actor_role);
-CREATE INDEX idx_audit_logs_action ON audit_logs(action);
-CREATE INDEX idx_audit_logs_entity_type ON audit_logs(entity_type);
-CREATE INDEX idx_audit_logs_entity_id ON audit_logs(entity_id);
+CREATE INDEX idx_audit_logs_entity ON audit_logs(entity_type, entity_id);
+CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
 
 -- +goose Down
 DROP TABLE IF EXISTS audit_logs;

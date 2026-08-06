@@ -15,9 +15,10 @@ import {
   DialogPadding,
 } from "../dialog";
 import { Input } from "../input";
-import { useForm, useStore } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Plus, ChevronDown, Trash2 } from "lucide-react";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { Loader2, Plus, Trash2 } from "lucide-react";
 import { SelectGender } from "../selects/gender-select";
 import { SelectDate } from "../selects/date-select";
 import { SelectCountry } from "../selects/country-select";
@@ -68,6 +69,7 @@ export interface UserFormDialogProps {
       file_size: number;
       folder?: string;
       is_public?: boolean;
+      owner_id?: number;
     };
   }) => Promise<any>;
   confirmFileUpload: (args: {
@@ -76,10 +78,12 @@ export interface UserFormDialogProps {
   registerCandidate: (args: { data: any }) => Promise<any>;
   updateUser: (args: { data: any }) => Promise<any>;
   updateUserMoreInfo?: (args: { data: any }) => Promise<any>;
+  getUserMoreInfo?: (args: { data: any }) => Promise<any>;
   updateUserPhoneNumbers?: (args: { data: any }) => Promise<any>;
   deleteUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   loadUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   getOccupations?: () => Promise<any>;
+  deleteFile?: (args: { data: { id: string | number; user_fake_id?: string | number; type?: string } }) => Promise<any>;
 }
 
 export function UserFormDialog({
@@ -99,32 +103,35 @@ export function UserFormDialog({
   registerCandidate,
   updateUser,
   updateUserMoreInfo,
+  getUserMoreInfo,
   updateUserPhoneNumbers,
   deleteUserPhoneNumber,
   loadUserPhoneNumber,
   getOccupations,
+  deleteFile,
 }: UserFormDialogProps) {
   const [avatarUrl, setAvatarUrl] = React.useState("");
+  const [uploadedFileId, setUploadedFileId] = React.useState<number | null>(null);
+  const [selectedAvatarFile, setSelectedAvatarFile] = React.useState<File | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
+
   const [error, setError] = React.useState<string | null>(null);
-
-  // console.log(user)
-
-  const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">(
-    "basic",
-  );
+  const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">("basic");
   const [createdUser, setCreatedUser] = React.useState<UserResult | null>(null);
 
-  const activeUser = mode === "update" ? user : createdUser;
+  const activeUser = mode === "update" ? (user || createdUser) : createdUser;
 
+  // the avatar file input ref
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  // Mutation to handle the form submission.
+  // Saving of the user basic info.
   // Validates all required fields and calls either updateUser or registerCandidate based on the mode.
   const saveMutation = useMutation({
     mutationFn: async (values: any) => {
       if (!values.firstName) throw new Error("First name is required");
       if (!values.lastName) throw new Error("Last name is required");
+      if (!values.username) throw new Error("Username is required");
       if (!values.gender) throw new Error("Gender is required");
       if (!values.dateOfBirth) throw new Error("Date of birth is required");
       if (!values.residenceCountryId)
@@ -134,20 +141,81 @@ export function UserFormDialog({
       if (!values.originCountryId)
         throw new Error("Country of origin is required");
       if (!values.originStateId) throw new Error("State of origin is required");
+      if (mode === "create" && !values.email) throw new Error("Email is required");
+      if (mode === "create" && !values.password) throw new Error("Password is required");
 
-      const formattedDob = values.dateOfBirth.split("T")[0]; // formatted date of birth
+      // formatted date of birth
+      const formattedDob = values.dateOfBirth.split("T")[0];
+
+      // new avatar url and file id, fallback to user's current ones
+      let finalAvatarUrl = avatarUrl;
+      let finalFileId = uploadedFileId || (activeUser as any)?.avatar_file_id || undefined;
+
+      // if there is a new avatar file(i.e selectedAvatarFile), upload it
+      if (selectedAvatarFile) {
+        setIsUploading(true);
+
+        // user is changing avatar, so we need to delete the existing one
+        if (activeUser?.avatar_file_id && Number(activeUser.avatar_file_id) > 0) {
+          await handleRemoveImage("changing_avatar");
+        }
+
+        try {
+          // 1. Request a presigned URL from the API for uploading the avatar
+          const uploadRes = await getPresignedUploadURL({
+            data: {
+              original_name: selectedAvatarFile.name,
+              mime_type: selectedAvatarFile.type,
+              file_size: selectedAvatarFile.size,
+              folder: "avatars",
+              is_public: true,
+              owner_id: activeUser?.id ? Number(activeUser.id) : undefined,
+            },
+          });
+          if (!uploadRes.success || !uploadRes.data) throw new Error(uploadRes.message || "Failed to initiate file upload");
+
+          const { upload_url, public_url, file_id } = uploadRes.data;
+
+          // 2. Upload the file directly to R2 storage via the presigned URL
+          const putRes = await fetch(upload_url, {
+            method: "PUT",
+            headers: { "Content-Type": selectedAvatarFile.type },
+            body: selectedAvatarFile,
+          });
+
+          if (!putRes.ok) {
+            // Revert/reject the file confirmation in the DB if the upload failed
+            await confirmFileUpload({ data: { id: file_id, success: false } });
+            throw new Error("Failed to upload image file to storage");
+          }
+
+          // 3. Confirm successful upload with the backend to finalize the file status
+          await confirmFileUpload({ data: { id: file_id, success: true } });
+
+          finalAvatarUrl = public_url;
+          finalFileId = file_id;
+          setSelectedAvatarFile(null)
+          setAvatarUrl(public_url)
+          setUploadedFileId(file_id)
+        } finally {
+          setIsUploading(false);
+        }
+      }
 
       let res: any;
+      // if mode == "update", means updating an existing account, else creating a placeholder account
       if (mode === "update") {
         res = await updateUser({
           data: {
-            id: user.fake_id,
-            email: values.email.trim(),
+            id: activeUser?.fake_id,
+            email: values.email ? values.email.trim() : "",
+            username: values.username.trim(),
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
             gender: values.gender.toLowerCase(),
-            avatar: avatarUrl,
+            avatar: finalAvatarUrl,
+            avatar_file_id: finalFileId,
             current_country: Number(values.residenceCountryId),
             current_state: Number(values.residenceStateId),
             current_city: values.residenceCityId
@@ -160,8 +228,9 @@ export function UserFormDialog({
       } else {
         res = await registerCandidate({
           data: {
-            email: values.email.trim(),
+            email: values.email ? values.email.trim() : "",
             password: values.password,
+            username: values.username.trim(),
             first_name: values.firstName.trim(),
             last_name: values.lastName.trim(),
             middle_name: values.middleName.trim(),
@@ -174,65 +243,80 @@ export function UserFormDialog({
               : undefined,
             state_of_origin: Number(values.originStateId),
             party_id: values.partyId ? Number(values.partyId) : undefined,
-            avatar: avatarUrl,
+            avatar: finalAvatarUrl,
+            avatar_file_id: finalFileId,
           },
         });
       }
-
-      console.log("RESPONSE:", res);
 
       if (!res.success) {
         throw new Error(res.message || `Failed to ${mode} user`);
       }
 
-      return {
-        id: mode === "update" ? user?.id : res.data.id,
-        fake_id:
-          mode === "update" ? user?.fake_id || user?.fakeId : res.data.fake_id,
-        firstName: values.firstName.trim(),
-        lastName: values.lastName.trim(),
-        partyId: values.partyId,
-      };
+      return res
     },
-    onSuccess: async (data) => {
-      let partyLogo = "";
-      let partyShortNameVal = "";
-      try {
-        const partiesRes = await getParties();
-        if (partiesRes.success && partiesRes.data?.parties) {
-          const partyObj = partiesRes.data.parties.find(
-            (p: any) => Number(p.id) === Number(data.partyId),
+    onSuccess: async (res) => {
+      if (mode === "update") {
+        const updatedDetails = res.data?.updatedUserDetails;
+        if (updatedDetails) {
+          queryClient.setQueriesData(
+            { queryKey: ["users-list"] },
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                pages: oldData.pages.map((page: any) => {
+                  return {
+                    ...page,
+                    data: {
+                      ...page.data,
+                      users: page.data?.users?.map((u: any) =>
+                        u.fake_id === updatedDetails.fake_id ? updatedDetails : u
+                      ) || []
+                    }
+                  };
+                })
+              };
+            }
           );
-          if (partyObj) {
-            partyLogo = partyObj.logo;
-            partyShortNameVal = partyObj.short_name;
-          }
+
+          onSuccess?.(updatedDetails);
         }
-      } catch (err) {
-        console.error("Failed to load party details for callback", err);
-      }
 
-      const result: UserResult = {
-        id: data.id,
-        fake_id: data.fake_id,
-        first_name: `${data.firstName} ${data.lastName}`,
-        last_name: data.lastName,
-        party_logo: partyLogo,
-        party_short_name: partyShortNameVal,
-        party_id: data.partyId,
-        avatar_url: avatarUrl || undefined,
-      };
-
-      onSuccess?.(result);
-
-      if (mode === "create") {
-        setCreatedUser(result);
-        setActiveTab("more");
+        toast.success("User updated successfully");
+        onClose(); // closes the edit form
       } else {
-        onClose();
+        const newUser = res.data?.user;
+        if (newUser) {
+          queryClient.setQueriesData(
+            { queryKey: ["users-list"] },
+            (oldData: any) => {
+              if (!oldData) return oldData;
+              return {
+                ...oldData,
+                pages: oldData.pages.map((page: any, idx: number) => {
+                  if (idx === 0) {
+                    return {
+                      ...page,
+                      data: {
+                        ...page.data,
+                        users: [newUser, ...(page.data?.users || [])]
+                      }
+                    };
+                  }
+                  return page;
+                })
+              };
+            }
+          );
+
+          onClose()
+          setCreatedUser(newUser);
+        }
       }
     },
     onError: (err: any) => {
+      console.log("see error", err.message)
       setError(err.message || "Something went wrong. Please try again.");
     },
   });
@@ -243,9 +327,10 @@ export function UserFormDialog({
       firstName: "",
       lastName: "",
       middleName: "",
+      username: "",
       gender: "",
       dateOfBirth: "",
-      residenceCountryId: undefined as number | undefined,
+      residenceCountryId: 161 as number | undefined,
       residenceStateId: undefined as number | undefined,
       residenceCityId: undefined as number | undefined,
       originCountryId: 161 as number | undefined,
@@ -259,63 +344,69 @@ export function UserFormDialog({
     },
   });
 
+  // load political parties
+  const { data: partiesData } = useQuery({
+    queryKey: ["parties"],
+    queryFn: async () => {
+      const res = await getParties();
+      if (res && res.success && res.data) return res.data.parties;
+      return [];
+    },
+    staleTime: Infinity,
+    enabled: open && partyId === undefined && !!partyShortName,
+  });
+
   // Effect to automatically resolve the party ID if only a party short name was provided
   React.useEffect(() => {
-    const resolvePartyId = async () => {
-      if (open && partyId === undefined && partyShortName) {
-        try {
-          const partiesRes = await getParties();
-          if (partiesRes.success && partiesRes.data?.parties) {
-            const partyObj = partiesRes.data.parties.find(
-              (p: any) =>
-                p.short_name?.toLowerCase() === partyShortName.toLowerCase(),
-            );
-            if (partyObj) {
-              form.setFieldValue("partyId", partyObj.id);
-            }
-          }
-        } catch (err) {
-          console.error("Failed to resolve party ID from short name", err);
-        }
-      }
-    };
-    resolvePartyId();
-  }, [open, partyId, partyShortName, getParties]);
+    if (open && partyId === undefined && partyShortName && partiesData) {
+      const partyObj = partiesData.find((p: any) => {
+        return p.short_name?.toLowerCase() === partyShortName.toLowerCase();
+      });
+
+      // if party found, auto select the user party
+      if (partyObj) form.setFieldValue("partyId", partyObj.id);
+    }
+  }, [open, partyId, partyShortName, partiesData, form]);
 
   // Effect to initialize the form fields whenever the dialog opens.
   // It populates data for 'update' mode and resets fields for 'create' mode.
   React.useEffect(() => {
     if (open) {
-      const isPartyLocked =
-        partyId !== undefined || partyShortName !== undefined;
+      if (mode === "create") {
+        setCreatedUser(null);
+        setActiveTab("basic");
+      }
+      const isPartyLocked = partyId !== undefined || partyShortName !== undefined;
 
-      if (mode === "update" && user) {
-        form.setFieldValue("firstName", user.first_name || "");
-        form.setFieldValue("lastName", user.last_name || "");
-        form.setFieldValue("middleName", user.middle_name || "");
-        form.setFieldValue("gender", user.gender || "");
-        form.setFieldValue("dateOfBirth", user.date_of_birth || "");
-        form.setFieldValue("residenceCountryId", user.current_country);
-        form.setFieldValue("residenceStateId", user.current_state);
-        form.setFieldValue("residenceCityId", user.current_city || undefined);
+      if (mode === "update" && activeUser) {
+        form.setFieldValue("firstName", activeUser.first_name || "");
+        form.setFieldValue("lastName", activeUser.last_name || "");
+        form.setFieldValue("middleName", activeUser.middle_name || "");
+        form.setFieldValue("username", activeUser.username || "");
+        form.setFieldValue("gender", activeUser.gender || "");
+        form.setFieldValue("dateOfBirth", activeUser.date_of_birth || "");
+        form.setFieldValue("residenceCountryId", activeUser.current_country || 161);
+        form.setFieldValue("residenceStateId", activeUser.current_state);
+        form.setFieldValue("residenceCityId", activeUser.current_city || undefined);
         form.setFieldValue("originCountryId", 161);
-        form.setFieldValue("originStateId", user.state_of_origin || undefined);
+        form.setFieldValue("originStateId", activeUser.state_of_origin || undefined);
         form.setFieldValue(
-          "partyId",
-          isPartyLocked
-            ? (partyId ?? user.party_id)
-            : user.party_id || undefined,
+          "partyId", isPartyLocked ? (partyId ?? activeUser.party_id) : activeUser.party_id || undefined,
         );
-        form.setFieldValue("email", user.email || "");
+        // form.setFieldValue("email", activeUser.email || ""); // we replaced the userEmail from the backend with ---
+        form.setFieldValue("email", "");
         form.setFieldValue("password", "");
-        setAvatarUrl(user.avatar || "");
+        setAvatarUrl(activeUser.avatar || "");
+        setUploadedFileId((activeUser as any)?.avatar_file_id || undefined);
+        setSelectedAvatarFile(null);
       } else {
         form.setFieldValue("firstName", "");
         form.setFieldValue("lastName", "");
         form.setFieldValue("middleName", "");
+        form.setFieldValue("username", "");
         form.setFieldValue("gender", "");
         form.setFieldValue("dateOfBirth", "");
-        form.setFieldValue("residenceCountryId", undefined);
+        form.setFieldValue("residenceCountryId", 161);
         form.setFieldValue("residenceStateId", undefined);
         form.setFieldValue("residenceCityId", undefined);
         form.setFieldValue("originCountryId", 161);
@@ -324,72 +415,73 @@ export function UserFormDialog({
         form.setFieldValue("email", "");
         form.setFieldValue("password", "");
         setAvatarUrl("");
+        setUploadedFileId(null);
+        setSelectedAvatarFile(null);
       }
       setError(null);
     }
-  }, [open, mode, user, partyId, partyShortName]);
+  }, [
+    open,
+    mode,
+    activeUser,
+    partyId,
+    partyShortName,
+  ]);
 
+  // Trigger the file input click:
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
-  // Handles the profile image upload process:
-  // 1. Converts the selected image to WebP
-  // 2. Fetches a presigned upload URL
-  // 3. Uploads the file to the storage provider
+  // Handles the profile image selection process:
+  // 1. Converts the selected image to WebP for optimization
+  // 2. Saves it in local state (deferred upload until form save)
+  // 3. Generates a local preview URL for immediate UI feedback
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFile = e.target.files?.[0];
     if (!rawFile) return;
 
-    setIsUploading(true);
-    setError(null);
-
     try {
       const file = await convertToWebP(rawFile);
-
-      const res = await getPresignedUploadURL({
-        data: {
-          original_name: file.name,
-          mime_type: file.type,
-          file_size: file.size,
-          folder: "avatars",
-          is_public: true,
-        },
-      });
-
-      if (!res.success || !res.data) {
-        throw new Error(res.message || "Failed to initiate file upload");
-      }
-
-      const { upload_url, public_url, file_id } = res.data;
-
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": file.type,
-        },
-        body: file,
-      });
-
-      if (!putRes.ok) {
-        await confirmFileUpload({ data: { id: file_id, success: false } });
-        throw new Error("Failed to upload image file to storage");
-      }
-
-      await confirmFileUpload({ data: { id: file_id, success: true } });
-      setAvatarUrl(public_url);
+      setSelectedAvatarFile(file);
+      setAvatarUrl(URL.createObjectURL(file));
+      setError(null);
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || "An error occurred during file upload");
-    } finally {
-      setIsUploading(false);
+      setError(err.message || "Failed to process image");
     }
   };
 
-  const handleRemoveImage = () => {
-    setAvatarUrl("");
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+  const handleRemoveImage = async (which: "changing_avatar" | "removing_avatar") => {
+    if (uploadedFileId && uploadedFileId > 0 && deleteFile) {
+      try {
+        const res = await deleteFile({
+          data: {
+            id: uploadedFileId,
+            user_fake_id: activeUser?.fake_id,
+            type: "user_avatar",
+          }
+        });
+
+        if (!res.success) {
+          throw new Error(res.message || "Failed to delete file from server");
+        }
+      } catch (err: any) {
+        setError(err.message || "Failed to delete file from server");
+        return;
+      }
+    }
+
+    if (which === "removing_avatar") {
+      setAvatarUrl("");
+      setUploadedFileId(null);
+      setSelectedAvatarFile(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } else if (which === "changing_avatar") {
+      setAvatarUrl("");
+      setUploadedFileId(null);
     }
   };
 
@@ -478,13 +570,7 @@ export function UserFormDialog({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileChange}
-                        accept="image/*"
-                        className="hidden"
-                      />
+                      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                       <button
                         type="button"
                         onClick={handleUploadClick}
@@ -496,7 +582,7 @@ export function UserFormDialog({
                       {avatarUrl && (
                         <button
                           type="button"
-                          onClick={handleRemoveImage}
+                          onClick={() => handleRemoveImage("removing_avatar")}
                           className="h-10 px-4 text-[14px] text-red hover:bg-red-50 rounded-[10px] border border-[#dfdfdf] transition cursor-pointer"
                         >
                           Remove image
@@ -540,22 +626,50 @@ export function UserFormDialog({
                   </div>
                 </div>
 
-                {/* Other names */}
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-[14px] text-c-50">
-                    Other names (Optional)
-                  </label>
-                  <form.Field
-                    name="middleName"
-                    children={(field: any) => (
-                      <Input
-                        type="text"
-                        placeholder="Other names"
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                      />
-                    )}
-                  />
+                {/* Other names and Username */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[14px] text-c-50">
+                      Other names (Optional)
+                    </label>
+                    <form.Field
+                      name="middleName"
+                      children={(field: any) => (
+                        <Input
+                          type="text"
+                          placeholder="Other names"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                        />
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-[14px] text-c-50">Username</label>
+                    <form.Field
+                      name="username"
+                      validators={{
+                        onChange: ({ value }) => {
+                          if (!value) return undefined;
+                          const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/;
+                          if (!usernameRegex.test(value)) {
+                            return "Invalid username format";
+                          }
+                          return undefined;
+                        },
+                      }}
+                      children={(field: any) => (
+                        <Input
+                          type="text"
+                          placeholder="Username"
+                          value={field.state.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          errorMsg={field.state.meta.errors?.join(", ")}
+                        />
+                      )}
+                    />
+                  </div>
                 </div>
 
                 {/* Gender and DOB */}
@@ -725,39 +839,47 @@ export function UserFormDialog({
                   </div>
                 )}
 
-                {/* Email and Password */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[14px] text-c-50">Email</label>
-                    <form.Field
-                      name="email"
-                      children={(field: any) => (
-                        <Input
-                          type="email"
-                          placeholder="Enter email"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          errorMsg={field.state.meta.errors?.join(", ")}
-                        />
-                      )}
-                    />
+                {/* Email and Password (Only on Create) */}
+                {mode === "create" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[14px] text-c-50">Email</label>
+                      <form.Field
+                        name="email"
+                        validators={{
+                          onChange: ({ value }: any) => {
+                            if (!value) return "Email is required";
+                            return undefined;
+                          },
+                        }}
+                        children={(field: any) => (
+                          <Input
+                            type="email"
+                            placeholder="Enter email"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            errorMsg={field.state.meta.errors?.join(", ")}
+                          />
+                        )}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[14px] text-c-50">Password</label>
+                      <form.Field
+                        name="password"
+                        children={(field: any) => (
+                          <Input
+                            type="password"
+                            placeholder="Enter password"
+                            value={field.state.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            errorMsg={field.state.meta.errors?.join(", ")}
+                          />
+                        )}
+                      />
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-[14px] text-c-50">Password</label>
-                    <form.Field
-                      name="password"
-                      children={(field: any) => (
-                        <Input
-                          type="password"
-                          placeholder="Enter password"
-                          value={field.state.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          errorMsg={field.state.meta.errors?.join(", ")}
-                        />
-                      )}
-                    />
-                  </div>
-                </div>
+                )}
               </DialogPadding>
             </div>
             {error && (
@@ -784,11 +906,12 @@ export function UserFormDialog({
           <MoreInfoTab
             user={activeUser}
             updateUserMoreInfo={updateUserMoreInfo}
+            getUserMoreInfo={getUserMoreInfo}
             getOccupations={getOccupations}
             onClose={onClose}
             onSuccess={() => {
               if (mode === "create") setActiveTab("phones");
-              else onClose();
+              else if (onSuccess) onSuccess(activeUser);
             }}
           />
         )}
@@ -801,7 +924,7 @@ export function UserFormDialog({
             getAllCountries={getAllCountries}
             onClose={onClose}
             onSuccess={() => {
-              onClose();
+              if (onSuccess) onSuccess(activeUser);
             }}
           />
         )}
@@ -814,50 +937,106 @@ export function UserFormDialog({
 // SUB-COMPONENTS
 // =======================
 
-// The MoreInfoTab
-function MoreInfoTab({
-  user,
-  updateUserMoreInfo,
-  getOccupations,
-  onClose,
-  onSuccess,
-}: any) {
+// The MoreInfoTab component handles updating the user's secondary profile information,
+// including their occupation, educational status, and demographic details.
+function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations, onClose, onSuccess }: any) {
   const [error, setError] = React.useState<string | null>(null);
-  const [occupations, setOccupations] = React.useState<any[]>([]);
+  const queryClient = useQueryClient();
 
-  React.useEffect(() => {
-    if (getOccupations) {
-      getOccupations()
-        .then((res: any) => {
-          if (res?.success && res?.data) {
-            // Assuming data is an array of {id, name} or {data: {occupations}}
-            const list = res.data.occupations || res.data || [];
-            setOccupations(list);
-          }
-        })
-        .catch(console.error);
-    }
-  }, [getOccupations]);
+  // Fetch the list of available occupations from the API using React Query.
+  // This depends on the getOccupations function being passed as a prop.
+  const { data: occupationsData, isLoading: isLoadingOccupations } = useQuery({
+    queryKey: ["occupations"],
+    queryFn: async () => {
+      if (!getOccupations) return [];
+      const res = await getOccupations();
+      if (res?.success && res?.data) {
+        // Assuming data is an array of {id, name} or {data: {occupations}}
+        return res.data.occupations || res.data || [];
+      }
+      return [];
+    },
 
+    enabled: !!getOccupations,
+  });
+
+  const occupations = occupationsData || [];
+
+  // Group the flat list of occupations by their 'category' property
+  // to render them logically in the `<optgroup>` segments of the dropdown.
+  const groupedOccupations = React.useMemo(() => {
+    const groups = occupations.reduce((acc: any, o: any) => {
+      const category = o.category || "Other";
+
+      if (!acc[category]) acc[category] = [];
+      acc[category].push(o);
+      return acc;
+    }, {});
+
+    return Object.keys(groups).map((category) => ({
+      category,
+      items: groups[category],
+    }));
+  }, [occupations]);
+
+  // Fetch existing MoreInfo data from backend
+  const { data: serverMoreInfo } = useQuery({
+    queryKey: ["userMoreInfo", user?.fake_id],
+    queryFn: async () => {
+      if (!getUserMoreInfo || !user) return null;
+      const res = await getUserMoreInfo({ data: user.fake_id || user.id });
+
+      if (res?.success && res?.data) {
+        return res.data.more_info || res.data;
+      }
+      return null;
+    },
+    enabled: !!getUserMoreInfo && !!user,
+  });
+
+  // Combine server fetched more info with user.profile
+  const initialMoreInfo = React.useMemo(() => {
+    return {
+      ...(user?.profile || {}),
+      ...(serverMoreInfo || {})
+    };
+  }, [user?.profile, serverMoreInfo]);
+
+  // Initialize the TanStack form for the More Info tab, populating default values
+  // from the existing user profile if it's an update operation.
   const form = useForm({
     defaultValues: {
-      occupation_id: user?.profile?.occupation_id
-        ? String(user.profile.occupation_id)
-        : "",
-      educational_status: user?.profile?.educational_status || "",
-      highest_degree: user?.profile?.highest_degree || "",
-      graduation_year: user?.profile?.graduation_year || "",
-      school_name: user?.profile?.school_name || "",
-      religion: user?.profile?.religion || "",
-      marital_status: user?.profile?.marital_status || "",
-      education_level: user?.profile?.education_level || "",
-      address: user?.profile?.address || "",
+      occupation_id: initialMoreInfo.occupation_id ? String(initialMoreInfo.occupation_id) : "",
+      educational_status: initialMoreInfo.educational_status || "",
+      highest_degree: initialMoreInfo.highest_degree || "",
+      graduation_year: initialMoreInfo.graduation_year || "",
+      school_name: initialMoreInfo.school_name || "",
+      religion: initialMoreInfo.religion || "",
+      marital_status: initialMoreInfo.marital_status || "",
+      education_level: initialMoreInfo.education_level || "",
+      address: initialMoreInfo.address || "",
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
     },
   });
 
+  // Reinitialize form when data arrives
+  React.useEffect(() => {
+    if (serverMoreInfo) {
+      form.setFieldValue("occupation_id", serverMoreInfo.occupation_id ? String(serverMoreInfo.occupation_id) : "");
+      form.setFieldValue("educational_status", serverMoreInfo.educational_status || "");
+      form.setFieldValue("highest_degree", serverMoreInfo.highest_degree || "");
+      form.setFieldValue("graduation_year", serverMoreInfo.graduation_year || "");
+      form.setFieldValue("school_name", serverMoreInfo.school_name || "");
+      form.setFieldValue("religion", serverMoreInfo.religion || "");
+      form.setFieldValue("marital_status", serverMoreInfo.marital_status || "");
+      form.setFieldValue("education_level", serverMoreInfo.education_level || "");
+      form.setFieldValue("address", serverMoreInfo.address || "");
+    }
+  }, [serverMoreInfo, occupationsData, form]);
+
+  // saveMutation handles the API call to persist the updated additional info to the backend.
   const saveMutation = useMutation({
     mutationFn: async (values: any) => {
       if (!updateUserMoreInfo) {
@@ -873,19 +1052,22 @@ function MoreInfoTab({
         throw new Error(res?.message || "Failed to save profile");
       return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
+      if (data?.more_info) {
+        queryClient.setQueryData(["userMoreInfo", user?.fake_id], data.more_info);
+      }
+      toast.success("Additional info updated successfully!");
       onSuccess?.();
+      onClose();
     },
     onError: (err: any) => {
       setError(err.message || "An error occurred.");
     },
   });
 
-  const renderSelect = (
-    name: string,
-    label: string,
-    options: { label: string; value: string }[],
-  ) => (
+  // renderSelect is a utility function that abstracts the rendering logic for a standard
+  // select dropdown input within the form, handling the field state and change events.
+  const renderSelect = (name: string, label: string, options: { label: string, value: string }[]) => (
     <div className="flex flex-col gap-1.5">
       <label className="text-[14px] text-c-50">{label}</label>
       <form.Field
@@ -933,10 +1115,14 @@ function MoreInfoTab({
                     className="flex h-11 w-full rounded-[10px] border border-[#dfdfdf] bg-[#fdfdfd] px-4 text-[14px] text-black outline-none transition focus:border-black appearance-none"
                   >
                     <option value="">Select Occupation</option>
-                    {occupations.map((o: any) => (
-                      <option key={o.id} value={o.id}>
-                        {o.name || o.title}
-                      </option>
+                    {groupedOccupations.map((group: any) => (
+                      <optgroup key={group.category} label={group.category}>
+                        {group.items.map((o: any) => (
+                          <option key={o.id} value={o.id}>
+                            {o.name || o.title}
+                          </option>
+                        ))}
+                      </optgroup>
                     ))}
                   </select>
                 )}
@@ -1072,14 +1258,11 @@ function PhoneNumbersTab({
   const [residentCountryPhoneCode, setResidentCountryPhoneCode] =
     React.useState<string | null>(null);
   const userCountry = user.current_country;
+  const queryClient = useQueryClient();
 
   // Fetch phone numbers asynchronously when the tab mounts.
   // The query uses fake_id (or id as fallback) as the unique query key identifier.
-  const {
-    data: userPhoneNumbers,
-    isLoading,
-    refetch,
-  } = useQuery({
+  const { data: userPhoneNumbers, isLoading, refetch, error: queryError } = useQuery({
     queryKey: ["user-phonenumbers", user?.fake_id],
 
     // query function that fetches the number
@@ -1098,11 +1281,16 @@ function PhoneNumbersTab({
 
     // disable refresh
     staleTime: Infinity,
+    retry: (failureCount, error) => {
+      // Do not retry if the error is a permission/forbidden error
+      if (error.message.includes("Forbidden")) return false;
+      return failureCount < 3;
+    },
   });
 
   // Fetch all countries to be able to extract the user current country international phone code
   const { data: loadedCountries, isLoading: isCountriesLoading } = useQuery({
-    queryKey: ["countries"],
+    queryKey: ["GetAllCountries"],
     queryFn: async () => {
       if (!getAllCountries) return null;
       const res = await getAllCountries();
@@ -1156,36 +1344,46 @@ function PhoneNumbersTab({
   });
 
   // Remove phone number
-  const handleRemovePhoneNumber = async (
-    index: number,
-    phoneObj: any,
-    field: any,
-  ) => {
-    console.log("delete number");
-    return;
-    // If the phone object has a valid ID (> 0), it is already saved on the server.
-    // We must call the backend API to physically delete it from the database.
+  const handleRemovePhoneNumber = async (index: number, phoneObj: any, field: any) => {
+    setError(null);
+
     if (phoneObj.id && Number(phoneObj.id) > 0) {
+      // Ensure the user cannot delete an active phone number before calling the backend
+      if (phoneObj.is_default === true || phoneObj.is_default?.Bool === true) {
+        setError("Cannot delete an active phone number");
+        return;
+      }
+
       if (deleteUserPhoneNumber) {
         try {
-          const res = await deleteUserPhoneNumber({
-            data: { id: phoneObj.id },
-          });
-          if (res && res.success === false) {
-            console.error("Failed to delete phone number:", res.message);
+          const res = await deleteUserPhoneNumber({ data: { id: phoneObj.id, user_fid: user.fake_id } });
+          if (!res.success) {
+            setError(res.message || "Failed to delete phone number");
+            return;
+          } else if (res.data?.phones) {
+            // Update the tanstack query cache with the freshly returned phones list
+            queryClient.setQueryData(["user-phonenumbers", user?.fake_id], res.data.phones);
+
+            // Sync the local form state with the latest from the server
+            field.handleChange(res.data.phones);
+
+            // toast on successful deletion
+            toast.success("Phone number deleted successfully");
           }
-        } catch (error) {
-          console.error("Error deleting phone number:", error);
+        } catch (error: any) {
+          setError(error.message || "Error deleting phone number");
+          return;
         }
       } else {
-        console.warn("deleteUserPhoneNumber function is not provided");
+        setError("deleteUserPhoneNumber function is not provided");
+        return;
       }
+    } else {
+      // For unsaved rows (id <= 0), simply remove it from the local form state slice
+      const newPhones = [...field.state.value];
+      newPhones.splice(index, 1);
+      field.handleChange(newPhones);
     }
-
-    // Always remove the row from the local form state so the UI updates instantly
-    const newPhones = [...field.state.value];
-    newPhones.splice(index, 1);
-    field.handleChange(newPhones);
   };
 
   // mutation for saving phone numbers back to the server
@@ -1211,8 +1409,9 @@ function PhoneNumbersTab({
         throw new Error(res?.message || "Failed to save phone numbers");
       return res.data;
     },
-    onSuccess: () => {
-      refetch();
+    onSuccess: (response) => {
+      queryClient.setQueryData(["user-phonenumbers", user?.fake_id], response?.phones || []);
+      toast.success("Phone numbers updated successfully");
       onSuccess?.();
     },
     onError: (err: any) => {
@@ -1247,7 +1446,7 @@ function PhoneNumbersTab({
     >
       <div className="flex-1 overflow-y-auto min-h-0">
         <DialogPadding className="space-y-6 pb-6 pt-4">
-          <TinyError error={error} />
+          <TinyError error={error || (queryError as Error)?.message} />
 
           <div className="flex flex-col gap-4">
             <form.Field
