@@ -8,8 +8,7 @@ import {
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
-import { Pencil, Target } from "lucide-react";
-import { Pencil, Award } from "lucide-react";
+import { Pencil, Target, Award } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { DeleteAlertDialog } from "../alerts/delete-alert";
 import { PartyFormDialog } from "../dialogs/PartyFormDialog";
@@ -121,8 +120,13 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
       <TargetFormDialog
         open={openTargetDialog}
         onClose={() => setOpenTargetDialog(false)}
-        onSubmit={(values) => {
+        partyId={data.id}
+        fetchTargets={async () => null}
+        updateTargets={async (partyId, values) => {
           console.log("Targets submitted", values);
+          return { success: true };
+        }}
+        onSuccess={() => {
           setOpenTargetDialog(false);
         }}
       />
