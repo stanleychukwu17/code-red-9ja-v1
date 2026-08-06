@@ -321,7 +321,7 @@ type GetUsersData struct {
 // @Description  Fetches the list of all registered users with role filtering and cursor-based pagination
 // @Tags         Users
 // @Produce      json
-// @Param        role    query     string  false  "Role (admin, party_admin, user)"
+// @Param        roles   query     string  false  "Roles (admin, party_admin, user, etc. comma-separated)"
 // @Param        limit   query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor  query     string  false  "Cursor (ID of last record)"
 // @Success      200     {object}  GetUsersResponse
@@ -330,7 +330,6 @@ type GetUsersData struct {
 // @Router       /users [get]
 func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	// 1. Parse URL query parameters for filtering and pagination
-	role := r.URL.Query().Get("role")     // filter by one role
 	roles := r.URL.Query().Get("roles")   // filter by multiple roles
 	search := r.URL.Query().Get("search") // filter by search query
 
@@ -348,8 +347,6 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	var roleSlice []string
 	if roles != "" {
 		roleSlice = strings.Split(roles, ",")
-	} else if role != "" {
-		roleSlice = strings.Split(role, ",")
 	}
 
 	var accountStatusSlice []string
