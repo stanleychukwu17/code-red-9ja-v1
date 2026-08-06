@@ -32,8 +32,6 @@ function RouteComponent() {
     staleTime: Infinity
   });
 
-  console.log(parties)
-
   // Dialog state for creating a new party
   const [createDialogOpen, setCreateDialogOpen] = React.useState(false);
 
