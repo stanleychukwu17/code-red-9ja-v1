@@ -10,7 +10,7 @@ RETURNING *;
 
 -- name: RemovePageVerification :exec
 DELETE FROM pages_verified
-WHERE page_type = $1 AND page_id = $2 AND verification_type_id = $3;
+WHERE id = $1 AND page_type = $2 AND page_id = $3 AND verification_type_id = $4;
 
 -- name: CheckIfPageHasAnyVerification :one
 SELECT EXISTS(
@@ -30,7 +30,12 @@ SELECT
   pvt.verification_type,
   pvt.verification_title,
   pvt.verification_description,
-  pvt.badge
+  pvt.is_admin_assignable,
+  pvt.for_who
 FROM pages_verified pv
 JOIN page_verification_types pvt ON pv.verification_type_id = pvt.id
 WHERE pv.page_type = $1 AND pv.page_id = $2;
+
+-- name: GetPageVerificationType :one
+SELECT * FROM page_verification_types
+WHERE id = $1 LIMIT 1;

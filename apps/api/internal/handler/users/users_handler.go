@@ -22,8 +22,9 @@ import (
 // UsersService interface defines the methods needed from the users service
 type UsersService interface {
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
+	GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
-	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
+	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error
@@ -42,6 +43,7 @@ type UsersService interface {
 
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error)
 	DeleteUserPhoneNumber(ctx context.Context, id int64) error
+	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -49,6 +51,7 @@ type BodiesService interface {
 	CheckCountry(ctx context.Context, country_id int16) (queries.GetCountryByIDRow, error)
 	CheckState(ctx context.Context, country_id, state_id int16) (queries.GetStateByIDRow, error)
 	CheckCity(ctx context.Context, state_id int16, city_id int32) (queries.GetCityByIDRow, error)
+	GetLocationNames(ctx context.Context, countryID, stateID int16, cityID int32) (string, string, string)
 }
 
 // Handler holds dependencies for the users handler
@@ -73,58 +76,57 @@ func NewHandler(usersService UsersService, auditService audit.AuditService, bodi
 
 // UserResponse represents the sanitized user profile details returned to the frontend
 type UserResponse struct {
-	ID                 int64    `json:"id"`
-	FakeID             int64    `json:"fake_id"`
-	Email              string   `json:"email"`
-	Avatar             string   `json:"avatar"`
-	Phone              string   `json:"phone"`
-	Username           string   `json:"username"`
-	LastName           string   `json:"last_name"`
-	FirstName          string   `json:"first_name"`
-	MiddleName         string   `json:"middle_name"`
-	Gender             string   `json:"gender"`
-	DateOfBirth        string   `json:"date_of_birth"`
-	CurrentCountry     int16    `json:"current_country"`
-	CurrentState       int16    `json:"current_state"`
-	CurrentCity        int32    `json:"current_city"`
-	CurrentLga         int32    `json:"current_lga"`
-	CurrentWard        int32    `json:"current_ward"`
-	StateOfOrigin      int16    `json:"state_of_origin"`
-	NinVerified        bool     `json:"nin_verified"`
-	PhoneVerified      bool     `json:"phone_verified"`
-	EmailVerified      bool     `json:"email_verified"`
-	VotersCardVerified bool     `json:"voters_card_verified"`
-	Roles              []string `json:"roles"`
-	AccountStatus      string   `json:"account_status"`
-	PartyID            int64    `json:"party_id,omitempty"`
-	PollingUnitID      int64    `json:"polling_unit_id,omitempty"`
-	CreatedAt          string   `json:"created_at"`
-	UpdatedAt          string   `json:"updated_at"`
-	WhatsappPhone      string   `json:"whatsapp_phone"`
-	DataPhone          string   `json:"data_phone"`
-	EducationalStatus  string   `json:"educational_status"`
-	HighestDegree      string   `json:"highest_degree"`
-	GraduationYear     string   `json:"graduation_year"`
-	SchoolName         string   `json:"school_name"`
-	BankAccountNumber  string   `json:"bank_account_number"`
-	BankCode           string   `json:"bank_code"`
-	VotersCardImage    string   `json:"voters_card_image"`
-	Address            string   `json:"address"`
-	Religion           string   `json:"religion"`
-	MaritalStatus      string   `json:"marital_status"`
-	EducationLevel     string   `json:"education_level"`
-	CountryName        string   `json:"country_name,omitempty"`
-	StateName          string   `json:"state_name,omitempty"`
-	CityName           string   `json:"city_name,omitempty"`
+	ID                 int64                             `json:"id"`
+	FakeID             int64                             `json:"fake_id"`
+	Email              string                            `json:"email"`
+	Avatar             string                            `json:"avatar"`
+	Phone              string                            `json:"phone"`
+	Username           string                            `json:"username"`
+	LastName           string                            `json:"last_name"`
+	FirstName          string                            `json:"first_name"`
+	MiddleName         string                            `json:"middle_name"`
+	Gender             string                            `json:"gender"`
+	DateOfBirth        string                            `json:"date_of_birth"`
+	CurrentCountry     int16                             `json:"current_country"`
+	CurrentState       int16                             `json:"current_state"`
+	CurrentCity        int32                             `json:"current_city"`
+	CurrentLga         int32                             `json:"current_lga"`
+	CurrentWard        int32                             `json:"current_ward"`
+	StateOfOrigin      int16                             `json:"state_of_origin"`
+	NinVerified        bool                              `json:"nin_verified"`
+	PhoneVerified      bool                              `json:"phone_verified"`
+	EmailVerified      bool                              `json:"email_verified"`
+	VotersCardVerified bool                              `json:"voters_card_verified"`
+	IsPolitician       bool                              `json:"is_politician"`
+	IsVerified         bool                              `json:"is_verified"`
+	Verifications      []queries.GetPageVerificationsRow `json:"verifications,omitempty"`
+	Roles              []string                          `json:"roles"`
+	AccountStatus      string                            `json:"account_status"`
+	PartyID            int64                             `json:"party_id,omitempty"`
+	PollingUnitID      int64                             `json:"polling_unit_id,omitempty"`
+	CreatedAt          string                            `json:"created_at"`
+	UpdatedAt          string                            `json:"updated_at"`
+	WhatsappPhone      string                            `json:"whatsapp_phone"`
+	DataPhone          string                            `json:"data_phone"`
+	EducationalStatus  string                            `json:"educational_status"`
+	HighestDegree      string                            `json:"highest_degree"`
+	GraduationYear     string                            `json:"graduation_year"`
+	SchoolName         string                            `json:"school_name"`
+	Address            string                            `json:"address"`
+	Religion           string                            `json:"religion"`
+	MaritalStatus      string                            `json:"marital_status"`
+	EducationLevel     string                            `json:"education_level"`
+	CountryName        string                            `json:"country_name,omitempty"`
+	StateName          string                            `json:"state_name,omitempty"`
+	CityName           string                            `json:"city_name,omitempty"`
 }
 
 func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *queries.UserVerification, uRoles []queries.GetUserRolesRow) UserResponse {
-	var email, avatar, phone, username, lastName, firstName, middleName, gender string
+	var avatar, username, lastName, firstName, middleName, gender string
 	var dateOfBirth, accountStatus string
 	var ninVerified, phoneVerified, emailVerified, votersCardVerified bool
 	var whatsappPhone, dataPhone, educationalStatus, highestDegree, graduationYear, schoolName string
-	var bankAccountNumber, bankCode, votersCardImage, address string
-	var religion, maritalStatus, educationLevel string
+	var address, religion, maritalStatus, educationLevel string
 	var partyID, pollingUnitID int64
 	var cityID, lgaID, wardID int32
 	var stateOfOrigin int16
@@ -134,14 +136,8 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 		roles = append(roles, r.Code)
 	}
 
-	if u.Email.Valid {
-		email = u.Email.String
-	}
 	if u.Avatar.Valid {
 		avatar = u.Avatar.String
-	}
-	if u.Phone.Valid {
-		phone = u.Phone.String
 	}
 	if u.Username.Valid {
 		username = u.Username.String
@@ -228,22 +224,11 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 			address = p.Address.String
 		}
 	}
-	if u.BankAccountNumber.Valid {
-		bankAccountNumber = u.BankAccountNumber.String
-	}
-	if u.BankCode.Valid {
-		bankCode = u.BankCode.String
-	}
-	if u.VotersCardImage.Valid {
-		votersCardImage = u.VotersCardImage.String
-	}
 
 	return UserResponse{
 		ID:                 u.ID,
 		FakeID:             u.FakeID.Int64,
-		Email:              email,
 		Avatar:             avatar,
-		Phone:              phone,
 		Username:           username,
 		LastName:           lastName,
 		FirstName:          firstName,
@@ -272,9 +257,9 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 		HighestDegree:      highestDegree,
 		GraduationYear:     graduationYear,
 		SchoolName:         schoolName,
-		BankAccountNumber:  bankAccountNumber,
-		BankCode:           bankCode,
-		VotersCardImage:    votersCardImage,
+		IsPolitician:       u.User.IsPolitician.Bool,
+		IsVerified:         u.User.IsVerified.Bool,
+		Verifications:      u.Verifications,
 		Address:            address,
 		Religion:           religion,
 		MaritalStatus:      maritalStatus,
@@ -282,16 +267,15 @@ func mapUserToResponse(u queries.UserWithPlaces, p *queries.UserMoreInfo, v *que
 	}
 }
 
-func mapListUserRowToResponse(u queries.ListUsersRow, uRoles []queries.GetUserRolesRow) UserResponse {
+func mapListUserRowToResponse(u queries.UserWithPlaces) UserResponse {
 	var roles []string
-	for _, r := range uRoles {
+	for _, r := range u.Roles {
 		roles = append(roles, r.Code)
 	}
 
 	return UserResponse{
 		ID:             u.ID,
 		FakeID:         u.FakeID.Int64,
-		Email:          u.Email.String,
 		Username:       u.Username.String,
 		Avatar:         u.Avatar.String,
 		FirstName:      u.FirstName.String,
@@ -307,6 +291,12 @@ func mapListUserRowToResponse(u queries.ListUsersRow, uRoles []queries.GetUserRo
 		AccountStatus:  u.AccountStatus.String,
 		PartyID:        int64(u.PartyID.Int16),
 		CreatedAt:      u.CreatedAt.Time.Format(time.RFC3339),
+		IsPolitician:   u.IsPolitician.Bool,
+		IsVerified:     u.IsVerified.Bool,
+		Verifications:  u.Verifications,
+		CountryName:    u.CountryName,
+		StateName:      u.StateName,
+		CityName:       u.CityName,
 	}
 }
 
@@ -375,9 +365,8 @@ func (h *Handler) ValidateBankAccount(w http.ResponseWriter, r *http.Request) {
 // @Security     BearerAuth
 // @Router       /users/me [get]
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -423,9 +412,8 @@ type UpdateProfileRequest struct {
 // @Security     BearerAuth
 // @Router       /users/profile [put]
 func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -542,10 +530,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 
 	var partyID int64
 	// 2. Retrieve JWT claims from the request context
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -600,45 +586,36 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hasMore := false
-	nextCursor := ""
+	hasMore := false // are there more users than the limit?
+	nextCursor := "" // cursor is the last user returned from this fetch
 
 	if len(paginatedUsers) == limit && len(paginatedUsers) > 0 {
 		hasMore = true
 		nextCursor = strconv.FormatInt(paginatedUsers[len(paginatedUsers)-1].ID, 10)
 	}
 
-	responses := make([]UserResponse, len(paginatedUsers))
-	for i, u := range paginatedUsers {
-		uRoles, _ := h.usersService.GetUserRoles(r.Context(), u.ID)
-
-		countryName := ""
-		stateName := ""
-		cityName := ""
-
-		countryData, err := h.bodiesService.CheckCountry(r.Context(), u.CurrentCountry)
-		if err == nil {
-			countryName = countryData.Name
+	// Collect fake_ids for bulk fetching
+	fakeIDs := make([]int64, 0, len(paginatedUsers))
+	for _, u := range paginatedUsers {
+		if u.FakeID.Valid {
+			fakeIDs = append(fakeIDs, u.FakeID.Int64)
 		}
+	}
 
-		stateData, err := h.bodiesService.CheckState(r.Context(), u.CurrentCountry, u.CurrentState)
-		if err == nil {
-			stateName = stateData.Name
+	// Fetch users efficiently via MGET + concurrent DB queries
+	fullUsers, err := h.usersService.GetUsersByFakeIDs(r.Context(), fakeIDs)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch detailed user profiles: "+err.Error())
+		return
+	}
+
+	responses := make([]UserResponse, 0, len(fullUsers))
+	for _, fullUser := range fullUsers {
+		// Only map non-empty user structs (in case of an error for a specific user, though we returned the error above)
+		if fullUser.User.ID > 0 {
+			res := mapListUserRowToResponse(fullUser)
+			responses = append(responses, res)
 		}
-
-		if u.CurrentCity.Int32 > 0 {
-			cityData, err := h.bodiesService.CheckCity(r.Context(), u.CurrentState, u.CurrentCity.Int32)
-			if err == nil {
-				cityName = cityData.Name
-			}
-		}
-
-		res := mapListUserRowToResponse(u, uRoles)
-		res.CountryName = countryName
-		res.StateName = stateName
-		res.CityName = cityName
-
-		responses[i] = res
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Users retrieved successfully", map[string]interface{}{
@@ -653,9 +630,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 // DeleteUser handles DELETE /api/v1/admin/users/{id}
 func (h *Handler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	// Extract the user's JWT claims from the request context to identify the requester
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -739,9 +715,8 @@ type AdminUpdateUserRequest struct {
 // AdminUpdateUser handles PUT /api/v1/admin/users/{id}
 func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	// Extract the user's JWT claims from the request context
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: claims not found")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 
@@ -866,8 +841,6 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			EntityID:   strconv.FormatInt(user.ID, 10),
 			OldValues:  oldValuesJSON,
 			NewValues:  newValuesJSON,
-			IpAddress:  audit.ParseIP(r.RemoteAddr),
-			UserAgent:  audit.StringToText(r.UserAgent()),
 		})
 	}
 	// ---------------------

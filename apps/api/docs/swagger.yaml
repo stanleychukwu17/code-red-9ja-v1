@@ -394,10 +394,6 @@ definitions:
         type: string
       avatar:
         type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
       current_city:
         type: integer
       current_country:
@@ -461,6 +457,8 @@ definitions:
     type: object
   authservice.SeedUserRequest:
     properties:
+      account_status:
+        type: string
       avatar:
         type: string
       current_city:
@@ -494,6 +492,8 @@ definitions:
       middle_name:
         type: string
       occupation_id:
+        type: integer
+      party_id:
         type: integer
       password:
         type: string
@@ -914,6 +914,22 @@ definitions:
       scope:
         type: string
     type: object
+  pageverificationshandler.AssignVerificationRequest:
+    properties:
+      for_who:
+        type: string
+      page_id:
+        type: integer
+      verification_type_ids:
+        items:
+          type: integer
+        minItems: 1
+        type: array
+    required:
+    - for_who
+    - page_id
+    - verification_type_ids
+    type: object
   partieshandler.BuySlotsRequest:
     properties:
       quantity:
@@ -1092,10 +1108,6 @@ definitions:
         type: string
       avatar:
         type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
       current_city:
         type: integer
       current_country:
@@ -1181,6 +1193,66 @@ definitions:
         type: string
       valid:
         type: boolean
+    type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Text:
+    properties:
+      string:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  pgtype.Timestamptz:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  polling_unit_results.ReviewRequest:
+    properties:
+      disputed_reason:
+        type: string
+      status:
+        description: '"confirmed" or "nullified"'
+        type: string
+    type: object
+  polling_unit_results.SubmitResultRequest:
+    properties:
+      assignment_id:
+        type: integer
+      election_group_id:
+        type: integer
+      election_id:
+        type: integer
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      result_sheet_image_url:
+        type: string
+      result_sheet_video_url:
+        type: string
+      uploaded_by_inec:
+        type: boolean
+    type: object
+  polling_unit_results.VoteRequest:
+    properties:
+      vote_type:
+        description: '"up" or "down"'
+        type: string
     type: object
   polling_unit_updates.CreateUpdateRequest:
     properties:
@@ -1408,6 +1480,29 @@ definitions:
         type: string
       election_started_video_url:
         type: string
+    type: object
+  queries.GetPageVerificationsRow:
+    properties:
+      for_who:
+        type: string
+      id:
+        type: integer
+      is_admin_assignable:
+        type: boolean
+      page_id:
+        type: integer
+      page_type:
+        type: string
+      verification_description:
+        $ref: '#/definitions/pgtype.Text'
+      verification_title:
+        type: string
+      verification_type:
+        type: string
+      verification_type_id:
+        type: integer
+      verified_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
     type: object
   queries.GetPartyBasicInfoRow:
     properties:
@@ -1672,10 +1767,6 @@ definitions:
         type: string
       avatar:
         type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
       city_name:
         type: string
       country_name:
@@ -1716,6 +1807,10 @@ definitions:
         type: string
       id:
         type: integer
+      is_politician:
+        type: boolean
+      is_verified:
+        type: boolean
       last_name:
         type: string
       marital_status:
@@ -1748,8 +1843,10 @@ definitions:
         type: string
       username:
         type: string
-      voters_card_image:
-        type: string
+      verifications:
+        items:
+          $ref: '#/definitions/queries.GetPageVerificationsRow'
+        type: array
       voters_card_verified:
         type: boolean
       whatsapp_phone:
@@ -2141,7 +2238,86 @@ paths:
       tags:
       - Marketing
   /auth/admin/login:
+  /admin/verifications:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a verification from a page
+      parameters:
+      - description: Page Type
+        in: query
+        name: page_type
+        required: true
+        type: string
+      - description: Page ID
+        in: query
+        name: page_id
+        required: true
+        type: integer
+      - description: Verification Type ID
+        in: query
+        name: verification_type_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification removed successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to remove verification
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Remove a verification from a page
+      tags:
+      - Page Verifications
     post:
+      consumes:
+      - application/json
+      description: Assign multiple verifications to a page
+      parameters:
+      - description: Assign Verification request payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/pageverificationshandler.AssignVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verifications assigned successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to assign verifications
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Assign verifications to a page
+      tags:
+      - Page Verifications
+  /api/v1/supervisor-assignments:
+    get:
       consumes:
       - application/json
       description: Authenticates an admin and returns access and refresh tokens
@@ -7018,6 +7194,64 @@ paths:
       summary: Provision missing wallets for users
       tags:
       - Users
+  /verifications/{pageType}/{pageID}:
+    get:
+      consumes:
+      - application/json
+      description: Get verifications for a page
+      parameters:
+      - description: Page Type
+        in: path
+        name: pageType
+        required: true
+        type: string
+      - description: Page ID
+        in: path
+        name: pageID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verifications fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid page ID
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch verifications
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get verifications for a page
+      tags:
+      - Page Verifications
+  /verifications/types:
+    get:
+      consumes:
+      - application/json
+      description: List verification types
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification types fetched successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to fetch verification types
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List verification types
+      tags:
+      - Page Verifications
   /wards:
     get:
       consumes:

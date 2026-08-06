@@ -22,11 +22,9 @@ SET
   current_state = $6,
   current_lga = $7,
   current_city = $8,
-  bank_account_number = $9,
-  bank_code = $10,
-  whatsapp_phone = $11,
-  data_phone = $12,
-  current_ward = $13,
+  whatsapp_phone = $9,
+  data_phone = $10,
+  current_ward = $11,
   phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
   polling_unit_id = sqlc.arg(polling_unit_id),
   address = COALESCE(NULLIF(sqlc.arg(address)::varchar, ''), address),
@@ -60,8 +58,8 @@ SELECT
   u.current_state,
   u.current_lga,
   u.current_city,
-  u.bank_account_number,
-  u.bank_code,
+  uba.account_number AS bank_account_number,
+  uba.bank_code AS bank_code,
   u.whatsapp_phone,
   u.data_phone,
   up.educational_status,
@@ -101,6 +99,7 @@ LEFT JOIN c_states st ON u.current_state = st.id
 LEFT JOIN lgas lg ON u.current_lga = lg.id
 LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
+LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
   (sqlc.arg(user_id)::bigint = 0 OR pa.user_id = sqlc.arg(user_id)) AND
   (sqlc.arg(party_id)::smallint = 0 OR pa.party_id = sqlc.arg(party_id)) AND

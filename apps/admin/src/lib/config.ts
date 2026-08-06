@@ -182,6 +182,8 @@ export const API_URL = {
     `${api}/admin/users/phones/${id}`,
   users: `${api}/users`,
   recalculateBodies: `${api}/bodies/recalculate`,
+  verificationTypes: `${api}/verifications/types`,
+  adminVerifications: `${api}/admin/verifications`,
   systemSettings: {
     get: (key: string) => `${api}/admin/settings/${key}`,
     update: (key: string) => `${api}/admin/settings/${key}`,

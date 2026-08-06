@@ -14,6 +14,7 @@ SELECT id, short_name, name, logo FROM parties WHERE id = $1 LIMIT 1;
 
 -- name: ListParties :many
 SELECT * FROM parties
+WHERE status = 'active'
 ORDER BY display_order ASC, name ASC;
 
 -- name: ListAcceptingParties :many

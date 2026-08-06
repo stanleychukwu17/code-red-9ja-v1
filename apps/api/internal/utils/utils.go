@@ -64,6 +64,24 @@ func (u *Utils) RespondSuccess(w http.ResponseWriter, statusCode int, message st
 	u.RespondJSON(w, statusCode, res)
 }
 
+// CheckRoles checks if the request context contains valid JWT claims using the provided claimsKey,
+// and verifies if the user has any of the specified roles. If any check fails, it writes an error
+// response using RespondError and returns false. If successful, it returns the claims and true.
+func (u *Utils) CheckRoles(r *http.Request, w http.ResponseWriter, claimsKey interface{}, roles ...string) (*JWTClaims, bool) {
+	claims, ok := r.Context().Value(claimsKey).(*JWTClaims)
+	if !ok || claims == nil {
+		u.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return nil, false
+	}
+
+	if len(roles) > 0 && !claims.HasAnyRole(roles...) {
+		u.RespondError(w, http.StatusForbidden, "Forbidden")
+		return nil, false
+	}
+
+	return claims, true
+}
+
 // SuccessResponse represents a generic success response structure for API documentation.
 type SuccessResponse struct {
 	Success bool                   `json:"success" example:"true"`

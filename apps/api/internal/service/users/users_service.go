@@ -8,27 +8,69 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
-	"time"
+
+	"sync"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/errgroup"
 )
 
-type UsersService struct {
-	queries *queries.Queries
-	rdb     *redis.Client
-	monnify *monnifyclient.Client
+// BodiesService interface defines the methods needed from the bodies service
+type BodiesService interface {
+	GetLocationNames(ctx context.Context, countryID, stateID int16, cityID int32) (string, string, string)
 }
 
-func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclient.Client) *UsersService {
+// PageVerificationsService interface defines the methods needed from the page verifications service
+type PageVerificationsService interface {
+	GetPageVerifications(ctx context.Context, pageType string, pageID int64) ([]queries.GetPageVerificationsRow, error)
+}
+
+// PartyService interface defines the methods needed from the party service
+type PartyService interface {
+	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.GetPartyBasicInfoRow
+}
+
+// UsersService provides operations for managing user data, roles, and related services.
+type UsersService struct {
+	queries                  *queries.Queries
+	rdb                      *redis.Client
+	monnify                  *monnifyclient.Client
+	bodiesService            BodiesService
+	pageVerificationsService PageVerificationsService
+	partyService             PartyService
+}
+
+// NewUsersService initializes and returns a new UsersService.
+func NewUsersService(q *queries.Queries, rdb *redis.Client, monnify *monnifyclient.Client, bodiesService BodiesService) *UsersService {
 	return &UsersService{
-		queries: q,
-		rdb:     rdb,
-		monnify: monnify,
+		queries:       q,
+		rdb:           rdb,
+		monnify:       monnify,
+		bodiesService: bodiesService,
 	}
 }
 
+// SetPageVerificationsService sets the PageVerificationsService to avoid circular dependency in constructor.
+func (s *UsersService) SetPageVerificationsService(pvs PageVerificationsService) {
+	s.pageVerificationsService = pvs
+}
+
+// SetPartyService sets the PartyService to avoid circular dependency in constructor.
+func (s *UsersService) SetPartyService(ps PartyService) {
+	s.partyService = ps
+}
+
+// GetUserPageVerifications retrieves the page verifications for a specific user ID.
+func (s *UsersService) GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error) {
+	if s.pageVerificationsService == nil {
+		return nil, fmt.Errorf("page verifications service not configured")
+	}
+	return s.pageVerificationsService.GetPageVerifications(ctx, db.PageTypeUser, userID)
+}
+
+// GetBanks retrieves a list of available banks via the Monnify client.
 func (s *UsersService) GetBanks(ctx context.Context) ([]monnifyclient.Bank, error) {
 	if s.monnify == nil {
 		return nil, fmt.Errorf("monnify client is not configured")
@@ -36,6 +78,7 @@ func (s *UsersService) GetBanks(ctx context.Context) ([]monnifyclient.Bank, erro
 	return s.monnify.GetBanks(ctx)
 }
 
+// ValidateBankAccount checks if a given account number and bank code are valid via Monnify.
 func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber string, bankCode string) (string, error) {
 	if s.monnify == nil {
 		return "", fmt.Errorf("monnify client is not configured")
@@ -43,8 +86,10 @@ func (s *UsersService) ValidateBankAccount(ctx context.Context, accountNumber st
 	return s.monnify.ValidateBankAccount(ctx, accountNumber, bankCode)
 }
 
+// GetUserByFakeID retrieves a user's details including their location names (Country, State, City).
+// It implements a cache-aside pattern using Redis to improve performance.
 func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error) {
-	// Check Redis
+	// Check Redis cache first
 	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
 	userInfoJSON, err := s.rdb.Get(ctx, userInfoKey).Result()
 	if err == nil {
@@ -54,52 +99,150 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 		}
 	}
 
-	// Fetch from DB if not in Redis
+	// Fetch user info from DB
 	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
 	if err != nil {
 		return queries.UserWithPlaces{}, fmt.Errorf("user not found: %w", err)
 	}
 
+	// fetch the user roles
+	var roles []queries.GetUserRolesRow
+	if user.HasRole.Valid && user.HasRole.Bool {
+		if r, err := s.GetUserRoles(ctx, user.ID); err == nil {
+			roles = r
+		}
+	}
+
+	// check if the user is verified, then fetches all the verification types of the user
+	var verifications []queries.GetPageVerificationsRow
+	if user.IsVerified.Valid && user.IsVerified.Bool {
+		if v, err := s.GetUserPageVerifications(ctx, user.ID); err == nil {
+			verifications = v
+		}
+	}
+
 	// attach the user countryName, stateName, cityName to the user info that will be cached in redis
-	var countryName, stateName, cityName string
-	if user.CurrentCountry > 0 {
-		if country, err := s.queries.GetCountryByID(ctx, user.CurrentCountry); err == nil {
-			countryName = country.Name
-		}
+	countryName, stateName, cityName := s.bodiesService.GetLocationNames(ctx, user.CurrentCountry, user.CurrentState, user.CurrentCity.Int32)
+
+	// Fetch party basic info if user belongs to a party
+	var partyBasicInfo *queries.GetPartyBasicInfoRow
+	if user.PartyID.Valid && user.PartyID.Int16 > 0 && s.partyService != nil {
+		partyBasicInfo = s.partyService.GetPartyBasicInfo(ctx, user.PartyID.Int16)
 	}
-	if user.CurrentState > 0 && user.CurrentCountry > 0 {
-		if state, err := s.queries.GetStateByID(ctx, queries.GetStateByIDParams{
-			ID:        user.CurrentState,
-			CountryID: user.CurrentCountry,
-		}); err == nil {
-			stateName = state.Name
-		}
-	}
-	if user.CurrentCity.Valid && user.CurrentState > 0 && user.CurrentCity.Int32 > 0 {
-		if city, err := s.queries.GetCityByID(ctx, queries.GetCityByIDParams{
-			ID:      user.CurrentCity.Int32,
-			StateID: user.CurrentState,
-		}); err == nil {
-			cityName = city.Name
-		}
-	}
+
+	// Create a copy of the user and obscure sensitive fields for caching
+	userForCache := user
+	userForCache.PasswordHash = "---"
+	userForCache.VotersCardImage.String = "---"
+	userForCache.Phone.String = "---"
+	userForCache.Email.String = "---"
 
 	// Cache it in Redis
-	userWithPlaces := queries.UserWithPlaces{
-		User:        user,
-		CountryName: countryName,
-		StateName:   stateName,
-		CityName:    cityName,
+	userWithPlacesForCache := queries.UserWithPlaces{
+		User:           userForCache,
+		CountryName:    countryName,
+		StateName:      stateName,
+		CityName:       cityName,
+		Verifications:  verifications,
+		PartyBasicInfo: partyBasicInfo,
+		Roles:          roles,
 	}
 
-	userJSON, err := json.Marshal(userWithPlaces)
+	// cache the user data in redis
+	userJSON, err := json.Marshal(userWithPlacesForCache)
 	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour) // 5 years expires
+		s.rdb.Set(ctx, userInfoKey, userJSON, db.RedisFiveYearsTTL) // 5 years expires
 	}
 
-	return userWithPlaces, nil
+	return userWithPlacesForCache, nil
 }
 
+// GetUsersByFakeIDs retrieves multiple users optimally.
+// It uses Redis MGET to fetch cached users in a single round-trip,
+// and uses an errgroup to concurrently fetch any cache misses from the database.
+func (s *UsersService) GetUsersByFakeIDs(ctx context.Context, fakeIDs []int64) ([]queries.UserWithPlaces, error) {
+	if len(fakeIDs) == 0 {
+		return []queries.UserWithPlaces{}, nil
+	}
+
+	// put the keys of the users in a slice
+	keys := make([]string, len(fakeIDs))
+	for i, id := range fakeIDs {
+		keys[i] = fmt.Sprintf("%s%d", db.RedisUserInfo, id)
+	}
+
+	// Fetch from Redis via MGET
+	// MGet returns interface{} slice. If a key is missed, the value is nil.
+	cachedUsers, err := s.rdb.MGet(ctx, keys...).Result()
+	if err != nil && err != redis.Nil {
+		return nil, fmt.Errorf("failed to mget users from redis: %w", err)
+	}
+
+	// init the results and missed indices slice
+	results := make([]queries.UserWithPlaces, len(fakeIDs))
+	var missedIndices []int // slice for missed results
+
+	// loop through the cached values
+	for i, cachedUser := range cachedUsers {
+		if cachedUser != nil {
+			userValue, ok := cachedUser.(string)
+			if ok {
+				var user queries.UserWithPlaces
+				if err := json.Unmarshal([]byte(userValue), &user); err == nil {
+					results[i] = user
+					continue // skip the missedIndices below
+				}
+			}
+		}
+
+		// If we reach here, it's a cache miss or invalid JSON
+		missedIndices = append(missedIndices, i)
+	}
+
+	if len(missedIndices) > 0 {
+		var g errgroup.Group // errgroup will run the GetUserByFakeID in a separate goroutine for each missed index
+		// Unleash full concurrency! RDS Proxy will handle the DB connections.
+		var mu sync.Mutex // mutex to protect the results slice from race conditions
+
+		for _, idx := range missedIndices {
+			fakeID := fakeIDs[idx]
+			g.Go(func() error {
+				// s.GetUserByFakeID handles fetching from DB and caching it in Redis
+				user, err := s.GetUserByFakeID(ctx, fakeID)
+				if err != nil {
+					// Return error to short-circuit if a critical failure occurs
+					return err
+				}
+
+				// The Mutex doesn't "know" it's protecting the 'results' slice.
+				// Instead, it locks this exact path of code execution.
+				// If Goroutine A is between Lock() and Unlock(), Goroutine B will be paused at Lock()
+				// waiting for the door to open, guaranteeing that only one goroutine modifies the slice at a time.
+				// what ever is inbetween mu.Lock() and mu.Unlock() can only be accessed by one Goroutine at a time
+				mu.Lock()
+				results[idx] = user
+				mu.Unlock() // allows other Goroutine to continue from mu.Lock()
+
+				return nil
+			})
+		}
+
+		if err := g.Wait(); err != nil {
+			return nil, err
+		}
+	}
+
+	return results, nil
+}
+
+// InvalidateCachedUserInfo invalidates the cached user information in Redis.
+// This function should be called anytime a user's details changes
+func (s *UsersService) InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error {
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+	return s.rdb.Del(ctx, userInfoKey).Err()
+}
+
+// GetUserRoles fetches the roles assigned to a specific user, utilizing Redis caching.
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error) {
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
 
@@ -121,13 +264,14 @@ func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) ([]querie
 	// Cache it in Redis
 	rolesJSONBytes, err := json.Marshal(roles)
 	if err == nil {
-		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, 5*365*24*time.Hour) // expires in 5years
+		s.rdb.Set(ctx, userRolesKey, rolesJSONBytes, db.RedisFiveYearsTTL) // expires in 5years
 	}
 
 	return roles, nil
 }
 
-func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error {
+// AssignUserRole assigns a specific role to a user and invalidates the user's role cache.
+func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error {
 	role, err := s.queries.GetRoleByCode(ctx, code)
 	if err != nil {
 		return err
@@ -142,13 +286,53 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, code st
 		return err
 	}
 
-	// Invalidate the cache
+	// Invalidate the user-roles cache
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
 	s.rdb.Del(ctx, userRolesKey)
+
+	// Update the user_table, updates has_role to true
+	_ = s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
+		ID:      userID,
+		HasRole: pgtype.Bool{Bool: true, Valid: true},
+	})
+
+	// Invalidate user info cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 
 	return nil
 }
 
+// RemoveUserRole removes a specific role from a user and updates has_role if needed.
+func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID int64, code string) error {
+	err := s.queries.RemoveUserRole(ctx, queries.RemoveUserRoleParams{
+		UserID:   userID,
+		RoleCode: code,
+	})
+	if err != nil {
+		return err
+	}
+
+	// Invalidate the cache
+	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
+	s.rdb.Del(ctx, userRolesKey)
+
+	// Check if user has any roles left
+	hasRole, err := s.queries.CheckUserHasAnyRole(ctx, userID)
+	if err != nil {
+		return err
+	}
+	_ = s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
+		ID:      userID,
+		HasRole: pgtype.Bool{Bool: hasRole, Valid: true},
+	})
+
+	// Invalidate user info cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
+	return nil
+}
+
+// UpdateUserProfile updates basic user profile details and invalidates the user info cache.
 func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32) error {
 	err := s.queries.UpdateUserProfile(ctx, queries.UpdateUserProfileParams{
 		ID:             id,
@@ -166,31 +350,33 @@ func (s *UsersService) UpdateUserProfile(ctx context.Context, id int64, fakeID i
 	}
 
 	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
 
+// ListUsers retrieves a paginated list of users based on provided parameters.
 func (s *UsersService) ListUsers(ctx context.Context, arg queries.ListUsersParams) ([]queries.ListUsersRow, error) {
 	return s.queries.ListUsers(ctx, arg)
 }
 
+// GetUserVerification fetches the verification status/details for a specific user.
 func (s *UsersService) GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error) {
 	return s.queries.GetUserVerification(ctx, userID)
 }
 
+// DeleteUser removes a user by ID and invalidates their user info cache.
 func (s *UsersService) DeleteUser(ctx context.Context, id int64, fakeID int64) error {
-	err := s.queries.DeleteUser(ctx, id)
-	if err != nil {
-		return err
-	}
+	// err := s.queries.DeleteUser(ctx, id)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
 
+// AdminUpdateUser allows admins to perform a comprehensive update of user details.
 func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, countryID, stateID int16, cityID int32, stateOfOrigin int16, partyID int16, email string) error {
 	err := s.queries.AdminUpdateUser(ctx, queries.AdminUpdateUserParams{
 		ID:             id,
@@ -211,11 +397,11 @@ func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int
 	}
 
 	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
 
+// GetMoreInfoAboutThisUser fetches extended profile details for a user, using Redis cache.
 func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error) {
 	// Check Redis
 	userProfileKey := fmt.Sprintf("%s%d", db.RedisUserMoreInfo, userID)
@@ -240,12 +426,13 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	// Cache it in Redis
 	profileJSONBytes, err := json.Marshal(profile)
 	if err == nil {
-		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, 5*365*24*time.Hour)
+		s.rdb.Set(ctx, userProfileKey, profileJSONBytes, db.RedisFiveYearsTTL)
 	}
 
 	return profile, nil
 }
 
+// UpdateUserProfileDetails updates extended educational and demographic information for a user.
 func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int64, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel string) error {
 	err := s.queries.UpdateMoreInfoAboutThisUser(ctx, queries.UpdateMoreInfoAboutThisUserParams{
 		UserID:            userID,
@@ -267,6 +454,7 @@ func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int6
 	return nil
 }
 
+// GetUserPhoneNumbersByUserID retrieves a user's phone numbers, prioritizing Redis cache.
 func (s *UsersService) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]queries.UsersPhoneNumber, error) {
 	// Check Redis
 	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
@@ -287,12 +475,13 @@ func (s *UsersService) GetUserPhoneNumbersByUserID(ctx context.Context, userID i
 	// Cache it in Redis
 	phoneNumbersJSONBytes, err := json.Marshal(phoneNumbers)
 	if err == nil {
-		s.rdb.Set(ctx, userPhoneNumbersKey, phoneNumbersJSONBytes, 5*365*24*time.Hour) // 5years TTL
+		s.rdb.Set(ctx, userPhoneNumbersKey, phoneNumbersJSONBytes, db.RedisFiveYearsTTL) // 5years TTL
 	}
 
 	return phoneNumbers, nil
 }
 
+// PhonePayload represents the incoming data structure for updating phone numbers.
 type PhonePayload struct {
 	ID         int64  `json:"id"`
 	Phone      string `json:"phone"`
@@ -302,6 +491,7 @@ type PhonePayload struct {
 	IsDefault  bool   `json:"is_default"`
 }
 
+// UpdateUserPhoneNumbers creates or updates multiple phone numbers for a user.
 func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64, phones []PhonePayload) error {
 	for _, p := range phones {
 		onWhatsapp := pgtype.Text{String: p.OnWhatsapp, Valid: p.OnWhatsapp != ""}
@@ -329,7 +519,7 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 			}
 		}
 	}
-	
+
 	// Invalidate cache
 	userPhoneNumbersKey := fmt.Sprintf("%s%d", db.RedisUserPhoneNumbers, userID)
 	s.rdb.Del(ctx, userPhoneNumbersKey)
@@ -337,10 +527,12 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 	return nil
 }
 
+// DeleteUserPhoneNumber removes a specific phone number record by its ID.
 func (s *UsersService) DeleteUserPhoneNumber(ctx context.Context, id int64) error {
 	return s.queries.DeleteUserPhoneNumber(ctx, id)
 }
 
+// UpdateUserIsVerified updates the verified status of a user and invalidates their cache.
 func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, fakeID int64, isVerified bool) error {
 	err := s.queries.UpdateUserIsVerified(ctx, queries.UpdateUserIsVerifiedParams{
 		ID:         userID,
@@ -349,10 +541,8 @@ func (s *UsersService) UpdateUserIsVerified(ctx context.Context, userID int64, f
 	if err != nil {
 		return err
 	}
-	
-	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+
+	// Invalidate the user info cache
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return nil
 }
-

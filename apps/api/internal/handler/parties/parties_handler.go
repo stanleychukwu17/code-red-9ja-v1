@@ -19,7 +19,7 @@ import (
 
 type PartiesService interface {
 	CreateParty(ctx context.Context, shortName, name, logo string, displayOrder int32) (queries.Party, error)
-	GetPartyByID(ctx context.Context, id int64) (queries.Party, error)
+	GetPartyInfo(ctx context.Context, partyID pgtype.Int8) *queries.Party
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
 	ListParties(ctx context.Context) ([]queries.Party, error)
 	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, displayOrder int32) (queries.Party, error)
@@ -347,8 +347,8 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	party, err := h.partiesService.GetPartyByID(r.Context(), id)
-	if err != nil {
+	party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true})
+	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
@@ -393,8 +393,7 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify party exists
-	_, err = h.partiesService.GetPartyByID(r.Context(), id)
-	if err != nil {
+	if party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true}); party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
@@ -433,8 +432,7 @@ func (h *Handler) DeleteParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Verify party exists
-	_, err = h.partiesService.GetPartyByID(r.Context(), id)
-	if err != nil {
+	if party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true}); party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
@@ -636,13 +634,13 @@ func (h *Handler) CreatePartyWalletHandler(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	party, err := h.partiesService.GetPartyByID(r.Context(), id)
-	if err != nil {
+	party := h.partiesService.GetPartyInfo(r.Context(), pgtype.Int8{Int64: id, Valid: true})
+	if party == nil {
 		h.utils.RespondError(w, http.StatusNotFound, "Party not found")
 		return
 	}
 
-	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), party)
+	wallet, err := h.partiesService.CreatePartyWallet(r.Context(), *party)
 	if err != nil {
 		if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 			h.utils.RespondError(w, http.StatusConflict, "This party already has a wallet")

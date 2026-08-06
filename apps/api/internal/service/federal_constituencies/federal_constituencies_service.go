@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
-	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -129,7 +128,7 @@ func (s *FederalConstituenciesService) GetFederalConstituencies(ctx context.Cont
 		}
 
 		jsonData, _ := json.Marshal(payload)
-		s.rdb.Set(ctx, redisKey, jsonData, 5*365*24*time.Hour)
+		s.rdb.Set(ctx, redisKey, jsonData, db.RedisFiveYearsTTL)
 
 		return dbData, nil
 	case nil:

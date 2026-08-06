@@ -783,9 +783,8 @@ func (h *Handler) FieldPartyCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
-	if !ok || claims == nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized: invalid claims")
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
 		return
 	}
 

@@ -104,9 +104,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 			"reason", "MONNIFY_API_KEY or MONNIFY_SECRET_KEY is empty")
 	}
 
-	usersService := usersservice.NewUsersService(q, rdb, monnifyClient)
-	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
 	bodiesService := bodiesservice.NewBodiesService(q, rdb)
+	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
+	partiesService := partiesservice.NewPartiesService(q, pool, rdb, monnifyClient)
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
 
 	statesService := statesservice.NewStatesService(q, rdb)
@@ -140,7 +140,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
 	auditService := audit.NewAuditService(q)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, utilsInstance)
-	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, usersService, partiesService, auditService)
+	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
+	usersService.SetPageVerificationsService(pageVerificationsService)
+	usersService.SetPartyService(partiesService)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
 	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
@@ -597,6 +599,13 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 
 		// Inject into context
 		ctx := logger.WithContext(r.Context(), log)
+
+		// Injects the http remote ip address and user agent to the context
+		// these metadata will be used for auditing purposes
+		ctx = audit.WithRequestMetadata(ctx, r.RemoteAddr, r.UserAgent())
+
+		// updates the request to use the currently updated context with all the information attached
+		// we attached the logger and the audit metadata to the context
 		r = r.WithContext(ctx)
 
 		// We need to wrap the response writer to get the status code

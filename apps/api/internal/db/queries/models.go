@@ -100,9 +100,10 @@ func (ns NullMarketingCampaignType) Value() (driver.Value, error) {
 
 type AuditLog struct {
 	ID         int64              `json:"id"`
+	Module     pgtype.Text        `json:"module"`
+	Action     string             `json:"action"`
 	ActorID    int64              `json:"actor_id"`
 	ActorRole  pgtype.Text        `json:"actor_role"`
-	Action     string             `json:"action"`
 	EntityType string             `json:"entity_type"`
 	EntityID   string             `json:"entity_id"`
 	OldValues  []byte             `json:"old_values"`
@@ -781,7 +782,8 @@ type PageVerificationType struct {
 	VerificationType        string      `json:"verification_type"`
 	VerificationTitle       string      `json:"verification_title"`
 	VerificationDescription pgtype.Text `json:"verification_description"`
-	Badge                   pgtype.Text `json:"badge"`
+	IsAdminAssignable       bool        `json:"is_admin_assignable"`
+	ForWho                  string      `json:"for_who"`
 }
 
 type PagesVerified struct {
@@ -1072,40 +1074,47 @@ type SystemSetting struct {
 }
 
 type User struct {
-	ID                int64              `json:"id"`
-	FakeID            pgtype.Int8        `json:"fake_id"`
-	Email             pgtype.Text        `json:"email"`
-	Avatar            pgtype.Text        `json:"avatar"`
-	Phone             pgtype.Text        `json:"phone"`
-	Username          pgtype.Text        `json:"username"`
-	PasswordHash      string             `json:"password_hash"`
-	LastName          pgtype.Text        `json:"last_name"`
-	FirstName         pgtype.Text        `json:"first_name"`
-	MiddleName        pgtype.Text        `json:"middle_name"`
-	Gender            pgtype.Text        `json:"gender"`
-	DateOfBirth       pgtype.Date        `json:"date_of_birth"`
-	WhatsappPhone     pgtype.Text        `json:"whatsapp_phone"`
-	DataPhone         pgtype.Text        `json:"data_phone"`
-	CurrentCountry    int16              `json:"current_country"`
-	CurrentState      int16              `json:"current_state"`
-	CurrentLga        pgtype.Int4        `json:"current_lga"`
-	CurrentWard       pgtype.Int4        `json:"current_ward"`
-	CurrentCity       pgtype.Int4        `json:"current_city"`
-	Address           pgtype.Text        `json:"address"`
-	CountryOfOrigin   pgtype.Int2        `json:"country_of_origin"`
-	StateOfOrigin     pgtype.Int2        `json:"state_of_origin"`
-	VotersCardImage   pgtype.Text        `json:"voters_card_image"`
-	BankAccountNumber pgtype.Text        `json:"bank_account_number"`
-	BankCode          pgtype.Text        `json:"bank_code"`
-	IsPolitician      pgtype.Bool        `json:"is_politician"`
-	IsVerified        pgtype.Bool        `json:"is_verified"`
-	PartyID           pgtype.Int2        `json:"party_id"`
-	PollingUnitID     pgtype.Int4        `json:"polling_unit_id"`
-	ReferralCode      pgtype.Text        `json:"referral_code"`
-	ReferredByCode    pgtype.Text        `json:"referred_by_code"`
-	AccountStatus     pgtype.Text        `json:"account_status"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	ID              int64              `json:"id"`
+	FakeID          pgtype.Int8        `json:"fake_id"`
+	Email           pgtype.Text        `json:"email"`
+	Avatar          pgtype.Text        `json:"avatar"`
+	Phone           pgtype.Text        `json:"phone"`
+	Username        pgtype.Text        `json:"username"`
+	PasswordHash    string             `json:"password_hash"`
+	LastName        pgtype.Text        `json:"last_name"`
+	FirstName       pgtype.Text        `json:"first_name"`
+	MiddleName      pgtype.Text        `json:"middle_name"`
+	Gender          pgtype.Text        `json:"gender"`
+	DateOfBirth     pgtype.Date        `json:"date_of_birth"`
+	WhatsappPhone   pgtype.Text        `json:"whatsapp_phone"`
+	DataPhone       pgtype.Text        `json:"data_phone"`
+	CurrentCountry  int16              `json:"current_country"`
+	CurrentState    int16              `json:"current_state"`
+	CurrentLga      pgtype.Int4        `json:"current_lga"`
+	CurrentWard     pgtype.Int4        `json:"current_ward"`
+	CurrentCity     pgtype.Int4        `json:"current_city"`
+	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
+	VotersCardImage pgtype.Text        `json:"voters_card_image"`
+	IsPolitician    pgtype.Bool        `json:"is_politician"`
+	IsVerified      pgtype.Bool        `json:"is_verified"`
+	HasRole         pgtype.Bool        `json:"has_role"`
+	PartyID         pgtype.Int2        `json:"party_id"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
+	ReferralCode    pgtype.Text        `json:"referral_code"`
+	ReferredByCode  pgtype.Text        `json:"referred_by_code"`
+	AccountStatus   pgtype.Text        `json:"account_status"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserBankAccount struct {
+	ID            int32              `json:"id"`
+	UserID        int64              `json:"user_id"`
+	AccountNumber string             `json:"account_number"`
+	BankCode      string             `json:"bank_code"`
+	IsPrimary     pgtype.Bool        `json:"is_primary"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserMoreInfo struct {

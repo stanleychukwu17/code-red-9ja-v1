@@ -2,10 +2,11 @@ package logger
 
 // Components
 const (
-	ComponentAuthService      = "auth_service"
-	ComponentCountriesHandler = "countries_handler"
-	ComponentMessagingService = "messaging_service"
-	ComponentRouter           = "router"
+	ComponentAuthService              = "auth_service"
+	ComponentCountriesHandler         = "countries_handler"
+	ComponentMessagingService         = "messaging_service"
+	ComponentRouter                   = "router"
+	ComponentPageVerificationsService = "page_verifications_service"
 )
 
 // Events & Operations
@@ -21,6 +22,7 @@ const (
 	EventFetchStatesFailed    = "fetch_states_failed"
 	EventInvalidStateID       = "invalid_state_id"
 	EventFetchCitiesFailed    = "fetch_cities_failed"
+	EventAuditLogFailed       = "audit_log_failed"
 )
 
 

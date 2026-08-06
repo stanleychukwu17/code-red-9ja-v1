@@ -18,6 +18,7 @@ import { getLGAs } from "#/lib/server/countries";
 import { getStates } from "#/lib/server/states";
 import { getWards } from "#/lib/server/wards";
 import { createPollingUnit, updatePollingUnit } from "#/lib/server/polling_units";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export interface PollingUnit {
   id: number;
@@ -221,11 +222,7 @@ export function PollingUnitFormDialog({
           className="max-h-[80vh] overflow-y-auto"
         >
           <DialogPadding className="space-y-5 pb-6">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TinyError error={error} />
 
             {/* Polling Unit Name */}
             <div className="w-full">

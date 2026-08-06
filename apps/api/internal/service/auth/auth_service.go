@@ -35,8 +35,9 @@ type UsersService interface {
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GetUserByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]queries.GetUserRolesRow, error)
-	AssignUserRole(ctx context.Context, userID int64, code string, whoAssigned int64) error
+	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
+	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
 }
 
 type PartyService interface {
@@ -113,8 +114,6 @@ type LoginUser struct {
 	HighestDegree     string                        `json:"highest_degree"`
 	GraduationYear    string                        `json:"graduation_year"`
 	SchoolName        string                        `json:"school_name"`
-	BankAccountNumber string                        `json:"bank_account_number"`
-	BankCode          string                        `json:"bank_code"`
 	VotersCardImage   string                        `json:"voters_card_image"`
 	Religion          string                        `json:"religion"`
 	MaritalStatus     string                        `json:"marital_status"`
@@ -211,8 +210,14 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		}
 	}
 
+	// Fetch the actual password hash directly from the database
+	actualPasswordHash, err := s.queries.GetUserPasswordHashByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		return LoginResult{}, errors.New("invalid login details provided")
+	}
+
 	//  Check if password matches
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(actualPasswordHash), []byte(password))
 	if err != nil {
 		return LoginResult{}, errors.New("invalid email, username, phone or password")
 	}
@@ -296,31 +301,29 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		AccessToken:  accessToken,
 		RefreshToken: randStr.RandomString,
 		User: LoginUser{
-			ID:                user.ID,
-			FakeID:            user.FakeID.Int64,
-			Email:             user.Email.String,
-			Username:          user.Username.String,
-			FirstName:         user.FirstName.String,
-			LastName:          user.LastName.String,
-			MiddleName:        user.MiddleName.String,
-			Gender:            user.Gender.String,
-			Avatar:            user.Avatar.String,
-			Phone:             user.Phone.String,
-			Roles:             userRoleCodes,
-			AccountStatus:     user.AccountStatus.String,
-			PartyID:           partyID,
-			PollingUnitID:     user.PollingUnitID.Int32,
-			CurrentCountry:    user.CurrentCountry,
-			CurrentState:      user.CurrentState,
-			CurrentLga:        user.CurrentLga.Int32,
-			CurrentWard:       user.CurrentWard.Int32,
-			CurrentCity:       user.CurrentCity.Int32,
-			WhatsappPhone:     user.WhatsappPhone.String,
-			DataPhone:         user.DataPhone.String,
-			BankAccountNumber: user.BankAccountNumber.String,
-			BankCode:          user.BankCode.String,
-			VotersCardImage:   user.VotersCardImage.String,
-			Party:             partyObj,
+			ID:              user.ID,
+			FakeID:          user.FakeID.Int64,
+			Email:           user.Email.String,
+			Username:        user.Username.String,
+			FirstName:       user.FirstName.String,
+			LastName:        user.LastName.String,
+			MiddleName:      user.MiddleName.String,
+			Gender:          user.Gender.String,
+			Avatar:          user.Avatar.String,
+			Phone:           user.Phone.String,
+			Roles:           userRoleCodes,
+			AccountStatus:   user.AccountStatus.String,
+			PartyID:         partyID,
+			PollingUnitID:   user.PollingUnitID.Int32,
+			CurrentCountry:  user.CurrentCountry,
+			CurrentState:    user.CurrentState,
+			CurrentLga:      user.CurrentLga.Int32,
+			CurrentWard:     user.CurrentWard.Int32,
+			CurrentCity:     user.CurrentCity.Int32,
+			WhatsappPhone:   user.WhatsappPhone.String,
+			DataPhone:       user.DataPhone.String,
+			VotersCardImage: user.VotersCardImage.String,
+			Party:           partyObj,
 		},
 	}
 
@@ -395,31 +398,29 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		userRoleCodes = append(userRoleCodes, ur.Code)
 	}
 	userDetails := LoginUser{
-		ID:                user.ID,
-		FakeID:            user.FakeID.Int64,
-		Email:             user.Email.String,
-		Username:          user.Username.String,
-		FirstName:         user.FirstName.String,
-		LastName:          user.LastName.String,
-		MiddleName:        user.MiddleName.String,
-		Gender:            user.Gender.String,
-		Avatar:            user.Avatar.String,
-		Phone:             user.Phone.String,
-		Roles:             userRoleCodes,
-		AccountStatus:     user.AccountStatus.String,
-		PartyID:           userPartyID,
-		PollingUnitID:     user.PollingUnitID.Int32,
-		CurrentCountry:    user.CurrentCountry,
-		CurrentState:      user.CurrentState,
-		CurrentLga:        user.CurrentLga.Int32,
-		CurrentWard:       user.CurrentWard.Int32,
-		CurrentCity:       user.CurrentCity.Int32,
-		WhatsappPhone:     user.WhatsappPhone.String,
-		DataPhone:         user.DataPhone.String,
-		BankAccountNumber: user.BankAccountNumber.String,
-		BankCode:          user.BankCode.String,
-		VotersCardImage:   user.VotersCardImage.String,
-		Party:             partyObj,
+		ID:              user.ID,
+		FakeID:          user.FakeID.Int64,
+		Email:           user.Email.String,
+		Username:        user.Username.String,
+		FirstName:       user.FirstName.String,
+		LastName:        user.LastName.String,
+		MiddleName:      user.MiddleName.String,
+		Gender:          user.Gender.String,
+		Avatar:          user.Avatar.String,
+		Phone:           user.Phone.String,
+		Roles:           userRoleCodes,
+		AccountStatus:   user.AccountStatus.String,
+		PartyID:         userPartyID,
+		PollingUnitID:   user.PollingUnitID.Int32,
+		CurrentCountry:  user.CurrentCountry,
+		CurrentState:    user.CurrentState,
+		CurrentLga:      user.CurrentLga.Int32,
+		CurrentWard:     user.CurrentWard.Int32,
+		CurrentCity:     user.CurrentCity.Int32,
+		WhatsappPhone:   user.WhatsappPhone.String,
+		DataPhone:       user.DataPhone.String,
+		VotersCardImage: user.VotersCardImage.String,
+		Party:           partyObj,
 	}
 
 	profile, _ := s.usersService.GetMoreInfoAboutThisUser(ctx, user.ID)
@@ -865,25 +866,65 @@ func CleanUsername(input string) (string, error) {
 // function: check if the username already exist in redis and in the postgres db
 func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisUsernameFakeID+username).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisUsernameFakeID+username, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 // function: checks if the Email address already exists in redis and in the postgres db
 func (s *AuthService) CheckEmail(ctx context.Context, email string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisEmailFakeID+email).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisEmailFakeID+email, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 // function: checks if the phone exists in redis and in the postgres db
 func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisPhoneFakeID+phone).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisPhoneFakeID+phone, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 // CheckNIN function checks if the nin already exists in the database
 func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 	exists, _ := s.rdb.Exists(ctx, db.RedisNINFakeID+nin).Result()
-	return exists > 0
+	if exists > 0 {
+		return true
+	}
+
+	fakeID, err := s.queries.GetFakeIDByNIN(ctx, nin)
+	if err == nil && fakeID.Valid {
+		s.rdb.Set(ctx, db.RedisNINFakeID+nin, fakeID.Int64, db.RedisFiveYearsTTL)
+		return true
+	}
+
+	return false
 }
 
 type SignupResult struct {
@@ -1098,13 +1139,13 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 	pipe := s.rdb.TxPipeline()
 
 	if username != "" {
-		pipe.Set(ctx, db.RedisUsernameFakeID+username, fakeID, 0)
+		pipe.Set(ctx, db.RedisUsernameFakeID+username, fakeID, db.RedisFiveYearsTTL)
 	}
 	if email != "" {
-		pipe.Set(ctx, db.RedisEmailFakeID+email, fakeID, 0)
+		pipe.Set(ctx, db.RedisEmailFakeID+email, fakeID, db.RedisFiveYearsTTL)
 	}
 	if nin != "" {
-		pipe.Set(ctx, db.RedisNINFakeID+nin, fakeID, 0)
+		pipe.Set(ctx, db.RedisNINFakeID+nin, fakeID, db.RedisFiveYearsTTL)
 	}
 
 	_, err := pipe.Exec(ctx)
@@ -1401,28 +1442,6 @@ func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) 
 	return s.usersService.GetUserByFakeID(ctx, fakeID)
 }
 
-// UpdateCachedUserInfo refreshes the cached user information in Redis.
-// This function should be called anytime a user's details changes
-func (s *AuthService) UpdateCachedUserInfo(ctx context.Context, fakeID int64) error {
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-
-	// Fetch fresh data from DB
-	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
-	if err != nil {
-		// If the user can't be fetched, remove the cache anyway to avoid stale data
-		s.rdb.Del(ctx, userInfoKey)
-		return fmt.Errorf("user not found for cache update: %w", err)
-	}
-
-	// Marshal and update Redis
-	userJSON, err := json.Marshal(user)
-	if err == nil {
-		s.rdb.Set(ctx, userInfoKey, userJSON, 5*365*24*time.Hour)
-	}
-
-	return err
-}
-
 type VerifySecurityQuestionsResult struct {
 	ChangePasswordID string `json:"change_password_id"`
 	UserFID          int64  `json:"user_fid"`
@@ -1587,9 +1606,8 @@ func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID strin
 		_, _ = pipe.Exec(ctx)
 	}
 
-	// Update cached user info
-	_ = s.UpdateCachedUserInfo(ctx, userFid)
-
+	// Invalidate cached user info
+	_ = s.usersService.InvalidateCachedUserInfo(ctx, userFid)
 	return nil
 }
 
@@ -1636,15 +1654,15 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 	if err != nil {
 		return RegisterResult{}, err
 	}
-	if role != "" {
-		_ = s.usersService.AssignUserRole(ctx, userID, role, 0)
-	}
-
 	// generate a fake_id using the user_id and update the user fake_id
 	fakeID := utils.GenerateFakeID(userID)
 	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: userID, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
 	if err != nil {
 		return RegisterResult{}, err
+	}
+
+	if role != "" {
+		_ = s.usersService.AssignUserRole(ctx, userID, fakeID, role, 0)
 	}
 
 	// save some of the user details to our db & also to redis(using pipeline)
@@ -1694,11 +1712,11 @@ func (s *AuthService) MakeUserSuperAdmin(ctx context.Context, username string) e
 		return fmt.Errorf("failed to fetch user details: %w", err)
 	}
 
-	return s.CheckAndAssignRole(ctx, user.ID, "super_admin", 0)
+	return s.CheckAndAssignRole(ctx, user.ID, fakeID, "super_admin", 0)
 }
 
 // CheckAndAssignRole checks if a user already has a specific role, and if not, assigns it.
-func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, roleCode string, whoAssigned int64) error {
+func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, fakeID int64, roleCode string, whoAssigned int64) error {
 	// 1. Get user roles (with cache check)
 	roles, err := s.usersService.GetUserRoles(ctx, userID)
 	if err != nil {
@@ -1714,7 +1732,7 @@ func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, role
 	}
 
 	// 3. Assign the role in DB (UsersService handles caching)
-	err = s.usersService.AssignUserRole(ctx, userID, roleCode, whoAssigned)
+	err = s.usersService.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
 	if err != nil {
 		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
 	}
@@ -1775,6 +1793,8 @@ type SeedUserRequest struct {
 	EducationLevel string  `json:"education_level"`
 	HomeAddress    string  `json:"home_address"`
 	OccupationID   *int16  `json:"occupation_id"`
+	PartyID        *int16  `json:"party_id"`
+	AccountStatus  string  `json:"account_status"`
 }
 
 func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
@@ -1806,6 +1826,7 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
 		stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
 		occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
+		partyIDVal := pgtype.Int2{Int16: *u.PartyID, Valid: true}
 
 		// check if the user phone number is valid
 		var phoneVal pgtype.Text
@@ -1830,27 +1851,25 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 		}
 
 		params := queries.SeedUserParams{
-			FakeID:            pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
-			Email:             emailVal,
-			Avatar:            avatarVal,
-			Phone:             phoneVal,
-			Username:          usernameVal,
-			PasswordHash:      string(hashed),
-			LastName:          pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
-			FirstName:         pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
-			MiddleName:        middleNameVal,
-			Gender:            genderVal,
-			DateOfBirth:       pgtype.Date{Time: dob, Valid: true},
-			CurrentCountry:    u.CurrentCountry,
-			CurrentState:      u.CurrentState,
-			CurrentLga:        currentLgaVal,
-			CurrentCity:       currentCityVal,
-			StateOfOrigin:     stateOfOriginVal,
-			VotersCardImage:   pgtype.Text{},
-			BankAccountNumber: pgtype.Text{},
-			BankCode:          pgtype.Text{},
-			AccountStatus:     pgtype.Text{},
-			PartyID:           pgtype.Int2{},
+			FakeID:          pgtype.Int8{Int64: u.FakeID, Valid: u.FakeID != 0},
+			Email:           emailVal,
+			Avatar:          avatarVal,
+			Phone:           phoneVal,
+			Username:        usernameVal,
+			PasswordHash:    string(hashed),
+			LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
+			FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
+			MiddleName:      middleNameVal,
+			Gender:          genderVal,
+			DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
+			CurrentCountry:  u.CurrentCountry,
+			CurrentState:    u.CurrentState,
+			CurrentLga:      currentLgaVal,
+			CurrentCity:     currentCityVal,
+			StateOfOrigin:   stateOfOriginVal,
+			VotersCardImage: pgtype.Text{String: "", Valid: false},
+			AccountStatus:   pgtype.Text{String: u.AccountStatus, Valid: u.AccountStatus != ""},
+			PartyID:         partyIDVal,
 		}
 
 		id, err := s.queries.SeedUser(ctx, params)
@@ -1887,6 +1906,7 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 
 		// Save details to Redis cache
 		fakeID := u.FakeID
+		fmt.Println("saved ", fakeID)
 		if fakeID == 0 {
 			fakeID = utils.GenerateFakeID(id)
 			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})

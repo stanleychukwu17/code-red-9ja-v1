@@ -18,6 +18,7 @@ import { UserFormDialog } from "./UserFormDialog";
 import { CandidateRow } from "./CandidateRow";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
 import { getUsersList } from "#/lib/server/users";
+import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface ManageCandidatesDialogProps {
   electionId: number;
@@ -157,11 +158,7 @@ export function ManageCandidatesDialog({
           <DialogHeader title="Manage candidates" />
 
           <DialogPadding className="flex-1 overflow-y-auto space-y-6 pb-6 pt-4 min-h-0">
-            {error && (
-              <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                {error}
-              </div>
-            )}
+            <TinyError error={error} />
 
             {/* Search and Action Buttons */}
             <div className="flex items-center justify-between gap-4">

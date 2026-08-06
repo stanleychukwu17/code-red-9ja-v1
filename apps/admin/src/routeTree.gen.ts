@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthSuperadminRouteImport } from './routes/auth/superadmin'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
+import { Route as AuthenticatedPartiesRouteImport } from './routes/_authenticated/parties'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedBodiesRouteImport } from './routes/_authenticated/bodies'
 import { Route as SettingsPartyadminIndexRouteImport } from './routes/settings/partyadmin/index'
@@ -65,6 +66,11 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AuthenticatedUsersRoute = AuthenticatedUsersRouteImport.update({
   id: '/users',
   path: '/users',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedPartiesRoute = AuthenticatedPartiesRouteImport.update({
+  id: '/parties',
+  path: '/parties',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedElectionsRoute = AuthenticatedElectionsRouteImport.update({
@@ -196,6 +202,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/elections': typeof AuthenticatedElectionsRouteWithChildren
+  '/parties': typeof AuthenticatedPartiesRoute
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/superadmin': typeof AuthSuperadminRoute
@@ -223,6 +230,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
+  '/parties': typeof AuthenticatedPartiesRoute
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/superadmin': typeof AuthSuperadminRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/_authenticated/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/_authenticated/elections': typeof AuthenticatedElectionsRouteWithChildren
+  '/_authenticated/parties': typeof AuthenticatedPartiesRoute
   '/_authenticated/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/superadmin': typeof AuthSuperadminRoute
@@ -285,6 +294,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/bodies'
     | '/elections'
+    | '/parties'
     | '/users'
     | '/auth/login'
     | '/auth/superadmin'
@@ -312,6 +322,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/bodies'
+    | '/parties'
     | '/users'
     | '/auth/login'
     | '/auth/superadmin'
@@ -342,6 +353,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/_authenticated/bodies'
     | '/_authenticated/elections'
+    | '/_authenticated/parties'
     | '/_authenticated/users'
     | '/auth/login'
     | '/auth/superadmin'
@@ -417,6 +429,13 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof AuthenticatedUsersRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/parties': {
+      id: '/_authenticated/parties'
+      path: '/parties'
+      fullPath: '/parties'
+      preLoaderRoute: typeof AuthenticatedPartiesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/elections': {
@@ -638,23 +657,23 @@ const AuthenticatedUsersRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedBodiesRoute: typeof AuthenticatedBodiesRouteWithChildren
   AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRouteWithChildren
+  AuthenticatedPartiesRoute: typeof AuthenticatedPartiesRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRouteWithChildren
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
   AuthenticatedLogsIndexRoute: typeof AuthenticatedLogsIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
-  AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBodiesRoute: AuthenticatedBodiesRouteWithChildren,
   AuthenticatedElectionsRoute: AuthenticatedElectionsRouteWithChildren,
+  AuthenticatedPartiesRoute: AuthenticatedPartiesRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRouteWithChildren,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
   AuthenticatedLogsIndexRoute: AuthenticatedLogsIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
-  AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

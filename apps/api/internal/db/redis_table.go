@@ -1,6 +1,11 @@
 package db
 
+import "time"
+
 const (
+	RedisFiveYearsTTL = 5 * 365 * 24 * time.Hour
+	RedisTwoYearsTTL  = 2 * 365 * 24 * time.Hour
+
 	//--START-- for registration
 	// STRING: RedisRegisterOnboarding is the Redis key prefix used to store onboarding data.
 	RedisRegisterOnboarding = "register:onboarding:"
@@ -14,28 +19,28 @@ const (
 	//--END--
 
 	//--START-- for login, refreshing jwt token, logout,
-	// STRING: "jwt:refresh_token:<hash>" is the Redis "string" key used to store and retrieve a hashed jwt refresh token.
+	// STRING: "jwt:refresh_token:<hash>" used to store and retrieve a hashed jwt refresh token.
 	// The key is a string, and the value is a JWT refresh token.
 	RedisJwtRefreshToken = "jwt:refresh_token:"
 
-	// SET: "jwt:session_tokens:<sessionID>" is used to store refresh tokens that belong to a session.
+	// SET: "jwt:session_tokens:<sessionID>" used to store refresh tokens that belong to a session.
 	RedisSessionTokens = "jwt:session_tokens:"
 
-	// SET: "jwt:user_login_sessions:<userFakeID>" is the Redis "set" key used to store and check for existing user login sessions.
+	// SET: "jwt:user_login_sessions:<userFakeID>" used to store and check for existing user login sessions.
 	RedisUserLoginSessions = "jwt:user_login_sessions:"
 
-	// STRING: "jwt:user_login_locked:<userFakeID>" is the Redis "string" key used to lock token generation.
+	// STRING: "jwt:user_login_locked:<userFakeID>" key used to lock token generation.
 	RedisJwtUserLoginLocked = "jwt:user_login_locked:"
 	//--END--
 
 	//--START-- for user
-	// STRING: user:info:<userFakeID> is the Redis "string" key used to store and retrieve user info.
+	// STRING: user:info:<userFakeID> used to store and retrieve user info.
 	RedisUserInfo = "user:info:"
-	// STRING: user:roles:<userFakeID> is the Redis "string" key used to store and retrieve user roles.
-	RedisUserRoles = "user:roles:"
-	// STRING: user:more_info:<userID> is the Redis "string" key used to store and retrieve user more_info.
+	// STRING: user:more_info:<userID> used to store and retrieve user more_info.
 	RedisUserMoreInfo = "user:more_info:"
-	// STRING: user:phone_numbers:<userID> is the Redis "string" key used to store and retrieve user phone numbers.
+	// STRING: user:roles:<userFakeID> used to store and retrieve user roles.
+	RedisUserRoles = "user:roles:"
+	// STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
 	RedisUserPhoneNumbers = "user:phone_numbers:"
 	//--END--
 
@@ -53,8 +58,18 @@ const (
 	//--END--
 
 	//--START-- for parties
-	RedisPartyInfo      = "parties:info:"
+	// STRING: used to store and retrieve all parties and they details, the value is a JSON string of all parties.
+	RedisPartiesList = "parties:list"
+	// STRING: "parties:info:<partyID>" is used to store and retrieve party info.
+	RedisPartyInfo = "parties:info:"
+	// STRING: "parties:basic_info:<partyID>" is used to store and retrieve party basic info.
 	RedisPartyBasicInfo = "parties:basic_info:"
+	//--END--
+
+	//--START-- for page verifications & badges
+	RedisPageVerificationTypesList = "page_verification_type:list"
+	RedisPageVerificationTypeInfo  = "page_verification_type:info:"
+	RedisPageVerifications         = "page_verifications:page:"
 	//--END--
 
 	//--START-- for political and administrative bodies

@@ -27,6 +27,7 @@ import { SelectParty } from "../selects/party-select";
 import { convertToWebP } from "../../lib/image";
 import NoProfileImageIcon from "../../icons/no-profile-image-icon";
 import { cn } from "../../lib/utils";
+import { TinyError } from "./TinyError";
 
 export interface UserResult {
   id: number;
@@ -760,17 +761,13 @@ export function UserFormDialog({
               </DialogPadding>
             </div>
             {error && (
-              <div className="px-6 pb-4 shrink-0">
-                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-                  {error}
-                </div>
-              </div>
+              <TinyError error={error} wrapperClassName="px-6 pb-4 shrink-0" />
             )}
             <DialogFooter>
               <Button
                 type="submit"
                 disabled={saveMutation.isPending}
-                className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
+                className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2"
               >
                 {saveMutation.isPending && (
                   <Loader2 className="size-4 animate-spin" />
@@ -922,11 +919,7 @@ function MoreInfoTab({
     >
       <div className="flex-1 overflow-y-auto min-h-0">
         <DialogPadding className="space-y-6 pb-6 pt-4">
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-              {error}
-            </div>
-          )}
+          <TinyError error={error} />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5 col-span-2">
@@ -1045,7 +1038,7 @@ function MoreInfoTab({
         <Button
           type="submit"
           disabled={saveMutation.isPending}
-          className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
+          className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
         >
           {saveMutation.isPending && (
             <Loader2 className="size-4 animate-spin" />
@@ -1254,11 +1247,7 @@ function PhoneNumbersTab({
     >
       <div className="flex-1 overflow-y-auto min-h-0">
         <DialogPadding className="space-y-6 pb-6 pt-4">
-          {error && (
-            <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
-              {error}
-            </div>
-          )}
+          <TinyError error={error} />
 
           <div className="flex flex-col gap-4">
             <form.Field
@@ -1409,7 +1398,7 @@ function PhoneNumbersTab({
         <Button
           type="submit"
           disabled={saveMutation.isPending}
-          className="h-11 px-6 bg-[#00cf79] hover:bg-[#00b568] text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
+          className="h-11 px-6 bg-success hover:bg-success-hover text-[16px] font-bold text-white rounded-xl cursor-pointer flex items-center gap-2 ml-2"
         >
           {saveMutation.isPending && (
             <Loader2 className="size-4 animate-spin" />

@@ -59,6 +59,25 @@ func (q *Queries) CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIf
 	return exists, err
 }
 
+const getPageVerificationType = `-- name: GetPageVerificationType :one
+SELECT id, verification_type, verification_title, verification_description, is_admin_assignable, for_who FROM page_verification_types
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetPageVerificationType(ctx context.Context, id int16) (PageVerificationType, error) {
+	row := q.db.QueryRow(ctx, getPageVerificationType, id)
+	var i PageVerificationType
+	err := row.Scan(
+		&i.ID,
+		&i.VerificationType,
+		&i.VerificationTitle,
+		&i.VerificationDescription,
+		&i.IsAdminAssignable,
+		&i.ForWho,
+	)
+	return i, err
+}
+
 const getPageVerifications = `-- name: GetPageVerifications :many
 SELECT 
   pv.id,
@@ -69,7 +88,8 @@ SELECT
   pvt.verification_type,
   pvt.verification_title,
   pvt.verification_description,
-  pvt.badge
+  pvt.is_admin_assignable,
+  pvt.for_who
 FROM pages_verified pv
 JOIN page_verification_types pvt ON pv.verification_type_id = pvt.id
 WHERE pv.page_type = $1 AND pv.page_id = $2
@@ -89,7 +109,8 @@ type GetPageVerificationsRow struct {
 	VerificationType        string             `json:"verification_type"`
 	VerificationTitle       string             `json:"verification_title"`
 	VerificationDescription pgtype.Text        `json:"verification_description"`
-	Badge                   pgtype.Text        `json:"badge"`
+	IsAdminAssignable       bool               `json:"is_admin_assignable"`
+	ForWho                  string             `json:"for_who"`
 }
 
 func (q *Queries) GetPageVerifications(ctx context.Context, arg GetPageVerificationsParams) ([]GetPageVerificationsRow, error) {
@@ -110,7 +131,8 @@ func (q *Queries) GetPageVerifications(ctx context.Context, arg GetPageVerificat
 			&i.VerificationType,
 			&i.VerificationTitle,
 			&i.VerificationDescription,
-			&i.Badge,
+			&i.IsAdminAssignable,
+			&i.ForWho,
 		); err != nil {
 			return nil, err
 		}
@@ -123,7 +145,7 @@ func (q *Queries) GetPageVerifications(ctx context.Context, arg GetPageVerificat
 }
 
 const listVerificationTypes = `-- name: ListVerificationTypes :many
-SELECT id, verification_type, verification_title, verification_description, badge FROM page_verification_types ORDER BY id ASC
+SELECT id, verification_type, verification_title, verification_description, is_admin_assignable, for_who FROM page_verification_types ORDER BY id ASC
 `
 
 func (q *Queries) ListVerificationTypes(ctx context.Context) ([]PageVerificationType, error) {
@@ -140,7 +162,8 @@ func (q *Queries) ListVerificationTypes(ctx context.Context) ([]PageVerification
 			&i.VerificationType,
 			&i.VerificationTitle,
 			&i.VerificationDescription,
-			&i.Badge,
+			&i.IsAdminAssignable,
+			&i.ForWho,
 		); err != nil {
 			return nil, err
 		}
@@ -154,16 +177,22 @@ func (q *Queries) ListVerificationTypes(ctx context.Context) ([]PageVerification
 
 const removePageVerification = `-- name: RemovePageVerification :exec
 DELETE FROM pages_verified
-WHERE page_type = $1 AND page_id = $2 AND verification_type_id = $3
+WHERE id = $1 AND page_type = $2 AND page_id = $3 AND verification_type_id = $4
 `
 
 type RemovePageVerificationParams struct {
+	ID                 int64  `json:"id"`
 	PageType           string `json:"page_type"`
 	PageID             int64  `json:"page_id"`
 	VerificationTypeID int16  `json:"verification_type_id"`
 }
 
 func (q *Queries) RemovePageVerification(ctx context.Context, arg RemovePageVerificationParams) error {
-	_, err := q.db.Exec(ctx, removePageVerification, arg.PageType, arg.PageID, arg.VerificationTypeID)
+	_, err := q.db.Exec(ctx, removePageVerification,
+		arg.ID,
+		arg.PageType,
+		arg.PageID,
+		arg.VerificationTypeID,
+	)
 	return err
 }
