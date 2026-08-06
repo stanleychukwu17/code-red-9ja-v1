@@ -336,14 +336,13 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	// filters
 	partyIDStr := r.URL.Query().Get("party_id")
 	parties := r.URL.Query().Get("parties")
-	accountStatus := r.URL.Query().Get("account_status")
 	statuses := r.URL.Query().Get("statuses")
 	verificationTypes := r.URL.Query().Get("verification_types")
 	countryID := r.URL.Query().Get("country_id")
 	stateIDs := r.URL.Query().Get("state_ids")
 	limit, cursor := parsePaginationParams(r)
 
-	// split the roles into slice of string, inCase we are trying to get multiple roles at the same
+	// sorting based on roles
 	var roleSlice []string
 	if roles != "" {
 		roleSlice = strings.Split(roles, ",")
@@ -352,10 +351,8 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	var accountStatusSlice []string
 	if statuses != "" {
 		accountStatusSlice = strings.Split(statuses, ",")
-	} else if accountStatus != "" {
-		accountStatusSlice = strings.Split(accountStatus, ",")
 	} else {
-		accountStatusSlice = []string{"just_registered", "placeholder", "active", "inactive"}
+		accountStatusSlice = []string{"just_registered", "placeholder", "active"}
 	}
 
 	// sorting based on parties
