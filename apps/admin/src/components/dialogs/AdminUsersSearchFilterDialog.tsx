@@ -245,7 +245,7 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
           {/* State Filter */}
           <div className="flex items-center justify-between gap-4">
             <h4 className="font-semibold text-c-90 text-[15px] shrink-0">Residence State</h4>
-            <div className="flex-1 max-w-[200px]">
+            <div className="flex-1 max-w-50">
               <SelectState
                 selectedId={selectedStateIds.length > 0 ? selectedStateIds[0] : undefined}
                 update={(item) => toggleState(String(item.id))}
