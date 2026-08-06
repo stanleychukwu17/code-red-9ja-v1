@@ -139,7 +139,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
 
-	authHandler := authhandler.NewHandler(authService, usersService, utilsInstance)
+	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
 	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
@@ -183,7 +183,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	if r2Err != nil {
 		slog.Warn("R2 service not configured — file upload endpoints will be unavailable", "reason", r2Err)
 	} else {
-		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService, partiesService)
+		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
 	}
 
 	// Core middleware

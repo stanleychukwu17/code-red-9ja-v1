@@ -5,6 +5,7 @@ const (
 	ModuleAdmin      = "admin"       // Represents the administration module of the system
 	ModulePartyAdmin = "party_admin" // Represents the party administration module of the system
 	ModuleUsers      = "users"       // Represents the users module of the system
+	ModuleFiles      = "files"       // Represents the files module of the system
 
 	// -- Actions --
 	ActionCreateParty            = "create_party"              // Action for creating a new party
@@ -17,6 +18,7 @@ const (
 	ActionUpdateUserPhoneNumbers = "update_user_phone_numbers" // Action for updating a user's phone numbers
 	ActionViewUserPhoneNumbers   = "view_user_phone_numbers"   // Action when a user's phone numbers are viewed
 	ActionDeleteUserPhoneNumber  = "delete_user_phone_number"  // Action when a user's phone number is deleted
+	ActionDeleteFile             = "delete_file"               // Action for deleting a file
 
 	// -- Actor Roles --
 	ActorRoleAdmin      = "admin"       // A standard administrative user

@@ -376,6 +376,7 @@ type Querier interface {
 	UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error)
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
+	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
 	UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMoreInfoAboutThisUserParams) error
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)

@@ -11,6 +11,7 @@ import (
 type FilesService interface {
 	CheckFileOwner(ctx context.Context, fileID int64, ownerID int64) (bool, error)
 	GetFileByID(ctx context.Context, id int64) (queries.File, error)
+	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error)
 }
 
 type filesService struct {
@@ -39,4 +40,12 @@ func (s *filesService) CheckFileOwner(ctx context.Context, fileID int64, ownerID
 // GetFileByID returns a file by its ID.
 func (s *filesService) GetFileByID(ctx context.Context, id int64) (queries.File, error) {
 	return s.db.GetFileByID(ctx, id)
+}
+
+// UpdateFileOwner updates the owner of a file
+func (s *filesService) UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error) {
+	return s.db.UpdateFileOwner(ctx, queries.UpdateFileOwnerParams{
+		ID:      fileID,
+		OwnerID: pgtype.Int8{Int64: ownerID, Valid: true},
+	})
 }

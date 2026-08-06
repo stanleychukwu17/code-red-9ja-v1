@@ -182,9 +182,13 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// update the file owner to the new partyID
+	if req.LogoFileID != nil && *req.LogoFileID > 0 {
+		h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, int64(party.ID))
+	}
+
 	// --- Audit Logging ---
 	newValuesJSON, _ := json.Marshal(party)
-
 	h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
 		Module:     audit.StringToText(db.ModuleAdmin),
 		Action:     db.ActionCreateParty,

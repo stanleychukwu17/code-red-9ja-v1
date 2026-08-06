@@ -117,11 +117,10 @@ export function UserFormDialog({
 
   const [error, setError] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
-
   const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">("basic");
   const [createdUser, setCreatedUser] = React.useState<UserResult | null>(null);
 
-  const activeUser = mode === "update" ? user : createdUser;
+  const activeUser = mode === "update" ? (user || createdUser) : createdUser;
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -144,11 +143,19 @@ export function UserFormDialog({
       // formatted date of birth
       const formattedDob = values.dateOfBirth.split("T")[0];
 
+      // new avatar url and file id, fallback to user's current ones
       let finalAvatarUrl = avatarUrl;
-      let finalFileId = uploadedFileId || (user as any)?.avatar_file_id || undefined;
+      let finalFileId = uploadedFileId || (activeUser as any)?.avatar_file_id || undefined;
 
+      // if there is a new avatar file(i.e selectedAvatarFile), upload it
       if (selectedAvatarFile) {
         setIsUploading(true);
+
+        // user is changing avatar, so we need to delete the existing one
+        if (activeUser?.avatar_file_id && Number(activeUser.avatar_file_id) > 0) {
+          await handleRemoveImage("changing_avatar");
+        }
+
         try {
           // 1. Request a presigned URL from the API for uploading the avatar
           const uploadRes = await getPresignedUploadURL({
@@ -158,7 +165,7 @@ export function UserFormDialog({
               file_size: selectedAvatarFile.size,
               folder: "avatars",
               is_public: true,
-              owner_id: user?.fake_id ? Number(user.fake_id) : undefined,
+              owner_id: activeUser?.id ? Number(activeUser.id) : undefined,
             },
           });
           if (!uploadRes.success || !uploadRes.data) throw new Error(uploadRes.message || "Failed to initiate file upload");
@@ -196,7 +203,7 @@ export function UserFormDialog({
       if (mode === "update") {
         res = await updateUser({
           data: {
-            id: user.fake_id,
+            id: activeUser?.fake_id,
             email: values.email ? values.email.trim() : "",
             username: values.username.trim(),
             first_name: values.firstName.trim(),
@@ -295,11 +302,9 @@ export function UserFormDialog({
             }
           );
 
-          onSuccess?.(newUser);
+          onClose()
           setCreatedUser(newUser);
         }
-
-        setActiveTab("more");
       }
     },
     onError: (err: any) => {
@@ -317,7 +322,7 @@ export function UserFormDialog({
       username: "",
       gender: "",
       dateOfBirth: "",
-      residenceCountryId: undefined as number | undefined,
+      residenceCountryId: 161 as number | undefined,
       residenceStateId: undefined as number | undefined,
       residenceCityId: undefined as number | undefined,
       originCountryId: 161 as number | undefined,
@@ -359,28 +364,32 @@ export function UserFormDialog({
   // It populates data for 'update' mode and resets fields for 'create' mode.
   React.useEffect(() => {
     if (open) {
+      if (mode === "create") {
+        setCreatedUser(null);
+        setActiveTab("basic");
+      }
       const isPartyLocked = partyId !== undefined || partyShortName !== undefined;
 
-      if (mode === "update" && user) {
-        form.setFieldValue("firstName", user.first_name || "");
-        form.setFieldValue("lastName", user.last_name || "");
-        form.setFieldValue("middleName", user.middle_name || "");
-        form.setFieldValue("username", user.username || "");
-        form.setFieldValue("gender", user.gender || "");
-        form.setFieldValue("dateOfBirth", user.date_of_birth || "");
-        form.setFieldValue("residenceCountryId", user.current_country);
-        form.setFieldValue("residenceStateId", user.current_state);
-        form.setFieldValue("residenceCityId", user.current_city || undefined);
+      if (mode === "update" && activeUser) {
+        form.setFieldValue("firstName", activeUser.first_name || "");
+        form.setFieldValue("lastName", activeUser.last_name || "");
+        form.setFieldValue("middleName", activeUser.middle_name || "");
+        form.setFieldValue("username", activeUser.username || "");
+        form.setFieldValue("gender", activeUser.gender || "");
+        form.setFieldValue("dateOfBirth", activeUser.date_of_birth || "");
+        form.setFieldValue("residenceCountryId", activeUser.current_country || 161);
+        form.setFieldValue("residenceStateId", activeUser.current_state);
+        form.setFieldValue("residenceCityId", activeUser.current_city || undefined);
         form.setFieldValue("originCountryId", 161);
-        form.setFieldValue("originStateId", user.state_of_origin || undefined);
+        form.setFieldValue("originStateId", activeUser.state_of_origin || undefined);
         form.setFieldValue(
-          "partyId", isPartyLocked ? (partyId ?? user.party_id) : user.party_id || undefined,
+          "partyId", isPartyLocked ? (partyId ?? activeUser.party_id) : activeUser.party_id || undefined,
         );
-        // form.setFieldValue("email", user.email || ""); // we replaced the userEmail from the backend with ---
+        // form.setFieldValue("email", activeUser.email || ""); // we replaced the userEmail from the backend with ---
         form.setFieldValue("email", "");
         form.setFieldValue("password", "");
-        setAvatarUrl(user.avatar || "");
-        setUploadedFileId((user as any)?.avatar_file_id || undefined);
+        setAvatarUrl(activeUser.avatar || "");
+        setUploadedFileId((activeUser as any)?.avatar_file_id || undefined);
         setSelectedAvatarFile(null);
       } else {
         form.setFieldValue("firstName", "");
@@ -389,7 +398,7 @@ export function UserFormDialog({
         form.setFieldValue("username", "");
         form.setFieldValue("gender", "");
         form.setFieldValue("dateOfBirth", "");
-        form.setFieldValue("residenceCountryId", undefined);
+        form.setFieldValue("residenceCountryId", 161);
         form.setFieldValue("residenceStateId", undefined);
         form.setFieldValue("residenceCityId", undefined);
         form.setFieldValue("originCountryId", 161);
@@ -406,7 +415,7 @@ export function UserFormDialog({
   }, [
     open,
     mode,
-    user,
+    activeUser,
     partyId,
     partyShortName,
   ]);
@@ -434,27 +443,37 @@ export function UserFormDialog({
     }
   };
 
-  const handleRemoveImage = async () => {
+  const handleRemoveImage = async (which: "changing_avatar" | "removing_avatar") => {
     if (uploadedFileId && uploadedFileId > 0 && deleteFile) {
       try {
-        await deleteFile({
+        const res = await deleteFile({
           data: {
             id: uploadedFileId,
             user_fake_id: activeUser?.fake_id,
             type: "user_avatar",
           }
         });
+
+        if (!res.success) {
+          throw new Error(res.message || "Failed to delete file from server");
+        }
       } catch (err: any) {
-        console.error("Failed to delete file from server:", err);
+        setError(err.message || "Failed to delete file from server");
+        return;
       }
     }
 
-    // reset the file inputs
-    setAvatarUrl("");
-    setSelectedAvatarFile(null);
-    setUploadedFileId(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+    if (which === "removing_avatar") {
+      setAvatarUrl("");
+      setUploadedFileId(null);
+      setSelectedAvatarFile(null);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } else if (which === "changing_avatar") {
+      setAvatarUrl("");
+      setUploadedFileId(null);
     }
   };
 
@@ -537,7 +556,7 @@ export function UserFormDialog({
                       {avatarUrl && (
                         <button
                           type="button"
-                          onClick={handleRemoveImage}
+                          onClick={() => handleRemoveImage("removing_avatar")}
                           className="h-10 px-4 text-[14px] text-red hover:bg-red-50 rounded-[10px] border border-[#dfdfdf] transition cursor-pointer"
                         >
                           Remove image

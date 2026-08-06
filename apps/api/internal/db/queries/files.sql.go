@@ -315,3 +315,37 @@ func (q *Queries) MarkFileDeleted(ctx context.Context, id int64) (File, error) {
 	)
 	return i, err
 }
+
+const updateFileOwner = `-- name: UpdateFileOwner :one
+UPDATE files
+SET owner_id = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, original_name, mime_type, file_size, file_key, public_url, folder, is_public, status, uploaded_by, owner_id, uploaded_at, created_at, updated_at
+`
+
+type UpdateFileOwnerParams struct {
+	ID      int64       `json:"id"`
+	OwnerID pgtype.Int8 `json:"owner_id"`
+}
+
+func (q *Queries) UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error) {
+	row := q.db.QueryRow(ctx, updateFileOwner, arg.ID, arg.OwnerID)
+	var i File
+	err := row.Scan(
+		&i.ID,
+		&i.OriginalName,
+		&i.MimeType,
+		&i.FileSize,
+		&i.FileKey,
+		&i.PublicUrl,
+		&i.Folder,
+		&i.IsPublic,
+		&i.Status,
+		&i.UploadedBy,
+		&i.OwnerID,
+		&i.UploadedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}

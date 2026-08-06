@@ -172,7 +172,7 @@ function RouteComponent() {
         open={isFormOpen}
         onClose={() => setIsFormOpen(false)}
         // Refetch the data when a user is successfully added so the table updates
-        onSuccess={() => refetch()}
+        onSuccess={() => { }}
         deleteFile={deleteFile}
       />
       <AdminUsersSearchFilterDialog

@@ -240,11 +240,12 @@ export function UsersTable({
 }
 
 export function PartiesTable({ items }: { items: PartyType[] }) {
+  const partyList = Array.isArray(items) ? items : [];
   return (
     <div className="w-full">
       <PartyTableHeader />
       <div>
-        {items.map((data) => (
+        {partyList.map((data) => (
           <PartyTableTile key={data.id || data.short_name} data={data} />
         ))}
       </div>

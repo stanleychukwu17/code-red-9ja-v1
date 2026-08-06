@@ -15,8 +15,10 @@ package fileshandler
 import (
 	"context"
 	"encoding/json"
+	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
+	"free9ja/api/internal/service/audit"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	r2service "free9ja/api/internal/service/r2"
 	"free9ja/api/internal/utils"
@@ -66,12 +68,13 @@ type Handler struct {
 	utils          *utils.Utils
 	usersService   UsersService
 	partiesService PartiesService
+	auditService   audit.AuditService
 }
 
 // NewHandler returns a Handler wired up with the provided database, R2 service, Redis,
 // and shared utilities instance.
-func NewHandler(db FilesDB, r2Svc *r2service.R2Service, rdb *redis.Client, u *utils.Utils, usersSvc UsersService, partiesSvc PartiesService) *Handler {
-	return &Handler{db: db, r2: r2Svc, rdb: rdb, utils: u, usersService: usersSvc, partiesService: partiesSvc}
+func NewHandler(db FilesDB, r2Svc *r2service.R2Service, rdb *redis.Client, u *utils.Utils, usersSvc UsersService, partiesSvc PartiesService, auditSvc audit.AuditService) *Handler {
+	return &Handler{db: db, r2: r2Svc, rdb: rdb, utils: u, usersService: usersSvc, partiesService: partiesSvc, auditService: auditSvc}
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -374,8 +377,13 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
+
+	// permissionsservice
+	permsSvc := permissionsservice.NewPermissionsService()
+	var auditModuleName, auditActorRole string
+
 	// the file id
-	id, err := parseID(r, "id")
+	fileID, err := parseID(r, "id")
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid file ID")
 		return
@@ -399,14 +407,24 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// if the user avatar file ID is not the same as the file ID
-		if !user.AvatarFileID.Valid || user.AvatarFileID.Int64 != id {
-			h.utils.RespondError(w, http.StatusNotFound, "You can only delete your own avatar file")
+		// check permissions to modify this user
+		allowed, perms, permErr := permsSvc.CheckUserModificationPermission(claims, user)
+		if !allowed {
+			h.utils.RespondError(w, http.StatusForbidden, permErr.Error())
 			return
+		}
+		auditModuleName, auditActorRole = perms.GetAuditActorInfo()
+
+		// if the user avatar file ID is not the same as the file ID
+		if !user.AvatarFileID.Valid || user.AvatarFileID.Int64 != fileID {
+			if !(perms.IsBothAdmin) {
+				h.utils.RespondError(w, http.StatusNotFound, "You can only delete your own avatar file")
+				return
+			}
 		}
 
 		// if the user avatar file ID is the same as the file ID
-		if user.AvatarFileID.Valid && user.AvatarFileID.Int64 == id {
+		if user.AvatarFileID.Valid && user.AvatarFileID.Int64 == fileID {
 			// update the user avatar file ID to NULL and invalidate user cache
 			_ = h.usersService.ResetUserAvatar(r.Context(), user.ID, userFakeID)
 		}
@@ -421,12 +439,12 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// check permissions to delete this party image
-		permsSvc := permissionsservice.NewPermissionsService()
-		allowed, _, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
+		allowed, perms, err := permsSvc.CheckPartyModificationPermission(claims, int16(partyID))
 		if !allowed {
 			h.utils.RespondError(w, http.StatusForbidden, err.Error())
 			return
 		}
+		auditModuleName, auditActorRole = perms.GetAuditActorInfo()
 
 		// get the party Details
 		party, dbErr := h.db.GetPartyByID(r.Context(), int16(partyID))
@@ -436,9 +454,9 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// if the file_id is available, we check if the file belongs to the party
-		if id > 0 {
+		if fileID > 0 {
 			// if the party logo file ID is not the same as the file ID
-			if !party.LogoFileID.Valid || party.LogoFileID.Int64 != id {
+			if !party.LogoFileID.Valid || party.LogoFileID.Int64 != fileID {
 				h.utils.RespondError(w, http.StatusNotFound, "You can only delete the party's own logo file")
 				return
 			}
@@ -452,16 +470,16 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// if the file_id is available, we delete from the r2 bucket
-	if id > 0 {
+	if fileID > 0 {
 		// Fetch record first so we have the R2 key.
-		file, err := h.db.GetFileByID(r.Context(), id)
+		file, err := h.db.GetFileByID(r.Context(), fileID)
 		if err != nil {
 			h.utils.RespondError(w, http.StatusNotFound, "File not found")
 			return
 		}
 
 		// Soft-delete first — prevents any new reads from seeing the record.
-		if _, err = h.db.MarkFileDeleted(r.Context(), id); err != nil {
+		if _, err = h.db.MarkFileDeleted(r.Context(), fileID); err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete file: "+err.Error())
 			return
 		}
@@ -469,7 +487,7 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 		// Purge from R2; only hard-delete the DB row once the bucket object is gone.
 		// If R2 deletion fails we log the error — a cleanup job can handle it later.
 		if err = h.r2.DeleteObject(r.Context(), file.FileKey); err == nil {
-			_ = h.db.HardDeleteFile(r.Context(), id)
+			_ = h.db.HardDeleteFile(r.Context(), fileID)
 
 			// Asynchronously purge Cloudflare Edge CDN cache
 			go func(key string) {
@@ -479,6 +497,26 @@ func (h *Handler) DeleteFile(w http.ResponseWriter, r *http.Request) {
 					slog.Error("failed to purge cloudflare edge cache", "fileKey", key, "error", purgeErr)
 				}
 			}(file.FileKey)
+
+			// --- Audit Logging ---
+			if auditModuleName == "" {
+				auditModuleName = db.ModuleFiles
+				auditActorRole = db.ActorRoleUser
+				if len(claims.Roles) > 0 {
+					auditActorRole = claims.Roles[0]
+				}
+			}
+
+			oldValuesJSON, _ := json.Marshal(file)
+			h.auditService.LogActionAsync(r.Context(), queries.InsertAuditLogParams{
+				Module:     audit.StringToText(auditModuleName),
+				Action:     db.ActionDeleteFile,
+				ActorID:    claims.UserID,
+				ActorRole:  audit.StringToText(auditActorRole),
+				EntityType: "file",
+				EntityID:   strconv.FormatInt(fileID, 10),
+				OldValues:  oldValuesJSON,
+			})
 		} else {
 			slog.ErrorContext(r.Context(), "failed to delete file from r2", "fileKey", file.FileKey, "error", err)
 		}

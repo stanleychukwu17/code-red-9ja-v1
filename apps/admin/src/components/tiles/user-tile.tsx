@@ -21,6 +21,7 @@ export type UserType = {
   last_name?: string;
   first_name?: string;
   middle_name?: string;
+  name?: string;
   gender?: string;
   date_of_birth?: string;
   current_country?: number;

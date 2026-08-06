@@ -38,19 +38,26 @@ type UsersService interface {
 	CheckEmail(ctx context.Context, email string) bool
 }
 
+// FilesService interface defines the methods from FilesService that the auth handler needs
+type FilesService interface {
+	UpdateFileOwner(ctx context.Context, fileID int64, ownerID int64) (queries.File, error)
+}
+
 // Handler struct holds the dependencies for the auth handler
 type Handler struct {
 	authService  AuthService
 	usersService UsersService
+	filesService FilesService
 	validate     *validator.Validate
 	utils        *utils.Utils
 }
 
 // NewHandler creates a new instance of the auth handler
-func NewHandler(authService AuthService, usersService UsersService, utils *utils.Utils) *Handler {
+func NewHandler(authService AuthService, usersService UsersService, filesService FilesService, utils *utils.Utils) *Handler {
 	return &Handler{
 		authService:  authService,
 		usersService: usersService,
+		filesService: filesService,
 		validate:     validator.New(),
 		utils:        utils,
 	}
@@ -754,6 +761,10 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create candidate placeholder: "+err.Error())
 		return
+	}
+
+	if req.AvatarFileId != nil && *req.AvatarFileId > 0 {
+		_, _ = h.filesService.UpdateFileOwner(r.Context(), *req.AvatarFileId, result.UserID)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Candidate placeholder registered successfully", map[string]interface{}{
