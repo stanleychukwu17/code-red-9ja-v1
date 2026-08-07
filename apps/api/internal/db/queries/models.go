@@ -804,11 +804,11 @@ type PagesVerified struct {
 }
 
 type Party struct {
-<<<<<<< HEAD
 	ID                      int16              `json:"id"`
 	ShortName               string             `json:"short_name"`
 	Name                    string             `json:"name"`
 	Logo                    string             `json:"logo"`
+	LogoFileID              pgtype.Int8        `json:"logo_file_id"`
 	DisplayOrder            int32              `json:"display_order"`
 	Status                  string             `json:"status"`
 	Slots                   int32              `json:"slots"`
@@ -819,22 +819,6 @@ type Party struct {
 	AgentAcquisitionTargets []byte             `json:"agent_acquisition_targets"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
-=======
-	ID                   int16              `json:"id"`
-	ShortName            string             `json:"short_name"`
-	Name                 string             `json:"name"`
-	Logo                 string             `json:"logo"`
-	LogoFileID           pgtype.Int8        `json:"logo_file_id"`
-	DisplayOrder         int32              `json:"display_order"`
-	Status               string             `json:"status"`
-	Slots                int32              `json:"slots"`
-	IsVerified           pgtype.Bool        `json:"is_verified"`
-	DiscountPercentage   pgtype.Numeric     `json:"discount_percentage"`
-	AllowanceBalanceKobo int64              `json:"allowance_balance_kobo"`
-	StateAllowances      []byte             `json:"state_allowances"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
->>>>>>> roles-merge-6-aug
 }
 
 type PartyApplication struct {
@@ -891,7 +875,6 @@ type PartyElectionGroup struct {
 	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
-<<<<<<< HEAD
 type PartyMarketingCampaign struct {
 	ID              int32                   `json:"id"`
 	PartyID         int32                   `json:"party_id"`
@@ -908,7 +891,8 @@ type PartyMarketingCampaign struct {
 	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
 	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
-=======
+}
+
 type PartyMembership struct {
 	ID        int64              `json:"id"`
 	UserID    int64              `json:"user_id"`
@@ -940,7 +924,6 @@ type PartyMembershipRequest struct {
 type PartyPositionType struct {
 	ID           int16       `json:"id"`
 	PositionName pgtype.Text `json:"position_name"`
->>>>>>> roles-merge-6-aug
 }
 
 type PartyWallet struct {
@@ -1179,6 +1162,7 @@ type User struct {
 	CurrentLga      pgtype.Int4        `json:"current_lga"`
 	CurrentWard     pgtype.Int4        `json:"current_ward"`
 	Address         pgtype.Text        `json:"address"`
+	CountryOfOrigin pgtype.Int2        `json:"country_of_origin"`
 	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
 	IsPolitician    pgtype.Bool        `json:"is_politician"`
 	IsVerified      pgtype.Bool        `json:"is_verified"`

@@ -363,7 +363,6 @@ func (q *Queries) ListUsersWithoutWallet(ctx context.Context) ([]ListUsersWithou
 			&i.CurrentLga,
 			&i.CurrentWard,
 			&i.Address,
-			&i.CountryOfOrigin,
 			&i.StateOfOrigin,
 			&i.IsPolitician,
 			&i.IsVerified,

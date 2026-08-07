@@ -11,6 +11,7 @@ import (
 	"free9ja/api/internal/service/files"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
+	"io"
 	"net/http"
 	"sort"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type PartiesService interface {
@@ -48,7 +50,6 @@ type PartiesService interface {
 	DepositAllowance(ctx context.Context, partyID int16, amountKobo int64) (queries.Party, error)
 	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
 	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
-	UpdateStateAllowances(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 	// Membership methods
 	UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 	GetAgentPaymentAllocation(ctx context.Context, partyID int16) (json.RawMessage, error)

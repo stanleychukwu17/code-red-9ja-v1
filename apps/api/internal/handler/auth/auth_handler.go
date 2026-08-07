@@ -25,8 +25,6 @@ type AuthService interface {
 	VerifySignupEmailOTP(ctx context.Context, email, otp string) (auth.EmailOTPResult, error)
 	SendForgotPasswordEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
 	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, nin string, q1 int16, a1 string, q2 int16, a2 string) error
-	CheckNIN(ctx context.Context, nin string) bool
-	CheckUsername(ctx context.Context, username string) bool
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
@@ -375,13 +373,13 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Check username availability
-	if h.authService.CheckUsername(ctx, req.Username) {
+	if h.usersService.CheckUsername(ctx, req.Username) {
 		h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 		return
 	}
 
 	// Check NIN uniqueness
-	if h.authService.CheckNIN(ctx, req.Nin) {
+	if h.usersService.CheckNIN(ctx, req.Nin) {
 		h.utils.RespondError(w, http.StatusBadRequest, "NIN is already registered to another account")
 		return
 	}

@@ -483,7 +483,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		r.Post("/api/v1/parties/{id}/join", partiesHandler.JoinParty)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
-		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateStateAllowances)
+		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocation)
 		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
 		r.Get("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.GetAgentPaymentAllocation)
 		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocation)

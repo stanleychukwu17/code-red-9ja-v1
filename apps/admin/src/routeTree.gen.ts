@@ -20,7 +20,6 @@ import { Route as AuthenticatedElectionsRouteImport } from './routes/_authentica
 import { Route as AuthenticatedBodiesRouteImport } from './routes/_authenticated/bodies'
 import { Route as SettingsPartyadminIndexRouteImport } from './routes/settings/partyadmin/index'
 import { Route as SettingsGeneralIndexRouteImport } from './routes/settings/_general/index'
-import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedLogsIndexRouteImport } from './routes/_authenticated/logs/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/home/index'
@@ -93,12 +92,6 @@ const SettingsGeneralIndexRoute = SettingsGeneralIndexRouteImport.update({
   path: '/',
   getParentRoute: () => SettingsRoute,
 } as any)
-const AuthenticatedPartiesIndexRoute =
-  AuthenticatedPartiesIndexRouteImport.update({
-    id: '/parties/',
-    path: '/parties/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
 const AuthenticatedNotificationsIndexRoute =
   AuthenticatedNotificationsIndexRouteImport.update({
     id: '/notifications/',
@@ -223,7 +216,6 @@ export interface FileRoutesByFullPath {
   '/home/': typeof AuthenticatedHomeIndexRoute
   '/logs/': typeof AuthenticatedLogsIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
-  '/parties/': typeof AuthenticatedPartiesIndexRoute
   '/settings/': typeof SettingsGeneralIndexRoute
   '/settings/partyadmin/': typeof SettingsPartyadminIndexRoute
 }
@@ -251,7 +243,6 @@ export interface FileRoutesByTo {
   '/home': typeof AuthenticatedHomeIndexRoute
   '/logs': typeof AuthenticatedLogsIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
-  '/parties': typeof AuthenticatedPartiesIndexRoute
   '/settings': typeof SettingsGeneralIndexRoute
   '/settings/partyadmin': typeof SettingsPartyadminIndexRoute
 }
@@ -283,7 +274,6 @@ export interface FileRoutesById {
   '/_authenticated/home/': typeof AuthenticatedHomeIndexRoute
   '/_authenticated/logs/': typeof AuthenticatedLogsIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
-  '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
   '/settings/_general/': typeof SettingsGeneralIndexRoute
   '/settings/partyadmin/': typeof SettingsPartyadminIndexRoute
 }
@@ -315,7 +305,6 @@ export interface FileRouteTypes {
     | '/home/'
     | '/logs/'
     | '/notifications/'
-    | '/parties/'
     | '/settings/'
     | '/settings/partyadmin/'
   fileRoutesByTo: FileRoutesByTo
@@ -343,7 +332,6 @@ export interface FileRouteTypes {
     | '/home'
     | '/logs'
     | '/notifications'
-    | '/parties'
     | '/settings'
     | '/settings/partyadmin'
   id:
@@ -374,7 +362,6 @@ export interface FileRouteTypes {
     | '/_authenticated/home/'
     | '/_authenticated/logs/'
     | '/_authenticated/notifications/'
-    | '/_authenticated/parties/'
     | '/settings/_general/'
     | '/settings/partyadmin/'
   fileRoutesById: FileRoutesById
@@ -465,13 +452,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings/'
       preLoaderRoute: typeof SettingsGeneralIndexRouteImport
       parentRoute: typeof SettingsRoute
-    }
-    '/_authenticated/parties/': {
-      id: '/_authenticated/parties/'
-      path: '/parties'
-      fullPath: '/parties/'
-      preLoaderRoute: typeof AuthenticatedPartiesIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/notifications/': {
       id: '/_authenticated/notifications/'

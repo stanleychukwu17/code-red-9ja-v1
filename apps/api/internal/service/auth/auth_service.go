@@ -9,7 +9,6 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"log/slog"
-	"math/rand"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -23,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -826,12 +826,12 @@ type SignupResult struct {
 
 func (s *AuthService) Signup(ctx context.Context, email, phone, password string, countryID int16) (SignupResult, error) {
 	// Check if email exists
-	if email != "" && s.CheckEmail(ctx, email) {
+	if email != "" && s.usersService.CheckEmail(ctx, email) {
 		return SignupResult{}, errors.New("Email address already exists")
 	}
 
 	// Check if phone exists
-	if s.CheckPhone(ctx, phone) {
+	if s.usersService.CheckPhone(ctx, phone) {
 		return SignupResult{}, errors.New("phone already exists")
 	}
 
@@ -878,7 +878,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	fakeID := utils.GenerateFakeID(user_id)
 
 	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{
-	// Update user fake ID
+		// Update user fake ID
 		ID:     user_id,
 		FakeID: pgtype.Int8{Int64: fakeID, Valid: true},
 	})
@@ -887,7 +887,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	}
 
 	go func() {
-	// Initialize basic wallet
+		// Initialize basic wallet
 		bgCtx := context.Background()
 		registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
 		if userErr == nil {
@@ -931,7 +931,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
 	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp)
 	if email != "" {
-	// Store email and phone → fakeID mappings so login-by-email/phone works immediately
+		// Store email and phone → fakeID mappings so login-by-email/phone works immediately
 		pipe.Set(ctx, db.RedisEmailFakeID+strings.ToLower(strings.TrimSpace(email)), fakeID, 0)
 	}
 	if e164Phone != "" {
@@ -950,8 +950,8 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 
 // CompleteOnboarding finalises a newly registered user's profile with all data collected during the onboarding flow.
 // It updates the user row, saves NIN + username to Redis/DB, stores security questions, and sets account status to 'active'.
-	ctx context.Context,
 func (s *AuthService) CompleteOnboarding(
+	ctx context.Context,
 	userID int64,
 	fakeID int64,
 	params queries.UpdateOnboardingProfileParams,
@@ -992,7 +992,7 @@ func (s *AuthService) CompleteOnboarding(
 	}
 
 	// 4. Invalidate the Redis user-info cache so the next read is fresh
-	s.UpdateCachedUserInfo(ctx, fakeID)
+	_ = s.usersService.InvalidateCachedUserInfo(ctx, fakeID)
 
 	return nil
 }
@@ -1134,7 +1134,7 @@ func (s *AuthService) SendSignupEmailOTP(ctx context.Context, email string) (Ema
 	if email == "" {
 		return EmailOTPResult{}, errors.New("email is required")
 	}
-	if s.CheckEmail(ctx, email) {
+	if s.usersService.CheckEmail(ctx, email) {
 		return EmailOTPResult{}, errors.New("Email address already exists")
 	}
 
@@ -1164,7 +1164,7 @@ func (s *AuthService) SendForgotPasswordEmailOTP(ctx context.Context, email stri
 	if email == "" {
 		return EmailOTPResult{}, errors.New("email is required")
 	}
-	if !s.CheckEmail(ctx, email) {
+	if !s.usersService.CheckEmail(ctx, email) {
 		return EmailOTPResult{}, errors.New("no account found with that email address")
 	}
 
@@ -1243,7 +1243,7 @@ func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone stri
 	if err := s.VerifySignupEmailToken(ctx, email, emailVerificationToken); err != nil {
 		return RegisterPhaseSignUpResult{}, err
 	}
-	if s.CheckEmail(ctx, email) {
+	if s.usersService.CheckEmail(ctx, email) {
 		return RegisterPhaseSignUpResult{}, errors.New("Email address already exists")
 	}
 
@@ -1412,7 +1412,7 @@ func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, newPassw
 	}
 
 	// 5. Update cached user info
-	_ = s.UpdateCachedUserInfo(ctx, fakeID)
+	_ = s.usersService.InvalidateCachedUserInfo(ctx, fakeID)
 
 	return nil
 }
@@ -1499,7 +1499,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 
 	// email checks
 	email = strings.TrimSpace(strings.ToLower(email))
-	if email != "" && s.CheckEmail(ctx, email) {
+	if email != "" && s.usersService.CheckEmail(ctx, email) {
 		return RegisterResult{}, errors.New("Email address already exists")
 	}
 

@@ -303,7 +303,6 @@ definitions:
     - question2
     - username
     type: object
-<<<<<<< HEAD
   authhandler.SignupRequest:
     properties:
       countryId:
@@ -322,25 +321,6 @@ definitions:
     - password
     - phoneNumber
     type: object
-  authhandler.UpdateUserRolesRequest:
-    properties:
-      party_id:
-        type: integer
-      roles:
-        items:
-          type: string
-        minItems: 1
-        type: array
-      user_fake_id:
-        type: integer
-      user_id:
-        type: integer
-    required:
-    - roles
-    - user_id
-    type: object
-=======
->>>>>>> roles-merge-6-aug
   authhandler.VerifySecurityQuestionsRequest:
     properties:
       answer1:
@@ -408,8 +388,6 @@ definitions:
         type: string
       voters_card_image:
         type: string
-    type: object
-  big.Int:
     type: object
   big.Int:
     type: object
@@ -1079,8 +1057,6 @@ definitions:
     - Infinity
     - Finite
     - NegativeInfinity
-<<<<<<< HEAD
-=======
   pgtype.Int2:
     properties:
       int16:
@@ -1097,7 +1073,6 @@ definitions:
       valid:
         type: boolean
     type: object
->>>>>>> roles-merge-6-aug
   pgtype.Int8:
     properties:
       int64:
@@ -1120,36 +1095,6 @@ definitions:
       valid:
         type: boolean
     type: object
-<<<<<<< HEAD
-  pgtype.Text:
-    properties:
-      string:
-        type: string
-      valid:
-        type: boolean
-    type: object
-  pgtype.Timestamptz:
-    properties:
-      infinityModifier:
-        $ref: '#/definitions/pgtype.InfinityModifier'
-      time:
-        type: string
-      valid:
-        type: boolean
-    type: object
-  pgtype.InfinityModifier:
-    enum:
-    - 1
-    - 0
-    - -1
-    format: int32
-    type: integer
-    x-enum-varnames:
-    - Infinity
-    - Finite
-    - NegativeInfinity
-=======
->>>>>>> roles-merge-6-aug
   pgtype.Text:
     properties:
       string:
@@ -1492,7 +1437,15 @@ definitions:
     type: object
   queries.PartyWithVerifications:
     properties:
-      allowance_balance_kobo:
+      agent_acquisition_targets:
+        items:
+          type: integer
+        type: array
+      agent_payment_allocation:
+        items:
+          type: integer
+        type: array
+      agent_payment_balance_kobo:
         type: integer
       created_at:
         $ref: '#/definitions/pgtype.Timestamptz'
@@ -1514,10 +1467,6 @@ definitions:
         type: string
       slots:
         type: integer
-      state_allowances:
-        items:
-          type: integer
-        type: array
       status:
         type: string
       updated_at:
@@ -1541,6 +1490,8 @@ definitions:
         type: string
       country_name:
         type: string
+      country_of_origin:
+        $ref: '#/definitions/pgtype.Int2'
       created_at:
         $ref: '#/definitions/pgtype.Timestamptz'
       current_city:
@@ -1972,8 +1923,6 @@ definitions:
       narration:
         type: string
     type: object
-<<<<<<< HEAD
-=======
   usersservice.PhonePayload:
     properties:
       id:
@@ -1989,7 +1938,6 @@ definitions:
       raw_input:
         type: string
     type: object
->>>>>>> roles-merge-6-aug
   utils.ErrorResponse:
     properties:
       data: {}
@@ -2356,30 +2304,6 @@ paths:
       summary: Delete a user phone number
       tags:
       - Users
-  /agent-marketing-plans:
-    get:
-      description: Returns all active marketing plans of the specified type (e.g.
-        agent-campaign)
-      parameters:
-      - default: agent-campaign
-        description: Campaign type
-        in: query
-        name: type
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Marketing plans retrieved successfully
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get plans by type
-      tags:
-      - Marketing
-  /auth/admin/login:
   /admin/verifications:
     delete:
       consumes:
@@ -2458,6 +2382,29 @@ paths:
       summary: Assign verifications to a page
       tags:
       - Page Verifications
+  /agent-marketing-plans:
+    get:
+      description: Returns all active marketing plans of the specified type (e.g.
+        agent-campaign)
+      parameters:
+      - default: agent-campaign
+        description: Campaign type
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Marketing plans retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get plans by type
+      tags:
+      - Marketing
   /api/v1/supervisor-assignments:
     get:
       consumes:
@@ -2879,42 +2826,6 @@ paths:
       summary: Update all roles for a user
       tags:
       - Auth
-<<<<<<< HEAD
-  /auth/seed:
-    post:
-      consumes:
-      - application/json
-      description: Batch registers testing users from formatted JSON data
-      parameters:
-      - description: List of users to seed
-        in: body
-        name: request
-        required: true
-        schema:
-          items:
-            $ref: '#/definitions/authservice.SeedUserRequest'
-          type: array
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Users seeded successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Failed to seed users
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Seed testing users
-      tags:
-      - Auth
   /auth/signup:
     post:
       consumes:
@@ -2943,8 +2854,6 @@ paths:
       summary: Basic sign-up
       tags:
       - Auth
-=======
->>>>>>> roles-merge-6-aug
   /auth/superadmin:
     post:
       consumes:
@@ -4199,12 +4108,68 @@ paths:
       summary: Create a new nationwide election
       tags:
       - Elections
+  /elections/results:
+    get:
+      consumes:
+      - application/json
+      description: Returns the specific final result for the provided scope parameters.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: State Constituency ID
+        in: query
+        name: state_constituency_id
+        type: integer
+      - description: LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Federal Constituency ID
+        in: query
+        name: federal_constituency_id
+        type: integer
+      - description: Senatorial District ID
+        in: query
+        name: senatorial_district_id
+        type: integer
+      - description: State ID
+        in: query
+        name: state_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get scoped final result
+      tags:
+      - ElectionResults
   /elections/results/federal-constituencies:
     get:
       consumes:
       - application/json
       description: Returns federal constituencies for a senatorial district with their
-        federal_constituency_final_result.
+        election_federal_constituency_final_result.
       parameters:
       - description: Election ID
         in: query
@@ -4249,7 +4214,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Returns LGAs for a federal constituency with their lga_final_result.
+      description: Returns LGAs for a federal constituency with their election_lga_final_result.
       parameters:
       - description: Election ID
         in: query
@@ -4339,7 +4304,7 @@ paths:
     get:
       consumes:
       - application/json
-      description: Returns senatorial districts for a state with their senatorial_district_final_result.
+      description: Returns senatorial districts for a state with their election_senatorial_district_final_result.
       parameters:
       - description: Election ID
         in: query
@@ -4384,8 +4349,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Returns all Nigerian states with their state_final_result for the
-        given election_id.
+      description: Returns all Nigerian states with their election_state_final_result
+        for the given election_id.
       parameters:
       - description: Election ID
         in: query
@@ -4426,7 +4391,7 @@ paths:
       consumes:
       - application/json
       description: Returns wards for a given LGA or state_assembly_constituency with
-        their ward_final_result.
+        their election_ward_final_result.
       parameters:
       - description: Election ID
         in: query
@@ -5886,7 +5851,35 @@ paths:
       summary: Withdraw from a party wallet
       tags:
       - Parties
-<<<<<<< HEAD
+  /parties/{party_id}/{short_name}/profile:
+    get:
+      description: Get party details by party ID and short name
+      parameters:
+      - description: Party ID
+        in: path
+        name: party_id
+        required: true
+        type: integer
+      - description: Party Short Name
+        in: path
+        name: short_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/utils.SuccessResponse'
+            - properties:
+                data:
+                  $ref: '#/definitions/queries.PartyWithVerifications'
+              type: object
+      summary: Get basic party profile
+      tags:
+      - Parties
   /parties/public:
     get:
       consumes:
@@ -5902,27 +5895,11 @@ paths:
       - description: 'Order direction (default: ASC, enum: ASC, DESC)'
         in: query
         name: order
-=======
-  /parties/{party_id}/{short_name}/profile:
-    get:
-      description: Get party details by party ID and short name
-      parameters:
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      - description: Party Short Name
-        in: path
-        name: short_name
-        required: true
->>>>>>> roles-merge-6-aug
         type: string
       produces:
       - application/json
       responses:
         "200":
-<<<<<<< HEAD
           description: Parties fetched successfully
           schema:
             additionalProperties: true
@@ -5933,17 +5910,6 @@ paths:
             additionalProperties: true
             type: object
       summary: List public political parties
-=======
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/queries.PartyWithVerifications'
-              type: object
-      summary: Get basic party profile
->>>>>>> roles-merge-6-aug
       tags:
       - Parties
   /parties/wallets/provision-missing:
@@ -7312,7 +7278,6 @@ paths:
       summary: Update a polling unit
       tags:
       - Polling Units
-<<<<<<< HEAD
   /practice-tests:
     get:
       description: Returns the authenticated user's practice tests. Pass user_id to
@@ -7357,20 +7322,10 @@ paths:
         user
       parameters:
       - description: Start Practice Test
-=======
-  /seed/admins:
-    post:
-      consumes:
-      - application/json
-      description: Batch registers roles for admins from formatted JSON data
-      parameters:
-      - description: List of admins to seed
->>>>>>> roles-merge-6-aug
         in: body
         name: request
         required: true
         schema:
-<<<<<<< HEAD
           $ref: '#/definitions/practicetestshandler.StartPracticeTestRequest'
       produces:
       - application/json
@@ -7417,14 +7372,10 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/practicetestshandler.CompleteTestRequest'
-=======
-          $ref: '#/definitions/seedservice.SeedAdminsRequest'
->>>>>>> roles-merge-6-aug
       produces:
       - application/json
       responses:
         "200":
-<<<<<<< HEAD
           description: OK
           schema:
             allOf:
@@ -7461,48 +7412,15 @@ paths:
         required: true
         type: integer
       - description: Task stats
-=======
-          description: Admins seeded successfully
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid request body
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Failed to seed admins
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Seed admins and party admins
-      tags:
-      - Seed
-  /seed/users:
-    post:
-      consumes:
-      - application/json
-      description: Batch registers testing users from formatted JSON data
-      parameters:
-      - description: List of users to seed
->>>>>>> roles-merge-6-aug
         in: body
         name: request
         required: true
         schema:
-<<<<<<< HEAD
           $ref: '#/definitions/practicetestshandler.AppendTaskRequest'
-=======
-          items:
-            $ref: '#/definitions/seedservice.SeedUserRequest'
-          type: array
->>>>>>> roles-merge-6-aug
       produces:
       - application/json
       responses:
         "200":
-<<<<<<< HEAD
           description: OK
           schema:
             allOf:
@@ -7528,7 +7446,57 @@ paths:
       summary: Append a completed task to a practice test
       tags:
       - Practice Tests
-=======
+  /seed/admins:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers roles for admins from formatted JSON data
+      parameters:
+      - description: List of admins to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/seedservice.SeedAdminsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Admins seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed admins
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed admins and party admins
+      tags:
+      - Seed
+  /seed/users:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers testing users from formatted JSON data
+      parameters:
+      - description: List of users to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/seedservice.SeedUserRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
           description: Users seeded successfully
           schema:
             additionalProperties: true
@@ -7546,7 +7514,6 @@ paths:
       summary: Seed testing users
       tags:
       - Seed
->>>>>>> roles-merge-6-aug
   /senatorial-districts:
     get:
       consumes:
@@ -8188,9 +8155,9 @@ paths:
       description: Fetches the list of all registered users with role filtering and
         cursor-based pagination
       parameters:
-      - description: Role (admin, party_admin, user)
+      - description: Roles (admin, party_admin, user, etc. comma-separated)
         in: query
-        name: role
+        name: roles
         type: string
       - description: Limit (default 20, max 100)
         in: query

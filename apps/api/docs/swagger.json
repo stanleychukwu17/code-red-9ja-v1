@@ -142,7 +142,6 @@
                 }
             }
         },
-<<<<<<< HEAD
         "/admin/settings/{key}": {
             "get": {
                 "security": [
@@ -278,10 +277,7 @@
                 }
             }
         },
-        "/admin/users/phones/{id}": {
-=======
         "/admin/users/phones": {
->>>>>>> roles-merge-6-aug
             "delete": {
                 "security": [
                     {
@@ -438,42 +434,6 @@
                 }
             }
         },
-        "/agent-marketing-plans": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns all active marketing plans of the specified type (e.g. agent-campaign)",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Marketing"
-                ],
-                "summary": "Get plans by type",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "default": "agent-campaign",
-                        "description": "Campaign type",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Marketing plans retrieved successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/admin/login": {
         "/admin/verifications": {
             "post": {
                 "security": [
@@ -584,6 +544,41 @@
                     },
                     "500": {
                         "description": "Failed to remove verification",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-marketing-plans": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all active marketing plans of the specified type (e.g. agent-campaign)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Marketing"
+                ],
+                "summary": "Get plans by type",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "agent-campaign",
+                        "description": "Campaign type",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Marketing plans retrieved successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -1216,59 +1211,6 @@
                 }
             }
         },
-<<<<<<< HEAD
-        "/auth/seed": {
-            "post": {
-                "description": "Batch registers testing users from formatted JSON data",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Seed testing users",
-                "parameters": [
-                    {
-                        "description": "List of users to seed",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/authservice.SeedUserRequest"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Users seeded successfully",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid request body",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to seed users",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/signup": {
             "post": {
                 "description": "Handles the basic user registration (phone, email, password, country)",
@@ -1311,8 +1253,6 @@
                 }
             }
         },
-=======
->>>>>>> roles-merge-6-aug
         "/auth/superadmin": {
             "post": {
                 "description": "Promotes a user to superadmin if their username is in the pre-approved list",
@@ -2845,9 +2785,92 @@
                 }
             }
         },
+        "/elections/results": {
+            "get": {
+                "description": "Returns the specific final result for the provided scope parameters.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get scoped final result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID",
+                        "name": "ward_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State Constituency ID",
+                        "name": "state_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Federal Constituency ID",
+                        "name": "federal_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "state_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/elections/results/federal-constituencies": {
             "get": {
-                "description": "Returns federal constituencies for a senatorial district with their federal_constituency_final_result.",
+                "description": "Returns federal constituencies for a senatorial district with their election_federal_constituency_final_result.",
                 "consumes": [
                     "application/json"
                 ],
@@ -2913,7 +2936,7 @@
         },
         "/elections/results/lgas": {
             "get": {
-                "description": "Returns LGAs for a federal constituency with their lga_final_result.",
+                "description": "Returns LGAs for a federal constituency with their election_lga_final_result.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3045,7 +3068,7 @@
         },
         "/elections/results/senatorial-districts": {
             "get": {
-                "description": "Returns senatorial districts for a state with their senatorial_district_final_result.",
+                "description": "Returns senatorial districts for a state with their election_senatorial_district_final_result.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3111,7 +3134,7 @@
         },
         "/elections/results/states": {
             "get": {
-                "description": "Returns all Nigerian states with their state_final_result for the given election_id.",
+                "description": "Returns all Nigerian states with their election_state_final_result for the given election_id.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3170,7 +3193,7 @@
         },
         "/elections/results/wards": {
             "get": {
-                "description": "Returns wards for a given LGA or state_assembly_constituency with their ward_final_result.",
+                "description": "Returns wards for a given LGA or state_assembly_constituency with their election_ward_final_result.",
                 "consumes": [
                     "application/json"
                 ],
@@ -5661,20 +5684,61 @@
                 }
             }
         },
-<<<<<<< HEAD
-        "/plans": {
-            "get": {
-                "description": "Retrieves marketing plans. Optionally filter by ?type= (e.g. agent-campaign) and ?is_active= (true/false).",
-=======
         "/parties/{party_id}/{short_name}/profile": {
             "get": {
                 "description": "Get party details by party ID and short name",
->>>>>>> roles-merge-6-aug
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-<<<<<<< HEAD
+                    "Parties"
+                ],
+                "summary": "Get basic party profile",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Party Short Name",
+                        "name": "short_name",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/queries.PartyWithVerifications"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/plans": {
+            "get": {
+                "description": "Retrieves marketing plans. Optionally filter by ?type= (e.g. agent-campaign) and ?is_active= (true/false).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
                     "Plans"
                 ],
                 "summary": "Get plans",
@@ -5809,30 +5873,12 @@
                         "type": "integer",
                         "description": "Plan ID",
                         "name": "id",
-=======
-                    "Parties"
-                ],
-                "summary": "Get basic party profile",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Party ID",
-                        "name": "party_id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Party Short Name",
-                        "name": "short_name",
->>>>>>> roles-merge-6-aug
                         "in": "path",
                         "required": true
                     }
                 ],
                 "responses": {
                     "200": {
-<<<<<<< HEAD
                         "description": "Plan deleted successfully",
                         "schema": {
                             "type": "object",
@@ -5884,23 +5930,6 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
-=======
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/queries.PartyWithVerifications"
-                                        }
-                                    }
-                                }
-                            ]
->>>>>>> roles-merge-6-aug
                         }
                     }
                 }
@@ -7698,7 +7727,6 @@
                 }
             }
         },
-<<<<<<< HEAD
         "/practice-tests": {
             "get": {
                 "security": [
@@ -7762,11 +7790,6 @@
                     }
                 ],
                 "description": "Creates a new in-progress practice test row for the authenticated user",
-=======
-        "/seed/admins": {
-            "post": {
-                "description": "Batch registers roles for admins from formatted JSON data",
->>>>>>> roles-merge-6-aug
                 "consumes": [
                     "application/json"
                 ],
@@ -7774,26 +7797,16 @@
                     "application/json"
                 ],
                 "tags": [
-<<<<<<< HEAD
                     "Practice Tests"
                 ],
                 "summary": "Start a practice test session",
                 "parameters": [
                     {
                         "description": "Start Practice Test",
-=======
-                    "Seed"
-                ],
-                "summary": "Seed admins and party admins",
-                "parameters": [
-                    {
-                        "description": "List of admins to seed",
->>>>>>> roles-merge-6-aug
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-<<<<<<< HEAD
                             "$ref": "#/definitions/practicetestshandler.StartPracticeTestRequest"
                         }
                     }
@@ -7870,15 +7883,11 @@
                         "required": true,
                         "schema": {
                             "$ref": "#/definitions/practicetestshandler.CompleteTestRequest"
-=======
-                            "$ref": "#/definitions/seedservice.SeedAdminsRequest"
->>>>>>> roles-merge-6-aug
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-<<<<<<< HEAD
                         "description": "OK",
                         "schema": {
                             "allOf": [
@@ -7912,7 +7921,112 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/utils.ErrorResponse"
-=======
+                        }
+                    }
+                }
+            }
+        },
+        "/practice-tests/{id}/task": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Practice Tests"
+                ],
+                "summary": "Append a completed task to a practice test",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Practice Test ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Task stats",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/practicetestshandler.AppendTaskRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/seed/admins": {
+            "post": {
+                "description": "Batch registers roles for admins from formatted JSON data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seed"
+                ],
+                "summary": "Seed admins and party admins",
+                "parameters": [
+                    {
+                        "description": "List of admins to seed",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/seedservice.SeedAdminsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
                         "description": "Admins seeded successfully",
                         "schema": {
                             "type": "object",
@@ -7931,25 +8045,14 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
->>>>>>> roles-merge-6-aug
                         }
                     }
                 }
             }
         },
-<<<<<<< HEAD
-        "/practice-tests/{id}/task": {
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-=======
         "/seed/users": {
             "post": {
                 "description": "Batch registers testing users from formatted JSON data",
->>>>>>> roles-merge-6-aug
                 "consumes": [
                     "application/json"
                 ],
@@ -7957,80 +8060,25 @@
                     "application/json"
                 ],
                 "tags": [
-<<<<<<< HEAD
-                    "Practice Tests"
-                ],
-                "summary": "Append a completed task to a practice test",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Practice Test ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Task stats",
-=======
                     "Seed"
                 ],
                 "summary": "Seed testing users",
                 "parameters": [
                     {
                         "description": "List of users to seed",
->>>>>>> roles-merge-6-aug
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-<<<<<<< HEAD
-                            "$ref": "#/definitions/practicetestshandler.AppendTaskRequest"
-=======
                             "type": "array",
                             "items": {
                                 "$ref": "#/definitions/seedservice.SeedUserRequest"
                             }
->>>>>>> roles-merge-6-aug
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-<<<<<<< HEAD
-                        "description": "OK",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
-=======
                         "description": "Users seeded successfully",
                         "schema": {
                             "type": "object",
@@ -8049,7 +8097,6 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
->>>>>>> roles-merge-6-aug
                         }
                     }
                 }
@@ -8993,8 +9040,8 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Role (admin, party_admin, user)",
-                        "name": "role",
+                        "description": "Roles (admin, party_admin, user, etc. comma-separated)",
+                        "name": "roles",
                         "in": "query"
                     },
                     {
@@ -10236,7 +10283,6 @@
                 }
             }
         },
-<<<<<<< HEAD
         "authhandler.SignupRequest": {
             "type": "object",
             "required": [
@@ -10262,33 +10308,6 @@
                 }
             }
         },
-        "authhandler.UpdateUserRolesRequest": {
-            "type": "object",
-            "required": [
-                "roles",
-                "user_id"
-            ],
-            "properties": {
-                "party_id": {
-                    "type": "integer"
-                },
-                "roles": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "user_fake_id": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
-                }
-            }
-        },
-=======
->>>>>>> roles-merge-6-aug
         "authhandler.VerifySecurityQuestionsRequest": {
             "type": "object",
             "required": [
@@ -10389,9 +10408,6 @@
                     "type": "string"
                 }
             }
-        },
-        "big.Int": {
-            "type": "object"
         },
         "big.Int": {
             "type": "object"
@@ -11417,8 +11433,6 @@
                 "NegativeInfinity"
             ]
         },
-<<<<<<< HEAD
-=======
         "pgtype.Int2": {
             "type": "object",
             "properties": {
@@ -11443,7 +11457,6 @@
                 }
             }
         },
->>>>>>> roles-merge-6-aug
         "pgtype.Int8": {
             "type": "object",
             "properties": {
@@ -11477,48 +11490,6 @@
                 }
             }
         },
-<<<<<<< HEAD
-        "pgtype.Text": {
-            "type": "object",
-            "properties": {
-                "string": {
-                    "type": "string"
-                },
-                "valid": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "pgtype.Timestamptz": {
-            "type": "object",
-            "properties": {
-                "infinityModifier": {
-                    "$ref": "#/definitions/pgtype.InfinityModifier"
-                },
-                "time": {
-                    "type": "string"
-                },
-                "valid": {
-                    "type": "boolean"
-                }
-            }
-        },
-        "pgtype.InfinityModifier": {
-            "type": "integer",
-            "format": "int32",
-            "enum": [
-                1,
-                0,
-                -1
-            ],
-            "x-enum-varnames": [
-                "Infinity",
-                "Finite",
-                "NegativeInfinity"
-            ]
-        },
-=======
->>>>>>> roles-merge-6-aug
         "pgtype.Text": {
             "type": "object",
             "properties": {
@@ -12042,7 +12013,19 @@
         "queries.PartyWithVerifications": {
             "type": "object",
             "properties": {
-                "allowance_balance_kobo": {
+                "agent_acquisition_targets": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "agent_payment_allocation": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "agent_payment_balance_kobo": {
                     "type": "integer"
                 },
                 "created_at": {
@@ -12074,12 +12057,6 @@
                 },
                 "slots": {
                     "type": "integer"
-                },
-                "state_allowances": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
                 },
                 "status": {
                     "type": "string"
@@ -12115,6 +12092,9 @@
                 },
                 "country_name": {
                     "type": "string"
+                },
+                "country_of_origin": {
+                    "$ref": "#/definitions/pgtype.Int2"
                 },
                 "created_at": {
                     "$ref": "#/definitions/pgtype.Timestamptz"
@@ -12771,8 +12751,6 @@
                 }
             }
         },
-<<<<<<< HEAD
-=======
         "usersservice.PhonePayload": {
             "type": "object",
             "properties": {
@@ -12796,7 +12774,6 @@
                 }
             }
         },
->>>>>>> roles-merge-6-aug
         "utils.ErrorResponse": {
             "type": "object",
             "properties": {
