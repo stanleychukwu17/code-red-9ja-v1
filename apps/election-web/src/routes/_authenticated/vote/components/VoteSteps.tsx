@@ -269,7 +269,6 @@ const Step3 = ({
           const displayImage =
             (candidate?.avatar?.String ?? candidate?.avatar) || party.logo;
           const isSelected = votes[currentElection.id] === party.id;
-          console.log({ party: party.logo });
 
           return (
             <UserCard
@@ -323,7 +322,9 @@ const Step4 = ({ votersCardImage, setVotersCardImage, isPractice }: any) => {
       onClick={() => {
         if (isPractice) {
           toast.success("Image auto-added for practice mode");
-          setVotersCardImage("https://res.cloudinary.com/dhtcwqsx4/image/upload/v1783939243/Free9ja/pictures/PVC_2_i9lvfa.png");
+          setVotersCardImage(
+            "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1783939243/Free9ja/pictures/PVC_2_i9lvfa.png",
+          );
         } else {
           fileInputRef.current?.click();
         }

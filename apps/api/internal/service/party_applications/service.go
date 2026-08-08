@@ -47,6 +47,8 @@ type SubmitApplicationInput struct {
 	SchoolName        string
 	Phone             string
 	Address           string
+	BankAccountNumber string
+	BankCode          string
 }
 
 func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PartyApplication, error) {
@@ -99,6 +101,26 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user profile: %w", err)
+	}
+
+	// Update bank account if provided
+	if input.BankAccountNumber != "" && input.BankCode != "" {
+		// First set existing primary accounts to non-primary
+		err = txQueries.UpdateUserBankAccountsToNonPrimary(ctx, input.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update existing bank accounts: %w", err)
+		}
+
+		// Insert the new primary bank account
+		_, err = txQueries.InsertUserBankAccount(ctx, queries.InsertUserBankAccountParams{
+			UserID:        input.UserID,
+			AccountNumber: input.BankAccountNumber,
+			BankCode:      input.BankCode,
+			IsPrimary:     pgtype.Bool{Bool: true, Valid: true},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert primary bank account: %w", err)
+		}
 	}
 
 	apps := make([]queries.PartyApplication, 0, len(input.ElectionGroupIDs))

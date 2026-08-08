@@ -44,7 +44,6 @@ export function ApplicationsCard() {
       return res.data.applications;
     },
   });
-  console.log({ applicationsData });
 
   const activeApps = (applicationsData || []).filter((app: any) => {
     const isActiveStatus =

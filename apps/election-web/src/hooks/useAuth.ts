@@ -8,7 +8,11 @@ import { getElectionScopedFinalResult } from "#/lib/server/final-results";
 import { getFinalResult as getPollingUnitFinalResult } from "#/lib/server/polling_unit_results";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 import { getSupervisorAssignments } from "#/lib/server/supervisor_assignments";
-import { getMyWallet, createUserWallet, generateReferralCode } from "#/lib/server/users";
+import {
+  getMyWallet,
+  createUserWallet,
+  generateReferralCode,
+} from "#/lib/server/users";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
   selectSelectedElection,
@@ -116,8 +120,11 @@ export const useAuth = () => {
       generateReferralCodeFn()
         .then((res) => {
           if (res?.success) {
-            console.log("Referral code generated", res.data);
-            dispatch(updateAuthState({ user: { ...user, referral_code: res.data.referral_code } }));
+            dispatch(
+              updateAuthState({
+                user: { ...user, referral_code: res.data.referral_code },
+              }),
+            );
           }
         })
         .catch((err) => console.error("Failed to generate referral code", err));
@@ -153,8 +160,6 @@ export const useAuth = () => {
       clearInterval(interval);
     };
   }, [electionDay, dispatch]);
-
-  console.log({ selectedElectionGroup, selectedElection });
 
   // 1. Fetch party details
   const partyId = user?.party?.id ?? user?.party_id;
@@ -362,21 +367,18 @@ export const useAuth = () => {
       if (res?.success && res.data?.wallet) {
         return res.data.wallet;
       }
-      
+
       // If wallet not found, attempt to create it automatically
-      if (user?.id) {
-        const createRes = await createMyWalletFn({ data: { id: user.id } });
+      if (user?.fake_id) {
+        const createRes = await createMyWalletFn({
+          data: { id: user.id },
+        });
         if (createRes?.success && createRes.data?.wallet) {
           return createRes.data.wallet;
         }
       }
       return null;
     },
-  });
-
-  console.log("🙌🥂 Final Result Obj:", {
-    scopedResultData,
-    finalResultObj,
   });
 
   return {

@@ -620,6 +620,9 @@ func (s *PartiesService) BuySlots(ctx context.Context, partyID int16, quantity i
 		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Invalidate the cache for the party since their slots have changed
+	s.InvalidatePartyCache(ctx, partyID)
+
 	return updatedParty, nil
 }
 
@@ -634,6 +637,7 @@ func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int16,
 		return queries.Party{}, fmt.Errorf("failed to parse discount percentage: %w", err)
 	}
 
+	defer s.InvalidatePartyCache(ctx, partyID)
 	return s.queries.UpdatePartyDiscount(ctx, queries.UpdatePartyDiscountParams{
 		DiscountPercentage: numericDiscount,
 		ID:                 partyID,
@@ -710,6 +714,9 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Invalidate the cache for the party
+	s.InvalidatePartyCache(ctx, partyID)
+
 	return updatedParty, nil
 }
 
@@ -721,6 +728,7 @@ func (s *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, party
 		return queries.Party{}, fmt.Errorf("invalid allowances configuration: %w", err)
 	}
 
+	defer s.InvalidatePartyCache(ctx, partyID)
 	return s.queries.UpdatePartyAgentPaymentAllocation(ctx, queries.UpdatePartyAgentPaymentAllocationParams{
 		AgentPaymentAllocation: allowancesJSON,
 		ID:              partyID,
@@ -1134,6 +1142,7 @@ func (s *PartiesService) UpdatePlanDisplayOrder(ctx context.Context, arg queries
 
 // UpdatePartyAgentAcquisitionTargets updates the agent acquisition targets of a party.
 func (s *PartiesService) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error) {
+	defer s.InvalidatePartyCache(ctx, arg.ID)
 	return s.queries.UpdatePartyAgentAcquisitionTargets(ctx, arg)
 }
 
@@ -1148,4 +1157,5 @@ func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, pa
 	}
 	return json.RawMessage(party.AgentAcquisitionTargets), nil
 }
+
 

@@ -28,6 +28,8 @@ import NINIcon from "@repo/ui/icons/onboarding/nin-icon ";
 import UserIcon from "@repo/ui/icons/onboarding/user-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { Shield, Users } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import {
   useCallback,
   useEffect,
@@ -155,8 +157,25 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     boolean | null
   >(null);
   const [securityError, setSecurityError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const completeOnboardingFn = useServerFn(completeOnboarding);
+  const completeOnboardingMutation = useMutation({
+    mutationFn: completeOnboardingFn,
+    onSuccess: (result) => {
+      if (result.success) {
+        // Hard redirect without triggering any React state updates to prevent UI flashes
+        window.location.href = APP_URL.home;
+      } else {
+        setSubmitError(result.message || "Failed to complete onboarding.");
+      }
+    },
+    onError: () => {
+      setSubmitError("An unexpected error occurred.");
+    }
+  });
+
+  const isSubmitting = completeOnboardingMutation.isPending;
 
   // Residence and Origin state is now directly managed by the Select components using react-query hooks internally
 
@@ -182,8 +201,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     if (previousStep) onStepChange(previousStep);
   }, [currentStepIndex, onStepChange]);
 
-  // â”€â”€ Final submit â”€â”€
-  const onFinish = useCallback(async () => {
+  // ── Final submit ──
+  const onFinish = useCallback(() => {
     // if (!data.securityQuestion1 || !data.securityQuestion2) {
     //   setSecurityError("Please select both security questions.");
     //   return;
@@ -207,54 +226,35 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       return;
     }
 
-    setIsSubmitting(true);
     setSubmitError(null);
     setSecurityError(null);
 
-    let isSuccess = false;
+    const dob = data.dateOfBirth
+      ? data.dateOfBirth.toISOString().split("T")[0]
+      : "";
 
-    try {
-      const dob = data.dateOfBirth
-        ? data.dateOfBirth.toISOString().split("T")[0]
-        : "";
-
-      const result = await completeOnboarding({
-        data: {
-          first_name: data.firstName.trim(),
-          last_name: data.surname.trim(),
-          middle_name: data.otherNames.trim() || "",
-          gender: data.gender.toLowerCase(),
-          date_of_birth: dob,
-          referral_code: data.referralCode.trim() || "",
-          username: data.username.trim(),
-          nin: data.nin,
-          country_of_origin: data.countryOfOriginId ?? 0,
-          state_of_origin: data.stateOfOriginId ?? 0,
-          current_country: data.countryId ?? 0,
-          current_state: data.stateId,
-          current_city: data.cityId ?? 0,
-          question1: data.securityQuestion1 ?? 0,
-          answer1: data.securityAnswer1?.trim() || "",
-          question2: data.securityQuestion2 ?? 0,
-          answer2: data.securityAnswer2?.trim() || "",
-        },
-      });
-
-      if (result.success) {
-        isSuccess = true;
-        // Hard redirect without triggering any React state updates to prevent UI flashes
-        window.location.href = APP_URL.home;
-      } else {
-        setSubmitError(result.message || "Failed to complete onboarding.");
-      }
-    } catch {
-      setSubmitError("An unexpected error occurred.");
-    } finally {
-      if (!isSuccess) {
-        setIsSubmitting(false);
-      }
-    }
-  }, [data, navigate, dispatch]);
+    completeOnboardingMutation.mutate({
+      data: {
+        first_name: data.firstName.trim(),
+        last_name: data.surname.trim(),
+        middle_name: data.otherNames.trim() || "",
+        gender: data.gender.toLowerCase(),
+        date_of_birth: dob,
+        referral_code: data.referralCode.trim() || "",
+        username: data.username.trim(),
+        nin: data.nin,
+        country_of_origin: data.countryOfOriginId ?? 0,
+        state_of_origin: data.stateOfOriginId ?? 0,
+        current_country: data.countryId ?? 0,
+        current_state: data.stateId,
+        current_city: data.cityId ?? 0,
+        question1: data.securityQuestion1 ?? 0,
+        answer1: data.securityAnswer1?.trim() || "",
+        question2: data.securityQuestion2 ?? 0,
+        answer2: data.securityAnswer2?.trim() || "",
+      },
+    });
+  }, [data, completeOnboardingMutation]);
 
   // ── Username active check ──
   const [debouncedUsername] = useDebounceValue(data.username, 500);

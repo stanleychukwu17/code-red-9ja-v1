@@ -181,8 +181,6 @@ function ResultsIndexComponent() {
     enabled,
   });
 
-  console.log("QUERY:", query.data);
-
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
   });

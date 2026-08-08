@@ -7,6 +7,7 @@ import {
   getPublicParties,
   getPartyWallet,
   createPartyWallet,
+  getPartyMarketingCampaigns,
 } from "#/lib/server/parties";
 import {
   getElectionCandidates,
@@ -176,6 +177,7 @@ export const useAppContext = () => {
   }
   const user = reduxUser || routeUser;
   const party = usePartyDetails();
+  console.log("🏖️🏖️🏖️", { party });
 
   const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);
   const selectedElection = useAppSelector(selectSelectedElection);
@@ -309,10 +311,31 @@ export const useAppContext = () => {
     },
   });
 
+  const fetchMarketingCampaignsFn = useServerFn(getPartyMarketingCampaigns);
+
+  const { data: activeMarketingCampaigns } = useQuery({
+    queryKey: ["activeMarketingCampaigns", party?.id],
+    enabled: !!party?.id,
+    queryFn: async () => {
+      const res = await fetchMarketingCampaignsFn({
+        data: party?.id as number,
+      });
+      if (res?.success && res.data?.campaigns) {
+        // filter to only active campaigns based on end_date
+        return res.data.campaigns.filter((c: any) => {
+          if (!c.end_date) return true;
+          return new Date(c.end_date) > new Date();
+        });
+      }
+      return [];
+    },
+  });
+
   return {
     user,
     party,
     partyWallet,
+    activeMarketingCampaigns,
     selectedElectionGroup,
     selectedElection,
     setSelectedElectionGroup: (group: any | null) =>
@@ -378,5 +401,6 @@ export const useAuth = () => {
     selectedWardId: context.selectedWardId,
     setSelectedWardId: context.setSelectedWardId,
     electionCandidates: context.electionCandidates,
+    activeMarketingCampaigns: context.activeMarketingCampaigns,
   };
 };

@@ -45,6 +45,7 @@ type UsersService interface {
 	CheckEmail(ctx context.Context, email string) bool
 	CheckPhone(ctx context.Context, phone string) bool
 	CheckNIN(ctx context.Context, nin string) bool
+	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
 }
 
 type PartyService interface {
@@ -108,11 +109,14 @@ type LoginUser struct {
 	Phone           string                                   `json:"phone"`
 	Roles           []string                                 `json:"roles"`
 	AccountStatus   string                                   `json:"account_status"`
-	PartyID         int16                                    `json:"party_id,omitempty"`
-	PollingUnitID   int32                                    `json:"polling_unit_id,omitempty"`
-	CurrentCountry  int16                                    `json:"current_country"`
-	CurrentState    int16                                    `json:"current_state"`
-	CurrentLga      int32                                    `json:"current_lga"`
+	PartyID           int16    `json:"party_id,omitempty"`
+	PollingUnitID     int32    `json:"polling_unit_id,omitempty"`
+	CurrentCountry    int16    `json:"current_country"`
+	CurrentState      int16    `json:"current_state"`
+	CurrentLga        int32    `json:"current_lga"`
+	BankAccountNumber string   `json:"bank_account_number"`
+	BankCode          string   `json:"bank_code"`
+
 	CurrentWard     int32                                    `json:"current_ward"`
 	CurrentCity     int32                                    `json:"current_city"`
 	VotersCardImage string                                   `json:"voters_card_image"`
@@ -138,13 +142,26 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		identifier = strings.TrimSpace(strings.ToLower(identifier))
 		fakeIDStr = s.rdb.Get(ctx, db.RedisEmailFakeID+identifier).Val()
 		if fakeIDStr == "" {
-			return LoginResult{}, errors.New("Invalid email or password")
+			// Fall back to Postgres if not in cache
+			fakeIDPg, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: identifier, Valid: true})
+			if err == nil && fakeIDPg.Valid {
+				fakeIDStr = strconv.FormatInt(fakeIDPg.Int64, 10)
+				s.rdb.Set(ctx, db.RedisEmailFakeID+identifier, fakeIDStr, db.RedisFiveYearsTTL)
+			} else {
+				return LoginResult{}, errors.New("Invalid email or password")
+			}
 		}
 
 	case "username":
 		fakeIDStr = s.rdb.Get(ctx, db.RedisUsernameFakeID+identifier).Val()
 		if fakeIDStr == "" {
-			return LoginResult{}, errors.New("invalid username or password")
+			fakeIDPg, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: identifier, Valid: true})
+			if err == nil && fakeIDPg.Valid {
+				fakeIDStr = strconv.FormatInt(fakeIDPg.Int64, 10)
+				s.rdb.Set(ctx, db.RedisUsernameFakeID+identifier, fakeIDStr, db.RedisFiveYearsTTL)
+			} else {
+				return LoginResult{}, errors.New("invalid username or password")
+			}
 		}
 
 	case "phone":
@@ -161,7 +178,13 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 
 		fakeIDStr = s.rdb.Get(ctx, db.RedisPhoneFakeID+identifier).Val()
 		if fakeIDStr == "" {
-			return LoginResult{}, errors.New("invalid phone number or password")
+			fakeIDPg, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: identifier, Valid: true})
+			if err == nil && fakeIDPg.Valid {
+				fakeIDStr = strconv.FormatInt(fakeIDPg.Int64, 10)
+				s.rdb.Set(ctx, db.RedisPhoneFakeID+identifier, fakeIDStr, db.RedisFiveYearsTTL)
+			} else {
+				return LoginResult{}, errors.New("invalid phone number or password")
+			}
 		}
 	default:
 		return LoginResult{}, errors.New("invalid identifier type")
@@ -282,31 +305,35 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
 	}
 
+	bankAccount, _ := s.usersService.GetUserPrimaryBankAccount(ctx, user.ID)
+
 	loginResult := LoginResult{
 		AccessToken:  accessToken,
 		RefreshToken: randStr.RandomString,
 		User: LoginUser{
-			ID:              user.ID,
-			FakeID:          user.FakeID.Int64,
-			Email:           user.Email.String,
-			Username:        user.Username.String,
-			FirstName:       user.FirstName.String,
-			LastName:        user.LastName.String,
-			MiddleName:      user.MiddleName.String,
-			Gender:          user.Gender.String,
-			Avatar:          user.Avatar.String,
-			Phone:           user.Phone.String,
-			Roles:           userRoleCodes,
-			AccountStatus:   user.AccountStatus.String,
-			PartyID:         partyID,
-			PollingUnitID:   user.PollingUnitID.Int32,
-			CurrentCountry:  user.CurrentCountry,
-			CurrentState:    user.CurrentState,
-			CurrentLga:      user.CurrentLga.Int32,
-			CurrentWard:     user.CurrentWard.Int32,
-			CurrentCity:     user.CurrentCity.Int32,
-			VotersCardImage: user.VotersCardImage.String,
-			Party:           partyObj,
+			ID:                user.ID,
+			FakeID:            user.FakeID.Int64,
+			Email:             user.Email.String,
+			Username:          user.Username.String,
+			FirstName:         user.FirstName.String,
+			LastName:          user.LastName.String,
+			MiddleName:        user.MiddleName.String,
+			Gender:            user.Gender.String,
+			Avatar:            user.Avatar.String,
+			Phone:             user.Phone.String,
+			Roles:             userRoleCodes,
+			AccountStatus:     user.AccountStatus.String,
+			PartyID:           partyID,
+			PollingUnitID:     user.PollingUnitID.Int32,
+			CurrentCountry:    user.CurrentCountry,
+			CurrentState:      user.CurrentState,
+			CurrentLga:        user.CurrentLga.Int32,
+			BankAccountNumber: bankAccount.AccountNumber,
+			BankCode:          bankAccount.BankCode,
+			CurrentWard:       user.CurrentWard.Int32,
+			CurrentCity:       user.CurrentCity.Int32,
+			VotersCardImage:   user.VotersCardImage.String,
+			Party:             partyObj,
 		},
 	}
 

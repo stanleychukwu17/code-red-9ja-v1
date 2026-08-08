@@ -47,11 +47,6 @@ export function mergeElectionResults({
   parties?: Party[];
   isLive?: boolean;
 }): MergedResult[] {
-  console.log({
-    parties,
-    candidates,
-    electionFinalResults,
-  });
   let liveRes = electionFinalResults?.candidate_results_live;
   let finalRes = electionFinalResults?.candidate_results;
 
@@ -101,9 +96,13 @@ export function mergeElectionResults({
   const merged = candidateResults.map((cr) => {
     const pName = cr.party_short_name || cr.short_name || "";
     const pNameLower = pName.toLowerCase();
-    const candidate = candidates.find((c) => c.party_short_name?.toLowerCase() === pNameLower);
+    const candidate = candidates.find(
+      (c) => c.party_short_name?.toLowerCase() === pNameLower,
+    );
     const party = parties.find(
-      (p) => p.short_name?.toLowerCase() === pNameLower || p.party_short_name?.toLowerCase() === pNameLower,
+      (p) =>
+        p.short_name?.toLowerCase() === pNameLower ||
+        p.party_short_name?.toLowerCase() === pNameLower,
     );
 
     return {

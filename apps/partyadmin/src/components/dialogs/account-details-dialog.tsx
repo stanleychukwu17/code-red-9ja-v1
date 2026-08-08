@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogPadding,
 } from "@repo/ui/components/dialog";
-import { cn } from "@repo/ui/lib/utils";
 import { Package, Loader2, Coins } from "lucide-react";
 import * as React from "react";
 import { useAppContext } from "#/hooks/useAppContext";

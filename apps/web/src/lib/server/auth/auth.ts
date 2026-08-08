@@ -1,9 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "#/lib/config";
-import { checkIfRefreshTokenInCookieImpl, getUserDetailsCookieImpl, loginUserImpl, logoutUserImpl, refreshUserTokenImpl, verifySecurityQuestionsImpl, resetPasswordImpl } from "#/lib/server/auth/auth.server"
+import {
+  checkIfRefreshTokenInCookieImpl,
+  getUserDetailsCookieImpl,
+  loginUserImpl,
+  logoutUserImpl,
+  refreshUserTokenImpl,
+  verifySecurityQuestionsImpl,
+  resetPasswordImpl,
+} from "#/lib/server/auth/auth.server";
 import { respondError, respondSuccess } from "@/lib/shared/response";
 import { apiFetch } from "../fetch";
-
 
 // Starts the registration process for a new user
 export const startUserRegistration = createServerFn({ method: "POST" })
@@ -77,60 +84,79 @@ export const completeRegistration = createServerFn({ method: "POST" })
       return respondSuccess(result);
     } catch (error) {
       console.error("Complete registration error:", error);
-      return respondError("An unexpected error occurred during final registration");
+      return respondError(
+        "An unexpected error occurred during final registration",
+      );
     }
   });
 
-
 // Sends a POST request to the server to log in a user with their identifier (email, phone number, or username) and password.
 export const loginUser = createServerFn({ method: "POST" })
-  .inputValidator((data: { identifier: string; password: string; iso2?: string, identifierType?: string }) => data)
+  .inputValidator(
+    (data: {
+      identifier: string;
+      password: string;
+      iso2?: string;
+      identifierType?: string;
+    }) => data,
+  )
   .handler(async ({ data }) => {
-    const result = await loginUserImpl({ data }) // Logs in a user
-    return result
-  })
+    const result = await loginUserImpl({ data }); // Logs in a user
+    return result;
+  });
 
 // Sends a POST request to the server to refresh the user's access token.
-export const refreshUserToken = createServerFn({ method: "POST" })
-  .handler(async () => {
-    const result = await refreshUserTokenImpl() // Refreshes the user's access token
-    // console.log("refreshUserToken result", result)
-    return result
-  });
+export const refreshUserToken = createServerFn({ method: "POST" }).handler(
+  async () => {
+    const result = await refreshUserTokenImpl(); // Refreshes the user's access token
+    return result;
+  },
+);
 
 // Sends a GET request to the server to check if there is a refresh token in the client's cookie.
-export const checkIfRefreshTokenInCookie = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const result = await checkIfRefreshTokenInCookieImpl() // Checks if there is a refresh token in the client's cookie
-    return result;
-  });
+export const checkIfRefreshTokenInCookie = createServerFn({
+  method: "GET",
+}).handler(async () => {
+  const result = await checkIfRefreshTokenInCookieImpl(); // Checks if there is a refresh token in the client's cookie
+  return result;
+});
 
 // Gets the user details from the client's cookie
-export const getUserDetailsCookie = createServerFn({ method: "GET" })
-  .handler(async () => {
-    const result = await getUserDetailsCookieImpl() // Gets the user details from the client's cookie
+export const getUserDetailsCookie = createServerFn({ method: "GET" }).handler(
+  async () => {
+    const result = await getUserDetailsCookieImpl(); // Gets the user details from the client's cookie
     return result;
-  });
+  },
+);
 
 // Sends a POST request to the server to log out a user.
-export const logoutUser = createServerFn({ method: "POST" })
-  .handler(async () => {
-    const result = await logoutUserImpl() // Logs out the user
-    return result
-  });
+export const logoutUser = createServerFn({ method: "POST" }).handler(
+  async () => {
+    const result = await logoutUserImpl(); // Logs out the user
+    return result;
+  },
+);
 
 // Verifies security questions for a user
 export const verifySecurityQuestions = createServerFn({ method: "POST" })
-  .inputValidator((data: { nin: string; question1: number; answer1: string; question2: number; answer2: string }) => data)
+  .inputValidator(
+    (data: {
+      nin: string;
+      question1: number;
+      answer1: string;
+      question2: number;
+      answer2: string;
+    }) => data,
+  )
   .handler(async ({ data }) => {
-    const result = await verifySecurityQuestionsImpl({ data })
-    return result
+    const result = await verifySecurityQuestionsImpl({ data });
+    return result;
   });
 
 // Resets user password
 export const resetPassword = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
-    const result = await resetPasswordImpl({ data })
-    return result
+    const result = await resetPasswordImpl({ data });
+    return result;
   });

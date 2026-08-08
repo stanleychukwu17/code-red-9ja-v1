@@ -1,12 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  Loader2,
-  Camera,
-  X,
-  ArrowRight,
-  ArrowLeft,
-  TriangleAlert,
-} from "lucide-react";
+import { Loader2, X, ArrowRight } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
@@ -19,6 +12,13 @@ import { PageWrapper } from "#/components/Wrappers";
 import { submitPollingUnitResult } from "#/lib/server/polling_unit_results";
 import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 import { getElectionsByGroup } from "#/lib/server/elections";
+import { AppAvatar } from "@repo/ui/components/avatar";
+import { InfoCard, RewardSumCard } from "@repo/ui/components/cards/Rewards";
+import { DescriptiveText, TitleText } from "@repo/ui/components/custom/Texts";
+import NigerianFlagIcon from "@repo/ui/icons/nigerian-flag-icon";
+import TwinkleLittleStarIcon from "@repo/ui/icons/twinkle-little-star-icon";
+import AlertIcon from "@repo/ui/icons/alert-icon";
+import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 
 export const Route = createFileRoute("/_authenticated/upload-result/")({
   component: UploadResultFlow,
@@ -30,19 +30,31 @@ type MediaFile = {
   file: File;
 };
 
-// ── Main Flow Component ─────────────────────────────────────────────────────────
+function BackgroundDesign() {
+  return (
+    <div className="absolute top-0 left-0 bg-c-primary inset-0 -z-10 overflow-hidden">
+      <div>
+        <TwinkleLittleStarIcon className="absolute top-10 left-4" />
+        <TwinkleLittleStarIcon className="absolute top-0 right-4 rotate-12" />
+        <TwinkleLittleStarIcon className="absolute top-96 left-16" />
+        <TwinkleLittleStarIcon className="absolute top-[480px] right-8 rotate-45" />
+      </div>
+      <div>
+        <NigerianFlagIcon className="absolute top-0 left-20 size-20 opacity-50 blur-[50px]" />
+        <NigerianFlagIcon className="absolute top-[480px] left-40 size-5 blur-[16px]" />
+      </div>
+    </div>
+  );
+}
 
 function UploadResultFlow() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
-  const { user, selectedElectionGroup, selectedAssignment, pollingUnitId } =
+  const { party, selectedElectionGroup, selectedAssignment, pollingUnitId } =
     useAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [currentElectionIndex, setCurrentElectionIndex] = useState(0);
-  // subStep 1: Intro
-  // subStep 2: Capture instructions & camera button
-  // subStep 3: Picture taken preview & submit
   const [subStep, setSubStep] = useState(1);
 
   const [resultSheetImage, setResultSheetImage] = useState<MediaFile | null>(
@@ -50,7 +62,6 @@ function UploadResultFlow() {
   );
   const sheetImageRef = useRef<HTMLInputElement>(null);
 
-  // ── Fetch Elections ──
   const { data: elections, isLoading: electionsLoading } = useQuery({
     queryKey: ["groupElections", selectedElectionGroup?.id],
     enabled: !!selectedElectionGroup?.id,
@@ -59,7 +70,6 @@ function UploadResultFlow() {
         data: selectedElectionGroup!.id,
       });
       if (!res?.success || !res.data?.elections) return [];
-      // Sort by rank if available, otherwise leave as returned
       return (res.data.elections as any[]).sort(
         (a, b) => (a.rank || 0) - (b.rank || 0),
       );
@@ -72,7 +82,6 @@ function UploadResultFlow() {
     }
   }, [currentElectionIndex, subStep]);
 
-  // ── Handlers ──
   const handleSheetImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -82,7 +91,7 @@ function UploadResultFlow() {
       type: "image",
       file,
     });
-    setSubStep(3); // Move to preview step
+    setSubStep(3);
     e.target.value = "";
   };
 
@@ -90,7 +99,7 @@ function UploadResultFlow() {
     if (resultSheetImage) URL.revokeObjectURL(resultSheetImage.url);
     setResultSheetImage(null);
     if (sheetImageRef.current) sheetImageRef.current.value = "";
-    setSubStep(2); // Go back to capture instructions
+    setSubStep(2);
   };
 
   const handleBack = () => {
@@ -101,14 +110,13 @@ function UploadResultFlow() {
     } else if (subStep === 1) {
       if (currentElectionIndex > 0) {
         setCurrentElectionIndex((prev) => prev - 1);
-        setSubStep(1); // Back to previous election
+        setSubStep(1);
       } else {
         navigate({ to: "/" });
       }
     }
   };
 
-  // ── Upload helper ──
   const uploadFile = async (mediaFile: MediaFile): Promise<string> => {
     const res = await getPresignedUploadURL({
       data: {
@@ -139,7 +147,6 @@ function UploadResultFlow() {
     return public_url;
   };
 
-  // ── Submit logic ──
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!selectedElectionGroup?.id)
@@ -150,8 +157,6 @@ function UploadResultFlow() {
         throw new Error("Please take a photo of the result sheet.");
 
       const currentElection = elections[currentElectionIndex];
-
-      // Upload image
       const imageUrl = await uploadFile(resultSheetImage);
 
       const payload: Parameters<typeof submitPollingUnitResult>[0]["data"] = {
@@ -174,12 +179,10 @@ function UploadResultFlow() {
     onSuccess: () => {
       toast.success("Result submitted successfully!");
       if (elections && currentElectionIndex < elections.length - 1) {
-        // Move to next election
         setResultSheetImage(null);
         setCurrentElectionIndex((prev) => prev + 1);
         setSubStep(1);
       } else {
-        // Finished all
         toast.success("All results submitted!");
         navigate({ to: "/" });
       }
@@ -189,7 +192,6 @@ function UploadResultFlow() {
     },
   });
 
-  // ── Render ──
   if (!selectedElectionGroup) {
     return (
       <div className="p-8 text-center text-neutral-500">
@@ -220,79 +222,95 @@ function UploadResultFlow() {
 
   return (
     <PageWrapper>
-      {/* Dynamic Header */}
-      <div className="flex items-center justify-between px-4 py-4 mt-2">
-        <button onClick={handleBack} className="p-2 -ml-2 text-neutral-800">
-          <ArrowLeft className="w-6 h-6" />
-        </button>
-        {subStep > 1 && (
-          <h2 className="text-[17px] font-bold text-purple-600">
-            {currentElection.name}
-          </h2>
-        )}
-        <div className="w-6" /> {/* Spacer */}
-      </div>
+      {/* Premium Styled PageHeader */}
+      <PageHeader
+        onBackClick={handleBack}
+        title={subStep > 1 ? currentElection.name : ""}
+      />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto pb-32">
-        {/* SUBSTEP 1: Intro */}
+        {/* SUBSTEP 1: Welcome Page / Intro */}
         {subStep === 1 && (
-          <div className="flex flex-col items-center justify-center h-full px-6 -mt-12">
-            <div className="text-4xl mb-4">🇳🇬</div>
-            <h1 className="text-3xl font-extrabold text-neutral-900 text-center mb-3">
-              {currentElection.name}
-            </h1>
-            <p className="text-neutral-500 text-center text-sm px-4">
-              Upload Final Voting Result Sheet
-              <br />
-              (for this election)
-            </p>
+          <div className="relative flex flex-col items-center gap-4 h-full px-5 pt-8 max-w-[430px] mx-auto">
+            <BackgroundDesign />
+            <AppAvatar
+              src={party?.logo}
+              alt="Party Logo"
+              className="size-14 mt-4"
+            />
+
+            <TitleText
+              text={currentElection.name}
+              size="xl"
+              className="text-center text-c-90 mt-2"
+            />
+
+            <DescriptiveText
+              text="Upload the official and final vote result sheet from INEC for this election."
+              size="sm"
+              className="text-center text-c-70 max-w-[320px]"
+            />
+
+            <div className="pt-6 w-full space-y-4">
+              <RewardSumCard
+                label="Reward for this upload"
+                subtext="Potential pay so far"
+                value="+₦2,500"
+                subValue="₦3,829.00 total"
+                variant="purple"
+                icon={<FancyMoneyBagIcon className="size-6 text-purple" />}
+                className="w-full "
+              />
+
+              <InfoCard
+                icon={<AlertIcon className="size-6 text-yellow shrink-0" />}
+                label="Ensure the picture is extremely clear. Blurry or cut-off result sheet uploads will be rejected by the party administrators."
+                variant="grey"
+                className="w-full text-[14px]"
+              />
+            </div>
           </div>
         )}
 
-        {/* SUBSTEP 2: Capture Instructions */}
+        {/* SUBSTEP 2: Instructions and Camera Trigger */}
         {subStep === 2 && (
-          <div className="px-5 flex flex-col gap-5">
-            <div>
-              <h1 className="text-[26px] font-extrabold text-neutral-900 leading-[1.15] mb-2">
-                Take a clear picture of the Final Result Sheet for this election
-              </h1>
-              <p className="text-neutral-500 text-[15px] leading-snug">
-                Take a clear picture of the final voting result and upload it.
-              </p>
+          <div className="px-5 flex flex-col gap-6 max-w-[430px] mx-auto">
+            <div className="space-y-2 mt-2">
+              <TitleText
+                text="Take a clear photo of the INEC Result Sheet"
+                size="lg"
+                className="text-c-90"
+              />
+              <DescriptiveText
+                text="Please position the camera directly above the sheet, ensuring all text and stamps are completely readable."
+                size="sm"
+              />
             </div>
 
-            <div className="bg-[#FFF8E6] border border-[#FDE6A8] rounded-2xl p-4 flex gap-3">
-              <TriangleAlert className="w-5 h-5 text-[#B88700] flex-shrink-0 mt-0.5" />
-              <p className="text-[14px] text-[#805D00] font-medium leading-tight">
-                After everyone has voted and votes have been counted, ask INEC
-                officials to show you the voting result sheet. Once shown take a
-                picture of it and upload.
-              </p>
-            </div>
+            <InfoCard
+              icon={
+                <AlertIcon className="size-6 text-yellow shrink-0 mt-0.5" />
+              }
+              label="After the counting is fully completed, ask the INEC officials to present the official result sheet. Take your photo immediately."
+              variant="yellow"
+              className="w-full text-[14px]"
+            />
 
-            <div className="bg-[#F3E8FF] rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-xl">💰</div>
-                <div>
-                  <p className="text-sm font-semibold text-neutral-900">
-                    Reward for this
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    Potential pay so far
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-base font-bold text-neutral-900">+₦2,500</p>
-                <p className="text-xs text-neutral-500">₦3,829.00 total</p>
-              </div>
-            </div>
+            <RewardSumCard
+              label="Reward for this upload"
+              subtext="Potential pay so far"
+              value="+₦2,500"
+              subValue="₦3,829.00 total"
+              variant="purple"
+              icon={<FancyMoneyBagIcon className="size-6 text-purple" />}
+              className="w-full "
+            />
 
-            <div className="mt-2">
-              <h3 className="font-bold text-neutral-900 mb-3">
+            <div className="space-y-3">
+              <span className="text-[15px] font-bold text-c-80">
                 Perfect Example:
-              </h3>
-              <div className="rounded-2xl overflow-hidden border border-c-90">
+              </span>
+              <div className="rounded-2xl overflow-hidden border-[1.5px] border-c-90 ">
                 <img
                   src="https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp"
                   alt="Result sheet example"
@@ -303,45 +321,29 @@ function UploadResultFlow() {
           </div>
         )}
 
-        {/* SUBSTEP 3: Preview */}
+        {/* SUBSTEP 3: Preview taken picture */}
         {subStep === 3 && resultSheetImage && (
-          <div className="px-5 flex flex-col gap-5">
-            <div className="flex items-center gap-3">
-              <div className="text-2xl">👍</div>
-              <h1 className="text-[22px] font-extrabold text-neutral-900">
-                Picture taken!
-              </h1>
-            </div>
-            <p className="text-neutral-500 text-[15px] -mt-3">
-              If picture is clear enough, tap the upload button.
-            </p>
-
-            <div className="bg-[#FFF8E6] border border-[#FDE6A8] rounded-2xl p-4 flex gap-3">
-              <TriangleAlert className="w-5 h-5 text-[#B88700] flex-shrink-0 mt-0.5" />
-              <p className="text-[14px] text-[#805D00] font-medium leading-tight">
-                You are paid based on how clear the picture is.
-              </p>
+          <div className="px-5 flex flex-col gap-6 max-w-[430px] mx-auto">
+            <div className="space-y-2 mt-2">
+              <TitleText
+                text="Confirm Result Sheet Photo"
+                size="lg"
+                className="text-c-90"
+              />
+              <DescriptiveText
+                text="Check if the image is readable. If not, tap Retake to shoot a cleaner photo."
+                size="sm"
+              />
             </div>
 
-            <div className="bg-[#F3E8FF] rounded-2xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="text-xl">💰</div>
-                <div>
-                  <p className="text-sm font-semibold text-neutral-900">
-                    Reward for this
-                  </p>
-                  <p className="text-xs text-neutral-500">
-                    Potential pay so far
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-base font-bold text-neutral-900">+₦2,500</p>
-                <p className="text-xs text-neutral-500">₦3,829.00 total</p>
-              </div>
-            </div>
+            <InfoCard
+              icon={<AlertIcon className="size-6 text-green shrink-0" />}
+              label="Your payout is dependent on the quality and readability of this image. Re-upload if it is blurry."
+              variant="green"
+              className="w-full text-[14px]"
+            />
 
-            <div className="relative rounded-2xl overflow-hidden border border-neutral-200 bg-neutral-100">
+            <div className="relative rounded-2xl overflow-hidden border-[1.5px] border-c-90  bg-neutral-100">
               <img
                 src={resultSheetImage.url}
                 alt="Result sheet preview"
@@ -350,17 +352,17 @@ function UploadResultFlow() {
               <button
                 type="button"
                 onClick={removeSheetImage}
-                className="absolute top-3 right-3 bg-black/60 text-white rounded-full p-1.5 backdrop-blur-sm hover:bg-black/80 transition"
+                className="absolute top-3 right-3 bg-black/70 text-white rounded-full p-2 backdrop-blur-sm hover:bg-black/95 transition "
               >
-                <X className="w-4 h-4" strokeWidth={2.5} />
+                <X className="w-5 h-5" strokeWidth={2.5} />
               </button>
             </div>
 
             <Button
               type="button"
               variant="outline"
-              size="xl"
-              className="w-full rounded-full border-2 border-neutral-200 text-neutral-700 font-bold h-14"
+              size="extra-large"
+              className="w-full rounded-full border-2 border-c-30 text-c-90 font-bold h-14"
               onClick={() => {
                 if (search.isPractice) {
                   const dummyFile = new File(["dummy"], "practice.jpg", {
@@ -379,22 +381,9 @@ function UploadResultFlow() {
             >
               +{" "}
               {search.isPractice
-                ? "Take another picture (simulate)"
-                : "Take another picture"}
+                ? "Retake Picture (simulate)"
+                : "Retake Picture"}
             </Button>
-
-            <div className="mt-2 pointer-events-none">
-              <h3 className="font-bold text-neutral-900 mb-3">
-                Perfect Example:
-              </h3>
-              <div className="rounded-2xl overflow-hidden border border-neutral-200">
-                <img
-                  src="https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp"
-                  alt="Result sheet example"
-                  className="w-full object-cover"
-                />
-              </div>
-            </div>
           </div>
         )}
       </div>
@@ -409,18 +398,21 @@ function UploadResultFlow() {
         onChange={handleSheetImageChange}
       />
 
-      {/* Sticky Footer */}
+      {/* Sticky Footer for step logic */}
       {subStep === 1 ? (
-        <div className="fixed bottom-0 left-0 right-0 p-6 bg-white flex justify-center pb-12">
-          <button
+        <StickyFooter className="pb-14">
+          <Button
+            type="button"
+            variant="secondary"
+            size="4xl"
+            className="w-full rounded-full"
             onClick={() => setSubStep(2)}
-            className="bg-[#00E676] text-white w-full max-w-md h-16 rounded-full flex items-center justify-center shadow-lg hover:bg-[#00C853] transition-colors"
           >
-            <ArrowRight className="w-6 h-6" />
-          </button>
-        </div>
+            Start Upload <ArrowRight className="ml-2 w-5 h-5" />
+          </Button>
+        </StickyFooter>
       ) : (
-        <StickyFooter className="pb-10 bg-gradient-to-t from-white via-white to-white/90">
+        <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90">
           <Button
             type="button"
             variant="black"

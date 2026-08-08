@@ -37,13 +37,32 @@ func (h *Handler) GetMyWallet(w http.ResponseWriter, r *http.Request) {
 
 	wallet, err := h.usersService.GetUserWallet(r.Context(), user.ID)
 	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Wallet not found for this user")
-		return
+		// If wallet not found, attempt to create it automatically
+		wallet, err = h.usersService.CreateUserWallet(r.Context(), user.User)
+		if err != nil {
+			if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
+				// Edge case: someone just created it, try fetching one last time
+				wallet, err = h.usersService.GetUserWallet(r.Context(), user.ID)
+				if err != nil {
+					h.utils.RespondError(w, http.StatusNotFound, "Wallet not found for this user")
+					return
+				}
+			} else {
+				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create user wallet automatically: "+err.Error())
+				return
+			}
+		}
 	}
 
 	var parsedAccounts interface{}
 	if len(wallet.AccountNumbers) > 0 {
 		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
+		if str, ok := parsedAccounts.(string); ok {
+			var doubleParsed interface{}
+			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
+				parsedAccounts = doubleParsed
+			}
+		}
 	} else {
 		parsedAccounts = []interface{}{}
 	}
@@ -211,6 +230,12 @@ func (h *Handler) CreateUserWalletHandler(w http.ResponseWriter, r *http.Request
 	var parsedAccounts interface{}
 	if len(wallet.AccountNumbers) > 0 {
 		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
+		if str, ok := parsedAccounts.(string); ok {
+			var doubleParsed interface{}
+			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
+				parsedAccounts = doubleParsed
+			}
+		}
 	} else {
 		parsedAccounts = []interface{}{}
 	}

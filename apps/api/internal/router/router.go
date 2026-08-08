@@ -19,6 +19,7 @@ import (
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
+	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
 	authhandler "free9ja/api/internal/handler/auth"
 	bodieshandler "free9ja/api/internal/handler/bodies"
 	electiongroupshandler "free9ja/api/internal/handler/election_groups"
@@ -35,6 +36,7 @@ import (
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
 	pollingunitshandler "free9ja/api/internal/handler/polling_units"
+	practicetestshandler "free9ja/api/internal/handler/practice_tests"
 	seedhandler "free9ja/api/internal/handler/seed"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
 	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
@@ -43,21 +45,20 @@ import (
 	systemsettingshandler "free9ja/api/internal/handler/system_settings"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
-	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
-	practicetestshandler "free9ja/api/internal/handler/practice_tests"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
 	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
+	earningsservice "free9ja/api/internal/service/earnings"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
 	electionstats "free9ja/api/internal/service/election_stats"
 	electionsservice "free9ja/api/internal/service/elections"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
+	filesservice "free9ja/api/internal/service/files"
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
-	filesservice "free9ja/api/internal/service/files"
 	officesservice "free9ja/api/internal/service/offices"
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
@@ -73,7 +74,6 @@ import (
 	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
 	statesservice "free9ja/api/internal/service/states"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
-	earningsservice "free9ja/api/internal/service/earnings"
 	usersservice "free9ja/api/internal/service/users"
 	wardsservice "free9ja/api/internal/service/wards"
 	"free9ja/api/internal/utils"
@@ -143,9 +143,29 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
 
+	// Initialize the R2 service
+	var r2Svc *r2service.R2Service
+	var r2Err error
+	if cfg != nil {
+		r2Svc, r2Err = r2service.New(r2service.Config{
+			AccountID:       cfg.R2.AccountID,
+			AccessKeyID:     cfg.R2.AccessKeyID,
+			SecretAccessKey: cfg.R2.SecretAccessKey,
+			BucketName:      cfg.R2.BucketName,
+			PublicURL:       cfg.R2.PublicURL,
+			ZoneID:          cfg.R2.ZoneID,
+			APIToken:        cfg.R2.APIToken,
+		})
+	} else {
+		r2Err = errors.New("no config provided")
+	}
+	if r2Err != nil {
+		slog.Warn("R2 service not configured", "reason", r2Err)
+	}
+
 	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
 	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
-	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance)
+	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance, r2Svc)
 	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
 	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, q, utilsInstance)
 	stateAssemblyConstituenciesHandler := stateassemblyconstituencieshandler.NewHandler(stateAssemblyConstituenciesService, q, utilsInstance)
@@ -171,26 +191,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsSvc, partyApplicationsService)
 	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsSvc, utilsInstance)
 
-	// Initialize the R2 service (nil-safe: file endpoints return an error if un-configured)
 	var filesHandler *fileshandler.Handler
-	var r2Svc *r2service.R2Service
-	var r2Err error
-	if cfg != nil {
-		r2Svc, r2Err = r2service.New(r2service.Config{
-			AccountID:       cfg.R2.AccountID,
-			AccessKeyID:     cfg.R2.AccessKeyID,
-			SecretAccessKey: cfg.R2.SecretAccessKey,
-			BucketName:      cfg.R2.BucketName,
-			PublicURL:       cfg.R2.PublicURL,
-			ZoneID:          cfg.R2.ZoneID,
-			APIToken:        cfg.R2.APIToken,
-		})
-	} else {
-		r2Err = errors.New("no config provided")
-	}
-	if r2Err != nil {
-		slog.Warn("R2 service not configured — file upload endpoints will be unavailable", "reason", r2Err)
-	} else {
+	if r2Svc != nil {
 		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
 	}
 
@@ -344,6 +346,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/parties/{id}", partiesHandler.UpdateParty)
 		r.Delete("/api/v1/parties/{id}", partiesHandler.DeleteParty)
 		r.Put("/api/v1/admin/parties/{id}/discount", partiesHandler.UpdatePartyDiscount)
+		r.Put("/api/v1/admin/parties/{id}/verify", partiesHandler.TogglePartyVerification)
 		// manual wallet creation for a party (in case auto-create failed)
 		r.Post("/api/v1/parties/{id}/wallet", partiesHandler.CreatePartyWalletHandler)
 		// slot pricing settings
@@ -674,3 +677,4 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 	})
 }
+

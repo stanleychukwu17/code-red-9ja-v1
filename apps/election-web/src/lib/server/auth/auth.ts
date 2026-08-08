@@ -27,7 +27,6 @@ export const startUserRegistration = createServerFn({ method: "POST" })
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Registration error:", error);
       return {
         status: "error",
         message: "An unexpected error occurred during registration",
@@ -38,7 +37,6 @@ export const startUserRegistration = createServerFn({ method: "POST" })
 export const sendSignupEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string }) => data)
   .handler(async ({ data }) => {
-    console.log("REQUEST OTP DATA:", data);
     try {
       const response = await fetch(API_URL.auth.sendSignupEmailOtp, {
         method: "POST",

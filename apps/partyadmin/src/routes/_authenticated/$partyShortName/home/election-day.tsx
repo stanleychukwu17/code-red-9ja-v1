@@ -138,7 +138,6 @@ function ElectionDayComponent() {
     parties: activeParties.length > 0 ? activeParties : party ? [party] : [],
     isLive,
   });
-  console.log({ sortedResults });
 
   return (
     <DashboardLayout>

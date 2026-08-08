@@ -46,6 +46,7 @@ type UsersService interface {
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
 	CheckEmail(ctx context.Context, email string) bool
+	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 }
 
 // FilesService interface defines the methods from FilesService that the auth handler needs
@@ -430,6 +431,13 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	if err := h.authService.CompleteOnboarding(ctx, user.ID, claims.FakeID, params, req.Nin, req.Question1, req.Answer1, req.Question2, req.Answer2); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to complete onboarding: "+err.Error())
 		return
+	}
+
+	// Re-fetch the updated user to get the new Name and NIN for wallet creation
+	if updatedUser, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID); err == nil {
+		// Attempt to create the wallet immediately. If it fails, we don't fail the onboarding request.
+		// The dashboard will auto-create it later as a fallback if it's missing.
+		_, _ = h.usersService.CreateUserWallet(ctx, updatedUser.User)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Onboarding completed successfully", nil)

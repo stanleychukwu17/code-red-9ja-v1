@@ -1,4 +1,6 @@
 tmp_bin
+tmp_build
+api.exe
 
 # Air build log
 build-errors.log

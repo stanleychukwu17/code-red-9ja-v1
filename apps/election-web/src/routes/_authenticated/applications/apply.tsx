@@ -45,7 +45,6 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
 function ApplyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  console.log("AUTH USER: ", user);
 
   // Form states
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(
@@ -104,16 +103,21 @@ function ApplyPage() {
     queryKey: ["userProfileMe"],
     queryFn: async () => {
       const res = await getUserMe();
-      return res?.success && res.data?.user?.profile ? res.data.user.profile : null;
+      return res?.success && res.data?.user?.profile
+        ? res.data.user.profile
+        : null;
     },
     staleTime: Infinity,
   });
 
   useEffect(() => {
     if (userProfile) {
-      if (userProfile.educational_status) setEducationalStatus(userProfile.educational_status);
-      if (userProfile.highest_degree) setHighestDegree(userProfile.highest_degree);
-      if (userProfile.graduation_year) setGraduationYear(userProfile.graduation_year);
+      if (userProfile.educational_status)
+        setEducationalStatus(userProfile.educational_status);
+      if (userProfile.highest_degree)
+        setHighestDegree(userProfile.highest_degree);
+      if (userProfile.graduation_year)
+        setGraduationYear(userProfile.graduation_year);
       if (userProfile.school_name) setSchoolName(userProfile.school_name);
     }
   }, [userProfile]);
@@ -218,7 +222,14 @@ function ApplyPage() {
     hasNextPage: hasNextUnits,
     isFetchingNextPage: isFetchingNextUnits,
   } = useInfiniteQuery({
-    queryKey: ["pollingUnits", selectedStateId, selectedLgaId, selectedWardId, selectedPartyId, selectedElectionIds?.[0]],
+    queryKey: [
+      "pollingUnits",
+      selectedStateId,
+      selectedLgaId,
+      selectedWardId,
+      selectedPartyId,
+      selectedElectionIds?.[0],
+    ],
     queryFn: async ({ pageParam }) => {
       const res = await getPollingUnits({
         data: {

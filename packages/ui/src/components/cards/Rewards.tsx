@@ -48,14 +48,20 @@ export function RewardSumCard({
   subValue,
   variant = "yellow",
   className,
+  labelClassName,
+  valueClassName,
+  subClassName,
   icon,
 }: {
   label: string;
-  subtext: string;
+  subtext?: string;
   value: string;
-  subValue: string;
+  subValue?: string;
   variant?: "yellow" | "green" | "purple";
   className?: string;
+  labelClassName?: string;
+  valueClassName?: string;
+  subClassName?: string;
   icon?: ReactNode;
 }) {
   const bgColor = {
@@ -75,13 +81,23 @@ export function RewardSumCard({
       {icon ? icon : <FancyMoneyBagIcon className="size-6 shrink-0" />}
       <div className="space-y-0.5 w-full">
         <div className="flex items-center justify-between text-c-90">
-          <span className="font-medium">{label}</span>
-          <span className="font-bold text-xl">{value}</span>
+          <span className={cn("font-medium", labelClassName)}>{label}</span>
+          <span className={cn("shrink-0 font-bold text-xl", valueClassName)}>
+            {value}
+          </span>
         </div>
-        <div className="flex items-center justify-between text-c-60 text-base">
-          <span>{subtext}</span>
-          <span>{subValue}</span>
-        </div>
+        {subtext ||
+          (subValue && (
+            <div
+              className={cn(
+                "flex items-center justify-between text-c-60 text-base",
+                subClassName,
+              )}
+            >
+              <span>{subtext}</span>
+              <span>{subValue}</span>
+            </div>
+          ))}
       </div>
     </div>
   );

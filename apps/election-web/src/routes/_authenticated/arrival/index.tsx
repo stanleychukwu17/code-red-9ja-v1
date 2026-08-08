@@ -64,7 +64,6 @@ function ArrivalVideo() {
   });
 
   const handleSubmit = async () => {
-    console.log("search", search);
     if (search.isPractice) {
       const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
       showFeedbackToast(true, failedAttempts);

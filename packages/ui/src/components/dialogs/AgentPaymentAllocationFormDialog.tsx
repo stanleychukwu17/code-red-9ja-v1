@@ -38,10 +38,10 @@ const ROLE_LABELS: Record<AgentRoles, string> = {
 };
 
 const DEFAULT_ALLOCATION: AgentPaymentAllocation = {
-  pollingAgent: { default: 20000, states: {} },
-  wardElectionSupervisor: { default: 25000, states: {} },
-  lgaElectionSupervisor: { default: 30000, states: {} },
-  stateElectionSupervisor: { default: 50000, states: {} },
+  pollingAgent: { default: 0, states: {} },
+  wardElectionSupervisor: { default: 0, states: {} },
+  lgaElectionSupervisor: { default: 0, states: {} },
+  stateElectionSupervisor: { default: 0, states: {} },
 };
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -83,7 +83,6 @@ export function AgentPaymentAllocationFormDialog({
     queryFn: () => fetchAllocation(partyId),
     enabled: open && !!partyId,
   });
-  console.log({ fetchedAllocation });
 
   // Sync fetched values into local state whenever the dialog opens / data arrives
   React.useEffect(() => {

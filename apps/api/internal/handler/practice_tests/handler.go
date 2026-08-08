@@ -216,7 +216,7 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 
 	// Background task for auto-accepting party applications
 	if req.ElectionGroupID != 0 {
-		go func(uid int64, groupID int64) {
+		go func(uid int64, groupID int64, testID int64, finalScore float64) {
 			ctx := context.Background()
 
 			// 1. Check if user has a pending application for this election group
@@ -254,7 +254,7 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 			if roleKey != "" && autoAcceptConfig[roleKey] {
 				// Auto-accept the application
 				slog.Info("Auto-accepting party application", "applicationID", app.ID, "userID", uid)
-				
+
 				_, err = h.partyApps.ApproveApplication(ctx, partyapplications.ApproveApplicationInput{
 					ApplicationID: app.ID,
 					PollingUnitID: app.PollingUnitID.Int32,
@@ -266,9 +266,42 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 				})
 				if err != nil {
 					slog.Error("Failed to auto-accept party application", "error", err, "applicationID", app.ID)
+					return
+				}
+
+				// After the assignment is created by ApproveApplication, immediately process
+				// practice test earnings so that:
+				//   1. assignment.election_practice_test_readiness_percentage is set
+				//   2. agent_earnings row is upserted with the readiness score
+				//   3. user wallet is credited for readiness earnings delta
+				if h.earnings != nil {
+					newAssignmentID, assignErr := h.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
+						UserID:          uid,
+						ElectionGroupID: groupID,
+					})
+					if assignErr != nil {
+						slog.Warn("Auto-accept: could not find new assignment for earnings processing",
+							"userID", uid, "electionGroupID", groupID, "error", assignErr)
+					} else {
+						h.earnings.ProcessPracticeTestEarnings(ctx, newAssignmentID, testID, finalScore)
+						slog.Info("Auto-accept: readiness earnings processed for new assignment",
+							"assignmentID", newAssignmentID, "readinessPct", finalScore)
+
+						// Immediately refresh the election_group_polling_units stats for this PU
+						// so the readiness percentage is visible without waiting for the next cron run.
+						if app.PollingUnitID.Valid && app.PollingUnitID.Int32 > 0 {
+							if refreshErr := h.q.RefreshSingleElectionGroupPollingUnitStats(ctx, queries.RefreshSingleElectionGroupPollingUnitStatsParams{
+								ElectionGroupID: groupID,
+								PollingUnitID:   app.PollingUnitID.Int32,
+							}); refreshErr != nil {
+								slog.Warn("Auto-accept: failed to refresh EGPU stats",
+									"electionGroupID", groupID, "pollingUnitID", app.PollingUnitID.Int32, "error", refreshErr)
+							}
+						}
+					}
 				}
 			}
-		}(userID, req.ElectionGroupID)
+		}(userID, req.ElectionGroupID, test.ID, req.FinalScore)
 	}
 
 	h.u.RespondSuccess(w, http.StatusCreated, "Practice test submitted", map[string]interface{}{

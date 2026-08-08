@@ -30,7 +30,6 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
       }),
     enabled: !!selectedElectionGroup?.id,
   });
-  console.log({ voteStatusData });
 
   if (!selectedElectionGroup || isLoading) {
     return null;

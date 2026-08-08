@@ -429,6 +429,11 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	return profile, nil
 }
 
+// GetUserPrimaryBankAccount fetches the primary bank account for a given user
+func (s *UsersService) GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error) {
+	return s.queries.GetUserPrimaryBankAccount(ctx, userID)
+}
+
 // AdminUpdateUser allows admins to perform a comprehensive update of user details.
 func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
 	avatarFileIdPg := pgtype.Int8{Valid: false}

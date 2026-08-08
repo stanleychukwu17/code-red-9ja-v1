@@ -1,20 +1,25 @@
-import { useState } from 'react';
-import { createFileRoute } from '@tanstack/react-router';
-import { Users, UserPlus, Check, Star, MapPin } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { getPartyProfile } from '@/lib/server/parties';
+import { useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Users, UserPlus, Check, Star, MapPin } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { getPartyProfile } from "@/lib/server/parties";
 import { Skeleton } from "@repo/ui/components/skeleton";
 
-export const Route = createFileRoute('/_authenticated/party/$partyName/$partyId/home')({
+export const Route = createFileRoute(
+  "/_authenticated/party/$partyName/$partyId/home",
+)({
   component: PartyHomeComponent,
-})
+});
 
 function PartyHomeComponent() {
-  const { partyName, partyId } = Route.useParams()
+  const { partyName, partyId } = Route.useParams();
 
   const { data: profileRes, isLoading } = useQuery({
-    queryKey: ['partyProfile', partyId, partyName],
-    queryFn: () => getPartyProfile({ data: { partyId: Number(partyId), shortName: partyName } }),
+    queryKey: ["partyProfile", partyId, partyName],
+    queryFn: () =>
+      getPartyProfile({
+        data: { partyId: Number(partyId), shortName: partyName },
+      }),
   });
 
   const partyDetails = profileRes?.success ? profileRes.data.data : null;
@@ -24,9 +29,6 @@ function PartyHomeComponent() {
 
   // Formatting party name for display
   const displayPartyName = partyDetails?.name || partyName.toUpperCase();
-
-
-  console.log(partyDetails)
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 pb-12">
@@ -41,10 +43,8 @@ function PartyHomeComponent() {
 
       {/* Profile Info Section */}
       <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
-
         <div className="relative -mt-10 sm:-mt-10 mb-8 z-5">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
-
             {/* Profile Picture and Title */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-6 flex-1">
               {/* Rounded Profile Picture */}
@@ -53,7 +53,11 @@ function PartyHomeComponent() {
                   {isLoading ? (
                     <Skeleton className="w-full h-full rounded-full" />
                   ) : (
-                    <img src={partyDetails.logo} alt={displayPartyName} className="w-full h-full object-cover" />
+                    <img
+                      src={partyDetails.logo}
+                      alt={displayPartyName}
+                      className="w-full h-full object-cover"
+                    />
                   )}
                 </div>
               </div>
@@ -67,7 +71,6 @@ function PartyHomeComponent() {
                   </div>
                 </h1>
                 <p className="text-neutral-500 dark:text-neutral-400 mt-1 flex items-center gap-4 text-sm sm:text-base font-medium">
-
                   <span className="flex items-center gap-1">
                     <MapPin className="w-4 h-4" /> Abuja, Nigeria
                   </span>
@@ -80,10 +83,11 @@ function PartyHomeComponent() {
               {/* Follow Button */}
               <button
                 onClick={() => setIsFollowing(!isFollowing)}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-200 ${isFollowing
-                  ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-white hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30'
-                  : 'bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:scale-105 active:scale-95 shadow-md hover:shadow-xl'
-                  }`}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-200 ${
+                  isFollowing
+                    ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-white hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30"
+                    : "bg-neutral-900 dark:bg-white text-white dark:text-neutral-900 hover:scale-105 active:scale-95 shadow-md hover:shadow-xl"
+                }`}
               >
                 {isFollowing ? (
                   <>
@@ -101,10 +105,11 @@ function PartyHomeComponent() {
               {/* Membership Button */}
               <button
                 onClick={() => setIsMember(!isMember)}
-                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-200 ${isMember
-                  ? 'bg-primary text-white hover:bg-primary/90 shadow-md hover:shadow-lg'
-                  : 'bg-primary/10 text-primary hover:bg-primary hover:text-white dark:bg-primary/20'
-                  }`}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-full font-bold transition-all duration-200 ${
+                  isMember
+                    ? "bg-primary text-white hover:bg-primary/90 shadow-md hover:shadow-lg"
+                    : "bg-primary/10 text-primary hover:bg-primary hover:text-white dark:bg-primary/20"
+                }`}
               >
                 {isMember ? (
                   <>
@@ -125,13 +130,26 @@ function PartyHomeComponent() {
         {/* Content Tabs (Mock) */}
         <div className="mt-8">
           <div className="flex border-b border-neutral-200 dark:border-neutral-800 gap-8 overflow-x-auto hide-scrollbar">
-            {['Home', 'Internal', 'Members', 'Chapters', 'Executives', 'Offices', 'Groups', 'About', 'Candidates', 'Manifesto', 'Updates'].map((tab, i) => (
+            {[
+              "Home",
+              "Internal",
+              "Members",
+              "Chapters",
+              "Executives",
+              "Offices",
+              "Groups",
+              "About",
+              "Candidates",
+              "Manifesto",
+              "Updates",
+            ].map((tab, i) => (
               <button
                 key={tab}
-                className={`pb-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${i === 0
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white'
-                  }`}
+                className={`pb-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${
+                  i === 0
+                    ? "border-primary text-primary"
+                    : "border-transparent text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
+                }`}
               >
                 {tab}
               </button>
@@ -142,9 +160,14 @@ function PartyHomeComponent() {
             <div className="lg:col-span-2 space-y-6">
               {/* Mock Feed Post */}
               <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-sm">
-                <h3 className="font-bold text-lg text-neutral-900 dark:text-white mb-4">Welcome to {displayPartyName}</h3>
+                <h3 className="font-bold text-lg text-neutral-900 dark:text-white mb-4">
+                  Welcome to {displayPartyName}
+                </h3>
                 <p className="text-neutral-600 dark:text-neutral-300 leading-relaxed">
-                  We are excited to have you here! Our party is dedicated to moving the nation forward through sustainable policies and transparent governance. Stay tuned for updates on our candidates and upcoming events in your area.
+                  We are excited to have you here! Our party is dedicated to
+                  moving the nation forward through sustainable policies and
+                  transparent governance. Stay tuned for updates on our
+                  candidates and upcoming events in your area.
                 </p>
               </div>
             </div>
@@ -152,18 +175,27 @@ function PartyHomeComponent() {
             <div className="space-y-6">
               {/* About Widget */}
               <div className="bg-white dark:bg-neutral-900 rounded-2xl border border-neutral-200 dark:border-neutral-800 p-6 shadow-sm">
-                <h3 className="font-bold text-lg text-neutral-900 dark:text-white mb-4">About</h3>
+                <h3 className="font-bold text-lg text-neutral-900 dark:text-white mb-4">
+                  About
+                </h3>
                 <p className="text-neutral-600 dark:text-neutral-300 text-sm mb-4">
-                  The official page for {displayPartyName}. Join the movement for a better tomorrow.
+                  The official page for {displayPartyName}. Join the movement
+                  for a better tomorrow.
                 </p>
                 <div className="space-y-3 text-sm">
                   <div className="flex items-center text-neutral-500">
                     <Users className="w-4 h-4 mr-3" />
-                    <span className="font-medium text-neutral-900 dark:text-white">12.5M</span>&nbsp;Members
+                    <span className="font-medium text-neutral-900 dark:text-white">
+                      12.5M
+                    </span>
+                    &nbsp;Members
                   </div>
                   <div className="flex items-center text-neutral-500">
                     <Star className="w-4 h-4 mr-3" />
-                    <span className="font-medium text-neutral-900 dark:text-white">2.1M</span>&nbsp;Followers
+                    <span className="font-medium text-neutral-900 dark:text-white">
+                      2.1M
+                    </span>
+                    &nbsp;Followers
                   </div>
                 </div>
               </div>
@@ -172,5 +204,5 @@ function PartyHomeComponent() {
         </div>
       </div>
     </div>
-  )
+  );
 }

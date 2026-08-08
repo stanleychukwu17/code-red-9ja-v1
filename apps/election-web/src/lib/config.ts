@@ -281,4 +281,36 @@ export const API_URL = {
     `${api}/practice-tests/${id}/task`,
   completePracticeTest: (id: string | number) =>
     `${api}/practice-tests/${id}/complete`,
+
+  listPracticeTests: (
+    userId?: number,
+    electionGroupId?: number,
+    status?: string,
+    limit?: number,
+    cursor?: number,
+  ) => {
+    const params = new URLSearchParams();
+    if (userId) params.append("user_id", String(userId));
+    if (electionGroupId) params.append("election_group_id", String(electionGroupId));
+    if (status) params.append("status", status);
+    if (limit) params.append("limit", String(limit));
+    if (cursor) params.append("cursor", String(cursor));
+    const qs = params.toString();
+    return `${api}/practice-tests${qs ? `?${qs}` : ""}`;
+  },
+
+  practiceTestPayoutPreview: (
+    electionGroupId: number,
+    role?: string,
+    electionDate?: string,
+    partyId?: number,
+  ) => {
+    const params = new URLSearchParams();
+    params.append("election_group_id", String(electionGroupId));
+    if (role) params.append("role", role);
+    if (electionDate) params.append("election_date", electionDate);
+    if (partyId) params.append("party_id", String(partyId));
+    const qs = params.toString();
+    return `${api}/practice-tests/payout-preview${qs ? `?${qs}` : ""}`;
+  },
 };

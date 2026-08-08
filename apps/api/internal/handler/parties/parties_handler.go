@@ -9,6 +9,7 @@ import (
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
 	"free9ja/api/internal/service/files"
+	r2service "free9ja/api/internal/service/r2"
 	permissionsservice "free9ja/api/internal/service/permissions"
 	"free9ja/api/internal/utils"
 	"io"
@@ -73,14 +74,16 @@ type Handler struct {
 	auditService   audit.AuditService
 	filesService   files.FilesService
 	utils          *utils.Utils
+	r2Svc          *r2service.R2Service
 }
 
-func NewHandler(partiesService PartiesService, auditService audit.AuditService, filesService files.FilesService, utils *utils.Utils) *Handler {
+func NewHandler(partiesService PartiesService, auditService audit.AuditService, filesService files.FilesService, utils *utils.Utils, r2Svc *r2service.R2Service) *Handler {
 	return &Handler{
 		partiesService: partiesService,
 		auditService:   auditService,
 		filesService:   filesService,
 		utils:          utils,
+		r2Svc:          r2Svc,
 	}
 }
 
@@ -123,7 +126,6 @@ type CreatePartyRequest struct {
 	ShortName    string `json:"short_name"`
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
-	LogoFileID   *int64 `json:"logo_file_id"`
 	DisplayOrder int32  `json:"display_order"`
 }
 
@@ -131,7 +133,6 @@ type UpdatePartyRequest struct {
 	ShortName    string `json:"short_name"`
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
-	LogoFileID   *int64 `json:"logo_file_id"`
 	DisplayOrder int32  `json:"display_order"`
 }
 
@@ -170,38 +171,14 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. If a logo file was uploaded, fetch its details and use the public URL
-	if req.LogoFileID != nil {
-		file, err := h.filesService.GetFileByID(r.Context(), *req.LogoFileID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
-			return
-		}
-		if file.Status != "uploaded" {
-			h.utils.RespondError(w, http.StatusBadRequest, "Logo file upload is not complete")
-			return
-		}
-
-		if file.UploadedBy.Int64 != claims.UserID {
-			h.utils.RespondError(w, http.StatusBadRequest, "You are not authorized to use this file")
-			return
-		}
-
-		// Automatically set the Logo URL from the file record
-		req.Logo = file.PublicUrl
-	}
-
-	// 4. Create the party in the database and provision a wallet via Monnify
-	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
+	// 3. Create the party in the database and provision a wallet via Monnify
+	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create party: "+err.Error())
 		return
 	}
 
-	// update the file owner to the new partyID
-	if req.LogoFileID != nil && *req.LogoFileID > 0 {
-		h.filesService.UpdateFileOwner(r.Context(), *req.LogoFileID, int64(party.ID))
-	}
+
 
 	// --- Audit Logging ---
 	newValuesJSON, _ := json.Marshal(party)
@@ -501,29 +478,6 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// If a logo is provided, validate the uploaded file
-	if req.LogoFileID != nil {
-		file, err := h.filesService.GetFileByID(r.Context(), *req.LogoFileID)
-		if err != nil {
-			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
-			return
-		}
-		if file.Status != "uploaded" {
-			h.utils.RespondError(w, http.StatusBadRequest, "Logo file upload is not complete")
-			return
-		}
-		req.Logo = file.PublicUrl
-
-		// Ensure the file belongs to the correct party and was uploaded by the current user
-		if file.OwnerID.Int64 != partyID || file.UploadedBy.Int64 != claims.UserID {
-			h.utils.RespondError(w, http.StatusBadRequest, "Invalid logo file ID")
-			return
-		}
-	} else {
-		h.utils.RespondError(w, http.StatusNotFound, "Party needs a logo")
-		return
-	}
-
 	// Verify party exists
 	party := h.partiesService.GetPartyInfo(r.Context(), int16(partyID))
 	if party == nil {
@@ -539,8 +493,30 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// If the logo URL is changing, and the party already had a logo, delete the old logo from R2
+	if party.Logo != req.Logo && party.Logo != "" {
+		// Example URL: https://pub-xxx.r2.dev/parties/2026-07-13/A.webp
+		// We can extract the key by stripping the domain prefix. We'll find ".dev/" or ".com/" and take the rest.
+		var key string
+		if idx := strings.Index(party.Logo, ".dev/"); idx != -1 {
+			key = party.Logo[idx+5:]
+		} else if idx := strings.Index(party.Logo, ".com/"); idx != -1 {
+			key = party.Logo[idx+5:]
+		}
+		
+		if key != "" && h.r2Svc != nil {
+			go func(k string) {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				defer cancel()
+				if delErr := h.r2Svc.DeleteObject(ctx, k); delErr == nil {
+					_ = h.r2Svc.PurgeCloudflareCache(ctx, k)
+				}
+			}(key)
+		}
+	}
+
 	// update the party info
-	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, req.LogoFileID, req.DisplayOrder)
+	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
 		return
@@ -709,13 +685,38 @@ func (h *Handler) GetPartyWallet(w http.ResponseWriter, r *http.Request) {
 
 	wallet, err := h.partiesService.GetPartyWallet(r.Context(), int16(id))
 	if err != nil {
-		h.utils.RespondError(w, http.StatusNotFound, "Wallet not found for this party")
-		return
+		// If wallet not found, attempt to create it automatically
+		party := h.partiesService.GetPartyInfo(r.Context(), int16(id))
+		if party == nil {
+			h.utils.RespondError(w, http.StatusNotFound, "Party not found")
+			return
+		}
+
+		wallet, err = h.partiesService.CreatePartyWallet(r.Context(), party.Party)
+		if err != nil {
+			if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
+				// Edge case: someone just created it, try fetching one last time
+				wallet, err = h.partiesService.GetPartyWallet(r.Context(), int16(id))
+				if err != nil {
+					h.utils.RespondError(w, http.StatusNotFound, "Wallet not found for this party")
+					return
+				}
+			} else {
+				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create party wallet automatically: "+err.Error())
+				return
+			}
+		}
 	}
 
 	var parsedAccounts interface{}
 	if len(wallet.AccountNumbers) > 0 {
 		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
+		if str, ok := parsedAccounts.(string); ok {
+			var doubleParsed interface{}
+			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
+				parsedAccounts = doubleParsed
+			}
+		}
 	} else {
 		parsedAccounts = []interface{}{}
 	}
@@ -896,6 +897,12 @@ func (h *Handler) CreatePartyWalletHandler(w http.ResponseWriter, r *http.Reques
 	var parsedAccounts interface{}
 	if len(wallet.AccountNumbers) > 0 {
 		_ = json.Unmarshal(wallet.AccountNumbers, &parsedAccounts)
+		if str, ok := parsedAccounts.(string); ok {
+			var doubleParsed interface{}
+			if err := json.Unmarshal([]byte(str), &doubleParsed); err == nil {
+				parsedAccounts = doubleParsed
+			}
+		}
 	} else {
 		parsedAccounts = []interface{}{}
 	}
@@ -1048,6 +1055,48 @@ func (h *Handler) UpdatePartyDiscount(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Party discount updated successfully", map[string]interface{}{
 		"party": party,
 	})
+}
+
+type ToggleVerificationRequest struct {
+	IsVerified bool `json:"is_verified"`
+}
+
+// TogglePartyVerification godoc
+// @Summary      Toggle party verification
+// @Description  Allows an admin to toggle the verification status of a political party.
+// @Tags         Parties
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Party ID"
+// @Param        request body ToggleVerificationRequest true "Toggle Verification request payload"
+// @Success      200  {object} map[string]interface{} "Party verification updated"
+// @Failure      400  {object} map[string]interface{} "Bad request"
+// @Failure      401  {object} map[string]interface{} "Unauthorized"
+// @Failure      403  {object} map[string]interface{} "Forbidden (Admin only)"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Security     BearerAuth
+// @Router       /admin/parties/{id}/verify [put]
+func (h *Handler) TogglePartyVerification(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	partyID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid party ID")
+		return
+	}
+
+	var req ToggleVerificationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	err = h.partiesService.UpdatePartyIsVerified(r.Context(), int16(partyID), req.IsVerified)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to toggle verification: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Party verification toggled successfully", nil)
 }
 
 // GetPartySlotPrice godoc
@@ -1817,3 +1866,4 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 		"targets": targets,
 	})
 }
+

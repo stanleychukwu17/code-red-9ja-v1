@@ -116,21 +116,6 @@ export const confirmFileUpload = createServerFn({ method: "POST" })
     }
   });
 
-export const getPartyWallet = createServerFn({ method: "POST" })
-  .inputValidator((partyID: string | number) => partyID)
-  .handler(async ({ data: partyID }) => {
-    try {
-      const response = await apiFetch(API_URL.partyWallet(partyID));
-      const resData = await response.json();
-      return resData;
-    } catch (error) {
-      return {
-        success: false,
-        message:
-          "Failed to fetch party wallet from API: " + (error as Error).message,
-      };
-    }
-  });
 
 export const getPartyWalletTransactions = createServerFn({ method: "POST" })
   .inputValidator(

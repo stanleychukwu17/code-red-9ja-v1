@@ -16,6 +16,7 @@ import {
   getPartyAgentPaymentAllocation,
   getPlans,
   createMarketingCampaign,
+  getPartyMarketingCampaigns,
   getPartyAgentTargets,
   updatePartyAgentTargets,
   depositPartyAllowance,
@@ -50,7 +51,13 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
 });
 
 function ReadinessComponent() {
-  const { party, selectedElectionGroup, selectedElection } = useAppContext();
+  const {
+    party,
+    selectedElectionGroup,
+    selectedElection,
+    activeMarketingCampaigns,
+  } = useAppContext();
+  console.log({ party, activeMarketingCampaigns });
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -90,7 +97,23 @@ function ReadinessComponent() {
     enabled: !!partyId,
   });
 
-  const wallet = walletRes?.data?.wallet;
+  const { data: campaignsRes } = useQuery({
+    queryKey: ["partyMarketingCampaigns", partyId],
+    queryFn: () => getPartyMarketingCampaigns({ data: Number(partyId) }),
+    enabled: !!partyId,
+  });
+
+  const campaigns = campaignsRes?.data?.campaigns || [];
+  const activeCampaignsCount = campaigns.filter((c: any) => {
+    if (!c.end_date) return true;
+    return new Date(c.end_date) > new Date();
+  }).length;
+  const hasMarketingSetup = activeCampaignsCount > 0;
+
+  // Safely extract the wallet, handling the case where it might be returned unwrapped from the cache
+  const wallet =
+    walletRes?.data?.wallet ||
+    ((walletRes as any)?.id ? (walletRes as any) : undefined);
 
   const { data: statesRes } = useQuery({
     queryKey: ["nigerianStates"],
@@ -159,9 +182,20 @@ function ReadinessComponent() {
         <div className="space-y-6">
           <ReadinessProgressCard />
           <RequiredActionsSection
+            hasSlots={(party?.slots ?? 0) > 0}
+            hasAgentPaymentBalance={(party?.agentPaymentBalanceKobo ?? 0) > 0}
+            hasPaymentAllocation={
+              party?.agentPaymentAllocation
+                ? Object.values(party.agentPaymentAllocation).some(
+                    (role: any) => (role?.default ?? 0) > 0,
+                  )
+                : false
+            }
+            hasMarketingSetup={hasMarketingSetup}
             onBuySlots={() => setIsSlotsDialogOpen(true)}
             onDepositPayment={() => setIsPaymentDialogOpen(true)}
             onDepositMarketing={() => setIsMarketingDialogOpen(true)}
+            onPaymentAllocation={() => setIsBudgetDialogOpen(true)}
           />
           <SubTabsSection />
         </div>
@@ -171,6 +205,12 @@ function ReadinessComponent() {
           <FinancialOverallCard
             walletBalance={wallet?.balance_kobo || 0}
             slots={party?.slots || 0}
+            agentPaymentBalance={party?.agentPaymentBalanceKobo || 0}
+            activeCampaignsCount={activeCampaignsCount}
+            onOpenWallet={() => setIsWalletDialogOpen(true)}
+            onBuySlots={() => setIsSlotsDialogOpen(true)}
+            onOpenAgentPayment={() => setIsPaymentDialogOpen(true)}
+            onOpenMarketing={() => setIsMarketingDialogOpen(true)}
           />
           <TargetCard />
           <AgentPaymentCard
@@ -290,7 +330,6 @@ function ReadinessComponent() {
         }
         onSubmit={async (values) => {
           if (!partyId) return;
-          console.log("FORM SUBMITTED:", values);
           const durationInDays =
             values.durationUnit === "months"
               ? values.durationValue * 30
@@ -432,39 +471,74 @@ function RoleProgressRow({
 }
 
 function RequiredActionsSection({
+  hasSlots,
+  hasAgentPaymentBalance,
+  hasPaymentAllocation,
+  hasMarketingSetup,
   onBuySlots,
   onDepositPayment,
   onDepositMarketing,
+  onPaymentAllocation,
 }: {
+  hasSlots: boolean;
+  hasAgentPaymentBalance: boolean;
+  hasPaymentAllocation: boolean;
+  hasMarketingSetup: boolean;
   onBuySlots: () => void;
   onDepositPayment: () => void;
   onDepositMarketing: () => void;
+  onPaymentAllocation: () => void;
 }) {
+  const allCompleted =
+    hasSlots &&
+    hasAgentPaymentBalance &&
+    hasPaymentAllocation &&
+    hasMarketingSetup;
+
+  if (allCompleted) {
+    return <></>;
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-c-90">Required Actions</h2>
       <div className="space-y-4">
-        <ActionBanner
-          title="Buy Slots for Election Agents"
-          description="Slots allow you accept agent requests for upcoming elections."
-          buttonLabel="Buy Slots"
-          bgClass="bg-[#FFDAAA]/50"
-          onClick={onBuySlots}
-        />
-        <ActionBanner
-          title="Deposit Agent Payment"
-          description="Deposit party agent election day payment."
-          buttonLabel="Deposit Agent Payment"
-          bgClass="bg-purple/20"
-          onClick={onDepositPayment}
-        />
-        <ActionBanner
-          title="Setup Agent Marketing"
-          description="Acquire agents for the upcoming election. This is the fastest way to get agents for your party (Highly Recommended)."
-          buttonLabel="Setup Agent Marketing"
-          bgClass="bg-[#0984E3]/20"
-          onClick={onDepositMarketing}
-        />
+        {!hasSlots && (
+          <ActionBanner
+            title="Buy Slots for Election Agents"
+            description="Slots allow you accept agent requests for upcoming elections."
+            buttonLabel="Buy Slots"
+            bgClass="bg-[#FFDAAA]/50"
+            onClick={onBuySlots}
+          />
+        )}
+        {!hasAgentPaymentBalance && (
+          <ActionBanner
+            title="Deposit Agent Payment"
+            description="Deposit party agent election day payment."
+            buttonLabel="Deposit Agent Payment"
+            bgClass="bg-purple/20"
+            onClick={onDepositPayment}
+          />
+        )}
+        {!hasPaymentAllocation && (
+          <ActionBanner
+            title="Set Agent Payment Allocation"
+            description="Configure how much each agent role gets paid per state."
+            buttonLabel="Set Agent Payment Allocation"
+            bgClass="bg-[#2ecc71]/20"
+            onClick={onPaymentAllocation}
+          />
+        )}
+        {!hasMarketingSetup && (
+          <ActionBanner
+            title="Setup Agent Marketing"
+            description="Acquire agents for the upcoming election. This is the fastest way to get agents for your party (Highly Recommended)."
+            buttonLabel="Setup Agent Marketing"
+            bgClass="bg-[#0984E3]/20"
+            onClick={onDepositMarketing}
+          />
+        )}
       </div>
     </div>
   );
@@ -774,30 +848,75 @@ function TransactionsSubTabContent() {
 function FinancialOverallCard({
   walletBalance,
   slots,
+  agentPaymentBalance,
+  activeCampaignsCount,
+  onOpenWallet,
+  onBuySlots,
+  onOpenAgentPayment,
+  onOpenMarketing,
 }: {
   walletBalance: number;
   slots: number;
+  agentPaymentBalance: number;
+  activeCampaignsCount: number;
+  onOpenWallet: () => void;
+  onBuySlots: () => void;
+  onOpenAgentPayment: () => void;
+  onOpenMarketing: () => void;
 }) {
   const balanceNGN = (walletBalance / 100).toLocaleString("en-NG", {
+    maximumFractionDigits: 1,
+  });
+  const agentPaymentNGN = (agentPaymentBalance / 100).toLocaleString("en-NG", {
     maximumFractionDigits: 1,
   });
 
   return (
     <ReadinessStatSection title="Financial Overall">
-      <FinancialRow label="Party Wallet Balance" value={`₦${balanceNGN}`} />
+      <FinancialRow
+        label="Party Wallet Balance"
+        value={`₦${balanceNGN}`}
+        onClick={onOpenWallet}
+      />
       <div className="px-3 py-2">
         <div className="h-px bg-border w-full" />
       </div>
-      <FinancialRow label="Slots" value={slots.toLocaleString()} />
-      <FinancialRow label="Agent Payment" value="₦176M" />
-      <FinancialRow label="Marketing Funds" value="₦200M" />
+      <FinancialRow
+        label="Slots"
+        value={slots.toLocaleString()}
+        onClick={onBuySlots}
+      />
+      <FinancialRow
+        label="Agent Payment Deposit"
+        value={`₦${agentPaymentNGN}`}
+        onClick={onOpenAgentPayment}
+      />
+      <FinancialRow
+        label="Marketing Campaigns"
+        value={activeCampaignsCount.toLocaleString()}
+        onClick={onOpenMarketing}
+      />
     </ReadinessStatSection>
   );
 }
 
-function FinancialRow({ label, value }: { label: string; value: string }) {
+function FinancialRow({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  onClick?: () => void;
+}) {
   return (
-    <div className="h-11 px-3 flex items-center gap-5">
+    <div
+      className={cn(
+        "h-11 px-3 flex items-center gap-5 transition-colors rounded-lg",
+        onClick && "cursor-pointer hover:bg-c-5",
+      )}
+      onClick={onClick}
+    >
       <p className="text-c-70 w-full">{label}</p>
       <span className="font-semibold text-[16px] text-c-80">{value}</span>
       <Button variant="black" className="h-8 px-3 rounded-[10px]">
@@ -818,7 +937,6 @@ function TargetCard() {
 
   const handleFetchTargets = async (id: string | number) => {
     const res = await fetchTargetsFn({ data: id });
-    console.log("FETCH TARGETS RES", res);
     return res?.data?.targets || res?.data || null;
   };
 

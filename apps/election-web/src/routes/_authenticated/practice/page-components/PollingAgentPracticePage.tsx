@@ -7,7 +7,11 @@ import {
   LeaderboardCardWrapper,
   ObjectiveTile,
 } from "@repo/ui/components/cards/leaderboard-card";
-import { InfoCard, SelectableCard } from "@repo/ui/components/cards/Rewards";
+import {
+  InfoCard,
+  RewardSumCard,
+  SelectableCard,
+} from "@repo/ui/components/cards/Rewards";
 import {
   Carousel,
   CarouselContent,
@@ -57,11 +61,12 @@ import {
   getPracticeTestPayoutPreview,
 } from "#/lib/server/practice_tests";
 import { getElectionGroups } from "#/lib/server/election_groups";
+import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { party } = useAuth();
+  const { party, user } = useAuth();
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
@@ -78,6 +83,7 @@ export function PollingAgentPracticePage() {
       "dashboard",
       "completed",
       "final",
+      "accepted",
     ] as const)
       .withDefault("welcome")
       .withOptions({ clearOnDefault: false }),
@@ -231,7 +237,6 @@ export function PollingAgentPracticePage() {
   const finalScore = testStats.length > 0 ? currentScore / testStats.length : 0;
   // Live preview: percentage-based score (0-100); divided by 10 for display only
   const currentTaskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
-  console.log({ currentScore, finalScore, currentTask });
 
   return (
     <div className="w-full h-full">
@@ -324,14 +329,60 @@ export function PollingAgentPracticePage() {
           score={Number((finalScore / 10).toFixed(2))}
           maxScore={10}
           potentialPayout={potentialTestPayout}
+          onNextClick={async () => {
+            let hasAssignment = false;
+            if (user?.id && selectedElectionGroupId) {
+              try {
+                const res = await queryClient.fetchQuery({
+                  queryKey: [
+                    "pollingAgentAssignments",
+                    user.id,
+                    selectedElectionGroupId,
+                  ],
+                  queryFn: async () => {
+                    const response = await getPollingUnitAssignments({
+                      data: {
+                        user_id: user.id,
+                        election_group_id: selectedElectionGroupId,
+                      },
+                    });
+                    if (!response?.success || !response.data?.assignments)
+                      return [];
+                    return response.data.assignments;
+                  },
+                });
+                if (res && res.length > 0) {
+                  hasAssignment = true;
+                }
+              } catch (e) {
+                console.error("Failed to fetch assignments on done:", e);
+              }
+            }
+
+            if (hasAssignment) {
+              setCurrentPage("accepted");
+            } else {
+              // Clear local storage so future attempts start completely fresh
+              setCurrentFailedAttempts(0);
+              setSelectedElectionGroupId(null);
+              setSelectedElectionDate(null);
+              setTestStats([]);
+              setTaskId(1);
+              navigate({ to: "/" });
+            }
+          }}
+          electionGroupId={selectedElectionGroupId}
+        />
+      )}
+
+      {currentPage === "accepted" && (
+        <ApplicationAcceptedPage
           onNextClick={() => {
-            // Clear local storage so future attempts start completely fresh
             setCurrentFailedAttempts(0);
             setSelectedElectionGroupId(null);
             setSelectedElectionDate(null);
             setTestStats([]);
             setTaskId(1);
-            
             navigate({ to: "/" });
           }}
           electionGroupId={selectedElectionGroupId}
@@ -498,77 +549,121 @@ export function SelectElectionPage({
 
 export function ApplicationAcceptedPage({
   onNextClick,
+  electionGroupId,
 }: {
   onNextClick?: () => void;
+  electionGroupId: number | null;
 }) {
-  const { party } = useAuth();
+  const { party, user } = useAuth();
+
+  const { data: assignments = [] } = useQuery({
+    queryKey: ["pollingAgentAssignments", user?.id, electionGroupId],
+    enabled: !!user?.id && !!electionGroupId,
+    queryFn: async () => {
+      const response = await getPollingUnitAssignments({
+        data: {
+          user_id: user?.id,
+          election_group_id: electionGroupId ?? undefined,
+        },
+      });
+      if (!response?.success || !response.data?.assignments) return [];
+      return response.data.assignments;
+    },
+  });
+
+  const assignment = assignments.length > 0 ? assignments[0] : null;
+
+  const electionDateFormatted = assignment?.election_date
+    ? new Date(assignment.election_date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    : "Election day";
 
   const Todo = ({ text }: { text: string }) => (
-    <div className="flex gap-4 py-2">
-      <div className="size-6 rounded-full bg-c-10 shrink-0" />
-      <p className="text-lg leading-6 text-c-60">{text}</p>
+    <div className="flex gap-4 py-2.5 items-start">
+      <div className="size-6 rounded-full bg-c-20 shrink-0 mt-1" />
+      <p className="text-lg leading-snug text-c-60">{text}</p>
     </div>
   );
 
   return (
-    <div className="w-full h-svh">
-      <PageHeader onBackClick={() => null} />
+    <div className="relative w-full h-svh flex flex-col">
+      <PageHeader className="" onBackClick={onNextClick} />
 
-      <div className="relative flex flex-col items-center gap-3 h-full px-4 max-w-[430px]">
-        <div className="">
-          <TaskScore
-            score={5.55}
-            maxScore={10}
-            className="absolute top-7 left-35 opacity-80 blur-2xl -z-10"
+      <div className="">
+        <TaskScore
+          score={5.55}
+          maxScore={10}
+          className="absolute top-13 left-35 opacity-80 blur-2xl -z-10"
+        />
+        <div className="absolute top-5 right-5 size-10 bg-yellow rounded-full blur-[32px] opacity-50 -z-10" />
+      </div>
+      <div className="flex-1 flex flex-col items-center gap-8 px-5 max-w-[430px] mx-auto overflow-y-auto pb-32">
+        <div className="mt-4 flex flex-col items-center">
+          <AppAvatar src={party?.logo} alt="Party Logo" className="size-16" />
+          <TitleText
+            text="Congratulations!"
+            size="xl"
+            className="text-center text-c-90 mt-4"
           />
-          <div className="absolute top-0 right-5 size-10 bg-yellow rounded-full blur-[32px] opacity-50 -z-10" />
+          <DescriptiveText
+            text="Your application has been accepted."
+            className="text-center text-c-60 mt-1"
+          />
         </div>
 
-        <AppAvatar src={party?.logo} alt="Party Logo" className="size-7" />
-        <TitleText
-          text="Congratulations!"
-          size="xl"
-          className="text-center text-c-90"
-        />
-        <DescriptiveText text="Your application has been accepted." />
-
-        <InfoCard
-          icon={<FancyAgentIcon className="size-6" />}
+        {/* Role Assigned Info Card */}
+        <RewardSumCard
+          icon={<FancyAgentIcon />}
           label="Role Assigned"
-          value="Polling Unit Agent"
-          variant="yellow"
-          className="w-full mt-7"
+          value="Polling Agent"
+          className="w-full text-md"
+          labelClassName="text-c-60"
+          valueClassName="text-md"
         />
 
-        <div className="mt-7 w-full space-y-3">
-          <Label title="Your Polling Unit" />
-          <div className="px-3 py-3 border-[1.5px] border-c-90 rounded-2xl shadow-[0_4px_4px_rgba(0,0,0,0.25)] flex items-center gap-2">
-            <PollingUnitIcon className="shrink-0 size-8" />
-            <div className="">
-              <p className="font-medium text-xl">Polling Unit Name</p>
-              <span className="text-c-50 text-sm">
-                State: Osun | LGA: EJIGBO | Ward: USUAMA
+        {/* Polling Unit Box */}
+        <div className="w-full space-y-3">
+          <span className="text-[15px] font-bold text-c-80 block">
+            Your Polling Unit
+          </span>
+          <div className="px-4 py-4 border-[1.5px] border-c-90 rounded-2xl bg-white shadow-sm flex items-center gap-4">
+            <PollingUnitIcon className="shrink-0 size-8 text-purple-600" />
+            <div className="space-y-1">
+              <p className="font-medium text-c-90 leading-tight">
+                {assignment?.polling_unit_name || "Polling Unit Name"}
+              </p>
+              <span className="text-c-50 text-[13px] block leading-5">
+                State: {assignment?.state_name || "N/A"} | LGA:{" "}
+                {assignment?.lga_name || "N/A"} | Ward:{" "}
+                {assignment?.ward_name || "N/A"}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="space-y-3 mt-7">
-          <Label title="What the party expects of you on Election Day." />
-          <div>
-            <Todo text="Ensure you are at the above Polling unit before 7AM on Election day (Jan 17)" />
+        {/* Duties List */}
+        <div className="space-y-3 w-full">
+          <span className="text-[15px] font-bold text-c-80 block">
+            Your Election Day Duties
+          </span>
+          <div className="space-y-2">
+            <Todo
+              text={`Ensure you are at the above Polling unit before 7AM on Election day (${electionDateFormatted})`}
+            />
             <Todo text="Complete all your election task and upload election results" />
-            <Todo text="End election and request payment from party." />
+            <Todo text="End election and request payment" />
           </div>
         </div>
       </div>
 
-      <StickyFooter className="pb-14">
+      <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90">
         <Button
           type="button"
           variant="black"
           size="4xl"
-          className="w-full rounded-full"
+          className="w-full rounded-full h-14"
           onClick={onNextClick}
         >
           Close

@@ -705,9 +705,6 @@ export function ChoosePollingUnitDialog({
     },
     enabled: open && (!!selectedState || !!selectedLga || !!selectedWard),
   });
-  console.log("DATA:", data);
-  console.log("HAS NEXT PAGE:", hasNextPage);
-  console.log("IS FETCHING NEXT PAGE:", isFetchingNextPage);
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,

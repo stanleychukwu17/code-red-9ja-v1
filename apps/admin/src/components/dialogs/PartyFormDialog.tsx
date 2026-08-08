@@ -37,7 +37,6 @@ export function PartyFormDialog({
   const queryClient = useQueryClient();
   const [logoUrl, setLogoUrl] = useState("");
   const [selectedInputLogo, setSelectedInputLogo] = useState<File | null>(null);
-  const [logoFileId, setLogoFileId] = useState<number | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,13 +62,11 @@ export function PartyFormDialog({
         form.setFieldValue("fullName", party.name || "");
         form.setFieldValue("displayOrder", party.display_order ?? 999);
         setLogoUrl(party.logo || "");
-        setLogoFileId(party.logo_file_id ?? null);
       } else {
         form.setFieldValue("acronym", "");
         form.setFieldValue("fullName", "");
         form.setFieldValue("displayOrder", 999);
         setLogoUrl("");
-        setLogoFileId(null);
       }
 
       setSelectedInputLogo(null);
@@ -98,31 +95,15 @@ export function PartyFormDialog({
   };
 
   // Handle the removal of the party logo
-  const handleRemoveImage = async (which: "changing_logo" | "removing_logo") => {
-    if (logoFileId && logoFileId > 0) {
-      try {
-        const res = await deleteFile({ data: { id: logoFileId, party_id: party?.id, type: "party_logo" } });
-        if (!res.success) {
-          throw new Error(res.message || "Failed to delete file");
-        }
-
-        if (which === "removing_logo") {
-          setLogoUrl("");
-          setLogoFileId(null);
-          setSelectedInputLogo(null);
-
-          if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-          }
-        } else if (which == "changing_logo") {
-          setLogoUrl("");
-          setLogoFileId(null);
-        }
-
-        return res;
-      } catch (err: any) {
-        setError(err.message || "Failed to delete file");
+  const handleRemoveImage = (which: "changing_logo" | "removing_logo") => {
+    if (which === "removing_logo") {
+      setLogoUrl("");
+      setSelectedInputLogo(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
       }
+    } else if (which == "changing_logo") {
+      setLogoUrl("");
     }
   };
 
@@ -130,16 +111,13 @@ export function PartyFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: { acronym: string; fullName: string; displayOrder: number }) => {
       let finalLogoUrl = logoUrl;
-      let finalFileId = logoFileId;
 
       // Upload the party logo if a new one was selected
       if (selectedInputLogo) {
         setIsUploadingLogo(true);
 
-        // party is changing logo, so we need to delete the existing one
-        if (party?.logo_file_id as number > 0) {
-          await handleRemoveImage("changing_logo");
-        }
+        // party is changing logo, clear the local state just in case
+        handleRemoveImage("changing_logo");
 
         if (!selectedInputLogo) {
           throw new Error("No file selected");
@@ -182,10 +160,8 @@ export function PartyFormDialog({
           await confirmFileUpload({ data: { id: file_id, success: true } });
 
           finalLogoUrl = public_url;
-          finalFileId = file_id;
           setSelectedInputLogo(null)
           setLogoUrl(public_url)
-          setLogoFileId(file_id)
         } finally {
           setIsUploadingLogo(false);
         }
@@ -202,7 +178,6 @@ export function PartyFormDialog({
             short_name: values.acronym.trim().toUpperCase(),
             name: values.fullName.trim(),
             logo: finalLogoUrl,
-            logo_file_id: finalFileId ?? undefined,
             display_order: values.displayOrder,
           },
         });
@@ -212,7 +187,6 @@ export function PartyFormDialog({
             short_name: values.acronym.trim().toUpperCase(),
             name: values.fullName.trim(),
             logo: finalLogoUrl,
-            logo_file_id: finalFileId ?? undefined,
             display_order: values.displayOrder,
           },
         });

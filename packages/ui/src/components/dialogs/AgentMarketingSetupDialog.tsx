@@ -162,7 +162,6 @@ function PlanCard({
   onSelect: () => void;
   electionScope?: string;
 }) {
-  console.log("PLAN:", plan);
   const accent = plan.color_hex ?? "#744B3E";
   const price =
     typeof plan.price === "string"
