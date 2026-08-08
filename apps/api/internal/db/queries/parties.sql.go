@@ -94,7 +94,7 @@ func (q *Queries) CreateNationalChapter(ctx context.Context, arg CreateNationalC
 const createParty = `-- name: CreateParty :one
 INSERT INTO parties (short_name, name, logo, logo_file_id, display_order)
 VALUES ($1, $2, $3, $4, $5)
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
 type CreatePartyParams struct {
@@ -128,6 +128,7 @@ func (q *Queries) CreateParty(ctx context.Context, arg CreatePartyParams) (Party
 		&i.AgentPaymentBalanceKobo,
 		&i.AgentPaymentAllocation,
 		&i.AgentAcquisitionTargets,
+		&i.AutoAcceptApplications,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -243,7 +244,7 @@ func (q *Queries) GetPartyBasicInfo(ctx context.Context, id int16) (GetPartyBasi
 }
 
 const getPartyByID = `-- name: GetPartyByID :one
-SELECT id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at FROM parties WHERE id = $1
+SELECT id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at FROM parties WHERE id = $1
 `
 
 func (q *Queries) GetPartyByID(ctx context.Context, id int16) (Party, error) {
@@ -263,6 +264,7 @@ func (q *Queries) GetPartyByID(ctx context.Context, id int16) (Party, error) {
 		&i.AgentPaymentBalanceKobo,
 		&i.AgentPaymentAllocation,
 		&i.AgentAcquisitionTargets,
+		&i.AutoAcceptApplications,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -270,7 +272,7 @@ func (q *Queries) GetPartyByID(ctx context.Context, id int16) (Party, error) {
 }
 
 const getPartyByShortName = `-- name: GetPartyByShortName :one
-SELECT id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at FROM parties WHERE short_name = $1
+SELECT id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at FROM parties WHERE short_name = $1
 `
 
 func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Party, error) {
@@ -290,6 +292,7 @@ func (q *Queries) GetPartyByShortName(ctx context.Context, shortName string) (Pa
 		&i.AgentPaymentBalanceKobo,
 		&i.AgentPaymentAllocation,
 		&i.AgentAcquisitionTargets,
+		&i.AutoAcceptApplications,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -376,7 +379,7 @@ func (q *Queries) ListAcceptingParties(ctx context.Context) ([]ListAcceptingPart
 }
 
 const listParties = `-- name: ListParties :many
-SELECT id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at FROM parties
+SELECT id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at FROM parties
 WHERE status = 'active'
 ORDER BY display_order ASC, name ASC
 `
@@ -404,6 +407,7 @@ func (q *Queries) ListParties(ctx context.Context) ([]Party, error) {
 			&i.AgentPaymentBalanceKobo,
 			&i.AgentPaymentAllocation,
 			&i.AgentAcquisitionTargets,
+			&i.AutoAcceptApplications,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -454,7 +458,7 @@ const updateParty = `-- name: UpdateParty :one
 UPDATE parties
 SET short_name = $1, name = $2, logo = $3, logo_file_id = $4, display_order = $5, updated_at = NOW()
 WHERE id = $6
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
 type UpdatePartyParams struct {
@@ -490,6 +494,7 @@ func (q *Queries) UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party
 		&i.AgentPaymentBalanceKobo,
 		&i.AgentPaymentAllocation,
 		&i.AgentAcquisitionTargets,
+		&i.AutoAcceptApplications,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -500,7 +505,7 @@ const updatePartyAgentAcquisitionTargets = `-- name: UpdatePartyAgentAcquisition
 UPDATE parties
 SET agent_acquisition_targets = $2, updated_at = NOW()
 WHERE id = $1
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
 type UpdatePartyAgentAcquisitionTargetsParams struct {
@@ -525,6 +530,7 @@ func (q *Queries) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg Up
 		&i.AgentPaymentBalanceKobo,
 		&i.AgentPaymentAllocation,
 		&i.AgentAcquisitionTargets,
+		&i.AutoAcceptApplications,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

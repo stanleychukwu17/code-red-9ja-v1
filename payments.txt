@@ -1,0 +1,33 @@
+Now payment for the service that polling agents, ward supervisors, lga supervisors, and state supervisors provide also needs some way of being calculated & stored as they lean on certain factors, I've listed below that determines what an agent gets paid after their service on elction day.
+
+Here are the factors:
+- agent_payment_allocation [20260506152000_parties.sql#L12-13](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260506152000_parties.sql#L12-13) 
+- earnings_allocation [20260629000000_system_settings.sql#L29-29](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260629000000_system_settings.sql#L29-29) 
+
+Note: our payment is perfomance based.
+
+e.g., Let's say user A is a party agent, precisely a polling agent for a party for an upcoming election group. Lets say the agent payment for polling agents is 20k. And If earnings allocation for polling agent is as such [20260629000000_system_settings.sql#L19-19](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260629000000_system_settings.sql#L19-19)  where
+readiness: 20%, results: 30%, updates: 20%, attendance: 10%, election_start: 5%, election_end: 5%, live_voters_referred: 10% .
+
+1. Readiness:
+since readiness is 20%, it therefore means that if we hit our test requirements target here [20260629000000_system_settings.sql#L43-43](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260629000000_system_settings.sql#L43-43), having submitted test scores that should only be registered here [20260805170000_practice_tests.sql#L9-9](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260805170000_practice_tests.sql#L9-9) (or we can add a field to the task objects to track if the task is to be counted so as to not record practice test stats outside valid windows)  if they align with this windows[20260629000000_system_settings.sql#L45-47](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260629000000_system_settings.sql#L45-47)  
+
+2. Results:
+For results, these [20260626051500_polling_unit_assignments.sql#L22-23](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260626051500_polling_unit_assignments.sql#L22-23)  are the determining factor. if the user is expected to submit 3 and they only submit 1, they only get 10% of the 30%. if they submit all 3 they get the full 30% so it depends on results submitted and results expected to be submitted. that determines the percentage which determines what they earn in his 20k payment.
+
+3. Updates:
+if updates are 20%, and [20260629000000_system_settings.sql#L22-24](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260629000000_system_settings.sql#L22-24)  target_updates_count is 20, it there for means that every update user A gives on election day would equate to 1% of their payment and if they hit the target_updates_count of 20, they would have got 20% of their 20k payment secured
+
+4. Attendance:
+[20260626051500_polling_unit_assignments.sql#L11-12](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260626051500_polling_unit_assignments.sql#L11-12) 
+saying they've arrived, they therefore would have earned 5% of their 20k payment down
+
+5. Election start:
+[20260626051500_polling_unit_assignments.sql#L13-14](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260626051500_polling_unit_assignments.sql#L13-14)  when they update this, they earn the percentage associated for this.
+
+6. Election end:
+[20260626051500_polling_unit_assignments.sql#L15-16](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260626051500_polling_unit_assignments.sql#L15-16)  when they update this, they earn the percentage associated to this.
+
+7. Live voters referred:
+[20260626051500_polling_unit_assignments.sql#L24-24](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260626051500_polling_unit_assignments.sql#L24-24) 
+whenever this gets updated, if they get 10 of this and by so doing meet the target[20260629000000_system_settings.sql#L17-19](textBlock;file:///c%3A/Users/danie/Desktop/Repos/free9ja/apps/api/db/migrations/20260629000000_system_settings.sql#L17-19) , they get the percentage associated to that.

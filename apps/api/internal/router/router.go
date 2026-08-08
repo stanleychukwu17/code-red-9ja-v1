@@ -43,6 +43,7 @@ import (
 	systemsettingshandler "free9ja/api/internal/handler/system_settings"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
+	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
 	practicetestshandler "free9ja/api/internal/handler/practice_tests"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
 	"free9ja/api/internal/logger"
@@ -72,6 +73,7 @@ import (
 	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
 	statesservice "free9ja/api/internal/service/states"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
+	earningsservice "free9ja/api/internal/service/earnings"
 	usersservice "free9ja/api/internal/service/users"
 	wardsservice "free9ja/api/internal/service/wards"
 	"free9ja/api/internal/utils"
@@ -156,7 +158,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
-	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
+	earningsSvc := earningsservice.NewService(q, pool)
+	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor, earningsSvc)
 	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
 	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
 	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
@@ -165,7 +168,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
 	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
 	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
-	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance)
+	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsSvc, partyApplicationsService)
+	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsSvc, utilsInstance)
 
 	// Initialize the R2 service (nil-safe: file endpoints return an error if un-configured)
 	var filesHandler *fileshandler.Handler
@@ -218,6 +222,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP) // Send forgot-password OTP
 	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                               // Check NIN endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                     // Check Username endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)             // Check Referral Code endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                               // Register endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                     // Login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                   // Logout endpoint
@@ -448,6 +453,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/users/me/wallet", usersHandler.GetMyWallet)
 		r.Get("/api/v1/users/me/wallet/transactions", usersHandler.ListMyWalletTransactions)
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)
+		r.Post("/api/v1/users/me/referral-code", usersHandler.GenerateReferralCode)
 		r.Post("/api/v1/users/{id}/wallet", usersHandler.CreateUserWalletHandler)
 		r.Post("/api/v1/auth/register-candidate", authHandler.RegisterCandidatePlaceholder)
 		r.Post("/api/v1/elections/did-not-vote", electionsHandler.CreateDidNotVoteReason)
@@ -528,10 +534,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
 
 		// practice tests routes
-		r.Post("/api/v1/practice-tests", practiceTestsHandler.StartPracticeTest)
+		r.Post("/api/v1/practice-tests", practiceTestsHandler.SubmitPracticeTest)
 		r.Get("/api/v1/practice-tests", practiceTestsHandler.ListPracticeTests)
-		r.Patch("/api/v1/practice-tests/{id}/task", practiceTestsHandler.AppendTask)
-		r.Patch("/api/v1/practice-tests/{id}/complete", practiceTestsHandler.CompleteTest)
+		r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
 	})
 
 	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin
@@ -545,6 +550,23 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)
+	})
+
+	// Agent earnings routes (authenticated users)
+	mainRouter.Group(func(r chi.Router) {
+		jwtSecret := ""
+		if cfg != nil {
+			jwtSecret = cfg.JWTSecret
+		}
+		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
+
+		// Admins/party_admins: trigger calculation, list, approve, mark paid
+		r.Post("/api/v1/agent-earnings/calculate/{assignment_id}", agentEarningsHandler.CalculateEarnings)
+		r.Get("/api/v1/agent-earnings", agentEarningsHandler.ListEarnings)
+		r.Get("/api/v1/agent-earnings/{id}", agentEarningsHandler.GetEarnings)
+		r.Get("/api/v1/agent-earnings/assignment/{assignment_id}", agentEarningsHandler.GetEarningsByAssignment)
+		r.Patch("/api/v1/agent-earnings/{id}/approve", agentEarningsHandler.ApproveEarnings)
+		r.Patch("/api/v1/agent-earnings/{id}/mark-paid", agentEarningsHandler.MarkPaid)
 	})
 
 	return mainRouter

@@ -29,6 +29,7 @@ import StarIcon from "@repo/ui/icons/star-icon";
 import TwinkleLittleStarIcon from "@repo/ui/icons/twinkle-little-star-icon";
 import { cn } from "@repo/ui/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
@@ -51,13 +52,16 @@ import { UploadsTab } from "../../_home/components/UploadsTab";
 import { TaskType, pollingAgentTest } from "./tasks-data";
 import { showFeedbackToast } from "./utils";
 import {
-  startPracticeTest,
-  appendPracticeTestTask,
-  completePracticeTest,
+  submitPracticeTest,
+  listPracticeTests,
+  getPracticeTestPayoutPreview,
 } from "#/lib/server/practice_tests";
+import { getElectionGroups } from "#/lib/server/election_groups";
 
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { party } = useAuth();
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
@@ -67,6 +71,7 @@ export function PollingAgentPracticePage() {
     "page",
     parseAsStringLiteral([
       "welcome",
+      "select-election",
       "tutorial",
       "quiz",
       "practical",
@@ -89,13 +94,22 @@ export function PollingAgentPracticePage() {
     setIsPractice("true");
   }, [setIsPractice]);
 
-  const [currentFailedAttempts, setCurrentFailedAttempts] = useState(0);
+  const [currentFailedAttempts, setCurrentFailedAttempts] = useLocalStorage(
+    "practice-current-failed-attempts",
+    0,
+  );
   const [quizSelectedOptionId, setQuizSelectedOptionId] = useState<
     number | null
   >(null);
 
-  // practiceTestId is the DB row ID returned by the API on start
-  const [practiceTestId, setPracticeTestId] = useState<number | null>(null);
+  // Election group selected for this practice test
+  const [selectedElectionGroupId, setSelectedElectionGroupId] = useLocalStorage<
+    number | null
+  >("practice-selected-election-group-id", null);
+
+  const [selectedElectionDate, setSelectedElectionDate] = useLocalStorage<
+    string | null
+  >("practice-selected-election-date", null);
 
   const [testStats, setTestStats] = useLocalStorage<
     {
@@ -110,34 +124,74 @@ export function PollingAgentPracticePage() {
   const validTaskIndex = currentTaskIndex === -1 ? 0 : currentTaskIndex;
   const currentTask = pollingAgentTest[validTaskIndex];
 
+  const { mutate: submitTest } = useMutation({
+    mutationFn: submitPracticeTest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["practiceTests"] });
+      setCurrentPage("final");
+    },
+    onError: (error) => {
+      console.error("Failed to submit test:", error);
+      setCurrentPage("final"); // Still move forward so they aren't stuck
+    },
+  });
+
   const handleNextTask = () => {
     const nextTask = pollingAgentTest[validTaskIndex + 1];
     if (nextTask) {
       setTaskId(nextTask.id);
       setCurrentPage("tutorial");
     } else {
-      // All tasks done — complete the test
+      // All tasks done — submit the entire test at once
       const finalScoreVal =
         testStats.length > 0
           ? testStats.reduce((acc, s) => acc + s.score, 0) / testStats.length
           : 0;
-      if (practiceTestId) {
-        completePracticeTest({
-          data: { practiceTestId, finalScore: Number(finalScoreVal.toFixed(2)) },
-        }).catch(console.error);
-      }
-      setCurrentPage("final");
+
+      submitTest({
+        data: {
+          electionGroupId: selectedElectionGroupId ?? undefined,
+          role: "pollingagent",
+          finalScore: Number(finalScoreVal.toFixed(2)),
+          taskStats: testStats.map((s) => ({
+            task_id: s.taskId,
+            score: s.score,
+            failed_attempts: s.failedAttempt,
+            completed: s.completed,
+          })),
+        },
+      });
     }
   };
+
+  useEffect(() => {
+    if (currentPage === "completed" && currentTask) {
+      setTestStats((prev) => {
+        if (prev.some((s) => s.taskId === currentTask.id)) return prev;
+        // Percentage-based: 1 success out of (failedAttempts + 1) total attempts
+        // Stored as 0-100; divided by 10 only at the display layer
+        const taskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
+        return [
+          ...prev,
+          {
+            taskId: currentTask.id,
+            failedAttempt: currentFailedAttempts,
+            completed: true,
+            score: taskScore,
+          },
+        ];
+      });
+    }
+  }, [currentPage, currentTask, currentFailedAttempts, setTestStats]);
 
   const handleQuizNext = () => {
     if (!currentTask) return;
 
     if (quizSelectedOptionId === currentTask.quiz.correctOptionId) {
-      showFeedbackToast(true);
+      showFeedbackToast(true, currentFailedAttempts);
       setCurrentPage("practical");
     } else {
-      showFeedbackToast(false);
+      showFeedbackToast(false, currentFailedAttempts + 1);
       setCurrentFailedAttempts((prev) => prev + 1);
       setQuizSelectedOptionId(null);
     }
@@ -145,30 +199,6 @@ export function PollingAgentPracticePage() {
 
   const handleDashboardCorrect = () => {
     if (!currentTask) return;
-
-    const taskScore = Math.max(0, 10 - currentFailedAttempts * 2);
-    setTestStats((prev) => [
-      ...prev,
-      {
-        taskId: currentTask.id,
-        failedAttempt: currentFailedAttempts,
-        completed: true,
-        score: taskScore,
-      },
-    ]);
-
-    // Persist task result to backend
-    if (practiceTestId) {
-      appendPracticeTestTask({
-        data: {
-          practiceTestId,
-          taskId: currentTask.id,
-          score: taskScore,
-          failedAttempts: currentFailedAttempts,
-        },
-      }).catch(console.error);
-    }
-
     setCurrentPage("completed");
   };
 
@@ -176,28 +206,52 @@ export function PollingAgentPracticePage() {
     setCurrentFailedAttempts((prev) => prev + 1);
   };
 
+  // Fetch payout preview once an election group is selected
+  const { data: payoutPreviewRes } = useQuery({
+    queryKey: ["payoutPreview", selectedElectionGroupId],
+    queryFn: async () => {
+      if (!selectedElectionGroupId) return null;
+      return getPracticeTestPayoutPreview({
+        data: {
+          electionGroupId: selectedElectionGroupId,
+          electionDate: selectedElectionDate ?? undefined,
+          partyId: party?.id ?? undefined,
+        },
+      });
+    },
+    enabled: !!selectedElectionGroupId,
+  });
+
+  const potentialTestPayout: number =
+    payoutPreviewRes?.success && payoutPreviewRes?.data
+      ? ((payoutPreviewRes.data.potential_test_payout as number) ?? 0)
+      : 0;
+
   const currentScore = testStats.reduce((acc, stat) => acc + stat.score, 0);
   const finalScore = testStats.length > 0 ? currentScore / testStats.length : 0;
-  const currentTaskScore = Math.max(0, 10 - currentFailedAttempts * 2);
+  // Live preview: percentage-based score (0-100); divided by 10 for display only
+  const currentTaskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
+  console.log({ currentScore, finalScore, currentTask });
 
   return (
     <div className="w-full h-full">
       {currentPage === "welcome" && (
         <WelcomePage
           practiceTestNumber={1}
-          potentialPayout={500}
-          onNextClick={async () => {
-            // Start a new practice test session in the DB
-            try {
-              const res = await startPracticeTest({
-                data: { role: "pollingagent" },
-              });
-              if (res?.success && res?.data?.practice_test?.id) {
-                setPracticeTestId(res.data.practice_test.id);
-              }
-            } catch (e) {
-              console.error("Failed to start practice test", e);
-            }
+          potentialPayout={potentialTestPayout}
+          onNextClick={() => setCurrentPage("select-election")}
+        />
+      )}
+
+      {currentPage === "select-election" && (
+        <SelectElectionPage
+          selectedElectionGroupId={selectedElectionGroupId}
+          onSelect={(id, electionDate) => {
+            setSelectedElectionGroupId(id);
+            setSelectedElectionDate(electionDate ?? null);
+          }}
+          onNextClick={() => {
+            // Test submission is batched at the very end
             setCurrentPage("tutorial");
           }}
         />
@@ -257,7 +311,7 @@ export function PollingAgentPracticePage() {
 
       {currentPage === "completed" && currentTask && (
         <TaskCompletedPage
-          score={currentTaskScore}
+          score={Number((currentTaskScore / 10).toFixed(1))}
           maxScore={10}
           failedAttempts={currentFailedAttempts}
           note={currentTask.note}
@@ -267,9 +321,20 @@ export function PollingAgentPracticePage() {
 
       {currentPage === "final" && (
         <FinalScorePage
-          score={Number(finalScore.toFixed(2))}
+          score={Number((finalScore / 10).toFixed(2))}
           maxScore={10}
-          onNextClick={() => navigate({ to: "/" })}
+          potentialPayout={potentialTestPayout}
+          onNextClick={() => {
+            // Clear local storage so future attempts start completely fresh
+            setCurrentFailedAttempts(0);
+            setSelectedElectionGroupId(null);
+            setSelectedElectionDate(null);
+            setTestStats([]);
+            setTaskId(1);
+            
+            navigate({ to: "/" });
+          }}
+          electionGroupId={selectedElectionGroupId}
         />
       )}
     </div>
@@ -333,6 +398,98 @@ export function WelcomePage({
           onClick={onNextClick}
         >
           Start Practice Test
+        </Button>
+      </StickyFooter>
+    </div>
+  );
+}
+
+export function SelectElectionPage({
+  selectedElectionGroupId,
+  onSelect,
+  onNextClick,
+}: {
+  selectedElectionGroupId: number | null;
+  onSelect: (id: number, electionDate?: string) => void;
+  onNextClick: () => void;
+}) {
+  const { data: elections = [], isLoading } = useQuery({
+    queryKey: ["electionGroups", { upcoming: true }],
+    queryFn: async () => {
+      const res = await getElectionGroups({ data: { upcoming: true } });
+      if (
+        res?.success &&
+        res.data?.election_groups &&
+        res.data.election_groups.length > 0
+      ) {
+        return res.data.election_groups.map((group: any) => ({
+          id: group.id,
+          name: group.name,
+          rawDate: group.election_date as string | undefined,
+          date: group.election_date
+            ? new Date(group.election_date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "TBD",
+        }));
+      }
+      return [];
+    },
+    initialData: [],
+  });
+
+  return (
+    <div className="w-full h-svh">
+      <PageHeader />
+
+      <div className="flex flex-col gap-4 w-full px-4 pt-2">
+        <div className="space-y-1">
+          <TitleText
+            text="Choose an Election"
+            size="xl"
+            className="text-c-90"
+          />
+          <DescriptiveText
+            text="Select the upcoming election you are preparing to work as a polling agent."
+            size="sm"
+          />
+        </div>
+
+        <div className="space-y-3 mt-2">
+          {isLoading && (
+            <p className="text-c-50 text-sm text-center py-4">
+              Loading elections...
+            </p>
+          )}
+          {!isLoading && elections.length === 0 && (
+            <p className="text-c-50 text-sm text-center py-4">
+              No upcoming elections found.
+            </p>
+          )}
+          {elections.map((election: any) => (
+            <SelectableCard
+              key={election.id}
+              title={election.name}
+              subtitle={election.date}
+              isSelected={election.id === selectedElectionGroupId}
+              onClick={() => onSelect(election.id, election.rawDate)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <StickyFooter className="pb-14">
+        <Button
+          type="button"
+          variant="black"
+          size="4xl"
+          className="w-full rounded-full"
+          disabled={selectedElectionGroupId === null}
+          onClick={onNextClick}
+        >
+          Continue
         </Button>
       </StickyFooter>
     </div>
@@ -557,15 +714,42 @@ export function TaskCompletedPage({
 export function FinalScorePage({
   score,
   maxScore,
+  potentialPayout,
   onNextClick,
+  electionGroupId,
 }: {
   score: number;
   maxScore: number;
+  potentialPayout: number;
   onNextClick: () => void;
+  electionGroupId: number | null;
 }) {
   const handleBackClick = () => {
     console.log("Go Back Clicked!");
   };
+
+  const { data: testsRes, isLoading } = useQuery({
+    queryKey: ["practiceTests", electionGroupId],
+    queryFn: async () => {
+      if (!electionGroupId) return null;
+      return listPracticeTests({ data: { electionGroupId } });
+    },
+    enabled: !!electionGroupId,
+  });
+
+  let practiceHistory: any[] = [];
+  if (testsRes?.success && testsRes.data?.practice_tests?.length > 0) {
+    try {
+      const record = testsRes.data.practice_tests[0];
+      const attempts = JSON.parse(record.test_attempts || "[]");
+      practiceHistory = Array.isArray(attempts) ? attempts : [];
+    } catch (e) {
+      console.error("Failed to parse test attempts", e);
+    }
+  }
+
+  // Reverse so newest attempts show up first
+  practiceHistory.reverse();
 
   const PracticeHistoryCard = ({
     title,
@@ -614,7 +798,10 @@ export function FinalScorePage({
           <InfoCard
             icon={<FancyMoneyBagIcon className="size-6" />}
             label="Final Score Payout"
-            value="+₦365"
+            value={`+₦${Math.min(
+              potentialPayout,
+              Math.round((score / maxScore) * potentialPayout),
+            ).toLocaleString()}`}
             variant="yellow"
             className="w-full"
           />
@@ -628,25 +815,43 @@ export function FinalScorePage({
         <div className="space-y-2 mt-5">
           <Label title="My Performance History" />
 
-          <div className="py-1 border border-c-80 rounded-2xl bg-background shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
-            <PracticeHistoryCard
-              title="Practice 1"
-              score={6}
-              maxScore={10}
-              date="Jun 14, 26"
-            />
-            <PracticeHistoryCard
-              title="Practice 2"
-              score={9.4}
-              maxScore={10}
-              date="Jun 14, 26"
-            />
-            <PracticeHistoryCard
-              title="Practice 3"
-              score={2.4}
-              maxScore={10}
-              date="Jun 14, 26"
-            />
+          <div className="py-1 border border-c-80 rounded-2xl bg-background shadow-[0_4px_4px_rgba(0,0,0,0.25)] min-h-[100px]">
+            {isLoading ? (
+              <p className="text-center py-6 text-sm text-c-50">
+                Loading history...
+              </p>
+            ) : practiceHistory.length > 0 ? (
+              practiceHistory.map((attempt, idx) => {
+                const isToday = attempt.completed_at
+                  ? new Date(attempt.completed_at).toDateString() ===
+                    new Date().toDateString()
+                  : true;
+
+                const dateStr =
+                  attempt.completed_at && !isToday
+                    ? new Date(attempt.completed_at).toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric", year: "2-digit" },
+                      )
+                    : "Today";
+
+                const displayIndex = practiceHistory.length - idx;
+
+                return (
+                  <PracticeHistoryCard
+                    key={idx}
+                    title={`Practice ${displayIndex}`}
+                    score={Number((attempt.final_score / 10).toFixed(1))}
+                    maxScore={10}
+                    date={dateStr}
+                  />
+                );
+              })
+            ) : (
+              <p className="text-center py-6 text-sm text-c-50">
+                No practice history yet.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -947,11 +1152,35 @@ export function DashboardPage({
   const hasNotRequestedPayout = taskType === "requestPayout";
   const noVotersReffered = taskType === "referVoters";
 
+  const handlePracticeWrong = () => {
+    showFeedbackToast(false, failedAttemptCount + 1);
+    onWrong?.();
+  };
+
+  const handleReportClick = () => {
+    const isCorrect = isThisCorrect("giveReport");
+    if (!isCorrect) {
+      showFeedbackToast(false, failedAttemptCount + 1);
+      onWrong?.();
+    } else {
+      showFeedbackToast(true, failedAttemptCount);
+      const params = new URLSearchParams(window.location.search);
+      params.set("failedAttemptCount", String(failedAttemptCount));
+      params.set("isReport", "true");
+      navigate({
+        to: `/give-update?${params.toString()}`,
+      });
+    }
+  };
+
   return (
     <div className="w-full min-h-screen">
-      <HomeHeader daysLeft={daysLeft} />
+      <div className="sticky top-0 z-50 flex items-center justify-center bg-blue-500 text-white font-bold w-full h-8">
+        <span className="text-center">Practice Mode 💪</span>
+      </div>
+      <HomeHeader daysLeft={daysLeft} onPracticeClick={handlePracticeWrong} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
-      <MyPollingUnit />
+      <MyPollingUnit onPracticeClick={handlePracticeWrong} />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           {showObjectives && (
@@ -962,32 +1191,14 @@ export function DashboardPage({
                     key={item.title}
                     isCompleted={item.isCompleted}
                     title={item.title}
-                    // onClick={() => navigate({ to: "/report" })}
+                    // onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                   />
                 ))}
                 <div className="mb-2 mt-2 px-4">
                   <Button
                     type="button"
                     size="extra-large"
-                    onClick={() => {
-                      const isCorrect = isThisCorrect("giveReport");
-                      if (!isCorrect) {
-                        showFeedbackToast(false, failedAttemptCount + 1);
-                        onWrong?.();
-                      } else {
-                        showFeedbackToast(true, failedAttemptCount);
-                        const params = new URLSearchParams(
-                          window.location.search,
-                        );
-                        params.set(
-                          "failedAttemptCount",
-                          String(failedAttemptCount),
-                        );
-                        navigate({
-                          to: `/give-update?${params.toString()}`,
-                        });
-                      }
-                    }}
+                    onClick={handleReportClick}
                     className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
                   >
                     <ReportIcon className="w-5 h-5 shrink-0" />
@@ -998,7 +1209,10 @@ export function DashboardPage({
             </CarouselItem>
           )}
           <CarouselItem>
-            <CandidatesLeaderboard />
+            <CandidatesLeaderboard
+              onPracticeClick={handlePracticeWrong}
+              onReportClick={handleReportClick}
+            />
           </CarouselItem>
         </CarouselContent>
       </Carousel>
@@ -1137,7 +1351,8 @@ export function DashboardPage({
 
         {noVotersReffered && (
           <ReferralCard
-            onClick={() => {
+            onClick={handlePracticeWrong}
+            onCopyClick={() => {
               const isCorrect = isThisCorrect("referVoters");
               showFeedbackToast(isCorrect, failedAttemptCount + 1);
               if (isCorrect) {

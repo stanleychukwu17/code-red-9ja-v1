@@ -56,6 +56,7 @@ type UsersService interface {
 	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
+	GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error)
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -629,6 +630,32 @@ func (h *Handler) AdminGetUserMoreInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdminUpdateUserRequest represents the request payload for updating user basic info
+// GenerateReferralCode handles POST /api/v1/users/me/referral-code
+func (h *Handler) GenerateReferralCode(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	user, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	code, err := h.usersService.GenerateAndAssignReferralCode(r.Context(), user.ID, claims.FakeID, user.FirstName.String)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to generate referral code: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Referral code generated", map[string]interface{}{
+		"referral_code": code,
+	})
+}
+
+
 type AdminUpdateUserRequest struct {
 	Avatar         string `json:"avatar" validate:"omitempty"`
 	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`

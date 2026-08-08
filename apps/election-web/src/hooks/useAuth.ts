@@ -8,6 +8,7 @@ import { getElectionScopedFinalResult } from "#/lib/server/final-results";
 import { getFinalResult as getPollingUnitFinalResult } from "#/lib/server/polling_unit_results";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 import { getSupervisorAssignments } from "#/lib/server/supervisor_assignments";
+import { getMyWallet, createUserWallet, generateReferralCode } from "#/lib/server/users";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
   selectSelectedElection,
@@ -19,6 +20,7 @@ import {
   setSelectedElection as setSelectedElectionAction,
   setSelectedElectionGroup as setSelectedElectionGroupAction,
 } from "#/redux/slice/electionSlice";
+import { updateAuthState } from "#/redux/slice/authSlice";
 
 export interface PartyDetails {
   id?: number;
@@ -57,6 +59,7 @@ export interface UserDetails {
   avatar?: string;
   phone?: string;
   username?: string;
+  referral_code?: string;
   last_name?: string;
   first_name?: string;
   middle_name?: string;
@@ -106,6 +109,20 @@ export const useAuth = () => {
   const selectedElection = useAppSelector(selectSelectedElection);
   const isLive = useAppSelector(selectIsLive);
   const isLock = useAppSelector(selectIsLocked);
+
+  const generateReferralCodeFn = useServerFn(generateReferralCode);
+  useEffect(() => {
+    if (user && user.id && !user.referral_code) {
+      generateReferralCodeFn()
+        .then((res) => {
+          if (res?.success) {
+            console.log("Referral code generated", res.data);
+            dispatch(updateAuthState({ user: { ...user, referral_code: res.data.referral_code } }));
+          }
+        })
+        .catch((err) => console.error("Failed to generate referral code", err));
+    }
+  }, [user?.id, user?.referral_code]);
 
   // Returns true if today matches electionDate (YYYY-MM-DD)
   const isElectionDay = (electionDate?: string | null): boolean => {
@@ -334,6 +351,29 @@ export const useAuth = () => {
 
   const finalResultObj = scopedResultData?.data?.final_result || null;
 
+  const fetchMyWallet = useServerFn(getMyWallet);
+  const createMyWalletFn = useServerFn(createUserWallet);
+
+  const { data: userWallet } = useQuery({
+    queryKey: ["userWallet", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const res = await fetchMyWallet();
+      if (res?.success && res.data?.wallet) {
+        return res.data.wallet;
+      }
+      
+      // If wallet not found, attempt to create it automatically
+      if (user?.id) {
+        const createRes = await createMyWalletFn({ data: { id: user.id } });
+        if (createRes?.success && createRes.data?.wallet) {
+          return createRes.data.wallet;
+        }
+      }
+      return null;
+    },
+  });
+
   console.log("🙌🥂 Final Result Obj:", {
     scopedResultData,
     finalResultObj,
@@ -341,6 +381,7 @@ export const useAuth = () => {
 
   return {
     user,
+    userWallet,
     party: party || {
       id: undefined,
       shortName: "",

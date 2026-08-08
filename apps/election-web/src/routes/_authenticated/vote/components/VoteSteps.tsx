@@ -119,32 +119,33 @@ const Step2 = ({
   selectedPollingUnitId,
   setSelectedPollingUnitId,
 }: any) => {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["polling-units", selectedWardId],
-    queryFn: async ({ pageParam }) => {
-      const res = await getPollingUnits({
-        data: {
-          stateId: selectedStateId,
-          localGovernmentId: selectedLgaId,
-          wardId: selectedWardId,
-          limit: 20,
-          cursor: pageParam,
-        },
-      });
-      if (res && res.success && res.data) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to fetch polling units");
-    },
-    initialPageParam: "",
-    getNextPageParam: (lastPage) => {
-      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-        return lastPage.meta.next_cursor || "";
-      }
-      return undefined;
-    },
-    enabled: !!selectedWardId,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ["polling-units", selectedWardId],
+      queryFn: async ({ pageParam }) => {
+        const res = await getPollingUnits({
+          data: {
+            stateId: selectedStateId,
+            localGovernmentId: selectedLgaId,
+            wardId: selectedWardId,
+            limit: 20,
+            cursor: pageParam,
+          },
+        });
+        if (res && res.success && res.data) {
+          return res;
+        }
+        throw new Error(res?.message || "Failed to fetch polling units");
+      },
+      initialPageParam: "",
+      getNextPageParam: (lastPage) => {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+          return lastPage.meta.next_cursor || "";
+        }
+        return undefined;
+      },
+      enabled: !!selectedWardId,
+    });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
@@ -197,7 +198,7 @@ const Step2 = ({
               />
             );
           })}
-          
+
           {hasNextPage && (
             <div
               ref={sentinelRef}
@@ -298,7 +299,7 @@ const Step3 = ({
   );
 };
 
-const Step4 = ({ votersCardImage, setVotersCardImage }: any) => {
+const Step4 = ({ votersCardImage, setVotersCardImage, isPractice }: any) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (file: File) => {
@@ -319,7 +320,14 @@ const Step4 = ({ votersCardImage, setVotersCardImage }: any) => {
   const uploadVotersCardPlaceholder = (
     <div
       className="min-h-48 border border-c-20 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer bg-c-10/50 hover:bg-c-10 transition-colors"
-      onClick={() => fileInputRef.current?.click()}
+      onClick={() => {
+        if (isPractice) {
+          toast.success("Image auto-added for practice mode");
+          setVotersCardImage("https://res.cloudinary.com/dhtcwqsx4/image/upload/v1783939243/Free9ja/pictures/PVC_2_i9lvfa.png");
+        } else {
+          fileInputRef.current?.click();
+        }
+      }}
     >
       <UploadIcon className="size-8 text-c-80 mb-2" />
       <p className="font-semibold text-sm">Upload Voters Card/PVC</p>
@@ -357,14 +365,16 @@ const Step4 = ({ votersCardImage, setVotersCardImage }: any) => {
         uploadVotersCardPlaceholder
       )}
 
-      <div className="mt-4">
-        <p className="font-semibold text-sm mb-2">Example:</p>
-        <img
-          src="https://res.cloudinary.com/dhtcwqsx4/image/upload/v1783939243/Free9ja/pictures/PVC_2_i9lvfa.png"
-          alt="PVC Example"
-          className="w-full rounded-xl"
-        />
-      </div>
+      {!isPractice && (
+        <div className="mt-4">
+          <p className="font-semibold text-sm mb-2">Example:</p>
+          <img
+            src="https://res.cloudinary.com/dhtcwqsx4/image/upload/v1783939243/Free9ja/pictures/PVC_2_i9lvfa.png"
+            alt="PVC Example"
+            className="w-full rounded-xl"
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -411,7 +421,7 @@ export function VoteFlow() {
     mutationFn: submitVotes,
     onSuccess: () => {
       toast.success("Vote submitted successfully!");
-      navigate({ to: "/home" });
+      navigate({ to: "/" });
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.message || "Failed to submit votes");
@@ -502,7 +512,7 @@ export function VoteFlow() {
               setStep(step - 1);
             }
           } else {
-            navigate({ to: "/home" });
+            navigate({ to: "/" });
           }
         }}
       />
@@ -542,6 +552,7 @@ export function VoteFlow() {
           <Step4
             votersCardImage={votersCardImage}
             setVotersCardImage={setVotersCardImage}
+            isPractice={search.isPractice}
           />
         )}
       </div>
@@ -566,4 +577,4 @@ export function VoteFlow() {
       </StickyFooter>
     </PageWrapper>
   );
-};
+}

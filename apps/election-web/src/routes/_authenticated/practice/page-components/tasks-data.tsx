@@ -229,12 +229,12 @@ export const pollingAgentTest: PracticeTaskType[] = [
       title2: "Show us what you will do?",
       taskType: "giveUpdate",
     },
-    note: "Make sure that on election day, you give regular updates about the election to your party every 30 minutes to keep them informed on.",
+    note: "Make sure that on election day, you give regular updates about the election to your party every 30 minutes to keep them informed on everything.",
   },
   {
     id: 4,
     tutorial: {
-      title: "Report irregularities",
+      title: "Report Irregularities",
       subtitle:
         "Report any irregularity you notice at your polling unit such as vote buying, ballot box snatching, multiple voting etc.",
       video:
@@ -323,7 +323,7 @@ export const pollingAgentTest: PracticeTaskType[] = [
     tutorial: {
       title: "Tell people to register on Free9ja and make more money",
       subtitle:
-        "Tell people before and on election day to register on Free9ja (using your referral code) and indicate who they voted for. This constitutes 20% of your payment.",
+        "Tell people before and on election day to register on Free9ja (using your referral code) and indicate who they voted for.",
       video:
         "https://res.cloudinary.com/dhtcwqsx4/video/upload/v1782937548/Free9ja/videos/I_like_this_but_he_shouldn_t_b_wsibes.mp4",
     },
@@ -336,7 +336,7 @@ export const pollingAgentTest: PracticeTaskType[] = [
     practical: {
       title1:
         "Your friends and family start registering on Free9ja, but they don't know your referral code.",
-      title2: "Show us what you will do?",
+      title2: "Tap the button showing your referral code?",
       taskType: "referVoters",
     },
     note: "Make sure to tell your friends, family, and others to register on Free9ja (using your referral code) and indicate who they voted for after voting on election day. This constitutes 20% of your payment.",

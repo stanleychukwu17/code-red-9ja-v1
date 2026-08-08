@@ -5,6 +5,7 @@ import { EarningsAllocationDialog } from "#/components/dialogs/EarningsAllocatio
 import { SlotCostDialog } from "#/components/dialogs/SlotCostDialog";
 import { TestRequirementsDialog } from "#/components/dialogs/TestRequirementsDialog";
 import { LiveVotersReferredDialog } from "#/components/dialogs/LiveVotersReferredDialog";
+import { TargetUpdatesCountDialog } from "#/components/dialogs/TargetUpdatesCountDialog";
 
 export const Route = createFileRoute("/settings/partyadmin/")({
   component: RouteComponent,
@@ -83,6 +84,7 @@ function RouteComponent() {
   const [selectedTestRole, setSelectedTestRole] = useState<SelectedRole>(null);
   const [isSlotCostOpen, setIsSlotCostOpen] = useState(false);
   const [isLiveVotersReferredOpen, setIsLiveVotersReferredOpen] = useState(false);
+  const [isTargetUpdatesCountOpen, setIsTargetUpdatesCountOpen] = useState(false);
 
   const handleEdit = (key: string, name: string) => {
     setSelectedRole({ key, name });
@@ -112,6 +114,12 @@ function RouteComponent() {
             description="Target live voters for agents to refer."
             buttonText="Edit"
             onClick={() => setIsLiveVotersReferredOpen(true)}
+          />
+          <SettingsTile
+            title="Target Updates Count"
+            description="Target number of updates required from agents."
+            buttonText="Edit"
+            onClick={() => setIsTargetUpdatesCountOpen(true)}
           />
         </SettingsSection>
         <SettingsSection title="Earnings Allocation">
@@ -228,6 +236,11 @@ function RouteComponent() {
       <LiveVotersReferredDialog
         open={isLiveVotersReferredOpen}
         onClose={() => setIsLiveVotersReferredOpen(false)}
+      />
+
+      <TargetUpdatesCountDialog
+        open={isTargetUpdatesCountOpen}
+        onClose={() => setIsTargetUpdatesCountOpen(false)}
       />
     </div>
   );

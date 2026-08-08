@@ -84,32 +84,33 @@ const Step2 = ({
   selectedPollingUnitId,
   setSelectedPollingUnitId,
 }: any) => {
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ["polling-units", selectedWardId],
-    queryFn: async ({ pageParam }) => {
-      const res = await getPollingUnits({
-        data: {
-          stateId: selectedStateId,
-          localGovernmentId: selectedLgaId,
-          wardId: selectedWardId,
-          limit: 20,
-          cursor: pageParam,
-        },
-      });
-      if (res && res.success && res.data) {
-        return res;
-      }
-      throw new Error(res?.message || "Failed to fetch polling units");
-    },
-    initialPageParam: "",
-    getNextPageParam: (lastPage) => {
-      if (lastPage && lastPage.meta && lastPage.meta.has_more) {
-        return lastPage.meta.next_cursor || "";
-      }
-      return undefined;
-    },
-    enabled: !!selectedWardId,
-  });
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ["polling-units", selectedWardId],
+      queryFn: async ({ pageParam }) => {
+        const res = await getPollingUnits({
+          data: {
+            stateId: selectedStateId,
+            localGovernmentId: selectedLgaId,
+            wardId: selectedWardId,
+            limit: 20,
+            cursor: pageParam,
+          },
+        });
+        if (res && res.success && res.data) {
+          return res;
+        }
+        throw new Error(res?.message || "Failed to fetch polling units");
+      },
+      initialPageParam: "",
+      getNextPageParam: (lastPage) => {
+        if (lastPage && lastPage.meta && lastPage.meta.has_more) {
+          return lastPage.meta.next_cursor || "";
+        }
+        return undefined;
+      },
+      enabled: !!selectedWardId,
+    });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
     threshold: 0.1,
@@ -209,7 +210,7 @@ export const UpdatePollingUnitFlow = () => {
     mutationFn: mockSubmitPollingUnit,
     onSuccess: () => {
       toast.success("Polling unit updated successfully!");
-      navigate({ to: "/home" });
+      navigate({ to: "/" });
     },
     onError: () => {
       toast.error("Failed to update polling unit.");
@@ -250,7 +251,7 @@ export const UpdatePollingUnitFlow = () => {
           if (step > 1) {
             setStep(step - 1);
           } else {
-            navigate({ to: "/home" });
+            navigate({ to: "/" });
           }
         }}
       />

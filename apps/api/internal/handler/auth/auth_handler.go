@@ -2,11 +2,14 @@ package authhandler
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
+	"math/big"
 	"net/http"
 
 	"strings"
@@ -25,6 +28,9 @@ type AuthService interface {
 	VerifySignupEmailOTP(ctx context.Context, email, otp string) (auth.EmailOTPResult, error)
 	SendForgotPasswordEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
 	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, nin string, q1 int16, a1 string, q2 int16, a2 string) error
+	CheckNIN(ctx context.Context, nin string) bool
+	CheckUsername(ctx context.Context, username string) bool
+	CheckReferralCode(ctx context.Context, code string) bool
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
@@ -336,7 +342,7 @@ type CompleteOnboardingRequest struct {
 	// username step
 	Username string `json:"username" validate:"required,min=2,max=30"`
 	// nin step
-	Nin string `json:"nin" validate:"required,numeric,len=11"`
+	Nin string `json:"nin" validate:"omitempty,numeric,len=11"`
 	// origin step
 	CountryOfOrigin int16 `json:"country_of_origin" validate:"omitempty"`
 	StateOfOrigin   int16 `json:"state_of_origin" validate:"omitempty"`
@@ -345,10 +351,10 @@ type CompleteOnboardingRequest struct {
 	CurrentState   int16 `json:"current_state" validate:"required"`
 	CurrentCity    int32 `json:"current_city" validate:"omitempty"`
 	// security questions step
-	Question1 int16  `json:"question1" validate:"required"`
-	Answer1   string `json:"answer1" validate:"required,min=1,max=100"`
-	Question2 int16  `json:"question2" validate:"required"`
-	Answer2   string `json:"answer2" validate:"required,min=1,max=100"`
+	Question1 int16  `json:"question1" validate:"omitempty"`
+	Answer1   string `json:"answer1" validate:"omitempty,max=100"`
+	Question2 int16  `json:"question2" validate:"omitempty"`
+	Answer2   string `json:"answer2" validate:"omitempty,max=100"`
 }
 
 // CompleteOnboarding handles PATCH /api/v1/auth/onboarding
@@ -398,6 +404,12 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate unique referral code (e.g. DANIEL-88)
+	firstNameUpper := strings.ToUpper(strings.TrimSpace(req.FirstName))
+	n, _ := rand.Int(rand.Reader, big.NewInt(900))
+	suffix := n.Int64() + 100 // 100-999
+	myReferralCode := fmt.Sprintf("%s-%d", firstNameUpper, suffix)
+
 	params := queries.UpdateOnboardingProfileParams{
 		ID:              user.ID,
 		Username:        pgtype.Text{String: req.Username, Valid: req.Username != ""},
@@ -412,6 +424,7 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 		StateOfOrigin:   pgtype.Int2{Int16: req.StateOfOrigin, Valid: req.StateOfOrigin != 0},
 		CountryOfOrigin: pgtype.Int2{Int16: req.CountryOfOrigin, Valid: req.CountryOfOrigin != 0},
 		ReferredByCode:  pgtype.Text{String: req.ReferralCode, Valid: req.ReferralCode != ""},
+		ReferralCode:    pgtype.Text{String: myReferralCode, Valid: true},
 	}
 
 	if err := h.authService.CompleteOnboarding(ctx, user.ID, claims.FakeID, params, req.Nin, req.Question1, req.Answer1, req.Question2, req.Answer2); err != nil {
@@ -495,10 +508,46 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	// checks if the username exist
 	exists := h.usersService.CheckUsername(r.Context(), req.Username)
 
-	h.utils.RespondSuccess(w, http.StatusOK, "Username check completed", map[string]interface{}{
+	h.utils.RespondSuccess(w, http.StatusOK, "Username checked successfully", map[string]interface{}{
 		"exists": exists,
 	})
 }
+
+// CheckReferralCodeRequest represents the structure for checking if a referral code exists
+type CheckReferralCodeRequest struct {
+	Code string `json:"code" validate:"required,min=3"`
+}
+
+// CheckReferralCode godoc
+// @Summary Check Referral Code existence
+// @Description Check if a given referral code exists
+// @Tags Auth
+// @Accept json
+// @Produce json
+// @Param request body CheckReferralCodeRequest true "Referral code to check"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Router /auth/check_referral_code [post]
+func (h *Handler) CheckReferralCode(w http.ResponseWriter, r *http.Request) {
+	var req CheckReferralCodeRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
+		return
+	}
+
+	exists := h.authService.CheckReferralCode(r.Context(), req.Code)
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Referral code checked successfully", map[string]interface{}{
+		"exists": exists,
+	})
+}
+
 
 // LoginRequest represents the parameters for logging in
 type LoginRequest struct {

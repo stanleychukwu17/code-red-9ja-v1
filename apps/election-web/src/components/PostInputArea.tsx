@@ -45,7 +45,7 @@ export function PostInputArea({
           value={reportText}
           onChange={(e) => setReportText(e.target.value)}
           className={cn(
-            "text-lg font-medium p-0",
+            "text-lg font-medium p-0 rounded-none",
             isReport && "text-red placeholder:text-red/50",
           )}
           placeholder={placeholder}

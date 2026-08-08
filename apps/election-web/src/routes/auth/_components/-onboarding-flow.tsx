@@ -3,6 +3,7 @@ import { APP_URL } from "#/lib/config";
 import {
   checkNin,
   checkUsername,
+  checkReferralCode,
   completeOnboarding,
 } from "#/lib/server/auth/auth";
 import { getAllCountries, getCities, getStates } from "#/lib/server/countries";
@@ -41,11 +42,11 @@ import { FormError } from "./-form-error";
 export const ONBOARDING_STEPS = [
   "details",
   "username",
-  "nin",
+  // "nin",
   "origin",
   "location",
   "referral",
-  "security",
+  // "security",
 ] as const;
 
 export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
@@ -144,6 +145,10 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const [isCheckingNIN, setIsCheckingNIN] = useState(false);
   const [ninError, setNinError] = useState<string | null>(null);
   const [isNinAvailable, setIsNinAvailable] = useState<boolean | null>(null);
+  const [isCheckingReferralCode, setIsCheckingReferralCode] = useState(false);
+  const [referralCodeError, setReferralCodeError] = useState<string | null>(null);
+  const [isReferralCodeValid, setIsReferralCodeValid] = useState<boolean | null>(null);
+
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<
@@ -179,18 +184,18 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
   // â”€â”€ Final submit â”€â”€
   const onFinish = useCallback(async () => {
-    if (!data.securityQuestion1 || !data.securityQuestion2) {
-      setSecurityError("Please select both security questions.");
-      return;
-    }
-    if (data.securityQuestion1 === data.securityQuestion2) {
-      setSecurityError("Please choose two different security questions.");
-      return;
-    }
-    if (!data.securityAnswer1 || !data.securityAnswer2) {
-      setSecurityError("Please provide answers for both questions.");
-      return;
-    }
+    // if (!data.securityQuestion1 || !data.securityQuestion2) {
+    //   setSecurityError("Please select both security questions.");
+    //   return;
+    // }
+    // if (data.securityQuestion1 === data.securityQuestion2) {
+    //   setSecurityError("Please choose two different security questions.");
+    //   return;
+    // }
+    // if (!data.securityAnswer1 || !data.securityAnswer2) {
+    //   setSecurityError("Please provide answers for both questions.");
+    //   return;
+    // }
 
     if (!data.countryId) {
       setSubmitError("Please select a country of residence.");
@@ -205,6 +210,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     setIsSubmitting(true);
     setSubmitError(null);
     setSecurityError(null);
+
+    let isSuccess = false;
 
     try {
       const dob = data.dateOfBirth
@@ -226,23 +233,26 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           current_country: data.countryId ?? 0,
           current_state: data.stateId,
           current_city: data.cityId ?? 0,
-          question1: data.securityQuestion1,
-          answer1: data.securityAnswer1.trim(),
-          question2: data.securityQuestion2,
-          answer2: data.securityAnswer2.trim(),
+          question1: data.securityQuestion1 ?? 0,
+          answer1: data.securityAnswer1?.trim() || "",
+          question2: data.securityQuestion2 ?? 0,
+          answer2: data.securityAnswer2?.trim() || "",
         },
       });
 
       if (result.success) {
-        dispatch(updateOnboardingData({ registrationCompleted: true }));
-        navigate({ to: APP_URL.auth.login, replace: true });
+        isSuccess = true;
+        // Hard redirect without triggering any React state updates to prevent UI flashes
+        window.location.href = APP_URL.home;
       } else {
         setSubmitError(result.message || "Failed to complete onboarding.");
       }
     } catch {
       setSubmitError("An unexpected error occurred.");
     } finally {
-      setIsSubmitting(false);
+      if (!isSuccess) {
+        setIsSubmitting(false);
+      }
     }
   }, [data, navigate, dispatch]);
 
@@ -352,6 +362,51 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     };
   }, [debouncedNin]);
 
+  // ── Referral Code active check ──
+  const [debouncedReferralCode] = useDebounceValue(data.referralCode, 500);
+
+  useEffect(() => {
+    setIsReferralCodeValid(null);
+    setReferralCodeError(null);
+  }, [data.referralCode]);
+
+  useEffect(() => {
+    const code = debouncedReferralCode.trim();
+    if (!code) return; // If empty, it's valid to skip
+
+    setIsCheckingReferralCode(true);
+    setReferralCodeError(null);
+
+    let isMounted = true;
+    const check = async () => {
+      try {
+        const res = await checkReferralCode({ data: { code } });
+        if (!isMounted) return;
+        if (res.success) {
+          if (res.data?.exists) {
+            setIsReferralCodeValid(true);
+          } else {
+            setReferralCodeError("Referral code not found");
+            setIsReferralCodeValid(false);
+          }
+        } else {
+          setReferralCodeError(res.message || "Failed to verify code.");
+          setIsReferralCodeValid(false);
+        }
+      } catch {
+        if (!isMounted) return;
+        setReferralCodeError("An unexpected error occurred.");
+        setIsReferralCodeValid(false);
+      } finally {
+        if (isMounted) setIsCheckingReferralCode(false);
+      }
+    };
+    check();
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedReferralCode]);
+
   // ── NIN handler ──
   const handleNINSubmit = () => {
     if (isNinAvailable) goNext();
@@ -365,21 +420,21 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
         ? Boolean(
             data.firstName && data.surname && data.gender && data.dateOfBirth,
           )
-        : step === "nin"
-          ? isNinAvailable === true
+        // : step === "nin"
+        //   ? isNinAvailable === true
           : step === "origin"
             ? Boolean(data.stateOfOriginId)
             : step === "location"
               ? Boolean(data.stateId)
               : step === "referral"
-                ? true
-                : step === "security"
-                  ? Boolean(
-                      data.securityQuestion1 &&
-                      data.securityAnswer1.trim() &&
-                      data.securityQuestion2 &&
-                      data.securityAnswer2.trim(),
-                    )
+                ? data.referralCode.trim() ? isReferralCodeValid === true : true
+                // : step === "security"
+                //   ? Boolean(
+                //       data.securityQuestion1 &&
+                //       data.securityAnswer1.trim() &&
+                //       data.securityQuestion2 &&
+                //       data.securityAnswer2.trim(),
+                //     )
                   : false;
 
   // â”€â”€ Render current step â”€â”€
@@ -410,7 +465,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
         />
       )}
 
-      {step === "nin" && (
+      {/* {step === "nin" && (
         <NINStep
           data={data}
           setData={setData}
@@ -422,7 +477,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           error={ninError}
           setError={setNinError}
         />
-      )}
+      )} */}
 
       {step === "origin" && (
         <OriginStep
@@ -450,11 +505,15 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           setData={setData}
           canContinue={canContinue}
           onBack={goBack}
-          onAction={goNext}
+          onAction={onFinish}
+          isChecking={isCheckingReferralCode || isSubmitting}
+          isValid={isReferralCodeValid}
+          error={referralCodeError || submitError}
+          setError={setReferralCodeError}
         />
       )}
 
-      {step === "security" && (
+      {/* {step === "security" && (
         <SecurityStep
           data={data}
           setData={setData}
@@ -466,7 +525,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           setSecurityError={setSecurityError}
           submitError={submitError}
         />
-      )}
+      )} */}
     </>
   );
 }
@@ -799,6 +858,10 @@ type ReferralStepProps = {
   canContinue: boolean;
   onBack: () => void;
   onAction: () => void;
+  isChecking: boolean;
+  isValid: boolean | null;
+  error: string | null;
+  setError: (e: string | null) => void;
 };
 
 function ReferralStep({
@@ -807,15 +870,22 @@ function ReferralStep({
   canContinue,
   onBack,
   onAction,
+  isChecking,
+  isValid,
+  error,
+  setError,
 }: ReferralStepProps) {
+  const hasCode = data.referralCode.trim().length > 0;
+
   return (
     <FlowScreen
       icon={<Users className="size-6 text-primary" strokeWidth={1.8} />}
       title="Who told you about Free9ja?"
       subtitle="Enter code of the person who told you about Free9ja (ask them for it) or skip for now."
       onBack={onBack}
-      actionLabel={data.referralCode.trim() ? "Continue" : "Skip for now"}
-      actionDisabled={!canContinue}
+      actionLabel={hasCode ? "Continue" : "Skip for now"}
+      actionDisabled={!canContinue || isChecking}
+      actionLoading={isChecking}
       onAction={onAction}
     >
       <div className="space-y-2">
@@ -824,9 +894,13 @@ function ReferralStep({
           placeholder="Referral code (optional)"
           value={data.referralCode}
           maxLength={30}
-          onChange={(e) =>
-            setData((c) => ({ ...c, referralCode: e.target.value }))
-          }
+          isLoading={isChecking}
+          showCheckMark={isValid === true}
+          errorMsg={error ?? ""}
+          onChange={(e) => {
+            setError(null);
+            setData((c) => ({ ...c, referralCode: e.target.value }));
+          }}
         />
         <DescriptiveText
           size="xs"

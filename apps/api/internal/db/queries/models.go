@@ -98,6 +98,37 @@ func (ns NullMarketingCampaignType) Value() (driver.Value, error) {
 	return string(ns.MarketingCampaignType), nil
 }
 
+type AgentEarning struct {
+	ID                      int64              `json:"id"`
+	UserID                  int64              `json:"user_id"`
+	PartyID                 int16              `json:"party_id"`
+	ElectionGroupID         int64              `json:"election_group_id"`
+	RoleType                string             `json:"role_type"`
+	BasePaymentKobo         int64              `json:"base_payment_kobo"`
+	EarningsAllocation      []byte             `json:"earnings_allocation"`
+	ReadinessScore          pgtype.Numeric     `json:"readiness_score"`
+	ResultsScore            pgtype.Numeric     `json:"results_score"`
+	UpdatesScore            pgtype.Numeric     `json:"updates_score"`
+	AttendanceScore         pgtype.Numeric     `json:"attendance_score"`
+	ElectionStartScore      pgtype.Numeric     `json:"election_start_score"`
+	ElectionEndScore        pgtype.Numeric     `json:"election_end_score"`
+	LiveVotersScore         pgtype.Numeric     `json:"live_voters_score"`
+	ReadinessEarnedKobo     int64              `json:"readiness_earned_kobo"`
+	ResultsEarnedKobo       int64              `json:"results_earned_kobo"`
+	UpdatesEarnedKobo       int64              `json:"updates_earned_kobo"`
+	AttendanceEarnedKobo    int64              `json:"attendance_earned_kobo"`
+	ElectionStartEarnedKobo int64              `json:"election_start_earned_kobo"`
+	ElectionEndEarnedKobo   int64              `json:"election_end_earned_kobo"`
+	LiveVotersEarnedKobo    int64              `json:"live_voters_earned_kobo"`
+	TotalEarnedKobo         int64              `json:"total_earned_kobo"`
+	Status                  string             `json:"status"`
+	CalculatedAt            pgtype.Timestamptz `json:"calculated_at"`
+	ApprovedAt              pgtype.Timestamptz `json:"approved_at"`
+	PaidAt                  pgtype.Timestamptz `json:"paid_at"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AuditLog struct {
 	ID         int64              `json:"id"`
 	Module     pgtype.Text        `json:"module"`
@@ -817,6 +848,7 @@ type Party struct {
 	AgentPaymentBalanceKobo int64              `json:"agent_payment_balance_kobo"`
 	AgentPaymentAllocation  []byte             `json:"agent_payment_allocation"`
 	AgentAcquisitionTargets []byte             `json:"agent_acquisition_targets"`
+	AutoAcceptApplications  []byte             `json:"auto_accept_applications"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1206,12 +1238,9 @@ type UserPracticeTest struct {
 	UserID          int64              `json:"user_id"`
 	ElectionGroupID pgtype.Int8        `json:"election_group_id"`
 	Role            string             `json:"role"`
-	Sequence        int16              `json:"sequence"`
-	TaskStats       []byte             `json:"task_stats"`
-	FinalScore      pgtype.Numeric     `json:"final_score"`
+	TestAttempts    []byte             `json:"test_attempts"`
+	OverallScore    pgtype.Numeric     `json:"overall_score"`
 	Status          string             `json:"status"`
-	StartedAt       pgtype.Timestamptz `json:"started_at"`
-	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }

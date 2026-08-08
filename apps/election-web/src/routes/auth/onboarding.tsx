@@ -12,11 +12,11 @@ import { getPageHeader } from "#/lib/shared/meta";
 const STEP_TITLES: Record<OnboardingStep, string> = {
   username: "Onboarding: Choose your username",
   details: "Onboarding: Add your details",
-  nin: "Onboarding: Add your NIN",
+  // nin: "Onboarding: Add your NIN",
   origin: "Onboarding: Where are you from?",
   location: "Onboarding: Add your location",
   referral: "Onboarding: Referral code",
-  security: "Onboarding: Security questions",
+  // security: "Onboarding: Security questions",
 };
 
 export const Route = createFileRoute("/auth/onboarding")({

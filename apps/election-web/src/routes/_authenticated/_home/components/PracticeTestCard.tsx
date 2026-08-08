@@ -13,7 +13,9 @@ export function PracticeTestCard() {
           <FancyMoneyBagIcon className="size-5" />
           <span>Better Payout</span>
         </div>
-        <span className="text-black font-extrabold text-[15px]">Come Election Day</span>
+        <span className="text-black font-extrabold text-[15px]">
+          Come Election Day
+        </span>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -24,7 +26,7 @@ export function PracticeTestCard() {
       </div>
 
       <Button
-        onClick={() => navigate({ to: "/report" })}
+        onClick={() => navigate({ to: "/practice" })}
         className="w-full rounded-[16px] h-[52px] text-[17px] font-bold mt-1"
         variant="black"
       >

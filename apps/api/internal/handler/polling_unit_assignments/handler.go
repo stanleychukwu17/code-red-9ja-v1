@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	earningsservice "free9ja/api/internal/service/earnings"
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
 
 	"github.com/go-chi/chi/v5"
@@ -33,15 +34,17 @@ type Handler struct {
 	service                   PollingUnitAssignmentsService
 	usersService              UsersService
 	pollingUnitUpdatesService *puupdates.Service
+	earningsService           *earningsservice.Service
 	utils                     *utils.Utils
 	taskDistributor           worker.TaskDistributor
 }
 
-func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, taskDistributor worker.TaskDistributor) *Handler {
+func NewHandler(service PollingUnitAssignmentsService, usersService UsersService, puUpdatesService *puupdates.Service, utils *utils.Utils, taskDistributor worker.TaskDistributor, earningsSvc *earningsservice.Service) *Handler {
 	return &Handler{
 		service:                   service,
 		usersService:              usersService,
 		pollingUnitUpdatesService: puUpdatesService,
+		earningsService:           earningsSvc,
 		utils:                     utils,
 		taskDistributor:           taskDistributor,
 	}
@@ -507,6 +510,15 @@ func (h *Handler) UpdateAssignmentTracking(w http.ResponseWriter, r *http.Reques
 			// Log error but don't fail the request
 		}
 	}()
+
+	// Trigger earnings recalculation in the background for the tracking events
+	if h.earningsService != nil {
+		earningsSvc := h.earningsService
+		assignmentID := assignment.ID
+		go func() {
+			_, _ = earningsSvc.Calculate(context.Background(), assignmentID)
+		}()
+	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Assignment tracking updated successfully", map[string]interface{}{
 		"assignment": updated,

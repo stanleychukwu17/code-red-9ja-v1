@@ -93,6 +93,7 @@ SET username = $2,
     state_of_origin = $11,
     country_of_origin = $12,
     referred_by_code = $13,
+    referral_code = $14,
     account_status = 'active',
     updated_at = NOW()
 WHERE id = $1;
@@ -142,9 +143,9 @@ INSERT INTO users (
   email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
   state_of_origin, voters_card_image,
-  account_status, party_id, is_politician, is_verified
+  account_status, party_id, is_politician, is_verified, referral_code
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
 RETURNING id;
 
 -- name: AdminUpdateUser :exec
@@ -302,3 +303,7 @@ UPDATE users
 SET has_role = $2
 WHERE id = $1;
 
+-- name: UpdateUserReferralCode :exec
+UPDATE users
+SET referral_code = $2
+WHERE id = $1;

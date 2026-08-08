@@ -11,147 +11,31 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const appendPracticeTestTask = `-- name: AppendPracticeTestTask :one
-UPDATE user_practice_tests
-SET
-  task_stats = task_stats || $1::jsonb,
-  updated_at = NOW()
-WHERE id = $2
-  AND user_id = $3
-RETURNING id, user_id, election_group_id, role, sequence, task_stats, final_score, status, started_at, completed_at, created_at, updated_at
+const getPracticeTest = `-- name: GetPracticeTest :one
+SELECT id, user_id, election_group_id, role, test_attempts, overall_score, status, created_at, updated_at FROM user_practice_tests
+WHERE user_id = $1 
+  AND election_group_id = $2
+  AND role = $3
+LIMIT 1
 `
 
-type AppendPracticeTestTaskParams struct {
-	TaskStat []byte `json:"task_stat"`
-	ID       int64  `json:"id"`
-	UserID   int64  `json:"user_id"`
-}
-
-func (q *Queries) AppendPracticeTestTask(ctx context.Context, arg AppendPracticeTestTaskParams) (UserPracticeTest, error) {
-	row := q.db.QueryRow(ctx, appendPracticeTestTask, arg.TaskStat, arg.ID, arg.UserID)
-	var i UserPracticeTest
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ElectionGroupID,
-		&i.Role,
-		&i.Sequence,
-		&i.TaskStats,
-		&i.FinalScore,
-		&i.Status,
-		&i.StartedAt,
-		&i.CompletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const completePracticeTest = `-- name: CompletePracticeTest :one
-UPDATE user_practice_tests
-SET
-  final_score  = $1,
-  status       = 'completed',
-  completed_at = NOW(),
-  updated_at   = NOW()
-WHERE id = $2
-  AND user_id = $3
-RETURNING id, user_id, election_group_id, role, sequence, task_stats, final_score, status, started_at, completed_at, created_at, updated_at
-`
-
-type CompletePracticeTestParams struct {
-	FinalScore pgtype.Numeric `json:"final_score"`
-	ID         int64          `json:"id"`
-	UserID     int64          `json:"user_id"`
-}
-
-func (q *Queries) CompletePracticeTest(ctx context.Context, arg CompletePracticeTestParams) (UserPracticeTest, error) {
-	row := q.db.QueryRow(ctx, completePracticeTest, arg.FinalScore, arg.ID, arg.UserID)
-	var i UserPracticeTest
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ElectionGroupID,
-		&i.Role,
-		&i.Sequence,
-		&i.TaskStats,
-		&i.FinalScore,
-		&i.Status,
-		&i.StartedAt,
-		&i.CompletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const createPracticeTest = `-- name: CreatePracticeTest :one
-INSERT INTO user_practice_tests (
-  user_id,
-  election_group_id,
-  role,
-  sequence
-) VALUES (
-  $1,
-  $2,
-  $3,
-  (
-    SELECT COALESCE(MAX(sequence), 0) + 1
-    FROM user_practice_tests
-    WHERE user_id = $1
-      AND ($2::bigint = 0 OR election_group_id = $2)
-      AND role = $3
-  )
-)
-RETURNING id, user_id, election_group_id, role, sequence, task_stats, final_score, status, started_at, completed_at, created_at, updated_at
-`
-
-type CreatePracticeTestParams struct {
+type GetPracticeTestParams struct {
 	UserID          int64       `json:"user_id"`
 	ElectionGroupID pgtype.Int8 `json:"election_group_id"`
 	Role            string      `json:"role"`
 }
 
-func (q *Queries) CreatePracticeTest(ctx context.Context, arg CreatePracticeTestParams) (UserPracticeTest, error) {
-	row := q.db.QueryRow(ctx, createPracticeTest, arg.UserID, arg.ElectionGroupID, arg.Role)
+func (q *Queries) GetPracticeTest(ctx context.Context, arg GetPracticeTestParams) (UserPracticeTest, error) {
+	row := q.db.QueryRow(ctx, getPracticeTest, arg.UserID, arg.ElectionGroupID, arg.Role)
 	var i UserPracticeTest
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
 		&i.ElectionGroupID,
 		&i.Role,
-		&i.Sequence,
-		&i.TaskStats,
-		&i.FinalScore,
+		&i.TestAttempts,
+		&i.OverallScore,
 		&i.Status,
-		&i.StartedAt,
-		&i.CompletedAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getPracticeTest = `-- name: GetPracticeTest :one
-SELECT id, user_id, election_group_id, role, sequence, task_stats, final_score, status, started_at, completed_at, created_at, updated_at FROM user_practice_tests
-WHERE id = $1
-LIMIT 1
-`
-
-func (q *Queries) GetPracticeTest(ctx context.Context, id int64) (UserPracticeTest, error) {
-	row := q.db.QueryRow(ctx, getPracticeTest, id)
-	var i UserPracticeTest
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.ElectionGroupID,
-		&i.Role,
-		&i.Sequence,
-		&i.TaskStats,
-		&i.FinalScore,
-		&i.Status,
-		&i.StartedAt,
-		&i.CompletedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -160,7 +44,7 @@ func (q *Queries) GetPracticeTest(ctx context.Context, id int64) (UserPracticeTe
 
 const listUserPracticeTests = `-- name: ListUserPracticeTests :many
 SELECT
-  upt.id, upt.user_id, upt.election_group_id, upt.role, upt.sequence, upt.task_stats, upt.final_score, upt.status, upt.started_at, upt.completed_at, upt.created_at, upt.updated_at,
+  upt.id, upt.user_id, upt.election_group_id, upt.role, upt.test_attempts, upt.overall_score, upt.status, upt.created_at, upt.updated_at,
   u.first_name,
   u.last_name,
   u.username
@@ -188,12 +72,9 @@ type ListUserPracticeTestsRow struct {
 	UserID          int64              `json:"user_id"`
 	ElectionGroupID pgtype.Int8        `json:"election_group_id"`
 	Role            string             `json:"role"`
-	Sequence        int16              `json:"sequence"`
-	TaskStats       []byte             `json:"task_stats"`
-	FinalScore      pgtype.Numeric     `json:"final_score"`
+	TestAttempts    []byte             `json:"test_attempts"`
+	OverallScore    pgtype.Numeric     `json:"overall_score"`
 	Status          string             `json:"status"`
-	StartedAt       pgtype.Timestamptz `json:"started_at"`
-	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	FirstName       pgtype.Text        `json:"first_name"`
@@ -221,12 +102,9 @@ func (q *Queries) ListUserPracticeTests(ctx context.Context, arg ListUserPractic
 			&i.UserID,
 			&i.ElectionGroupID,
 			&i.Role,
-			&i.Sequence,
-			&i.TaskStats,
-			&i.FinalScore,
+			&i.TestAttempts,
+			&i.OverallScore,
 			&i.Status,
-			&i.StartedAt,
-			&i.CompletedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.FirstName,
@@ -241,4 +119,96 @@ func (q *Queries) ListUserPracticeTests(ctx context.Context, arg ListUserPractic
 		return nil, err
 	}
 	return items, nil
+}
+
+const markPracticeTestAttemptsPaid = `-- name: MarkPracticeTestAttemptsPaid :one
+UPDATE user_practice_tests
+SET test_attempts = (
+  SELECT jsonb_agg(
+    CASE
+      WHEN (elem->>'been_paid')::boolean IS NOT TRUE
+      THEN elem || '{"been_paid": true}'::jsonb
+      ELSE elem
+    END
+  )
+  FROM jsonb_array_elements(test_attempts) AS elem
+),
+updated_at = NOW()
+WHERE id = $1
+RETURNING id, user_id, election_group_id, role, test_attempts, overall_score, status, created_at, updated_at
+`
+
+// Sets been_paid=true on every attempt that currently has been_paid=false.
+// Uses a JSONB map to flip the flag without touching any other fields.
+func (q *Queries) MarkPracticeTestAttemptsPaid(ctx context.Context, id int64) (UserPracticeTest, error) {
+	row := q.db.QueryRow(ctx, markPracticeTestAttemptsPaid, id)
+	var i UserPracticeTest
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ElectionGroupID,
+		&i.Role,
+		&i.TestAttempts,
+		&i.OverallScore,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const submitPracticeTest = `-- name: SubmitPracticeTest :one
+INSERT INTO user_practice_tests (
+  user_id,
+  election_group_id,
+  role,
+  test_attempts,
+  overall_score,
+  status
+) VALUES (
+  $1,
+  $2,
+  $3,
+  JSONB_BUILD_ARRAY($4::jsonb),
+  $5,
+  'completed'
+)
+ON CONFLICT (user_id, election_group_id, role)
+DO UPDATE SET
+  test_attempts = user_practice_tests.test_attempts || $4::jsonb,
+  overall_score = GREATEST(user_practice_tests.overall_score, $5),
+  status = 'completed',
+  updated_at = NOW()
+RETURNING id, user_id, election_group_id, role, test_attempts, overall_score, status, created_at, updated_at
+`
+
+type SubmitPracticeTestParams struct {
+	UserID          int64          `json:"user_id"`
+	ElectionGroupID pgtype.Int8    `json:"election_group_id"`
+	Role            string         `json:"role"`
+	Attempt         []byte         `json:"attempt"`
+	OverallScore    pgtype.Numeric `json:"overall_score"`
+}
+
+func (q *Queries) SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error) {
+	row := q.db.QueryRow(ctx, submitPracticeTest,
+		arg.UserID,
+		arg.ElectionGroupID,
+		arg.Role,
+		arg.Attempt,
+		arg.OverallScore,
+	)
+	var i UserPracticeTest
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ElectionGroupID,
+		&i.Role,
+		&i.TestAttempts,
+		&i.OverallScore,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

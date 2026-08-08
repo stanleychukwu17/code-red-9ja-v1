@@ -1,15 +1,170 @@
 basePath: /api/v1
 definitions:
-  authhandler.AdminLoginData:
+  big.Int:
+    type: object
+  free9ja_api_internal_db_queries.GetPartyBasicInfoRow:
+    properties:
+      id:
+        type: integer
+      logo:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+    type: object
+  free9ja_api_internal_service_auth.LoginUser:
+    properties:
+      account_status:
+        type: string
+      address:
+        type: string
+      avatar:
+        type: string
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      data_phone:
+        type: string
+      date_of_birth:
+        type: string
+      education_level:
+        type: string
+      educational_status:
+        type: string
+      email:
+        type: string
+      fake_id:
+        type: integer
+      first_name:
+        type: string
+      gender:
+        type: string
+      graduation_year:
+        type: string
+      highest_degree:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      marital_status:
+        type: string
+      middle_name:
+        type: string
+      party:
+        $ref: '#/definitions/free9ja_api_internal_db_queries.GetPartyBasicInfoRow'
+      party_id:
+        type: integer
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      religion:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      school_name:
+        type: string
+      username:
+        type: string
+      voters_card_image:
+        type: string
+      whatsapp_phone:
+        type: string
+    type: object
+  free9ja_api_internal_service_auth.SeedUserRequest:
+    properties:
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        type: string
+      education_level:
+        type: string
+      email:
+        type: string
+      fake_id:
+        type: integer
+      first_name:
+        type: string
+      gender:
+        type: string
+      home_address:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      marital_status:
+        type: string
+      middle_name:
+        type: string
+      occupation_id:
+        type: integer
+      password:
+        type: string
+      phone:
+        type: string
+      religion:
+        type: string
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+    type: object
+  free9ja_api_internal_utils.ErrorResponse:
+    properties:
+      data: {}
+      message:
+        example: Error message description
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  free9ja_api_internal_utils.SuccessResponse:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      message:
+        example: Operation successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  internal_handler_auth.AdminLoginData:
     properties:
       accessToken:
         type: string
       refreshToken:
         type: string
       user:
-        $ref: '#/definitions/authservice.LoginUser'
+        $ref: '#/definitions/free9ja_api_internal_service_auth.LoginUser'
     type: object
-  authhandler.AdminLoginRequest:
+  internal_handler_auth.AdminLoginRequest:
     properties:
       identifier:
         maxLength: 50
@@ -31,16 +186,26 @@ definitions:
     - identifierType
     - password
     type: object
-  authhandler.AdminLoginResponse:
+  internal_handler_auth.AdminLoginResponse:
     properties:
       data:
-        $ref: '#/definitions/authhandler.AdminLoginData'
+        $ref: '#/definitions/internal_handler_auth.AdminLoginData'
       message:
         type: string
       success:
         type: boolean
     type: object
-  authhandler.ChangePasswordByEmailRequest:
+  internal_handler_auth.AssignRoleRequest:
+    properties:
+      role:
+        type: string
+      user_id:
+        type: integer
+    required:
+    - role
+    - user_id
+    type: object
+  internal_handler_auth.ChangePasswordByEmailRequest:
     properties:
       email:
         type: string
@@ -52,14 +217,14 @@ definitions:
     - email
     - password
     type: object
-  authhandler.CheckNINRequest:
+  internal_handler_auth.CheckNINRequest:
     properties:
       nin:
         type: string
     required:
     - nin
     type: object
-  authhandler.CheckUsernameRequest:
+  internal_handler_auth.CheckUsernameRequest:
     properties:
       username:
         maxLength: 30
@@ -68,7 +233,7 @@ definitions:
     required:
     - username
     type: object
-  authhandler.ForgotPasswordRequest:
+  internal_handler_auth.ForgotPasswordRequest:
     properties:
       change_password_id:
         type: string
@@ -85,7 +250,7 @@ definitions:
     - password
     - user_fid
     type: object
-  authhandler.LoginRequest:
+  internal_handler_auth.LoginRequest:
     properties:
       country:
         type: string
@@ -111,12 +276,20 @@ definitions:
     - identifierType
     - password
     type: object
-  authhandler.LogoutRequest:
+  internal_handler_auth.LogoutRequest:
     properties:
       refreshToken:
         type: string
     type: object
-  authhandler.PartyLoginRequest:
+  internal_handler_auth.MakeUserSuperAdminRequest:
+    properties:
+      name:
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
+  internal_handler_auth.PartyLoginRequest:
     properties:
       identifier:
         maxLength: 50
@@ -138,12 +311,12 @@ definitions:
     - identifierType
     - password
     type: object
-  authhandler.RefreshRequest:
+  internal_handler_auth.RefreshRequest:
     properties:
       refreshToken:
         type: string
     type: object
-  authhandler.RegisterCandidatePlaceholderRequest:
+  internal_handler_auth.RegisterCandidatePlaceholderRequest:
     properties:
       avatar:
         type: string
@@ -198,7 +371,7 @@ definitions:
     - last_name
     - password
     type: object
-  authhandler.RegisterPhaseSignUpRequest:
+  internal_handler_auth.RegisterPhaseSignUpRequest:
     properties:
       confirmPassword:
         type: string
@@ -225,7 +398,7 @@ definitions:
     - password
     - phoneNumber
     type: object
-  authhandler.RegisterRequest:
+  internal_handler_auth.RegisterRequest:
     properties:
       answer1:
         maxLength: 30
@@ -303,7 +476,7 @@ definitions:
     - question2
     - username
     type: object
-  authhandler.SignupRequest:
+  internal_handler_auth.SignupRequest:
     properties:
       countryId:
         type: integer
@@ -321,7 +494,24 @@ definitions:
     - password
     - phoneNumber
     type: object
-  authhandler.VerifySecurityQuestionsRequest:
+  internal_handler_auth.UpdateUserRolesRequest:
+    properties:
+      party_id:
+        type: integer
+      roles:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      user_fake_id:
+        type: integer
+      user_id:
+        type: integer
+    required:
+    - roles
+    - user_id
+    type: object
+  internal_handler_auth.VerifySecurityQuestionsRequest:
     properties:
       answer1:
         type: string
@@ -340,65 +530,14 @@ definitions:
     - question1
     - question2
     type: object
-  authservice.LoginUser:
-    properties:
-      account_status:
-        type: string
-      avatar:
-        type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_lga:
-        type: integer
-      current_state:
-        type: integer
-      current_ward:
-        type: integer
-      date_of_birth:
-        type: string
-      email:
-        type: string
-      fake_id:
-        type: integer
-      first_name:
-        type: string
-      gender:
-        type: string
-      id:
-        type: integer
-      last_name:
-        type: string
-      middle_name:
-        type: string
-      party:
-        $ref: '#/definitions/queries.PartyBasicInfoWithVerifications'
-      party_id:
-        type: integer
-      phone:
-        type: string
-      polling_unit_id:
-        type: integer
-      roles:
-        items:
-          type: string
-        type: array
-      username:
-        type: string
-      voters_card_image:
-        type: string
-    type: object
-  big.Int:
-    type: object
-  bodieshandler.CityResponse:
+  internal_handler_bodies.CityResponse:
     properties:
       id:
         type: integer
       name:
         type: string
     type: object
-  bodieshandler.CountryResponse:
+  internal_handler_bodies.CountryResponse:
     properties:
       id:
         type: integer
@@ -409,77 +548,77 @@ definitions:
       phone_code:
         type: string
     type: object
-  bodieshandler.GetCitiesData:
+  internal_handler_bodies.GetCitiesData:
     properties:
       cities:
         items:
-          $ref: '#/definitions/bodieshandler.CityResponse'
+          $ref: '#/definitions/internal_handler_bodies.CityResponse'
         type: array
     type: object
-  bodieshandler.GetCitiesResponse:
+  internal_handler_bodies.GetCitiesResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetCitiesData'
+        $ref: '#/definitions/internal_handler_bodies.GetCitiesData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/bodieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_bodies.PaginationMeta'
       success:
         type: boolean
     type: object
-  bodieshandler.GetCountriesData:
+  internal_handler_bodies.GetCountriesData:
     properties:
       countries:
         items:
-          $ref: '#/definitions/bodieshandler.CountryResponse'
+          $ref: '#/definitions/internal_handler_bodies.CountryResponse'
         type: array
     type: object
-  bodieshandler.GetCountriesResponse:
+  internal_handler_bodies.GetCountriesResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetCountriesData'
+        $ref: '#/definitions/internal_handler_bodies.GetCountriesData'
       message:
         type: string
       success:
         type: boolean
     type: object
-  bodieshandler.GetLGAsData:
+  internal_handler_bodies.GetLGAsData:
     properties:
       lgas:
         items:
-          $ref: '#/definitions/bodieshandler.LGAResponse'
+          $ref: '#/definitions/internal_handler_bodies.LGAResponse'
         type: array
     type: object
-  bodieshandler.GetLGAsResponse:
+  internal_handler_bodies.GetLGAsResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetLGAsData'
+        $ref: '#/definitions/internal_handler_bodies.GetLGAsData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/bodieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_bodies.PaginationMeta'
       success:
         type: boolean
     type: object
-  bodieshandler.GetStatesData:
+  internal_handler_bodies.GetStatesData:
     properties:
       states:
         items:
-          $ref: '#/definitions/bodieshandler.StateResponse'
+          $ref: '#/definitions/internal_handler_bodies.StateResponse'
         type: array
     type: object
-  bodieshandler.GetStatesResponse:
+  internal_handler_bodies.GetStatesResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetStatesData'
+        $ref: '#/definitions/internal_handler_bodies.GetStatesData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/bodieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_bodies.PaginationMeta'
       success:
         type: boolean
     type: object
-  bodieshandler.LGAResponse:
+  internal_handler_bodies.LGAResponse:
     properties:
       abbreviation:
         type: string
@@ -492,21 +631,21 @@ definitions:
       state_name:
         type: string
     type: object
-  bodieshandler.PaginationMeta:
+  internal_handler_bodies.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  bodieshandler.StateResponse:
+  internal_handler_bodies.StateResponse:
     properties:
       id:
         type: integer
       name:
         type: string
     type: object
-  electiongroupshandler.CreateElectionGroupRequest:
+  internal_handler_election_groups.CreateElectionGroupRequest:
     properties:
       election_date:
         type: string
@@ -519,7 +658,7 @@ definitions:
       states_count:
         type: integer
     type: object
-  electiongroupshandler.UpdateElectionGroupRequest:
+  internal_handler_election_groups.UpdateElectionGroupRequest:
     properties:
       election_date:
         type: string
@@ -532,7 +671,7 @@ definitions:
       states_count:
         type: integer
     type: object
-  electiongroupshandler.UpsertPartyElectionGroupStatsRequest:
+  internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest:
     properties:
       elections_contesting:
         type: integer
@@ -543,7 +682,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateElectionRequest:
+  internal_handler_elections.CreateElectionRequest:
     properties:
       candidates_count:
         type: integer
@@ -568,7 +707,7 @@ definitions:
       ward_id:
         type: integer
     type: object
-  electionshandler.CreateFederalConstituencyElectionRequest:
+  internal_handler_elections.CreateFederalConstituencyElectionRequest:
     properties:
       election_date:
         type: string
@@ -581,7 +720,7 @@ definitions:
       office_id:
         type: integer
     type: object
-  electionshandler.CreateLgaElectionRequest:
+  internal_handler_elections.CreateLgaElectionRequest:
     properties:
       election_date:
         type: string
@@ -594,11 +733,11 @@ definitions:
       office_id:
         type: integer
     type: object
-  electionshandler.CreateNationwideElectionRequest:
+  internal_handler_elections.CreateNationwideElectionRequest:
     properties:
       candidates:
         items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
+          $ref: '#/definitions/internal_handler_elections.ElectionCandidateInput'
         type: array
       election_date:
         type: string
@@ -607,7 +746,7 @@ definitions:
       office_id:
         type: integer
     type: object
-  electionshandler.CreateSenatorialDistrictElectionRequest:
+  internal_handler_elections.CreateSenatorialDistrictElectionRequest:
     properties:
       election_date:
         type: string
@@ -620,7 +759,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateStateConstituencyElectionRequest:
+  internal_handler_elections.CreateStateConstituencyElectionRequest:
     properties:
       election_date:
         type: string
@@ -633,7 +772,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateStateElectionRequest:
+  internal_handler_elections.CreateStateElectionRequest:
     properties:
       election_date:
         type: string
@@ -646,7 +785,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateWardElectionRequest:
+  internal_handler_elections.CreateWardElectionRequest:
     properties:
       election_date:
         type: string
@@ -659,7 +798,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.ElectionCandidateInput:
+  internal_handler_elections.ElectionCandidateInput:
     properties:
       candidate_id:
         type: integer
@@ -672,14 +811,14 @@ definitions:
     - party_id
     - party_short_name
     type: object
-  electionshandler.SyncCandidatesRequest:
+  internal_handler_elections.SyncCandidatesRequest:
     properties:
       candidates:
         items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
+          $ref: '#/definitions/internal_handler_elections.ElectionCandidateInput'
         type: array
     type: object
-  electionshandler.UpdateElectionRequest:
+  internal_handler_elections.UpdateElectionRequest:
     properties:
       candidates_count:
         type: integer
@@ -704,7 +843,7 @@ definitions:
       ward_id:
         type: integer
     type: object
-  federalconstituencieshandler.CreateFederalConstituencyRequest:
+  internal_handler_federal_constituencies.CreateFederalConstituencyRequest:
     properties:
       name:
         type: string
@@ -713,7 +852,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  federalconstituencieshandler.FederalConstituencyResponse:
+  internal_handler_federal_constituencies.FederalConstituencyResponse:
     properties:
       id:
         type: integer
@@ -728,32 +867,32 @@ definitions:
       state_name:
         type: string
     type: object
-  federalconstituencieshandler.GetFederalConstituenciesData:
+  internal_handler_federal_constituencies.GetFederalConstituenciesData:
     properties:
       constituencies:
         items:
-          $ref: '#/definitions/federalconstituencieshandler.FederalConstituencyResponse'
+          $ref: '#/definitions/internal_handler_federal_constituencies.FederalConstituencyResponse'
         type: array
     type: object
-  federalconstituencieshandler.GetFederalConstituenciesResponse:
+  internal_handler_federal_constituencies.GetFederalConstituenciesResponse:
     properties:
       data:
-        $ref: '#/definitions/federalconstituencieshandler.GetFederalConstituenciesData'
+        $ref: '#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/federalconstituencieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_federal_constituencies.PaginationMeta'
       success:
         type: boolean
     type: object
-  federalconstituencieshandler.PaginationMeta:
+  internal_handler_federal_constituencies.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  federalconstituencieshandler.UpdateFederalConstituencyRequest:
+  internal_handler_federal_constituencies.UpdateFederalConstituencyRequest:
     properties:
       name:
         type: string
@@ -762,7 +901,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  fileshandler.GenerateUploadURLRequest:
+  internal_handler_files.GenerateUploadURLRequest:
     properties:
       file_size:
         type: integer
@@ -777,7 +916,7 @@ definitions:
       owner_id:
         type: integer
     type: object
-  officeshandler.CreateOfficeRequest:
+  internal_handler_offices.CreateOfficeRequest:
     properties:
       election:
         type: string
@@ -788,7 +927,7 @@ definitions:
       scope:
         type: string
     type: object
-  officeshandler.UpdateOfficeRequest:
+  internal_handler_offices.UpdateOfficeRequest:
     properties:
       election:
         type: string
@@ -820,7 +959,7 @@ definitions:
       quantity:
         type: integer
     type: object
-  partieshandler.CreateMarketingCampaignRequest:
+  internal_handler_parties.CreateMarketingCampaignRequest:
     properties:
       budget:
         type: number
@@ -839,7 +978,7 @@ definitions:
       type:
         type: string
     type: object
-  partieshandler.CreatePartyRequest:
+  internal_handler_parties.CreatePartyRequest:
     properties:
       display_order:
         type: integer
@@ -852,7 +991,7 @@ definitions:
       short_name:
         type: string
     type: object
-  partieshandler.CreatePlanRequest:
+  internal_handler_parties.CreatePlanRequest:
     properties:
       color_hex:
         type: string
@@ -873,22 +1012,22 @@ definitions:
       type:
         type: string
     type: object
-  partieshandler.DepositAllowanceRequest:
+  internal_handler_parties.DepositAllowanceRequest:
     properties:
       amount_kobo:
         type: integer
     type: object
-  partieshandler.SetPartyDiscountRequest:
+  internal_handler_parties.SetPartyDiscountRequest:
     properties:
       discount_percentage:
         type: number
     type: object
-  partieshandler.SetSlotPriceRequest:
+  internal_handler_parties.SetSlotPriceRequest:
     properties:
       price_kobo:
         type: integer
     type: object
-  partieshandler.UpdateAgentTargetsRequest:
+  internal_handler_parties.UpdateAgentTargetsRequest:
     properties:
       lgaElectionSupervisor:
         type: integer
@@ -899,7 +1038,7 @@ definitions:
       wardElectionSupervisor:
         type: integer
     type: object
-  partieshandler.UpdatePartyRequest:
+  internal_handler_parties.UpdatePartyRequest:
     properties:
       display_order:
         type: integer
@@ -912,12 +1051,12 @@ definitions:
       short_name:
         type: string
     type: object
-  partieshandler.UpdatePlanDisplayOrderRequest:
+  internal_handler_parties.UpdatePlanDisplayOrderRequest:
     properties:
       display_order:
         type: integer
     type: object
-  partieshandler.UpdatePlanRequest:
+  internal_handler_parties.UpdatePlanRequest:
     properties:
       color_hex:
         type: string
@@ -940,7 +1079,7 @@ definitions:
       type:
         type: string
     type: object
-  partieshandler.WithdrawRequest:
+  internal_handler_parties.WithdrawRequest:
     properties:
       amount_kobo:
         description: AmountKobo is the withdrawal amount in Kobo (1 NGN = 100 Kobo).
@@ -952,18 +1091,18 @@ definitions:
       narration:
         type: string
     type: object
-  partieshandler.agentPaymentAllocation:
+  internal_handler_parties.agentPaymentAllocation:
     properties:
       lgaElectionSupervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
       pollingAgent:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
       stateElectionSupervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
       wardElectionSupervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
     type: object
-  partieshandler.agentPaymentConfig:
+  internal_handler_parties.agentPaymentConfig:
     properties:
       default:
         type: integer
@@ -973,7 +1112,7 @@ definitions:
           type: integer
         type: object
     type: object
-  partyapplicationshandler.ApproveApplicationRequest:
+  internal_handler_party_applications.ApproveApplicationRequest:
     properties:
       lga_id:
         type: integer
@@ -986,12 +1125,12 @@ definitions:
       ward_id:
         type: integer
     type: object
-  partyapplicationshandler.RejectApplicationRequest:
+  internal_handler_party_applications.RejectApplicationRequest:
     properties:
       reason:
         type: string
     type: object
-  partyapplicationshandler.SubmitApplicationRequest:
+  internal_handler_party_applications.SubmitApplicationRequest:
     properties:
       address:
         type: string
@@ -1075,40 +1214,57 @@ definitions:
     type: object
   pgtype.Int8:
     properties:
-      int64:
-        format: int64
+      election_group_id:
         type: integer
-      valid:
-        type: boolean
-    type: object
-  pgtype.Numeric:
-    properties:
-      exp:
-        format: int32
+      fake_id:
         type: integer
-      infinityModifier:
-        $ref: '#/definitions/pgtype.InfinityModifier'
-      int:
-        $ref: '#/definitions/big.Int'
-      naN:
-        type: boolean
-      valid:
-        type: boolean
-    type: object
-  pgtype.Text:
-    properties:
-      string:
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      role_type:
         type: string
-      valid:
-        type: boolean
     type: object
-  pgtype.Timestamptz:
+  internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest:
     properties:
-      infinityModifier:
-        $ref: '#/definitions/pgtype.InfinityModifier'
-      time:
+      arrival_video_url:
         type: string
-      valid:
+      arrived_at:
+        type: string
+      election_ended_at:
+        type: string
+      election_ended_video_url:
+        type: string
+      election_started_at:
+        type: string
+      election_started_video_url:
+        type: string
+    type: object
+  internal_handler_polling_unit_results.ReviewRequest:
+    properties:
+      disputed_reason:
+        type: string
+      status:
+        description: '"confirmed" or "nullified"'
+        type: string
+    type: object
+  internal_handler_polling_unit_results.SubmitResultRequest:
+    properties:
+      assignment_id:
+        type: integer
+      election_group_id:
+        type: integer
+      election_id:
+        type: integer
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      result_sheet_image_url:
+        type: string
+      result_sheet_video_url:
+        type: string
+      uploaded_by_inec:
         type: boolean
     type: object
   polling_unit_results.ReviewRequest:
@@ -1144,7 +1300,7 @@ definitions:
         description: '"up" or "down"'
         type: string
     type: object
-  polling_unit_updates.CreateUpdateRequest:
+  internal_handler_polling_unit_updates.CreateUpdateRequest:
     properties:
       assignment_id:
         type: integer
@@ -1167,7 +1323,7 @@ definitions:
           type: string
         type: array
     type: object
-  pollingunitshandler.CreatePollingUnitRequest:
+  internal_handler_polling_units.CreatePollingUnitRequest:
     properties:
       abbreviation:
         type: string
@@ -1198,32 +1354,32 @@ definitions:
       ward_id:
         type: integer
     type: object
-  pollingunitshandler.GetPollingUnitsData:
+  internal_handler_polling_units.GetPollingUnitsData:
     properties:
       polling_units:
         items:
-          $ref: '#/definitions/pollingunitshandler.PollingUnitResponse'
+          $ref: '#/definitions/internal_handler_polling_units.PollingUnitResponse'
         type: array
     type: object
-  pollingunitshandler.GetPollingUnitsResponse:
+  internal_handler_polling_units.GetPollingUnitsResponse:
     properties:
       data:
-        $ref: '#/definitions/pollingunitshandler.GetPollingUnitsData'
+        $ref: '#/definitions/internal_handler_polling_units.GetPollingUnitsData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/pollingunitshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_polling_units.PaginationMeta'
       success:
         type: boolean
     type: object
-  pollingunitshandler.PaginationMeta:
+  internal_handler_polling_units.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  pollingunitshandler.PollingUnitResponse:
+  internal_handler_polling_units.PollingUnitResponse:
     properties:
       abbreviation:
         type: string
@@ -1262,7 +1418,7 @@ definitions:
       ward_name:
         type: string
     type: object
-  pollingunitshandler.UpdatePollingUnitRequest:
+  internal_handler_polling_units.UpdatePollingUnitRequest:
     properties:
       abbreviation:
         type: string
@@ -1293,41 +1449,21 @@ definitions:
       ward_id:
         type: integer
     type: object
-  practicetestshandler.AppendTaskRequest:
+  internal_handler_practice_tests.PracticeTestResponse:
     properties:
-      failed_attempts:
-        type: integer
-      score:
-        type: number
-      task_id:
-        type: integer
-    type: object
-  practicetestshandler.CompleteTestRequest:
-    properties:
-      final_score:
-        type: number
-    type: object
-  practicetestshandler.PracticeTestResponse:
-    properties:
-      completed_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
       created_at:
         $ref: '#/definitions/pgtype.Timestamptz'
       election_group_id:
         $ref: '#/definitions/pgtype.Int8'
-      final_score:
-        $ref: '#/definitions/pgtype.Numeric'
       id:
         type: integer
+      overall_score:
+        $ref: '#/definitions/pgtype.Numeric'
       role:
         type: string
-      sequence:
-        type: integer
-      started_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
       status:
         type: string
-      task_stats:
+      test_attempts:
         items:
           type: integer
         type: array
@@ -1336,25 +1472,29 @@ definitions:
       user_id:
         type: integer
     type: object
-  practicetestshandler.StartPracticeTestRequest:
+  internal_handler_practice_tests.SubmitPracticeTestRequest:
     properties:
       election_group_id:
         type: integer
+      final_score:
+        type: number
       role:
         type: string
+      task_stats:
+        items:
+          $ref: '#/definitions/internal_handler_practice_tests.TaskStat'
+        type: array
     type: object
-  puassignmentshandler.CreateAssignmentRequest:
+  internal_handler_practice_tests.TaskStat:
     properties:
-      election_group_id:
+      completed:
+        type: boolean
+      failed_attempts:
         type: integer
-      fake_id:
+      score:
+        type: number
+      task_id:
         type: integer
-      party_id:
-        type: integer
-      polling_unit_id:
-        type: integer
-      role_type:
-        type: string
     type: object
   puassignmentshandler.UpdateAssignmentTrackingRequest:
     properties:
@@ -1649,32 +1789,32 @@ definitions:
       state_id:
         type: integer
     type: object
-  senatorialdistrictshandler.GetSenatorialDistrictsData:
+  internal_handler_senatorial_districts.GetSenatorialDistrictsData:
     properties:
       districts:
         items:
-          $ref: '#/definitions/senatorialdistrictshandler.SenatorialDistrictResponse'
+          $ref: '#/definitions/internal_handler_senatorial_districts.SenatorialDistrictResponse'
         type: array
     type: object
-  senatorialdistrictshandler.GetSenatorialDistrictsResponse:
+  internal_handler_senatorial_districts.GetSenatorialDistrictsResponse:
     properties:
       data:
-        $ref: '#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsData'
+        $ref: '#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/senatorialdistrictshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_senatorial_districts.PaginationMeta'
       success:
         type: boolean
     type: object
-  senatorialdistrictshandler.PaginationMeta:
+  internal_handler_senatorial_districts.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  senatorialdistrictshandler.SenatorialDistrictResponse:
+  internal_handler_senatorial_districts.SenatorialDistrictResponse:
     properties:
       coalition_center:
         type: string
@@ -1689,7 +1829,7 @@ definitions:
       state_name:
         type: string
     type: object
-  senatorialdistrictshandler.UpdateSenatorialDistrictRequest:
+  internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest:
     properties:
       coalition_center:
         type: string
@@ -1700,7 +1840,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest:
+  internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest:
     properties:
       federal_constituency_id:
         type: integer
@@ -1713,32 +1853,32 @@ definitions:
       state_id:
         type: integer
     type: object
-  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData:
+  internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData:
     properties:
       constituencies:
         items:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse'
+          $ref: '#/definitions/internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse'
         type: array
     type: object
-  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse:
+  internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse:
     properties:
       data:
-        $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData'
+        $ref: '#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/stateassemblyconstituencieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_state_assembly_constituencies.PaginationMeta'
       success:
         type: boolean
     type: object
-  stateassemblyconstituencieshandler.PaginationMeta:
+  internal_handler_state_assembly_constituencies.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse:
+  internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse:
     properties:
       federal_constituency_id:
         type: integer
@@ -1757,7 +1897,7 @@ definitions:
       state_name:
         type: string
     type: object
-  stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest:
+  internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest:
     properties:
       federal_constituency_id:
         type: integer
@@ -1770,7 +1910,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  stateshandler.CreateStateRequest:
+  internal_handler_states.CreateStateRequest:
     properties:
       country_code:
         type: string
@@ -1783,7 +1923,7 @@ definitions:
       name:
         type: string
     type: object
-  stateshandler.UpdateStateRequest:
+  internal_handler_states.UpdateStateRequest:
     properties:
       country_code:
         type: string
@@ -1796,7 +1936,7 @@ definitions:
       name:
         type: string
     type: object
-  system_settings.SystemSettingResponse:
+  internal_handler_system_settings.SystemSettingResponse:
     properties:
       created_at:
         $ref: '#/definitions/pgtype.Timestamptz'
@@ -1811,7 +1951,7 @@ definitions:
           type: integer
         type: array
     type: object
-  system_settings.UpdateSystemSettingRequest:
+  internal_handler_system_settings.UpdateSystemSettingRequest:
     properties:
       description:
         type: string
@@ -1822,21 +1962,21 @@ definitions:
     required:
     - value
     type: object
-  usershandler.GetUsersData:
+  internal_handler_users.GetUsersData:
     properties:
       users:
         items:
-          $ref: '#/definitions/queries.UserWithPlaces'
+          $ref: '#/definitions/internal_handler_users.UserResponse'
         type: array
     type: object
-  usershandler.GetUsersResponse:
+  internal_handler_users.GetUsersResponse:
     properties:
       data:
-        $ref: '#/definitions/usershandler.GetUsersData'
+        $ref: '#/definitions/internal_handler_users.GetUsersData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/usershandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_users.PaginationMeta'
       success:
         type: boolean
     type: object
@@ -1855,7 +1995,7 @@ definitions:
       next_cursor:
         type: string
     type: object
-  usershandler.UpdateProfileRequest:
+  internal_handler_users.UpdateProfileRequest:
     properties:
       avatar:
         type: string
@@ -1890,7 +2030,9 @@ definitions:
     - gender
     - last_name
     type: object
-  usershandler.UpdateUserPhoneNumbersRequest:
+  internal_handler_users.UpdateUserPhoneNumbersRequest:
+    type: object
+  internal_handler_users.UserResponse:
     properties:
       phones:
         items:
@@ -1912,7 +2054,7 @@ definitions:
     required:
     - roles
     type: object
-  usershandler.UserWithdrawRequest:
+  internal_handler_users.UserWithdrawRequest:
     properties:
       amount_kobo:
         type: integer
@@ -1971,32 +2113,32 @@ definitions:
       state_id:
         type: integer
     type: object
-  wardshandler.GetWardsData:
+  internal_handler_wards.GetWardsData:
     properties:
       wards:
         items:
-          $ref: '#/definitions/wardshandler.WardResponse'
+          $ref: '#/definitions/internal_handler_wards.WardResponse'
         type: array
     type: object
-  wardshandler.GetWardsResponse:
+  internal_handler_wards.GetWardsResponse:
     properties:
       data:
-        $ref: '#/definitions/wardshandler.GetWardsData'
+        $ref: '#/definitions/internal_handler_wards.GetWardsData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/wardshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_wards.PaginationMeta'
       success:
         type: boolean
     type: object
-  wardshandler.PaginationMeta:
+  internal_handler_wards.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  wardshandler.UpdateWardRequest:
+  internal_handler_wards.UpdateWardRequest:
     properties:
       abbreviation:
         type: string
@@ -2007,7 +2149,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  wardshandler.WardResponse:
+  internal_handler_wards.WardResponse:
     properties:
       id:
         type: integer
@@ -2021,6 +2163,55 @@ definitions:
         type: integer
       state_name:
         type: string
+    type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Int8:
+    properties:
+      int64:
+        format: int64
+        type: integer
+      valid:
+        type: boolean
+    type: object
+  pgtype.Numeric:
+    properties:
+      exp:
+        format: int32
+        type: integer
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      int:
+        $ref: '#/definitions/big.Int'
+      naN:
+        type: boolean
+      valid:
+        type: boolean
+    type: object
+  pgtype.Text:
+    properties:
+      string:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  pgtype.Timestamptz:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
     type: object
 host: localhost:4100
 info:
@@ -2068,7 +2259,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.SetPartyDiscountRequest'
+          $ref: '#/definitions/internal_handler_parties.SetPartyDiscountRequest'
       produces:
       - application/json
       responses:
@@ -2100,23 +2291,23 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
+            - $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/system_settings.SystemSettingResponse'
+                  $ref: '#/definitions/internal_handler_system_settings.SystemSettingResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get a system setting
@@ -2137,7 +2328,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/system_settings.UpdateSystemSettingRequest'
+          $ref: '#/definitions/internal_handler_system_settings.UpdateSystemSettingRequest'
       produces:
       - application/json
       responses:
@@ -2145,19 +2336,19 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
+            - $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/system_settings.SystemSettingResponse'
+                  $ref: '#/definitions/internal_handler_system_settings.SystemSettingResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update a system setting
@@ -2189,7 +2380,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.SetSlotPriceRequest'
+          $ref: '#/definitions/internal_handler_parties.SetSlotPriceRequest'
       produces:
       - application/json
       responses:
@@ -2248,7 +2439,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UpdateUserPhoneNumbersRequest'
+          $ref: '#/definitions/internal_handler_users.UpdateUserPhoneNumbersRequest'
       produces:
       - application/json
       responses:
@@ -2304,26 +2495,32 @@ paths:
       summary: Delete a user phone number
       tags:
       - Users
-  /admin/verifications:
-    delete:
-      consumes:
-      - application/json
-      description: Remove a verification from a page
+  /agent-earnings:
+    get:
       parameters:
-      - description: Page Type
+      - description: Filter by user ID
         in: query
-        name: page_type
-        required: true
-        type: string
-      - description: Page ID
-        in: query
-        name: page_id
-        required: true
+        name: user_id
         type: integer
-      - description: Verification Type ID
+      - description: Filter by election group
         in: query
-        name: verification_type_id
-        required: true
+        name: election_group_id
+        type: integer
+      - description: Filter by party
+        in: query
+        name: party_id
+        type: integer
+      - description: Filter by status (pending|approved|paid|disputed)
+        in: query
+        name: status
+        type: string
+      - description: Page size (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor for pagination
+        in: query
+        name: cursor
         type: integer
       produces:
       - application/json
@@ -2427,11 +2624,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/utils.SuccessResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       summary: Get Supervisor Assignments
       tags:
       - SupervisorAssignments
@@ -2446,14 +2643,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.AdminLoginRequest'
+          $ref: '#/definitions/internal_handler_auth.AdminLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authhandler.AdminLoginResponse'
+            $ref: '#/definitions/internal_handler_auth.AdminLoginResponse'
         "400":
           description: Bad Request
           schema:
@@ -2465,6 +2662,49 @@ paths:
             additionalProperties: true
             type: object
       summary: Login admin user
+      tags:
+      - Auth
+  /auth/assign-role:
+    post:
+      consumes:
+      - application/json
+      description: Assigns a specific role (like party_admin) to an existing user
+      parameters:
+      - description: Role assignment details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_auth.AssignRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Assign a role to a user
       tags:
       - Auth
   /auth/change-password:
@@ -2479,7 +2719,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.ChangePasswordByEmailRequest'
+          $ref: '#/definitions/internal_handler_auth.ChangePasswordByEmailRequest'
       produces:
       - application/json
       responses:
@@ -2512,7 +2752,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.CheckNINRequest'
+          $ref: '#/definitions/internal_handler_auth.CheckNINRequest'
       produces:
       - application/json
       responses:
@@ -2540,7 +2780,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.CheckUsernameRequest'
+          $ref: '#/definitions/internal_handler_auth.CheckUsernameRequest'
       produces:
       - application/json
       responses:
@@ -2568,7 +2808,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.ForgotPasswordRequest'
+          $ref: '#/definitions/internal_handler_auth.ForgotPasswordRequest'
       produces:
       - application/json
       responses:
@@ -2601,7 +2841,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.LoginRequest'
+          $ref: '#/definitions/internal_handler_auth.LoginRequest'
       produces:
       - application/json
       responses:
@@ -2634,7 +2874,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.LogoutRequest'
+          $ref: '#/definitions/internal_handler_auth.LogoutRequest'
       produces:
       - application/json
       responses:
@@ -2662,14 +2902,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.PartyLoginRequest'
+          $ref: '#/definitions/internal_handler_auth.PartyLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authhandler.AdminLoginResponse'
+            $ref: '#/definitions/internal_handler_auth.AdminLoginResponse'
         "400":
           description: Bad Request
           schema:
@@ -2694,7 +2934,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.RefreshRequest'
+          $ref: '#/definitions/internal_handler_auth.RefreshRequest'
       produces:
       - application/json
       responses:
@@ -2727,7 +2967,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.RegisterRequest'
+          $ref: '#/definitions/internal_handler_auth.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -2760,7 +3000,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.RegisterCandidatePlaceholderRequest'
+          $ref: '#/definitions/internal_handler_auth.RegisterCandidatePlaceholderRequest'
       produces:
       - application/json
       responses:
@@ -2794,7 +3034,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UpdateUserRolesRequest'
+          $ref: '#/definitions/internal_handler_auth.UpdateUserRolesRequest'
       produces:
       - application/json
       responses:
@@ -2826,6 +3066,41 @@ paths:
       summary: Update all roles for a user
       tags:
       - Auth
+  /auth/seed:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers testing users from formatted JSON data
+      parameters:
+      - description: List of users to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/free9ja_api_internal_service_auth.SeedUserRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Users seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed users
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed testing users
+      tags:
+      - Auth
   /auth/signup:
     post:
       consumes:
@@ -2837,7 +3112,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.SignupRequest'
+          $ref: '#/definitions/internal_handler_auth.SignupRequest'
       produces:
       - application/json
       responses:
@@ -2866,7 +3141,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.MakeUserSuperAdminRequest'
+          $ref: '#/definitions/internal_handler_auth.MakeUserSuperAdminRequest'
       produces:
       - application/json
       responses:
@@ -2900,7 +3175,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.VerifySecurityQuestionsRequest'
+          $ref: '#/definitions/internal_handler_auth.VerifySecurityQuestionsRequest'
       produces:
       - application/json
       responses:
@@ -2992,7 +3267,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetCountriesResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetCountriesResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -3018,7 +3293,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetStatesResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetStatesResponse'
         "400":
           description: Bad Request
           schema:
@@ -3075,7 +3350,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electiongroupshandler.CreateElectionGroupRequest'
+          $ref: '#/definitions/internal_handler_election_groups.CreateElectionGroupRequest'
       produces:
       - application/json
       responses:
@@ -3186,7 +3461,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electiongroupshandler.UpdateElectionGroupRequest'
+          $ref: '#/definitions/internal_handler_election_groups.UpdateElectionGroupRequest'
       produces:
       - application/json
       responses:
@@ -3260,7 +3535,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest'
+          $ref: '#/definitions/internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest'
       produces:
       - application/json
       responses:
@@ -3762,7 +4037,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateElectionRequest'
       produces:
       - application/json
       responses:
@@ -3873,7 +4148,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.UpdateElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.UpdateElectionRequest'
       produces:
       - application/json
       responses:
@@ -3947,7 +4222,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.SyncCandidatesRequest'
+          $ref: '#/definitions/internal_handler_elections.SyncCandidatesRequest'
       produces:
       - application/json
       responses:
@@ -4018,7 +4293,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateFederalConstituencyElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateFederalConstituencyElectionRequest'
       produces:
       - application/json
       responses:
@@ -4052,7 +4327,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateLgaElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateLgaElectionRequest'
       produces:
       - application/json
       responses:
@@ -4086,7 +4361,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateNationwideElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateNationwideElectionRequest'
       produces:
       - application/json
       responses:
@@ -4447,7 +4722,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateSenatorialDistrictElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateSenatorialDistrictElectionRequest'
       produces:
       - application/json
       responses:
@@ -4481,7 +4756,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateStateElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateStateElectionRequest'
       produces:
       - application/json
       responses:
@@ -4515,7 +4790,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateStateConstituencyElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateStateConstituencyElectionRequest'
       produces:
       - application/json
       responses:
@@ -4549,7 +4824,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateWardElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateWardElectionRequest'
       produces:
       - application/json
       responses:
@@ -4602,7 +4877,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/federalconstituencieshandler.GetFederalConstituenciesResponse'
+            $ref: '#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -4620,7 +4895,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/federalconstituencieshandler.CreateFederalConstituencyRequest'
+          $ref: '#/definitions/internal_handler_federal_constituencies.CreateFederalConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -4751,7 +5026,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/federalconstituencieshandler.UpdateFederalConstituencyRequest'
+          $ref: '#/definitions/internal_handler_federal_constituencies.UpdateFederalConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -4939,7 +5214,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/fileshandler.GenerateUploadURLRequest'
+          $ref: '#/definitions/internal_handler_files.GenerateUploadURLRequest'
       produces:
       - application/json
       responses:
@@ -4999,7 +5274,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetLGAsResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetLGAsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -5047,7 +5322,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/officeshandler.CreateOfficeRequest'
+          $ref: '#/definitions/internal_handler_offices.CreateOfficeRequest'
       produces:
       - application/json
       responses:
@@ -5157,7 +5432,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/officeshandler.UpdateOfficeRequest'
+          $ref: '#/definitions/internal_handler_offices.UpdateOfficeRequest'
       produces:
       - application/json
       responses:
@@ -5235,7 +5510,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.CreatePartyRequest'
+          $ref: '#/definitions/internal_handler_parties.CreatePartyRequest'
       produces:
       - application/json
       responses:
@@ -5367,7 +5642,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdatePartyRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdatePartyRequest'
       produces:
       - application/json
       responses:
@@ -5442,7 +5717,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.CreateMarketingCampaignRequest'
+          $ref: '#/definitions/internal_handler_parties.CreateMarketingCampaignRequest'
       produces:
       - application/json
       responses:
@@ -5471,7 +5746,7 @@ paths:
         "200":
           description: Agent targets retrieved successfully
           schema:
-            $ref: '#/definitions/partieshandler.UpdateAgentTargetsRequest'
+            $ref: '#/definitions/internal_handler_parties.UpdateAgentTargetsRequest'
       security:
       - BearerAuth: []
       summary: Get party agent acquisition targets
@@ -5492,7 +5767,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdateAgentTargetsRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdateAgentTargetsRequest'
       produces:
       - application/json
       responses:
@@ -5523,7 +5798,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.DepositAllowanceRequest'
+          $ref: '#/definitions/internal_handler_parties.DepositAllowanceRequest'
       produces:
       - application/json
       responses:
@@ -5576,7 +5851,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.agentPaymentAllocation'
+          $ref: '#/definitions/internal_handler_parties.agentPaymentAllocation'
       produces:
       - application/json
       responses:
@@ -5607,7 +5882,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.BuySlotsRequest'
+          $ref: '#/definitions/internal_handler_parties.BuySlotsRequest'
       produces:
       - application/json
       responses:
@@ -5737,7 +6012,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.DepositAllowanceRequest'
+          $ref: '#/definitions/internal_handler_parties.DepositAllowanceRequest'
       produces:
       - application/json
       responses:
@@ -5819,7 +6094,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.WithdrawRequest'
+          $ref: '#/definitions/internal_handler_parties.WithdrawRequest'
       produces:
       - application/json
       responses:
@@ -5969,7 +6244,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.CreatePlanRequest'
+          $ref: '#/definitions/internal_handler_parties.CreatePlanRequest'
       produces:
       - application/json
       responses:
@@ -6022,7 +6297,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdatePlanRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdatePlanRequest'
       produces:
       - application/json
       responses:
@@ -6052,7 +6327,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdatePlanDisplayOrderRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdatePlanDisplayOrderRequest'
       produces:
       - application/json
       responses:
@@ -6128,7 +6403,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partyapplicationshandler.SubmitApplicationRequest'
+          $ref: '#/definitions/internal_handler_party_applications.SubmitApplicationRequest'
       produces:
       - application/json
       responses:
@@ -6210,7 +6485,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partyapplicationshandler.ApproveApplicationRequest'
+          $ref: '#/definitions/internal_handler_party_applications.ApproveApplicationRequest'
       produces:
       - application/json
       responses:
@@ -6304,7 +6579,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partyapplicationshandler.RejectApplicationRequest'
+          $ref: '#/definitions/internal_handler_party_applications.RejectApplicationRequest'
       produces:
       - application/json
       responses:
@@ -6441,7 +6716,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/puassignmentshandler.CreateAssignmentRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_assignments.CreateAssignmentRequest'
       produces:
       - application/json
       responses:
@@ -6557,7 +6832,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/puassignmentshandler.UpdateAssignmentTrackingRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest'
       produces:
       - application/json
       responses:
@@ -6745,7 +7020,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/polling_unit_results.SubmitResultRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_results.SubmitResultRequest'
       produces:
       - application/json
       responses:
@@ -6827,7 +7102,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/polling_unit_results.ReviewRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_results.ReviewRequest'
       produces:
       - application/json
       responses:
@@ -6878,7 +7153,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/polling_unit_results.VoteRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_results.VoteRequest'
       produces:
       - application/json
       responses:
@@ -7022,7 +7297,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/polling_unit_updates.CreateUpdateRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_updates.CreateUpdateRequest'
       produces:
       - application/json
       responses:
@@ -7092,7 +7367,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/pollingunitshandler.GetPollingUnitsResponse'
+            $ref: '#/definitions/internal_handler_polling_units.GetPollingUnitsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -7110,7 +7385,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pollingunitshandler.CreatePollingUnitRequest'
+          $ref: '#/definitions/internal_handler_polling_units.CreatePollingUnitRequest'
       produces:
       - application/json
       responses:
@@ -7241,7 +7516,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pollingunitshandler.UpdatePollingUnitRequest'
+          $ref: '#/definitions/internal_handler_polling_units.UpdatePollingUnitRequest'
       produces:
       - application/json
       responses:
@@ -7309,7 +7584,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/utils.SuccessResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
       security:
       - BearerAuth: []
       summary: List practice tests
@@ -7318,15 +7593,15 @@ paths:
     post:
       consumes:
       - application/json
-      description: Creates a new in-progress practice test row for the authenticated
-        user
+      description: Saves the practice test attempt and recalculates the user's overall
+        score
       parameters:
-      - description: Start Practice Test
+      - description: Submit Practice Test
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/practicetestshandler.StartPracticeTestRequest'
+          $ref: '#/definitions/internal_handler_practice_tests.SubmitPracticeTestRequest'
       produces:
       - application/json
       responses:
@@ -7334,116 +7609,61 @@ paths:
           description: Created
           schema:
             allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
+            - $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/practicetestshandler.PracticeTestResponse'
+                  $ref: '#/definitions/internal_handler_practice_tests.PracticeTestResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Start a practice test session
+      summary: Submit a completed practice test session
       tags:
       - Practice Tests
-  /practice-tests/{id}/complete:
-    patch:
-      consumes:
-      - application/json
+  /practice-tests/payout-preview:
+    get:
+      description: Returns the potential payout for the next practice test the user
+        takes, based on their role, party payment allocation, and how many tests they
+        have already taken in the active time window.
       parameters:
-      - description: Practice Test ID
-        in: path
-        name: id
+      - description: The election group to preview payout for
+        in: query
+        name: election_group_id
         required: true
         type: integer
-      - description: Final score
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/practicetestshandler.CompleteTestRequest'
+      - description: 'Role override (default: pollingagent)'
+        in: query
+        name: role
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/practicetestshandler.PracticeTestResponse'
-              type: object
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "404":
-          description: Not Found
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
+        "401":
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Mark a practice test as completed
-      tags:
-      - Practice Tests
-  /practice-tests/{id}/task:
-    patch:
-      consumes:
-      - application/json
-      parameters:
-      - description: Practice Test ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Task stats
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/practicetestshandler.AppendTaskRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
-            - properties:
-                data:
-                  $ref: '#/definitions/practicetestshandler.PracticeTestResponse'
-              type: object
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "404":
-          description: Not Found
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Append a completed task to a practice test
+      summary: Get practice test payout preview
       tags:
       - Practice Tests
   /seed/admins:
@@ -7539,7 +7759,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsResponse'
+            $ref: '#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -7557,7 +7777,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/senatorialdistrictshandler.CreateSenatorialDistrictRequest'
+          $ref: '#/definitions/internal_handler_senatorial_districts.CreateSenatorialDistrictRequest'
       produces:
       - application/json
       responses:
@@ -7688,7 +7908,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/senatorialdistrictshandler.UpdateSenatorialDistrictRequest'
+          $ref: '#/definitions/internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest'
       produces:
       - application/json
       responses:
@@ -7737,7 +7957,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest'
+          $ref: '#/definitions/internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -7869,7 +8089,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest'
+          $ref: '#/definitions/internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -7935,7 +8155,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse'
+            $ref: '#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -7954,7 +8174,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateshandler.CreateStateRequest'
+          $ref: '#/definitions/internal_handler_states.CreateStateRequest'
       produces:
       - application/json
       responses:
@@ -8084,7 +8304,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateshandler.UpdateStateRequest'
+          $ref: '#/definitions/internal_handler_states.UpdateStateRequest'
       produces:
       - application/json
       responses:
@@ -8138,7 +8358,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetCitiesResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetCitiesResponse'
         "400":
           description: Bad Request
           schema:
@@ -8173,7 +8393,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/usershandler.GetUsersResponse'
+            $ref: '#/definitions/internal_handler_users.GetUsersResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -8238,8 +8458,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/internal_handler_users.UserResponse'
         "401":
           description: Unauthorized
           schema:
@@ -8333,7 +8552,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UserWithdrawRequest'
+          $ref: '#/definitions/internal_handler_users.UserWithdrawRequest'
       produces:
       - application/json
       responses:
@@ -8378,7 +8597,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UpdateProfileRequest'
+          $ref: '#/definitions/internal_handler_users.UpdateProfileRequest'
       produces:
       - application/json
       responses:
@@ -8517,7 +8736,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/wardshandler.GetWardsResponse'
+            $ref: '#/definitions/internal_handler_wards.GetWardsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -8535,7 +8754,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/wardshandler.CreateWardRequest'
+          $ref: '#/definitions/internal_handler_wards.CreateWardRequest'
       produces:
       - application/json
       responses:
@@ -8665,7 +8884,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/wardshandler.UpdateWardRequest'
+          $ref: '#/definitions/internal_handler_wards.UpdateWardRequest'
       produces:
       - application/json
       responses:

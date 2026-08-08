@@ -30,10 +30,14 @@ function GiveUpdate() {
     selectedAssignment: currentAssignment,
   } = useAuth();
 
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(search.isReport ? 2 : 1);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [reportText, setReportText] = useState("");
+  const [reportText, setReportText] = useState(
+    search.isPractice && !search.isReport
+      ? "Election is currently going fine at my polling unit"
+      : "",
+  );
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [mediaFiles, setMediaFiles] = useState<
     { url: string; type: "image" | "video"; file: File }[]
@@ -158,7 +162,7 @@ function GiveUpdate() {
         uploadedUrls.push(public_url);
       }
 
-      const isReport = selectedTags.length > 0;
+      const isReport = Boolean(search.isReport) || selectedTags.length > 0;
 
       const res = await createPollingUnitUpdate({
         data: {
@@ -179,7 +183,7 @@ function GiveUpdate() {
       return res;
     },
     onSuccess: () => {
-      navigate({ to: "/home" });
+      navigate({ to: "/" });
     },
     onError: (err: any) => {
       toast.error(err.message || "An error occurred");
@@ -257,7 +261,7 @@ function GiveUpdate() {
                   }
                 }}
               >
-                {search.isPractice ? "Take Picture (simulate)" : "Take Picture"}
+                Take Picture
               </Button>
               <Button
                 type="button"
@@ -271,7 +275,7 @@ function GiveUpdate() {
                   }
                 }}
               >
-                {search.isPractice ? "Take Video (simulate)" : "Take Video"}
+                Take Video
               </Button>
             </div>
             <Button
@@ -288,10 +292,23 @@ function GiveUpdate() {
       ) : (
         <>
           <PostHeader
-            onClose={() => setStep(1)}
+            onClose={() => {
+              if (search.isReport) {
+                if (search.isPractice) {
+                  navigate({ to: "/practice" });
+                } else {
+                  navigate({ to: "/" });
+                }
+              } else {
+                setStep(1);
+              }
+            }}
             onPost={() => {
               if (search.isPractice) {
-                const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
+                const failedAttempts = parseInt(
+                  search.failedAttemptCount || "0",
+                  10,
+                );
                 showFeedbackToast(true, failedAttempts);
                 navigate({
                   to: "/practice",
@@ -307,6 +324,7 @@ function GiveUpdate() {
             }}
             isSubmitting={isSubmitting}
             isDisabled={!reportText.trim()}
+            isReport={search.isReport}
           />
 
           <PostInputArea
@@ -317,6 +335,7 @@ function GiveUpdate() {
             mediaFiles={mediaFiles}
             removeMedia={removeMedia}
             userAvatar={user?.avatar}
+            isReport={search.isReport}
           />
 
           <PostFooter

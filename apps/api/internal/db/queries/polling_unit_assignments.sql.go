@@ -368,6 +368,51 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 	return items, nil
 }
 
+const updateAssignmentReadinessPercentage = `-- name: UpdateAssignmentReadinessPercentage :one
+UPDATE polling_unit_assignments
+SET
+  election_practice_test_readiness_percentage = $2,
+  updated_at = NOW()
+WHERE id = $1
+RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, created_at, updated_at
+`
+
+type UpdateAssignmentReadinessPercentageParams struct {
+	ID                                      int64          `json:"id"`
+	ElectionPracticeTestReadinessPercentage pgtype.Numeric `json:"election_practice_test_readiness_percentage"`
+}
+
+func (q *Queries) UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (PollingUnitAssignment, error) {
+	row := q.db.QueryRow(ctx, updateAssignmentReadinessPercentage, arg.ID, arg.ElectionPracticeTestReadinessPercentage)
+	var i PollingUnitAssignment
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PollingUnitID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.ElectionStartedAt,
+		&i.ElectionStartedVideoUrl,
+		&i.ElectionEndedAt,
+		&i.ElectionEndedVideoUrl,
+		&i.LastUpdateAt,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
+		&i.ResultsExpectedToSubmitCount,
+		&i.LiveVotersReferredCount,
+		&i.IntervalUpdates,
+		&i.ElectionPracticeTestReadinessPercentage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const updateAssignmentTracking = `-- name: UpdateAssignmentTracking :one
 UPDATE polling_unit_assignments
 SET 

@@ -451,7 +451,7 @@ function ApplyPage() {
         )}
         {step === 4 && (
           <Step4
-            avatarUrl={user?.avatar}
+            avatarUrl={avatarUrl || user?.avatar}
             isUploading={isUploading}
             handleUploadClick={handleUploadClick}
             fileInputRef={fileInputRef}

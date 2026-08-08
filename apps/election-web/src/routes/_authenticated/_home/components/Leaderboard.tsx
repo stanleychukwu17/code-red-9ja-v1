@@ -10,7 +10,13 @@ import { useAuth } from "#/hooks/useAuth";
 import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
 import { Loader2 } from "lucide-react";
 
-export function CandidatesLeaderboard() {
+export function CandidatesLeaderboard({ 
+  onPracticeClick,
+  onReportClick
+}: { 
+  onPracticeClick?: () => void;
+  onReportClick?: () => void;
+}) {
   const navigate = useNavigate();
   const {
     selectedElection,
@@ -23,6 +29,16 @@ export function CandidatesLeaderboard() {
     selectedSupervisorAssignment,
     isLock,
   } = useAuth();
+
+  const interceptClick = (e: React.MouseEvent, action?: () => void) => {
+    if (onPracticeClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onPracticeClick();
+      return;
+    }
+    if (action) action();
+  };
 
   const sortedResults = mergeElectionResults({
     candidates: electionCandidates || [],
@@ -103,6 +119,7 @@ export function CandidatesLeaderboard() {
         <Button
           type="button"
           size="extra-large"
+          onClick={(e) => interceptClick(e)}
           className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
         >
           Show all
@@ -110,7 +127,15 @@ export function CandidatesLeaderboard() {
         <Button
           type="button"
           size="extra-large"
-          onClick={() => navigate({ to: "/report" })}
+          onClick={(e) => {
+            if (onReportClick) {
+              e.preventDefault();
+              e.stopPropagation();
+              onReportClick();
+            } else {
+              navigate({ to: "/give-update", search: { isReport: true } });
+            }
+          }}
           className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
         >
           <ReportIcon className="w-5 h-5 shrink-0" />

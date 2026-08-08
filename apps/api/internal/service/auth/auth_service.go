@@ -2,6 +2,7 @@ package authservice
 
 import (
 	"context"
+	cryptorand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -818,6 +820,38 @@ func CleanUsername(input string) (string, error) {
 	return clean, nil
 }
 
+// function: check if the username already exist in redis and in the postgres db
+func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
+	exists, _ := s.rdb.Exists(ctx, db.RedisUsernameFakeID+username).Result()
+	return exists > 0
+}
+
+func (s *AuthService) CheckReferralCode(ctx context.Context, code string) bool {
+	exists, err := s.queries.CheckReferralCodeExists(ctx, pgtype.Text{String: code, Valid: true})
+	if err != nil {
+		return false
+	}
+	return exists
+}
+
+// function: checks if the Email address already exists in redis and in the postgres db
+func (s *AuthService) CheckEmail(ctx context.Context, email string) bool {
+	exists, _ := s.rdb.Exists(ctx, db.RedisEmailFakeID+email).Result()
+	return exists > 0
+}
+
+// function: checks if the phone exists in redis and in the postgres db
+func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool {
+	exists, _ := s.rdb.Exists(ctx, db.RedisPhoneFakeID+phone).Result()
+	return exists > 0
+}
+
+// CheckNIN function checks if the nin already exists in the database
+func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
+	exists, _ := s.rdb.Exists(ctx, db.RedisNINFakeID+nin).Result()
+	return exists > 0
+}
+
 type SignupResult struct {
 	ID           string `json:"id"`
 	AccessToken  string `json:"accessToken"`
@@ -969,30 +1003,46 @@ func (s *AuthService) CompleteOnboarding(
 		return fmt.Errorf("save registration details: %w", err)
 	}
 
-	// 3. Save security questions
-	hashedAnswer1, err := bcrypt.GenerateFromPassword([]byte(strings.ToLower(strings.TrimSpace(a1))), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("hash answer1: %w", err)
-	}
-	hashedAnswer2, err := bcrypt.GenerateFromPassword([]byte(strings.ToLower(strings.TrimSpace(a2))), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("hash answer2: %w", err)
-	}
+	// 3. Save security questions (if provided)
+	if q1 != 0 && q2 != 0 && a1 != "" && a2 != "" {
+		hashedAnswer1, err := bcrypt.GenerateFromPassword([]byte(strings.ToLower(strings.TrimSpace(a1))), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("hash answer1: %w", err)
+		}
+		hashedAnswer2, err := bcrypt.GenerateFromPassword([]byte(strings.ToLower(strings.TrimSpace(a2))), bcrypt.DefaultCost)
+		if err != nil {
+			return fmt.Errorf("hash answer2: %w", err)
+		}
 
-	_, err = s.queries.CreateUserSecurityQuestions(ctx, queries.CreateUserSecurityQuestionsParams{
-		UserFid:   fakeID,
-		Nin:       nin,
-		Question1: q1,
-		Question2: q2,
-		Answer1:   string(hashedAnswer1),
-		Answer2:   string(hashedAnswer2),
-	})
-	if err != nil {
-		return fmt.Errorf("save security questions: %w", err)
+		_, err = s.queries.CreateUserSecurityQuestions(ctx, queries.CreateUserSecurityQuestionsParams{
+			UserFid:   fakeID,
+			Nin:       nin,
+			Question1: q1,
+			Answer1:   string(hashedAnswer1),
+			Question2: q2,
+			Answer2:   string(hashedAnswer2),
+		})
+		if err != nil {
+			return fmt.Errorf("save security questions: %w", err)
+		}
 	}
 
 	// 4. Invalidate the Redis user-info cache so the next read is fresh
 	_ = s.usersService.InvalidateCachedUserInfo(ctx, fakeID)
+
+	// 5. Attempt to create user wallet if it wasn't successfully created during Signup
+	// Since the user now definitely has a NIN, Monnify wallet creation is more likely to succeed.
+	if s.usersService != nil {
+		go func() {
+			bgCtx := context.Background()
+			registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
+			if userErr == nil {
+				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
+					slog.Info("wallet creation attempt during onboarding (might already exist)", "user_id", userID, "err", walletErr)
+				}
+			}
+		}()
+	}
 
 	return nil
 }
@@ -1559,5 +1609,233 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		return RegisterResult{}, err
 	}
 
-	return RegisterResult{UserID: userID, FakeID: fakeID, User: &user}, nil
+	err = s.CheckAndAssignRole(ctx, user.ID, fakeID, "super_admin", 0)
+	return RegisterResult{UserID: user.ID, FakeID: user.FakeID.Int64, User: &user}, err
+}
+
+// CheckAndAssignRole checks if a user already has a specific role, and if not, assigns it.
+func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, fakeID int64, roleCode string, whoAssigned int64) error {
+	// 1. Get user roles (with cache check)
+	roles, err := s.usersService.GetUserRoles(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user roles: %w", err)
+	}
+
+	// 2. Check if the user already has the role
+	for _, r := range roles.RolesCode {
+		if r == roleCode {
+			// Already has the role, no need to assign again
+			return nil
+		}
+	}
+
+	// 3. Assign the role in DB (UsersService handles caching)
+	err = s.usersService.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
+	if err != nil {
+		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
+	}
+
+	return nil
+}
+
+// UpdateUserRoles replaces a user's roles and optionally sets their party ID.
+func (s *AuthService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error {
+	// 1. Delete all existing roles
+	err := s.queries.DeleteUserRoles(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete existing roles: %w", err)
+	}
+
+	// 2. Assign the new roles
+	for _, roleCode := range roles {
+		err = s.usersService.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
+		if err != nil {
+			return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
+		}
+	}
+
+	// 3. Update party if provided
+	if partyID != nil {
+		err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
+			ID:      userID,
+			PartyID: pgtype.Int2{Int16: int16(*partyID), Valid: true},
+		})
+		if err != nil {
+			return fmt.Errorf("failed to update user party: %w", err)
+		}
+	}
+
+	return nil
+}
+
+type SeedUserRequest struct {
+	ID             int64   `json:"id"`
+	FakeID         int64   `json:"fake_id"`
+	Email          string  `json:"email"`
+	Avatar         string  `json:"avatar"`
+	Phone          *string `json:"phone"`
+	Username       *string `json:"username"`
+	Password       string  `json:"password"`
+	LastName       string  `json:"last_name"`
+	FirstName      string  `json:"first_name"`
+	MiddleName     *string `json:"middle_name"`
+	Gender         string  `json:"gender"`
+	DateOfBirth    string  `json:"date_of_birth"`
+	Religion       string  `json:"religion"`
+	CurrentCountry int16   `json:"current_country"`
+	CurrentState   int16   `json:"current_state"`
+	CurrentLga     *int32  `json:"current_lga"`
+	CurrentCity    *int32  `json:"current_city"`
+	StateOfOrigin  *int16  `json:"state_of_origin"`
+	MaritalStatus  string  `json:"marital_status"`
+	EducationLevel string  `json:"education_level"`
+	HomeAddress    string  `json:"home_address"`
+	OccupationID   *int16  `json:"occupation_id"`
+}
+
+func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
+	for _, u := range users {
+		// check if email already exit, if yes, we can skip this user onto the next
+		if s.CheckEmail(ctx, u.Email) {
+			continue
+		}
+
+		// Hash password
+		hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return "", err
+		}
+
+		// parse date of birth
+		dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
+		if err != nil {
+			return "", fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
+		}
+
+		// Prepare params
+		emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
+		avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
+		usernameVal := pgtype.Text{String: *u.Username, Valid: true}
+		middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
+		genderVal := pgtype.Text{String: u.Gender, Valid: true}
+		currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
+		currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
+		stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
+		occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
+
+		// check if the user phone number is valid
+		var phoneVal pgtype.Text
+		var iso2 string
+		var phonecode string
+		var formattedPhone string
+		var rawPhoneInput string
+		if u.Phone != nil && *u.Phone != "" {
+			rawPhoneInput = *u.Phone
+			country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
+			if err != nil {
+				return "", fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
+			}
+
+			iso2 = country.Iso2
+			phonecode = country.Phonecode
+			formattedPhone, err = s.ValidatePhoneForCountry(rawPhoneInput, iso2)
+			if err != nil {
+				return "", fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
+			}
+			phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
+		}
+
+		// Generate unique referral code (e.g. DANIEL-88)
+		firstNameUpper := strings.ToUpper(strings.TrimSpace(u.FirstName))
+		if firstNameUpper == "" {
+			firstNameUpper = "USER"
+		}
+		n, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(900))
+		suffix := n.Int64() + 100 // 100-999
+		myReferralCode := fmt.Sprintf("%s-%d", firstNameUpper, suffix)
+
+		params := queries.SeedUserParams{
+			Email:           emailVal,
+			Avatar:          avatarVal,
+			Phone:           phoneVal,
+			Username:        usernameVal,
+			PasswordHash:    string(hashed),
+			LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
+			FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
+			MiddleName:      middleNameVal,
+			Gender:          genderVal,
+			DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
+			CurrentCountry:  u.CurrentCountry,
+			CurrentState:    u.CurrentState,
+			CurrentLga:      currentLgaVal,
+			CurrentCity:     currentCityVal,
+			StateOfOrigin:   stateOfOriginVal,
+			VotersCardImage: pgtype.Text{},
+			AccountStatus:   pgtype.Text{},
+			PartyID:         pgtype.Int2{},
+			IsPolitician:    pgtype.Bool{Bool: false, Valid: true},
+			IsVerified:      pgtype.Bool{Bool: false, Valid: true},
+			ReferralCode:    pgtype.Text{String: myReferralCode, Valid: true},
+		}
+
+		id, err := s.queries.SeedUser(ctx, params)
+		if err != nil {
+			return "", fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+		}
+
+		_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
+			UserID:            id,
+			OccupationID:      occupationIDVal,
+			EducationalStatus: pgtype.Text{},
+			HighestDegree:     pgtype.Text{},
+			GraduationYear:    pgtype.Text{},
+			SchoolName:        pgtype.Text{},
+			Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
+			MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
+			EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
+			Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
+		}
+
+		_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
+			UserID:             id,
+			NinVerified:        pgtype.Bool{Bool: false, Valid: true},
+			PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
+			EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
+			VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
+		})
+		if err != nil {
+			return "", fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
+		}
+
+		// Save details to Redis cache
+		fakeID := u.FakeID
+		if fakeID == 0 {
+			fakeID = utils.GenerateFakeID(id)
+			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
+		}
+
+		emailStr := emailVal.String
+		usernameStr := usernameVal.String
+		_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", id, fakeID)
+
+		// save the user phone number
+		if formattedPhone != "" {
+			_ = s.usersService.UpdateUserPhoneNumbers(ctx, id, fakeID, []usersservice.PhonePayload{
+				{
+					Phone:     formattedPhone,
+					RawInput:  rawPhoneInput,
+					Phonecode: phonecode,
+					IsDefault: true,
+				},
+			})
+		}
+
+		// get and save the user details to cache in redis
+		_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
+
+	}
+	return "Users seeded successfully", nil
 }

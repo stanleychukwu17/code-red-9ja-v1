@@ -18,10 +18,20 @@ const LockIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export function MyPollingUnit() {
+export function MyPollingUnit({ onPracticeClick }: { onPracticeClick?: () => void }) {
   const navigate = useNavigate();
   const { selectedAssignment, isLive, setIsLive, isLock, setIsLocked } =
     useAuth();
+
+  const interceptClick = (e: React.MouseEvent, action: () => void) => {
+    if (onPracticeClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onPracticeClick();
+      return;
+    }
+    action();
+  };
 
   const pollingUnitName =
     selectedAssignment?.polling_unit_name ||
@@ -38,7 +48,7 @@ export function MyPollingUnit() {
           </h3>
         </div>
         <Button
-          onClick={() => navigate({ to: "/update-polling-unit" })}
+          onClick={(e) => interceptClick(e, () => navigate({ to: "/update-polling-unit" }))}
           variant="secondary"
           size="sm"
           className="rounded-full px-3"
@@ -64,7 +74,7 @@ export function MyPollingUnit() {
         </div>
       </div>
       <div
-        onClick={() => setIsLive(!isLive)}
+        onClick={(e) => interceptClick(e, () => setIsLive(!isLive))}
         className={cn(
           "size-11 bg-c-10 rounded-full flex items-center justify-center shrink-0 font-extrabold text-sm cursor-pointer",
           isLive && "bg-[#54a0ff]/15 text-[#54a0ff]",
@@ -73,7 +83,7 @@ export function MyPollingUnit() {
         <p className="text-lg">{isLive ? "L" : "F"}</p>
       </div>
       <div
-        onClick={() => setIsLocked(!isLock)}
+        onClick={(e) => interceptClick(e, () => setIsLocked(!isLock))}
         className={cn(
           "size-11 bg-[#4A2D1B]/15 text-[#4A2D1B] rounded-full flex items-center justify-center shrink-0 font-semibold text-sm cursor-pointer",
           !isLock && "bg-purple/15 text-purple",

@@ -9,7 +9,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"strconv"
-
+	"strings"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -896,3 +896,33 @@ func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
 
 	return false
 }
+func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error) {
+	if firstName == "" {
+		firstName = "AGENT"
+	}
+	base := strings.ToUpper(firstName)
+	var code string
+	for i := 10; i < 999; i++ {
+		code = fmt.Sprintf("%s%d", base, i)
+		exists, err := s.queries.CheckReferralCodeExists(ctx, pgtype.Text{String: code, Valid: true})
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			break
+		}
+	}
+	err := s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
+		ID:           userID,
+		ReferralCode: pgtype.Text{String: code, Valid: true},
+	})
+	if err != nil {
+		return "", err
+	}
+	// Invalidate the cache
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+	s.rdb.Del(ctx, userInfoKey)
+	return code, nil
+}
+
+

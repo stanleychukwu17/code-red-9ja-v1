@@ -19,6 +19,11 @@ INSERT INTO system_settings (key, value, description)
 VALUES ('live_voters_referred', '10'::jsonb, 'The target number of live voters an agent is expected to refer')
 ON CONFLICT (key) DO NOTHING;
 
+-- Seed target for updates count
+INSERT INTO system_settings (key, value, description)
+VALUES ('target_updates_count', '20'::jsonb, 'The target number of updates an agent is expected to give')
+ON CONFLICT (key) DO NOTHING;
+
 -- Seed initial earnings allocations
 INSERT INTO system_settings (key, value, description)
 VALUES 

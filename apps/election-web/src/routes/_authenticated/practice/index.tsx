@@ -29,5 +29,9 @@ function RouteComponent() {
     );
   }
 
-  return <>Regular User</>;
+  return (
+    <NuqsAdapter>
+      <PollingAgentPracticePage />
+    </NuqsAdapter>
+  );
 }

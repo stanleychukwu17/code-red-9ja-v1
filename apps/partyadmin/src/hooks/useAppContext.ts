@@ -2,7 +2,12 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRouteContext } from "@tanstack/react-router";
-import { getParty, getPublicParties } from "#/lib/server/parties";
+import {
+  getParty,
+  getPublicParties,
+  getPartyWallet,
+  createPartyWallet,
+} from "#/lib/server/parties";
 import {
   getElectionCandidates,
   getElectionsByGroup,
@@ -281,9 +286,33 @@ export const useAppContext = () => {
     }
   }, [elections, selectedElectionGroup, selectedElection, dispatch]);
 
+  const fetchPartyWallet = useServerFn(getPartyWallet);
+  const createPartyWalletFn = useServerFn(createPartyWallet);
+
+  const { data: partyWallet } = useQuery({
+    queryKey: ["partyWallet", party?.id],
+    enabled: !!party?.id,
+    queryFn: async () => {
+      const res = await fetchPartyWallet({ data: party?.id as number });
+      if (res?.success && res.data?.wallet) {
+        return res.data.wallet;
+      }
+
+      // If wallet not found, attempt to create it automatically
+      if (party?.id) {
+        const createRes = await createPartyWalletFn({ data: party.id });
+        if (createRes?.success && createRes.data?.wallet) {
+          return createRes.data.wallet;
+        }
+      }
+      return null;
+    },
+  });
+
   return {
     user,
     party,
+    partyWallet,
     selectedElectionGroup,
     selectedElection,
     setSelectedElectionGroup: (group: any | null) =>
@@ -329,6 +358,7 @@ export const useAuth = () => {
       name: "",
       logo: undefined,
     },
+    partyWallet: context.partyWallet,
     selectedElectionGroup: context.selectedElectionGroup,
     selectedElection: context.selectedElection,
     setSelectedElectionGroup: context.setSelectedElectionGroup,

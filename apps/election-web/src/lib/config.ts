@@ -28,6 +28,7 @@ export const API_URL = {
     verifySignupEmailOtp: `${api}/auth/signup/email-otp/verify`,
     checkNin: `${api}/auth/check_nin`,
     checkUsername: `${api}/auth/check_username`,
+    checkReferralCode: `${api}/auth/check_referral_code`,
     signup: `${api}/auth/signup`,
     register: `${api}/auth/register`,
     completeOnboarding: `${api}/auth/onboarding`,
@@ -250,6 +251,9 @@ export const API_URL = {
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
 
   users: `${api}/users`,
+  generateReferralCode: `${api}/users/me/referral-code`,
+  getMyWallet: `${api}/users/me/wallet`,
+  createUserWallet: (id: string | number) => `${api}/users/${id}/wallet`,
   updateProfile: `${api}/users/profile`,
   pollingAgentApplications: `${api}/party-applications`,
   pollingAgentRecommendations: `${api}/party-applications/recommendations`,

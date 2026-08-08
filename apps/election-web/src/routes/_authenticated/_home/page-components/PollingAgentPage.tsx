@@ -18,6 +18,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { HomeTabs } from "../../../../components/Tabs";
 import { ApplicationsCard } from "../components/ApplicationsCard";
+import { ReferralCard } from "../components/ReferralCard";
 import { ArrivalCard } from "../components/ArrivalCard";
 import { ArrivalDrawer } from "../components/ArrivalDrawer";
 import { ContactPartyTab } from "../components/ContactPartyTab";
@@ -33,9 +34,12 @@ import { UploadsTab } from "../components/UploadsTab";
 import { GiveUpdateFloatingButton } from "../components/GiveUpdateFloatingButton";
 import { HomeBody } from "../components/Shared";
 import { MyPollingUnit } from "../components/MyPollingUnit";
+import { Route } from "..";
 
 export function PollingAgentPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch() as any;
+
   const {
     selectedElectionGroup,
     selectedElection,
@@ -170,8 +174,8 @@ export function PollingAgentPage() {
   return (
     <div className="w-full min-h-screen">
       <HomeHeader daysLeft={daysLeft} />
+      {!search.isPractice && <MyPollingUnit />}
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
-      <MyPollingUnit />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           {showObjectives && (
@@ -182,14 +186,14 @@ export function PollingAgentPage() {
                     key={item.title}
                     isCompleted={item.isCompleted}
                     title={item.title}
-                    onClick={() => navigate({ to: "/report" })}
+                    onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                   />
                 ))}
                 <div className="mb-2 mt-2 px-4">
                   <Button
                     type="button"
                     size="extra-large"
-                    onClick={() => navigate({ to: "/report" })}
+                    onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                     className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
                   >
                     <ReportIcon className="w-5 h-5 shrink-0" />
@@ -208,7 +212,7 @@ export function PollingAgentPage() {
                     isCompleted={item.isCompleted}
                     title={item.title}
                     rightText={item.rightText}
-                    onClick={() => navigate({ to: "/report" })}
+                    onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                   />
                 ))}
               </LeaderboardCardWrapper>
@@ -229,6 +233,7 @@ export function PollingAgentPage() {
 
       <HomeBody>
         {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
+        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
         {daysLeft === 0 &&

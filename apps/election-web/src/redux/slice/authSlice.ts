@@ -32,6 +32,7 @@ export interface UserProps {
   last_name?: string;
   avatar_url?: string;
   phone?: string;
+  referral_code?: string;
 }
 
 export interface AuthState {

@@ -46,6 +46,30 @@ export const getParty = createServerFn({ method: "POST" })
     }
   });
 
+export const getPartyWallet = createServerFn({ method: "GET" })
+  .inputValidator((id: string | number) => id)
+  .handler(async ({ data: id }) => {
+    try {
+      const response = await apiFetch(API_URL.partyWallet(id));
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: "Failed to fetch party wallet" };
+    }
+  });
+
+export const createPartyWallet = createServerFn({ method: "POST" })
+  .inputValidator((id: string | number) => id)
+  .handler(async ({ data: id }) => {
+    try {
+      const response = await apiFetch(API_URL.partyWallet(id), {
+        method: "POST",
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: "Failed to create party wallet" };
+    }
+  });
+
 export const getPresignedUploadURL = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {

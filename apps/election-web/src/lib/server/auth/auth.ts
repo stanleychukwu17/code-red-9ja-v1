@@ -175,6 +175,27 @@ export const checkUsername = createServerFn({ method: "POST" })
     }
   });
 
+export const checkReferralCode = createServerFn({ method: "POST" })
+  .inputValidator((data: { code: string }) => data)
+  .handler(async ({ data }) => {
+    try {
+      const response = await fetch(API_URL.auth.checkReferralCode, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const result = await response.json();
+      return result;
+    } catch (error) {
+      console.error("Check referral code error:", error);
+      return {
+        status: "error",
+        message: "An unexpected error occurred during referral code check",
+      };
+    }
+  });
+
 // Completes the registration process by sending a POST request to the server with the user's data.
 export const completeRegistration = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)

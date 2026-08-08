@@ -27,8 +27,12 @@ import { ReferralCard } from "../components/ReferralCard";
 import { HomeBody } from "../components/Shared";
 import { UploadResultCard } from "../components/UploadResultCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
+import { Route } from "..";
+
 export function GeneralPage() {
   const navigate = useNavigate();
+  const search = Route.useSearch() as any;
+
   const { selectedElectionGroup, selectedElection } = useAuth();
 
   const [carouselIndex, setCarouselIndex] = useState(0);
@@ -97,7 +101,7 @@ export function GeneralPage() {
   return (
     <div className="w-full min-h-screen">
       <HomeHeader daysLeft={daysLeft} />
-      <MyPollingUnit />
+      {!search.isPractice && <MyPollingUnit />}
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
@@ -109,7 +113,7 @@ export function GeneralPage() {
                   isCompleted={item.isCompleted}
                   title={item.title}
                   rightText={item.rightText}
-                  onClick={() => navigate({ to: "/report" })}
+                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                 />
               ))}
               <div className="mb-2 mt-2 px-4">
@@ -117,7 +121,7 @@ export function GeneralPage() {
                   type="button"
                   variant="leaderboardGrey"
                   size="extra-large"
-                  onClick={() => navigate({ to: "/report" })}
+                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                   className="w-full"
                 >
                   <ReportIcon className="w-5 h-5 shrink-0" />

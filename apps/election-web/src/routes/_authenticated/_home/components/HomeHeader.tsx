@@ -18,6 +18,7 @@ interface HomeHeaderProps {
   avatarImage?: string;
   textClassName?: string;
   containerClassName?: string;
+  onPracticeClick?: () => void;
 }
 
 export function HomeHeader({
@@ -25,6 +26,7 @@ export function HomeHeader({
   textClassName,
   avatarImage,
   containerClassName,
+  onPracticeClick,
 }: HomeHeaderProps) {
   const {
     user,
@@ -35,6 +37,16 @@ export function HomeHeader({
   } = useAuth();
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
+
+  const interceptClick = (e: React.MouseEvent, action?: () => void) => {
+    if (onPracticeClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onPracticeClick();
+      return;
+    }
+    if (action) action();
+  };
 
   return (
     <header
@@ -50,7 +62,16 @@ export function HomeHeader({
           alt={user?.first_name || "User"}
           className="size-7 shrink-0"
         />
-        <div className="flex-1 min-w-0 sm:max-w-[180px]">
+        <div 
+          className="flex-1 min-w-0 sm:max-w-[180px]"
+          onClickCapture={(e) => {
+            if (onPracticeClick) {
+              e.preventDefault();
+              e.stopPropagation();
+              onPracticeClick();
+            }
+          }}
+        >
           <SelectElectionGroupAndElection
             fetchElectionGroups={fetchGroups}
             fetchElectionsByGroup={fetchElectionsByGroup}
@@ -77,7 +98,10 @@ export function HomeHeader({
               {daysLeft} {daysLeft === 1 ? "day" : "days"} left
             </span>
           ))}
-        <div className="relative cursor-pointer p-1">
+        <div 
+          className="relative cursor-pointer p-1"
+          onClick={(e) => interceptClick(e)}
+        >
           <NotificationSolidIcon
             className={`size-7 transition ${textClassName || "text-neutral-950 hover:text-neutral-800"}`}
           />

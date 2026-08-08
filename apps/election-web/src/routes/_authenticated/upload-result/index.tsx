@@ -103,7 +103,7 @@ function UploadResultFlow() {
         setCurrentElectionIndex((prev) => prev - 1);
         setSubStep(1); // Back to previous election
       } else {
-        navigate({ to: "/home" });
+        navigate({ to: "/" });
       }
     }
   };
@@ -181,7 +181,7 @@ function UploadResultFlow() {
       } else {
         // Finished all
         toast.success("All results submitted!");
-        navigate({ to: "/home" });
+        navigate({ to: "/" });
       }
     },
     onError: (err: any) => {
@@ -207,7 +207,7 @@ function UploadResultFlow() {
   if (!elections || elections.length === 0) {
     return (
       <PageWrapper>
-        <PageHeader onBackClick={() => navigate({ to: "/home" })} />
+        <PageHeader onBackClick={() => navigate({ to: "/" })} />
         <div className="p-8 text-center text-neutral-500">
           No eligible elections found.
         </div>
@@ -363,7 +363,9 @@ function UploadResultFlow() {
               className="w-full rounded-full border-2 border-neutral-200 text-neutral-700 font-bold h-14"
               onClick={() => {
                 if (search.isPractice) {
-                  const dummyFile = new File(["dummy"], "practice.jpg", { type: "image/jpeg" });
+                  const dummyFile = new File(["dummy"], "practice.jpg", {
+                    type: "image/jpeg",
+                  });
                   setResultSheetImage({
                     url: "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp",
                     type: "image",
@@ -375,7 +377,10 @@ function UploadResultFlow() {
                 }
               }}
             >
-              + {search.isPractice ? "Take another picture (simulate)" : "Take another picture"}
+              +{" "}
+              {search.isPractice
+                ? "Take another picture (simulate)"
+                : "Take another picture"}
             </Button>
 
             <div className="mt-2 pointer-events-none">
@@ -424,7 +429,9 @@ function UploadResultFlow() {
             onClick={() => {
               if (subStep === 2) {
                 if (search.isPractice) {
-                  const dummyFile = new File(["dummy"], "practice.jpg", { type: "image/jpeg" });
+                  const dummyFile = new File(["dummy"], "practice.jpg", {
+                    type: "image/jpeg",
+                  });
                   setResultSheetImage({
                     url: "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp",
                     type: "image",
@@ -436,7 +443,10 @@ function UploadResultFlow() {
                 }
               } else if (subStep === 3) {
                 if (search.isPractice) {
-                  const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
+                  const failedAttempts = parseInt(
+                    search.failedAttemptCount || "0",
+                    10,
+                  );
                   showFeedbackToast(true, failedAttempts);
                   navigate({
                     to: "/practice",
@@ -456,7 +466,11 @@ function UploadResultFlow() {
             {isSubmitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : subStep === 2 ? (
-              search.isPractice ? "+ Upload Result (simulate)" : "+ Upload Result"
+              search.isPractice ? (
+                "+ Upload Result (simulate)"
+              ) : (
+                "+ Upload Result"
+              )
             ) : (
               "Upload Result"
             )}

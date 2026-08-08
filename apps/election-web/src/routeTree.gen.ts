@@ -19,7 +19,6 @@ import { Route as AuthChangePasswordRouteImport } from './routes/auth/change-pas
 import { Route as AuthenticatedVoteIndexRouteImport } from './routes/_authenticated/vote/index'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
 import { Route as AuthenticatedUpdatePollingUnitIndexRouteImport } from './routes/_authenticated/update-polling-unit/index'
-import { Route as AuthenticatedReportIndexRouteImport } from './routes/_authenticated/report/index'
 import { Route as AuthenticatedReferralsIndexRouteImport } from './routes/_authenticated/referrals/index'
 import { Route as AuthenticatedPracticeIndexRouteImport } from './routes/_authenticated/practice/index'
 import { Route as AuthenticatedPartiesIndexRouteImport } from './routes/_authenticated/parties/index'
@@ -86,12 +85,6 @@ const AuthenticatedUpdatePollingUnitIndexRoute =
   AuthenticatedUpdatePollingUnitIndexRouteImport.update({
     id: '/update-polling-unit/',
     path: '/update-polling-unit/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedReportIndexRoute =
-  AuthenticatedReportIndexRouteImport.update({
-    id: '/report/',
-    path: '/report/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedReferralsIndexRoute =
@@ -211,7 +204,6 @@ export interface FileRoutesByFullPath {
   '/parties/': typeof AuthenticatedPartiesIndexRoute
   '/practice/': typeof AuthenticatedPracticeIndexRoute
   '/referrals/': typeof AuthenticatedReferralsIndexRoute
-  '/report/': typeof AuthenticatedReportIndexRoute
   '/update-polling-unit/': typeof AuthenticatedUpdatePollingUnitIndexRoute
   '/upload-result/': typeof AuthenticatedUploadResultIndexRoute
   '/vote/': typeof AuthenticatedVoteIndexRoute
@@ -239,7 +231,6 @@ export interface FileRoutesByTo {
   '/parties': typeof AuthenticatedPartiesIndexRoute
   '/practice': typeof AuthenticatedPracticeIndexRoute
   '/referrals': typeof AuthenticatedReferralsIndexRoute
-  '/report': typeof AuthenticatedReportIndexRoute
   '/update-polling-unit': typeof AuthenticatedUpdatePollingUnitIndexRoute
   '/upload-result': typeof AuthenticatedUploadResultIndexRoute
   '/vote': typeof AuthenticatedVoteIndexRoute
@@ -269,7 +260,6 @@ export interface FileRoutesById {
   '/_authenticated/parties/': typeof AuthenticatedPartiesIndexRoute
   '/_authenticated/practice/': typeof AuthenticatedPracticeIndexRoute
   '/_authenticated/referrals/': typeof AuthenticatedReferralsIndexRoute
-  '/_authenticated/report/': typeof AuthenticatedReportIndexRoute
   '/_authenticated/update-polling-unit/': typeof AuthenticatedUpdatePollingUnitIndexRoute
   '/_authenticated/upload-result/': typeof AuthenticatedUploadResultIndexRoute
   '/_authenticated/vote/': typeof AuthenticatedVoteIndexRoute
@@ -299,7 +289,6 @@ export interface FileRouteTypes {
     | '/parties/'
     | '/practice/'
     | '/referrals/'
-    | '/report/'
     | '/update-polling-unit/'
     | '/upload-result/'
     | '/vote/'
@@ -327,7 +316,6 @@ export interface FileRouteTypes {
     | '/parties'
     | '/practice'
     | '/referrals'
-    | '/report'
     | '/update-polling-unit'
     | '/upload-result'
     | '/vote'
@@ -356,7 +344,6 @@ export interface FileRouteTypes {
     | '/_authenticated/parties/'
     | '/_authenticated/practice/'
     | '/_authenticated/referrals/'
-    | '/_authenticated/report/'
     | '/_authenticated/update-polling-unit/'
     | '/_authenticated/upload-result/'
     | '/_authenticated/vote/'
@@ -442,13 +429,6 @@ declare module '@tanstack/react-router' {
       path: '/update-polling-unit'
       fullPath: '/update-polling-unit/'
       preLoaderRoute: typeof AuthenticatedUpdatePollingUnitIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/report/': {
-      id: '/_authenticated/report/'
-      path: '/report'
-      fullPath: '/report/'
-      preLoaderRoute: typeof AuthenticatedReportIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/referrals/': {
@@ -583,7 +563,6 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPartiesIndexRoute: typeof AuthenticatedPartiesIndexRoute
   AuthenticatedPracticeIndexRoute: typeof AuthenticatedPracticeIndexRoute
   AuthenticatedReferralsIndexRoute: typeof AuthenticatedReferralsIndexRoute
-  AuthenticatedReportIndexRoute: typeof AuthenticatedReportIndexRoute
   AuthenticatedUpdatePollingUnitIndexRoute: typeof AuthenticatedUpdatePollingUnitIndexRoute
   AuthenticatedUploadResultIndexRoute: typeof AuthenticatedUploadResultIndexRoute
   AuthenticatedVoteIndexRoute: typeof AuthenticatedVoteIndexRoute
@@ -606,7 +585,6 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPartiesIndexRoute: AuthenticatedPartiesIndexRoute,
   AuthenticatedPracticeIndexRoute: AuthenticatedPracticeIndexRoute,
   AuthenticatedReferralsIndexRoute: AuthenticatedReferralsIndexRoute,
-  AuthenticatedReportIndexRoute: AuthenticatedReportIndexRoute,
   AuthenticatedUpdatePollingUnitIndexRoute:
     AuthenticatedUpdatePollingUnitIndexRoute,
   AuthenticatedUploadResultIndexRoute: AuthenticatedUploadResultIndexRoute,
