@@ -84,6 +84,7 @@ type Querier interface {
 	CreditUserWallet(ctx context.Context, arg CreditUserWalletParams) (UserWallet, error)
 	DebitPartyWallet(ctx context.Context, arg DebitPartyWalletParams) (PartyWallet, error)
 	DebitUserWallet(ctx context.Context, arg DebitUserWalletParams) (UserWallet, error)
+	DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (Party, error)
 	DeductPartySlots(ctx context.Context, arg DeductPartySlotsParams) (Party, error)
 	DeleteAssignment(ctx context.Context, id int64) error
 	DeleteElectionCandidateForParty(ctx context.Context, arg DeleteElectionCandidateForPartyParams) error
@@ -411,7 +412,7 @@ type Querier interface {
 	UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) error
 	UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error)
 	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (Party, error)
-	UpdatePartyAgentPaymentAllocation(ctx context.Context, arg UpdatePartyAgentPaymentAllocationParams) (Party, error)
+	UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg UpdatePartyAgentPaymentAllocationKoboParams) (Party, error)
 	UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscountParams) (Party, error)
 	UpdatePartyIsVerified(ctx context.Context, arg UpdatePartyIsVerifiedParams) error
 	UpdatePhoneNumber(ctx context.Context, arg UpdatePhoneNumberParams) error
@@ -480,6 +481,7 @@ type Querier interface {
 	UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)
 	UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
+	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
 	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }
 

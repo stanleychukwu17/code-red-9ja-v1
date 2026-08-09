@@ -2,10 +2,12 @@ package partyapplications
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -49,6 +51,7 @@ type SubmitApplicationInput struct {
 	Address           string
 	BankAccountNumber string
 	BankCode          string
+	WhatsappPhone     string
 }
 
 func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PartyApplication, error) {
@@ -72,6 +75,11 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	txQueries := s.queries.WithTx(tx)
 
+	phoneVal := input.Phone
+	if phoneVal == "---" {
+		phoneVal = ""
+	}
+
 	// Update user agent details
 	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:              input.UserID,
@@ -83,7 +91,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		CurrentLga:      pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
 		CurrentCity:     pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
 		CurrentWard:     pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
-		Phone:           input.Phone,
+		Phone:           phoneVal,
 		PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
 		Address:         input.Address,
 	})
@@ -120,6 +128,36 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert primary bank account: %w", err)
+		}
+	}
+
+	if input.WhatsappPhone != "" {
+		rawPhone := input.WhatsappPhone
+		phonecode := "234"
+		formattedPhone := rawPhone
+
+		if len(rawPhone) > 0 && rawPhone[0] != '+' {
+			if rawPhone[0] == '0' {
+				formattedPhone = "+234" + rawPhone[1:]
+			} else if len(rawPhone) == 10 {
+				formattedPhone = "+234" + rawPhone
+			} else if !strings.HasPrefix(rawPhone, "234") {
+				formattedPhone = "+234" + rawPhone
+			} else {
+				formattedPhone = "+" + rawPhone
+			}
+		}
+
+		_, err = txQueries.UpsertUserPhoneNumber(ctx, queries.UpsertUserPhoneNumberParams{
+			UserID:     input.UserID,
+			Phone:      formattedPhone,
+			Phonecode:  phonecode,
+			RawInput:   rawPhone,
+			OnWhatsapp: pgtype.Bool{Bool: true, Valid: true},
+			IsDefault:  pgtype.Bool{Bool: false, Valid: true},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to upsert whatsapp phone number: %w", err)
 		}
 	}
 
@@ -411,6 +449,50 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			} else {
 				return queries.PartyApplication{}, errors.New("polling unit ID is required for polling agents but not specified in application")
 			}
+		}
+	}
+
+	// Deduct payment based on role payment allocation
+	party, err := txQueries.GetPartyByID(ctx, int16(app.PartyID))
+	if err != nil {
+		return queries.PartyApplication{}, fmt.Errorf("failed to fetch party: %w", err)
+	}
+
+	roleKey := ""
+	switch roleType {
+	case "pollingagent", "polling_agent":
+		roleKey = "pollingAgent"
+	case "ward-election-supervisor", "ward_supervisor":
+		roleKey = "wardElectionSupervisor"
+	case "lga-election-supervisor", "lga_supervisor":
+		roleKey = "lgaElectionSupervisor"
+	case "state-election-supervisor", "state_supervisor":
+		roleKey = "stateElectionSupervisor"
+	}
+
+	var deductionKobo int64 = 0
+	if roleKey != "" && party.AgentPaymentAllocationKobo != nil {
+		var allocs map[string]struct {
+			Default int64 `json:"default"`
+		}
+		if err := json.Unmarshal(party.AgentPaymentAllocationKobo, &allocs); err == nil {
+			if alloc, ok := allocs[roleKey]; ok {
+				// The value is in Kobo now
+				deductionKobo = alloc.Default
+			}
+		}
+	}
+
+	if deductionKobo > 0 {
+		_, err = txQueries.DeductPartyAgentPaymentBalance(ctx, queries.DeductPartyAgentPaymentBalanceParams{
+			AgentPaymentBalanceKobo: deductionKobo,
+			ID:                      party.ID,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return queries.PartyApplication{}, errors.New("insufficient payment balance: please fund your party wallet to accept this application")
+			}
+			return queries.PartyApplication{}, fmt.Errorf("failed to deduct payment balance: %w", err)
 		}
 	}
 

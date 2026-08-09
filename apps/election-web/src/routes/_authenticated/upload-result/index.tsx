@@ -19,6 +19,7 @@ import NigerianFlagIcon from "@repo/ui/icons/nigerian-flag-icon";
 import TwinkleLittleStarIcon from "@repo/ui/icons/twinkle-little-star-icon";
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
+import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 
 export const Route = createFileRoute("/_authenticated/upload-result/")({
   component: UploadResultFlow,
@@ -225,14 +226,13 @@ function UploadResultFlow() {
       {/* Premium Styled PageHeader */}
       <PageHeader
         onBackClick={handleBack}
-        title={subStep > 1 ? currentElection.name : ""}
+        // title={subStep > 1 ? currentElection.name : ""}
       />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto pb-32">
         {/* SUBSTEP 1: Welcome Page / Intro */}
         {subStep === 1 && (
-          <div className="relative flex flex-col items-center gap-4 h-full px-5 pt-8 max-w-[430px] mx-auto">
-            <BackgroundDesign />
+          <div className="relative flex flex-col items-center gap-4 h-full px-4 pt-8 max-w-[430px] mx-auto">
             <AppAvatar
               src={party?.logo}
               alt="Party Logo"
@@ -246,7 +246,7 @@ function UploadResultFlow() {
             />
 
             <DescriptiveText
-              text="Upload the official and final vote result sheet from INEC for this election."
+              text="Upload Final Voting Result Sheet (for this election)."
               size="sm"
               className="text-center text-c-70 max-w-[320px]"
             />
@@ -258,15 +258,14 @@ function UploadResultFlow() {
                 value="+₦2,500"
                 subValue="₦3,829.00 total"
                 variant="purple"
-                icon={<FancyMoneyBagIcon className="size-6 text-purple" />}
+                icon={<FancyMoneyBagIcon className="size-6" />}
                 className="w-full "
               />
 
               <InfoCard
-                icon={<AlertIcon className="size-6 text-yellow shrink-0" />}
-                label="Ensure the picture is extremely clear. Blurry or cut-off result sheet uploads will be rejected by the party administrators."
+                icon={<AlertIcon className="size-6 text-c-90 shrink-0" />}
+                label="Ensure the picture is clear and captures the entire result sheet. You will be paid based on how well you do this."
                 variant="grey"
-                className="w-full text-[14px]"
               />
             </div>
           </div>
@@ -274,42 +273,23 @@ function UploadResultFlow() {
 
         {/* SUBSTEP 2: Instructions and Camera Trigger */}
         {subStep === 2 && (
-          <div className="px-5 flex flex-col gap-6 max-w-[430px] mx-auto">
+          <div className="px-4 flex flex-col gap-6 max-w-[430px] mx-auto">
             <div className="space-y-2 mt-2">
               <TitleText
-                text="Take a clear photo of the INEC Result Sheet"
+                text="Take a clear picture of the Final Result Sheet for this election"
                 size="lg"
                 className="text-c-90"
               />
               <DescriptiveText
-                text="Please position the camera directly above the sheet, ensuring all text and stamps are completely readable."
+                text="It needs to be as clear as the perfect example below"
                 size="sm"
               />
             </div>
 
-            <InfoCard
-              icon={
-                <AlertIcon className="size-6 text-yellow shrink-0 mt-0.5" />
-              }
-              label="After the counting is fully completed, ask the INEC officials to present the official result sheet. Take your photo immediately."
-              variant="yellow"
-              className="w-full text-[14px]"
-            />
-
-            <RewardSumCard
-              label="Reward for this upload"
-              subtext="Potential pay so far"
-              value="+₦2,500"
-              subValue="₦3,829.00 total"
-              variant="purple"
-              icon={<FancyMoneyBagIcon className="size-6 text-purple" />}
-              className="w-full "
-            />
-
             <div className="space-y-3">
-              <span className="text-[15px] font-bold text-c-80">
+              <p className="text-[15px] font-bold text-c-80">
                 Perfect Example:
-              </span>
+              </p>
               <div className="rounded-2xl overflow-hidden border-[1.5px] border-c-90 ">
                 <img
                   src="https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp"
@@ -323,25 +303,18 @@ function UploadResultFlow() {
 
         {/* SUBSTEP 3: Preview taken picture */}
         {subStep === 3 && resultSheetImage && (
-          <div className="px-5 flex flex-col gap-6 max-w-[430px] mx-auto">
+          <div className="px-4 flex flex-col gap-6 max-w-[430px] mx-auto">
             <div className="space-y-2 mt-2">
               <TitleText
-                text="Confirm Result Sheet Photo"
+                text="👍 Picture taken!"
                 size="lg"
                 className="text-c-90"
               />
               <DescriptiveText
-                text="Check if the image is readable. If not, tap Retake to shoot a cleaner photo."
+                text="If picture is clear enough and captures entire sheet, tap the upload result button."
                 size="sm"
               />
             </div>
-
-            <InfoCard
-              icon={<AlertIcon className="size-6 text-green shrink-0" />}
-              label="Your payout is dependent on the quality and readability of this image. Re-upload if it is blurry."
-              variant="green"
-              className="w-full text-[14px]"
-            />
 
             <div className="relative rounded-2xl overflow-hidden border-[1.5px] border-c-90  bg-neutral-100">
               <img
@@ -379,7 +352,6 @@ function UploadResultFlow() {
                 }
               }}
             >
-              +{" "}
               {search.isPractice
                 ? "Retake Picture (simulate)"
                 : "Retake Picture"}
@@ -408,66 +380,71 @@ function UploadResultFlow() {
             className="w-full rounded-full"
             onClick={() => setSubStep(2)}
           >
-            Start Upload <ArrowRight className="ml-2 w-5 h-5" />
+            <ArrowHandleIcon className="ml-2 w-5 h-5" />
           </Button>
         </StickyFooter>
       ) : (
-        <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90">
-          <Button
-            type="button"
-            variant="black"
-            size="4xl"
-            className="w-full rounded-full h-14 text-[16px]"
-            onClick={() => {
-              if (subStep === 2) {
-                if (search.isPractice) {
-                  const dummyFile = new File(["dummy"], "practice.jpg", {
-                    type: "image/jpeg",
-                  });
-                  setResultSheetImage({
-                    url: "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp",
-                    type: "image",
-                    file: dummyFile,
-                  });
-                  setSubStep(3);
-                } else {
-                  sheetImageRef.current?.click();
+        <div>
+          <div className="bg-purple/20 w-full h-10 px-4 flex items-center">
+            <p>{currentElection.name}</p>
+          </div>
+          <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90">
+            <Button
+              type="button"
+              variant="black"
+              size="4xl"
+              className="w-full rounded-full h-14 text-[16px]"
+              onClick={() => {
+                if (subStep === 2) {
+                  if (search.isPractice) {
+                    const dummyFile = new File(["dummy"], "practice.jpg", {
+                      type: "image/jpeg",
+                    });
+                    setResultSheetImage({
+                      url: "https://res.cloudinary.com/dhtcwqsx4/image/upload/v1784365430/Free9ja/pictures/Example_-_Election_Result_zcloos.webp",
+                      type: "image",
+                      file: dummyFile,
+                    });
+                    setSubStep(3);
+                  } else {
+                    sheetImageRef.current?.click();
+                  }
+                } else if (subStep === 3) {
+                  if (search.isPractice) {
+                    const failedAttempts = parseInt(
+                      search.failedAttemptCount || "0",
+                      10,
+                    );
+                    showFeedbackToast(true, failedAttempts);
+                    navigate({
+                      to: "/practice",
+                      search: {
+                        page: "completed",
+                        taskId: search.taskId,
+                        isPractice: "true",
+                      } as any,
+                    });
+                  } else {
+                    submitMutation.mutate();
+                  }
                 }
-              } else if (subStep === 3) {
-                if (search.isPractice) {
-                  const failedAttempts = parseInt(
-                    search.failedAttemptCount || "0",
-                    10,
-                  );
-                  showFeedbackToast(true, failedAttempts);
-                  navigate({
-                    to: "/practice",
-                    search: {
-                      page: "completed",
-                      taskId: search.taskId,
-                      isPractice: "true",
-                    } as any,
-                  });
-                } else {
-                  submitMutation.mutate();
-                }
-              }
-            }}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : subStep === 2 ? (
-              search.isPractice ? (
-                "+ Upload Result (simulate)"
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : subStep === 2 ? (
+                search.isPractice ? (
+                  "Upload Result (simulate)"
+                ) : (
+                  "Upload Result"
+                )
               ) : (
-                "+ Upload Result"
-              )
-            ) : (
-              "Upload Result"
-            )}
-          </Button>
-        </StickyFooter>
+                "Upload Result"
+              )}
+            </Button>
+          </StickyFooter>
+        </div>
       )}
     </PageWrapper>
   );

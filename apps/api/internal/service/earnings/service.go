@@ -116,7 +116,7 @@ func (s *Service) calculateWithTx(
 		return queries.AgentEarning{}, fmt.Errorf("get party: %w", err)
 	}
 
-	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocation, roleType, asgn.StateName)
+	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, asgn.StateName)
 
 	// 5. Compute each factor score (0–100)
 	readinessScore     := s.computeReadinessScore(asgn)

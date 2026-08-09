@@ -41,7 +41,19 @@ CREATE TABLE polling_unit_results (
   -- Gemini AI verification lifecycle
   status                   VARCHAR(30) NOT NULL DEFAULT 'submitted'
                            CHECK (status IN ('submitted', 'ai_verified', 'confirmed', 'disputed', 'nullified')),
+  -- Shape of ai_extracted_data:
+  -- {
+  --   "accredited_voters": 150,
+  --   "votes_cast": 150,
+  --   "valid_votes": 145,
+  --   "rejected_votes": 5,
+  --   "candidate_results": [
+  --     {"party_short_name": "APC", "vote_count": 70, "agent_name": "John Doe", "has_signature": true},
+  --     {"party_short_name": "PDP", "vote_count": 75, "agent_name": "Jane Smith", "has_signature": true}
+  --   ]
+  -- }
   ai_extracted_data        JSONB,           -- Raw data Gemini pulled from the image
+  result_is_ai_generated   BOOLEAN DEFAULT FALSE, -- Flag indicating if Gemini suspects the result_sheet_image_url is AI-generated
   ai_confidence_score      NUMERIC(5, 4),   -- 0.0000 – 1.0000
 
   -- Manual override (platform admin)

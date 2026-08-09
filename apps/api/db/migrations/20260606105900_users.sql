@@ -98,7 +98,7 @@ CREATE TABLE users_phone_numbers (
   phone VARCHAR(25) UNIQUE NOT NULL,
   raw_input VARCHAR(25) NOT NULL,
   phonecode VARCHAR(10) NOT NULL,
-  on_whatsapp VARCHAR(25) CHECK (on_whatsapp IN ('yes','no')) DEFAULT 'no',
+  on_whatsapp BOOLEAN DEFAULT false,
   is_default BOOLEAN DEFAULT false,
   is_active BOOLEAN DEFAULT true
 );

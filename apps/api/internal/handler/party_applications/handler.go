@@ -67,6 +67,7 @@ type SubmitApplicationRequest struct {
 	Address           string `json:"address"`
 	BankAccountNumber string `json:"bank_account_number"`
 	BankCode          string `json:"bank_code"`
+	WhatsappPhone     string `json:"whatsapp_phone"`
 }
 
 // SubmitApplication godoc
@@ -131,6 +132,7 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 		Address:           req.Address,
 		BankAccountNumber: req.BankAccountNumber,
 		BankCode:          req.BankCode,
+		WhatsappPhone:     req.WhatsappPhone,
 	})
 	if err != nil {
 		errStr := err.Error()

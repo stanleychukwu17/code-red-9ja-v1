@@ -179,20 +179,29 @@ export function WardElectionSupervisorPage() {
                   title={item.title}
                   rightText={item.rightText}
                   rightText2={item.rightText2}
-                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
+                  onClick={() =>
+                    navigate({ to: "/give-update", search: { isReport: true } })
+                  }
                 />
               ))}
-              <div className="mb-2 mt-2 px-4">
-                <Button
-                  type="button"
-                  size="extra-large"
-                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
-                  className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
-                >
-                  <ReportIcon className="w-5 h-5 shrink-0" />
-                  Report
-                </Button>
-              </div>
+              {daysLeft === 0 && (
+                <div className="mb-2 mt-2 px-4">
+                  <Button
+                    type="button"
+                    size="extra-large"
+                    onClick={() =>
+                      navigate({
+                        to: "/give-update",
+                        search: { isReport: true },
+                      })
+                    }
+                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                  >
+                    <ReportIcon className="w-5 h-5 shrink-0" />
+                    Report
+                  </Button>
+                </div>
+              )}
             </LeaderboardCardWrapper>
           </CarouselItem>
           <CarouselItem>
@@ -204,24 +213,33 @@ export function WardElectionSupervisorPage() {
                   title={item.title}
                   rightText={item.rightText}
                   rightText2={item.rightText}
-                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
+                  onClick={() =>
+                    navigate({ to: "/give-update", search: { isReport: true } })
+                  }
                 />
               ))}
-              <div className="mb-2 mt-2 px-4">
-                <Button
-                  type="button"
-                  size="extra-large"
-                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
-                  className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
-                >
-                  <ReportIcon className="w-5 h-5 shrink-0" />
-                  Report
-                </Button>
-              </div>
+              {daysLeft === 0 && (
+                <div className="mb-2 mt-2 px-4">
+                  <Button
+                    type="button"
+                    size="extra-large"
+                    onClick={() =>
+                      navigate({
+                        to: "/give-update",
+                        search: { isReport: true },
+                      })
+                    }
+                    className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+                  >
+                    <ReportIcon className="w-5 h-5 shrink-0" />
+                    Report
+                  </Button>
+                </div>
+              )}
             </LeaderboardCardWrapper>
           </CarouselItem>
           <CarouselItem>
-            <CandidatesLeaderboard />
+            <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
           </CarouselItem>
         </CarouselContent>
       </Carousel>
@@ -257,9 +275,11 @@ export function WardElectionSupervisorPage() {
         {activeTab === "Tasks" && (
           <WardSupervisorTasksTab isElectionDay={daysLeft === 0} />
         )}
-        <GiveUpdateFloatingButton
-          onClick={() => navigate({ to: "/give-update" })}
-        />
+        {daysLeft === 0 && (
+          <GiveUpdateFloatingButton
+            onClick={() => navigate({ to: "/give-update" })}
+          />
+        )}
       </HomeBody>
     </div>
   );

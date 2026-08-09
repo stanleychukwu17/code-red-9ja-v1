@@ -73,7 +73,7 @@ export function RewardSumCard({
   return (
     <div
       className={cn(
-        `rounded-[16px] p-4 flex items-center gap-3 text-lg`,
+        `rounded-[16px] p-4 flex items-center gap-3`,
         bgColor[variant],
         className,
       )}
@@ -82,7 +82,7 @@ export function RewardSumCard({
       <div className="space-y-0.5 w-full">
         <div className="flex items-center justify-between text-c-90">
           <span className={cn("font-medium", labelClassName)}>{label}</span>
-          <span className={cn("shrink-0 font-bold text-xl", valueClassName)}>
+          <span className={cn("shrink-0 font-bold", valueClassName)}>
             {value}
           </span>
         </div>
@@ -90,7 +90,7 @@ export function RewardSumCard({
           (subValue && (
             <div
               className={cn(
-                "flex items-center justify-between text-c-60 text-base",
+                "flex items-center justify-between text-c-50",
                 subClassName,
               )}
             >

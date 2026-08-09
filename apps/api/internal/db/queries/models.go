@@ -835,22 +835,22 @@ type PagesVerified struct {
 }
 
 type Party struct {
-	ID                      int16              `json:"id"`
-	ShortName               string             `json:"short_name"`
-	Name                    string             `json:"name"`
-	Logo                    string             `json:"logo"`
-	LogoFileID              pgtype.Int8        `json:"logo_file_id"`
-	DisplayOrder            int32              `json:"display_order"`
-	Status                  string             `json:"status"`
-	Slots                   int32              `json:"slots"`
-	IsVerified              pgtype.Bool        `json:"is_verified"`
-	DiscountPercentage      pgtype.Numeric     `json:"discount_percentage"`
-	AgentPaymentBalanceKobo int64              `json:"agent_payment_balance_kobo"`
-	AgentPaymentAllocation  []byte             `json:"agent_payment_allocation"`
-	AgentAcquisitionTargets []byte             `json:"agent_acquisition_targets"`
-	AutoAcceptApplications  []byte             `json:"auto_accept_applications"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	ID                         int16              `json:"id"`
+	ShortName                  string             `json:"short_name"`
+	Name                       string             `json:"name"`
+	Logo                       string             `json:"logo"`
+	LogoFileID                 pgtype.Int8        `json:"logo_file_id"`
+	DisplayOrder               int32              `json:"display_order"`
+	Status                     string             `json:"status"`
+	Slots                      int32              `json:"slots"`
+	IsVerified                 pgtype.Bool        `json:"is_verified"`
+	DiscountPercentage         pgtype.Numeric     `json:"discount_percentage"`
+	AgentPaymentBalanceKobo    int64              `json:"agent_payment_balance_kobo"`
+	AgentPaymentAllocationKobo []byte             `json:"agent_payment_allocation_kobo"`
+	AgentAcquisitionTargets    []byte             `json:"agent_acquisition_targets"`
+	AutoAcceptApplications     []byte             `json:"auto_accept_applications"`
+	CreatedAt                  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyApplication struct {
@@ -1072,6 +1072,7 @@ type PollingUnitResult struct {
 	ResultSheetVideoUrl   pgtype.Text        `json:"result_sheet_video_url"`
 	Status                string             `json:"status"`
 	AiExtractedData       []byte             `json:"ai_extracted_data"`
+	ResultIsAiGenerated   pgtype.Bool        `json:"result_is_ai_generated"`
 	AiConfidenceScore     pgtype.Numeric     `json:"ai_confidence_score"`
 	DisputedReason        pgtype.Text        `json:"disputed_reason"`
 	ConfirmedAt           pgtype.Timestamptz `json:"confirmed_at"`
@@ -1316,7 +1317,7 @@ type UsersPhoneNumber struct {
 	Phone           string      `json:"phone"`
 	RawInput        string      `json:"raw_input"`
 	Phonecode       string      `json:"phonecode"`
-	OnWhatsapp      pgtype.Text `json:"on_whatsapp"`
+	OnWhatsapp      pgtype.Bool `json:"on_whatsapp"`
 	IsDefault       pgtype.Bool `json:"is_default"`
 	IsActive        pgtype.Bool `json:"is_active"`
 }

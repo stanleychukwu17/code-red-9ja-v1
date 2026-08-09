@@ -113,25 +113,34 @@ export function GeneralPage() {
                   isCompleted={item.isCompleted}
                   title={item.title}
                   rightText={item.rightText}
-                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
+                  onClick={() =>
+                    navigate({ to: "/give-update", search: { isReport: true } })
+                  }
                 />
               ))}
-              <div className="mb-2 mt-2 px-4">
-                <Button
-                  type="button"
-                  variant="leaderboardGrey"
-                  size="extra-large"
-                  onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
-                  className="w-full"
-                >
-                  <ReportIcon className="w-5 h-5 shrink-0" />
-                  Report
-                </Button>
-              </div>
+              {daysLeft === 0 && (
+                <div className="mb-2 mt-2 px-4">
+                  <Button
+                    type="button"
+                    variant="leaderboardGrey"
+                    size="extra-large"
+                    onClick={() =>
+                      navigate({
+                        to: "/give-update",
+                        search: { isReport: true },
+                      })
+                    }
+                    className="w-full"
+                  >
+                    <ReportIcon className="w-5 h-5 shrink-0" />
+                    Report
+                  </Button>
+                </div>
+              )}
             </LeaderboardCardWrapper>
           </CarouselItem>
           <CarouselItem>
-            <CandidatesLeaderboard />
+            <CandidatesLeaderboard hideReportButton={daysLeft !== 0} />
           </CarouselItem>
         </CarouselContent>
       </Carousel>
@@ -141,10 +150,6 @@ export function GeneralPage() {
       </CarouselDotContent>
 
       <HomeBody>
-        {/* {daysLeft !== 0 && <ApplicationsCard />} */}
-        <ApplicationsCard />
-        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-        {daysLeft !== 0 && <PracticeTestCard />}
         {daysLeft === 0 && (
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
@@ -153,9 +158,15 @@ export function GeneralPage() {
             onClick={() => navigate({ to: "/upload-result" })}
           />
         )}
-        <GiveUpdateFloatingButton
-          onClick={() => navigate({ to: "/give-update" })}
-        />
+        <ApplicationsCard />
+        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
+        {/* {daysLeft !== 0 && <PracticeTestCard />} */}
+        <PracticeTestCard />
+        {daysLeft === 0 && (
+          <GiveUpdateFloatingButton
+            onClick={() => navigate({ to: "/give-update" })}
+          />
+        )}
       </HomeBody>
     </div>
   );

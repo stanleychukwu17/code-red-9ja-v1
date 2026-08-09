@@ -88,7 +88,21 @@ export function AgentPaymentAllocationFormDialog({
   React.useEffect(() => {
     if (!open) return;
     if (fetchedAllocation) {
-      setValues({ ...DEFAULT_ALLOCATION, ...fetchedAllocation });
+      const koboToNaira = (alloc: AgentPaymentAllocation): AgentPaymentAllocation => {
+        const converted = { ...DEFAULT_ALLOCATION };
+        (Object.keys(alloc) as AgentRoles[]).forEach((role) => {
+          if (alloc[role]) {
+            converted[role] = {
+              default: (alloc[role].default || 0) / 100,
+              states: Object.fromEntries(
+                Object.entries(alloc[role].states || {}).map(([state, kobo]) => [state, (kobo || 0) / 100])
+              )
+            };
+          }
+        });
+        return converted;
+      };
+      setValues(koboToNaira(fetchedAllocation));
     } else {
       setValues(DEFAULT_ALLOCATION);
     }
@@ -97,7 +111,23 @@ export function AgentPaymentAllocationFormDialog({
 
   // ── Mutation ───────────────────────────────────────────────────────────────
   const mutation = useMutation({
-    mutationFn: () => updateAllocation(partyId, values),
+    mutationFn: () => {
+      const nairaToKobo = (alloc: AgentPaymentAllocation): AgentPaymentAllocation => {
+        const converted = { ...DEFAULT_ALLOCATION };
+        (Object.keys(alloc) as AgentRoles[]).forEach((role) => {
+          if (alloc[role]) {
+            converted[role] = {
+              default: (alloc[role].default || 0) * 100,
+              states: Object.fromEntries(
+                Object.entries(alloc[role].states || {}).map(([state, naira]) => [state, (naira || 0) * 100])
+              )
+            };
+          }
+        });
+        return converted;
+      };
+      return updateAllocation(partyId, nairaToKobo(values));
+    },
     onSuccess: () => {
       onSuccess?.();
       onClose();

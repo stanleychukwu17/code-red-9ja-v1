@@ -30,6 +30,14 @@ INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsa
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id;
 
+-- name: UpsertUserPhoneNumber :one
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsapp, is_default)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (phone) DO UPDATE
+SET on_whatsapp = EXCLUDED.on_whatsapp,
+    is_active = true
+RETURNING id;
+
 -- name: UpdateUserFakeID :exec
 UPDATE users
 SET fake_id = $2

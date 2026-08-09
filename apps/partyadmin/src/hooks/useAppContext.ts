@@ -55,7 +55,7 @@ export interface BackendParty {
   logo?: string;
   slots?: number;
   agent_payment_balance_kobo?: number;
-  agent_payment_allocation?: Record<string, number>;
+  agent_payment_allocation_kobo?: Record<string, number>;
   created_at?: string;
   updated_at?: string;
 }
@@ -84,7 +84,7 @@ export interface UserDetails {
     logo?: string;
     slots?: number;
     agent_payment_balance_kobo?: number;
-    agent_payment_allocation?: Record<string, number>;
+    agent_payment_allocation_kobo?: Record<string, number>;
     created_at?: string;
     updated_at?: string;
   };
@@ -123,7 +123,7 @@ export const usePartyDetails = (): PartyDetails | null => {
         logo: fetchedParty.logo,
         slots: fetchedParty.slots || 0,
         agentPaymentBalanceKobo: fetchedParty.agent_payment_balance_kobo || 0,
-        agentPaymentAllocation: fetchedParty.agent_payment_allocation || {},
+        agentPaymentAllocation: fetchedParty.agent_payment_allocation_kobo || {},
       }
     : user?.party?.short_name
       ? {
@@ -133,7 +133,7 @@ export const usePartyDetails = (): PartyDetails | null => {
           logo: user.party.logo,
           slots: user.party.slots || 0,
           agentPaymentBalanceKobo: user.party.agent_payment_balance_kobo || 0,
-          agentPaymentAllocation: user.party.agent_payment_allocation || {},
+          agentPaymentAllocation: user.party.agent_payment_allocation_kobo || {},
         }
       : user?.party_id
         ? {
@@ -177,7 +177,6 @@ export const useAppContext = () => {
   }
   const user = reduxUser || routeUser;
   const party = usePartyDetails();
-  console.log("🏖️🏖️🏖️", { party });
 
   const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);
   const selectedElection = useAppSelector(selectSelectedElection);

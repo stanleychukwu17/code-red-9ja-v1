@@ -52,8 +52,8 @@ type PartiesService interface {
 	JoinParty(ctx context.Context, partyID int16, chapterID int32, userID, userFid int64) error
 	LeaveParty(ctx context.Context, partyID int16, userID, userFid int64) error
 	// Membership methods
-	UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
-	GetAgentPaymentAllocation(ctx context.Context, partyID int16) (json.RawMessage, error)
+	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
+	GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Marketing methods
 	GetMarketingPlansByType(ctx context.Context, campaignType queries.MarketingCampaignType) ([]queries.Plan, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
@@ -324,11 +324,11 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 	for _, p := range parties {
 		isAccepting := false
 		if len(p.AgentAcquisitionTargets) > 0 && string(p.AgentAcquisitionTargets) != "{}" && string(p.AgentAcquisitionTargets) != "null" {
-			if len(p.AgentPaymentAllocation) > 0 && string(p.AgentPaymentAllocation) != "{}" && string(p.AgentPaymentAllocation) != "null" {
+			if len(p.AgentPaymentAllocationKobo) > 0 && string(p.AgentPaymentAllocationKobo) != "{}" && string(p.AgentPaymentAllocationKobo) != "null" {
 				var alloc map[string]struct {
 					Default *int64 `json:"default"`
 				}
-				if err := json.Unmarshal(p.AgentPaymentAllocation, &alloc); err == nil {
+				if err := json.Unmarshal(p.AgentPaymentAllocationKobo, &alloc); err == nil {
 					roles := []string{"pollingAgent", "wardElectionSupervisor", "lgaElectionSupervisor", "stateElectionSupervisor"}
 					var maxDefault int64 = -1
 					hasAllDefaults := true
@@ -1218,13 +1218,13 @@ func (h *Handler) DepositAllowance(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// agentPaymentConfig is the shape of a single role entry in agent_payment_allocation.
+// agentPaymentConfig is the shape of a single role entry in agent_payment_allocation_kobo.
 type agentPaymentConfig struct {
 	Default int64            `json:"default"`
 	States  map[string]int64 `json:"states"`
 }
 
-// agentPaymentAllocation mirrors the documented shape of the agent_payment_allocation column.
+// agentPaymentAllocation mirrors the documented shape of the agent_payment_allocation_kobo column.
 type agentPaymentAllocation struct {
 	PollingAgent              agentPaymentConfig `json:"pollingAgent"`
 	WardElectionSupervisor    agentPaymentConfig `json:"wardElectionSupervisor"`
@@ -1232,7 +1232,7 @@ type agentPaymentAllocation struct {
 	StateElectionSupervisor   agentPaymentConfig `json:"stateElectionSupervisor"`
 }
 
-// UpdateAgentPaymentAllocation godoc
+// UpdateAgentPaymentAllocationKobo godoc
 // @Summary      Update agent payment allocation
 // @Description  Saves the polling agent allowance budget settings per role and state for a party.
 //               Body must be a JSON object with keys: pollingAgent, wardElectionSupervisor,
@@ -1246,7 +1246,7 @@ type agentPaymentAllocation struct {
 // @Success      200  {object} map[string]interface{} "Allowances configuration updated successfully"
 // @Security     BearerAuth
 // @Router       /parties/{id}/allowances/settings [put]
-func (h *Handler) UpdateAgentPaymentAllocation(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateAgentPaymentAllocationKobo(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -1267,7 +1267,7 @@ func (h *Handler) UpdateAgentPaymentAllocation(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	party, err := h.partiesService.UpdateAgentPaymentAllocation(r.Context(), int16(partyID), bodyBytes)
+	party, err := h.partiesService.UpdateAgentPaymentAllocationKobo(r.Context(), int16(partyID), bodyBytes)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -1278,16 +1278,16 @@ func (h *Handler) UpdateAgentPaymentAllocation(w http.ResponseWriter, r *http.Re
 	})
 }
 
-// GetAgentPaymentAllocation godoc
+// GetAgentPaymentAllocationKobo godoc
 // @Summary      Get agent payment allocation
-// @Description  Returns the current agent_payment_allocation for a party as a parsed JSON object.
+// @Description  Returns the current agent_payment_allocation_kobo for a party as a parsed JSON object.
 // @Tags         Parties
 // @Produce      json
 // @Param        id path int true "Party ID"
 // @Success      200  {object} map[string]interface{} "Allocation fetched successfully"
 // @Security     BearerAuth
 // @Router       /parties/{id}/allowances/settings [get]
-func (h *Handler) GetAgentPaymentAllocation(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetAgentPaymentAllocationKobo(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	partyID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -1295,14 +1295,14 @@ func (h *Handler) GetAgentPaymentAllocation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	allocation, err := h.partiesService.GetAgentPaymentAllocation(r.Context(), int16(partyID))
+	allocation, err := h.partiesService.GetAgentPaymentAllocationKobo(r.Context(), int16(partyID))
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Allocation fetched successfully", map[string]interface{}{
-		"agent_payment_allocation": allocation,
+		"agent_payment_allocation_kobo": allocation,
 	})
 }
 

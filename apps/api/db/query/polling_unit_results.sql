@@ -77,6 +77,7 @@ SET
   disputed_reason     = $5,
   confirmed_at        = $6,
   confirmed_by        = $7,
+  result_is_ai_generated = $8,
   updated_at          = NOW()
 WHERE id = $1
 RETURNING *;

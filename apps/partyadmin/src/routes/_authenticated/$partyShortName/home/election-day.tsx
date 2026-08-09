@@ -95,6 +95,17 @@ function ElectionDayComponent() {
       }),
     enabled: !!selectedElectionGroup?.id,
   });
+  console.log("DATA", {
+    party_id: party?.id,
+    electionGroupId: selectedElectionGroup?.id as number,
+    stateId: selectedStateId,
+    senatorialDistrictId: selectedDistrictId,
+    federalConstituencyId: selectedFederalConstituencyId,
+    stateAssemblyConstituencyId: selectedStateConstituencyId,
+    lgaId: selectedLGAId,
+    wardId: selectedWardId,
+  });
+  console.log("ELECTION STATS", electionStatsData);
 
   // Fetch scoped election final result
   const { data: scopedResultData, isLoading: isResultLoading } = useQuery({

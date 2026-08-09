@@ -11,8 +11,8 @@ CREATE TABLE parties (
   is_verified BOOLEAN DEFAULT false,
   discount_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
   agent_payment_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (agent_payment_balance_kobo >= 0),
-  -- {"pollingAgent":{default: 2000, states: {lagos: 2500, ...all state's custom pay}},"lgaElectionSupervisor":{},"wardElectionSupervisor":{},"stateElectionSupervisor":{}}
-  agent_payment_allocation JSONB NOT NULL DEFAULT '{}'::jsonb,
+  -- {"pollingAgent":{default: 2000000, states: {lagos: 2500000, ...all state's custom pay}},"lgaElectionSupervisor":{},"wardElectionSupervisor":{},"stateElectionSupervisor":{}}
+  agent_payment_allocation_kobo JSONB NOT NULL DEFAULT '{"pollingAgent":{"default":0,"states":{}},"wardElectionSupervisor":{"default":0,"states":{}},"lgaElectionSupervisor":{"default":0,"states":{}},"stateElectionSupervisor":{"default":0,"states":{}}}'::jsonb,
   -- {"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}
   agent_acquisition_targets JSONB NOT NULL DEFAULT '{"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}'::jsonb,
   -- {"pollingAgent": true, "wardElectionSupervisor": true, "lgaElectionSupervisor": true, "stateElectionSupervisor": true}

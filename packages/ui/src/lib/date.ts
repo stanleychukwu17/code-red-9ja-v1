@@ -1,6 +1,17 @@
 const getIsoDate = (isoString: string | number) => {
-  const isoDate = new Date(isoString); // '2025-02-26T01:34:45.605Z' => Date object
-  return isoDate;
+  if (typeof isoString === "string") {
+    // Fix non-standard SQL timestamp strings for Safari: "2026-08-09 07:54:30+00" -> "2026-08-09T07:54:30+00:00" or "Z"
+    let cleanStr = isoString.trim();
+    if (cleanStr.includes(" ") && !cleanStr.includes("T")) {
+      cleanStr = cleanStr.replace(" ", "T");
+    }
+    // Handle "+00" without the trailing ":00" which breaks Safari
+    if (cleanStr.endsWith("+00")) {
+      cleanStr = cleanStr.replace("+00", "Z");
+    }
+    return new Date(cleanStr);
+  }
+  return new Date(isoString);
 };
 
 type Time = "numeric" | "2-digit" | undefined;

@@ -591,11 +591,11 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 
 	// Update or create phone numbers
 	for _, p := range phones {
-		whatsappVal := "no"
+		whatsappVal := false
 		if p.OnWhatsapp == "yes" {
-			whatsappVal = "yes"
+			whatsappVal = true
 		}
-		onWhatsapp := pgtype.Text{String: whatsappVal, Valid: true}
+		onWhatsapp := pgtype.Bool{Bool: whatsappVal, Valid: true}
 		isDefault := pgtype.Bool{Bool: p.IsDefault, Valid: true}
 
 		// if p.ID == 0, it means the phone number is new, so create it

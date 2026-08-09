@@ -38,7 +38,7 @@ const EndElectionSmallyButton = () => (
   <SmallyButton>Yes, it has ended</SmallyButton>
 );
 
-const VotedSmallyButton = () => <SmallyButton>Yes, I have voted</SmallyButton>;
+const VotedSmallyButton = () => <SmallyButton>Yes</SmallyButton>;
 
 const UploadResultSmallyButton = () => (
   <SmallyButton className="bg-purple text-white">Upload Result</SmallyButton>

@@ -492,10 +492,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		r.Post("/api/v1/parties/{id}/join", partiesHandler.JoinParty)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
-		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocation)
+		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
-		r.Get("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.GetAgentPaymentAllocation)
-		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocation)
+		r.Get("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.GetAgentPaymentAllocationKobo)
+		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
 		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
 		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.DepositTest)

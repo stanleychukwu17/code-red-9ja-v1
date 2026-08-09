@@ -10,12 +10,14 @@ import { useAuth } from "#/hooks/useAuth";
 import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
 import { Loader2 } from "lucide-react";
 
-export function CandidatesLeaderboard({ 
+export function CandidatesLeaderboard({
   onPracticeClick,
-  onReportClick
-}: { 
+  onReportClick,
+  hideReportButton,
+}: {
   onPracticeClick?: () => void;
   onReportClick?: () => void;
+  hideReportButton?: boolean;
 }) {
   const navigate = useNavigate();
   const {
@@ -115,7 +117,7 @@ export function CandidatesLeaderboard({
       )}
 
       {/* Buttons */}
-      <div className="grid grid-cols-2 gap-4 mb-2 mt-2 px-4">
+      <div className="flex items-center gap-4 mb-2 mt-2 px-4">
         <Button
           type="button"
           size="extra-large"
@@ -124,23 +126,25 @@ export function CandidatesLeaderboard({
         >
           Show all
         </Button>
-        <Button
-          type="button"
-          size="extra-large"
-          onClick={(e) => {
-            if (onReportClick) {
-              e.preventDefault();
-              e.stopPropagation();
-              onReportClick();
-            } else {
-              navigate({ to: "/give-update", search: { isReport: true } });
-            }
-          }}
-          className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
-        >
-          <ReportIcon className="w-5 h-5 shrink-0" />
-          Report
-        </Button>
+        {!hideReportButton && (
+          <Button
+            type="button"
+            size="extra-large"
+            onClick={(e) => {
+              if (onReportClick) {
+                e.preventDefault();
+                e.stopPropagation();
+                onReportClick();
+              } else {
+                navigate({ to: "/give-update", search: { isReport: true } });
+              }
+            }}
+            className="bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
+          >
+            <ReportIcon className="w-5 h-5 shrink-0" />
+            Report
+          </Button>
+        )}
       </div>
     </LeaderboardCardWrapper>
   );

@@ -169,7 +169,6 @@ function ArrivalVideo() {
     <div className="flex flex-col relative w-full">
       {/* Header */}
       <PageHeader
-        title="PRACTICE MODE"
         onBackClick={() => {
           if (search.isPractice === false) navigate({ to: "/" });
         }}

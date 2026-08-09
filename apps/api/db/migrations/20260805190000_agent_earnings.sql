@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
   election_group_id            BIGINT NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   role_type                    VARCHAR(50) NOT NULL,
 
-  -- The base payment for this role (kobo), snapshotted from party.agent_payment_allocation at calc time
+  -- The base payment for this role (kobo), snapshotted from party.agent_payment_allocation_kobo at calc time
   base_payment_kobo            BIGINT NOT NULL DEFAULT 0,
 
   -- Snapshot of earnings_allocation_* used for this calculation

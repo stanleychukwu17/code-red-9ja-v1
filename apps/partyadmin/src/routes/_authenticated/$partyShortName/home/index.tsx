@@ -30,7 +30,7 @@ import { getStates } from "#/lib/server/countries";
 import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { getElectionsByGroup } from "#/lib/server/elections";
+import { getElectionsByGroup, getElectionStats } from "#/lib/server/elections";
 import {
   AgentMarketingSetupDialog,
   type AgentMarketingSetupValue,
@@ -55,6 +55,12 @@ function ReadinessComponent() {
     party,
     selectedElectionGroup,
     selectedElection,
+    selectedStateId,
+    selectedDistrictId,
+    selectedFederalConstituencyId,
+    selectedStateConstituencyId,
+    selectedLGAId,
+    selectedWardId,
     activeMarketingCampaigns,
   } = useAppContext();
   console.log({ party, activeMarketingCampaigns });
@@ -72,6 +78,7 @@ function ReadinessComponent() {
 
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
+  const fetchElectionStatsFn = useServerFn(getElectionStats);
   const fetchPlans = useServerFn(getPlans);
   const submitCampaign = useServerFn(createMarketingCampaign);
 
@@ -165,6 +172,41 @@ function ReadinessComponent() {
         "Zamfara",
       ];
 
+  const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: [
+      "election-stats",
+      selectedElectionGroup?.id,
+      party?.id,
+      selectedStateId,
+      selectedDistrictId,
+      selectedFederalConstituencyId,
+      selectedStateConstituencyId,
+      selectedLGAId,
+      selectedWardId,
+    ],
+    queryFn: () =>
+      fetchElectionStatsFn({
+        data: {
+          electionGroupId: selectedElectionGroup?.id as number,
+          partyId: party?.id,
+          stateId: selectedStateId,
+          senatorialDistrictId: selectedDistrictId,
+          federalConstituencyId: selectedFederalConstituencyId,
+          stateAssemblyConstituencyId: selectedStateConstituencyId,
+          lgaId: selectedLGAId,
+          wardId: selectedWardId,
+        },
+      }),
+    enabled: !!selectedElectionGroup?.id,
+  });
+
+  const resolvedStats =
+    electionStatsData?.data?.party_stats ||
+    electionStatsData?.data?.stats ||
+    {};
+  const targets =
+    electionStatsData?.data?.targets || electionStatsData?.data?.stats || {};
+
   const handleSlotsPurchased = () => {
     refetchWallet();
     if (partyId) {
@@ -180,7 +222,11 @@ function ReadinessComponent() {
       <div className="grid gap-6 lg:grid-cols-[2fr_1.2fr] items-start pb-20">
         {/* Left Hand Column */}
         <div className="space-y-6">
-          <ReadinessProgressCard />
+          <ReadinessProgressCard
+            partyStats={resolvedStats}
+            targets={targets}
+            isLoading={isStatsLoading}
+          />
           <RequiredActionsSection
             hasSlots={(party?.slots ?? 0) > 0}
             hasAgentPaymentBalance={(party?.agentPaymentBalanceKobo ?? 0) > 0}
@@ -242,7 +288,7 @@ function ReadinessComponent() {
         partyId={partyId!}
         fetchAllocation={async (id) => {
           const res = await getPartyAgentPaymentAllocation({ data: id });
-          return res?.data?.agent_payment_allocation ?? null;
+          return res?.data?.agent_payment_allocation_kobo ?? null;
         }}
         updateAllocation={async (id, values) => {
           const res = await updatePartyStateAllowances({
@@ -367,7 +413,24 @@ function ReadinessComponent() {
   );
 }
 
-function ReadinessProgressCard() {
+function ReadinessProgressCard({
+  partyStats,
+  targets,
+  isLoading,
+}: {
+  partyStats?: any;
+  targets?: any;
+  isLoading?: boolean;
+}) {
+  const {
+    selectedStateId,
+    selectedLGAId,
+    selectedWardId,
+    selectedDistrictId,
+    selectedStateConstituencyId,
+    selectedFederalConstituencyId,
+  } = useAppContext();
+
   const ReadinessText = ({
     label,
     value,
@@ -383,32 +446,108 @@ function ReadinessProgressCard() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <LeaderboardCardWrapper>
+        <div className="flex h-40 items-center justify-center text-white/50">
+          Loading readiness stats...
+        </div>
+      </LeaderboardCardWrapper>
+    );
+  }
+
+  const pStats = partyStats || {};
+  const tStats = targets || {};
+
+  const puCount = pStats.unique_pu_agents_count || 0;
+  const puMax = tStats.polling_units_count || 0;
+  const puPercent = puMax > 0 ? Math.floor((puCount / puMax) * 100) : 0;
+
+  const wardCount = pStats.unique_ward_supervisors_count || 0;
+  const wardMax = tStats.wards_count || 0;
+  const wardPercent = wardMax > 0 ? Math.floor((wardCount / wardMax) * 100) : 0;
+
+  const lgaCount = pStats.unique_lga_supervisors_count || 0;
+  const lgaMax = tStats.lgas_count || 0;
+  const lgaPercent = lgaMax > 0 ? Math.floor((lgaCount / lgaMax) * 100) : 0;
+
+  const stateCount = pStats.unique_state_supervisors_count || 0;
+  let stateMax = tStats.states_count || 0;
+  // If backend doesn't provide states_count, infer from scope
+  const isBelowStateLevel = !!(
+    selectedLGAId ||
+    selectedWardId ||
+    selectedDistrictId ||
+    selectedStateConstituencyId ||
+    selectedFederalConstituencyId
+  );
+  if (!stateMax && !isBelowStateLevel) {
+    stateMax = selectedStateId ? 1 : 37;
+  }
+  const statePercent =
+    stateMax > 0 ? Math.floor((stateCount / stateMax) * 100) : 0;
+
+  const showState = !isBelowStateLevel;
+  const showLGA = !selectedWardId;
+  const showWard = true;
+  const showPU = true;
+
   return (
     <LeaderboardCardWrapper>
-      <ObjectiveTile
-        isCompleted={false}
-        title="Polling Agent"
-        rightText={<ReadinessText label="22,982" value="/ 174,402" />}
-        rightText2={<ReadinessText label="32%" value="ready" />}
-      />
-      <ObjectiveTile
-        isCompleted={false}
-        title="Ward Election Supervisor"
-        rightText={<ReadinessText label="3,984" value="/ 8,713" />}
-        rightText2={<ReadinessText label="46%" value="ready" />}
-      />
-      <ObjectiveTile
-        isCompleted={false}
-        title="LGA Election Supervisor"
-        rightText={<ReadinessText label="241" value="/ 774" />}
-        rightText2={<ReadinessText label="31%" value="ready" />}
-      />
-      <ObjectiveTile
-        isCompleted={true}
-        title="State Election Supervisor"
-        rightText={<ReadinessText label="37" value="/ 37" />}
-        rightText2={<ReadinessText label="100%" value="ready" />}
-      />
+      {showPU && (
+        <ObjectiveTile
+          isCompleted={puPercent >= 100}
+          title="Polling Agent"
+          rightText={
+            <ReadinessText
+              label={puCount.toLocaleString()}
+              value={`/ ${puMax.toLocaleString()}`}
+            />
+          }
+          rightText2={<ReadinessText label={`${puPercent}%`} value="ready" />}
+        />
+      )}
+      {showWard && (
+        <ObjectiveTile
+          isCompleted={wardPercent >= 100}
+          title="Ward Election Supervisor"
+          rightText={
+            <ReadinessText
+              label={wardCount.toLocaleString()}
+              value={`/ ${wardMax.toLocaleString()}`}
+            />
+          }
+          rightText2={<ReadinessText label={`${wardPercent}%`} value="ready" />}
+        />
+      )}
+      {showLGA && (
+        <ObjectiveTile
+          isCompleted={lgaPercent >= 100}
+          title="LGA Election Supervisor"
+          rightText={
+            <ReadinessText
+              label={lgaCount.toLocaleString()}
+              value={`/ ${lgaMax.toLocaleString()}`}
+            />
+          }
+          rightText2={<ReadinessText label={`${lgaPercent}%`} value="ready" />}
+        />
+      )}
+      {showState && (
+        <ObjectiveTile
+          isCompleted={statePercent >= 100}
+          title="State Election Supervisor"
+          rightText={
+            <ReadinessText
+              label={stateCount.toLocaleString()}
+              value={`/ ${stateMax.toLocaleString()}`}
+            />
+          }
+          rightText2={
+            <ReadinessText label={`${statePercent}%`} value="ready" />
+          }
+        />
+      )}
     </LeaderboardCardWrapper>
   );
 }
@@ -1041,14 +1180,32 @@ function AgentPaymentCard({
   onEdit: () => void;
   party: any;
 }) {
-  const defaultPayment =
-    (party?.agentPaymentAllocation?.default || 5000000) / 100;
+  const allocations = party?.agentPaymentAllocation || {};
+  const pollingAgentPaymentKobo = allocations.pollingAgent?.default || 0;
+  const wardSupervisorPaymentKobo =
+    allocations.wardElectionSupervisor?.default || 0;
+  const lgaSupervisorPaymentKobo =
+    allocations.lgaElectionSupervisor?.default || 0;
+  const stateSupervisorPaymentKobo =
+    allocations.stateElectionSupervisor?.default || 0;
 
   const payments = [
-    { role: "Polling Agent", amount: `₦${defaultPayment.toLocaleString()}` },
-    { role: "Ward Supervisor", amount: "₦70,000" },
-    { role: "LGA Supervisor", amount: "₦100,000" },
-    { role: "State Supervisor", amount: "₦500,000" },
+    {
+      role: "Polling Agent",
+      amount: `₦${(pollingAgentPaymentKobo / 100).toLocaleString()}`,
+    },
+    {
+      role: "Ward Supervisor",
+      amount: `₦${(wardSupervisorPaymentKobo / 100).toLocaleString()}`,
+    },
+    {
+      role: "LGA Supervisor",
+      amount: `₦${(lgaSupervisorPaymentKobo / 100).toLocaleString()}`,
+    },
+    {
+      role: "State Supervisor",
+      amount: `₦${(stateSupervisorPaymentKobo / 100).toLocaleString()}`,
+    },
   ];
 
   return (

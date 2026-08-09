@@ -47,12 +47,12 @@ func (p Party) MarshalJSON() ([]byte, error) {
 	type Alias jsonParty
 	type PartyOut struct {
 		Alias
-		AgentPaymentAllocation  json.RawMessage `json:"agent_payment_allocation"`
-		AgentAcquisitionTargets json.RawMessage `json:"agent_acquisition_targets"`
-		AutoAcceptApplications  json.RawMessage `json:"auto_accept_applications"`
+		AgentPaymentAllocationKobo json.RawMessage `json:"agent_payment_allocation_kobo"`
+		AgentAcquisitionTargets    json.RawMessage `json:"agent_acquisition_targets"`
+		AutoAcceptApplications     json.RawMessage `json:"auto_accept_applications"`
 	}
 
-	rawAlloc := json.RawMessage(p.AgentPaymentAllocation)
+	rawAlloc := json.RawMessage(p.AgentPaymentAllocationKobo)
 	if len(rawAlloc) == 0 {
 		rawAlloc = json.RawMessage("null")
 	}
@@ -67,8 +67,27 @@ func (p Party) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(PartyOut{
 		Alias:                   Alias(jsonParty(p)),
-		AgentPaymentAllocation:  rawAlloc,
+		AgentPaymentAllocationKobo: rawAlloc,
 		AgentAcquisitionTargets: rawTargets,
 		AutoAcceptApplications:  rawAutoAccept,
+	})
+}
+
+// jsonUsersPhoneNumber is an alias used exclusively inside MarshalJSON to avoid infinite recursion.
+type jsonUsersPhoneNumber UsersPhoneNumber
+
+func (up UsersPhoneNumber) MarshalJSON() ([]byte, error) {
+	type Alias jsonUsersPhoneNumber
+	whatsappStr := "no"
+	if up.OnWhatsapp.Valid && up.OnWhatsapp.Bool {
+		whatsappStr = "yes"
+	}
+	type PhoneOut struct {
+		Alias
+		OnWhatsapp string `json:"on_whatsapp"`
+	}
+	return json.Marshal(PhoneOut{
+		Alias:      Alias(jsonUsersPhoneNumber(up)),
+		OnWhatsapp: whatsappStr,
 	})
 }

@@ -184,7 +184,7 @@ type CreatePhoneNumberParams struct {
 	Phone      string      `json:"phone"`
 	Phonecode  string      `json:"phonecode"`
 	RawInput   string      `json:"raw_input"`
-	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
+	OnWhatsapp pgtype.Bool `json:"on_whatsapp"`
 	IsDefault  pgtype.Bool `json:"is_default"`
 }
 
@@ -968,7 +968,7 @@ WHERE id = $1 AND user_id = $4
 
 type UpdatePhoneNumberParams struct {
 	ID         int64       `json:"id"`
-	OnWhatsapp pgtype.Text `json:"on_whatsapp"`
+	OnWhatsapp pgtype.Bool `json:"on_whatsapp"`
 	IsDefault  pgtype.Bool `json:"is_default"`
 	UserID     int64       `json:"user_id"`
 }
@@ -1210,4 +1210,36 @@ type UpdateUserVotersCardParams struct {
 func (q *Queries) UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error {
 	_, err := q.db.Exec(ctx, updateUserVotersCard, arg.ID, arg.VotersCardImage)
 	return err
+}
+
+const upsertUserPhoneNumber = `-- name: UpsertUserPhoneNumber :one
+INSERT INTO users_phone_numbers (user_id, phone, phonecode, raw_input, on_whatsapp, is_default)
+VALUES ($1, $2, $3, $4, $5, $6)
+ON CONFLICT (phone) DO UPDATE
+SET on_whatsapp = EXCLUDED.on_whatsapp,
+    is_active = true
+RETURNING id
+`
+
+type UpsertUserPhoneNumberParams struct {
+	UserID     int64       `json:"user_id"`
+	Phone      string      `json:"phone"`
+	Phonecode  string      `json:"phonecode"`
+	RawInput   string      `json:"raw_input"`
+	OnWhatsapp pgtype.Bool `json:"on_whatsapp"`
+	IsDefault  pgtype.Bool `json:"is_default"`
+}
+
+func (q *Queries) UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error) {
+	row := q.db.QueryRow(ctx, upsertUserPhoneNumber,
+		arg.UserID,
+		arg.Phone,
+		arg.Phonecode,
+		arg.RawInput,
+		arg.OnWhatsapp,
+		arg.IsDefault,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

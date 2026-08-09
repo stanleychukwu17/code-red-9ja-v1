@@ -16,7 +16,7 @@ UPDATE parties
 SET slots = slots + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
 type AddPartySlotsParams struct {
@@ -39,7 +39,7 @@ func (q *Queries) AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (P
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocation,
+		&i.AgentPaymentAllocationKobo,
 		&i.AgentAcquisitionTargets,
 		&i.AutoAcceptApplications,
 		&i.CreatedAt,
@@ -53,7 +53,7 @@ UPDATE parties
 SET slots = slots - $1,
     updated_at = NOW()
 WHERE id = $2 AND slots >= $1
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
 type DeductPartySlotsParams struct {
@@ -76,7 +76,7 @@ func (q *Queries) DeductPartySlots(ctx context.Context, arg DeductPartySlotsPara
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocation,
+		&i.AgentPaymentAllocationKobo,
 		&i.AgentAcquisitionTargets,
 		&i.AutoAcceptApplications,
 		&i.CreatedAt,
@@ -107,7 +107,7 @@ UPDATE parties
 SET discount_percentage = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
 type UpdatePartyDiscountParams struct {
@@ -130,7 +130,7 @@ func (q *Queries) UpdatePartyDiscount(ctx context.Context, arg UpdatePartyDiscou
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocation,
+		&i.AgentPaymentAllocationKobo,
 		&i.AgentAcquisitionTargets,
 		&i.AutoAcceptApplications,
 		&i.CreatedAt,

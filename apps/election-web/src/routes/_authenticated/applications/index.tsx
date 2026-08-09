@@ -388,6 +388,7 @@ function ApplicationsIndexPage() {
           title="Party Agent"
           className="text-white/90"
           buttonClassName="[&_svg]:text-white/70"
+          onBackClick={() => navigate({ to: "/" })}
         />
 
         {/* Stats Black Card */}

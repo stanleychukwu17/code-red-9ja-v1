@@ -394,7 +394,8 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// resolveBasePayment uses the same logic as the earnings service
-	basePayment := resolveBasePaymentNaira(party.AgentPaymentAllocation, roleType)
+	basePaymentKobo := resolveBasePaymentKobo(party.AgentPaymentAllocationKobo, roleType)
+	basePayment := basePaymentKobo / 100 // convert back to Naira for internal preview logic
 	slog.Info("resolved base payment for practice test preview", "roleType", roleType, "basePaymentNaira", basePayment, "partyID", partyID)
 
 	// ── 3. Fetch earnings allocation for readiness % ──────────────────────────
@@ -529,9 +530,9 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// resolveBasePaymentNaira extracts the default naira amount from agent_payment_allocation JSONB.
-// Format: {"pollingAgent": {"default": 20000, "states": {...}}}
-func resolveBasePaymentNaira(rawJSON []byte, roleType string) int64 {
+// resolveBasePaymentKobo extracts the default kobo amount from agent_payment_allocation JSONB.
+// Format: {"pollingAgent": {"default": 2000000, "states": {...}}}
+func resolveBasePaymentKobo(rawJSON []byte, roleType string) int64 {
 	var alloc map[string]struct {
 		Default int64            `json:"default"`
 		States  map[string]int64 `json:"states"`

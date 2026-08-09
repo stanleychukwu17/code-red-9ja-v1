@@ -367,8 +367,7 @@ export function PollingAgentPracticePage() {
               setSelectedElectionGroupId(null);
               setSelectedElectionDate(null);
               setTestStats([]);
-              setTaskId(1);
-              navigate({ to: "/" });
+              navigate({ to: "/", search: {} });
             }
           }}
           electionGroupId={selectedElectionGroupId}
@@ -377,13 +376,20 @@ export function PollingAgentPracticePage() {
 
       {currentPage === "accepted" && (
         <ApplicationAcceptedPage
-          onNextClick={() => {
+          onTakeAnotherTest={() => {
             setCurrentFailedAttempts(0);
             setSelectedElectionGroupId(null);
             setSelectedElectionDate(null);
             setTestStats([]);
             setTaskId(1);
-            navigate({ to: "/" });
+            setCurrentPage("select-election");
+          }}
+          onGoToHome={() => {
+            setCurrentFailedAttempts(0);
+            setSelectedElectionGroupId(null);
+            setSelectedElectionDate(null);
+            setTestStats([]);
+            navigate({ to: "/", search: {} });
           }}
           electionGroupId={selectedElectionGroupId}
         />
@@ -402,14 +408,11 @@ export function WelcomePage({
   onNextClick: () => void;
 }) {
   const { party } = useAuth();
-
-  const handleBackClick = () => {
-    console.log("Go Back Clicked!");
-  };
+  const navigate = useNavigate();
 
   return (
     <div className="w-full h-full">
-      <PageHeader onBackClick={handleBackClick} />
+      <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
       <div className="relative flex flex-col items-center gap-3 h-full px-4 pt-16 max-w-[430px]">
         <BackgroundDesign />
@@ -492,10 +495,10 @@ export function SelectElectionPage({
   });
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader />
 
-      <div className="flex flex-col gap-4 w-full px-4 pt-2">
+      <div className="flex flex-col gap-4 w-full h-full px-4 pt-2">
         <div className="space-y-1">
           <TitleText
             text="Choose an Election"
@@ -548,10 +551,12 @@ export function SelectElectionPage({
 }
 
 export function ApplicationAcceptedPage({
-  onNextClick,
+  onTakeAnotherTest,
+  onGoToHome,
   electionGroupId,
 }: {
-  onNextClick?: () => void;
+  onTakeAnotherTest: () => void;
+  onGoToHome: () => void;
   electionGroupId: number | null;
 }) {
   const { party, user } = useAuth();
@@ -588,8 +593,8 @@ export function ApplicationAcceptedPage({
   );
 
   return (
-    <div className="relative w-full h-svh flex flex-col">
-      <PageHeader className="" onBackClick={onNextClick} />
+    <div className="relative w-full h-full flex flex-col">
+      <PageHeader className="" onBackClick={onGoToHome} />
 
       <div className="">
         <TaskScore
@@ -658,15 +663,24 @@ export function ApplicationAcceptedPage({
         </div>
       </div>
 
-      <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90">
+      <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90 flex flex-col gap-3">
         <Button
           type="button"
           variant="black"
           size="4xl"
           className="w-full rounded-full h-14"
-          onClick={onNextClick}
+          onClick={onTakeAnotherTest}
         >
-          Close
+          Take Another Test
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="4xl"
+          className="w-full rounded-full h-14 border-c-90 text-c-90"
+          onClick={onGoToHome}
+        >
+          Go to Home
         </Button>
       </StickyFooter>
     </div>
@@ -691,7 +705,7 @@ export function TutorialPage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} title={`Task ${taskNumber}`} />
       <div className="flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -746,7 +760,7 @@ export function TaskCompletedPage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} />
       <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -870,7 +884,7 @@ export function FinalScorePage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} />
       <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -1004,7 +1018,7 @@ export function PracticalQuestionPage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} title={`Task ${taskNumber}`} />
       <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -1061,7 +1075,7 @@ export function QuizPage({
   onSelectOption: (id: number) => void;
 }) {
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={onGoBackClick} title={`Task ${taskNumber}`} />
       <div className="flex flex-col gap-3 h-full px-4 max-w-[430px]">
         <TitleText text={title} size="md" />

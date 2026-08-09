@@ -274,7 +274,7 @@ export const getPartyAgentPaymentAllocation = createServerFn({ method: "GET" })
         API_URL.partyAgentPaymentAllocations(partyId),
       );
       const resData = await response.json();
-      return resData; // { success, data: { agent_payment_allocation: {...} } }
+      return resData; // { success, data: { agent_payment_allocation_kobo: {...} } }
     } catch (error) {
       return {
         success: false,

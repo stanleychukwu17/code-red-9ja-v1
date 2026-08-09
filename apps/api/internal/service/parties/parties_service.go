@@ -720,8 +720,8 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 	return updatedParty, nil
 }
 
-// UpdateAgentPaymentAllocation updates the state-by-state polling agent payment settings for a party.
-func (s *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
+// UpdateAgentPaymentAllocationKobo updates the state-by-state polling agent payment settings for a party.
+func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
 	// Simple validation to ensure valid JSON is supplied
 	var temp map[string]any
 	if err := json.Unmarshal(allowancesJSON, &temp); err != nil {
@@ -729,22 +729,22 @@ func (s *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, party
 	}
 
 	defer s.InvalidatePartyCache(ctx, partyID)
-	return s.queries.UpdatePartyAgentPaymentAllocation(ctx, queries.UpdatePartyAgentPaymentAllocationParams{
-		AgentPaymentAllocation: allowancesJSON,
+	return s.queries.UpdatePartyAgentPaymentAllocationKobo(ctx, queries.UpdatePartyAgentPaymentAllocationKoboParams{
+		AgentPaymentAllocationKobo: allowancesJSON,
 		ID:              partyID,
 	})
 }
 
-// GetAgentPaymentAllocation returns the agent_payment_allocation JSON for a party.
-func (s *PartiesService) GetAgentPaymentAllocation(ctx context.Context, partyID int16) (json.RawMessage, error) {
+// GetAgentPaymentAllocationKobo returns the agent_payment_allocation JSON for a party.
+func (s *PartiesService) GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error) {
 	party, err := s.queries.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return nil, fmt.Errorf("party not found: %w", err)
 	}
-	if len(party.AgentPaymentAllocation) == 0 {
+	if len(party.AgentPaymentAllocationKobo) == 0 {
 		return json.RawMessage("{}"), nil
 	}
-	return json.RawMessage(party.AgentPaymentAllocation), nil
+	return json.RawMessage(party.AgentPaymentAllocationKobo), nil
 }
 
 // UpdatePartyIsVerified updates the is_verified flag of a party.
