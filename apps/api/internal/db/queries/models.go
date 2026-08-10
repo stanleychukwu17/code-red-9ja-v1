@@ -920,6 +920,7 @@ type PartyMarketingCampaign struct {
 	EndDate         pgtype.Timestamptz      `json:"end_date"`
 	Status          MarketingCampaignStatus `json:"status"`
 	Budget          pgtype.Numeric          `json:"budget"`
+	ReferralAmount  pgtype.Numeric          `json:"referral_amount"`
 	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
 	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
@@ -995,6 +996,8 @@ type Plan struct {
 	Features             []byte                `json:"features"`
 	ScopesRecommendation []byte                `json:"scopes_recommendation"`
 	ColorHex             pgtype.Text           `json:"color_hex"`
+	DarkColorHex         pgtype.Text           `json:"dark_color_hex"`
+	ReferralAmount       pgtype.Numeric        `json:"referral_amount"`
 	IsActive             bool                  `json:"is_active"`
 	DisplayOrder         int32                 `json:"display_order"`
 	CreatedAt            pgtype.Timestamptz    `json:"created_at"`
@@ -1105,6 +1108,20 @@ type PollingUnitUpdate struct {
 	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type Referral struct {
+	ID              int64              `json:"id"`
+	PartyID         pgtype.Int2        `json:"party_id"`
+	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
+	ReferrerUserID  int64              `json:"referrer_user_id"`
+	ReferredUserID  int64              `json:"referred_user_id"`
+	Milestone       string             `json:"milestone"`
+	Status          pgtype.Text        `json:"status"`
+	AmountToPay     pgtype.Numeric     `json:"amount_to_pay"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	PaidAt          pgtype.Timestamptz `json:"paid_at"`
+}
+
 type Role struct {
 	ID          int16       `json:"id"`
 	Code        string      `json:"code"`
@@ -1202,9 +1219,9 @@ type User struct {
 	HasRole         pgtype.Bool        `json:"has_role"`
 	PartyID         pgtype.Int2        `json:"party_id"`
 	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
-	ReferralCode    pgtype.Text        `json:"referral_code"`
-	ReferredByCode  pgtype.Text        `json:"referred_by_code"`
 	AccountStatus   pgtype.Text        `json:"account_status"`
+	ReferralCode    pgtype.Text        `json:"referral_code"`
+	ReferredByID    pgtype.Int8        `json:"referred_by_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1244,6 +1261,21 @@ type UserPracticeTest struct {
 	Status          string             `json:"status"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserReferral struct {
+	ID                                int64              `json:"id"`
+	UserID                            int64              `json:"user_id"`
+	PartyID                           pgtype.Int2        `json:"party_id"`
+	ElectionGroupID                   pgtype.Int4        `json:"election_group_id"`
+	TotalReferrals                    pgtype.Int4        `json:"total_referrals"`
+	AgentReferrals                    pgtype.Int4        `json:"agent_referrals"`
+	UnpaidReferrals                   pgtype.Int4        `json:"unpaid_referrals"`
+	DutiesCompletedReferrals          pgtype.Int4        `json:"duties_completed_referrals"`
+	DutiesCompletedAndUnpaidReferrals pgtype.Int4        `json:"duties_completed_and_unpaid_referrals"`
+	TotalEarnedAmount                 pgtype.Numeric     `json:"total_earned_amount"`
+	CreatedAt                         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserRole struct {

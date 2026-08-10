@@ -146,6 +146,159 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/referrals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "list all referrals",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "referrals"
+                ],
+                "summary": "List referrals (Admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "manually insert a referral record",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "referrals"
+                ],
+                "summary": "Create a referral (Admin)",
+                "parameters": [
+                    {
+                        "description": "Referral Data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/referrals.createReferralRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/referrals/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "update referral milestone or status",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "referrals"
+                ],
+                "summary": "Update a referral (Admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Referral ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update Data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/referrals.updateReferralRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/settings/slot-price": {
             "get": {
                 "description": "Retrieves the global, app-wide price of a single polling unit slot in Kobo",
@@ -4218,7 +4371,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the current agent_payment_allocation for a party as a parsed JSON object.",
+                "description": "Returns the current agent_payment_allocation_kobo for a party as a parsed JSON object.",
                 "produces": [
                     "application/json"
                 ],
@@ -6363,6 +6516,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/referrals/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "get referral by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "referrals"
+                ],
+                "summary": "Get a referral",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Referral ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/senatorial-districts": {
             "get": {
                 "description": "Fetches senatorial districts with optional stateID filtering and cursor pagination",
@@ -7370,6 +7565,46 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/users/me/referrals": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "list referrals referred by the authenticated user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "referrals"
+                ],
+                "summary": "List my referrals",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -9647,6 +9882,9 @@ const docTemplate = `{
                 },
                 "voters_card_image": {
                     "type": "string"
+                },
+                "whatsapp_phone": {
+                    "type": "string"
                 }
             }
         },
@@ -10220,7 +10458,7 @@ const docTemplate = `{
                         "type": "integer"
                     }
                 },
-                "agent_payment_allocation": {
+                "agent_payment_allocation_kobo": {
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -10398,6 +10636,49 @@ const docTemplate = `{
                 },
                 "voters_card_image": {
                     "$ref": "#/definitions/pgtype.Text"
+                }
+            }
+        },
+        "referrals.createReferralRequest": {
+            "type": "object",
+            "required": [
+                "milestone",
+                "referred_user_id",
+                "referrer_user_id"
+            ],
+            "properties": {
+                "milestone": {
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "referred_user_id": {
+                    "type": "integer"
+                },
+                "referrer_user_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "referrals.updateReferralRequest": {
+            "type": "object",
+            "properties": {
+                "milestone": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "description": "ISO8601 string",
+                    "type": "string"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },

@@ -2,13 +2,11 @@
 INSERT INTO users (
   email, phone, username, password_hash, last_name,
   first_name, middle_name, gender, date_of_birth, current_country,
-  current_state, current_city, referral_code, referred_by_code
+  current_state, current_city
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING id;
 
--- name: CheckReferralCodeExists :one
-SELECT EXISTS(SELECT 1 FROM users WHERE referral_code = $1);
 
 -- name: CreateCandidatePlaceholder :one
 INSERT INTO users (
@@ -49,8 +47,10 @@ SET password_hash = $2
 WHERE fake_id = $1;
 
 -- name: GetUserByFakeID :one
-SELECT * FROM users
-WHERE fake_id = $1 LIMIT 1;
+SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
+       u.referral_code, u.referred_by_id
+FROM users u
+WHERE u.fake_id = $1 LIMIT 1;
 
 -- name: CreateUserSecurityQuestions :one
 INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
@@ -100,8 +100,6 @@ SET username = $2,
     current_city = $10,
     state_of_origin = $11,
     country_of_origin = $12,
-    referred_by_code = $13,
-    referral_code = $14,
     account_status = 'active',
     updated_at = NOW()
 WHERE id = $1;
@@ -151,9 +149,9 @@ INSERT INTO users (
   email, avatar, phone, username, password_hash, last_name, first_name, middle_name,
   gender, date_of_birth, current_country, current_state, current_lga, current_city,
   state_of_origin, voters_card_image,
-  account_status, party_id, is_politician, is_verified, referral_code
+  account_status, party_id, is_politician, is_verified
 )
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
 RETURNING id;
 
 -- name: AdminUpdateUser :exec
@@ -210,23 +208,84 @@ SET occupation_id = EXCLUDED.occupation_id,
     address = EXCLUDED.address,
     updated_at = NOW();
 
--- name: UpdateUserAgentMoreInfo :exec
-INSERT INTO user_more_infos (
-  user_id, educational_status, highest_degree, graduation_year, school_name, address
-) VALUES ($1, $2, $3, $4, $5, $6)
-ON CONFLICT (user_id) DO UPDATE
-SET educational_status = EXCLUDED.educational_status,
-    highest_degree = EXCLUDED.highest_degree,
-    graduation_year = EXCLUDED.graduation_year,
-    school_name = EXCLUDED.school_name,
-    address = EXCLUDED.address,
-    updated_at = NOW();
+-- name: GetUserIdByReferralCode :one
+SELECT id FROM users
+WHERE referral_code = $1 LIMIT 1;
+
+-- name: UpdateUserReferredBy :exec
+UPDATE users
+SET referred_by_id = $2,
+    updated_at = NOW()
+WHERE id = $1;
 
 -- name: CreateUserVerification :one
-INSERT INTO user_verifications (
-  user_id, nin_verified, phone_verified, email_verified, voters_card_verified
-) VALUES ($1, $2, $3, $4, $5)
+INSERT INTO user_verifications (user_id, nin_verified, phone_verified, email_verified, voters_card_verified)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING user_id;
+
+-- name: GetReferrerNameByCode :one
+SELECT first_name, last_name 
+FROM users
+WHERE referral_code = $1 LIMIT 1;
+
+-- name: GetFakeIDByEmail :one
+SELECT fake_id FROM users
+WHERE email = $1 LIMIT 1;
+
+-- name: GetUserPasswordHashByFakeID :one
+SELECT password_hash FROM users
+WHERE fake_id = $1 LIMIT 1;
+
+-- name: GetFakeIDByPhone :one
+SELECT fake_id FROM users
+WHERE phone = $1 LIMIT 1;
+
+-- name: GetFakeIDByUsername :one
+SELECT fake_id FROM users
+WHERE username = $1 LIMIT 1;
+
+-- name: CountAllUserPhoneNumbers :one
+SELECT COUNT(*) FROM users_phone_numbers
+WHERE user_id = $1;
+
+-- name: UpdatePhoneNumber :exec
+UPDATE users_phone_numbers
+SET on_whatsapp = $3,
+    is_default = $4
+WHERE id = $1 AND user_id = $2;
+
+-- name: DeleteUserPhoneNumber :exec
+DELETE FROM users_phone_numbers
+WHERE id = $1 AND user_id = $2;
+
+-- name: UpdateUserAgentMoreInfo :exec
+INSERT INTO user_more_infos (
+  user_id, educational_status, highest_degree, graduation_year, school_name
+) VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id) DO UPDATE
+SET educational_status = COALESCE(EXCLUDED.educational_status, user_more_infos.educational_status),
+    highest_degree = COALESCE(EXCLUDED.highest_degree, user_more_infos.highest_degree),
+    graduation_year = COALESCE(EXCLUDED.graduation_year, user_more_infos.graduation_year),
+    school_name = COALESCE(EXCLUDED.school_name, user_more_infos.school_name),
+    updated_at = NOW();
+
+-- name: CheckReferralCodeExists :one
+SELECT EXISTS(
+    SELECT 1 FROM users
+    WHERE referral_code = $1
+);
+
+-- name: UpdateUserReferralCode :exec
+UPDATE users
+SET referral_code = $2,
+    updated_at = NOW()
+WHERE id = $1;
+
+-- name: UpdateUserHasRole :exec
+UPDATE users
+SET has_role = $2,
+    updated_at = NOW()
+WHERE id = $1;
 
 -- name: GetUserVerification :one
 SELECT * FROM user_verifications
@@ -234,84 +293,21 @@ WHERE user_id = $1 LIMIT 1;
 
 -- name: GetUserPhoneNumbersByUserID :many
 SELECT * FROM users_phone_numbers
-WHERE user_id = $1 AND is_active = true ORDER BY id ASC;
-
--- name: CountAllUserPhoneNumbers :one
-SELECT count(*) FROM users_phone_numbers
 WHERE user_id = $1;
-
--- name: DeleteUserPhoneNumber :exec
-UPDATE users_phone_numbers
-SET is_active = false
-WHERE id = $1 AND user_id = $2;
--- name: UpdatePhoneNumber :exec
-UPDATE users_phone_numbers
-SET on_whatsapp = $2, is_default = $3
-WHERE id = $1 AND user_id = $4;
-
--- name: CreateUserBankAccount :one
-INSERT INTO user_bank_accounts (
-  user_id, account_number, bank_code, is_primary
-) VALUES ($1, $2, $3, $4)
-RETURNING *;
-
--- name: GetUserBankAccountsByUserID :many
-SELECT * FROM user_bank_accounts
-WHERE user_id = $1 ORDER BY is_primary DESC, id DESC;
-
--- name: UpdateUserBankAccount :one
-UPDATE user_bank_accounts
-SET account_number = $2, bank_code = $3, is_primary = $4, updated_at = NOW()
-WHERE id = $1 AND user_id = $5
-RETURNING *;
-
--- name: DeleteUserBankAccount :exec
-DELETE FROM user_bank_accounts
-WHERE id = $1 AND user_id = $2;
-
--- name: SetPrimaryBankAccount :exec
-UPDATE user_bank_accounts
-SET is_primary = CASE WHEN id = $1 THEN true ELSE false END
-WHERE user_id = $2;
-
--- name: GetFakeIDByUsername :one
-SELECT fake_id FROM users
-WHERE username = $1 LIMIT 1;
-
--- name: GetFakeIDByEmail :one
-SELECT fake_id FROM users
-WHERE email = $1 LIMIT 1;
-
--- name: GetFakeIDByPhone :one
-SELECT fake_id FROM users
-WHERE phone = $1 LIMIT 1;
 
 -- name: GetFakeIDByAdditionalPhone :one
 SELECT u.fake_id
 FROM users u
-JOIN users_phone_numbers pn ON u.id = pn.user_id
-WHERE pn.phone = $1 LIMIT 1;
+JOIN users_phone_numbers upn ON u.id = upn.user_id
+WHERE upn.phone = $1 LIMIT 1;
+
+-- name: GetFakeIDByNIN :one
+SELECT u.fake_id
+FROM users u
+JOIN users_nin un ON u.id = un.user_id
+WHERE un.nin = $1 LIMIT 1;
 
 -- name: GetFakeIDByUserID :one
 SELECT fake_id FROM users
 WHERE id = $1 LIMIT 1;
 
--- name: GetFakeIDByNIN :one
-SELECT u.fake_id
-FROM users u
-JOIN users_nin n ON u.id = n.user_id
-WHERE n.nin = $1 LIMIT 1;
-
--- name: GetUserPasswordHashByFakeID :one
-SELECT password_hash FROM users
-WHERE fake_id = $1 LIMIT 1;
-
--- name: UpdateUserHasRole :exec
-UPDATE users
-SET has_role = $2
-WHERE id = $1;
-
--- name: UpdateUserReferralCode :exec
-UPDATE users
-SET referral_code = $2
-WHERE id = $1;

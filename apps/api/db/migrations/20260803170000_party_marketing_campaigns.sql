@@ -11,6 +11,8 @@ CREATE TABLE plans (
     features JSONB NOT NULL DEFAULT '[]'::jsonb,
     scopes_recommendation JSONB NOT NULL DEFAULT '[]'::jsonb,
     color_hex VARCHAR(50) DEFAULT NULL,
+    dark_color_hex VARCHAR(50) DEFAULT NULL,
+    referral_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT true,
     display_order INT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
@@ -18,12 +20,12 @@ CREATE TABLE plans (
 );
 
 -- Seed basic plans based on UI
-INSERT INTO plans (name, description, price, type, features, scopes_recommendation, color_hex, display_order) VALUES
-('Starter',      'Ideal for: ward-level or small-parties',          220000,   'agent-campaign', '["Low-budget referral", "1 to 1,000 applications per month"]'::jsonb, '["ward"]'::jsonb, '#313131', 1),
-('Basic',        'Ideal for: LGA-level and mid-parties',             600000,   'agent-campaign', '["Everything in Starter", "Mid-budget referral", "Facebook & Instagram Advertising", "1 to 3,000 applications per month"]'::jsonb, '["lga"]'::jsonb, '#3742FA', 2),
-('Pro',          'Ideal for: senatorial and house of rep',           1200000,  'agent-campaign', '["Everything in Basic", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 6,000 applications per month"]'::jsonb, '["senatorial-district", "federal-constituency"]'::jsonb, '#009A49', 3),
-('Premium',      'Ideal for: presidential and governorship',        5000000,  'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 applications per month", "5X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#FF8D28', 4),
-('Premium Plus', 'Ideal for: presidential and governorship',        10000000, 'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 application per month", "10X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#F44336', 5);
+INSERT INTO plans (name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, display_order) VALUES
+('Starter',      'Ideal for: ward-level or small-parties',          220000,   'agent-campaign', '["Low-budget referral", "1 to 1,000 applications per month"]'::jsonb, '["ward"]'::jsonb, '#313131', '#D1D5DB', 200, 1),
+('Basic',        'Ideal for: LGA-level and mid-parties',             600000,   'agent-campaign', '["Everything in Starter", "Mid-budget referral", "Facebook & Instagram Advertising", "1 to 3,000 applications per month"]'::jsonb, '["lga"]'::jsonb, '#3742FA', '#5352ED', 300, 2),
+('Pro',          'Ideal for: senatorial and house of rep',           1200000,  'agent-campaign', '["Everything in Basic", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 6,000 applications per month"]'::jsonb, '["senatorial-district", "federal-constituency"]'::jsonb, '#009A49', '#2ED573', 500, 3),
+('Premium',      'Ideal for: presidential and governorship',        5000000,  'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 applications per month", "5X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#FF8D28', '#FFA502', 1000, 4),
+('Premium Plus', 'Ideal for: presidential and governorship',        10000000, 'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 application per month", "10X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#F44336', '#FF4757', 2000, 5);
 
 CREATE TABLE party_marketing_campaigns (
     id SERIAL PRIMARY KEY,
@@ -38,6 +40,7 @@ CREATE TABLE party_marketing_campaigns (
     end_date TIMESTAMP WITH TIME ZONE,
     status marketing_campaign_status NOT NULL DEFAULT 'pending',
     budget DECIMAL(15, 2) NOT NULL,
+    referral_amount DECIMAL(15, 2) NOT NULL DEFAULT 0,
     amount_spent DECIMAL(15, 2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL

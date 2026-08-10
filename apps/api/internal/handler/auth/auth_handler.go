@@ -21,16 +21,16 @@ import (
 
 // AuthService interface defines the methods for authentication services
 type AuthService interface {
-	Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (auth.RegisterResult, error)
+	Register(ctx context.Context, params queries.CreateUserParams, referredByCode string, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (auth.RegisterResult, error)
 	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16, emailVerificationToken string) (auth.RegisterPhaseSignUpResult, error)
 	Signup(ctx context.Context, email, phone, password string, countryID int16) (auth.SignupResult, error)
 	SendSignupEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
 	VerifySignupEmailOTP(ctx context.Context, email, otp string) (auth.EmailOTPResult, error)
 	SendForgotPasswordEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
-	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, nin string, q1 int16, a1 string, q2 int16, a2 string) error
+	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, myReferralCode string, referredByCode string, nin string, q1 int16, a1 string, q2 int16, a2 string) error
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
-	CheckReferralCode(ctx context.Context, code string) bool
+	CheckReferralCode(ctx context.Context, code string) (bool, string)
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
@@ -150,11 +150,10 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		CurrentCountry: req.CurrentCountry,
 		CurrentState:   req.CurrentState,
 		CurrentCity:    pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
-		ReferredByCode: pgtype.Text{String: req.ReferredByCode, Valid: req.ReferredByCode != ""},
 	}
 
 	// Call the auth service to register the new user
-	id, err := h.authService.Register(r.Context(), params, req.Nin, req.OnboardingID, req.Question1, req.Answer1, req.Question2, req.Answer2)
+	id, err := h.authService.Register(r.Context(), params, req.ReferredByCode, req.Nin, req.OnboardingID, req.Question1, req.Answer1, req.Question2, req.Answer2)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create user: "+err.Error())
 		return
@@ -424,11 +423,9 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 		CurrentCity:     pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
 		StateOfOrigin:   pgtype.Int2{Int16: req.StateOfOrigin, Valid: req.StateOfOrigin != 0},
 		CountryOfOrigin: pgtype.Int2{Int16: req.CountryOfOrigin, Valid: req.CountryOfOrigin != 0},
-		ReferredByCode:  pgtype.Text{String: req.ReferralCode, Valid: req.ReferralCode != ""},
-		ReferralCode:    pgtype.Text{String: myReferralCode, Valid: true},
 	}
 
-	if err := h.authService.CompleteOnboarding(ctx, user.ID, claims.FakeID, params, req.Nin, req.Question1, req.Answer1, req.Question2, req.Answer2); err != nil {
+	if err = h.authService.CompleteOnboarding(r.Context(), user.ID, user.FakeID.Int64, params, myReferralCode, req.ReferralCode, req.Nin, req.Question1, req.Answer1, req.Question2, req.Answer2); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to complete onboarding: "+err.Error())
 		return
 	}
@@ -437,7 +434,27 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	if updatedUser, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID); err == nil {
 		// Attempt to create the wallet immediately. If it fails, we don't fail the onboarding request.
 		// The dashboard will auto-create it later as a fallback if it's missing.
-		_, _ = h.usersService.CreateUserWallet(ctx, updatedUser.User)
+		_, _ = h.usersService.CreateUserWallet(ctx, queries.User{
+			ID: updatedUser.ID,
+			FakeID: updatedUser.FakeID,
+			Email: updatedUser.Email,
+			Phone: updatedUser.Phone,
+			Username: updatedUser.Username,
+			PasswordHash: updatedUser.PasswordHash,
+			LastName: updatedUser.LastName,
+			FirstName: updatedUser.FirstName,
+			MiddleName: updatedUser.MiddleName,
+			Gender: updatedUser.Gender,
+			DateOfBirth: updatedUser.DateOfBirth,
+			CurrentCountry: updatedUser.CurrentCountry,
+			CurrentState: updatedUser.CurrentState,
+			CurrentCity: updatedUser.CurrentCity,
+			StateOfOrigin: updatedUser.StateOfOrigin,
+			CountryOfOrigin: updatedUser.CountryOfOrigin,
+			AccountStatus: updatedUser.AccountStatus,
+			CreatedAt: updatedUser.CreatedAt,
+			UpdatedAt: updatedUser.UpdatedAt,
+		})
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Onboarding completed successfully", nil)
@@ -549,10 +566,11 @@ func (h *Handler) CheckReferralCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	exists := h.authService.CheckReferralCode(r.Context(), req.Code)
+	exists, name := h.authService.CheckReferralCode(r.Context(), req.Code)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Referral code checked successfully", map[string]interface{}{
 		"exists": exists,
+		"name":   name,
 	})
 }
 

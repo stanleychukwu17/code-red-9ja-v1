@@ -6,7 +6,7 @@ import "encoding/json"
 // UserWithPlaces extends the base User struct with additional resolved fields
 // like location names, verifications, basic party info, and roles.
 type UserWithPlaces struct {
-	User
+	GetUserByFakeIDRow
 	CountryName    string                           `json:"country_name"`
 	StateName      string                           `json:"state_name"`
 	CityName       string                           `json:"city_name"`

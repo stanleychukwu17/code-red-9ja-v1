@@ -145,7 +145,8 @@ export const API_URL = {
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
     if (partyId) params.append("party_id", String(partyId));
-    if (electionGroupId) params.append("election_group_id", String(electionGroupId));
+    if (electionGroupId)
+      params.append("election_group_id", String(electionGroupId));
     const qs = params.toString();
     return `${api}/polling-units${qs ? `?${qs}` : ""}`;
   },
@@ -258,9 +259,12 @@ export const API_URL = {
   pollingAgentApplications: `${api}/party-applications`,
   pollingAgentRecommendations: `${api}/party-applications/recommendations`,
 
-  approveApplication: (id: string | number) => `${api}/party-applications/${id}/approve`,
-  rejectApplication: (id: string | number) => `${api}/party-applications/${id}/reject`,
-  cancelApplication: (id: string | number) => `${api}/party-applications/${id}/cancel`,
+  approveApplication: (id: string | number) =>
+    `${api}/party-applications/${id}/approve`,
+  rejectApplication: (id: string | number) =>
+    `${api}/party-applications/${id}/reject`,
+  cancelApplication: (id: string | number) =>
+    `${api}/party-applications/${id}/cancel`,
 
   pollingUnitAssignments: `${api}/polling-unit-assignments`,
   updateAssignmentTracking: (id: string | number) =>
@@ -291,7 +295,8 @@ export const API_URL = {
   ) => {
     const params = new URLSearchParams();
     if (userId) params.append("user_id", String(userId));
-    if (electionGroupId) params.append("election_group_id", String(electionGroupId));
+    if (electionGroupId)
+      params.append("election_group_id", String(electionGroupId));
     if (status) params.append("status", status);
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));

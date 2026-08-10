@@ -11,7 +11,6 @@ import { getSupervisorAssignments } from "#/lib/server/supervisor_assignments";
 import {
   getMyWallet,
   createUserWallet,
-  generateReferralCode,
 } from "#/lib/server/users";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
@@ -113,23 +112,6 @@ export const useAuth = () => {
   const selectedElection = useAppSelector(selectSelectedElection);
   const isLive = useAppSelector(selectIsLive);
   const isLock = useAppSelector(selectIsLocked);
-
-  const generateReferralCodeFn = useServerFn(generateReferralCode);
-  useEffect(() => {
-    if (user && user.id && !user.referral_code) {
-      generateReferralCodeFn()
-        .then((res) => {
-          if (res?.success) {
-            dispatch(
-              updateAuthState({
-                user: { ...user, referral_code: res.data.referral_code },
-              }),
-            );
-          }
-        })
-        .catch((err) => console.error("Failed to generate referral code", err));
-    }
-  }, [user?.id, user?.referral_code]);
 
   // Returns true if today matches electionDate (YYYY-MM-DD)
   const isElectionDay = (electionDate?: string | null): boolean => {

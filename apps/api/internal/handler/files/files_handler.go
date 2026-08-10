@@ -46,7 +46,7 @@ type PartiesService interface {
 // FilesDB is the narrow interface for file-related database operations.
 // Satisfied by *queries.Queries, but mockable in tests.
 type FilesDB interface {
-	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (queries.User, error)
+	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (queries.GetUserByFakeIDRow, error)
 	UpdateUserAvatar(ctx context.Context, arg queries.UpdateUserAvatarParams) error
 	CreateFile(ctx context.Context, arg queries.CreateFileParams) (queries.File, error)
 	ConfirmUpload(ctx context.Context, arg queries.ConfirmUploadParams) (queries.File, error)

@@ -57,10 +57,11 @@ INSERT INTO party_marketing_campaigns (
     start_date,
     end_date,
     budget,
+    referral_amount,
     amount_spent,
     status
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10, $11
 )
 RETURNING *;
 
@@ -70,3 +71,14 @@ FROM party_marketing_campaigns pmc
 JOIN plans p ON pmc.plan_id = p.id
 WHERE pmc.party_id = $1
 ORDER BY pmc.created_at DESC;
+
+-- name: GetActiveMarketingCampaignForElectionGroup :one
+-- Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
+SELECT * FROM party_marketing_campaigns
+WHERE party_id = $1
+  AND election_group_id = $2
+  AND status = 'active'
+  AND start_date IS NOT NULL
+  AND end_date IS NOT NULL
+  AND NOW() BETWEEN start_date AND end_date
+LIMIT 1;

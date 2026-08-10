@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -176,6 +177,17 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		if err != nil {
 			return nil, fmt.Errorf("failed to create application: %w", err)
 		}
+
+		// Create user referral record for this election group
+		err = txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
+			UserID:          input.UserID,
+			PartyID:         pgtype.Int2{Int16: int16(input.PartyID), Valid: input.PartyID > 0},
+			ElectionGroupID: pgtype.Int4{Int32: int32(egID), Valid: egID > 0},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create user referral record: %w", err)
+		}
+
 		apps = append(apps, app)
 	}
 
@@ -878,9 +890,184 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		}
 	}
 
+	// --- Referral stat update on acceptance ---
+	// Best-effort: failures are logged but do not fail the whole transaction.
+	if refErr := s.processReferralOnAcceptance(ctx, txQueries, app.UserID, int16(app.PartyID)); refErr != nil {
+		slog.Warn("processReferralOnAcceptance failed (non-fatal)", "userID", app.UserID, "err", refErr)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return updatedApp, nil
+}
+
+// processReferralOnAcceptance updates referral stats when a referred user's application is accepted.
+//
+// Selection logic (per user comment):
+//  1. Get all election group IDs the accepted user applied for under this party.
+//  2. Get all user_referrals rows the referrer has for this party → build intersection set.
+//  3. For each intersecting election group, check if the party has an active marketing campaign
+//     (NOW() BETWEEN start_date AND end_date AND status='active').
+//  4. Prefer election groups with an active campaign; among those, pick the one whose election_group
+//     has the nearest upcoming election date. If none have an active campaign, pick the nearest
+//     election date from the full intersection set.
+//  5. Update: increment agent_referrals (always); increment unpaid_referrals (only if active campaign);
+//     update the referrals row with milestone='BECAME_AGENT', amount_to_pay, party_id, election_group_id.
+func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *queries.Queries, acceptedUserID int64, partyID int16) error {
+	// 1. Get the accepted user's referrer
+	referredByID, err := txQueries.GetUserReferredByID(ctx, acceptedUserID)
+	if err != nil || !referredByID.Valid {
+		return nil // not referred — nothing to do
+	}
+	referrerID := referredByID.Int64
+
+	// 2. Check if the referrals row is already at BECAME_AGENT (idempotency guard)
+	existingReferral, err := txQueries.GetReferralByReferredUserID(ctx, acceptedUserID)
+	if err == nil && existingReferral.Milestone == "BECAME_AGENT" {
+		return nil // already processed
+	}
+
+	// 3. All election groups the accepted user submitted applications for under this party
+	submittedEGIDs, err := txQueries.GetApplicationElectionGroupsByUserAndParty(ctx, queries.GetApplicationElectionGroupsByUserAndPartyParams{
+		UserID:  acceptedUserID,
+		PartyID: partyID,
+	})
+	if err != nil || len(submittedEGIDs) == 0 {
+		return nil
+	}
+
+	// 4. All user_referrals records the referrer has under this party
+	referrerRecords, err := txQueries.GetReferrerUserReferralsForParty(ctx, queries.GetReferrerUserReferralsForPartyParams{
+		UserID:  referrerID,
+		PartyID: pgtype.Int2{Int16: partyID, Valid: true},
+	})
+	if err != nil || len(referrerRecords) == 0 {
+		return nil
+	}
+
+	// Build a set of election group IDs the referrer tracks
+	referrerEGMap := make(map[int64]bool)
+	for _, r := range referrerRecords {
+		if r.ElectionGroupID.Valid {
+			referrerEGMap[int64(r.ElectionGroupID.Int32)] = true
+		}
+	}
+
+	// Intersection: election groups submitted by accepted user that referrer also tracks
+	type candidateEG struct {
+		egID             int64
+		electionDate     pgtype.Date
+		hasActiveCampaign bool
+		referralAmount   pgtype.Numeric
+	}
+	var candidates []candidateEG
+
+	for _, egID := range submittedEGIDs {
+		if !referrerEGMap[egID] {
+			continue
+		}
+		// Fetch election group for election date
+		eg, egErr := txQueries.GetElectionGroupByID(ctx, egID)
+		if egErr != nil {
+			continue
+		}
+		// Check for active marketing campaign
+		campaign, campErr := txQueries.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
+			PartyID:         int32(partyID),
+			ElectionGroupID: int32(egID),
+		})
+		hasActiveCampaign := campErr == nil
+		var referralAmt pgtype.Numeric
+		if hasActiveCampaign {
+			referralAmt = campaign.ReferralAmount
+		}
+		candidates = append(candidates, candidateEG{
+			egID:              egID,
+			electionDate:      eg.ElectionDate,
+			hasActiveCampaign: hasActiveCampaign,
+			referralAmount:    referralAmt,
+		})
+	}
+
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	// 5. Select best candidate:
+	//    - First pass: prefer those with an active campaign
+	//    - Among qualifying, pick nearest upcoming election date
+	//    - If none have an active campaign, fall back to nearest from all candidates
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	pickNearest := func(pool []candidateEG) candidateEG {
+		best := pool[0]
+		for _, c := range pool[1:] {
+			if !c.electionDate.Valid {
+				continue
+			}
+			if !best.electionDate.Valid {
+				best = c
+				continue
+			}
+			cDate := c.electionDate.Time
+			bDate := best.electionDate.Time
+			// Prefer upcoming dates; among those, nearest
+			cUpcoming := !cDate.Before(today)
+			bUpcoming := !bDate.Before(today)
+			if cUpcoming && !bUpcoming {
+				best = c
+			} else if cUpcoming && bUpcoming && cDate.Before(bDate) {
+				best = c
+			}
+		}
+		return best
+	}
+
+	var activeCandidates []candidateEG
+	for _, c := range candidates {
+		if c.hasActiveCampaign {
+			activeCandidates = append(activeCandidates, c)
+		}
+	}
+
+	var best candidateEG
+	if len(activeCandidates) > 0 {
+		best = pickNearest(activeCandidates)
+	} else {
+		best = pickNearest(candidates)
+	}
+
+	// 6. Increment agent_referrals on referrer's user_referrals row
+	egIDPg := pgtype.Int4{Int32: int32(best.egID), Valid: true}
+	if err := txQueries.IncrementUserReferralAgentCount(ctx, queries.IncrementUserReferralAgentCountParams{
+		UserID:          referrerID,
+		ElectionGroupID: egIDPg,
+	}); err != nil {
+		return fmt.Errorf("IncrementUserReferralAgentCount: %w", err)
+	}
+
+	// 7. If active campaign: also increment unpaid_referrals
+	if best.hasActiveCampaign {
+		if err := txQueries.IncrementUserReferralUnpaidCount(ctx, queries.IncrementUserReferralUnpaidCountParams{
+			UserID:          referrerID,
+			ElectionGroupID: egIDPg,
+		}); err != nil {
+			slog.Warn("IncrementUserReferralUnpaidCount failed", "err", err)
+		}
+	}
+
+	// 8. Update the referrals row for the referred user
+	if err := txQueries.UpdateReferralOnAgentAcceptance(ctx, queries.UpdateReferralOnAgentAcceptanceParams{
+		ReferredUserID:  acceptedUserID,
+		AmountToPay:     best.referralAmount,
+		PartyID:         pgtype.Int2{Int16: partyID, Valid: true},
+		ElectionGroupID: egIDPg,
+	}); err != nil {
+		return fmt.Errorf("UpdateReferralOnAgentAcceptance: %w", err)
+	}
+
+	return nil
 }

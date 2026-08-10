@@ -1046,6 +1046,8 @@ definitions:
         type: string
       voters_card_image:
         type: string
+      whatsapp_phone:
+        type: string
     type: object
   pgtype.Bool:
     properties:
@@ -1422,7 +1424,7 @@ definitions:
         items:
           type: integer
         type: array
-      agent_payment_allocation:
+      agent_payment_allocation_kobo:
         items:
           type: integer
         type: array
@@ -1541,6 +1543,35 @@ definitions:
         type: array
       voters_card_image:
         $ref: '#/definitions/pgtype.Text'
+    type: object
+  referrals.createReferralRequest:
+    properties:
+      milestone:
+        type: string
+      party_id:
+        type: integer
+      referred_user_id:
+        type: integer
+      referrer_user_id:
+        type: integer
+      status:
+        type: string
+    required:
+    - milestone
+    - referred_user_id
+    - referrer_user_id
+    type: object
+  referrals.updateReferralRequest:
+    properties:
+      milestone:
+        type: string
+      paid_at:
+        description: ISO8601 string
+        type: string
+      party_id:
+        type: integer
+      status:
+        type: string
     type: object
   senatorialdistrictshandler.CreateSenatorialDistrictRequest:
     properties:
@@ -2022,6 +2053,105 @@ paths:
       summary: Toggle party verification
       tags:
       - Parties
+  /admin/referrals:
+    get:
+      description: list all referrals
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List referrals (Admin)
+      tags:
+      - referrals
+    post:
+      consumes:
+      - application/json
+      description: manually insert a referral record
+      parameters:
+      - description: Referral Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/referrals.createReferralRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a referral (Admin)
+      tags:
+      - referrals
+  /admin/referrals/{id}:
+    put:
+      consumes:
+      - application/json
+      description: update referral milestone or status
+      parameters:
+      - description: Referral ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/referrals.updateReferralRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a referral (Admin)
+      tags:
+      - referrals
   /admin/settings/{key}:
     get:
       consumes:
@@ -4732,8 +4862,8 @@ paths:
       - Parties
   /parties/{id}/allowances/settings:
     get:
-      description: Returns the current agent_payment_allocation for a party as a parsed
-        JSON object.
+      description: Returns the current agent_payment_allocation_kobo for a party as
+        a parsed JSON object.
       parameters:
       - description: Party ID
         in: path
@@ -6232,6 +6362,33 @@ paths:
       summary: Get practice test payout preview
       tags:
       - Practice Tests
+  /referrals/{id}:
+    get:
+      description: get referral by ID
+      parameters:
+      - description: Referral ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get a referral
+      tags:
+      - referrals
   /senatorial-districts:
     get:
       consumes:
@@ -6973,6 +7130,31 @@ paths:
       summary: Get current user profile
       tags:
       - Users
+  /users/me/referrals:
+    get:
+      description: list referrals referred by the authenticated user
+      parameters:
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List my referrals
+      tags:
+      - referrals
   /users/me/wallet:
     get:
       consumes:

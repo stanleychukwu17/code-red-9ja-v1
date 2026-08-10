@@ -37,6 +37,7 @@ import (
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
 	pollingunitshandler "free9ja/api/internal/handler/polling_units"
 	practicetestshandler "free9ja/api/internal/handler/practice_tests"
+	referralshandler "free9ja/api/internal/handler/referrals"
 	seedhandler "free9ja/api/internal/handler/seed"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
 	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
@@ -69,6 +70,7 @@ import (
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
 	pollingunitsservice "free9ja/api/internal/service/polling_units"
 	r2service "free9ja/api/internal/service/r2"
+	referralsservice "free9ja/api/internal/service/referrals"
 	seedservice "free9ja/api/internal/service/seed"
 	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
 	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
@@ -131,6 +133,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
 	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
 	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateAssemblyConstituenciesService(q, rdb)
+	referralsService := referralsservice.NewReferralsService(q)
 
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
@@ -190,6 +193,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
 	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsSvc, partyApplicationsService)
 	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsSvc, utilsInstance)
+	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
 
 	var filesHandler *fileshandler.Handler
 	if r2Svc != nil {
@@ -425,6 +429,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/elections/{id}", electionsHandler.DeleteElection)
 		r.Post("/api/v1/elections/{id}/candidates", electionsHandler.SyncElectionCandidates)
 
+		// referrals admin mutations
+		r.Post("/api/v1/admin/referrals", referralsHandler.CreateReferral)
+		r.Get("/api/v1/admin/referrals", referralsHandler.ListReferrals)
+		r.Get("/api/v1/admin/referrals/{id}", referralsHandler.GetReferral)
+		r.Put("/api/v1/admin/referrals/{id}", referralsHandler.UpdateReferral)
+
 		// only admins can permanently delete files
 		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))
 	})
@@ -457,6 +467,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/users/me/wallet/transactions", usersHandler.ListMyWalletTransactions)
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)
 		r.Post("/api/v1/users/me/referral-code", usersHandler.GenerateReferralCode)
+		r.Get("/api/v1/users/me/referrals", referralsHandler.ListMyReferrals)
 		r.Post("/api/v1/users/{id}/wallet", usersHandler.CreateUserWalletHandler)
 		r.Post("/api/v1/auth/register-candidate", authHandler.RegisterCandidatePlaceholder)
 		r.Post("/api/v1/elections/did-not-vote", electionsHandler.CreateDidNotVoteReason)

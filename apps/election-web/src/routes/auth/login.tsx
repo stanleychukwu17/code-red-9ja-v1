@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import LogoIcon from "@repo/ui/icons/logo-icon";
 import { Button } from "@repo/ui/components/button";
@@ -98,7 +99,23 @@ function LoginComponent() {
     },
   });
 
-  const onSubmit = async (value: any) => {
+  const loginMutation = useMutation({
+    mutationFn: loginUser,
+    onSuccess: (response) => {
+      console.log(response);
+      if (response.success) {
+        dispatch(updateAuthState({ user: response.data?.user }));
+        navigate({ to: "/" });
+      } else {
+        setErrorMsg(response.message || "Invalid email or password.");
+      }
+    },
+    onError: () => {
+      setErrorMsg("Connection error: Unable to reach the server.");
+    },
+  });
+
+  const onSubmit = (value: any) => {
     setErrorMsg(null);
 
     const payload: payloadType = {
@@ -137,18 +154,8 @@ function LoginComponent() {
     // add the identifier type to the payload
     payload.identifierType = identifierType;
 
-    try {
-      const response = await loginUser({ data: payload });
-
-      if (response.success) {
-        dispatch(updateAuthState({ user: response.data?.user }));
-        navigate({ to: "/" });
-      } else {
-        setErrorMsg(response.message || "Invalid email or password.");
-      }
-    } catch (err) {
-      setErrorMsg("Connection error: Unable to reach the server.");
-    }
+    console.log({ payload });
+    loginMutation.mutate({ data: payload });
   };
 
   // auto-select the country where the user is browsing from once visitorCountry is available
@@ -248,7 +255,7 @@ function LoginComponent() {
           size="2xl"
           variant="secondary"
           disabled={!isValid}
-          loading={isSubmitting}
+          loading={isSubmitting || loginMutation.isPending}
           className="mt-2"
         >
           Log in

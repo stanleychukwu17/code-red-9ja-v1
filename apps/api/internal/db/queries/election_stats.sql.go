@@ -2253,7 +2253,7 @@ referral_codes AS (
   SELECT
     election_group_id,
     polling_unit_id,
-    array_agg(referral_code) FILTER (WHERE referral_code IS NOT NULL) AS codes
+    array_agg(user_id) FILTER (WHERE user_id IS NOT NULL) AS agent_ids
   FROM assignments
   GROUP BY election_group_id, polling_unit_id
 ),
@@ -2263,7 +2263,7 @@ referral_counts AS (
     rc.polling_unit_id,
     COUNT(DISTINCT ev.user_id) AS pu_live_voters_referred_by_agent_count
   FROM referral_codes rc
-  JOIN users voter ON voter.referred_by_code = ANY(rc.codes)
+  JOIN users voter ON voter.referred_by_id = ANY(rc.agent_ids)
   JOIN election_votes ev ON ev.user_id = voter.id AND ev.election_group_id = rc.election_group_id
   GROUP BY rc.election_group_id, rc.polling_unit_id
 ),
@@ -2334,9 +2334,9 @@ party_referral_counts AS (
     a.election_group_id, a.polling_unit_id, a.party_id,
     COUNT(DISTINCT ev.user_id) AS pu_live_voters_referred_by_agent_count
   FROM assignments a
-  JOIN users voter ON voter.referred_by_code = a.referral_code
+  JOIN users voter ON voter.referred_by_id = a.user_id
   JOIN election_votes ev ON ev.user_id = voter.id AND ev.election_group_id = a.election_group_id
-  WHERE a.referral_code IS NOT NULL
+  WHERE a.user_id IS NOT NULL
   GROUP BY a.election_group_id, a.polling_unit_id, a.party_id
 ),
 party_json AS (

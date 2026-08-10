@@ -1,6 +1,7 @@
 package usershandler
 
 import (
+	"free9ja/api/internal/db/queries"
 	"encoding/json"
 	"fmt"
 	apimiddleware "free9ja/api/internal/middleware"
@@ -38,7 +39,27 @@ func (h *Handler) GetMyWallet(w http.ResponseWriter, r *http.Request) {
 	wallet, err := h.usersService.GetUserWallet(r.Context(), user.ID)
 	if err != nil {
 		// If wallet not found, attempt to create it automatically
-		wallet, err = h.usersService.CreateUserWallet(r.Context(), user.User)
+		wallet, err = h.usersService.CreateUserWallet(r.Context(), queries.User{
+		ID: user.ID,
+		FakeID: user.FakeID,
+		Email: user.Email,
+		Phone: user.Phone,
+		Username: user.Username,
+		PasswordHash: user.PasswordHash,
+		LastName: user.LastName,
+		FirstName: user.FirstName,
+		MiddleName: user.MiddleName,
+		Gender: user.Gender,
+		DateOfBirth: user.DateOfBirth,
+		CurrentCountry: user.CurrentCountry,
+		CurrentState: user.CurrentState,
+		CurrentCity: user.CurrentCity,
+		StateOfOrigin: user.StateOfOrigin,
+		CountryOfOrigin: user.CountryOfOrigin,
+		AccountStatus: user.AccountStatus,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	})
 		if err != nil {
 			if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 				// Edge case: someone just created it, try fetching one last time
@@ -217,7 +238,27 @@ func (h *Handler) CreateUserWalletHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	wallet, err := h.usersService.CreateUserWallet(r.Context(), user.User)
+	wallet, err := h.usersService.CreateUserWallet(r.Context(), queries.User{
+		ID: user.ID,
+		FakeID: user.FakeID,
+		Email: user.Email,
+		Phone: user.Phone,
+		Username: user.Username,
+		PasswordHash: user.PasswordHash,
+		LastName: user.LastName,
+		FirstName: user.FirstName,
+		MiddleName: user.MiddleName,
+		Gender: user.Gender,
+		DateOfBirth: user.DateOfBirth,
+		CurrentCountry: user.CurrentCountry,
+		CurrentState: user.CurrentState,
+		CurrentCity: user.CurrentCity,
+		StateOfOrigin: user.StateOfOrigin,
+		CountryOfOrigin: user.CountryOfOrigin,
+		AccountStatus: user.AccountStatus,
+		CreatedAt: user.CreatedAt,
+		UpdatedAt: user.UpdatedAt,
+	})
 	if err != nil {
 		if containsString(err.Error(), "unique") || containsString(err.Error(), "duplicate") {
 			h.utils.RespondError(w, http.StatusConflict, "This user already has a wallet")

@@ -146,13 +146,13 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 
 	// Cache it in Redis
 	userWithPlacesForCache := queries.UserWithPlaces{
-		User:           userForCache,
-		CountryName:    countryName,
-		StateName:      stateName,
-		CityName:       cityName,
-		Verifications:  verifications,
-		PartyBasicInfo: partyBasicInfo,
-		Roles:          roles,
+		GetUserByFakeIDRow: userForCache,
+		CountryName:        countryName,
+		StateName:          stateName,
+		CityName:           cityName,
+		Verifications:      verifications,
+		PartyBasicInfo:     partyBasicInfo,
+		Roles:              roles,
 	}
 
 	// cache the user data in redis
@@ -902,6 +902,14 @@ func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
 	return false
 }
 func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error) {
+	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		return "", err
+	}
+	if user.ReferralCode.Valid && user.ReferralCode.String != "" {
+		return user.ReferralCode.String, nil
+	}
+
 	if firstName == "" {
 		firstName = "AGENT"
 	}
@@ -917,7 +925,7 @@ func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID
 			break
 		}
 	}
-	err := s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
+	err = s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
 		ID:           userID,
 		ReferralCode: pgtype.Text{String: code, Valid: true},
 	})
@@ -929,5 +937,3 @@ func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID
 	s.rdb.Del(ctx, userInfoKey)
 	return code, nil
 }
-
-

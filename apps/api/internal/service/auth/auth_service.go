@@ -96,19 +96,20 @@ func NewAuthService(
 }
 
 type LoginUser struct {
-	ID              int64                                    `json:"id"`
-	FakeID          int64                                    `json:"fake_id"`
-	Email           string                                   `json:"email"`
-	Username        string                                   `json:"username"`
-	FirstName       string                                   `json:"first_name"`
-	LastName        string                                   `json:"last_name"`
-	MiddleName      string                                   `json:"middle_name"`
-	Gender          string                                   `json:"gender"`
-	DateOfBirth     string                                   `json:"date_of_birth"`
-	Avatar          string                                   `json:"avatar"`
-	Phone           string                                   `json:"phone"`
-	Roles           []string                                 `json:"roles"`
-	AccountStatus   string                                   `json:"account_status"`
+	ID                int64    `json:"id"`
+	FakeID            int64    `json:"fake_id"`
+	Email             string   `json:"email"`
+	Username          string   `json:"username"`
+	ReferralCode      string   `json:"referral_code"`
+	FirstName         string   `json:"first_name"`
+	LastName          string   `json:"last_name"`
+	MiddleName        string   `json:"middle_name"`
+	Gender            string   `json:"gender"`
+	DateOfBirth       string   `json:"date_of_birth"`
+	Avatar            string   `json:"avatar"`
+	Phone             string   `json:"phone"`
+	Roles             []string `json:"roles"`
+	AccountStatus     string   `json:"account_status"`
 	PartyID           int16    `json:"party_id,omitempty"`
 	PollingUnitID     int32    `json:"polling_unit_id,omitempty"`
 	CurrentCountry    int16    `json:"current_country"`
@@ -315,6 +316,7 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 			FakeID:            user.FakeID.Int64,
 			Email:             user.Email.String,
 			Username:          user.Username.String,
+			ReferralCode:      user.ReferralCode.String,
 			FirstName:         user.FirstName.String,
 			LastName:          user.LastName.String,
 			MiddleName:        user.MiddleName.String,
@@ -433,6 +435,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		FakeID:          user.FakeID.Int64,
 		Email:           user.Email.String,
 		Username:        user.Username.String,
+		ReferralCode:    user.ReferralCode.String,
 		FirstName:       user.FirstName.String,
 		LastName:        user.LastName.String,
 		MiddleName:      user.MiddleName.String,
@@ -615,7 +618,7 @@ type RegisterResult struct {
 	User   *queries.UserWithPlaces
 }
 
-func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (RegisterResult, error) {
+func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, referredByCode string, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (RegisterResult, error) {
 	// check security questions are different
 	if question1 == question2 {
 		return RegisterResult{}, errors.New("security questions must be different")
@@ -740,13 +743,45 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		timeMsStr = timeMsStr[len(timeMsStr)-6:]
 	}
 	refCode := fmt.Sprintf("%s-%s-%s", fName, timeMsStr, lName)
-	params.ReferralCode = pgtype.Text{String: refCode, Valid: true}
-
 	//--CREATE USER--
 	// creates the user's new account in our database
 	user_id, err := s.queries.CreateUser(ctx, params)
 	if err != nil {
 		return RegisterResult{}, err
+	}
+
+	var referredByID pgtype.Int8
+	if referredByCode != "" {
+		uID, err := s.queries.GetUserIdByReferralCode(ctx, pgtype.Text{String: referredByCode, Valid: true})
+		if err == nil {
+			referredByID = pgtype.Int8{Int64: uID, Valid: true}
+		}
+	}
+
+	err = s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
+		ID:           user_id,
+		ReferralCode: pgtype.Text{String: refCode, Valid: true},
+	})
+	if err == nil && referredByID.Valid {
+		err = s.queries.UpdateUserReferredBy(ctx, queries.UpdateUserReferredByParams{
+			ID:           user_id,
+			ReferredByID: referredByID,
+		})
+	}
+	if err != nil {
+		slog.Error("failed to create user referral profile during registration", "user_id", user_id, "err", err)
+	} else if referredByID.Valid {
+		_, err = s.queries.CreateReferral(ctx, queries.CreateReferralParams{
+			PartyID:        pgtype.Int2{Valid: false},
+			ReferrerUserID: referredByID.Int64,
+			ReferredUserID: user_id,
+			Milestone:      "SIGNED_UP",
+			Status:         pgtype.Text{String: "pending", Valid: true},
+		})
+		if err != nil {
+			slog.Error("failed to create referral record during registration", "user_id", user_id, "err", err)
+		}
+
 	}
 
 	// generate a fake_id using the user_id and update the user fake_id
@@ -800,7 +835,27 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 	if userErr == nil {
 		go func() {
 			bgCtx := context.Background()
-			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
+			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, queries.User{
+				ID:              registeredUser.ID,
+				FakeID:          registeredUser.FakeID,
+				Email:           registeredUser.Email,
+				Phone:           registeredUser.Phone,
+				Username:        registeredUser.Username,
+				PasswordHash:    registeredUser.PasswordHash,
+				LastName:        registeredUser.LastName,
+				FirstName:       registeredUser.FirstName,
+				MiddleName:      registeredUser.MiddleName,
+				Gender:          registeredUser.Gender,
+				DateOfBirth:     registeredUser.DateOfBirth,
+				CurrentCountry:  registeredUser.CurrentCountry,
+				CurrentState:    registeredUser.CurrentState,
+				CurrentCity:     registeredUser.CurrentCity,
+				StateOfOrigin:   registeredUser.StateOfOrigin,
+				CountryOfOrigin: registeredUser.CountryOfOrigin,
+				AccountStatus:   registeredUser.AccountStatus,
+				CreatedAt:       registeredUser.CreatedAt,
+				UpdatedAt:       registeredUser.UpdatedAt,
+			}); walletErr != nil {
 				slog.Error("failed to create user wallet during registration", "user_id", user_id, "err", walletErr)
 			}
 		}()
@@ -853,12 +908,22 @@ func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
 	return exists > 0
 }
 
-func (s *AuthService) CheckReferralCode(ctx context.Context, code string) bool {
-	exists, err := s.queries.CheckReferralCodeExists(ctx, pgtype.Text{String: code, Valid: true})
+func (s *AuthService) CheckReferralCode(ctx context.Context, code string) (bool, string) {
+	user, err := s.queries.GetReferrerNameByCode(ctx, pgtype.Text{String: code, Valid: true})
 	if err != nil {
-		return false
+		return false, ""
 	}
-	return exists
+	name := ""
+	if user.FirstName.Valid {
+		name += user.FirstName.String
+	}
+	if user.LastName.Valid {
+		if name != "" {
+			name += " "
+		}
+		name += user.LastName.String
+	}
+	return true, name
 }
 
 // function: checks if the Email address already exists in redis and in the postgres db
@@ -952,7 +1017,27 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		bgCtx := context.Background()
 		registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
 		if userErr == nil {
-			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
+			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, queries.User{
+				ID:              registeredUser.ID,
+				FakeID:          registeredUser.FakeID,
+				Email:           registeredUser.Email,
+				Phone:           registeredUser.Phone,
+				Username:        registeredUser.Username,
+				PasswordHash:    registeredUser.PasswordHash,
+				LastName:        registeredUser.LastName,
+				FirstName:       registeredUser.FirstName,
+				MiddleName:      registeredUser.MiddleName,
+				Gender:          registeredUser.Gender,
+				DateOfBirth:     registeredUser.DateOfBirth,
+				CurrentCountry:  registeredUser.CurrentCountry,
+				CurrentState:    registeredUser.CurrentState,
+				CurrentCity:     registeredUser.CurrentCity,
+				StateOfOrigin:   registeredUser.StateOfOrigin,
+				CountryOfOrigin: registeredUser.CountryOfOrigin,
+				AccountStatus:   registeredUser.AccountStatus,
+				CreatedAt:       registeredUser.CreatedAt,
+				UpdatedAt:       registeredUser.UpdatedAt,
+			}); walletErr != nil {
 				slog.Error("failed to create user wallet during signup", "user_id", user_id, "err", walletErr)
 			}
 		}
@@ -1016,6 +1101,8 @@ func (s *AuthService) CompleteOnboarding(
 	userID int64,
 	fakeID int64,
 	params queries.UpdateOnboardingProfileParams,
+	myReferralCode string,
+	referredByCode string,
 	nin string,
 	q1 int16, a1 string,
 	q2 int16, a2 string,
@@ -1023,6 +1110,41 @@ func (s *AuthService) CompleteOnboarding(
 	// 1. Update the users row with all onboarding fields
 	if err := s.queries.UpdateOnboardingProfile(ctx, params); err != nil {
 		return fmt.Errorf("update profile: %w", err)
+	}
+
+	var referredByID pgtype.Int8
+	if referredByCode != "" {
+		uID, err := s.queries.GetUserIdByReferralCode(ctx, pgtype.Text{String: referredByCode, Valid: true})
+		if err == nil {
+			referredByID = pgtype.Int8{Int64: uID, Valid: true}
+		}
+	}
+
+	err := s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
+		ID:           userID,
+		ReferralCode: pgtype.Text{String: myReferralCode, Valid: myReferralCode != ""},
+	})
+	if err == nil && referredByID.Valid {
+		err = s.queries.UpdateUserReferredBy(ctx, queries.UpdateUserReferredByParams{
+			ID:           userID,
+			ReferredByID: referredByID,
+		})
+	}
+	if err != nil {
+		slog.Error("failed to update user referral profile during complete onboarding", "user_id", userID, "err", err)
+	} else if referredByID.Valid {
+		// Log the initial referral milestone
+		_, err = s.queries.CreateReferral(ctx, queries.CreateReferralParams{
+			PartyID:        pgtype.Int2{Valid: false}, // No party at signup
+			ReferrerUserID: referredByID.Int64,
+			ReferredUserID: userID,
+			Milestone:      "SIGNED_UP",
+			Status:         pgtype.Text{String: "pending", Valid: true},
+		})
+		if err != nil {
+			slog.Error("failed to create referral record during complete onboarding", "user_id", userID, "err", err)
+		}
+
 	}
 
 	// 2. Persist username, email, NIN to Redis for fast lookups
@@ -1064,7 +1186,27 @@ func (s *AuthService) CompleteOnboarding(
 			bgCtx := context.Background()
 			registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
 			if userErr == nil {
-				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, registeredUser.User); walletErr != nil {
+				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, queries.User{
+					ID:              registeredUser.ID,
+					FakeID:          registeredUser.FakeID,
+					Email:           registeredUser.Email,
+					Phone:           registeredUser.Phone,
+					Username:        registeredUser.Username,
+					PasswordHash:    registeredUser.PasswordHash,
+					LastName:        registeredUser.LastName,
+					FirstName:       registeredUser.FirstName,
+					MiddleName:      registeredUser.MiddleName,
+					Gender:          registeredUser.Gender,
+					DateOfBirth:     registeredUser.DateOfBirth,
+					CurrentCountry:  registeredUser.CurrentCountry,
+					CurrentState:    registeredUser.CurrentState,
+					CurrentCity:     registeredUser.CurrentCity,
+					StateOfOrigin:   registeredUser.StateOfOrigin,
+					CountryOfOrigin: registeredUser.CountryOfOrigin,
+					AccountStatus:   registeredUser.AccountStatus,
+					CreatedAt:       registeredUser.CreatedAt,
+					UpdatedAt:       registeredUser.UpdatedAt,
+				}); walletErr != nil {
 					slog.Info("wallet creation attempt during onboarding (might already exist)", "user_id", userID, "err", walletErr)
 				}
 			}
@@ -1802,12 +1944,19 @@ func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 			PartyID:         pgtype.Int2{},
 			IsPolitician:    pgtype.Bool{Bool: false, Valid: true},
 			IsVerified:      pgtype.Bool{Bool: false, Valid: true},
-			ReferralCode:    pgtype.Text{String: myReferralCode, Valid: true},
 		}
 
 		id, err := s.queries.SeedUser(ctx, params)
 		if err != nil {
 			return "", fmt.Errorf("failed to seed user %s: %w", u.Email, err)
+		}
+
+		err = s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
+			ID:           id,
+			ReferralCode: pgtype.Text{String: myReferralCode, Valid: true},
+		})
+		if err != nil {
+			slog.Error("failed to seed user referral profile", "user_id", id, "err", err)
 		}
 
 		_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{

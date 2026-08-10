@@ -2,6 +2,7 @@ package electionsservice
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
@@ -28,6 +29,13 @@ func NewElectionsService(q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Clie
 	}
 }
 
+func (s *ElectionsService) invalidateCache(ctx context.Context, id *int64) {
+	s.rdb.Del(ctx, "elections:all")
+	if id != nil {
+		s.rdb.Del(ctx, fmt.Sprintf("election:%d", *id))
+	}
+}
+
 func (s *ElectionsService) CreateElection(
 	ctx context.Context,
 	name string,
@@ -37,6 +45,7 @@ func (s *ElectionsService) CreateElection(
 	stateID *int16,
 	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
 ) (queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
 		return queries.Election{}, err
@@ -235,6 +244,7 @@ type CandidateInput struct {
 }
 
 func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, candidates []CandidateInput) (queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -362,6 +372,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 }
 
 func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, stateIDs []int16) ([]queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -496,6 +507,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 }
 
 func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, senatorialDistrictIDs []int32) ([]queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -640,6 +652,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 }
 
 func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, federalConstituencyIDs []int32) ([]queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -787,6 +800,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 }
 
 func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, stateConstituencyIDs []int32) ([]queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -934,6 +948,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 }
 
 func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, lgaIDs []int32) ([]queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -1078,6 +1093,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64
 }
 
 func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int64, electionDate time.Time, electionGroupID *int64, wardIDs []int32) ([]queries.Election, error) {
+	defer s.invalidateCache(ctx, nil)
 	// 1. Fetch office
 	et, err := s.queries.GetOfficeByID(ctx, officeID)
 	if err != nil {
@@ -1225,11 +1241,47 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int6
 }
 
 func (s *ElectionsService) GetElectionByID(ctx context.Context, id int64) (queries.Election, error) {
-	return s.queries.GetElectionInstanceByID(ctx, id)
+	cacheKey := fmt.Sprintf("election:%d", id)
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var el queries.Election
+		if err := json.Unmarshal([]byte(val), &el); err == nil {
+			return el, nil
+		}
+	}
+
+	el, err := s.queries.GetElectionInstanceByID(ctx, id)
+	if err != nil {
+		return el, err
+	}
+
+	if elBytes, err := json.Marshal(el); err == nil {
+		s.rdb.Set(ctx, cacheKey, elBytes, 24*time.Hour)
+	}
+
+	return el, nil
 }
 
 func (s *ElectionsService) ListElections(ctx context.Context) ([]queries.Election, error) {
-	return s.queries.ListElectionInstances(ctx)
+	cacheKey := "elections:all"
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var els []queries.Election
+		if err := json.Unmarshal([]byte(val), &els); err == nil {
+			return els, nil
+		}
+	}
+
+	els, err := s.queries.ListElectionInstances(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if elsBytes, err := json.Marshal(els); err == nil {
+		s.rdb.Set(ctx, cacheKey, elsBytes, 24*time.Hour)
+	}
+
+	return els, nil
 }
 
 func (s *ElectionsService) UpdateElection(
@@ -1276,7 +1328,7 @@ func (s *ElectionsService) UpdateElection(
 		wardID4 = pgtype.Int4{Int32: *wardID, Valid: true}
 	}
 
-	return s.queries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
+	el, err := s.queries.UpdateElectionInstance(ctx, queries.UpdateElectionInstanceParams{
 		ID:                    id,
 		Name:                  name,
 		Rank:                  et.Rank,
@@ -1294,10 +1346,19 @@ func (s *ElectionsService) UpdateElection(
 		LgaID:                 lgaID4,
 		WardID:                wardID4,
 	})
+
+	if err == nil {
+		s.invalidateCache(ctx, &id)
+	}
+	return el, err
 }
 
 func (s *ElectionsService) DeleteElection(ctx context.Context, id int64) error {
-	return s.queries.DeleteElectionInstance(ctx, id)
+	err := s.queries.DeleteElectionInstance(ctx, id)
+	if err == nil {
+		s.invalidateCache(ctx, &id)
+	}
+	return err
 }
 
 func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID int64) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error) {

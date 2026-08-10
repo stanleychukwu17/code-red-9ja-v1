@@ -1093,7 +1093,14 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to record wallet transaction: %w", err)
 	}
 
-	// 4. Create the marketing campaign record
+	// 4. Get the plan to snapshot referral amount
+	plan, err := qtx.GetPlanByID(ctx, arg.PlanID)
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get plan: %w", err)
+	}
+	arg.ReferralAmount = plan.ReferralAmount
+
+	// 5. Create the marketing campaign record
 	campaign, err := qtx.CreatePartyMarketingCampaign(ctx, arg)
 	if err != nil {
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to create marketing campaign: %w", err)

@@ -148,8 +148,13 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const [ninError, setNinError] = useState<string | null>(null);
   const [isNinAvailable, setIsNinAvailable] = useState<boolean | null>(null);
   const [isCheckingReferralCode, setIsCheckingReferralCode] = useState(false);
-  const [referralCodeError, setReferralCodeError] = useState<string | null>(null);
-  const [isReferralCodeValid, setIsReferralCodeValid] = useState<boolean | null>(null);
+  const [referralCodeError, setReferralCodeError] = useState<string | null>(
+    null,
+  );
+  const [isReferralCodeValid, setIsReferralCodeValid] = useState<
+    boolean | null
+  >(null);
+  const [referrerName, setReferrerName] = useState<string | null>(null);
 
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
@@ -172,7 +177,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     },
     onError: () => {
       setSubmitError("An unexpected error occurred.");
-    }
+    },
   });
 
   const isSubmitting = completeOnboardingMutation.isPending;
@@ -376,15 +381,18 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
     setIsCheckingReferralCode(true);
     setReferralCodeError(null);
+    setReferrerName(null);
 
     let isMounted = true;
     const check = async () => {
       try {
         const res = await checkReferralCode({ data: { code } });
+        console.log("referral response", res);
         if (!isMounted) return;
         if (res.success) {
           if (res.data?.exists) {
             setIsReferralCodeValid(true);
+            setReferrerName(res.data.name);
           } else {
             setReferralCodeError("Referral code not found");
             setIsReferralCodeValid(false);
@@ -420,22 +428,24 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
         ? Boolean(
             data.firstName && data.surname && data.gender && data.dateOfBirth,
           )
-        // : step === "nin"
-        //   ? isNinAvailable === true
-          : step === "origin"
-            ? Boolean(data.stateOfOriginId)
-            : step === "location"
-              ? Boolean(data.stateId)
-              : step === "referral"
-                ? data.referralCode.trim() ? isReferralCodeValid === true : true
-                // : step === "security"
+        : // : step === "nin"
+          //   ? isNinAvailable === true
+          step === "origin"
+          ? Boolean(data.stateOfOriginId)
+          : step === "location"
+            ? Boolean(data.stateId)
+            : step === "referral"
+              ? data.referralCode.trim()
+                ? isReferralCodeValid === true
+                : true
+              : // : step === "security"
                 //   ? Boolean(
                 //       data.securityQuestion1 &&
                 //       data.securityAnswer1.trim() &&
                 //       data.securityQuestion2 &&
                 //       data.securityAnswer2.trim(),
                 //     )
-                  : false;
+                false;
 
   // â”€â”€ Render current step â”€â”€
   return (
@@ -508,6 +518,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           onAction={onFinish}
           isChecking={isCheckingReferralCode || isSubmitting}
           isValid={isReferralCodeValid}
+          referrerName={referrerName}
           error={referralCodeError || submitError}
           setError={setReferralCodeError}
         />
@@ -860,6 +871,7 @@ type ReferralStepProps = {
   onAction: () => void;
   isChecking: boolean;
   isValid: boolean | null;
+  referrerName: string | null;
   error: string | null;
   setError: (e: string | null) => void;
 };
@@ -872,6 +884,7 @@ function ReferralStep({
   onAction,
   isChecking,
   isValid,
+  referrerName,
   error,
   setError,
 }: ReferralStepProps) {
@@ -902,10 +915,9 @@ function ReferralStep({
             setData((c) => ({ ...c, referralCode: e.target.value }));
           }}
         />
-        <DescriptiveText
-          size="xs"
-          text="You can leave this blank if no one referred you."
-        />
+        {referrerName && (
+          <p className=" font-bold text-green">{referrerName}</p>
+        )}
       </div>
     </FlowScreen>
   );

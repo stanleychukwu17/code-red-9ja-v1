@@ -16,7 +16,7 @@ ON CONFLICT (key) DO NOTHING;
 
 -- Seed target for live voters referred
 INSERT INTO system_settings (key, value, description)
-VALUES ('live_voters_referred', '10'::jsonb, 'The target number of live voters an agent is expected to refer')
+VALUES ('live_voters_referred', '20'::jsonb, 'The target number of live voters an agent is expected to refer')
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed target for updates count

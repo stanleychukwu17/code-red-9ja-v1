@@ -2,6 +2,8 @@ package electiongroupsservice
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
 	"log/slog"
@@ -22,6 +24,13 @@ func NewElectionGroupsService(q *queries.Queries, rdb *redis.Client, distributor
 		queries:     q,
 		rdb:         rdb,
 		distributor: distributor,
+	}
+}
+
+func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int64) {
+	s.rdb.Del(ctx, "election_groups:all")
+	if id != nil {
+		s.rdb.Del(ctx, fmt.Sprintf("election_group:%d", *id))
 	}
 }
 
@@ -61,15 +70,53 @@ func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name st
 		}
 	}
 
+	s.invalidateCache(ctx, nil)
+
 	return eg, nil
 }
 
 func (s *ElectionGroupsService) GetElectionGroupByID(ctx context.Context, id int64) (queries.ElectionGroup, error) {
-	return s.queries.GetElectionGroupByID(ctx, id)
+	cacheKey := fmt.Sprintf("election_group:%d", id)
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var eg queries.ElectionGroup
+		if err := json.Unmarshal([]byte(val), &eg); err == nil {
+			return eg, nil
+		}
+	}
+
+	eg, err := s.queries.GetElectionGroupByID(ctx, id)
+	if err != nil {
+		return eg, err
+	}
+
+	if egBytes, err := json.Marshal(eg); err == nil {
+		s.rdb.Set(ctx, cacheKey, egBytes, 24*time.Hour)
+	}
+
+	return eg, nil
 }
 
 func (s *ElectionGroupsService) ListElectionGroups(ctx context.Context) ([]queries.ElectionGroup, error) {
-	return s.queries.ListElectionGroups(ctx)
+	cacheKey := "election_groups:all"
+	val, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var groups []queries.ElectionGroup
+		if err := json.Unmarshal([]byte(val), &groups); err == nil {
+			return groups, nil
+		}
+	}
+
+	groups, err := s.queries.ListElectionGroups(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if groupsBytes, err := json.Marshal(groups); err == nil {
+		s.rdb.Set(ctx, cacheKey, groupsBytes, 24*time.Hour)
+	}
+
+	return groups, nil
 }
 
 func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int64, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error) {
@@ -91,11 +138,17 @@ func (s *ElectionGroupsService) UpdateElectionGroup(ctx context.Context, id int6
 		ElectionGroupID: id,
 	})
 
+	s.invalidateCache(ctx, &id)
+
 	return group, nil
 }
 
 func (s *ElectionGroupsService) DeleteElectionGroup(ctx context.Context, id int64) error {
-	return s.queries.DeleteElectionGroup(ctx, id)
+	err := s.queries.DeleteElectionGroup(ctx, id)
+	if err == nil {
+		s.invalidateCache(ctx, &id)
+	}
+	return err
 }
 
 func (s *ElectionGroupsService) ListElectionGroupsWithPartyStats(ctx context.Context, partyID int16) ([]queries.ListElectionGroupsWithPartyStatsRow, error) {
