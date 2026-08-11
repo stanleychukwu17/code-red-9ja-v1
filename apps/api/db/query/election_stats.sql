@@ -162,6 +162,9 @@ party_json AS (
     COALESCE(jsonb_agg(
       jsonb_build_object(
         'party_id',                              po.party_id,
+        'applications_count',                       0,
+        'accepted_applications_count',              0,
+        'rejected_applications_count',              0,
         'pu_agents_in_attendance_count',            po.agents_in_attendance_count,
         'pu_average_arrival_time',                  po.pu_average_arrival_time,
         'pu_average_election_started_at',                   po.election_started_at,
@@ -3487,4 +3490,395 @@ SET
 FROM src_agg s
 LEFT JOIN party_json pj ON s.election_group_id = pj.election_group_id
 WHERE election_groups.id = s.election_group_id;
+
+-- ============================================================
+-- APPLICATION COUNT INCREMENT QUERIES
+-- Increments/updates application counts (total, accepted, rejected, and role specific)
+-- across polling units, wards, lgas, states, and election_groups.
+-- ============================================================
+
+-- name: AdjustElectionGroupPollingUnitApplicationCounts :exec
+INSERT INTO election_group_polling_units (
+  election_group_id, polling_unit_id, state_id, lga_id, ward_id,
+  state_constituency_id, federal_constituency_id, senatorial_district_id,
+  applications_count, accepted_applications_count, rejected_applications_count,
+  parties
+)
+SELECT
+  sqlc.arg(election_group_id)::bigint,
+  sqlc.arg(polling_unit_id)::int,
+  pu.state_id, pu.lga_id, pu.ward_id,
+  w.state_assembly_constituency_id, l.federal_constituency_id, l.senatorial_district_id,
+  GREATEST(0, sqlc.arg(app_delta)::int),
+  GREATEST(0, sqlc.arg(accepted_delta)::int),
+  GREATEST(0, sqlc.arg(rejected_delta)::int),
+  jsonb_build_array(jsonb_build_object(
+    'party_id', sqlc.arg(party_id)::smallint,
+    'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+    'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+    'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int)
+  ))
+FROM polling_units pu
+JOIN wards w ON w.id = pu.ward_id
+JOIN lgas l ON l.id = pu.lga_id
+WHERE pu.id = sqlc.arg(polling_unit_id)::int
+ON CONFLICT (election_group_id, polling_unit_id) DO UPDATE SET
+  applications_count          = GREATEST(0, election_group_polling_units.applications_count + sqlc.arg(app_delta)::int),
+  accepted_applications_count = GREATEST(0, election_group_polling_units.accepted_applications_count + sqlc.arg(accepted_delta)::int),
+  rejected_applications_count = GREATEST(0, election_group_polling_units.rejected_applications_count + sqlc.arg(rejected_delta)::int),
+  parties = CASE
+    WHEN election_group_polling_units.parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
+          THEN jsonb_set(
+                 jsonb_set(
+                   jsonb_set(
+                     elem,
+                     '{applications_count}',
+                     to_jsonb(GREATEST(0, COALESCE((elem->>'applications_count')::int, 0) + sqlc.arg(app_delta)::int))
+                   ),
+                   '{accepted_applications_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'accepted_applications_count')::int, 0) + sqlc.arg(accepted_delta)::int))
+                 ),
+                 '{rejected_applications_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'rejected_applications_count')::int, 0) + sqlc.arg(rejected_delta)::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(election_group_polling_units.parties) elem
+    )
+    ELSE election_group_polling_units.parties || jsonb_build_object(
+      'party_id', sqlc.arg(party_id)::smallint,
+      'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+      'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+      'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int)
+    )
+  END,
+  updated_at = NOW();
+
+-- name: AdjustElectionGroupWardApplicationCounts :exec
+INSERT INTO election_group_wards (
+  election_group_id, ward_id, lga_id, state_id,
+  applications_count, accepted_applications_count, rejected_applications_count,
+  ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count,
+  parties
+)
+SELECT
+  sqlc.arg(election_group_id)::bigint,
+  sqlc.arg(ward_id)::int,
+  w.lga_id, w.state_id,
+  GREATEST(0, sqlc.arg(app_delta)::int),
+  GREATEST(0, sqlc.arg(accepted_delta)::int),
+  GREATEST(0, sqlc.arg(rejected_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int),
+  jsonb_build_array(jsonb_build_object(
+    'party_id', sqlc.arg(party_id)::smallint,
+    'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+    'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+    'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int),
+    'ward_supervisor_applications_count', GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+    'ward_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+    'ward_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int)
+  ))
+FROM wards w
+WHERE w.id = sqlc.arg(ward_id)::int
+ON CONFLICT (election_group_id, ward_id) DO UPDATE SET
+  applications_count                            = GREATEST(0, election_group_wards.applications_count + sqlc.arg(app_delta)::int),
+  accepted_applications_count                   = GREATEST(0, election_group_wards.accepted_applications_count + sqlc.arg(accepted_delta)::int),
+  rejected_applications_count                   = GREATEST(0, election_group_wards.rejected_applications_count + sqlc.arg(rejected_delta)::int),
+  ward_supervisor_applications_count            = GREATEST(0, election_group_wards.ward_supervisor_applications_count + sqlc.arg(ward_sup_app_delta)::int),
+  ward_supervisor_accepted_applications_count   = GREATEST(0, election_group_wards.ward_supervisor_accepted_applications_count + sqlc.arg(ward_sup_accepted_delta)::int),
+  ward_supervisor_rejected_applications_count   = GREATEST(0, election_group_wards.ward_supervisor_rejected_applications_count + sqlc.arg(ward_sup_rejected_delta)::int),
+  parties = CASE
+    WHEN election_group_wards.parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
+          THEN jsonb_set(
+                 jsonb_set(
+                   jsonb_set(
+                     jsonb_set(
+                       jsonb_set(
+                         jsonb_set(
+                           elem,
+                           '{applications_count}',
+                           to_jsonb(GREATEST(0, COALESCE((elem->>'applications_count')::int, 0) + sqlc.arg(app_delta)::int))
+                         ),
+                         '{accepted_applications_count}',
+                         to_jsonb(GREATEST(0, COALESCE((elem->>'accepted_applications_count')::int, 0) + sqlc.arg(accepted_delta)::int))
+                       ),
+                       '{rejected_applications_count}',
+                       to_jsonb(GREATEST(0, COALESCE((elem->>'rejected_applications_count')::int, 0) + sqlc.arg(rejected_delta)::int))
+                     ),
+                     '{ward_supervisor_applications_count}',
+                     to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_applications_count')::int, 0) + sqlc.arg(ward_sup_app_delta)::int))
+                   ),
+                   '{ward_supervisor_accepted_applications_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_accepted_applications_count')::int, 0) + sqlc.arg(ward_sup_accepted_delta)::int))
+                 ),
+                 '{ward_supervisor_rejected_applications_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_rejected_applications_count')::int, 0) + sqlc.arg(ward_sup_rejected_delta)::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(election_group_wards.parties) elem
+    )
+    ELSE election_group_wards.parties || jsonb_build_object(
+      'party_id', sqlc.arg(party_id)::smallint,
+      'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+      'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+      'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int),
+      'ward_supervisor_applications_count', GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+      'ward_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+      'ward_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int)
+    )
+  END,
+  updated_at = NOW();
+
+-- name: AdjustElectionGroupLGAApplicationCounts :exec
+INSERT INTO election_group_lgas (
+  election_group_id, lga_id, state_id, senatorial_district_id, federal_constituency_id,
+  applications_count, accepted_applications_count, rejected_applications_count,
+  ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count,
+  lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count,
+  parties
+)
+SELECT
+  sqlc.arg(election_group_id)::bigint,
+  sqlc.arg(lga_id)::int,
+  l.state_id, l.senatorial_district_id, l.federal_constituency_id,
+  GREATEST(0, sqlc.arg(app_delta)::int),
+  GREATEST(0, sqlc.arg(accepted_delta)::int),
+  GREATEST(0, sqlc.arg(rejected_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int),
+  GREATEST(0, sqlc.arg(lga_sup_app_delta)::int),
+  GREATEST(0, sqlc.arg(lga_sup_accepted_delta)::int),
+  GREATEST(0, sqlc.arg(lga_sup_rejected_delta)::int),
+  jsonb_build_array(jsonb_build_object(
+    'party_id', sqlc.arg(party_id)::smallint,
+    'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+    'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+    'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int),
+    'ward_supervisor_applications_count', GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+    'ward_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+    'ward_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int),
+    'lga_supervisor_applications_count', GREATEST(0, sqlc.arg(lga_sup_app_delta)::int),
+    'lga_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(lga_sup_accepted_delta)::int),
+    'lga_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(lga_sup_rejected_delta)::int)
+  ))
+FROM lgas l
+WHERE l.id = sqlc.arg(lga_id)::int
+ON CONFLICT (election_group_id, lga_id) DO UPDATE SET
+  applications_count                            = GREATEST(0, election_group_lgas.applications_count + sqlc.arg(app_delta)::int),
+  accepted_applications_count                   = GREATEST(0, election_group_lgas.accepted_applications_count + sqlc.arg(accepted_delta)::int),
+  rejected_applications_count                   = GREATEST(0, election_group_lgas.rejected_applications_count + sqlc.arg(rejected_delta)::int),
+  ward_supervisor_applications_count            = GREATEST(0, election_group_lgas.ward_supervisor_applications_count + sqlc.arg(ward_sup_app_delta)::int),
+  ward_supervisor_accepted_applications_count   = GREATEST(0, election_group_lgas.ward_supervisor_accepted_applications_count + sqlc.arg(ward_sup_accepted_delta)::int),
+  ward_supervisor_rejected_applications_count   = GREATEST(0, election_group_lgas.ward_supervisor_rejected_applications_count + sqlc.arg(ward_sup_rejected_delta)::int),
+  lga_supervisor_applications_count             = GREATEST(0, election_group_lgas.lga_supervisor_applications_count + sqlc.arg(lga_sup_app_delta)::int),
+  lga_supervisor_accepted_applications_count    = GREATEST(0, election_group_lgas.lga_supervisor_accepted_applications_count + sqlc.arg(lga_sup_accepted_delta)::int),
+  lga_supervisor_rejected_applications_count    = GREATEST(0, election_group_lgas.lga_supervisor_rejected_applications_count + sqlc.arg(lga_sup_rejected_delta)::int),
+  parties = CASE
+    WHEN election_group_lgas.parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
+          THEN jsonb_set(
+                 jsonb_set(
+                   jsonb_set(
+                     jsonb_set(
+                       jsonb_set(
+                         jsonb_set(
+                           jsonb_set(
+                             jsonb_set(
+                               jsonb_set(
+                                 elem,
+                                 '{applications_count}',
+                                 to_jsonb(GREATEST(0, COALESCE((elem->>'applications_count')::int, 0) + sqlc.arg(app_delta)::int))
+                               ),
+                               '{accepted_applications_count}',
+                               to_jsonb(GREATEST(0, COALESCE((elem->>'accepted_applications_count')::int, 0) + sqlc.arg(accepted_delta)::int))
+                             ),
+                             '{rejected_applications_count}',
+                             to_jsonb(GREATEST(0, COALESCE((elem->>'rejected_applications_count')::int, 0) + sqlc.arg(rejected_delta)::int))
+                           ),
+                           '{ward_supervisor_applications_count}',
+                           to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_applications_count')::int, 0) + sqlc.arg(ward_sup_app_delta)::int))
+                         ),
+                         '{ward_supervisor_accepted_applications_count}',
+                         to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_accepted_applications_count')::int, 0) + sqlc.arg(ward_sup_accepted_delta)::int))
+                       ),
+                       '{ward_supervisor_rejected_applications_count}',
+                       to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_rejected_applications_count')::int, 0) + sqlc.arg(ward_sup_rejected_delta)::int))
+                     ),
+                     '{lga_supervisor_applications_count}',
+                     to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisor_applications_count')::int, 0) + sqlc.arg(lga_sup_app_delta)::int))
+                   ),
+                   '{lga_supervisor_accepted_applications_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisor_accepted_applications_count')::int, 0) + sqlc.arg(lga_sup_accepted_delta)::int))
+                 ),
+                 '{lga_supervisor_rejected_applications_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisor_rejected_applications_count')::int, 0) + sqlc.arg(lga_sup_rejected_delta)::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(election_group_lgas.parties) elem
+    )
+    ELSE election_group_lgas.parties || jsonb_build_object(
+      'party_id', sqlc.arg(party_id)::smallint,
+      'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+      'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+      'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int),
+      'ward_supervisor_applications_count', GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+      'ward_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+      'ward_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int),
+      'lga_supervisor_applications_count', GREATEST(0, sqlc.arg(lga_sup_app_delta)::int),
+      'lga_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(lga_sup_accepted_delta)::int),
+      'lga_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(lga_sup_rejected_delta)::int)
+    )
+  END,
+  updated_at = NOW();
+
+-- name: AdjustElectionGroupStateApplicationCounts :exec
+INSERT INTO election_group_states (
+  election_group_id, state_id,
+  applications_count, accepted_applications_count, rejected_applications_count,
+  ward_supervisor_applications_count, ward_supervisor_accepted_applications_count, ward_supervisor_rejected_applications_count,
+  lga_supervisor_applications_count, lga_supervisor_accepted_applications_count, lga_supervisor_rejected_applications_count,
+  state_supervisor_applications_count, state_supervisor_accepted_applications_count, state_supervisor_rejected_applications_count,
+  parties
+)
+VALUES (
+  sqlc.arg(election_group_id)::bigint,
+  sqlc.arg(state_id)::smallint,
+  GREATEST(0, sqlc.arg(app_delta)::int),
+  GREATEST(0, sqlc.arg(accepted_delta)::int),
+  GREATEST(0, sqlc.arg(rejected_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+  GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int),
+  GREATEST(0, sqlc.arg(lga_sup_app_delta)::int),
+  GREATEST(0, sqlc.arg(lga_sup_accepted_delta)::int),
+  GREATEST(0, sqlc.arg(lga_sup_rejected_delta)::int),
+  GREATEST(0, sqlc.arg(state_sup_app_delta)::int),
+  GREATEST(0, sqlc.arg(state_sup_accepted_delta)::int),
+  GREATEST(0, sqlc.arg(state_sup_rejected_delta)::int),
+  jsonb_build_array(jsonb_build_object(
+    'party_id', sqlc.arg(party_id)::smallint,
+    'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+    'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+    'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int),
+    'ward_supervisor_applications_count', GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+    'ward_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+    'ward_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int),
+    'lga_supervisor_applications_count', GREATEST(0, sqlc.arg(lga_sup_app_delta)::int),
+    'lga_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(lga_sup_accepted_delta)::int),
+    'lga_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(lga_sup_rejected_delta)::int),
+    'state_supervisor_applications_count', GREATEST(0, sqlc.arg(state_sup_app_delta)::int),
+    'state_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(state_sup_accepted_delta)::int),
+    'state_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(state_sup_rejected_delta)::int)
+  ))
+)
+ON CONFLICT (election_group_id, state_id) DO UPDATE SET
+  applications_count                            = GREATEST(0, election_group_states.applications_count + sqlc.arg(app_delta)::int),
+  accepted_applications_count                   = GREATEST(0, election_group_states.accepted_applications_count + sqlc.arg(accepted_delta)::int),
+  rejected_applications_count                   = GREATEST(0, election_group_states.rejected_applications_count + sqlc.arg(rejected_delta)::int),
+  ward_supervisor_applications_count            = GREATEST(0, election_group_states.ward_supervisor_applications_count + sqlc.arg(ward_sup_app_delta)::int),
+  ward_supervisor_accepted_applications_count   = GREATEST(0, election_group_states.ward_supervisor_accepted_applications_count + sqlc.arg(ward_sup_accepted_delta)::int),
+  ward_supervisor_rejected_applications_count   = GREATEST(0, election_group_states.ward_supervisor_rejected_applications_count + sqlc.arg(ward_sup_rejected_delta)::int),
+  lga_supervisor_applications_count             = GREATEST(0, election_group_states.lga_supervisor_applications_count + sqlc.arg(lga_sup_app_delta)::int),
+  lga_supervisor_accepted_applications_count    = GREATEST(0, election_group_states.lga_supervisor_accepted_applications_count + sqlc.arg(lga_sup_accepted_delta)::int),
+  lga_supervisor_rejected_applications_count    = GREATEST(0, election_group_states.lga_supervisor_rejected_applications_count + sqlc.arg(lga_sup_rejected_delta)::int),
+  state_supervisor_applications_count           = GREATEST(0, election_group_states.state_supervisor_applications_count + sqlc.arg(state_sup_app_delta)::int),
+  state_supervisor_accepted_applications_count  = GREATEST(0, election_group_states.state_supervisor_accepted_applications_count + sqlc.arg(state_sup_accepted_delta)::int),
+  state_supervisor_rejected_applications_count  = GREATEST(0, election_group_states.state_supervisor_rejected_applications_count + sqlc.arg(state_sup_rejected_delta)::int),
+  parties = CASE
+    WHEN election_group_states.parties @> jsonb_build_array(jsonb_build_object('party_id', sqlc.arg(party_id)::smallint))
+    THEN (
+      SELECT jsonb_agg(
+        CASE
+          WHEN (elem->>'party_id')::bigint = sqlc.arg(party_id)::smallint
+          THEN jsonb_set(
+                 jsonb_set(
+                   jsonb_set(
+                     jsonb_set(
+                       jsonb_set(
+                         jsonb_set(
+                           jsonb_set(
+                             jsonb_set(
+                               jsonb_set(
+                                 jsonb_set(
+                                   jsonb_set(
+                                     jsonb_set(
+                                       elem,
+                                       '{applications_count}',
+                                       to_jsonb(GREATEST(0, COALESCE((elem->>'applications_count')::int, 0) + sqlc.arg(app_delta)::int))
+                                     ),
+                                     '{accepted_applications_count}',
+                                     to_jsonb(GREATEST(0, COALESCE((elem->>'accepted_applications_count')::int, 0) + sqlc.arg(accepted_delta)::int))
+                                   ),
+                                   '{rejected_applications_count}',
+                                   to_jsonb(GREATEST(0, COALESCE((elem->>'rejected_applications_count')::int, 0) + sqlc.arg(rejected_delta)::int))
+                                 ),
+                                 '{ward_supervisor_applications_count}',
+                                 to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_applications_count')::int, 0) + sqlc.arg(ward_sup_app_delta)::int))
+                               ),
+                               '{ward_supervisor_accepted_applications_count}',
+                               to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_accepted_applications_count')::int, 0) + sqlc.arg(ward_sup_accepted_delta)::int))
+                             ),
+                             '{ward_supervisor_rejected_applications_count}',
+                             to_jsonb(GREATEST(0, COALESCE((elem->>'ward_supervisor_rejected_applications_count')::int, 0) + sqlc.arg(ward_sup_rejected_delta)::int))
+                           ),
+                           '{lga_supervisor_applications_count}',
+                           to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisor_applications_count')::int, 0) + sqlc.arg(lga_sup_app_delta)::int))
+                         ),
+                         '{lga_supervisor_accepted_applications_count}',
+                         to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisor_accepted_applications_count')::int, 0) + sqlc.arg(lga_sup_accepted_delta)::int))
+                       ),
+                       '{lga_supervisor_rejected_applications_count}',
+                       to_jsonb(GREATEST(0, COALESCE((elem->>'lga_supervisor_rejected_applications_count')::int, 0) + sqlc.arg(lga_sup_rejected_delta)::int))
+                     ),
+                     '{state_supervisor_applications_count}',
+                     to_jsonb(GREATEST(0, COALESCE((elem->>'state_supervisor_applications_count')::int, 0) + sqlc.arg(state_sup_app_delta)::int))
+                   ),
+                   '{state_supervisor_accepted_applications_count}',
+                   to_jsonb(GREATEST(0, COALESCE((elem->>'state_supervisor_accepted_applications_count')::int, 0) + sqlc.arg(state_sup_accepted_delta)::int))
+                 ),
+                 '{state_supervisor_rejected_applications_count}',
+                 to_jsonb(GREATEST(0, COALESCE((elem->>'state_supervisor_rejected_applications_count')::int, 0) + sqlc.arg(state_sup_rejected_delta)::int))
+               )
+          ELSE elem
+        END
+      )
+      FROM jsonb_array_elements(election_group_states.parties) elem
+    )
+    ELSE election_group_states.parties || jsonb_build_object(
+      'party_id', sqlc.arg(party_id)::smallint,
+      'applications_count', GREATEST(0, sqlc.arg(app_delta)::int),
+      'accepted_applications_count', GREATEST(0, sqlc.arg(accepted_delta)::int),
+      'rejected_applications_count', GREATEST(0, sqlc.arg(rejected_delta)::int),
+      'ward_supervisor_applications_count', GREATEST(0, sqlc.arg(ward_sup_app_delta)::int),
+      'ward_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(ward_sup_accepted_delta)::int),
+      'ward_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(ward_sup_rejected_delta)::int),
+      'lga_supervisor_applications_count', GREATEST(0, sqlc.arg(lga_sup_app_delta)::int),
+      'lga_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(lga_sup_accepted_delta)::int),
+      'lga_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(lga_sup_rejected_delta)::int),
+      'state_supervisor_applications_count', GREATEST(0, sqlc.arg(state_sup_app_delta)::int),
+      'state_supervisor_accepted_applications_count', GREATEST(0, sqlc.arg(state_sup_accepted_delta)::int),
+      'state_supervisor_rejected_applications_count', GREATEST(0, sqlc.arg(state_sup_rejected_delta)::int)
+    )
+  END,
+  updated_at = NOW();
+
 

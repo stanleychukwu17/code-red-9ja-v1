@@ -64,7 +64,6 @@ SELECT
   up.school_name,
   up.religion,
   up.marital_status,
-  up.education_level,
   u.current_ward,
   eg.name AS election_group_name,
   eg.election_date,
@@ -179,3 +178,22 @@ WHERE pa.user_id = $1
   AND pa.election_group_id = $2 
   AND pa.status = 'pending'
 LIMIT 1;
+
+-- name: GetAcceptedApplicationForUser :one
+SELECT 
+  pa.id,
+  pa.user_id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.state_id,
+  pa.lga_id,
+  pa.ward_id,
+  pa.role,
+  pa.status
+FROM party_applications pa
+WHERE pa.user_id = $1 
+  AND pa.election_group_id = $2 
+  AND pa.status = 'accepted'
+LIMIT 1;
+

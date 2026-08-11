@@ -195,7 +195,6 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 				SchoolName:        pgtype.Text{},
 				Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
 				MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
-				EducationLevel:    pgtype.Text{String: u.EducationLevel, Valid: u.EducationLevel != ""},
 				Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
 			})
 			if err != nil {

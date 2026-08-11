@@ -262,3 +262,45 @@ export const submitPollingAgentApplication = createServerFn({ method: "POST" })
     }
   });
 
+export const submitSupervisorApplication = createServerFn({ method: "POST" })
+  .inputValidator(
+    (data: {
+      election_group_id: number;
+      role: string;
+      state_id: number;
+      lga_id?: number;
+      ward_id?: number;
+      degree_certificate_url?: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const response = await apiFetch(API_URL.supervisorApplications, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
+      });
+      const rawText = await response.text();
+      let resData: any;
+      try {
+        resData = JSON.parse(rawText);
+      } catch {
+        return {
+          success: false,
+          message: `Server returned non-JSON (status ${response.status}): ${rawText.slice(0, 200)}`,
+        };
+      }
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message:
+          "Failed to submit supervisor application: " +
+          (error as Error).message,
+      };
+    }
+  });
+
+

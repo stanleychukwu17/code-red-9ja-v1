@@ -19,6 +19,7 @@ import (
 
 type PartyApplicationsService interface {
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) ([]queries.PartyApplication, error)
+	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
 	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error)
@@ -154,6 +155,81 @@ func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Polling agent application submitted successfully", respData)
 }
+
+type SubmitSupervisorApplicationRequest struct {
+	ElectionGroupID      int64  `json:"election_group_id"`
+	Role                 string `json:"role"`
+	StateID              int16  `json:"state_id"`
+	LgaID                int32  `json:"lga_id"`
+	WardID               int32  `json:"ward_id"`
+	DegreeCertificateURL string `json:"degree_certificate_url"`
+}
+
+// SubmitSupervisorApplication godoc
+// @Summary      Submit a supervisor application
+// @Description  Allows an accepted polling agent to submit an application to become a ward, LGA, or state supervisor. Requires higher education degree.
+// @Tags         PollingAgentApplications
+// @Accept       json
+// @Produce      json
+// @Param        request body SubmitSupervisorApplicationRequest true "Submit Supervisor Application payload"
+// @Success      201  {object} map[string]interface{} "Supervisor application submitted successfully"
+// @Failure      400  {object} map[string]interface{} "Invalid request payload or eligibility failure"
+// @Failure      409  {object} map[string]interface{} "Already applied for this election group"
+// @Failure      500  {object} map[string]interface{} "Internal server error"
+// @Security     BearerAuth
+// @Router       /party-applications/supervisor [post]
+func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Request) {
+	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
+	if !ok {
+		return
+	}
+
+	requester, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "User not found")
+		return
+	}
+
+	var req SubmitSupervisorApplicationRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload")
+		return
+	}
+
+	if req.ElectionGroupID <= 0 || strings.TrimSpace(req.Role) == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_group_id and role are required")
+		return
+	}
+
+	app, err := h.service.SubmitSupervisorApplication(r.Context(), partyapplications.SubmitSupervisorApplicationInput{
+		UserID:               requester.ID,
+		ElectionGroupID:      req.ElectionGroupID,
+		Role:                 req.Role,
+		StateID:              req.StateID,
+		LgaID:                req.LgaID,
+		WardID:               req.WardID,
+		DegreeCertificateURL: req.DegreeCertificateURL,
+	})
+	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "already have an active application") {
+			h.utils.RespondError(w, http.StatusConflict, errStr)
+			return
+		}
+		if strings.Contains(errStr, "required") || strings.Contains(errStr, "higher education degree") || strings.Contains(errStr, "accepted polling agent") || strings.Contains(errStr, "complete your educational details") {
+			h.utils.RespondError(w, http.StatusBadRequest, errStr)
+			return
+		}
+
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to submit supervisor application: "+errStr)
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusCreated, "Supervisor application submitted successfully", map[string]interface{}{
+		"application": app,
+	})
+}
+
 
 // ListApplications godoc
 // @Summary      List polling agent applications

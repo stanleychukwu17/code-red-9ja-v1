@@ -833,15 +833,19 @@ export const EducationalDetailsStep = ({
             options={[
               {
                 label: "Primary School Certificate",
-                value: "Primary School Certificate",
+                value: "primary",
               },
               {
                 label: "Secondary School Certificate",
-                value: "Secondary School Certificate",
+                value: "secondary",
               },
-              { label: "Bachelors", value: "Bachelors" },
-              { label: "Masters", value: "Masters" },
-              { label: "PhD", value: "PhD" },
+              {
+                label: "Polytechnic (OND / HND)",
+                value: "polytechnic",
+              },
+              { label: "Bachelors", value: "bachelors" },
+              { label: "Masters", value: "masters" },
+              { label: "PhD", value: "phd" },
             ]}
           />
         </div>

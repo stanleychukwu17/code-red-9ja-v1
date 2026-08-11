@@ -303,6 +303,18 @@ type ElectionGroup struct {
 	UniqueLgaSupervisorsCount                 int32              `json:"unique_lga_supervisors_count"`
 	WardSupervisorsCount                      int32              `json:"ward_supervisors_count"`
 	UniqueWardSupervisorsCount                int32              `json:"unique_ward_supervisors_count"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
+	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
+	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
+	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
+	LgaSupervisorApplicationsCount            int32              `json:"lga_supervisor_applications_count"`
+	LgaSupervisorAcceptedApplicationsCount    int32              `json:"lga_supervisor_accepted_applications_count"`
+	LgaSupervisorRejectedApplicationsCount    int32              `json:"lga_supervisor_rejected_applications_count"`
+	StateSupervisorApplicationsCount          int32              `json:"state_supervisor_applications_count"`
+	StateSupervisorAcceptedApplicationsCount  int32              `json:"state_supervisor_accepted_applications_count"`
+	StateSupervisorRejectedApplicationsCount  int32              `json:"state_supervisor_rejected_applications_count"`
 	PuReportsCount                            int32              `json:"pu_reports_count"`
 	PuUpdatesCount                            int32              `json:"pu_updates_count"`
 	ResultsSubmittedCount                     int32              `json:"results_submitted_count"`
@@ -337,6 +349,15 @@ type ElectionGroupFederalConstituency struct {
 	FederalConstituencyID                     int32              `json:"federal_constituency_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID                      pgtype.Int4        `json:"senatorial_district_id"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
+	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
+	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
+	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
+	LgaSupervisorApplicationsCount            int32              `json:"lga_supervisor_applications_count"`
+	LgaSupervisorAcceptedApplicationsCount    int32              `json:"lga_supervisor_accepted_applications_count"`
+	LgaSupervisorRejectedApplicationsCount    int32              `json:"lga_supervisor_rejected_applications_count"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
@@ -378,6 +399,15 @@ type ElectionGroupLga struct {
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID                      pgtype.Int4        `json:"senatorial_district_id"`
 	FederalConstituencyID                     pgtype.Int4        `json:"federal_constituency_id"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
+	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
+	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
+	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
+	LgaSupervisorApplicationsCount            int32              `json:"lga_supervisor_applications_count"`
+	LgaSupervisorAcceptedApplicationsCount    int32              `json:"lga_supervisor_accepted_applications_count"`
+	LgaSupervisorRejectedApplicationsCount    int32              `json:"lga_supervisor_rejected_applications_count"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
@@ -420,6 +450,9 @@ type ElectionGroupPollingUnit struct {
 	FederalConstituencyID                     pgtype.Int4        `json:"federal_constituency_id"`
 	SenatorialDistrictID                      pgtype.Int4        `json:"senatorial_district_id"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	PuAgentsInAttendanceCount                 int32              `json:"pu_agents_in_attendance_count"`
 	PuReportsCount                            int32              `json:"pu_reports_count"`
@@ -442,6 +475,15 @@ type ElectionGroupSenatorialDistrict struct {
 	ElectionGroupID                           int64              `json:"election_group_id"`
 	SenatorialDistrictID                      int32              `json:"senatorial_district_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
+	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
+	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
+	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
+	LgaSupervisorApplicationsCount            int32              `json:"lga_supervisor_applications_count"`
+	LgaSupervisorAcceptedApplicationsCount    int32              `json:"lga_supervisor_accepted_applications_count"`
+	LgaSupervisorRejectedApplicationsCount    int32              `json:"lga_supervisor_rejected_applications_count"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
@@ -481,6 +523,18 @@ type ElectionGroupState struct {
 	ID                                        int64              `json:"id"`
 	ElectionGroupID                           int64              `json:"election_group_id"`
 	StateID                                   int16              `json:"state_id"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
+	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
+	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
+	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
+	LgaSupervisorApplicationsCount            int32              `json:"lga_supervisor_applications_count"`
+	LgaSupervisorAcceptedApplicationsCount    int32              `json:"lga_supervisor_accepted_applications_count"`
+	LgaSupervisorRejectedApplicationsCount    int32              `json:"lga_supervisor_rejected_applications_count"`
+	StateSupervisorApplicationsCount          int32              `json:"state_supervisor_applications_count"`
+	StateSupervisorAcceptedApplicationsCount  int32              `json:"state_supervisor_accepted_applications_count"`
+	StateSupervisorRejectedApplicationsCount  int32              `json:"state_supervisor_rejected_applications_count"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
@@ -524,6 +578,12 @@ type ElectionGroupStateConstituency struct {
 	ElectionGroupID                           int64              `json:"election_group_id"`
 	StateConstituencyID                       int32              `json:"state_constituency_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
+	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
+	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
+	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
@@ -561,6 +621,12 @@ type ElectionGroupWard struct {
 	LgaID                                     pgtype.Int4        `json:"lga_id"`
 	StateID                                   pgtype.Int2        `json:"state_id"`
 	UniqueFinalResultsExpected                int32              `json:"unique_final_results_expected"`
+	ApplicationsCount                         int32              `json:"applications_count"`
+	AcceptedApplicationsCount                 int32              `json:"accepted_applications_count"`
+	RejectedApplicationsCount                 int32              `json:"rejected_applications_count"`
+	WardSupervisorApplicationsCount           int32              `json:"ward_supervisor_applications_count"`
+	WardSupervisorAcceptedApplicationsCount   int32              `json:"ward_supervisor_accepted_applications_count"`
+	WardSupervisorRejectedApplicationsCount   int32              `json:"ward_supervisor_rejected_applications_count"`
 	PuAgentsCount                             int32              `json:"pu_agents_count"`
 	UniquePuAgentsCount                       int32              `json:"unique_pu_agents_count"`
 	PuAgentsInAttendanceCount                 int32              `json:"pu_agents_in_attendance_count"`
@@ -1238,18 +1304,18 @@ type UserBankAccount struct {
 }
 
 type UserMoreInfo struct {
-	UserID            int64              `json:"user_id"`
-	OccupationID      pgtype.Int2        `json:"occupation_id"`
-	EducationalStatus pgtype.Text        `json:"educational_status"`
-	EducationLevel    pgtype.Text        `json:"education_level"`
-	HighestDegree     pgtype.Text        `json:"highest_degree"`
-	GraduationYear    pgtype.Text        `json:"graduation_year"`
-	SchoolName        pgtype.Text        `json:"school_name"`
-	Religion          pgtype.Text        `json:"religion"`
-	MaritalStatus     pgtype.Text        `json:"marital_status"`
-	Address           pgtype.Text        `json:"address"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+	UserID               int64              `json:"user_id"`
+	OccupationID         pgtype.Int2        `json:"occupation_id"`
+	EducationalStatus    pgtype.Text        `json:"educational_status"`
+	HighestDegree        pgtype.Text        `json:"highest_degree"`
+	GraduationYear       pgtype.Text        `json:"graduation_year"`
+	SchoolName           pgtype.Text        `json:"school_name"`
+	DegreeCertificateUrl pgtype.Text        `json:"degree_certificate_url"`
+	Religion             pgtype.Text        `json:"religion"`
+	MaritalStatus        pgtype.Text        `json:"marital_status"`
+	Address              pgtype.Text        `json:"address"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserPracticeTest struct {

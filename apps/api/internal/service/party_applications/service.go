@@ -188,6 +188,18 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 			return nil, fmt.Errorf("failed to create user referral record: %w", err)
 		}
 
+		// Increment applications_count on election_group_polling_units for this PU & party
+		if input.PollingUnitID > 0 {
+			_ = txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
+				ElectionGroupID: egID,
+				PollingUnitID:   input.PollingUnitID,
+				PartyID:         int16(input.PartyID),
+				AppDelta:        1,
+				AcceptedDelta:   0,
+				RejectedDelta:   0,
+			})
+		}
+
 		apps = append(apps, app)
 	}
 
@@ -207,6 +219,131 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserMoreInfo, input.UserID))
 
 	return apps, nil
+}
+
+type SubmitSupervisorApplicationInput struct {
+	UserID               int64
+	ElectionGroupID      int64
+	Role                 string
+	StateID              int16
+	LgaID                int32
+	WardID               int32
+	DegreeCertificateURL string
+}
+
+func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitSupervisorApplicationInput) (queries.PartyApplication, error) {
+	// 1. Verify role type string
+	roleType := strings.TrimSpace(input.Role)
+	switch roleType {
+	case "state-election-supervisor", "state_supervisor":
+		roleType = "state-election-supervisor"
+		if input.StateID <= 0 {
+			return queries.PartyApplication{}, errors.New("state_id is required for state supervisor application")
+		}
+	case "lga-election-supervisor", "lga_supervisor":
+		roleType = "lga-election-supervisor"
+		if input.StateID <= 0 || input.LgaID <= 0 {
+			return queries.PartyApplication{}, errors.New("state_id and lga_id are required for LGA supervisor application")
+		}
+	case "ward-election-supervisor", "ward_supervisor":
+		roleType = "ward-election-supervisor"
+		if input.StateID <= 0 || input.LgaID <= 0 || input.WardID <= 0 {
+			return queries.PartyApplication{}, errors.New("state_id, lga_id, and ward_id are required for Ward supervisor application")
+		}
+	default:
+		return queries.PartyApplication{}, errors.New("invalid supervisor role. Must be state-election-supervisor, lga-election-supervisor, or ward-election-supervisor")
+	}
+
+	// 2. Check user's educational degree eligibility
+	moreInfo, err := s.queries.GetMoreInfoAboutThisUser(ctx, input.UserID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return queries.PartyApplication{}, errors.New("please complete your educational details before applying for a supervisor role")
+		}
+		return queries.PartyApplication{}, fmt.Errorf("failed to fetch user educational details: %w", err)
+	}
+
+	highestDegree := strings.ToLower(strings.TrimSpace(moreInfo.HighestDegree.String))
+	validDegrees := map[string]bool{
+		"polytechnic": true,
+		"bachelors":   true,
+		"masters":     true,
+		"phd":         true,
+	}
+	if !validDegrees[highestDegree] {
+		return queries.PartyApplication{}, errors.New("a higher education degree (Polytechnic/OND/HND, Bachelors, Masters, or PhD) is required to apply as an election supervisor")
+	}
+
+	// 3. Verify user has an accepted application for this election group
+	acceptedApp, err := s.queries.GetAcceptedApplicationForUser(ctx, queries.GetAcceptedApplicationForUserParams{
+		UserID:          input.UserID,
+		ElectionGroupID: input.ElectionGroupID,
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return queries.PartyApplication{}, errors.New("you must be an accepted polling agent for this election before applying for a supervisor role")
+		}
+		return queries.PartyApplication{}, fmt.Errorf("failed to verify polling agent application status: %w", err)
+	}
+
+	// 4. Begin transaction
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return queries.PartyApplication{}, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	txQueries := s.queries.WithTx(tx)
+
+	// Update user's degree certificate URL if provided
+	if input.DegreeCertificateURL != "" {
+		err = txQueries.UpdateUserDegreeCertificateUrl(ctx, queries.UpdateUserDegreeCertificateUrlParams{
+			UserID:               input.UserID,
+			DegreeCertificateUrl: pgtype.Text{String: input.DegreeCertificateURL, Valid: true},
+		})
+		if err != nil {
+			return queries.PartyApplication{}, fmt.Errorf("failed to save degree certificate URL: %w", err)
+		}
+	}
+
+	// Create supervisor application
+	app, err := txQueries.CreateApplication(ctx, queries.CreateApplicationParams{
+		UserID:          input.UserID,
+		PartyID:         acceptedApp.PartyID,
+		ElectionGroupID: input.ElectionGroupID,
+		PollingUnitID:   pgtype.Int4{Valid: false},
+		StateID:         pgtype.Int2{Int16: input.StateID, Valid: input.StateID > 0},
+		LgaID:           pgtype.Int4{Int32: input.LgaID, Valid: input.LgaID > 0},
+		WardID:          pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
+	})
+	if err != nil {
+		errStr := err.Error()
+		if strings.Contains(errStr, "uq_active_user_app_per_group") || strings.Contains(errStr, "uq_user_application_per_group") {
+			return queries.PartyApplication{}, errors.New("you already have an active application for this election group")
+		}
+		return queries.PartyApplication{}, fmt.Errorf("failed to create supervisor application: %w", err)
+	}
+
+	// Set role on application record explicitly to supervisor role
+	app, err = txQueries.UpdateApplicationApproval(ctx, queries.UpdateApplicationApprovalParams{
+		ID:            app.ID,
+		Role:          roleType,
+		PollingUnitID: pgtype.Int4{Valid: false},
+		StateID:       pgtype.Int2{Int16: input.StateID, Valid: input.StateID > 0},
+		LgaID:         pgtype.Int4{Int32: input.LgaID, Valid: input.LgaID > 0},
+		WardID:        pgtype.Int4{Int32: input.WardID, Valid: input.WardID > 0},
+	})
+	if err != nil {
+		return queries.PartyApplication{}, fmt.Errorf("failed to set supervisor application role: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	s.rdb.Del(ctx, fmt.Sprintf("%s%d", db.RedisUserMoreInfo, input.UserID))
+
+	return app, nil
 }
 
 func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error) {
@@ -892,6 +1029,71 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			}); err != nil {
 				return queries.PartyApplication{}, fmt.Errorf("failed UpsertElectionGroupNationalPartyEntry: %v", err)
 			}
+		}
+	}
+
+	// Increment accepted application metrics on scope tables
+	if roleType == "ward-election-supervisor" || roleType == "ward_supervisor" {
+		if input.WardID > 0 {
+			_ = txQueries.AdjustElectionGroupWardApplicationCounts(ctx, queries.AdjustElectionGroupWardApplicationCountsParams{
+				ElectionGroupID:       egID,
+				WardID:                input.WardID,
+				PartyID:               partyID,
+				AppDelta:              0,
+				AcceptedDelta:         1,
+				RejectedDelta:         0,
+				WardSupAppDelta:       0,
+				WardSupAcceptedDelta: 1,
+				WardSupRejectedDelta: 0,
+			})
+		}
+	} else if roleType == "lga-election-supervisor" || roleType == "lga_supervisor" {
+		if input.LgaID > 0 {
+			_ = txQueries.AdjustElectionGroupLGAApplicationCounts(ctx, queries.AdjustElectionGroupLGAApplicationCountsParams{
+				ElectionGroupID:      egID,
+				LgaID:                input.LgaID,
+				PartyID:              partyID,
+				AppDelta:             0,
+				AcceptedDelta:        1,
+				RejectedDelta:        0,
+				WardSupAppDelta:      0,
+				WardSupAcceptedDelta:0,
+				WardSupRejectedDelta:0,
+				LgaSupAppDelta:       0,
+				LgaSupAcceptedDelta: 1,
+				LgaSupRejectedDelta: 0,
+			})
+		}
+	} else if roleType == "state-election-supervisor" || roleType == "state_supervisor" {
+		if input.StateID > 0 {
+			_ = txQueries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
+				ElectionGroupID:        egID,
+				StateID:                input.StateID,
+				PartyID:                partyID,
+				AppDelta:               0,
+				AcceptedDelta:          1,
+				RejectedDelta:          0,
+				WardSupAppDelta:        0,
+				WardSupAcceptedDelta:  0,
+				WardSupRejectedDelta:  0,
+				LgaSupAppDelta:         0,
+				LgaSupAcceptedDelta:   0,
+				LgaSupRejectedDelta:   0,
+				StateSupAppDelta:       0,
+				StateSupAcceptedDelta: 1,
+				StateSupRejectedDelta: 0,
+			})
+		}
+	} else {
+		if pollingUnitID > 0 {
+			_ = txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
+				ElectionGroupID: egID,
+				PollingUnitID:   pollingUnitID,
+				PartyID:         partyID,
+				AppDelta:        0,
+				AcceptedDelta:   1,
+				RejectedDelta:   0,
+			})
 		}
 	}
 

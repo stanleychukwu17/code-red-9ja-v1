@@ -498,7 +498,6 @@ func (s *UsersService) UpdateUserProfileDetails(ctx context.Context, userID int6
 		SchoolName:        pgtype.Text{String: schoolName, Valid: schoolName != ""},
 		Religion:          pgtype.Text{String: religion, Valid: religion != ""},
 		MaritalStatus:     pgtype.Text{String: maritalStatus, Valid: maritalStatus != ""},
-		EducationLevel:    pgtype.Text{String: educationLevel, Valid: educationLevel != ""},
 		Address:           pgtype.Text{String: address, Valid: address != ""},
 	})
 	if err != nil {

@@ -14,7 +14,7 @@
 
 
 -- ============================================================
--- election_group_polling_units
+-- 1. election_group_polling_units
 -- One row per (election_group_id, polling_unit_id).
 -- Most granular level — all higher tables roll up from here.
 -- ============================================================
@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   unique_final_results_expected                        INT         NOT NULL DEFAULT 0,
 
   -- Overall aggregate fields (across all parties at this PU)
+  applications_count                                   INT         NOT NULL DEFAULT 0,
+  accepted_applications_count                          INT         NOT NULL DEFAULT 0,
+  rejected_applications_count                          INT         NOT NULL DEFAULT 0,
   pu_agents_count                                      INT         NOT NULL DEFAULT 0,
   pu_agents_in_attendance_count                        INT         NOT NULL DEFAULT 0,
   pu_reports_count                                     INT         NOT NULL DEFAULT 0,
@@ -57,6 +60,9 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   -- Per-party breakdown. Array of objects:
   -- {
   --   party_id,
+  --   applications_count,
+  --   accepted_applications_count,
+  --   rejected_applications_count,
   --   pu_agents_count,
   --   pu_agents_in_attendance_count,
   --   pu_average_arrival_time,
@@ -89,7 +95,7 @@ CREATE INDEX idx_egpu_senatorial        ON election_group_polling_units(senatori
 
 
 -- ============================================================
--- election_group_wards
+-- 2. election_group_wards
 -- One row per (election_group_id, ward_id).
 -- All pu_* fields are rollups of election_group_polling_units.
 -- ============================================================
@@ -105,6 +111,12 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   unique_final_results_expected                    INT NOT NULL DEFAULT 1, -- total unique results (a polling unit may have)
 
   -- Rollups of per-PU scalar fields
+  applications_count                            INT NOT NULL DEFAULT 0,
+  accepted_applications_count                   INT NOT NULL DEFAULT 0,
+  rejected_applications_count                   INT NOT NULL DEFAULT 0,
+  ward_supervisor_applications_count            INT NOT NULL DEFAULT 0,
+  ward_supervisor_accepted_applications_count   INT NOT NULL DEFAULT 0,
+  ward_supervisor_rejected_applications_count   INT NOT NULL DEFAULT 0,
   pu_agents_count                            INT NOT NULL DEFAULT 0, -- total pu agents
   unique_pu_agents_count                     INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
   pu_agents_in_attendance_count              INT NOT NULL DEFAULT 0, -- total agents in attendance
@@ -131,6 +143,12 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   -- Per-party rollup. Array of objects, one per party:
   -- {
   --   party_id,
+  --   applications_count,
+  --   accepted_applications_count,
+  --   rejected_applications_count,
+  --   ward_supervisor_applications_count,
+  --   ward_supervisor_accepted_applications_count,
+  --   ward_supervisor_rejected_applications_count,
   --   pu_agents_count,
   --   unique_pu_agents_count,
   --   pu_agents_in_attendance_count,
@@ -139,8 +157,8 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   --   pu_average_arrival_time,
   --   pu_average_election_started_at,
   --   pu_average_election_ended_at,
-  --   pu_final_results_uploaded_count,-
-  --   unique_pu_final_results_uploaded_count,-
+  --   pu_final_results_uploaded_count,
+  --   unique_pu_final_results_uploaded_count,
   --   pu_average_update_time_interval_in_seconds,
   --   pu_election_practice_test_readiness_percentage,
   --   pu_live_voters_referred_by_agent_count,
@@ -149,7 +167,7 @@ CREATE TABLE IF NOT EXISTS election_group_wards (
   --   total_pu_with_agents_in_attendance,
   --   total_pu_where_election_has_started,
   --   total_pu_where_election_has_ended,
-  --   total_pu_unique_final_results_uploaded,-
+  --   total_pu_unique_final_results_uploaded,
   --   total_pu_where_agents_referred_live_voters
   -- }
   parties JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -168,7 +186,72 @@ CREATE INDEX idx_egw_state          ON election_group_wards(state_id);
 
 
 -- ============================================================
--- election_group_lgas
+-- 3. election_group_state_constituencies
+-- One row per (election_group_id, state_constituency_id).
+-- ============================================================
+CREATE TABLE IF NOT EXISTS election_group_state_constituencies (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+
+  election_group_id         BIGINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
+  state_constituency_id     INT      NOT NULL REFERENCES state_assembly_constituencies(id) ON DELETE CASCADE,
+  state_id                  SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  -- Application Stats
+  applications_count                               INT NOT NULL DEFAULT 0,
+  accepted_applications_count                      INT NOT NULL DEFAULT 0,
+  rejected_applications_count                      INT NOT NULL DEFAULT 0,
+  ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
+  ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
+  ward_supervisor_rejected_applications_count      INT NOT NULL DEFAULT 0,
+
+  unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
+  pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
+  unique_pu_agents_count                           INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
+  pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
+  pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
+  pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
+  pu_average_arrival_time                          TIMESTAMPTZ,
+  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
+  pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
+  pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
+  pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
+  pu_final_results_uploaded_count            INT NOT NULL DEFAULT 0, -- total pu final result uploads
+  unique_pu_final_results_uploaded_count     INT NOT NULL DEFAULT 0, -- total unique final result uploads
+  pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs
+  total_pu_with_reports                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more reports
+  total_pu_with_updates                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more updates
+  total_pu_with_agents_in_attendance               INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents in attendance
+  total_pu_where_election_has_started              INT NOT NULL DEFAULT 0, -- total pu where election has started
+  total_pu_where_election_has_ended                INT NOT NULL DEFAULT 0, -- total pu where election has ended
+  total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
+  total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
+
+  ward_supervisors_count                            INT NOT NULL DEFAULT 0,
+  unique_ward_supervisors_count                     INT NOT NULL DEFAULT 0,
+
+  wards_count                                       INT NOT NULL DEFAULT 0,
+  polling_units_count                               INT NOT NULL DEFAULT 0,
+
+  -- Per-party rollup. Array of objects, one per party:
+  -- {
+  --   ... same object shape as outlined by the comment in election_group_wards,
+  --   ward_supervisors_count,
+  --   unique_ward_supervisors_count,
+  -- }
+  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
+
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  CONSTRAINT uq_election_group_state_constituency UNIQUE (election_group_id, state_constituency_id)
+);
+
+CREATE INDEX idx_egsc_state_constituency ON election_group_state_constituencies(state_constituency_id);
+CREATE INDEX idx_egsc_state              ON election_group_state_constituencies(state_id);
+
+
+-- ============================================================
+-- 4. election_group_lgas
 -- One row per (election_group_id, lga_id).
 -- ============================================================
 CREATE TABLE IF NOT EXISTS election_group_lgas (
@@ -179,6 +262,17 @@ CREATE TABLE IF NOT EXISTS election_group_lgas (
   state_id                SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id  INT      REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT      REFERENCES federal_constituencies(id) ON DELETE SET NULL,
+
+  -- Application Stats
+  applications_count                               INT NOT NULL DEFAULT 0,
+  accepted_applications_count                      INT NOT NULL DEFAULT 0,
+  rejected_applications_count                      INT NOT NULL DEFAULT 0,
+  ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
+  ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
+  ward_supervisor_rejected_applications_count      INT NOT NULL DEFAULT 0,
+  lga_supervisor_applications_count                INT NOT NULL DEFAULT 0,
+  lga_supervisor_accepted_applications_count       INT NOT NULL DEFAULT 0,
+  lga_supervisor_rejected_applications_count       INT NOT NULL DEFAULT 0,
 
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
@@ -228,64 +322,7 @@ CREATE INDEX idx_eglga_state          ON election_group_lgas(state_id);
 
 
 -- ============================================================
--- election_group_state_constituencies
--- One row per (election_group_id, state_constituency_id).
--- ============================================================
-CREATE TABLE IF NOT EXISTS election_group_state_constituencies (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-
-  election_group_id         BIGINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
-  state_constituency_id     INT      NOT NULL REFERENCES state_assembly_constituencies(id) ON DELETE CASCADE,
-  state_id                  SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
-
-  unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
-  pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
-  unique_pu_agents_count                           INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
-  pu_agents_in_attendance_count                    INT NOT NULL DEFAULT 0, -- total agents in attendance
-  pu_reports_count                                 INT NOT NULL DEFAULT 0, -- total reports
-  pu_updates_count                                 INT NOT NULL DEFAULT 0, -- total updates
-  pu_average_arrival_time                          TIMESTAMPTZ,
-  pu_average_update_time_interval_in_seconds       FLOAT NOT NULL DEFAULT 0,
-  pu_average_election_started_at                   TIMESTAMPTZ, -- average time election starts in pu
-  pu_average_election_ended_at                     TIMESTAMPTZ, -- average time election stops in pu
-  pu_election_practice_test_readiness_percentage   NUMERIC(5,2) NOT NULL DEFAULT 0, -- average election practice test readiness percentage across all PUs
-  pu_final_results_uploaded_count            INT NOT NULL DEFAULT 0, -- total pu final result uploads
-  unique_pu_final_results_uploaded_count     INT NOT NULL DEFAULT 0, -- total unique final result uploads
-  pu_live_voters_referred_by_agent_count           INT NOT NULL DEFAULT 0, -- total live voters referred by agents across all PUs
-  total_pu_with_reports                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more reports
-  total_pu_with_updates                            INT NOT NULL DEFAULT 0, -- total pu with 1 or more updates
-  total_pu_with_agents_in_attendance               INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents in attendance
-  total_pu_where_election_has_started              INT NOT NULL DEFAULT 0, -- total pu where election has started
-  total_pu_where_election_has_ended                INT NOT NULL DEFAULT 0, -- total pu where election has ended
-  total_pu_unique_final_results_uploaded           INT NOT NULL DEFAULT 0, -- total pu with 1 or more unique election final results uploaded (1 recorded for each election final result upload within the election group)
-  total_pu_where_agents_referred_live_voters       INT NOT NULL DEFAULT 0, -- total pu where agents have referred live voters
-
-  ward_supervisors_count                            INT NOT NULL DEFAULT 0,
-  unique_ward_supervisors_count                     INT NOT NULL DEFAULT 0,
-
-  wards_count                                       INT NOT NULL DEFAULT 0,
-  polling_units_count                               INT NOT NULL DEFAULT 0,
-
-  -- Per-party rollup. Array of objects, one per party:
-  -- {
-  --   ... same object shape as outlined by the comment in election_group_wards,
-  --   ward_supervisors_count,
-  --   unique_ward_supervisors_count,
-  -- }
-  parties JSONB NOT NULL DEFAULT '[]'::jsonb,
-
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-
-  CONSTRAINT uq_election_group_state_constituency UNIQUE (election_group_id, state_constituency_id)
-);
-
-CREATE INDEX idx_egsc_state_constituency ON election_group_state_constituencies(state_constituency_id);
-CREATE INDEX idx_egsc_state              ON election_group_state_constituencies(state_id);
-
-
--- ============================================================
--- election_group_federal_constituencies
+-- 5. election_group_federal_constituencies
 -- One row per (election_group_id, federal_constituency_id).
 -- ============================================================
 CREATE TABLE IF NOT EXISTS election_group_federal_constituencies (
@@ -295,6 +332,17 @@ CREATE TABLE IF NOT EXISTS election_group_federal_constituencies (
   federal_constituency_id                          INT      NOT NULL REFERENCES federal_constituencies(id) ON DELETE CASCADE,
   state_id                                         SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id                           INT      REFERENCES senatorial_districts(id) ON DELETE SET NULL,
+
+  -- Application Stats
+  applications_count                               INT NOT NULL DEFAULT 0,
+  accepted_applications_count                      INT NOT NULL DEFAULT 0,
+  rejected_applications_count                      INT NOT NULL DEFAULT 0,
+  ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
+  ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
+  ward_supervisor_rejected_applications_count      INT NOT NULL DEFAULT 0,
+  lga_supervisor_applications_count                INT NOT NULL DEFAULT 0,
+  lga_supervisor_accepted_applications_count       INT NOT NULL DEFAULT 0,
+  lga_supervisor_rejected_applications_count       INT NOT NULL DEFAULT 0,
 
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
@@ -349,7 +397,7 @@ CREATE INDEX idx_egfc_state                ON election_group_federal_constituenc
 
 
 -- ============================================================
--- election_group_senatorial_districts
+-- 6. election_group_senatorial_districts
 -- One row per (election_group_id, senatorial_district_id).
 -- ============================================================
 CREATE TABLE IF NOT EXISTS election_group_senatorial_districts (
@@ -358,6 +406,17 @@ CREATE TABLE IF NOT EXISTS election_group_senatorial_districts (
   election_group_id           BIGINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   senatorial_district_id      INT      NOT NULL REFERENCES senatorial_districts(id) ON DELETE CASCADE,
   state_id                    SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
+
+  -- Application Stats
+  applications_count                               INT NOT NULL DEFAULT 0,
+  accepted_applications_count                      INT NOT NULL DEFAULT 0,
+  rejected_applications_count                      INT NOT NULL DEFAULT 0,
+  ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
+  ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
+  ward_supervisor_rejected_applications_count      INT NOT NULL DEFAULT 0,
+  lga_supervisor_applications_count                INT NOT NULL DEFAULT 0,
+  lga_supervisor_accepted_applications_count       INT NOT NULL DEFAULT 0,
+  lga_supervisor_rejected_applications_count       INT NOT NULL DEFAULT 0,
 
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
@@ -413,7 +472,7 @@ CREATE INDEX idx_egsd_state               ON election_group_senatorial_districts
 
 
 -- ============================================================
--- election_group_states
+-- 7. election_group_states
 -- One row per (election_group_id, state_id).
 -- Highest geographic level for stats aggregation.
 -- ============================================================
@@ -423,6 +482,20 @@ CREATE TABLE IF NOT EXISTS election_group_states (
   election_group_id   BIGINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
   state_id            SMALLINT NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
 
+  -- Application Stats
+  applications_count                               INT NOT NULL DEFAULT 0,
+  accepted_applications_count                      INT NOT NULL DEFAULT 0,
+  rejected_applications_count                      INT NOT NULL DEFAULT 0,
+  ward_supervisor_applications_count               INT NOT NULL DEFAULT 0,
+  ward_supervisor_accepted_applications_count      INT NOT NULL DEFAULT 0,
+  ward_supervisor_rejected_applications_count      INT NOT NULL DEFAULT 0,
+  lga_supervisor_applications_count                INT NOT NULL DEFAULT 0,
+  lga_supervisor_accepted_applications_count       INT NOT NULL DEFAULT 0,
+  lga_supervisor_rejected_applications_count       INT NOT NULL DEFAULT 0,
+  state_supervisor_applications_count              INT NOT NULL DEFAULT 0,
+  state_supervisor_accepted_applications_count     INT NOT NULL DEFAULT 0,
+  state_supervisor_rejected_applications_count     INT NOT NULL DEFAULT 0,
+  
   unique_final_results_expected                    INT NOT NULL DEFAULT 0, -- total unique results (a polling unit may have)
   pu_agents_count                                  INT NOT NULL DEFAULT 0, -- total pu agents
   unique_pu_agents_count                           INT NOT NULL DEFAULT 0, -- total pu with 1 or more agents
@@ -462,7 +535,19 @@ CREATE TABLE IF NOT EXISTS election_group_states (
 
   -- Per-party rollup. Array of objects, one per party:
   -- {
-  --   ... same object shape as outlined by the comment in election_group_wards,
+  --   party_id,
+  --   applications_count,
+  --   accepted_applications_count,
+  --   rejected_applications_count,
+  --   ward_supervisor_applications_count,
+  --   ward_supervisor_accepted_applications_count,
+  --   ward_supervisor_rejected_applications_count,
+  --   lga_supervisor_applications_count,
+  --   lga_supervisor_accepted_applications_count,
+  --   lga_supervisor_rejected_applications_count,
+  --   state_supervisor_applications_count,
+  --   state_supervisor_accepted_applications_count,
+  --   state_supervisor_rejected_applications_count,
   --   lga_supervisors_count,
   --   unique_lga_supervisors_count,
   --   ward_supervisors_count,
@@ -485,8 +570,8 @@ CREATE INDEX idx_egstate_state          ON election_group_states(state_id);
 DROP TABLE IF EXISTS election_group_states;
 DROP TABLE IF EXISTS election_group_senatorial_districts;
 DROP TABLE IF EXISTS election_group_federal_constituencies;
-DROP TABLE IF EXISTS election_group_state_constituencies;
 DROP TABLE IF EXISTS election_group_lgas;
+DROP TABLE IF EXISTS election_group_state_constituencies;
 DROP TABLE IF EXISTS election_group_wards;
 DROP TABLE IF EXISTS election_group_polling_units;
 

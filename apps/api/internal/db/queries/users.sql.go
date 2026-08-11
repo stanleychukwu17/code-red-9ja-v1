@@ -140,8 +140,8 @@ func (q *Queries) CreateCandidatePlaceholder(ctx context.Context, arg CreateCand
 
 const createMoreInfoAboutThisUser = `-- name: CreateMoreInfoAboutThisUser :one
 INSERT INTO user_more_infos (
-  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING user_id
 `
 
@@ -154,7 +154,6 @@ type CreateMoreInfoAboutThisUserParams struct {
 	SchoolName        pgtype.Text `json:"school_name"`
 	Religion          pgtype.Text `json:"religion"`
 	MaritalStatus     pgtype.Text `json:"marital_status"`
-	EducationLevel    pgtype.Text `json:"education_level"`
 	Address           pgtype.Text `json:"address"`
 }
 
@@ -168,7 +167,6 @@ func (q *Queries) CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMor
 		arg.SchoolName,
 		arg.Religion,
 		arg.MaritalStatus,
-		arg.EducationLevel,
 		arg.Address,
 	)
 	var user_id int64
@@ -436,7 +434,7 @@ func (q *Queries) GetFakeIDByUsername(ctx context.Context, username pgtype.Text)
 }
 
 const getMoreInfoAboutThisUser = `-- name: GetMoreInfoAboutThisUser :one
-SELECT user_id, occupation_id, educational_status, education_level, highest_degree, graduation_year, school_name, religion, marital_status, address, created_at, updated_at FROM user_more_infos
+SELECT user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, degree_certificate_url, religion, marital_status, address, created_at, updated_at FROM user_more_infos
 WHERE user_id = $1 LIMIT 1
 `
 
@@ -447,10 +445,10 @@ func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (U
 		&i.UserID,
 		&i.OccupationID,
 		&i.EducationalStatus,
-		&i.EducationLevel,
 		&i.HighestDegree,
 		&i.GraduationYear,
 		&i.SchoolName,
+		&i.DegreeCertificateUrl,
 		&i.Religion,
 		&i.MaritalStatus,
 		&i.Address,
@@ -824,8 +822,8 @@ func (q *Queries) SeedUser(ctx context.Context, arg SeedUserParams) (int64, erro
 
 const updateMoreInfoAboutThisUser = `-- name: UpdateMoreInfoAboutThisUser :exec
 INSERT INTO user_more_infos (
-  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (user_id) DO UPDATE
 SET occupation_id = EXCLUDED.occupation_id,
     educational_status = EXCLUDED.educational_status,
@@ -834,7 +832,6 @@ SET occupation_id = EXCLUDED.occupation_id,
     school_name = EXCLUDED.school_name,
     religion = EXCLUDED.religion,
     marital_status = EXCLUDED.marital_status,
-    education_level = EXCLUDED.education_level,
     address = EXCLUDED.address,
     updated_at = NOW()
 `
@@ -848,7 +845,6 @@ type UpdateMoreInfoAboutThisUserParams struct {
 	SchoolName        pgtype.Text `json:"school_name"`
 	Religion          pgtype.Text `json:"religion"`
 	MaritalStatus     pgtype.Text `json:"marital_status"`
-	EducationLevel    pgtype.Text `json:"education_level"`
 	Address           pgtype.Text `json:"address"`
 }
 
@@ -862,7 +858,6 @@ func (q *Queries) UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMor
 		arg.SchoolName,
 		arg.Religion,
 		arg.MaritalStatus,
-		arg.EducationLevel,
 		arg.Address,
 	)
 	return err
@@ -990,6 +985,25 @@ type UpdateUserAvatarParams struct {
 
 func (q *Queries) UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error {
 	_, err := q.db.Exec(ctx, updateUserAvatar, arg.ID, arg.Avatar, arg.AvatarFileID)
+	return err
+}
+
+const updateUserDegreeCertificateUrl = `-- name: UpdateUserDegreeCertificateUrl :exec
+INSERT INTO user_more_infos (
+  user_id, degree_certificate_url
+) VALUES ($1, $2)
+ON CONFLICT (user_id) DO UPDATE
+SET degree_certificate_url = EXCLUDED.degree_certificate_url,
+    updated_at = NOW()
+`
+
+type UpdateUserDegreeCertificateUrlParams struct {
+	UserID               int64       `json:"user_id"`
+	DegreeCertificateUrl pgtype.Text `json:"degree_certificate_url"`
+}
+
+func (q *Queries) UpdateUserDegreeCertificateUrl(ctx context.Context, arg UpdateUserDegreeCertificateUrlParams) error {
+	_, err := q.db.Exec(ctx, updateUserDegreeCertificateUrl, arg.UserID, arg.DegreeCertificateUrl)
 	return err
 }
 

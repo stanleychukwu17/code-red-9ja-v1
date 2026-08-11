@@ -257,6 +257,7 @@ export const API_URL = {
   createUserWallet: (id: string | number) => `${api}/users/${id}/wallet`,
   updateProfile: `${api}/users/profile`,
   pollingAgentApplications: `${api}/party-applications`,
+  supervisorApplications: `${api}/party-applications/supervisor`,
   pollingAgentRecommendations: `${api}/party-applications/recommendations`,
 
   approveApplication: (id: string | number) =>

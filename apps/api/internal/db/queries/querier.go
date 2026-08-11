@@ -17,6 +17,7 @@ type Querier interface {
 	AddPartySlots(ctx context.Context, arg AddPartySlotsParams) (Party, error)
 	AdjustElectionGroupFederalConstituencyLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyLGASupervisorCountsParams) error
 	AdjustElectionGroupFederalConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupFederalConstituencyWardSupervisorCountsParams) error
+	AdjustElectionGroupLGAApplicationCounts(ctx context.Context, arg AdjustElectionGroupLGAApplicationCountsParams) error
 	// ============================================================
 	// SUPERVISOR COUNT INCREMENTS / DECREMENTS
 	// Called from Go after creating/removing supervisor records.
@@ -27,11 +28,19 @@ type Querier interface {
 	AdjustElectionGroupNationalLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalLGASupervisorCountsParams) error
 	AdjustElectionGroupNationalStateSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalStateSupervisorCountsParams) error
 	AdjustElectionGroupNationalWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupNationalWardSupervisorCountsParams) error
+	// ============================================================
+	// APPLICATION COUNT INCREMENT QUERIES
+	// Increments/updates application counts (total, accepted, rejected, and role specific)
+	// across polling units, wards, lgas, states, and election_groups.
+	// ============================================================
+	AdjustElectionGroupPollingUnitApplicationCounts(ctx context.Context, arg AdjustElectionGroupPollingUnitApplicationCountsParams) error
 	AdjustElectionGroupSenatorialDistrictLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupSenatorialDistrictLGASupervisorCountsParams) error
 	AdjustElectionGroupSenatorialDistrictWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupSenatorialDistrictWardSupervisorCountsParams) error
+	AdjustElectionGroupStateApplicationCounts(ctx context.Context, arg AdjustElectionGroupStateApplicationCountsParams) error
 	AdjustElectionGroupStateConstituencyWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateConstituencyWardSupervisorCountsParams) error
 	AdjustElectionGroupStateLGASupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateLGASupervisorCountsParams) error
 	AdjustElectionGroupStateWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupStateWardSupervisorCountsParams) error
+	AdjustElectionGroupWardApplicationCounts(ctx context.Context, arg AdjustElectionGroupWardApplicationCountsParams) error
 	AdjustElectionGroupWardWardSupervisorCounts(ctx context.Context, arg AdjustElectionGroupWardWardSupervisorCountsParams) error
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
 	ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarning, error)
@@ -109,6 +118,7 @@ type Querier interface {
 	DeleteUserVotesByElectionGroup(ctx context.Context, arg DeleteUserVotesByElectionGroupParams) error
 	DeleteWard(ctx context.Context, id int32) error
 	DepositPartyAllowance(ctx context.Context, arg DepositPartyAllowanceParams) (Party, error)
+	GetAcceptedApplicationForUser(ctx context.Context, arg GetAcceptedApplicationForUserParams) (GetAcceptedApplicationForUserRow, error)
 	// Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
 	GetActiveMarketingCampaignForElectionGroup(ctx context.Context, arg GetActiveMarketingCampaignForElectionGroupParams) (PartyMarketingCampaign, error)
 	GetAgentEarningsByID(ctx context.Context, id int64) (AgentEarning, error)
@@ -460,6 +470,7 @@ type Querier interface {
 	UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error
 	UpdateUserBankAccountsToNonPrimary(ctx context.Context, userID int64) error
+	UpdateUserDegreeCertificateUrl(ctx context.Context, arg UpdateUserDegreeCertificateUrlParams) error
 	UpdateUserFakeID(ctx context.Context, arg UpdateUserFakeIDParams) error
 	UpdateUserHasRole(ctx context.Context, arg UpdateUserHasRoleParams) error
 	UpdateUserIsVerified(ctx context.Context, arg UpdateUserIsVerifiedParams) error

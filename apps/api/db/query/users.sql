@@ -188,14 +188,14 @@ WHERE user_id = $1 LIMIT 1;
 
 -- name: CreateMoreInfoAboutThisUser :one
 INSERT INTO user_more_infos (
-  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 RETURNING user_id;
 
 -- name: UpdateMoreInfoAboutThisUser :exec
 INSERT INTO user_more_infos (
-  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, education_level, address
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+  user_id, occupation_id, educational_status, highest_degree, graduation_year, school_name, religion, marital_status, address
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 ON CONFLICT (user_id) DO UPDATE
 SET occupation_id = EXCLUDED.occupation_id,
     educational_status = EXCLUDED.educational_status,
@@ -204,7 +204,6 @@ SET occupation_id = EXCLUDED.occupation_id,
     school_name = EXCLUDED.school_name,
     religion = EXCLUDED.religion,
     marital_status = EXCLUDED.marital_status,
-    education_level = EXCLUDED.education_level,
     address = EXCLUDED.address,
     updated_at = NOW();
 
@@ -267,6 +266,14 @@ SET educational_status = COALESCE(EXCLUDED.educational_status, user_more_infos.e
     highest_degree = COALESCE(EXCLUDED.highest_degree, user_more_infos.highest_degree),
     graduation_year = COALESCE(EXCLUDED.graduation_year, user_more_infos.graduation_year),
     school_name = COALESCE(EXCLUDED.school_name, user_more_infos.school_name),
+    updated_at = NOW();
+
+-- name: UpdateUserDegreeCertificateUrl :exec
+INSERT INTO user_more_infos (
+  user_id, degree_certificate_url
+) VALUES ($1, $2)
+ON CONFLICT (user_id) DO UPDATE
+SET degree_certificate_url = EXCLUDED.degree_certificate_url,
     updated_at = NOW();
 
 -- name: CheckReferralCodeExists :one

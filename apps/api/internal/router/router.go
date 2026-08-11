@@ -529,6 +529,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// party applications routes
 		r.Post("/api/v1/party-applications", partyApplicationsHandler.SubmitApplication)
+		r.Post("/api/v1/party-applications/supervisor", partyApplicationsHandler.SubmitSupervisorApplication)
 		r.Get("/api/v1/party-applications", partyApplicationsHandler.ListApplications)
 		r.Get("/api/v1/party-applications/recommendations", partyApplicationsHandler.GetPollingUnitRecommendations)
 		r.Get("/api/v1/party-applications/{id}", partyApplicationsHandler.GetApplication)

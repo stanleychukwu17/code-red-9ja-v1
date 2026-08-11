@@ -33,6 +33,7 @@ import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
 import { Route as AuthenticatedUsersPartyMembersRouteImport } from './routes/_authenticated/users/party-members'
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
+import { Route as AuthenticatedApplicationsSupervisorRouteImport } from './routes/_authenticated/applications/supervisor'
 import { Route as AuthenticatedApplicationsApplyRouteImport } from './routes/_authenticated/applications/apply'
 import { Route as AuthenticatedHomeNotVotingReasonRouteImport } from './routes/_authenticated/_home/not-voting-reason'
 
@@ -168,6 +169,12 @@ const AuthenticatedUsersAdminRoute = AuthenticatedUsersAdminRouteImport.update({
   path: '/users/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedApplicationsSupervisorRoute =
+  AuthenticatedApplicationsSupervisorRouteImport.update({
+    id: '/applications/supervisor',
+    path: '/applications/supervisor',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedApplicationsApplyRoute =
   AuthenticatedApplicationsApplyRouteImport.update({
     id: '/applications/apply',
@@ -191,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/auth/signup': typeof AuthSignupRoute
   '/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
+  '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
@@ -217,6 +225,7 @@ export interface FileRoutesByTo {
   '/auth/signup': typeof AuthSignupRoute
   '/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
+  '/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
@@ -246,6 +255,7 @@ export interface FileRoutesById {
   '/auth/signup': typeof AuthSignupRoute
   '/_authenticated/_home/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/_authenticated/applications/apply': typeof AuthenticatedApplicationsApplyRoute
+  '/_authenticated/applications/supervisor': typeof AuthenticatedApplicationsSupervisorRoute
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
   '/_authenticated/users/party-members': typeof AuthenticatedUsersPartyMembersRoute
   '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/not-voting-reason'
     | '/applications/apply'
+    | '/applications/supervisor'
     | '/users/admin'
     | '/users/party-members'
     | '/users/users'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/not-voting-reason'
     | '/applications/apply'
+    | '/applications/supervisor'
     | '/users/admin'
     | '/users/party-members'
     | '/users/users'
@@ -330,6 +342,7 @@ export interface FileRouteTypes {
     | '/auth/signup'
     | '/_authenticated/_home/not-voting-reason'
     | '/_authenticated/applications/apply'
+    | '/_authenticated/applications/supervisor'
     | '/_authenticated/users/admin'
     | '/_authenticated/users/party-members'
     | '/_authenticated/users/users'
@@ -529,6 +542,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedUsersAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/applications/supervisor': {
+      id: '/_authenticated/applications/supervisor'
+      path: '/applications/supervisor'
+      fullPath: '/applications/supervisor'
+      preLoaderRoute: typeof AuthenticatedApplicationsSupervisorRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/applications/apply': {
       id: '/_authenticated/applications/apply'
       path: '/applications/apply'
@@ -549,6 +569,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedHomeNotVotingReasonRoute: typeof AuthenticatedHomeNotVotingReasonRoute
   AuthenticatedApplicationsApplyRoute: typeof AuthenticatedApplicationsApplyRoute
+  AuthenticatedApplicationsSupervisorRoute: typeof AuthenticatedApplicationsSupervisorRoute
   AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
   AuthenticatedUsersPartyMembersRoute: typeof AuthenticatedUsersPartyMembersRoute
   AuthenticatedUsersUsersRoute: typeof AuthenticatedUsersUsersRoute
@@ -571,6 +592,8 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeNotVotingReasonRoute: AuthenticatedHomeNotVotingReasonRoute,
   AuthenticatedApplicationsApplyRoute: AuthenticatedApplicationsApplyRoute,
+  AuthenticatedApplicationsSupervisorRoute:
+    AuthenticatedApplicationsSupervisorRoute,
   AuthenticatedUsersAdminRoute: AuthenticatedUsersAdminRoute,
   AuthenticatedUsersPartyMembersRoute: AuthenticatedUsersPartyMembersRoute,
   AuthenticatedUsersUsersRoute: AuthenticatedUsersUsersRoute,

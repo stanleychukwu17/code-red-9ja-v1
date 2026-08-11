@@ -65,6 +65,61 @@ func (q *Queries) CreateApplication(ctx context.Context, arg CreateApplicationPa
 	return i, err
 }
 
+const getAcceptedApplicationForUser = `-- name: GetAcceptedApplicationForUser :one
+SELECT 
+  pa.id,
+  pa.user_id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.state_id,
+  pa.lga_id,
+  pa.ward_id,
+  pa.role,
+  pa.status
+FROM party_applications pa
+WHERE pa.user_id = $1 
+  AND pa.election_group_id = $2 
+  AND pa.status = 'accepted'
+LIMIT 1
+`
+
+type GetAcceptedApplicationForUserParams struct {
+	UserID          int64 `json:"user_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+type GetAcceptedApplicationForUserRow struct {
+	ID              int64       `json:"id"`
+	UserID          int64       `json:"user_id"`
+	PartyID         int16       `json:"party_id"`
+	ElectionGroupID int64       `json:"election_group_id"`
+	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
+	StateID         pgtype.Int2 `json:"state_id"`
+	LgaID           pgtype.Int4 `json:"lga_id"`
+	WardID          pgtype.Int4 `json:"ward_id"`
+	Role            string      `json:"role"`
+	Status          string      `json:"status"`
+}
+
+func (q *Queries) GetAcceptedApplicationForUser(ctx context.Context, arg GetAcceptedApplicationForUserParams) (GetAcceptedApplicationForUserRow, error) {
+	row := q.db.QueryRow(ctx, getAcceptedApplicationForUser, arg.UserID, arg.ElectionGroupID)
+	var i GetAcceptedApplicationForUserRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PartyID,
+		&i.ElectionGroupID,
+		&i.PollingUnitID,
+		&i.StateID,
+		&i.LgaID,
+		&i.WardID,
+		&i.Role,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getApplicationByID = `-- name: GetApplicationByID :one
 SELECT id, user_id, party_id, election_group_id, polling_unit_id, state_id, lga_id, ward_id, role, status, rejected_reason, created_at, updated_at FROM party_applications
 WHERE id = $1 LIMIT 1
@@ -255,7 +310,6 @@ SELECT
   up.school_name,
   up.religion,
   up.marital_status,
-  up.education_level,
   u.current_ward,
   eg.name AS election_group_name,
   eg.election_date,
@@ -335,7 +389,6 @@ type ListApplicationsRow struct {
 	SchoolName        pgtype.Text        `json:"school_name"`
 	Religion          pgtype.Text        `json:"religion"`
 	MaritalStatus     pgtype.Text        `json:"marital_status"`
-	EducationLevel    pgtype.Text        `json:"education_level"`
 	CurrentWard       pgtype.Int4        `json:"current_ward"`
 	ElectionGroupName string             `json:"election_group_name"`
 	ElectionDate      pgtype.Date        `json:"election_date"`
@@ -395,7 +448,6 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.SchoolName,
 			&i.Religion,
 			&i.MaritalStatus,
-			&i.EducationLevel,
 			&i.CurrentWard,
 			&i.ElectionGroupName,
 			&i.ElectionDate,
