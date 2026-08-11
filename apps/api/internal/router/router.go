@@ -468,6 +468,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)
 		r.Post("/api/v1/users/me/referral-code", usersHandler.GenerateReferralCode)
 		r.Get("/api/v1/users/me/referrals", referralsHandler.ListMyReferrals)
+		r.Get("/api/v1/referrals/stats", referralsHandler.GetReferralStats)
+		r.Get("/api/v1/referrals", referralsHandler.ListReferredUsers)
 		r.Post("/api/v1/users/{id}/wallet", usersHandler.CreateUserWalletHandler)
 		r.Post("/api/v1/auth/register-candidate", authHandler.RegisterCandidatePlaceholder)
 		r.Post("/api/v1/elections/did-not-vote", electionsHandler.CreateDidNotVoteReason)

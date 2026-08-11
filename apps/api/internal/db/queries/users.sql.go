@@ -461,12 +461,13 @@ func (q *Queries) GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (U
 }
 
 const getReferrerNameByCode = `-- name: GetReferrerNameByCode :one
-SELECT first_name, last_name 
+SELECT id, first_name, last_name 
 FROM users
 WHERE referral_code = $1 LIMIT 1
 `
 
 type GetReferrerNameByCodeRow struct {
+	ID        int64       `json:"id"`
 	FirstName pgtype.Text `json:"first_name"`
 	LastName  pgtype.Text `json:"last_name"`
 }
@@ -474,7 +475,7 @@ type GetReferrerNameByCodeRow struct {
 func (q *Queries) GetReferrerNameByCode(ctx context.Context, referralCode pgtype.Text) (GetReferrerNameByCodeRow, error) {
 	row := q.db.QueryRow(ctx, getReferrerNameByCode, referralCode)
 	var i GetReferrerNameByCodeRow
-	err := row.Scan(&i.FirstName, &i.LastName)
+	err := row.Scan(&i.ID, &i.FirstName, &i.LastName)
 	return i, err
 }
 

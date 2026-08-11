@@ -12,7 +12,8 @@ CREATE TABLE IF NOT EXISTS user_referrals (
   duties_completed_referrals INTEGER DEFAULT 0, -- updated only if referred agent complete their electoral duties on election day
   duties_completed_and_unpaid_referrals INTEGER DEFAULT 0, -- updated only if the unpaid referral agents complete their electoral duties on election day
   
-  total_earned_amount DECIMAL(15, 2) DEFAULT 0,
+  potential_earnings DECIMAL(15, 2) DEFAULT 0,
+  earned_amount DECIMAL(15, 2) DEFAULT 0,
   
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -26,6 +27,7 @@ CREATE INDEX IF NOT EXISTS idx_user_referrals_party ON user_referrals(party_id);
 
 CREATE TABLE IF NOT EXISTS referrals (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_referral_id BIGINT REFERENCES user_referrals(id) ON DELETE SET NULL,
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   election_group_id INT REFERENCES election_groups(id) ON DELETE SET NULL,
   referrer_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -44,6 +46,7 @@ CREATE TABLE IF NOT EXISTS referrals (
 
 CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_user_id);
 CREATE INDEX IF NOT EXISTS idx_referrals_party ON referrals(party_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_user_referral ON referrals(user_referral_id);
 
 -- +goose Down
 DROP TABLE IF EXISTS user_referrals;

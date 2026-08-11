@@ -1110,6 +1110,7 @@ type PollingUnitUpdate struct {
 
 type Referral struct {
 	ID              int64              `json:"id"`
+	UserReferralID  pgtype.Int8        `json:"user_referral_id"`
 	PartyID         pgtype.Int2        `json:"party_id"`
 	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
 	ReferrerUserID  int64              `json:"referrer_user_id"`
@@ -1273,7 +1274,8 @@ type UserReferral struct {
 	UnpaidReferrals                   pgtype.Int4        `json:"unpaid_referrals"`
 	DutiesCompletedReferrals          pgtype.Int4        `json:"duties_completed_referrals"`
 	DutiesCompletedAndUnpaidReferrals pgtype.Int4        `json:"duties_completed_and_unpaid_referrals"`
-	TotalEarnedAmount                 pgtype.Numeric     `json:"total_earned_amount"`
+	PotentialEarnings                 pgtype.Numeric     `json:"potential_earnings"`
+	EarnedAmount                      pgtype.Numeric     `json:"earned_amount"`
 	CreatedAt                         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                         pgtype.Timestamptz `json:"updated_at"`
 }

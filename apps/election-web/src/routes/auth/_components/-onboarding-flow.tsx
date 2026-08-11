@@ -155,6 +155,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     boolean | null
   >(null);
   const [referrerName, setReferrerName] = useState<string | null>(null);
+  const [referrerId, setReferrerId] = useState<number | null>(null);
 
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
@@ -245,7 +246,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
         middle_name: data.otherNames.trim() || "",
         gender: data.gender.toLowerCase(),
         date_of_birth: dob,
-        referral_code: data.referralCode.trim() || "",
+        referrer_user_id: referrerId,
         username: data.username.trim(),
         nin: data.nin,
         country_of_origin: data.countryOfOriginId ?? 0,
@@ -382,6 +383,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     setIsCheckingReferralCode(true);
     setReferralCodeError(null);
     setReferrerName(null);
+    setReferrerId(null);
 
     let isMounted = true;
     const check = async () => {
@@ -393,6 +395,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           if (res.data?.exists) {
             setIsReferralCodeValid(true);
             setReferrerName(res.data.name);
+            setReferrerId(res.data.referrerId);
           } else {
             setReferralCodeError("Referral code not found");
             setIsReferralCodeValid(false);

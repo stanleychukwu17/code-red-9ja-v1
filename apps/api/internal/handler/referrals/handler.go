@@ -192,6 +192,134 @@ func (h *Handler) ListMyReferrals(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, "Referrals fetched successfully", map[string]interface{}{"referrals": referralsList})
 }
 
+// GetReferralStats fetches user_referral stats and active marketing campaign for an election group
+func (h *Handler) GetReferralStats(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(middleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	userID := claims.UserID
+
+	egIDStr := r.URL.Query().Get("election_group_id")
+	var egID int32
+	if egIDStr != "" {
+		if id, err := strconv.ParseInt(egIDStr, 10, 32); err == nil {
+			egID = int32(id)
+		}
+	}
+
+	partyIDStr := r.URL.Query().Get("party_id")
+	var partyID int32
+	if partyIDStr != "" {
+		if id, err := strconv.ParseInt(partyIDStr, 10, 32); err == nil {
+			partyID = int32(id)
+		}
+	}
+
+	// Fetch user referral record
+	userReferral, err := h.referralsService.GetUserReferralByUserAndElectionGroup(r.Context(), userID, egID)
+	var userReferralData map[string]interface{}
+	if err != nil {
+		userReferralData = map[string]interface{}{
+			"total_referrals":    0,
+			"agent_referrals":    0,
+			"unpaid_referrals":   0,
+			"potential_earnings": "0.00",
+			"earned_amount":       "0.00",
+		}
+	} else {
+		userReferralData = map[string]interface{}{
+			"id":                 userReferral.ID,
+			"user_id":            userReferral.UserID,
+			"party_id":           userReferral.PartyID,
+			"election_group_id":  userReferral.ElectionGroupID,
+			"total_referrals":    userReferral.TotalReferrals,
+			"agent_referrals":    userReferral.AgentReferrals,
+			"unpaid_referrals":   userReferral.UnpaidReferrals,
+			"potential_earnings": userReferral.PotentialEarnings,
+			"earned_amount":       userReferral.EarnedAmount,
+		}
+	}
+
+	// Fetch active marketing campaign if party_id & egID are available
+	var activeCampaignData interface{}
+	if partyID > 0 && egID > 0 {
+		campaign, campErr := h.referralsService.GetActiveMarketingCampaignForElectionGroup(r.Context(), partyID, egID)
+		if campErr == nil {
+			activeCampaignData = campaign
+		}
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Referral stats fetched successfully", map[string]interface{}{
+		"user_referral":   userReferralData,
+		"active_campaign": activeCampaignData,
+	})
+}
+
+// ListReferredUsers fetches referrals with cursor-based pagination
+func (h *Handler) ListReferredUsers(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(middleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+	userID := claims.UserID
+
+	egIDStr := r.URL.Query().Get("election_group_id")
+	var egIDPg pgtype.Int4
+	if egIDStr != "" {
+		if id, err := strconv.ParseInt(egIDStr, 10, 32); err == nil && id > 0 {
+			egIDPg = pgtype.Int4{Int32: int32(id), Valid: true}
+		}
+	}
+
+	cursorStr := r.URL.Query().Get("cursor")
+	var cursorPg pgtype.Int8
+	if cursorStr != "" {
+		if c, err := strconv.ParseInt(cursorStr, 10, 64); err == nil && c > 0 {
+			cursorPg = pgtype.Int8{Int64: c, Valid: true}
+		}
+	}
+
+	limit := 20
+	limitStr := r.URL.Query().Get("limit")
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	// Request 1 extra item to check for next_cursor
+	params := queries.ListReferredUsersWithDetailsParams{
+		ReferrerUserID:  userID,
+		ElectionGroupID: egIDPg,
+		CursorID:        cursorPg,
+		Limit:           int32(limit + 1),
+	}
+
+	items, err := h.referralsService.ListReferredUsersWithDetails(r.Context(), params)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list referred users")
+		return
+	}
+
+	hasMore := false
+	var nextCursor *int64
+	if len(items) > limit {
+		hasMore = true
+		items = items[:limit]
+		lastID := items[limit-1].ID
+		nextCursor = &lastID
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Referred users fetched successfully", map[string]interface{}{
+		"items":       items,
+		"has_more":    hasMore,
+		"next_cursor": nextCursor,
+	})
+}
+
 // @Summary Update a referral (Admin)
 // @Description update referral milestone or status
 // @Tags referrals

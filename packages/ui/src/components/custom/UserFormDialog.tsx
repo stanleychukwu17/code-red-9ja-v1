@@ -142,7 +142,7 @@ export function UserFormDialog({
     mutationFn: async (values: any) => {
       if (!values.firstName) throw new Error("First name is required");
       if (!values.lastName) throw new Error("Last name is required");
-      if (!values.username) throw new Error("Username is required");
+      // if (!values.username) throw new Error("Username is required");
       if (!values.gender) throw new Error("Gender is required");
       if (!values.dateOfBirth) throw new Error("Date of birth is required");
       if (!values.residenceCountryId)

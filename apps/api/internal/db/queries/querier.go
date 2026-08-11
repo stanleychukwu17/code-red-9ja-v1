@@ -225,6 +225,8 @@ type Querier interface {
 	GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype.Int8) (string, error)
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error)
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (UserBankAccount, error)
+	GetUserReferralByID(ctx context.Context, id int64) (UserReferral, error)
+	GetUserReferralByUserAndElectionGroup(ctx context.Context, arg GetUserReferralByUserAndElectionGroupParams) (UserReferral, error)
 	// Returns the referred_by_id for a user given their internal user ID.
 	GetUserReferredByID(ctx context.Context, id int64) (pgtype.Int8, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
@@ -257,8 +259,14 @@ type Querier interface {
 	IncrementPollingUnitAssignmentMetrics(ctx context.Context, arg IncrementPollingUnitAssignmentMetricsParams) error
 	// Increments agent_referrals for the referrer's user_referrals row matching the election group.
 	IncrementUserReferralAgentCount(ctx context.Context, arg IncrementUserReferralAgentCountParams) error
+	IncrementUserReferralAgentCountByID(ctx context.Context, id int64) error
+	IncrementUserReferralEarnedAmountByID(ctx context.Context, arg IncrementUserReferralEarnedAmountByIDParams) error
+	IncrementUserReferralPotentialEarningsByID(ctx context.Context, arg IncrementUserReferralPotentialEarningsByIDParams) error
+	// Increments total_referrals count for the selected user_referrals record.
+	IncrementUserReferralTotalCount(ctx context.Context, id int64) error
 	// Increments unpaid_referrals for the referrer's user_referrals row matching the election group.
 	IncrementUserReferralUnpaidCount(ctx context.Context, arg IncrementUserReferralUnpaidCountParams) error
+	IncrementUserReferralUnpaidCountByID(ctx context.Context, id int64) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
@@ -288,6 +296,7 @@ type Querier interface {
 	ListPollingUnitUpdates(ctx context.Context, arg ListPollingUnitUpdatesParams) ([]ListPollingUnitUpdatesRow, error)
 	ListReferrals(ctx context.Context, arg ListReferralsParams) ([]Referral, error)
 	ListReferralsByReferrer(ctx context.Context, arg ListReferralsByReferrerParams) ([]Referral, error)
+	ListReferredUsersWithDetails(ctx context.Context, arg ListReferredUsersWithDetailsParams) ([]ListReferredUsersWithDetailsRow, error)
 	ListUserPracticeTests(ctx context.Context, arg ListUserPracticeTestsParams) ([]ListUserPracticeTestsRow, error)
 	ListUserWalletTransactions(ctx context.Context, arg ListUserWalletTransactionsParams) ([]UserWalletTransaction, error)
 	// ListUsers fetches a paginated list of users with optional filtering.
@@ -440,6 +449,8 @@ type Querier interface {
 	// Updates the referrals row when the referred user is accepted as an agent.
 	// Sets milestone, amount_to_pay, party_id, election_group_id.
 	UpdateReferralOnAgentAcceptance(ctx context.Context, arg UpdateReferralOnAgentAcceptanceParams) error
+	// Updates the referrals row when the referred user submits a party application matching referrer's user_referrals.
+	UpdateReferralOnApplication(ctx context.Context, arg UpdateReferralOnApplicationParams) error
 	UpdateResultStatus(ctx context.Context, arg UpdateResultStatusParams) (PollingUnitResult, error)
 	UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenatorialDistrictParams) (SenatorialDistrict, error)
 	UpdateState(ctx context.Context, arg UpdateStateParams) (CState, error)

@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"free9ja/api/internal/db/queries"
 )
@@ -55,4 +56,22 @@ func (s *ReferralsService) UpdateReferral(ctx context.Context, params queries.Up
 	}
 	
 	return s.q.UpdateReferral(ctx, params)
+}
+
+func (s *ReferralsService) GetUserReferralByUserAndElectionGroup(ctx context.Context, userID int64, electionGroupID int32) (queries.UserReferral, error) {
+	return s.q.GetUserReferralByUserAndElectionGroup(ctx, queries.GetUserReferralByUserAndElectionGroupParams{
+		UserID:          userID,
+		ElectionGroupID: pgtype.Int4{Int32: electionGroupID, Valid: electionGroupID > 0},
+	})
+}
+
+func (s *ReferralsService) ListReferredUsersWithDetails(ctx context.Context, params queries.ListReferredUsersWithDetailsParams) ([]queries.ListReferredUsersWithDetailsRow, error) {
+	return s.q.ListReferredUsersWithDetails(ctx, params)
+}
+
+func (s *ReferralsService) GetActiveMarketingCampaignForElectionGroup(ctx context.Context, partyID int32, electionGroupID int32) (queries.PartyMarketingCampaign, error) {
+	return s.q.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
+		PartyID:         partyID,
+		ElectionGroupID: electionGroupID,
+	})
 }

@@ -318,4 +318,24 @@ export const API_URL = {
     const qs = params.toString();
     return `${api}/practice-tests/payout-preview${qs ? `?${qs}` : ""}`;
   },
+
+  referrals: {
+    stats: (electionGroupId?: number, partyId?: number) => {
+      const params = new URLSearchParams();
+      if (electionGroupId)
+        params.append("election_group_id", String(electionGroupId));
+      if (partyId) params.append("party_id", String(partyId));
+      const qs = params.toString();
+      return `${api}/referrals/stats${qs ? `?${qs}` : ""}`;
+    },
+    list: (electionGroupId?: number, cursor?: number, limit?: number) => {
+      const params = new URLSearchParams();
+      if (electionGroupId)
+        params.append("election_group_id", String(electionGroupId));
+      if (cursor) params.append("cursor", String(cursor));
+      if (limit) params.append("limit", String(limit));
+      const qs = params.toString();
+      return `${api}/referrals${qs ? `?${qs}` : ""}`;
+    },
+  },
 };

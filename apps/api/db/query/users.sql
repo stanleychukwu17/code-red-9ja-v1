@@ -224,7 +224,7 @@ VALUES ($1, $2, $3, $4, $5)
 RETURNING user_id;
 
 -- name: GetReferrerNameByCode :one
-SELECT first_name, last_name 
+SELECT id, first_name, last_name 
 FROM users
 WHERE referral_code = $1 LIMIT 1;
 

@@ -1,18 +1,19 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { ArrowDownLeft, Bell, ChevronDown, Link2 } from "lucide-react";
-import { useCopyToClipboard } from "usehooks-ts";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { Link2 } from "lucide-react";
+import { useCopyToClipboard, useIntersectionObserver } from "usehooks-ts";
 import { toast } from "sonner";
 
 import { useAuth } from "#/hooks/useAuth";
 import { getPageHeader } from "#/lib/shared/meta";
+import { getReferralStats, getReferredUsers } from "#/lib/server/referrals";
 import {
   DarkBodyWrapper,
   PageWrapper,
   RoundedTopWrapper,
 } from "#/components/Wrappers";
 import { PageHeader } from "#/components/Headers";
-import { Tabs } from "#/components/Tabs";
 import { Button } from "@repo/ui/components/button";
 import { AppAvatar, DoubleAvatar } from "@repo/ui/components/avatar";
 import { HomeHeader } from "../_home/components/HomeHeader";
@@ -23,44 +24,37 @@ export const Route = createFileRoute("/_authenticated/referrals/")({
   component: ReferralsPage,
 });
 
-type ReferralItem = {
-  id: number;
-  name: string;
-  role: string;
-  time: string;
-  amount: string;
-  avatar: string;
+type UserReferralStats = {
+  id?: number;
+  total_referrals?: number;
+  agent_referrals?: number;
+  unpaid_referrals?: number;
+  potential_earnings?: string | number;
+  earned_amount?: string | number;
 };
 
-const referrals: ReferralItem[] = [
-  {
-    id: 1,
-    name: "Aisha Mariam",
-    role: "Polling agent (A)",
-    time: "02:53 AM",
-    amount: "+₦1000",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=160&h=160&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Aisha Mariam",
-    role: "User",
-    time: "02:53 AM",
-    amount: "+₦1000",
-    avatar:
-      "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&h=160&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Aisha Mariam",
-    role: "Polling agent (A)",
-    time: "02:53 AM",
-    amount: "+₦1000",
-    avatar:
-      "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=160&h=160&fit=crop",
-  },
-];
+type ActiveCampaign = {
+  id?: number;
+  referral_amount?: string | number;
+  title?: string;
+};
+
+type ReferredUserItem = {
+  id: number;
+  user_referral_id?: number;
+  party_id?: number;
+  election_group_id?: number;
+  referrer_user_id: number;
+  referred_user_id: number;
+  milestone: string;
+  status: string;
+  amount_to_pay: string | number;
+  created_at: string;
+  updated_at: string;
+  first_name?: string;
+  last_name?: string;
+  avatar?: string;
+};
 
 function SummaryItem({
   icon,
@@ -77,7 +71,7 @@ function SummaryItem({
         {icon}
       </div>
       <p className="text-white/90 w-full">{label}</p>
-      <span className={`text-lg leading-none text-white font-medium`}>
+      <span className="text-lg leading-none text-white font-medium">
         {value}
       </span>
     </div>
@@ -86,16 +80,12 @@ function SummaryItem({
 
 function ReferralsPage() {
   const navigate = useNavigate();
-  const { party, selectedElectionGroup } = useAuth();
-  const [activeTab, setActiveTab] = useState<"Earnings" | "Referred">(
-    "Earnings",
-  );
+  const { party, selectedElectionGroup, user } = useAuth();
   const [_, copy] = useCopyToClipboard();
 
-  const referralCode = "DAN-40";
-  const partyName = party?.shortName || party?.name || "Accord";
-  const electionLabel =
-    selectedElectionGroup?.name || "2026 Governorship Election (Osun)";
+  const { ref: loadMoreRef, isIntersecting } = useIntersectionObserver({
+    threshold: 0.1,
+  });
 
   let daysLeft: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
@@ -110,14 +100,92 @@ function ReferralsPage() {
     }
   }
 
-  const summary = useMemo(
-    () => ({
-      referredCount: 53,
-      earnings: "₦53,000",
-      rank: "#1",
-    }),
-    [],
-  );
+  // React Query with server function: Fetch Referral Stats & Active Campaign
+  const { data: referralStatsData, isLoading: loadingStats } = useQuery({
+    queryKey: ["referralStats", selectedElectionGroup?.id, party?.id],
+    queryFn: async () => {
+      const response = await getReferralStats({
+        data: {
+          electionGroupId: selectedElectionGroup?.id,
+          partyId: party?.id,
+        },
+      });
+      if (!response?.success || !response.data) return null;
+      return response.data as {
+        user_referral?: UserReferralStats;
+        active_campaign?: ActiveCampaign;
+      };
+    },
+  });
+
+  const stats = referralStatsData?.user_referral || null;
+  const activeCampaign = referralStatsData?.active_campaign || null;
+
+  // React Query with server function: Fetch Referred Users with Infinite Scroll Cursor Pagination
+  const {
+    data: infiniteData,
+    isLoading: loadingList,
+    isFetchingNextPage: loadingMore,
+    fetchNextPage,
+    hasNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["referredUsers", selectedElectionGroup?.id],
+    queryFn: async ({ pageParam }) => {
+      const response = await getReferredUsers({
+        data: {
+          electionGroupId: selectedElectionGroup?.id,
+          cursor: pageParam ? Number(pageParam) : undefined,
+          limit: 20,
+        },
+      });
+      if (!response?.success || !response.data) {
+        return { items: [], next_cursor: null, has_more: false };
+      }
+      return response.data as {
+        items: ReferredUserItem[];
+        next_cursor: number | null;
+        has_more: boolean;
+      };
+    },
+    initialPageParam: undefined as number | undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.has_more && lastPage.next_cursor
+        ? lastPage.next_cursor
+        : undefined,
+  });
+
+  const items = useMemo(() => {
+    const rawItems = infiniteData?.pages.flatMap((page) => page?.items || []) || [];
+    return rawItems.filter((item): item is ReferredUserItem => Boolean(item));
+  }, [infiniteData]);
+
+  // Trigger infinite scroll when sentinel is intersecting
+  useEffect(() => {
+    if (isIntersecting && hasNextPage && !loadingMore && !loadingList) {
+      fetchNextPage();
+    }
+  }, [isIntersecting, hasNextPage, loadingMore, loadingList, fetchNextPage]);
+
+  // Campaign referral bonus amount text
+  const campaignBonusText = useMemo(() => {
+    if (activeCampaign?.referral_amount) {
+      const amt = Number(activeCampaign.referral_amount);
+      if (!isNaN(amt) && amt > 0) {
+        return `₦${amt.toLocaleString()} per agent referred`;
+      }
+    }
+    return "Bonus per agent referred";
+  }, [activeCampaign]);
+
+  // Formatted potential earnings
+  const formattedPotentialEarnings = useMemo(() => {
+    const amt = Number(stats?.potential_earnings ?? 0);
+    return `₦${amt.toLocaleString()}`;
+  }, [stats?.potential_earnings]);
+
+  // Extract avatars of the first and second referred users (with fallback defaults)
+  const avatar1 = items[0]?.avatar || "";
+  const avatar2 = items[1]?.avatar || items[0]?.avatar || "";
 
   return (
     <PageWrapper>
@@ -131,27 +199,22 @@ function ReferralsPage() {
 
         <HomeHeader
           daysLeft={daysLeft}
-          avatarImage={party.logo}
+          avatarImage={party?.logo}
           textClassName="text-white"
           containerClassName="pt-0"
         />
 
         <div className="mt-1 px-4">
           <SummaryItem
-            icon={
-              <DoubleAvatar
-                src1="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80&h=80&fit=crop"
-                src2="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop"
-              />
-            }
+            icon={<DoubleAvatar src1={avatar1} src2={avatar2} />}
             label="Agents Referred"
-            value={summary.referredCount}
+            value={loadingStats ? "..." : (stats?.agent_referrals ?? 0)}
           />
 
           <SummaryItem
             icon={<FancyMoneyBagIcon className="size-8" />}
-            label="Earnings"
-            value={summary.earnings}
+            label="Potential Earnings"
+            value={loadingStats ? "..." : formattedPotentialEarnings}
           />
         </div>
 
@@ -160,7 +223,7 @@ function ReferralsPage() {
             <p className="text-white/50">Referral code:</p>
             <div className="flex items-center gap-2 font-medium text-[#FFD44D]">
               <FancyMoneyBagIcon className="size-4" />
-              <span>1k per agent referred</span>
+              <span>{campaignBonusText}</span>
             </div>
           </div>
 
@@ -169,55 +232,58 @@ function ReferralsPage() {
             variant="leaderboardGrey"
             size="extra-large"
             onClick={() => {
-              copy(referralCode);
-              toast.success("Copied to clipboard", {
-                position: "top-center",
-              });
+              if (user?.referral_code) {
+                copy(user.referral_code);
+                toast.success("Copied to clipboard", {
+                  position: "top-center",
+                });
+              } else {
+                toast.error("No referral code available", {
+                  position: "top-center",
+                });
+              }
             }}
             className="w-full"
           >
-            {referralCode}
+            {user?.referral_code ?? "NONE"}
           </Button>
         </div>
 
         <RoundedTopWrapper>
-          {/* <p className="mb-4 text-sm text-neutral-500">{partyName}</p> */}
-          <Tabs
-            activeTab={activeTab}
-            onTabChange={(tab) => setActiveTab(tab as "Earnings" | "Referred")}
-            tabs={[
-              { label: "Earnings", value: "Earnings" },
-              { label: "Referred", value: "Referred" },
-            ]}
-            className="rounded-[12px] bg-neutral-100 p-1.5"
-          />
+          <div className="mt-6 space-y-6">
+            {loadingList ? (
+              <div className="py-8 text-center text-sm text-neutral-500">
+                Loading referrals...
+              </div>
+            ) : items.length === 0 ? (
+              <div className="py-12 text-center text-neutral-500">
+                <p className="text-base font-medium text-neutral-700">
+                  No referrals yet
+                </p>
+                <p className="mt-1 text-sm text-neutral-400">
+                  Share your referral code to start earning bonuses!
+                </p>
+              </div>
+            ) : (
+              items.map((item) => {
+                if (!item) return null;
+                const fullName =
+                  `${item.first_name || ""} ${item.last_name || ""}`.trim() ||
+                  "Referred User";
+                const roleLabel =
+                  item.milestone === "BECAME_AGENT"
+                    ? "Agent"
+                    : item.milestone === "APPLIED"
+                      ? "Applied"
+                      : "Signed Up";
+                const formattedTime = item.created_at
+                  ? new Date(item.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "";
 
-          <div className="mt-7 space-y-6">
-            {activeTab === "Earnings"
-              ? referrals.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between gap-3"
-                  >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex size-12 items-center justify-center rounded-full bg-emerald-100 text-black">
-                        <ArrowDownLeft className="size-6" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-[16px] font-semibold text-neutral-800">
-                          Agent referred successfully
-                        </p>
-                        <p className="text-[15px] text-neutral-500">
-                          {item.time}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="shrink-0 text-[18px] font-extrabold text-black">
-                      {item.amount}
-                    </span>
-                  </div>
-                ))
-              : referrals.map((item) => (
+                return (
                   <div
                     key={item.id}
                     className="flex items-center justify-between gap-3"
@@ -225,21 +291,21 @@ function ReferralsPage() {
                     <div className="flex min-w-0 items-center gap-3">
                       <AppAvatar
                         src={item.avatar}
-                        alt={item.name}
+                        alt={fullName}
                         className="size-12"
                       />
                       <div className="min-w-0">
                         <p className="truncate text-[16px] font-medium text-neutral-800">
-                          {item.name}
+                          {fullName}
                         </p>
                         <p className="truncate text-[15px] text-[#E5A100]">
-                          {item.role}
+                          {roleLabel}
                         </p>
                       </div>
                     </div>
                     <div className="flex shrink-0 items-center gap-3">
                       <span className="text-[13px] text-neutral-500">
-                        {item.time}
+                        {formattedTime}
                       </span>
                       <button
                         type="button"
@@ -249,7 +315,19 @@ function ReferralsPage() {
                       </button>
                     </div>
                   </div>
-                ))}
+                );
+              })
+            )}
+
+            {/* Infinite Scroll Sentinel */}
+            <div
+              ref={loadMoreRef}
+              className="h-6 flex items-center justify-center"
+            >
+              {loadingMore && (
+                <p className="text-xs text-neutral-400">Loading more...</p>
+              )}
+            </div>
           </div>
         </RoundedTopWrapper>
       </DarkBodyWrapper>

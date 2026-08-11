@@ -8,6 +8,12 @@ INSERT INTO referrals (
 ) VALUES (
   $1, $2, $3, $4, $5
 )
+ON CONFLICT (referred_user_id) DO UPDATE SET
+  referrer_user_id = EXCLUDED.referrer_user_id,
+  party_id = COALESCE(EXCLUDED.party_id, referrals.party_id),
+  milestone = EXCLUDED.milestone,
+  status = EXCLUDED.status,
+  updated_at = NOW()
 RETURNING *;
 
 -- name: GetReferral :one
@@ -88,3 +94,78 @@ SET milestone        = 'BECAME_AGENT',
     election_group_id = $4,
     updated_at       = NOW()
 WHERE referred_user_id = $1;
+
+-- name: UpdateReferralOnApplication :exec
+-- Updates the referrals row when the referred user submits a party application matching referrer's user_referrals.
+UPDATE referrals
+SET user_referral_id  = $2,
+    party_id          = $3,
+    election_group_id = $4,
+    amount_to_pay     = $5,
+    milestone         = COALESCE(NULLIF(sqlc.arg('milestone')::text, ''), milestone),
+    updated_at        = NOW()
+WHERE id = $1;
+
+-- name: IncrementUserReferralTotalCount :exec
+-- Increments total_referrals count for the selected user_referrals record.
+UPDATE user_referrals
+SET total_referrals = total_referrals + 1,
+    updated_at      = NOW()
+WHERE id = $1;
+
+-- name: GetUserReferralByID :one
+SELECT * FROM user_referrals
+WHERE id = $1 LIMIT 1;
+
+-- name: IncrementUserReferralAgentCountByID :exec
+UPDATE user_referrals
+SET agent_referrals = agent_referrals + 1,
+    updated_at      = NOW()
+WHERE id = $1;
+
+-- name: IncrementUserReferralUnpaidCountByID :exec
+UPDATE user_referrals
+SET unpaid_referrals = unpaid_referrals + 1,
+    updated_at       = NOW()
+WHERE id = $1;
+
+-- name: IncrementUserReferralPotentialEarningsByID :exec
+UPDATE user_referrals
+SET potential_earnings = potential_earnings + $2,
+    updated_at         = NOW()
+WHERE id = $1;
+
+-- name: IncrementUserReferralEarnedAmountByID :exec
+UPDATE user_referrals
+SET earned_amount = earned_amount + $2,
+    updated_at    = NOW()
+WHERE id = $1;
+
+-- name: GetUserReferralByUserAndElectionGroup :one
+SELECT * FROM user_referrals
+WHERE user_id = $1 AND election_group_id = $2
+LIMIT 1;
+
+-- name: ListReferredUsersWithDetails :many
+SELECT 
+  r.id,
+  r.user_referral_id,
+  r.party_id,
+  r.election_group_id,
+  r.referrer_user_id,
+  r.referred_user_id,
+  r.milestone,
+  r.status,
+  r.amount_to_pay,
+  r.created_at,
+  r.updated_at,
+  u.first_name,
+  u.last_name,
+  u.avatar
+FROM referrals r
+JOIN users u ON u.id = r.referred_user_id
+WHERE r.referrer_user_id = $1
+  AND (sqlc.narg('election_group_id')::int IS NULL OR r.election_group_id = sqlc.narg('election_group_id'))
+  AND (sqlc.narg('cursor_id')::bigint IS NULL OR r.id < sqlc.narg('cursor_id'))
+ORDER BY r.id DESC
+LIMIT $2;
