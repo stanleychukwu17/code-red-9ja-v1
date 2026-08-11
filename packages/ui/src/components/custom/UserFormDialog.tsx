@@ -83,7 +83,13 @@ export interface UserFormDialogProps {
   deleteUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   loadUserPhoneNumber?: (args: { data: any }) => Promise<any>;
   getOccupations?: () => Promise<any>;
-  deleteFile?: (args: { data: { id: string | number; user_fake_id?: string | number; type?: string } }) => Promise<any>;
+  deleteFile?: (args: {
+    data: {
+      id: string | number;
+      user_fake_id?: string | number;
+      type?: string;
+    };
+  }) => Promise<any>;
 }
 
 export function UserFormDialog({
@@ -111,16 +117,21 @@ export function UserFormDialog({
   deleteFile,
 }: UserFormDialogProps) {
   const [avatarUrl, setAvatarUrl] = React.useState("");
-  const [uploadedFileId, setUploadedFileId] = React.useState<number | null>(null);
-  const [selectedAvatarFile, setSelectedAvatarFile] = React.useState<File | null>(null);
+  const [uploadedFileId, setUploadedFileId] = React.useState<number | null>(
+    null,
+  );
+  const [selectedAvatarFile, setSelectedAvatarFile] =
+    React.useState<File | null>(null);
   const [isUploading, setIsUploading] = React.useState(false);
 
   const [error, setError] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
-  const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">("basic");
+  const [activeTab, setActiveTab] = React.useState<"basic" | "more" | "phones">(
+    "basic",
+  );
   const [createdUser, setCreatedUser] = React.useState<UserResult | null>(null);
 
-  const activeUser = mode === "update" ? (user || createdUser) : createdUser;
+  const activeUser = mode === "update" ? user || createdUser : createdUser;
 
   // the avatar file input ref
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -131,7 +142,7 @@ export function UserFormDialog({
     mutationFn: async (values: any) => {
       if (!values.firstName) throw new Error("First name is required");
       if (!values.lastName) throw new Error("Last name is required");
-      if (!values.username) throw new Error("Username is required");
+      // if (!values.username) throw new Error("Username is required");
       if (!values.gender) throw new Error("Gender is required");
       if (!values.dateOfBirth) throw new Error("Date of birth is required");
       if (!values.residenceCountryId)
@@ -141,22 +152,28 @@ export function UserFormDialog({
       if (!values.originCountryId)
         throw new Error("Country of origin is required");
       if (!values.originStateId) throw new Error("State of origin is required");
-      if (mode === "create" && !values.email) throw new Error("Email is required");
-      if (mode === "create" && !values.password) throw new Error("Password is required");
+      if (mode === "create" && !values.email)
+        throw new Error("Email is required");
+      if (mode === "create" && !values.password)
+        throw new Error("Password is required");
 
       // formatted date of birth
       const formattedDob = values.dateOfBirth.split("T")[0];
 
       // new avatar url and file id, fallback to user's current ones
       let finalAvatarUrl = avatarUrl;
-      let finalFileId = uploadedFileId || (activeUser as any)?.avatar_file_id || undefined;
+      let finalFileId =
+        uploadedFileId || (activeUser as any)?.avatar_file_id || undefined;
 
       // if there is a new avatar file(i.e selectedAvatarFile), upload it
       if (selectedAvatarFile) {
         setIsUploading(true);
 
         // user is changing avatar, so we need to delete the existing one
-        if (activeUser?.avatar_file_id && Number(activeUser.avatar_file_id) > 0) {
+        if (
+          activeUser?.avatar_file_id &&
+          Number(activeUser.avatar_file_id) > 0
+        ) {
           await handleRemoveImage("changing_avatar");
         }
 
@@ -172,7 +189,10 @@ export function UserFormDialog({
               owner_id: activeUser?.id ? Number(activeUser.id) : undefined,
             },
           });
-          if (!uploadRes.success || !uploadRes.data) throw new Error(uploadRes.message || "Failed to initiate file upload");
+          if (!uploadRes.success || !uploadRes.data)
+            throw new Error(
+              uploadRes.message || "Failed to initiate file upload",
+            );
 
           const { upload_url, public_url, file_id } = uploadRes.data;
 
@@ -194,9 +214,9 @@ export function UserFormDialog({
 
           finalAvatarUrl = public_url;
           finalFileId = file_id;
-          setSelectedAvatarFile(null)
-          setAvatarUrl(public_url)
-          setUploadedFileId(file_id)
+          setSelectedAvatarFile(null);
+          setAvatarUrl(public_url);
+          setUploadedFileId(file_id);
         } finally {
           setIsUploading(false);
         }
@@ -253,7 +273,7 @@ export function UserFormDialog({
         throw new Error(res.message || `Failed to ${mode} user`);
       }
 
-      return res
+      return res;
     },
     onSuccess: async (res) => {
       if (mode === "update") {
@@ -270,14 +290,17 @@ export function UserFormDialog({
                     ...page,
                     data: {
                       ...page.data,
-                      users: page.data?.users?.map((u: any) =>
-                        u.fake_id === updatedDetails.fake_id ? updatedDetails : u
-                      ) || []
-                    }
+                      users:
+                        page.data?.users?.map((u: any) =>
+                          u.fake_id === updatedDetails.fake_id
+                            ? updatedDetails
+                            : u,
+                        ) || [],
+                    },
                   };
-                })
+                }),
               };
-            }
+            },
           );
 
           onSuccess?.(updatedDetails);
@@ -300,23 +323,22 @@ export function UserFormDialog({
                       ...page,
                       data: {
                         ...page.data,
-                        users: [newUser, ...(page.data?.users || [])]
-                      }
+                        users: [newUser, ...(page.data?.users || [])],
+                      },
                     };
                   }
                   return page;
-                })
+                }),
               };
-            }
+            },
           );
 
-          onClose()
+          onClose();
           setCreatedUser(newUser);
         }
       }
     },
     onError: (err: any) => {
-      console.log("see error", err.message)
       setError(err.message || "Something went wrong. Please try again.");
     },
   });
@@ -376,7 +398,8 @@ export function UserFormDialog({
         setCreatedUser(null);
         setActiveTab("basic");
       }
-      const isPartyLocked = partyId !== undefined || partyShortName !== undefined;
+      const isPartyLocked =
+        partyId !== undefined || partyShortName !== undefined;
 
       if (mode === "update" && activeUser) {
         form.setFieldValue("firstName", activeUser.first_name || "");
@@ -385,13 +408,25 @@ export function UserFormDialog({
         form.setFieldValue("username", activeUser.username || "");
         form.setFieldValue("gender", activeUser.gender || "");
         form.setFieldValue("dateOfBirth", activeUser.date_of_birth || "");
-        form.setFieldValue("residenceCountryId", activeUser.current_country || 161);
-        form.setFieldValue("residenceStateId", activeUser.current_state);
-        form.setFieldValue("residenceCityId", activeUser.current_city || undefined);
-        form.setFieldValue("originCountryId", 161);
-        form.setFieldValue("originStateId", activeUser.state_of_origin || undefined);
         form.setFieldValue(
-          "partyId", isPartyLocked ? (partyId ?? activeUser.party_id) : activeUser.party_id || undefined,
+          "residenceCountryId",
+          activeUser.current_country || 161,
+        );
+        form.setFieldValue("residenceStateId", activeUser.current_state);
+        form.setFieldValue(
+          "residenceCityId",
+          activeUser.current_city || undefined,
+        );
+        form.setFieldValue("originCountryId", 161);
+        form.setFieldValue(
+          "originStateId",
+          activeUser.state_of_origin || undefined,
+        );
+        form.setFieldValue(
+          "partyId",
+          isPartyLocked
+            ? (partyId ?? activeUser.party_id)
+            : activeUser.party_id || undefined,
         );
         // form.setFieldValue("email", activeUser.email || ""); // we replaced the userEmail from the backend with ---
         form.setFieldValue("email", "");
@@ -420,13 +455,7 @@ export function UserFormDialog({
       }
       setError(null);
     }
-  }, [
-    open,
-    mode,
-    activeUser,
-    partyId,
-    partyShortName,
-  ]);
+  }, [open, mode, activeUser, partyId, partyShortName]);
 
   // Trigger the file input click:
   const handleUploadClick = () => {
@@ -451,7 +480,9 @@ export function UserFormDialog({
     }
   };
 
-  const handleRemoveImage = async (which: "changing_avatar" | "removing_avatar") => {
+  const handleRemoveImage = async (
+    which: "changing_avatar" | "removing_avatar",
+  ) => {
     if (uploadedFileId && uploadedFileId > 0 && deleteFile) {
       try {
         const res = await deleteFile({
@@ -459,7 +490,7 @@ export function UserFormDialog({
             id: uploadedFileId,
             user_fake_id: activeUser?.fake_id,
             type: "user_avatar",
-          }
+          },
         });
 
         if (!res.success) {
@@ -570,7 +601,13 @@ export function UserFormDialog({
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/*"
+                        className="hidden"
+                      />
                       <button
                         type="button"
                         onClick={handleUploadClick}
@@ -652,7 +689,8 @@ export function UserFormDialog({
                       validators={{
                         onChange: ({ value }) => {
                           if (!value) return undefined;
-                          const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/;
+                          const usernameRegex =
+                            /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/;
                           if (!usernameRegex.test(value)) {
                             return "Invalid username format";
                           }
@@ -939,7 +977,14 @@ export function UserFormDialog({
 
 // The MoreInfoTab component handles updating the user's secondary profile information,
 // including their occupation, educational status, and demographic details.
-function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations, onClose, onSuccess }: any) {
+function MoreInfoTab({
+  user,
+  updateUserMoreInfo,
+  getUserMoreInfo,
+  getOccupations,
+  onClose,
+  onSuccess,
+}: any) {
   const [error, setError] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
 
@@ -998,7 +1043,7 @@ function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations
   const initialMoreInfo = React.useMemo(() => {
     return {
       ...(user?.profile || {}),
-      ...(serverMoreInfo || {})
+      ...(serverMoreInfo || {}),
     };
   }, [user?.profile, serverMoreInfo]);
 
@@ -1006,7 +1051,9 @@ function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations
   // from the existing user profile if it's an update operation.
   const form = useForm({
     defaultValues: {
-      occupation_id: initialMoreInfo.occupation_id ? String(initialMoreInfo.occupation_id) : "",
+      occupation_id: initialMoreInfo.occupation_id
+        ? String(initialMoreInfo.occupation_id)
+        : "",
       educational_status: initialMoreInfo.educational_status || "",
       highest_degree: initialMoreInfo.highest_degree || "",
       graduation_year: initialMoreInfo.graduation_year || "",
@@ -1024,14 +1071,28 @@ function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations
   // Reinitialize form when data arrives
   React.useEffect(() => {
     if (serverMoreInfo) {
-      form.setFieldValue("occupation_id", serverMoreInfo.occupation_id ? String(serverMoreInfo.occupation_id) : "");
-      form.setFieldValue("educational_status", serverMoreInfo.educational_status || "");
+      form.setFieldValue(
+        "occupation_id",
+        serverMoreInfo.occupation_id
+          ? String(serverMoreInfo.occupation_id)
+          : "",
+      );
+      form.setFieldValue(
+        "educational_status",
+        serverMoreInfo.educational_status || "",
+      );
       form.setFieldValue("highest_degree", serverMoreInfo.highest_degree || "");
-      form.setFieldValue("graduation_year", serverMoreInfo.graduation_year || "");
+      form.setFieldValue(
+        "graduation_year",
+        serverMoreInfo.graduation_year || "",
+      );
       form.setFieldValue("school_name", serverMoreInfo.school_name || "");
       form.setFieldValue("religion", serverMoreInfo.religion || "");
       form.setFieldValue("marital_status", serverMoreInfo.marital_status || "");
-      form.setFieldValue("education_level", serverMoreInfo.education_level || "");
+      form.setFieldValue(
+        "education_level",
+        serverMoreInfo.education_level || "",
+      );
       form.setFieldValue("address", serverMoreInfo.address || "");
     }
   }, [serverMoreInfo, occupationsData, form]);
@@ -1054,7 +1115,10 @@ function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations
     },
     onSuccess: (data: any) => {
       if (data?.more_info) {
-        queryClient.setQueryData(["userMoreInfo", user?.fake_id], data.more_info);
+        queryClient.setQueryData(
+          ["userMoreInfo", user?.fake_id],
+          data.more_info,
+        );
       }
       toast.success("Additional info updated successfully!");
       onSuccess?.();
@@ -1067,7 +1131,11 @@ function MoreInfoTab({ user, updateUserMoreInfo, getUserMoreInfo, getOccupations
 
   // renderSelect is a utility function that abstracts the rendering logic for a standard
   // select dropdown input within the form, handling the field state and change events.
-  const renderSelect = (name: string, label: string, options: { label: string, value: string }[]) => (
+  const renderSelect = (
+    name: string,
+    label: string,
+    options: { label: string; value: string }[],
+  ) => (
     <div className="flex flex-col gap-1.5">
       <label className="text-[14px] text-c-50">{label}</label>
       <form.Field
@@ -1262,7 +1330,12 @@ function PhoneNumbersTab({
 
   // Fetch phone numbers asynchronously when the tab mounts.
   // The query uses fake_id (or id as fallback) as the unique query key identifier.
-  const { data: userPhoneNumbers, isLoading, refetch, error: queryError } = useQuery({
+  const {
+    data: userPhoneNumbers,
+    isLoading,
+    refetch,
+    error: queryError,
+  } = useQuery({
     queryKey: ["user-phonenumbers", user?.fake_id],
 
     // query function that fetches the number
@@ -1344,7 +1417,11 @@ function PhoneNumbersTab({
   });
 
   // Remove phone number
-  const handleRemovePhoneNumber = async (index: number, phoneObj: any, field: any) => {
+  const handleRemovePhoneNumber = async (
+    index: number,
+    phoneObj: any,
+    field: any,
+  ) => {
     setError(null);
 
     if (phoneObj.id && Number(phoneObj.id) > 0) {
@@ -1356,13 +1433,18 @@ function PhoneNumbersTab({
 
       if (deleteUserPhoneNumber) {
         try {
-          const res = await deleteUserPhoneNumber({ data: { id: phoneObj.id, user_fid: user.fake_id } });
+          const res = await deleteUserPhoneNumber({
+            data: { id: phoneObj.id, user_fid: user.fake_id },
+          });
           if (!res.success) {
             setError(res.message || "Failed to delete phone number");
             return;
           } else if (res.data?.phones) {
             // Update the tanstack query cache with the freshly returned phones list
-            queryClient.setQueryData(["user-phonenumbers", user?.fake_id], res.data.phones);
+            queryClient.setQueryData(
+              ["user-phonenumbers", user?.fake_id],
+              res.data.phones,
+            );
 
             // Sync the local form state with the latest from the server
             field.handleChange(res.data.phones);
@@ -1410,7 +1492,10 @@ function PhoneNumbersTab({
       return res.data;
     },
     onSuccess: (response) => {
-      queryClient.setQueryData(["user-phonenumbers", user?.fake_id], response?.phones || []);
+      queryClient.setQueryData(
+        ["user-phonenumbers", user?.fake_id],
+        response?.phones || [],
+      );
       toast.success("Phone numbers updated successfully");
       onSuccess?.();
     },

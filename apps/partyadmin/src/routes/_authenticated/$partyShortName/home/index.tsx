@@ -16,6 +16,7 @@ import {
   getPartyAgentPaymentAllocation,
   getPlans,
   createMarketingCampaign,
+  getPartyMarketingCampaigns,
   getPartyAgentTargets,
   updatePartyAgentTargets,
   depositPartyAllowance,
@@ -29,7 +30,7 @@ import { getStates } from "#/lib/server/countries";
 import { TargetFormDialog } from "@repo/ui/components/dialogs/TargetFormDialog";
 import { useServerFn } from "@tanstack/react-start";
 import { getElectionGroups } from "#/lib/server/election_groups";
-import { getElectionsByGroup } from "#/lib/server/elections";
+import { getElectionsByGroup, getElectionStats } from "#/lib/server/elections";
 import {
   AgentMarketingSetupDialog,
   type AgentMarketingSetupValue,
@@ -50,7 +51,19 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
 });
 
 function ReadinessComponent() {
-  const { party, selectedElectionGroup, selectedElection } = useAppContext();
+  const {
+    party,
+    selectedElectionGroup,
+    selectedElection,
+    selectedStateId,
+    selectedDistrictId,
+    selectedFederalConstituencyId,
+    selectedStateConstituencyId,
+    selectedLGAId,
+    selectedWardId,
+    activeMarketingCampaigns,
+  } = useAppContext();
+  console.log({ party, activeMarketingCampaigns });
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -65,6 +78,7 @@ function ReadinessComponent() {
 
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
+  const fetchElectionStatsFn = useServerFn(getElectionStats);
   const fetchPlans = useServerFn(getPlans);
   const submitCampaign = useServerFn(createMarketingCampaign);
 
@@ -90,7 +104,23 @@ function ReadinessComponent() {
     enabled: !!partyId,
   });
 
-  const wallet = walletRes?.data?.wallet;
+  const { data: campaignsRes } = useQuery({
+    queryKey: ["partyMarketingCampaigns", partyId],
+    queryFn: () => getPartyMarketingCampaigns({ data: Number(partyId) }),
+    enabled: !!partyId,
+  });
+
+  const campaigns = campaignsRes?.data?.campaigns || [];
+  const activeCampaignsCount = campaigns.filter((c: any) => {
+    if (!c.end_date) return true;
+    return new Date(c.end_date) > new Date();
+  }).length;
+  const hasMarketingSetup = activeCampaignsCount > 0;
+
+  // Safely extract the wallet, handling the case where it might be returned unwrapped from the cache
+  const wallet =
+    walletRes?.data?.wallet ||
+    ((walletRes as any)?.id ? (walletRes as any) : undefined);
 
   const { data: statesRes } = useQuery({
     queryKey: ["nigerianStates"],
@@ -142,6 +172,41 @@ function ReadinessComponent() {
         "Zamfara",
       ];
 
+  const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
+    queryKey: [
+      "election-stats",
+      selectedElectionGroup?.id,
+      party?.id,
+      selectedStateId,
+      selectedDistrictId,
+      selectedFederalConstituencyId,
+      selectedStateConstituencyId,
+      selectedLGAId,
+      selectedWardId,
+    ],
+    queryFn: () =>
+      fetchElectionStatsFn({
+        data: {
+          electionGroupId: selectedElectionGroup?.id as number,
+          partyId: party?.id,
+          stateId: selectedStateId,
+          senatorialDistrictId: selectedDistrictId,
+          federalConstituencyId: selectedFederalConstituencyId,
+          stateAssemblyConstituencyId: selectedStateConstituencyId,
+          lgaId: selectedLGAId,
+          wardId: selectedWardId,
+        },
+      }),
+    enabled: !!selectedElectionGroup?.id,
+  });
+
+  const resolvedStats =
+    electionStatsData?.data?.party_stats ||
+    electionStatsData?.data?.stats ||
+    {};
+  const targets =
+    electionStatsData?.data?.targets || electionStatsData?.data?.stats || {};
+
   const handleSlotsPurchased = () => {
     refetchWallet();
     if (partyId) {
@@ -157,11 +222,26 @@ function ReadinessComponent() {
       <div className="grid gap-6 lg:grid-cols-[2fr_1.2fr] items-start pb-20">
         {/* Left Hand Column */}
         <div className="space-y-6">
-          <ReadinessProgressCard />
+          <ReadinessProgressCard
+            partyStats={resolvedStats}
+            targets={targets}
+            isLoading={isStatsLoading}
+          />
           <RequiredActionsSection
+            hasSlots={(party?.slots ?? 0) > 0}
+            hasAgentPaymentBalance={(party?.agentPaymentBalanceKobo ?? 0) > 0}
+            hasPaymentAllocation={
+              party?.agentPaymentAllocation
+                ? Object.values(party.agentPaymentAllocation).some(
+                    (role: any) => (role?.default ?? 0) > 0,
+                  )
+                : false
+            }
+            hasMarketingSetup={hasMarketingSetup}
             onBuySlots={() => setIsSlotsDialogOpen(true)}
             onDepositPayment={() => setIsPaymentDialogOpen(true)}
             onDepositMarketing={() => setIsMarketingDialogOpen(true)}
+            onPaymentAllocation={() => setIsBudgetDialogOpen(true)}
           />
           <SubTabsSection />
         </div>
@@ -171,6 +251,12 @@ function ReadinessComponent() {
           <FinancialOverallCard
             walletBalance={wallet?.balance_kobo || 0}
             slots={party?.slots || 0}
+            agentPaymentBalance={party?.agentPaymentBalanceKobo || 0}
+            activeCampaignsCount={activeCampaignsCount}
+            onOpenWallet={() => setIsWalletDialogOpen(true)}
+            onBuySlots={() => setIsSlotsDialogOpen(true)}
+            onOpenAgentPayment={() => setIsPaymentDialogOpen(true)}
+            onOpenMarketing={() => setIsMarketingDialogOpen(true)}
           />
           <TargetCard />
           <AgentPaymentCard
@@ -202,7 +288,7 @@ function ReadinessComponent() {
         partyId={partyId!}
         fetchAllocation={async (id) => {
           const res = await getPartyAgentPaymentAllocation({ data: id });
-          return res?.data?.agent_payment_allocation ?? null;
+          return res?.data?.agent_payment_allocation_kobo ?? null;
         }}
         updateAllocation={async (id, values) => {
           const res = await updatePartyStateAllowances({
@@ -290,7 +376,6 @@ function ReadinessComponent() {
         }
         onSubmit={async (values) => {
           if (!partyId) return;
-          console.log("FORM SUBMITTED:", values);
           const durationInDays =
             values.durationUnit === "months"
               ? values.durationValue * 30
@@ -328,7 +413,24 @@ function ReadinessComponent() {
   );
 }
 
-function ReadinessProgressCard() {
+function ReadinessProgressCard({
+  partyStats,
+  targets,
+  isLoading,
+}: {
+  partyStats?: any;
+  targets?: any;
+  isLoading?: boolean;
+}) {
+  const {
+    selectedStateId,
+    selectedLGAId,
+    selectedWardId,
+    selectedDistrictId,
+    selectedStateConstituencyId,
+    selectedFederalConstituencyId,
+  } = useAppContext();
+
   const ReadinessText = ({
     label,
     value,
@@ -344,32 +446,108 @@ function ReadinessProgressCard() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <LeaderboardCardWrapper>
+        <div className="flex h-40 items-center justify-center text-white/50">
+          Loading readiness stats...
+        </div>
+      </LeaderboardCardWrapper>
+    );
+  }
+
+  const pStats = partyStats || {};
+  const tStats = targets || {};
+
+  const puCount = pStats.unique_pu_agents_count || 0;
+  const puMax = tStats.polling_units_count || 0;
+  const puPercent = puMax > 0 ? Math.floor((puCount / puMax) * 100) : 0;
+
+  const wardCount = pStats.unique_ward_supervisors_count || 0;
+  const wardMax = tStats.wards_count || 0;
+  const wardPercent = wardMax > 0 ? Math.floor((wardCount / wardMax) * 100) : 0;
+
+  const lgaCount = pStats.unique_lga_supervisors_count || 0;
+  const lgaMax = tStats.lgas_count || 0;
+  const lgaPercent = lgaMax > 0 ? Math.floor((lgaCount / lgaMax) * 100) : 0;
+
+  const stateCount = pStats.unique_state_supervisors_count || 0;
+  let stateMax = tStats.states_count || 0;
+  // If backend doesn't provide states_count, infer from scope
+  const isBelowStateLevel = !!(
+    selectedLGAId ||
+    selectedWardId ||
+    selectedDistrictId ||
+    selectedStateConstituencyId ||
+    selectedFederalConstituencyId
+  );
+  if (!stateMax && !isBelowStateLevel) {
+    stateMax = selectedStateId ? 1 : 37;
+  }
+  const statePercent =
+    stateMax > 0 ? Math.floor((stateCount / stateMax) * 100) : 0;
+
+  const showState = !isBelowStateLevel;
+  const showLGA = !selectedWardId;
+  const showWard = true;
+  const showPU = true;
+
   return (
     <LeaderboardCardWrapper>
-      <ObjectiveTile
-        isCompleted={false}
-        title="Polling Agent"
-        rightText={<ReadinessText label="22,982" value="/ 174,402" />}
-        rightText2={<ReadinessText label="32%" value="ready" />}
-      />
-      <ObjectiveTile
-        isCompleted={false}
-        title="Ward Election Supervisor"
-        rightText={<ReadinessText label="3,984" value="/ 8,713" />}
-        rightText2={<ReadinessText label="46%" value="ready" />}
-      />
-      <ObjectiveTile
-        isCompleted={false}
-        title="LGA Election Supervisor"
-        rightText={<ReadinessText label="241" value="/ 774" />}
-        rightText2={<ReadinessText label="31%" value="ready" />}
-      />
-      <ObjectiveTile
-        isCompleted={true}
-        title="State Election Supervisor"
-        rightText={<ReadinessText label="37" value="/ 37" />}
-        rightText2={<ReadinessText label="100%" value="ready" />}
-      />
+      {showPU && (
+        <ObjectiveTile
+          isCompleted={puPercent >= 100}
+          title="Polling Agent"
+          rightText={
+            <ReadinessText
+              label={puCount.toLocaleString()}
+              value={`/ ${puMax.toLocaleString()}`}
+            />
+          }
+          rightText2={<ReadinessText label={`${puPercent}%`} value="ready" />}
+        />
+      )}
+      {showWard && (
+        <ObjectiveTile
+          isCompleted={wardPercent >= 100}
+          title="Ward Election Supervisor"
+          rightText={
+            <ReadinessText
+              label={wardCount.toLocaleString()}
+              value={`/ ${wardMax.toLocaleString()}`}
+            />
+          }
+          rightText2={<ReadinessText label={`${wardPercent}%`} value="ready" />}
+        />
+      )}
+      {showLGA && (
+        <ObjectiveTile
+          isCompleted={lgaPercent >= 100}
+          title="LGA Election Supervisor"
+          rightText={
+            <ReadinessText
+              label={lgaCount.toLocaleString()}
+              value={`/ ${lgaMax.toLocaleString()}`}
+            />
+          }
+          rightText2={<ReadinessText label={`${lgaPercent}%`} value="ready" />}
+        />
+      )}
+      {showState && (
+        <ObjectiveTile
+          isCompleted={statePercent >= 100}
+          title="State Election Supervisor"
+          rightText={
+            <ReadinessText
+              label={stateCount.toLocaleString()}
+              value={`/ ${stateMax.toLocaleString()}`}
+            />
+          }
+          rightText2={
+            <ReadinessText label={`${statePercent}%`} value="ready" />
+          }
+        />
+      )}
     </LeaderboardCardWrapper>
   );
 }
@@ -432,39 +610,74 @@ function RoleProgressRow({
 }
 
 function RequiredActionsSection({
+  hasSlots,
+  hasAgentPaymentBalance,
+  hasPaymentAllocation,
+  hasMarketingSetup,
   onBuySlots,
   onDepositPayment,
   onDepositMarketing,
+  onPaymentAllocation,
 }: {
+  hasSlots: boolean;
+  hasAgentPaymentBalance: boolean;
+  hasPaymentAllocation: boolean;
+  hasMarketingSetup: boolean;
   onBuySlots: () => void;
   onDepositPayment: () => void;
   onDepositMarketing: () => void;
+  onPaymentAllocation: () => void;
 }) {
+  const allCompleted =
+    hasSlots &&
+    hasAgentPaymentBalance &&
+    hasPaymentAllocation &&
+    hasMarketingSetup;
+
+  if (allCompleted) {
+    return <></>;
+  }
+
   return (
     <div className="space-y-4">
       <h2 className="text-xl font-semibold text-c-90">Required Actions</h2>
       <div className="space-y-4">
-        <ActionBanner
-          title="Buy Slots for Election Agents"
-          description="Slots allow you accept agent requests for upcoming elections."
-          buttonLabel="Buy Slots"
-          bgClass="bg-[#FFDAAA]/50"
-          onClick={onBuySlots}
-        />
-        <ActionBanner
-          title="Deposit Agent Payment"
-          description="Deposit party agent election day payment."
-          buttonLabel="Deposit Agent Payment"
-          bgClass="bg-purple/20"
-          onClick={onDepositPayment}
-        />
-        <ActionBanner
-          title="Setup Agent Marketing"
-          description="Acquire agents for the upcoming election. This is the fastest way to get agents for your party (Highly Recommended)."
-          buttonLabel="Setup Agent Marketing"
-          bgClass="bg-[#0984E3]/20"
-          onClick={onDepositMarketing}
-        />
+        {!hasSlots && (
+          <ActionBanner
+            title="Buy Slots for Election Agents"
+            description="Slots allow you accept agent requests for upcoming elections."
+            buttonLabel="Buy Slots"
+            bgClass="bg-[#FFDAAA]/50"
+            onClick={onBuySlots}
+          />
+        )}
+        {!hasAgentPaymentBalance && (
+          <ActionBanner
+            title="Deposit Agent Payment"
+            description="Deposit party agent election day payment."
+            buttonLabel="Deposit Agent Payment"
+            bgClass="bg-purple/20"
+            onClick={onDepositPayment}
+          />
+        )}
+        {!hasPaymentAllocation && (
+          <ActionBanner
+            title="Set Agent Payment Allocation"
+            description="Configure how much each agent role gets paid per state."
+            buttonLabel="Set Agent Payment Allocation"
+            bgClass="bg-[#2ecc71]/20"
+            onClick={onPaymentAllocation}
+          />
+        )}
+        {!hasMarketingSetup && (
+          <ActionBanner
+            title="Setup Agent Marketing"
+            description="Acquire agents for the upcoming election. This is the fastest way to get agents for your party (Highly Recommended)."
+            buttonLabel="Setup Agent Marketing"
+            bgClass="bg-[#0984E3]/20"
+            onClick={onDepositMarketing}
+          />
+        )}
       </div>
     </div>
   );
@@ -774,30 +987,75 @@ function TransactionsSubTabContent() {
 function FinancialOverallCard({
   walletBalance,
   slots,
+  agentPaymentBalance,
+  activeCampaignsCount,
+  onOpenWallet,
+  onBuySlots,
+  onOpenAgentPayment,
+  onOpenMarketing,
 }: {
   walletBalance: number;
   slots: number;
+  agentPaymentBalance: number;
+  activeCampaignsCount: number;
+  onOpenWallet: () => void;
+  onBuySlots: () => void;
+  onOpenAgentPayment: () => void;
+  onOpenMarketing: () => void;
 }) {
   const balanceNGN = (walletBalance / 100).toLocaleString("en-NG", {
+    maximumFractionDigits: 1,
+  });
+  const agentPaymentNGN = (agentPaymentBalance / 100).toLocaleString("en-NG", {
     maximumFractionDigits: 1,
   });
 
   return (
     <ReadinessStatSection title="Financial Overall">
-      <FinancialRow label="Party Wallet Balance" value={`₦${balanceNGN}`} />
+      <FinancialRow
+        label="Party Wallet Balance"
+        value={`₦${balanceNGN}`}
+        onClick={onOpenWallet}
+      />
       <div className="px-3 py-2">
         <div className="h-px bg-border w-full" />
       </div>
-      <FinancialRow label="Slots" value={slots.toLocaleString()} />
-      <FinancialRow label="Agent Payment" value="₦176M" />
-      <FinancialRow label="Marketing Funds" value="₦200M" />
+      <FinancialRow
+        label="Slots"
+        value={slots.toLocaleString()}
+        onClick={onBuySlots}
+      />
+      <FinancialRow
+        label="Agent Payment Deposit"
+        value={`₦${agentPaymentNGN}`}
+        onClick={onOpenAgentPayment}
+      />
+      <FinancialRow
+        label="Marketing Campaigns"
+        value={activeCampaignsCount.toLocaleString()}
+        onClick={onOpenMarketing}
+      />
     </ReadinessStatSection>
   );
 }
 
-function FinancialRow({ label, value }: { label: string; value: string }) {
+function FinancialRow({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  onClick?: () => void;
+}) {
   return (
-    <div className="h-11 px-3 flex items-center gap-5">
+    <div
+      className={cn(
+        "h-11 px-3 flex items-center gap-5 transition-colors rounded-lg",
+        onClick && "cursor-pointer hover:bg-c-5",
+      )}
+      onClick={onClick}
+    >
       <p className="text-c-70 w-full">{label}</p>
       <span className="font-semibold text-[16px] text-c-80">{value}</span>
       <Button variant="black" className="h-8 px-3 rounded-[10px]">
@@ -818,7 +1076,6 @@ function TargetCard() {
 
   const handleFetchTargets = async (id: string | number) => {
     const res = await fetchTargetsFn({ data: id });
-    console.log("FETCH TARGETS RES", res);
     return res?.data?.targets || res?.data || null;
   };
 
@@ -923,14 +1180,32 @@ function AgentPaymentCard({
   onEdit: () => void;
   party: any;
 }) {
-  const defaultPayment =
-    (party?.agentPaymentAllocation?.default || 5000000) / 100;
+  const allocations = party?.agentPaymentAllocation || {};
+  const pollingAgentPaymentKobo = allocations.pollingAgent?.default || 0;
+  const wardSupervisorPaymentKobo =
+    allocations.wardElectionSupervisor?.default || 0;
+  const lgaSupervisorPaymentKobo =
+    allocations.lgaElectionSupervisor?.default || 0;
+  const stateSupervisorPaymentKobo =
+    allocations.stateElectionSupervisor?.default || 0;
 
   const payments = [
-    { role: "Polling Agent", amount: `₦${defaultPayment.toLocaleString()}` },
-    { role: "Ward Supervisor", amount: "₦70,000" },
-    { role: "LGA Supervisor", amount: "₦100,000" },
-    { role: "State Supervisor", amount: "₦500,000" },
+    {
+      role: "Polling Agent",
+      amount: `₦${(pollingAgentPaymentKobo / 100).toLocaleString()}`,
+    },
+    {
+      role: "Ward Supervisor",
+      amount: `₦${(wardSupervisorPaymentKobo / 100).toLocaleString()}`,
+    },
+    {
+      role: "LGA Supervisor",
+      amount: `₦${(lgaSupervisorPaymentKobo / 100).toLocaleString()}`,
+    },
+    {
+      role: "State Supervisor",
+      amount: `₦${(stateSupervisorPaymentKobo / 100).toLocaleString()}`,
+    },
   ];
 
   return (

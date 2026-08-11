@@ -23,12 +23,13 @@ INSERT INTO party_marketing_campaigns (
     start_date,
     end_date,
     budget,
+    referral_amount,
     amount_spent,
     status
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, NOW(), NOW() + ($7::int * interval '1 day'), $8, $9, $10, $11
 )
-RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget, amount_spent, created_at, updated_at
+RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget, referral_amount, amount_spent, created_at, updated_at
 `
 
 type CreatePartyMarketingCampaignParams struct {
@@ -40,6 +41,7 @@ type CreatePartyMarketingCampaignParams struct {
 	States          []byte                  `json:"states"`
 	DurationInDays  int32                   `json:"duration_in_days"`
 	Budget          pgtype.Numeric          `json:"budget"`
+	ReferralAmount  pgtype.Numeric          `json:"referral_amount"`
 	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
 	Status          MarketingCampaignStatus `json:"status"`
 }
@@ -54,6 +56,7 @@ func (q *Queries) CreatePartyMarketingCampaign(ctx context.Context, arg CreatePa
 		arg.States,
 		arg.DurationInDays,
 		arg.Budget,
+		arg.ReferralAmount,
 		arg.AmountSpent,
 		arg.Status,
 	)
@@ -71,6 +74,7 @@ func (q *Queries) CreatePartyMarketingCampaign(ctx context.Context, arg CreatePa
 		&i.EndDate,
 		&i.Status,
 		&i.Budget,
+		&i.ReferralAmount,
 		&i.AmountSpent,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -81,7 +85,7 @@ func (q *Queries) CreatePartyMarketingCampaign(ctx context.Context, arg CreatePa
 const createPlan = `-- name: CreatePlan :one
 INSERT INTO plans (name, description, price, type, features, scopes_recommendation, color_hex)
 VALUES ($1, $2, $3, $4, $5, $6, $7)
-RETURNING id, name, description, price, type, features, scopes_recommendation, color_hex, is_active, display_order, created_at, updated_at
+RETURNING id, name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, is_active, display_order, created_at, updated_at
 `
 
 type CreatePlanParams struct {
@@ -114,6 +118,8 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, e
 		&i.Features,
 		&i.ScopesRecommendation,
 		&i.ColorHex,
+		&i.DarkColorHex,
+		&i.ReferralAmount,
 		&i.IsActive,
 		&i.DisplayOrder,
 		&i.CreatedAt,
@@ -131,8 +137,49 @@ func (q *Queries) DeletePlan(ctx context.Context, id int32) error {
 	return err
 }
 
+const getActiveMarketingCampaignForElectionGroup = `-- name: GetActiveMarketingCampaignForElectionGroup :one
+SELECT id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget, referral_amount, amount_spent, created_at, updated_at FROM party_marketing_campaigns
+WHERE party_id = $1
+  AND election_group_id = $2
+  AND status = 'active'
+  AND start_date IS NOT NULL
+  AND end_date IS NOT NULL
+  AND NOW() BETWEEN start_date AND end_date
+LIMIT 1
+`
+
+type GetActiveMarketingCampaignForElectionGroupParams struct {
+	PartyID         int32 `json:"party_id"`
+	ElectionGroupID int32 `json:"election_group_id"`
+}
+
+// Returns the active campaign (if any) for a party + election group where NOW() is within start/end dates.
+func (q *Queries) GetActiveMarketingCampaignForElectionGroup(ctx context.Context, arg GetActiveMarketingCampaignForElectionGroupParams) (PartyMarketingCampaign, error) {
+	row := q.db.QueryRow(ctx, getActiveMarketingCampaignForElectionGroup, arg.PartyID, arg.ElectionGroupID)
+	var i PartyMarketingCampaign
+	err := row.Scan(
+		&i.ID,
+		&i.PartyID,
+		&i.ElectionGroupID,
+		&i.ElectionID,
+		&i.PlanID,
+		&i.Type,
+		&i.States,
+		&i.DurationInDays,
+		&i.StartDate,
+		&i.EndDate,
+		&i.Status,
+		&i.Budget,
+		&i.ReferralAmount,
+		&i.AmountSpent,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getMarketingPlansByType = `-- name: GetMarketingPlansByType :many
-SELECT id, name, description, price, type, features, scopes_recommendation, color_hex, is_active, display_order, created_at, updated_at FROM plans
+SELECT id, name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, is_active, display_order, created_at, updated_at FROM plans
 WHERE is_active = true AND type = $1
 ORDER BY display_order ASC, price ASC
 `
@@ -155,6 +202,8 @@ func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ MarketingCa
 			&i.Features,
 			&i.ScopesRecommendation,
 			&i.ColorHex,
+			&i.DarkColorHex,
+			&i.ReferralAmount,
 			&i.IsActive,
 			&i.DisplayOrder,
 			&i.CreatedAt,
@@ -171,7 +220,7 @@ func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ MarketingCa
 }
 
 const getPartyMarketingCampaigns = `-- name: GetPartyMarketingCampaigns :many
-SELECT pmc.id, pmc.party_id, pmc.election_group_id, pmc.election_id, pmc.plan_id, pmc.type, pmc.states, pmc.duration_in_days, pmc.start_date, pmc.end_date, pmc.status, pmc.budget, pmc.amount_spent, pmc.created_at, pmc.updated_at, p.name as plan_name, p.price as plan_price, p.color_hex as plan_color
+SELECT pmc.id, pmc.party_id, pmc.election_group_id, pmc.election_id, pmc.plan_id, pmc.type, pmc.states, pmc.duration_in_days, pmc.start_date, pmc.end_date, pmc.status, pmc.budget, pmc.referral_amount, pmc.amount_spent, pmc.created_at, pmc.updated_at, p.name as plan_name, p.price as plan_price, p.color_hex as plan_color
 FROM party_marketing_campaigns pmc
 JOIN plans p ON pmc.plan_id = p.id
 WHERE pmc.party_id = $1
@@ -191,6 +240,7 @@ type GetPartyMarketingCampaignsRow struct {
 	EndDate         pgtype.Timestamptz      `json:"end_date"`
 	Status          MarketingCampaignStatus `json:"status"`
 	Budget          pgtype.Numeric          `json:"budget"`
+	ReferralAmount  pgtype.Numeric          `json:"referral_amount"`
 	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
 	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
@@ -221,6 +271,7 @@ func (q *Queries) GetPartyMarketingCampaigns(ctx context.Context, partyID int32)
 			&i.EndDate,
 			&i.Status,
 			&i.Budget,
+			&i.ReferralAmount,
 			&i.AmountSpent,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -239,7 +290,7 @@ func (q *Queries) GetPartyMarketingCampaigns(ctx context.Context, partyID int32)
 }
 
 const getPlanByID = `-- name: GetPlanByID :one
-SELECT id, name, description, price, type, features, scopes_recommendation, color_hex, is_active, display_order, created_at, updated_at FROM plans 
+SELECT id, name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, is_active, display_order, created_at, updated_at FROM plans 
 WHERE id = $1
 `
 
@@ -255,6 +306,8 @@ func (q *Queries) GetPlanByID(ctx context.Context, id int32) (Plan, error) {
 		&i.Features,
 		&i.ScopesRecommendation,
 		&i.ColorHex,
+		&i.DarkColorHex,
+		&i.ReferralAmount,
 		&i.IsActive,
 		&i.DisplayOrder,
 		&i.CreatedAt,
@@ -264,7 +317,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id int32) (Plan, error) {
 }
 
 const getPlans = `-- name: GetPlans :many
-SELECT id, name, description, price, type, features, scopes_recommendation, color_hex, is_active, display_order, created_at, updated_at FROM plans
+SELECT id, name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, is_active, display_order, created_at, updated_at FROM plans
 WHERE ($1::text = '' OR type::text = $1::text)
   AND ($2::text = '' OR is_active = ($2::text = 'true'))
 ORDER BY display_order ASC, price ASC
@@ -295,6 +348,8 @@ func (q *Queries) GetPlans(ctx context.Context, arg GetPlansParams) ([]Plan, err
 			&i.Features,
 			&i.ScopesRecommendation,
 			&i.ColorHex,
+			&i.DarkColorHex,
+			&i.ReferralAmount,
 			&i.IsActive,
 			&i.DisplayOrder,
 			&i.CreatedAt,
@@ -323,7 +378,7 @@ SET
     is_active            = $9,
     updated_at           = NOW()
 WHERE id = $1
-RETURNING id, name, description, price, type, features, scopes_recommendation, color_hex, is_active, display_order, created_at, updated_at
+RETURNING id, name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, is_active, display_order, created_at, updated_at
 `
 
 type UpdatePlanParams struct {
@@ -360,6 +415,8 @@ func (q *Queries) UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, e
 		&i.Features,
 		&i.ScopesRecommendation,
 		&i.ColorHex,
+		&i.DarkColorHex,
+		&i.ReferralAmount,
 		&i.IsActive,
 		&i.DisplayOrder,
 		&i.CreatedAt,
@@ -373,7 +430,7 @@ UPDATE plans
 SET display_order = $2,
     updated_at    = NOW()
 WHERE id = $1
-RETURNING id, name, description, price, type, features, scopes_recommendation, color_hex, is_active, display_order, created_at, updated_at
+RETURNING id, name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, is_active, display_order, created_at, updated_at
 `
 
 type UpdatePlanDisplayOrderParams struct {
@@ -393,6 +450,8 @@ func (q *Queries) UpdatePlanDisplayOrder(ctx context.Context, arg UpdatePlanDisp
 		&i.Features,
 		&i.ScopesRecommendation,
 		&i.ColorHex,
+		&i.DarkColorHex,
+		&i.ReferralAmount,
 		&i.IsActive,
 		&i.DisplayOrder,
 		&i.CreatedAt,

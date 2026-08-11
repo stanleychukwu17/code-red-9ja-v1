@@ -85,7 +85,6 @@ export function EarningsAllocationDialog({
     queryFn: () => getSystemSetting({ data: settingKey }),
     enabled: open,
   });
-  console.log({ settingRes });
 
   const settingData: EarningsAllocation | null = React.useMemo(() => {
     const value = settingRes?.data?.setting?.value || settingRes?.data?.value;

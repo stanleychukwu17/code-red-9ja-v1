@@ -28,6 +28,7 @@ export const API_URL = {
     verifySignupEmailOtp: `${api}/auth/signup/email-otp/verify`,
     checkNin: `${api}/auth/check_nin`,
     checkUsername: `${api}/auth/check_username`,
+    checkReferralCode: `${api}/auth/check_referral_code`,
     signup: `${api}/auth/signup`,
     register: `${api}/auth/register`,
     completeOnboarding: `${api}/auth/onboarding`,
@@ -144,7 +145,8 @@ export const API_URL = {
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
     if (partyId) params.append("party_id", String(partyId));
-    if (electionGroupId) params.append("election_group_id", String(electionGroupId));
+    if (electionGroupId)
+      params.append("election_group_id", String(electionGroupId));
     const qs = params.toString();
     return `${api}/polling-units${qs ? `?${qs}` : ""}`;
   },
@@ -250,13 +252,19 @@ export const API_URL = {
   adminUserById: (id: string | number) => `${api}/admin/users/${id}`,
 
   users: `${api}/users`,
+  generateReferralCode: `${api}/users/me/referral-code`,
+  getMyWallet: `${api}/users/me/wallet`,
+  createUserWallet: (id: string | number) => `${api}/users/${id}/wallet`,
   updateProfile: `${api}/users/profile`,
   pollingAgentApplications: `${api}/party-applications`,
   pollingAgentRecommendations: `${api}/party-applications/recommendations`,
 
-  approveApplication: (id: string | number) => `${api}/party-applications/${id}/approve`,
-  rejectApplication: (id: string | number) => `${api}/party-applications/${id}/reject`,
-  cancelApplication: (id: string | number) => `${api}/party-applications/${id}/cancel`,
+  approveApplication: (id: string | number) =>
+    `${api}/party-applications/${id}/approve`,
+  rejectApplication: (id: string | number) =>
+    `${api}/party-applications/${id}/reject`,
+  cancelApplication: (id: string | number) =>
+    `${api}/party-applications/${id}/cancel`,
 
   pollingUnitAssignments: `${api}/polling-unit-assignments`,
   updateAssignmentTracking: (id: string | number) =>
@@ -277,4 +285,57 @@ export const API_URL = {
     `${api}/practice-tests/${id}/task`,
   completePracticeTest: (id: string | number) =>
     `${api}/practice-tests/${id}/complete`,
+
+  listPracticeTests: (
+    userId?: number,
+    electionGroupId?: number,
+    status?: string,
+    limit?: number,
+    cursor?: number,
+  ) => {
+    const params = new URLSearchParams();
+    if (userId) params.append("user_id", String(userId));
+    if (electionGroupId)
+      params.append("election_group_id", String(electionGroupId));
+    if (status) params.append("status", status);
+    if (limit) params.append("limit", String(limit));
+    if (cursor) params.append("cursor", String(cursor));
+    const qs = params.toString();
+    return `${api}/practice-tests${qs ? `?${qs}` : ""}`;
+  },
+
+  practiceTestPayoutPreview: (
+    electionGroupId: number,
+    role?: string,
+    electionDate?: string,
+    partyId?: number,
+  ) => {
+    const params = new URLSearchParams();
+    params.append("election_group_id", String(electionGroupId));
+    if (role) params.append("role", role);
+    if (electionDate) params.append("election_date", electionDate);
+    if (partyId) params.append("party_id", String(partyId));
+    const qs = params.toString();
+    return `${api}/practice-tests/payout-preview${qs ? `?${qs}` : ""}`;
+  },
+
+  referrals: {
+    stats: (electionGroupId?: number, partyId?: number) => {
+      const params = new URLSearchParams();
+      if (electionGroupId)
+        params.append("election_group_id", String(electionGroupId));
+      if (partyId) params.append("party_id", String(partyId));
+      const qs = params.toString();
+      return `${api}/referrals/stats${qs ? `?${qs}` : ""}`;
+    },
+    list: (electionGroupId?: number, cursor?: number, limit?: number) => {
+      const params = new URLSearchParams();
+      if (electionGroupId)
+        params.append("election_group_id", String(electionGroupId));
+      if (cursor) params.append("cursor", String(cursor));
+      if (limit) params.append("limit", String(limit));
+      const qs = params.toString();
+      return `${api}/referrals${qs ? `?${qs}` : ""}`;
+    },
+  },
 };

@@ -3,6 +3,43 @@ import { apiFetch } from "./fetch";
 import { API_URL } from "#/lib/config";
 
 
+export const getMyWallet = createServerFn({ method: "GET" }).handler(
+  async () => {
+    try {
+      const response = await apiFetch(API_URL.getMyWallet);
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: "Failed to fetch wallet from API" };
+    }
+  },
+);
+
+export const generateReferralCode = createServerFn({ method: "POST" }).handler(
+  async () => {
+    try {
+      const response = await apiFetch(API_URL.generateReferralCode, {
+        method: "POST",
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: "Failed to generate referral code" };
+    }
+  },
+);
+
+export const createUserWallet = createServerFn({ method: "POST" })
+  .inputValidator((data: { id: string | number }) => data)
+  .handler(async ({ data: { id } }) => {
+    try {
+      const response = await apiFetch(API_URL.createUserWallet(id), {
+        method: "POST",
+      });
+      return await response.json();
+    } catch (error) {
+      return { success: false, message: "Failed to create wallet" };
+    }
+  });
+
 export const getUsersList = createServerFn({ method: "GET" })
   .inputValidator(
     (data: { role?: string; limit?: number; cursor?: string | number; party_id?: number } | undefined) => data,

@@ -147,7 +147,6 @@ function LoginComponent() {
 
       try {
         const response = await loginPartyApp({ data: payload });
-        console.log({ response });
 
         if (response.success) {
           dispatch(updateAuthState({ user: response.data.user }));

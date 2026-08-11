@@ -45,7 +45,6 @@ export function TargetFormDialog({
     queryFn: () => fetchTargets(partyId),
     enabled: open,
   });
-  console.log("Targets:", targets);
 
   const mutation = useMutation({
     mutationFn: (values: TargetData) => updateTargets(partyId, values),

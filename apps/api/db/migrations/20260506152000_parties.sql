@@ -11,10 +11,13 @@ CREATE TABLE parties (
   is_verified BOOLEAN DEFAULT false,
   discount_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
   agent_payment_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (agent_payment_balance_kobo >= 0),
-  -- {"pollingAgent":{default: 2000, states: {lagos: 2500, ...all state's custom pay}},"lgaElectionSupervisor":{},"wardElectionSupervisor":{},"stateElectionSupervisor":{}}
-  agent_payment_allocation JSONB NOT NULL DEFAULT '{}'::jsonb,
+  -- {"pollingAgent":{default: 2000000, states: {lagos: 2500000, ...all state's custom pay}},"lgaElectionSupervisor":{},"wardElectionSupervisor":{},"stateElectionSupervisor":{}}
+  agent_payment_allocation_kobo JSONB NOT NULL DEFAULT '{"pollingAgent":{"default":0,"states":{}},"wardElectionSupervisor":{"default":0,"states":{}},"lgaElectionSupervisor":{"default":0,"states":{}},"stateElectionSupervisor":{"default":0,"states":{}}}'::jsonb,
   -- {"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}
   agent_acquisition_targets JSONB NOT NULL DEFAULT '{"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}'::jsonb,
+  -- {"pollingAgent": true, "wardElectionSupervisor": true, "lgaElectionSupervisor": true, "stateElectionSupervisor": true}
+  auto_accept_applications JSONB NOT NULL DEFAULT '{"pollingAgent": true, "wardElectionSupervisor": true, "lgaElectionSupervisor": true, "stateElectionSupervisor": true}'::jsonb,
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -42,11 +45,10 @@ INSERT INTO parties (id, short_name, name, logo, display_order) VALUES
     (16, 'AA', 'African Action', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/AA-Action-Alliance-ebccaca6-89f4-4a69-b747-8b0f581bbca0.webp', 999),
     (17, 'ADC', 'African Democratic Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ADC-African-Democratic-Congress-f73b776b-56dd-4b78-a428-6088fb054c82.webp', 1),
     (18, 'ADP', 'African Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ADP-Action-Democratic-Party-dc8cb363-85da-4a4b-8195-846c421e6ad7.webp', 999),
-    (19, 'AP', 'Action Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/AP-Accord-Party-67cc544d-c05d-4372-a222-2c0eff138fb7.webp', 999),
-    (20, 'DLA', 'Democratic Leadership Alliance', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/DLA-Democratic-Leadership-Alliance-83e923a8-ef45-492b-8f42-15bc906906a7.webp', 999),
-    (21, 'NDP', 'National Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/NDP-National-Democratic-Party-5c979c25-27ea-4344-860c-da2ba283f652.webp', 999),
-    (22, 'AAC', 'African Action Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/AAC-African-Action-Congress-750daa5b-b723-4e88-95e5-556cd3b2d8d0.webp', 999),
-    (23, 'A', 'Accord', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/A-Accord-c5c9260c-1402-4038-8212-3b2d7ffb107a.webp', 999);
+    (19, 'DLA', 'Democratic Leadership Alliance', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/DLA-Democratic-Leadership-Alliance-83e923a8-ef45-492b-8f42-15bc906906a7.webp', 999),
+    (20, 'NDP', 'National Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/NDP-National-Democratic-Party-5c979c25-27ea-4344-860c-da2ba283f652.webp', 999),
+    (21, 'AAC', 'African Action Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/AAC-African-Action-Congress-750daa5b-b723-4e88-95e5-556cd3b2d8d0.webp', 999),
+    (22, 'A', 'Accord', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/A-Accord-c5c9260c-1402-4038-8212-3b2d7ffb107a.webp', 999);
 
 -- Sync the identity sequence with the max id to prevent duplicate key errors on new inserts
 SELECT setval(pg_get_serial_sequence('parties', 'id'), (SELECT MAX(id) FROM parties));

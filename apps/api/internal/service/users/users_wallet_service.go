@@ -30,8 +30,8 @@ func (s *UsersService) CreateUserWallet(ctx context.Context, user queries.User) 
 	accountReference := fmt.Sprintf("free9ja-user-%d", user.ID)
 
 	email := fmt.Sprintf("user-%d@free9ja.com", user.ID)
-	if user.Email.Valid && user.Email.String != "" {
-		email = user.Email.String
+	if user.Email.Valid && user.Email.String != "" && strings.Contains(user.Email.String, "@") && strings.Contains(user.Email.String, ".") {
+		email = strings.TrimSpace(user.Email.String)
 	}
 
 	name := fmt.Sprintf("User %d", user.ID)

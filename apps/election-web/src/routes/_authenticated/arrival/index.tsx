@@ -55,7 +55,7 @@ function ArrivalVideo() {
           } as any,
         });
       } else {
-        navigate({ to: "/home" });
+        navigate({ to: "/" });
       }
     },
     onError: (err: any) => {
@@ -64,7 +64,6 @@ function ArrivalVideo() {
   });
 
   const handleSubmit = async () => {
-    console.log("search", search);
     if (search.isPractice) {
       const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
       showFeedbackToast(true, failedAttempts);
@@ -169,7 +168,11 @@ function ArrivalVideo() {
   return (
     <div className="flex flex-col relative w-full">
       {/* Header */}
-      <PageHeader title="PRACTICE MODE" />
+      <PageHeader
+        onBackClick={() => {
+          if (search.isPractice === false) navigate({ to: "/" });
+        }}
+      />
 
       <div className="px-4 pb-20 space-y-6">
         <TitleText
@@ -249,7 +252,8 @@ function ArrivalVideo() {
               variant="outline"
               size="4xl"
               className="w-full"
-              onClick={() => navigate({ to: "/home" })}
+              onClick={() => navigate({ to: "/" })}
+              disabled={search.isPractice === true}
             >
               Cancel
             </Button>

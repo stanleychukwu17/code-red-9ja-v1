@@ -2,7 +2,13 @@ import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useRouteContext } from "@tanstack/react-router";
-import { getParty, getPublicParties } from "#/lib/server/parties";
+import {
+  getParty,
+  getPublicParties,
+  getPartyWallet,
+  createPartyWallet,
+  getPartyMarketingCampaigns,
+} from "#/lib/server/parties";
 import {
   getElectionCandidates,
   getElectionsByGroup,
@@ -49,7 +55,7 @@ export interface BackendParty {
   logo?: string;
   slots?: number;
   agent_payment_balance_kobo?: number;
-  agent_payment_allocation?: Record<string, number>;
+  agent_payment_allocation_kobo?: Record<string, number>;
   created_at?: string;
   updated_at?: string;
 }
@@ -78,7 +84,7 @@ export interface UserDetails {
     logo?: string;
     slots?: number;
     agent_payment_balance_kobo?: number;
-    agent_payment_allocation?: Record<string, number>;
+    agent_payment_allocation_kobo?: Record<string, number>;
     created_at?: string;
     updated_at?: string;
   };
@@ -117,7 +123,7 @@ export const usePartyDetails = (): PartyDetails | null => {
         logo: fetchedParty.logo,
         slots: fetchedParty.slots || 0,
         agentPaymentBalanceKobo: fetchedParty.agent_payment_balance_kobo || 0,
-        agentPaymentAllocation: fetchedParty.agent_payment_allocation || {},
+        agentPaymentAllocation: fetchedParty.agent_payment_allocation_kobo || {},
       }
     : user?.party?.short_name
       ? {
@@ -127,7 +133,7 @@ export const usePartyDetails = (): PartyDetails | null => {
           logo: user.party.logo,
           slots: user.party.slots || 0,
           agentPaymentBalanceKobo: user.party.agent_payment_balance_kobo || 0,
-          agentPaymentAllocation: user.party.agent_payment_allocation || {},
+          agentPaymentAllocation: user.party.agent_payment_allocation_kobo || {},
         }
       : user?.party_id
         ? {
@@ -281,9 +287,54 @@ export const useAppContext = () => {
     }
   }, [elections, selectedElectionGroup, selectedElection, dispatch]);
 
+  const fetchPartyWallet = useServerFn(getPartyWallet);
+  const createPartyWalletFn = useServerFn(createPartyWallet);
+
+  const { data: partyWallet } = useQuery({
+    queryKey: ["partyWallet", party?.id],
+    enabled: !!party?.id,
+    queryFn: async () => {
+      const res = await fetchPartyWallet({ data: party?.id as number });
+      if (res?.success && res.data?.wallet) {
+        return res.data.wallet;
+      }
+
+      // If wallet not found, attempt to create it automatically
+      if (party?.id) {
+        const createRes = await createPartyWalletFn({ data: party.id });
+        if (createRes?.success && createRes.data?.wallet) {
+          return createRes.data.wallet;
+        }
+      }
+      return null;
+    },
+  });
+
+  const fetchMarketingCampaignsFn = useServerFn(getPartyMarketingCampaigns);
+
+  const { data: activeMarketingCampaigns } = useQuery({
+    queryKey: ["activeMarketingCampaigns", party?.id],
+    enabled: !!party?.id,
+    queryFn: async () => {
+      const res = await fetchMarketingCampaignsFn({
+        data: party?.id as number,
+      });
+      if (res?.success && res.data?.campaigns) {
+        // filter to only active campaigns based on end_date
+        return res.data.campaigns.filter((c: any) => {
+          if (!c.end_date) return true;
+          return new Date(c.end_date) > new Date();
+        });
+      }
+      return [];
+    },
+  });
+
   return {
     user,
     party,
+    partyWallet,
+    activeMarketingCampaigns,
     selectedElectionGroup,
     selectedElection,
     setSelectedElectionGroup: (group: any | null) =>
@@ -329,6 +380,7 @@ export const useAuth = () => {
       name: "",
       logo: undefined,
     },
+    partyWallet: context.partyWallet,
     selectedElectionGroup: context.selectedElectionGroup,
     selectedElection: context.selectedElection,
     setSelectedElectionGroup: context.setSelectedElectionGroup,
@@ -348,5 +400,6 @@ export const useAuth = () => {
     selectedWardId: context.selectedWardId,
     setSelectedWardId: context.setSelectedWardId,
     electionCandidates: context.electionCandidates,
+    activeMarketingCampaigns: context.activeMarketingCampaigns,
   };
 };

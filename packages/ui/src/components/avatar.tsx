@@ -138,13 +138,18 @@ const DoubleAvatar = ({
   className,
 }: DoubleAvatarProps) => {
   return (
-    <div className={cn("relative flex items-start justify-start size-11", className)}>
-      <img
+    <div
+      className={cn(
+        "relative flex items-start justify-start size-11",
+        className,
+      )}
+    >
+      <AppAvatar
         src={src1}
         alt={alt1}
         className="absolute top-0 left-0 size-8 rounded-full border-2 border-black object-cover"
       />
-      <img
+      <AppAvatar
         src={src2}
         alt={alt2}
         className="absolute bottom-0 right-0 size-8 rounded-full border-2 border-black object-cover"

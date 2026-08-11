@@ -89,7 +89,6 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
     });
 
     const result = await response.json();
-    // console.log(result)
     if (result.success && result.data?.refreshToken) {
       setAuthCookies({
         refreshToken: result.data.refreshToken,
@@ -193,10 +192,8 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       ];
 
       if (logOutConditions.includes(result?.message)) {
-        console.log("cleared cookies because of this result", result);
         clearAuthCookies();
       } else {
-        console.log("other errors for token error", result);
       }
       return {
         status: "error",

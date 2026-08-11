@@ -24,8 +24,6 @@ export const Route = createFileRoute("/settings")({
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
-    // console.log(user)
-
     if (res.status != "success") {
       throw redirect({ to: APP_URL.auth.login });
     }

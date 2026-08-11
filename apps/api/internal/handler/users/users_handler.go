@@ -31,6 +31,7 @@ type UsersService interface {
 	GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error)
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
+	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
 	GetUserVerification(ctx context.Context, userID int64) (queries.UserVerification, error)
 	UpdateUserProfile(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32) error
 	UpdateUserProfileDetails(ctx context.Context, userID int64, occupationID *int16, educationalStatus, highestDegree, graduationYear, schoolName, religion, maritalStatus, educationLevel, address string) error
@@ -55,7 +56,9 @@ type UsersService interface {
 	CheckUsername(ctx context.Context, username string) bool
 	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
+	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
+	GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error)
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -103,7 +106,9 @@ func NewHandler(usersService UsersService, auditService audit.AuditService, bodi
 // UserProfileResponse represents the complete user profile details returned to the frontend
 type UserProfileResponse struct {
 	queries.UserWithPlaces
-	Profile *queries.UserMoreInfo `json:"profile,omitempty"`
+	Profile           *queries.UserMoreInfo `json:"profile,omitempty"`
+	BankAccountNumber string                `json:"bank_account_number"`
+	BankCode          string                `json:"bank_code"`
 }
 
 // GetBanks handles GET /api/v1/banks
@@ -183,11 +188,14 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile, _ := h.usersService.GetMoreInfoAboutThisUser(r.Context(), user.ID)
+	bankAccount, _ := h.usersService.GetUserPrimaryBankAccount(r.Context(), user.ID)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "User profile retrieved successfully", map[string]interface{}{
 		"user": UserProfileResponse{
-			UserWithPlaces: user,
-			Profile:        &profile,
+			UserWithPlaces:    user,
+			Profile:           &profile,
+			BankAccountNumber: bankAccount.AccountNumber,
+			BankCode:          bankAccount.BankCode,
 		},
 	})
 }
@@ -629,6 +637,32 @@ func (h *Handler) AdminGetUserMoreInfo(w http.ResponseWriter, r *http.Request) {
 }
 
 // AdminUpdateUserRequest represents the request payload for updating user basic info
+// GenerateReferralCode handles POST /api/v1/users/me/referral-code
+func (h *Handler) GenerateReferralCode(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok || claims == nil {
+		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	user, err := h.usersService.GetUserByFakeID(r.Context(), claims.FakeID)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusNotFound, "User not found")
+		return
+	}
+
+	code, err := h.usersService.GenerateAndAssignReferralCode(r.Context(), user.ID, claims.FakeID, user.FirstName.String)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to generate referral code: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Referral code generated", map[string]interface{}{
+		"referral_code": code,
+	})
+}
+
+
 type AdminUpdateUserRequest struct {
 	Avatar         string `json:"avatar" validate:"omitempty"`
 	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`
@@ -708,10 +742,23 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Ensure that if the target user already has a party, the party cannot be changed
-	if targetUserDetails.PartyID.Valid && req.PartyID != int64(targetUserDetails.PartyID.Int16) {
-		h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party cannot be changed")
-		return
+	// Ensure that if the target user already has a party, the party cannot be changed unless super admin
+	if req.PartyID != 0 {
+		if targetUserDetails.PartyID.Valid && req.PartyID != int64(targetUserDetails.PartyID.Int16) {
+			if !perms.IsSuperAdmin {
+				h.utils.RespondError(w, http.StatusForbidden, "Forbidden: party cannot be changed")
+				return
+			}
+		}
+		
+		// If the party is changing (or being set for the first time), update it
+		if !targetUserDetails.PartyID.Valid || req.PartyID != int64(targetUserDetails.PartyID.Int16) {
+			pID := int16(req.PartyID)
+			if err := h.usersService.UpdateUserParty(r.Context(), targetUserDetails.ID, &pID, targetUserDetails.FakeID.Int64); err != nil {
+				h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update user party: "+err.Error())
+				return
+			}
+		}
 	}
 
 	// update the user

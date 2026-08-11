@@ -34,14 +34,6 @@ CREATE TABLE users (
   party_id SMALLINT REFERENCES parties(id) ON DELETE SET NULL,
   polling_unit_id INT REFERENCES polling_units(id) ON DELETE SET NULL,
 
-  -- Referral system
-  -- referral_code format: {FIRST_NAME}{2-digit suffix} e.g. "DANIEL40"
-  -- Generated server-side at user registration time, unique per user
-  referral_code VARCHAR(30) UNIQUE,
-  -- The referral code of whoever referred this user (e.g. an agent)
-  -- Stored as plain text so it survives referrer account deletions
-  referred_by_code VARCHAR(30),
-
   account_status VARCHAR(30)
     CHECK (account_status IN (
       'just_registered',
@@ -53,6 +45,12 @@ CREATE TABLE users (
       'deleted'
     ))
     DEFAULT 'just_registered',
+
+  -- Referral system
+  -- referral_code format: {FIRST_NAME}{2-digit suffix} e.g. "DANIEL40"
+  -- Generated server-side at user registration time, unique per user
+  referral_code VARCHAR(30) UNIQUE,
+  referred_by_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -98,7 +96,7 @@ CREATE TABLE users_phone_numbers (
   phone VARCHAR(25) UNIQUE NOT NULL,
   raw_input VARCHAR(25) NOT NULL,
   phonecode VARCHAR(10) NOT NULL,
-  on_whatsapp VARCHAR(25) CHECK (on_whatsapp IN ('yes','no')) DEFAULT 'no',
+  on_whatsapp BOOLEAN DEFAULT false,
   is_default BOOLEAN DEFAULT false,
   is_active BOOLEAN DEFAULT true
 );

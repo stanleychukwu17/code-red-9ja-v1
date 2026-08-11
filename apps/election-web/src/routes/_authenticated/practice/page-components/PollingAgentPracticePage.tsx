@@ -7,7 +7,11 @@ import {
   LeaderboardCardWrapper,
   ObjectiveTile,
 } from "@repo/ui/components/cards/leaderboard-card";
-import { InfoCard, SelectableCard } from "@repo/ui/components/cards/Rewards";
+import {
+  InfoCard,
+  RewardSumCard,
+  SelectableCard,
+} from "@repo/ui/components/cards/Rewards";
 import {
   Carousel,
   CarouselContent,
@@ -29,6 +33,7 @@ import StarIcon from "@repo/ui/icons/star-icon";
 import TwinkleLittleStarIcon from "@repo/ui/icons/twinkle-little-star-icon";
 import { cn } from "@repo/ui/lib/utils";
 import { useNavigate } from "@tanstack/react-router";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useState } from "react";
 import { useLocalStorage } from "usehooks-ts";
@@ -51,13 +56,17 @@ import { UploadsTab } from "../../_home/components/UploadsTab";
 import { TaskType, pollingAgentTest } from "./tasks-data";
 import { showFeedbackToast } from "./utils";
 import {
-  startPracticeTest,
-  appendPracticeTestTask,
-  completePracticeTest,
+  submitPracticeTest,
+  listPracticeTests,
+  getPracticeTestPayoutPreview,
 } from "#/lib/server/practice_tests";
+import { getElectionGroups } from "#/lib/server/election_groups";
+import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { party, user } = useAuth();
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
@@ -67,12 +76,14 @@ export function PollingAgentPracticePage() {
     "page",
     parseAsStringLiteral([
       "welcome",
+      "select-election",
       "tutorial",
       "quiz",
       "practical",
       "dashboard",
       "completed",
       "final",
+      "accepted",
     ] as const)
       .withDefault("welcome")
       .withOptions({ clearOnDefault: false }),
@@ -89,13 +100,22 @@ export function PollingAgentPracticePage() {
     setIsPractice("true");
   }, [setIsPractice]);
 
-  const [currentFailedAttempts, setCurrentFailedAttempts] = useState(0);
+  const [currentFailedAttempts, setCurrentFailedAttempts] = useLocalStorage(
+    "practice-current-failed-attempts",
+    0,
+  );
   const [quizSelectedOptionId, setQuizSelectedOptionId] = useState<
     number | null
   >(null);
 
-  // practiceTestId is the DB row ID returned by the API on start
-  const [practiceTestId, setPracticeTestId] = useState<number | null>(null);
+  // Election group selected for this practice test
+  const [selectedElectionGroupId, setSelectedElectionGroupId] = useLocalStorage<
+    number | null
+  >("practice-selected-election-group-id", null);
+
+  const [selectedElectionDate, setSelectedElectionDate] = useLocalStorage<
+    string | null
+  >("practice-selected-election-date", null);
 
   const [testStats, setTestStats] = useLocalStorage<
     {
@@ -110,34 +130,74 @@ export function PollingAgentPracticePage() {
   const validTaskIndex = currentTaskIndex === -1 ? 0 : currentTaskIndex;
   const currentTask = pollingAgentTest[validTaskIndex];
 
+  const { mutate: submitTest } = useMutation({
+    mutationFn: submitPracticeTest,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["practiceTests"] });
+      setCurrentPage("final");
+    },
+    onError: (error) => {
+      console.error("Failed to submit test:", error);
+      setCurrentPage("final"); // Still move forward so they aren't stuck
+    },
+  });
+
   const handleNextTask = () => {
     const nextTask = pollingAgentTest[validTaskIndex + 1];
     if (nextTask) {
       setTaskId(nextTask.id);
       setCurrentPage("tutorial");
     } else {
-      // All tasks done — complete the test
+      // All tasks done — submit the entire test at once
       const finalScoreVal =
         testStats.length > 0
           ? testStats.reduce((acc, s) => acc + s.score, 0) / testStats.length
           : 0;
-      if (practiceTestId) {
-        completePracticeTest({
-          data: { practiceTestId, finalScore: Number(finalScoreVal.toFixed(2)) },
-        }).catch(console.error);
-      }
-      setCurrentPage("final");
+
+      submitTest({
+        data: {
+          electionGroupId: selectedElectionGroupId ?? undefined,
+          role: "pollingagent",
+          finalScore: Number(finalScoreVal.toFixed(2)),
+          taskStats: testStats.map((s) => ({
+            task_id: s.taskId,
+            score: s.score,
+            failed_attempts: s.failedAttempt,
+            completed: s.completed,
+          })),
+        },
+      });
     }
   };
+
+  useEffect(() => {
+    if (currentPage === "completed" && currentTask) {
+      setTestStats((prev) => {
+        if (prev.some((s) => s.taskId === currentTask.id)) return prev;
+        // Percentage-based: 1 success out of (failedAttempts + 1) total attempts
+        // Stored as 0-100; divided by 10 only at the display layer
+        const taskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
+        return [
+          ...prev,
+          {
+            taskId: currentTask.id,
+            failedAttempt: currentFailedAttempts,
+            completed: true,
+            score: taskScore,
+          },
+        ];
+      });
+    }
+  }, [currentPage, currentTask, currentFailedAttempts, setTestStats]);
 
   const handleQuizNext = () => {
     if (!currentTask) return;
 
     if (quizSelectedOptionId === currentTask.quiz.correctOptionId) {
-      showFeedbackToast(true);
+      showFeedbackToast(true, currentFailedAttempts);
       setCurrentPage("practical");
     } else {
-      showFeedbackToast(false);
+      showFeedbackToast(false, currentFailedAttempts + 1);
       setCurrentFailedAttempts((prev) => prev + 1);
       setQuizSelectedOptionId(null);
     }
@@ -145,30 +205,6 @@ export function PollingAgentPracticePage() {
 
   const handleDashboardCorrect = () => {
     if (!currentTask) return;
-
-    const taskScore = Math.max(0, 10 - currentFailedAttempts * 2);
-    setTestStats((prev) => [
-      ...prev,
-      {
-        taskId: currentTask.id,
-        failedAttempt: currentFailedAttempts,
-        completed: true,
-        score: taskScore,
-      },
-    ]);
-
-    // Persist task result to backend
-    if (practiceTestId) {
-      appendPracticeTestTask({
-        data: {
-          practiceTestId,
-          taskId: currentTask.id,
-          score: taskScore,
-          failedAttempts: currentFailedAttempts,
-        },
-      }).catch(console.error);
-    }
-
     setCurrentPage("completed");
   };
 
@@ -176,28 +212,51 @@ export function PollingAgentPracticePage() {
     setCurrentFailedAttempts((prev) => prev + 1);
   };
 
+  // Fetch payout preview once an election group is selected
+  const { data: payoutPreviewRes } = useQuery({
+    queryKey: ["payoutPreview", selectedElectionGroupId],
+    queryFn: async () => {
+      if (!selectedElectionGroupId) return null;
+      return getPracticeTestPayoutPreview({
+        data: {
+          electionGroupId: selectedElectionGroupId,
+          electionDate: selectedElectionDate ?? undefined,
+          partyId: party?.id ?? undefined,
+        },
+      });
+    },
+    enabled: !!selectedElectionGroupId,
+  });
+
+  const potentialTestPayout: number =
+    payoutPreviewRes?.success && payoutPreviewRes?.data
+      ? ((payoutPreviewRes.data.potential_test_payout as number) ?? 0)
+      : 0;
+
   const currentScore = testStats.reduce((acc, stat) => acc + stat.score, 0);
   const finalScore = testStats.length > 0 ? currentScore / testStats.length : 0;
-  const currentTaskScore = Math.max(0, 10 - currentFailedAttempts * 2);
+  // Live preview: percentage-based score (0-100); divided by 10 for display only
+  const currentTaskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
 
   return (
     <div className="w-full h-full">
       {currentPage === "welcome" && (
         <WelcomePage
           practiceTestNumber={1}
-          potentialPayout={500}
-          onNextClick={async () => {
-            // Start a new practice test session in the DB
-            try {
-              const res = await startPracticeTest({
-                data: { role: "pollingagent" },
-              });
-              if (res?.success && res?.data?.practice_test?.id) {
-                setPracticeTestId(res.data.practice_test.id);
-              }
-            } catch (e) {
-              console.error("Failed to start practice test", e);
-            }
+          potentialPayout={potentialTestPayout}
+          onNextClick={() => setCurrentPage("select-election")}
+        />
+      )}
+
+      {currentPage === "select-election" && (
+        <SelectElectionPage
+          selectedElectionGroupId={selectedElectionGroupId}
+          onSelect={(id, electionDate) => {
+            setSelectedElectionGroupId(id);
+            setSelectedElectionDate(electionDate ?? null);
+          }}
+          onNextClick={() => {
+            // Test submission is batched at the very end
             setCurrentPage("tutorial");
           }}
         />
@@ -257,7 +316,7 @@ export function PollingAgentPracticePage() {
 
       {currentPage === "completed" && currentTask && (
         <TaskCompletedPage
-          score={currentTaskScore}
+          score={Number((currentTaskScore / 10).toFixed(1))}
           maxScore={10}
           failedAttempts={currentFailedAttempts}
           note={currentTask.note}
@@ -267,9 +326,72 @@ export function PollingAgentPracticePage() {
 
       {currentPage === "final" && (
         <FinalScorePage
-          score={Number(finalScore.toFixed(2))}
+          score={Number((finalScore / 10).toFixed(2))}
           maxScore={10}
-          onNextClick={() => navigate({ to: "/" })}
+          potentialPayout={potentialTestPayout}
+          onNextClick={async () => {
+            let hasAssignment = false;
+            if (user?.id && selectedElectionGroupId) {
+              try {
+                const res = await queryClient.fetchQuery({
+                  queryKey: [
+                    "pollingAgentAssignments",
+                    user.id,
+                    selectedElectionGroupId,
+                  ],
+                  queryFn: async () => {
+                    const response = await getPollingUnitAssignments({
+                      data: {
+                        user_id: user.id,
+                        election_group_id: selectedElectionGroupId,
+                      },
+                    });
+                    if (!response?.success || !response.data?.assignments)
+                      return [];
+                    return response.data.assignments;
+                  },
+                });
+                if (res && res.length > 0) {
+                  hasAssignment = true;
+                }
+              } catch (e) {
+                console.error("Failed to fetch assignments on done:", e);
+              }
+            }
+
+            if (hasAssignment) {
+              setCurrentPage("accepted");
+            } else {
+              // Clear local storage so future attempts start completely fresh
+              setCurrentFailedAttempts(0);
+              setSelectedElectionGroupId(null);
+              setSelectedElectionDate(null);
+              setTestStats([]);
+              navigate({ to: "/", search: {} });
+            }
+          }}
+          electionGroupId={selectedElectionGroupId}
+        />
+      )}
+
+      {currentPage === "accepted" && (
+        <ApplicationAcceptedPage
+          onTakeAnotherTest={() => {
+            setCurrentFailedAttempts(0);
+            setSelectedElectionGroupId(null);
+            setSelectedElectionDate(null);
+            setTestStats([]);
+            setTaskId(1);
+            setCurrentPage("select-election");
+          }}
+          onGoToHome={() => {
+            setCurrentFailedAttempts(0);
+            setSelectedElectionGroupId(null);
+            setSelectedElectionDate(null);
+            setTestStats([]);
+            navigate({ to: "/", search: {} });
+          }}
+          electionGroupId={selectedElectionGroupId}
         />
       )}
     </div>
@@ -286,14 +408,11 @@ export function WelcomePage({
   onNextClick: () => void;
 }) {
   const { party } = useAuth();
-
-  const handleBackClick = () => {
-    console.log("Go Back Clicked!");
-  };
+  const navigate = useNavigate();
 
   return (
     <div className="w-full h-full">
-      <PageHeader onBackClick={handleBackClick} />
+      <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
       <div className="relative flex flex-col items-center gap-3 h-full px-4 pt-16 max-w-[430px]">
         <BackgroundDesign />
@@ -339,70 +458,79 @@ export function WelcomePage({
   );
 }
 
-export function ApplicationAcceptedPage({
+export function SelectElectionPage({
+  selectedElectionGroupId,
+  onSelect,
   onNextClick,
 }: {
-  onNextClick?: () => void;
+  selectedElectionGroupId: number | null;
+  onSelect: (id: number, electionDate?: string) => void;
+  onNextClick: () => void;
 }) {
-  const { party } = useAuth();
-
-  const Todo = ({ text }: { text: string }) => (
-    <div className="flex gap-4 py-2">
-      <div className="size-6 rounded-full bg-c-10 shrink-0" />
-      <p className="text-lg leading-6 text-c-60">{text}</p>
-    </div>
-  );
+  const { data: elections = [], isLoading } = useQuery({
+    queryKey: ["electionGroups", { upcoming: true }],
+    queryFn: async () => {
+      const res = await getElectionGroups({ data: { upcoming: true } });
+      if (
+        res?.success &&
+        res.data?.election_groups &&
+        res.data.election_groups.length > 0
+      ) {
+        return res.data.election_groups.map((group: any) => ({
+          id: group.id,
+          name: group.name,
+          rawDate: group.election_date as string | undefined,
+          date: group.election_date
+            ? new Date(group.election_date).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })
+            : "TBD",
+        }));
+      }
+      return [];
+    },
+    initialData: [],
+  });
 
   return (
-    <div className="w-full h-svh">
-      <PageHeader onBackClick={() => null} />
+    <div className="w-full h-full">
+      <PageHeader />
 
-      <div className="relative flex flex-col items-center gap-3 h-full px-4 max-w-[430px]">
-        <div className="">
-          <TaskScore
-            score={5.55}
-            maxScore={10}
-            className="absolute top-7 left-35 opacity-80 blur-2xl -z-10"
+      <div className="flex flex-col gap-4 w-full h-full px-4 pt-2">
+        <div className="space-y-1">
+          <TitleText
+            text="Choose an Election"
+            size="xl"
+            className="text-c-90"
           />
-          <div className="absolute top-0 right-5 size-10 bg-yellow rounded-full blur-[32px] opacity-50 -z-10" />
+          <DescriptiveText
+            text="Select the upcoming election you are preparing to work as a polling agent."
+            size="sm"
+          />
         </div>
 
-        <AppAvatar src={party?.logo} alt="Party Logo" className="size-7" />
-        <TitleText
-          text="Congratulations!"
-          size="xl"
-          className="text-center text-c-90"
-        />
-        <DescriptiveText text="Your application has been accepted." />
-
-        <InfoCard
-          icon={<FancyAgentIcon className="size-6" />}
-          label="Role Assigned"
-          value="Polling Unit Agent"
-          variant="yellow"
-          className="w-full mt-7"
-        />
-
-        <div className="mt-7 w-full space-y-3">
-          <Label title="Your Polling Unit" />
-          <div className="px-3 py-3 border-[1.5px] border-c-90 rounded-2xl shadow-[0_4px_4px_rgba(0,0,0,0.25)] flex items-center gap-2">
-            <PollingUnitIcon className="shrink-0 size-8" />
-            <div className="">
-              <p className="font-medium text-xl">Polling Unit Name</p>
-              <span className="text-c-50 text-sm">
-                State: Osun | LGA: EJIGBO | Ward: USUAMA
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-3 mt-7">
-          <Label title="What the party expects of you on Election Day." />
-          <div>
-            <Todo text="Ensure you are at the above Polling unit before 7AM on Election day (Jan 17)" />
-            <Todo text="Complete all your election task and upload election results" />
-            <Todo text="End election and request payment from party." />
-          </div>
+        <div className="space-y-3 mt-2">
+          {isLoading && (
+            <p className="text-c-50 text-sm text-center py-4">
+              Loading elections...
+            </p>
+          )}
+          {!isLoading && elections.length === 0 && (
+            <p className="text-c-50 text-sm text-center py-4">
+              No upcoming elections found.
+            </p>
+          )}
+          {elections.map((election: any) => (
+            <SelectableCard
+              key={election.id}
+              title={election.name}
+              subtitle={election.date}
+              isSelected={election.id === selectedElectionGroupId}
+              onClick={() => onSelect(election.id, election.rawDate)}
+            />
+          ))}
         </div>
       </div>
 
@@ -412,9 +540,147 @@ export function ApplicationAcceptedPage({
           variant="black"
           size="4xl"
           className="w-full rounded-full"
+          disabled={selectedElectionGroupId === null}
           onClick={onNextClick}
         >
-          Close
+          Continue
+        </Button>
+      </StickyFooter>
+    </div>
+  );
+}
+
+export function ApplicationAcceptedPage({
+  onTakeAnotherTest,
+  onGoToHome,
+  electionGroupId,
+}: {
+  onTakeAnotherTest: () => void;
+  onGoToHome: () => void;
+  electionGroupId: number | null;
+}) {
+  const { party, user } = useAuth();
+
+  const { data: assignments = [] } = useQuery({
+    queryKey: ["pollingAgentAssignments", user?.id, electionGroupId],
+    enabled: !!user?.id && !!electionGroupId,
+    queryFn: async () => {
+      const response = await getPollingUnitAssignments({
+        data: {
+          user_id: user?.id,
+          election_group_id: electionGroupId ?? undefined,
+        },
+      });
+      if (!response?.success || !response.data?.assignments) return [];
+      return response.data.assignments;
+    },
+  });
+
+  const assignment = assignments.length > 0 ? assignments[0] : null;
+
+  const electionDateFormatted = assignment?.election_date
+    ? new Date(assignment.election_date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    : "Election day";
+
+  const Todo = ({ text }: { text: string }) => (
+    <div className="flex gap-4 py-2.5 items-start">
+      <div className="size-6 rounded-full bg-c-20 shrink-0 mt-1" />
+      <p className="text-lg leading-snug text-c-60">{text}</p>
+    </div>
+  );
+
+  return (
+    <div className="relative w-full h-full flex flex-col">
+      <PageHeader className="" onBackClick={onGoToHome} />
+
+      <div className="">
+        <TaskScore
+          score={5.55}
+          maxScore={10}
+          className="absolute top-13 left-35 opacity-80 blur-2xl -z-10"
+        />
+        <div className="absolute top-5 right-5 size-10 bg-yellow rounded-full blur-[32px] opacity-50 -z-10" />
+      </div>
+      <div className="flex-1 flex flex-col items-center gap-8 px-5 max-w-[430px] mx-auto overflow-y-auto pb-32">
+        <div className="mt-4 flex flex-col items-center">
+          <AppAvatar src={party?.logo} alt="Party Logo" className="size-16" />
+          <TitleText
+            text="Congratulations!"
+            size="xl"
+            className="text-center text-c-90 mt-4"
+          />
+          <DescriptiveText
+            text="Your application has been accepted."
+            className="text-center text-c-60 mt-1"
+          />
+        </div>
+
+        {/* Role Assigned Info Card */}
+        <RewardSumCard
+          icon={<FancyAgentIcon />}
+          label="Role Assigned"
+          value="Polling Agent"
+          className="w-full text-md"
+          labelClassName="text-c-60"
+          valueClassName="text-md"
+        />
+
+        {/* Polling Unit Box */}
+        <div className="w-full space-y-3">
+          <span className="text-[15px] font-bold text-c-80 block">
+            Your Polling Unit
+          </span>
+          <div className="px-4 py-4 border-[1.5px] border-c-90 rounded-2xl bg-white shadow-sm flex items-center gap-4">
+            <PollingUnitIcon className="shrink-0 size-8 text-purple-600" />
+            <div className="space-y-1">
+              <p className="font-medium text-c-90 leading-tight">
+                {assignment?.polling_unit_name || "Polling Unit Name"}
+              </p>
+              <span className="text-c-50 text-[13px] block leading-5">
+                State: {assignment?.state_name || "N/A"} | LGA:{" "}
+                {assignment?.lga_name || "N/A"} | Ward:{" "}
+                {assignment?.ward_name || "N/A"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Duties List */}
+        <div className="space-y-3 w-full">
+          <span className="text-[15px] font-bold text-c-80 block">
+            Your Election Day Duties
+          </span>
+          <div className="space-y-2">
+            <Todo
+              text={`Ensure you are at the above Polling unit before 7AM on Election day (${electionDateFormatted})`}
+            />
+            <Todo text="Complete all your election task and upload election results" />
+            <Todo text="End election and request payment" />
+          </div>
+        </div>
+      </div>
+
+      <StickyFooter className="pb-14 bg-gradient-to-t from-white via-white to-white/90 flex flex-col gap-3">
+        <Button
+          type="button"
+          variant="black"
+          size="4xl"
+          className="w-full rounded-full h-14"
+          onClick={onTakeAnotherTest}
+        >
+          Take Another Test
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="4xl"
+          className="w-full rounded-full h-14 border-c-90 text-c-90"
+          onClick={onGoToHome}
+        >
+          Go to Home
         </Button>
       </StickyFooter>
     </div>
@@ -439,7 +705,7 @@ export function TutorialPage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} title={`Task ${taskNumber}`} />
       <div className="flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -494,7 +760,7 @@ export function TaskCompletedPage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} />
       <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -557,15 +823,42 @@ export function TaskCompletedPage({
 export function FinalScorePage({
   score,
   maxScore,
+  potentialPayout,
   onNextClick,
+  electionGroupId,
 }: {
   score: number;
   maxScore: number;
+  potentialPayout: number;
   onNextClick: () => void;
+  electionGroupId: number | null;
 }) {
   const handleBackClick = () => {
     console.log("Go Back Clicked!");
   };
+
+  const { data: testsRes, isLoading } = useQuery({
+    queryKey: ["practiceTests", electionGroupId],
+    queryFn: async () => {
+      if (!electionGroupId) return null;
+      return listPracticeTests({ data: { electionGroupId } });
+    },
+    enabled: !!electionGroupId,
+  });
+
+  let practiceHistory: any[] = [];
+  if (testsRes?.success && testsRes.data?.practice_tests?.length > 0) {
+    try {
+      const record = testsRes.data.practice_tests[0];
+      const attempts = JSON.parse(record.test_attempts || "[]");
+      practiceHistory = Array.isArray(attempts) ? attempts : [];
+    } catch (e) {
+      console.error("Failed to parse test attempts", e);
+    }
+  }
+
+  // Reverse so newest attempts show up first
+  practiceHistory.reverse();
 
   const PracticeHistoryCard = ({
     title,
@@ -591,7 +884,7 @@ export function FinalScorePage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} />
       <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -614,7 +907,10 @@ export function FinalScorePage({
           <InfoCard
             icon={<FancyMoneyBagIcon className="size-6" />}
             label="Final Score Payout"
-            value="+₦365"
+            value={`+₦${Math.min(
+              potentialPayout,
+              Math.round((score / maxScore) * potentialPayout),
+            ).toLocaleString()}`}
             variant="yellow"
             className="w-full"
           />
@@ -628,25 +924,43 @@ export function FinalScorePage({
         <div className="space-y-2 mt-5">
           <Label title="My Performance History" />
 
-          <div className="py-1 border border-c-80 rounded-2xl bg-background shadow-[0_4px_4px_rgba(0,0,0,0.25)]">
-            <PracticeHistoryCard
-              title="Practice 1"
-              score={6}
-              maxScore={10}
-              date="Jun 14, 26"
-            />
-            <PracticeHistoryCard
-              title="Practice 2"
-              score={9.4}
-              maxScore={10}
-              date="Jun 14, 26"
-            />
-            <PracticeHistoryCard
-              title="Practice 3"
-              score={2.4}
-              maxScore={10}
-              date="Jun 14, 26"
-            />
+          <div className="py-1 border border-c-80 rounded-2xl bg-background shadow-[0_4px_4px_rgba(0,0,0,0.25)] min-h-[100px]">
+            {isLoading ? (
+              <p className="text-center py-6 text-sm text-c-50">
+                Loading history...
+              </p>
+            ) : practiceHistory.length > 0 ? (
+              practiceHistory.map((attempt, idx) => {
+                const isToday = attempt.completed_at
+                  ? new Date(attempt.completed_at).toDateString() ===
+                    new Date().toDateString()
+                  : true;
+
+                const dateStr =
+                  attempt.completed_at && !isToday
+                    ? new Date(attempt.completed_at).toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric", year: "2-digit" },
+                      )
+                    : "Today";
+
+                const displayIndex = practiceHistory.length - idx;
+
+                return (
+                  <PracticeHistoryCard
+                    key={idx}
+                    title={`Practice ${displayIndex}`}
+                    score={Number((attempt.final_score / 10).toFixed(1))}
+                    maxScore={10}
+                    date={dateStr}
+                  />
+                );
+              })
+            ) : (
+              <p className="text-center py-6 text-sm text-c-50">
+                No practice history yet.
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -704,7 +1018,7 @@ export function PracticalQuestionPage({
   };
 
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={handleBackClick} title={`Task ${taskNumber}`} />
       <div className="relative flex flex-col gap-3 h-full px-4 max-w-[430px]">
         {/* <BackgroundDesign /> */}
@@ -761,7 +1075,7 @@ export function QuizPage({
   onSelectOption: (id: number) => void;
 }) {
   return (
-    <div className="w-full h-svh">
+    <div className="w-full h-full">
       <PageHeader onBackClick={onGoBackClick} title={`Task ${taskNumber}`} />
       <div className="flex flex-col gap-3 h-full px-4 max-w-[430px]">
         <TitleText text={title} size="md" />
@@ -947,11 +1261,35 @@ export function DashboardPage({
   const hasNotRequestedPayout = taskType === "requestPayout";
   const noVotersReffered = taskType === "referVoters";
 
+  const handlePracticeWrong = () => {
+    showFeedbackToast(false, failedAttemptCount + 1);
+    onWrong?.();
+  };
+
+  const handleReportClick = () => {
+    const isCorrect = isThisCorrect("giveReport");
+    if (!isCorrect) {
+      showFeedbackToast(false, failedAttemptCount + 1);
+      onWrong?.();
+    } else {
+      showFeedbackToast(true, failedAttemptCount);
+      const params = new URLSearchParams(window.location.search);
+      params.set("failedAttemptCount", String(failedAttemptCount));
+      params.set("isReport", "true");
+      navigate({
+        to: `/give-update?${params.toString()}`,
+      });
+    }
+  };
+
   return (
     <div className="w-full min-h-screen">
-      <HomeHeader daysLeft={daysLeft} />
+      <div className="sticky top-0 z-50 flex items-center justify-center bg-blue-500 text-white font-bold w-full h-8">
+        <span className="text-center">Practice Mode 💪</span>
+      </div>
+      <HomeHeader daysLeft={daysLeft} onPracticeClick={handlePracticeWrong} />
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
-      <MyPollingUnit />
+      <MyPollingUnit onPracticeClick={handlePracticeWrong} />
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           {showObjectives && (
@@ -962,32 +1300,14 @@ export function DashboardPage({
                     key={item.title}
                     isCompleted={item.isCompleted}
                     title={item.title}
-                    // onClick={() => navigate({ to: "/report" })}
+                    // onClick={() => navigate({ to: "/give-update", search: { isReport: true } })}
                   />
                 ))}
                 <div className="mb-2 mt-2 px-4">
                   <Button
                     type="button"
                     size="extra-large"
-                    onClick={() => {
-                      const isCorrect = isThisCorrect("giveReport");
-                      if (!isCorrect) {
-                        showFeedbackToast(false, failedAttemptCount + 1);
-                        onWrong?.();
-                      } else {
-                        showFeedbackToast(true, failedAttemptCount);
-                        const params = new URLSearchParams(
-                          window.location.search,
-                        );
-                        params.set(
-                          "failedAttemptCount",
-                          String(failedAttemptCount),
-                        );
-                        navigate({
-                          to: `/give-update?${params.toString()}`,
-                        });
-                      }
-                    }}
+                    onClick={handleReportClick}
                     className="w-full bg-[#2D2D2D] hover:bg-[#3D3D3D] active:bg-[#202020] text-white rounded-[12px]"
                   >
                     <ReportIcon className="w-5 h-5 shrink-0" />
@@ -998,7 +1318,10 @@ export function DashboardPage({
             </CarouselItem>
           )}
           <CarouselItem>
-            <CandidatesLeaderboard />
+            <CandidatesLeaderboard
+              onPracticeClick={handlePracticeWrong}
+              onReportClick={handleReportClick}
+            />
           </CarouselItem>
         </CarouselContent>
       </Carousel>
@@ -1137,7 +1460,8 @@ export function DashboardPage({
 
         {noVotersReffered && (
           <ReferralCard
-            onClick={() => {
+            onClick={handlePracticeWrong}
+            onCopyClick={() => {
               const isCorrect = isThisCorrect("referVoters");
               showFeedbackToast(isCorrect, failedAttemptCount + 1);
               if (isCorrect) {

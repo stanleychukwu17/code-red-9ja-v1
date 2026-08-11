@@ -76,7 +76,6 @@ export function ActivitiesCard({
     ],
     queryFn: () => fetchPollingUnitUpdates({ data: buildQueryData(false) }),
   });
-  console.log("🧲 UPDATES DATA:", updatesData);
 
   const { data: reportsData, isLoading: isLoadingReports } = useQuery({
     queryKey: [

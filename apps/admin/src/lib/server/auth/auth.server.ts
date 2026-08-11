@@ -133,7 +133,6 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       ];
 
       if (logOutConditions.includes(result?.message)) {
-        console.log("cleared cookies because of this result", result);
         clearAuthCookies();
       } else {
         console.log("other errors for token error", result);

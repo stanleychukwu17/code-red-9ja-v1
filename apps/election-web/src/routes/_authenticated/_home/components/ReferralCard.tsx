@@ -6,9 +6,14 @@ import { GreyCardWrapper } from "./Shared";
 import { useCopyToClipboard } from "usehooks-ts";
 import { toast } from "sonner";
 
-export function ReferralCard({ onClick }: { onClick: () => void }) {
-  const { party } = useAuth();
-  const referralCode = "DAN-40";
+export function ReferralCard({
+  onClick,
+  onCopyClick,
+}: {
+  onClick: () => void;
+  onCopyClick?: () => void;
+}) {
+  const { party, user } = useAuth();
   const [_, copy] = useCopyToClipboard();
   const partyName = party?.shortName || party?.name || "Accord";
 
@@ -38,11 +43,12 @@ export function ReferralCard({ onClick }: { onClick: () => void }) {
         <div
           className="h-14 rounded-2xl border border-c-90 bg-white flex items-center justify-center font-bold cursor-pointer hover:bg-gray-50 transition-colors"
           onClick={() => {
-            copy(referralCode);
+            copy(user?.referral_code || "None yet");
             toast.success("Copied to clipboard", { position: "top-center" });
+            onCopyClick?.();
           }}
         >
-          <span>{referralCode}</span>
+          <span>{user?.referral_code || "None yet"}</span>
         </div>
       </div>
 

@@ -98,6 +98,37 @@ func (ns NullMarketingCampaignType) Value() (driver.Value, error) {
 	return string(ns.MarketingCampaignType), nil
 }
 
+type AgentEarning struct {
+	ID                      int64              `json:"id"`
+	UserID                  int64              `json:"user_id"`
+	PartyID                 int16              `json:"party_id"`
+	ElectionGroupID         int64              `json:"election_group_id"`
+	RoleType                string             `json:"role_type"`
+	BasePaymentKobo         int64              `json:"base_payment_kobo"`
+	EarningsAllocation      []byte             `json:"earnings_allocation"`
+	ReadinessScore          pgtype.Numeric     `json:"readiness_score"`
+	ResultsScore            pgtype.Numeric     `json:"results_score"`
+	UpdatesScore            pgtype.Numeric     `json:"updates_score"`
+	AttendanceScore         pgtype.Numeric     `json:"attendance_score"`
+	ElectionStartScore      pgtype.Numeric     `json:"election_start_score"`
+	ElectionEndScore        pgtype.Numeric     `json:"election_end_score"`
+	LiveVotersScore         pgtype.Numeric     `json:"live_voters_score"`
+	ReadinessEarnedKobo     int64              `json:"readiness_earned_kobo"`
+	ResultsEarnedKobo       int64              `json:"results_earned_kobo"`
+	UpdatesEarnedKobo       int64              `json:"updates_earned_kobo"`
+	AttendanceEarnedKobo    int64              `json:"attendance_earned_kobo"`
+	ElectionStartEarnedKobo int64              `json:"election_start_earned_kobo"`
+	ElectionEndEarnedKobo   int64              `json:"election_end_earned_kobo"`
+	LiveVotersEarnedKobo    int64              `json:"live_voters_earned_kobo"`
+	TotalEarnedKobo         int64              `json:"total_earned_kobo"`
+	Status                  string             `json:"status"`
+	CalculatedAt            pgtype.Timestamptz `json:"calculated_at"`
+	ApprovedAt              pgtype.Timestamptz `json:"approved_at"`
+	PaidAt                  pgtype.Timestamptz `json:"paid_at"`
+	CreatedAt               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+}
+
 type AuditLog struct {
 	ID         int64              `json:"id"`
 	Module     pgtype.Text        `json:"module"`
@@ -804,21 +835,22 @@ type PagesVerified struct {
 }
 
 type Party struct {
-	ID                      int16              `json:"id"`
-	ShortName               string             `json:"short_name"`
-	Name                    string             `json:"name"`
-	Logo                    string             `json:"logo"`
-	LogoFileID              pgtype.Int8        `json:"logo_file_id"`
-	DisplayOrder            int32              `json:"display_order"`
-	Status                  string             `json:"status"`
-	Slots                   int32              `json:"slots"`
-	IsVerified              pgtype.Bool        `json:"is_verified"`
-	DiscountPercentage      pgtype.Numeric     `json:"discount_percentage"`
-	AgentPaymentBalanceKobo int64              `json:"agent_payment_balance_kobo"`
-	AgentPaymentAllocation  []byte             `json:"agent_payment_allocation"`
-	AgentAcquisitionTargets []byte             `json:"agent_acquisition_targets"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
+	ID                         int16              `json:"id"`
+	ShortName                  string             `json:"short_name"`
+	Name                       string             `json:"name"`
+	Logo                       string             `json:"logo"`
+	LogoFileID                 pgtype.Int8        `json:"logo_file_id"`
+	DisplayOrder               int32              `json:"display_order"`
+	Status                     string             `json:"status"`
+	Slots                      int32              `json:"slots"`
+	IsVerified                 pgtype.Bool        `json:"is_verified"`
+	DiscountPercentage         pgtype.Numeric     `json:"discount_percentage"`
+	AgentPaymentBalanceKobo    int64              `json:"agent_payment_balance_kobo"`
+	AgentPaymentAllocationKobo []byte             `json:"agent_payment_allocation_kobo"`
+	AgentAcquisitionTargets    []byte             `json:"agent_acquisition_targets"`
+	AutoAcceptApplications     []byte             `json:"auto_accept_applications"`
+	CreatedAt                  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyApplication struct {
@@ -888,6 +920,7 @@ type PartyMarketingCampaign struct {
 	EndDate         pgtype.Timestamptz      `json:"end_date"`
 	Status          MarketingCampaignStatus `json:"status"`
 	Budget          pgtype.Numeric          `json:"budget"`
+	ReferralAmount  pgtype.Numeric          `json:"referral_amount"`
 	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
 	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
@@ -963,6 +996,8 @@ type Plan struct {
 	Features             []byte                `json:"features"`
 	ScopesRecommendation []byte                `json:"scopes_recommendation"`
 	ColorHex             pgtype.Text           `json:"color_hex"`
+	DarkColorHex         pgtype.Text           `json:"dark_color_hex"`
+	ReferralAmount       pgtype.Numeric        `json:"referral_amount"`
 	IsActive             bool                  `json:"is_active"`
 	DisplayOrder         int32                 `json:"display_order"`
 	CreatedAt            pgtype.Timestamptz    `json:"created_at"`
@@ -1040,6 +1075,7 @@ type PollingUnitResult struct {
 	ResultSheetVideoUrl   pgtype.Text        `json:"result_sheet_video_url"`
 	Status                string             `json:"status"`
 	AiExtractedData       []byte             `json:"ai_extracted_data"`
+	ResultIsAiGenerated   pgtype.Bool        `json:"result_is_ai_generated"`
 	AiConfidenceScore     pgtype.Numeric     `json:"ai_confidence_score"`
 	DisputedReason        pgtype.Text        `json:"disputed_reason"`
 	ConfirmedAt           pgtype.Timestamptz `json:"confirmed_at"`
@@ -1070,6 +1106,21 @@ type PollingUnitUpdate struct {
 	ReportTypes                 []string           `json:"report_types"`
 	CreatedAt                   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type Referral struct {
+	ID              int64              `json:"id"`
+	UserReferralID  pgtype.Int8        `json:"user_referral_id"`
+	PartyID         pgtype.Int2        `json:"party_id"`
+	ElectionGroupID pgtype.Int4        `json:"election_group_id"`
+	ReferrerUserID  int64              `json:"referrer_user_id"`
+	ReferredUserID  int64              `json:"referred_user_id"`
+	Milestone       string             `json:"milestone"`
+	Status          pgtype.Text        `json:"status"`
+	AmountToPay     pgtype.Numeric     `json:"amount_to_pay"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	PaidAt          pgtype.Timestamptz `json:"paid_at"`
 }
 
 type Role struct {
@@ -1169,9 +1220,9 @@ type User struct {
 	HasRole         pgtype.Bool        `json:"has_role"`
 	PartyID         pgtype.Int2        `json:"party_id"`
 	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
-	ReferralCode    pgtype.Text        `json:"referral_code"`
-	ReferredByCode  pgtype.Text        `json:"referred_by_code"`
 	AccountStatus   pgtype.Text        `json:"account_status"`
+	ReferralCode    pgtype.Text        `json:"referral_code"`
+	ReferredByID    pgtype.Int8        `json:"referred_by_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1206,14 +1257,27 @@ type UserPracticeTest struct {
 	UserID          int64              `json:"user_id"`
 	ElectionGroupID pgtype.Int8        `json:"election_group_id"`
 	Role            string             `json:"role"`
-	Sequence        int16              `json:"sequence"`
-	TaskStats       []byte             `json:"task_stats"`
-	FinalScore      pgtype.Numeric     `json:"final_score"`
+	TestAttempts    []byte             `json:"test_attempts"`
+	OverallScore    pgtype.Numeric     `json:"overall_score"`
 	Status          string             `json:"status"`
-	StartedAt       pgtype.Timestamptz `json:"started_at"`
-	CompletedAt     pgtype.Timestamptz `json:"completed_at"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UserReferral struct {
+	ID                                int64              `json:"id"`
+	UserID                            int64              `json:"user_id"`
+	PartyID                           pgtype.Int2        `json:"party_id"`
+	ElectionGroupID                   pgtype.Int4        `json:"election_group_id"`
+	TotalReferrals                    pgtype.Int4        `json:"total_referrals"`
+	AgentReferrals                    pgtype.Int4        `json:"agent_referrals"`
+	UnpaidReferrals                   pgtype.Int4        `json:"unpaid_referrals"`
+	DutiesCompletedReferrals          pgtype.Int4        `json:"duties_completed_referrals"`
+	DutiesCompletedAndUnpaidReferrals pgtype.Int4        `json:"duties_completed_and_unpaid_referrals"`
+	PotentialEarnings                 pgtype.Numeric     `json:"potential_earnings"`
+	EarnedAmount                      pgtype.Numeric     `json:"earned_amount"`
+	CreatedAt                         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserRole struct {
@@ -1287,7 +1351,7 @@ type UsersPhoneNumber struct {
 	Phone           string      `json:"phone"`
 	RawInput        string      `json:"raw_input"`
 	Phonecode       string      `json:"phonecode"`
-	OnWhatsapp      pgtype.Text `json:"on_whatsapp"`
+	OnWhatsapp      pgtype.Bool `json:"on_whatsapp"`
 	IsDefault       pgtype.Bool `json:"is_default"`
 	IsActive        pgtype.Bool `json:"is_active"`
 }

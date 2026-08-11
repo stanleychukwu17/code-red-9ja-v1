@@ -47,7 +47,7 @@ function ElectionEnd() {
       return res;
     },
     onSuccess: () => {
-      navigate({ to: "/home" });
+      navigate({ to: "/" });
     },
     onError: (err: any) => {
       toast.error(err.message || "An error occurred while submitting.");
@@ -218,7 +218,7 @@ function ElectionEnd() {
               type="button"
               variant="grey"
               size="4xl"
-              onClick={() => navigate({ to: "/home" })}
+              onClick={() => navigate({ to: "/" })}
             >
               Cancel
             </Button>

@@ -13,7 +13,10 @@ export const setUserDetailsCookie = (userDetails: any) => {
 };
 
 // Helper function to set auth cookies
-const setAuthCookies = (tokens: { refreshToken?: string; accessToken?: string }) => {
+const setAuthCookies = (tokens: {
+  refreshToken?: string;
+  accessToken?: string;
+}) => {
   if (tokens.refreshToken) {
     setCookie("refresh_token", tokens.refreshToken, {
       httpOnly: true,
@@ -49,8 +52,6 @@ export const clearAuthCookies = () => {
   });
 };
 
-
-
 // Logs in a party member user
 export const loginPartyAppImpl = createServerOnlyFn(async ({ data }) => {
   try {
@@ -62,7 +63,10 @@ export const loginPartyAppImpl = createServerOnlyFn(async ({ data }) => {
 
     const result = await response.json();
     if (result.success && result.data?.refreshToken) {
-      setAuthCookies({ refreshToken: result.data.refreshToken, accessToken: result.data.accessToken });
+      setAuthCookies({
+        refreshToken: result.data.refreshToken,
+        accessToken: result.data.accessToken,
+      });
       if (result.data.user) {
         setUserDetailsCookie(result.data.user);
       }
@@ -71,9 +75,14 @@ export const loginPartyAppImpl = createServerOnlyFn(async ({ data }) => {
     }
     return result;
   } catch (error) {
-    return { status: "error", message: "Connection error. Please try again later. " + (error as Error)?.message };
+    return {
+      status: "error",
+      message:
+        "Connection error. Please try again later. " +
+        (error as Error)?.message,
+    };
   }
-})
+});
 
 // Refreshes the user's access token by sending a POST request to the server with the user's refresh token.
 export const refreshUserTokenImpl = createServerOnlyFn(async () => {
@@ -116,7 +125,6 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       ];
 
       if (logOutConditions.includes(result?.message)) {
-        console.log("cleared cookies because of this result", result);
         clearAuthCookies();
       } else {
         console.log("other errors for token error", result);
@@ -130,7 +138,9 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
   } catch (error) {
     return {
       status: "error",
-      message: "Connection error. Please try again later. " + (error as Error)?.message,
+      message:
+        "Connection error. Please try again later. " +
+        (error as Error)?.message,
     };
   }
 });
@@ -139,7 +149,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {
   const refreshToken = getCookie("refresh_token");
   return { status: refreshToken ? "success" : "error" };
-})
+});
 
 export const getUserDetailsCookieImpl = createServerOnlyFn(async () => {
   const userDetailsCookie = getCookie("user_details");
@@ -173,4 +183,3 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
     clearAuthCookies();
   }
 });
-

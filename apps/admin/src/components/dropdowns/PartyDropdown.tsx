@@ -4,6 +4,7 @@ import {
   deleteParty,
   updatePartyStateAllowances,
   getPartyAgentPaymentAllocation,
+  togglePartyVerification,
 } from "#/lib/server/parties";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
@@ -48,6 +49,27 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
     },
   });
 
+  const toggleVerificationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await togglePartyVerification({
+        data: { id: data.id, is_verified: !data.is_verified },
+      });
+      if (!res.success) {
+        throw new Error(res.message || "Failed to toggle verification");
+      }
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["parties"] });
+      toast.success(
+        `Party marked as ${!data.is_verified ? "verified" : "unverified"}`,
+      );
+    },
+    onError: (err: any) => {
+      toast.error(err.message || "Something went wrong");
+    },
+  });
+
   const group1: TDropdownGroup = [
     {
       title: "Edit",
@@ -58,11 +80,11 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
       },
     },
     {
-      title: "Add/Edit badge",
+      title: data.is_verified ? "Mark as unverified" : "Mark as verified",
       icon: <Award className="size-4" />,
       action: () => {
         setOpenMenu(false);
-        setOpenBadgeDialog(true);
+        toggleVerificationMutation.mutate();
       },
       className: "cursor-pointer!",
     },
@@ -123,7 +145,6 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
         partyId={data.id}
         fetchTargets={async () => null}
         updateTargets={async (partyId, values) => {
-          console.log("Targets submitted", values);
           return { success: true };
         }}
         onSuccess={() => {

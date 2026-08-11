@@ -19,6 +19,7 @@ import (
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
+	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
 	authhandler "free9ja/api/internal/handler/auth"
 	bodieshandler "free9ja/api/internal/handler/bodies"
 	electiongroupshandler "free9ja/api/internal/handler/election_groups"
@@ -35,6 +36,8 @@ import (
 	puresultshandler "free9ja/api/internal/handler/polling_unit_results"
 	puupdateshandler "free9ja/api/internal/handler/polling_unit_updates"
 	pollingunitshandler "free9ja/api/internal/handler/polling_units"
+	practicetestshandler "free9ja/api/internal/handler/practice_tests"
+	referralshandler "free9ja/api/internal/handler/referrals"
 	seedhandler "free9ja/api/internal/handler/seed"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
 	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
@@ -43,20 +46,20 @@ import (
 	systemsettingshandler "free9ja/api/internal/handler/system_settings"
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
-	practicetestshandler "free9ja/api/internal/handler/practice_tests"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
 	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
 	"free9ja/api/internal/service/audit"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
+	earningsservice "free9ja/api/internal/service/earnings"
 	electiongroupsservice "free9ja/api/internal/service/election_groups"
 	electionstats "free9ja/api/internal/service/election_stats"
 	electionsservice "free9ja/api/internal/service/elections"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
+	filesservice "free9ja/api/internal/service/files"
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
-	filesservice "free9ja/api/internal/service/files"
 	officesservice "free9ja/api/internal/service/offices"
 	pageverificationsservice "free9ja/api/internal/service/page_verifications"
 	partiesservice "free9ja/api/internal/service/parties"
@@ -67,6 +70,7 @@ import (
 	puupdates "free9ja/api/internal/service/polling_unit_updates"
 	pollingunitsservice "free9ja/api/internal/service/polling_units"
 	r2service "free9ja/api/internal/service/r2"
+	referralsservice "free9ja/api/internal/service/referrals"
 	seedservice "free9ja/api/internal/service/seed"
 	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
 	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
@@ -129,6 +133,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
 	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
 	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateAssemblyConstituenciesService(q, rdb)
+	referralsService := referralsservice.NewReferralsService(q)
 
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
@@ -141,34 +146,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
 
-	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
-	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
-	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance)
-	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
-	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, q, utilsInstance)
-	stateAssemblyConstituenciesHandler := stateassemblyconstituencieshandler.NewHandler(stateAssemblyConstituenciesService, q, utilsInstance)
-	federalConstituenciesHandler := federalconstituencieshandler.NewHandler(federalConstituenciesService, q, utilsInstance)
-	wardsHandler := wardshandler.NewHandler(wardsService, q, utilsInstance)
-	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, q, utilsInstance)
-	officesHandler := officeshandler.NewHandler(officesService, utilsInstance)
-	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
-	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
-	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
-	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, utilsInstance)
-	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
-	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor)
-	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
-	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
-	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
-	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
-	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
-	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
-	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
-	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
-	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance)
-
-	// Initialize the R2 service (nil-safe: file endpoints return an error if un-configured)
-	var filesHandler *fileshandler.Handler
+	// Initialize the R2 service
 	var r2Svc *r2service.R2Service
 	var r2Err error
 	if cfg != nil {
@@ -185,8 +163,40 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r2Err = errors.New("no config provided")
 	}
 	if r2Err != nil {
-		slog.Warn("R2 service not configured — file upload endpoints will be unavailable", "reason", r2Err)
-	} else {
+		slog.Warn("R2 service not configured", "reason", r2Err)
+	}
+
+	authHandler := authhandler.NewHandler(authService, usersService, filesService, utilsInstance)
+	bodiesHandler := bodieshandler.NewHandler(bodiesService, q, utilsInstance, rdb)
+	partiesHandler := partieshandler.NewHandler(partiesService, auditService, filesService, utilsInstance, r2Svc)
+	statesHandler := stateshandler.NewHandler(statesService, utilsInstance)
+	senatorialDistrictsHandler := senatorialdistrictshandler.NewHandler(senatorialDistrictsService, q, utilsInstance)
+	stateAssemblyConstituenciesHandler := stateassemblyconstituencieshandler.NewHandler(stateAssemblyConstituenciesService, q, utilsInstance)
+	federalConstituenciesHandler := federalconstituencieshandler.NewHandler(federalConstituenciesService, q, utilsInstance)
+	wardsHandler := wardshandler.NewHandler(wardsService, q, utilsInstance)
+	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, q, utilsInstance)
+	officesHandler := officeshandler.NewHandler(officesService, utilsInstance)
+	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
+	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
+	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
+	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, utilsInstance)
+	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
+	earningsSvc := earningsservice.NewService(q, pool)
+	pollingUnitAssignmentsHandler := puassignmentshandler.NewHandler(pollingUnitAssignmentsService, usersService, pollingUnitUpdatesService, utilsInstance, distributor, earningsSvc)
+	partyApplicationsHandler := partyapplicationshandler.NewHandler(partyApplicationsService, usersService, utilsInstance)
+	pollingUnitUpdatesHandler := puupdateshandler.NewHandler(pollingUnitUpdatesService, utilsInstance, distributor)
+	pollingUnitResultsHandler := puresultshandler.NewHandler(pollingUnitResultsService, utilsInstance, distributor)
+	supervisorAssignmentsHandler := supervisorassignmentshandler.NewHandler(supervisorAssignmentsService, utilsInstance)
+	webhookHandler := webhookshandler.NewHandler(partiesService, usersService, monnifyClient, utilsInstance)
+	electionResultsHandler := electionresultshandler.NewHandler(pool, utilsInstance)
+	seedHandler := seedhandler.NewHandler(seedService, utilsInstance)
+	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
+	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsSvc, partyApplicationsService)
+	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsSvc, utilsInstance)
+	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
+
+	var filesHandler *fileshandler.Handler
+	if r2Svc != nil {
 		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
 	}
 
@@ -218,6 +228,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP) // Send forgot-password OTP
 	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                               // Check NIN endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                     // Check Username endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)             // Check Referral Code endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                               // Register endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                     // Login endpoint
 	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                   // Logout endpoint
@@ -339,6 +350,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/parties/{id}", partiesHandler.UpdateParty)
 		r.Delete("/api/v1/parties/{id}", partiesHandler.DeleteParty)
 		r.Put("/api/v1/admin/parties/{id}/discount", partiesHandler.UpdatePartyDiscount)
+		r.Put("/api/v1/admin/parties/{id}/verify", partiesHandler.TogglePartyVerification)
 		// manual wallet creation for a party (in case auto-create failed)
 		r.Post("/api/v1/parties/{id}/wallet", partiesHandler.CreatePartyWalletHandler)
 		// slot pricing settings
@@ -417,6 +429,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/elections/{id}", electionsHandler.DeleteElection)
 		r.Post("/api/v1/elections/{id}/candidates", electionsHandler.SyncElectionCandidates)
 
+		// referrals admin mutations
+		r.Post("/api/v1/admin/referrals", referralsHandler.CreateReferral)
+		r.Get("/api/v1/admin/referrals", referralsHandler.ListReferrals)
+		r.Get("/api/v1/admin/referrals/{id}", referralsHandler.GetReferral)
+		r.Put("/api/v1/admin/referrals/{id}", referralsHandler.UpdateReferral)
+
 		// only admins can permanently delete files
 		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))
 	})
@@ -448,6 +466,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/users/me/wallet", usersHandler.GetMyWallet)
 		r.Get("/api/v1/users/me/wallet/transactions", usersHandler.ListMyWalletTransactions)
 		r.Post("/api/v1/users/me/wallet/withdraw", usersHandler.WithdrawFromUserWallet)
+		r.Post("/api/v1/users/me/referral-code", usersHandler.GenerateReferralCode)
+		r.Get("/api/v1/users/me/referrals", referralsHandler.ListMyReferrals)
+		r.Get("/api/v1/referrals/stats", referralsHandler.GetReferralStats)
+		r.Get("/api/v1/referrals", referralsHandler.ListReferredUsers)
 		r.Post("/api/v1/users/{id}/wallet", usersHandler.CreateUserWalletHandler)
 		r.Post("/api/v1/auth/register-candidate", authHandler.RegisterCandidatePlaceholder)
 		r.Post("/api/v1/elections/did-not-vote", electionsHandler.CreateDidNotVoteReason)
@@ -483,10 +505,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		r.Post("/api/v1/parties/{id}/join", partiesHandler.JoinParty)
 		r.Post("/api/v1/parties/{id}/leave", partiesHandler.LeaveParty)
-		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocation)
+		r.Put("/api/v1/parties/{id}/allowances/settings", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Post("/api/v1/parties/{id}/agent-payment-deposits", partiesHandler.DepositAllowance)
-		r.Get("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.GetAgentPaymentAllocation)
-		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocation)
+		r.Get("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.GetAgentPaymentAllocationKobo)
+		r.Put("/api/v1/parties/{id}/agent-payment-allocations", partiesHandler.UpdateAgentPaymentAllocationKobo)
 		r.Patch("/api/v1/parties/{id}/agent-targets", partiesHandler.UpdateAgentAcquisitionTargets)
 		r.Get("/api/v1/parties/{id}/agent-targets", partiesHandler.GetAgentAcquisitionTargets)
 		r.Post("/api/v1/parties/{id}/wallet/deposit-test", partiesHandler.DepositTest)
@@ -528,10 +550,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Patch("/api/v1/polling-unit-results/{id}/review", pollingUnitResultsHandler.ReviewResult)
 
 		// practice tests routes
-		r.Post("/api/v1/practice-tests", practiceTestsHandler.StartPracticeTest)
+		r.Post("/api/v1/practice-tests", practiceTestsHandler.SubmitPracticeTest)
 		r.Get("/api/v1/practice-tests", practiceTestsHandler.ListPracticeTests)
-		r.Patch("/api/v1/practice-tests/{id}/task", practiceTestsHandler.AppendTask)
-		r.Patch("/api/v1/practice-tests/{id}/complete", practiceTestsHandler.CompleteTest)
+		r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
 	})
 
 	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin
@@ -545,6 +566,23 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// party admins can view their own party's wallet transaction ledger
 		r.Get("/api/v1/parties/{id}/wallet/transactions", partiesHandler.ListPartyWalletTransactions)
+	})
+
+	// Agent earnings routes (authenticated users)
+	mainRouter.Group(func(r chi.Router) {
+		jwtSecret := ""
+		if cfg != nil {
+			jwtSecret = cfg.JWTSecret
+		}
+		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
+
+		// Admins/party_admins: trigger calculation, list, approve, mark paid
+		r.Post("/api/v1/agent-earnings/calculate/{assignment_id}", agentEarningsHandler.CalculateEarnings)
+		r.Get("/api/v1/agent-earnings", agentEarningsHandler.ListEarnings)
+		r.Get("/api/v1/agent-earnings/{id}", agentEarningsHandler.GetEarnings)
+		r.Get("/api/v1/agent-earnings/assignment/{assignment_id}", agentEarningsHandler.GetEarningsByAssignment)
+		r.Patch("/api/v1/agent-earnings/{id}/approve", agentEarningsHandler.ApproveEarnings)
+		r.Patch("/api/v1/agent-earnings/{id}/mark-paid", agentEarningsHandler.MarkPaid)
 	})
 
 	return mainRouter
@@ -652,3 +690,4 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 	})
 }
+

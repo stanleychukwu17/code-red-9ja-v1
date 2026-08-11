@@ -295,7 +295,7 @@ func (q *Queries) ListUserWalletTransactions(ctx context.Context, arg ListUserWa
 }
 
 const listUsersWithoutWallet = `-- name: ListUsersWithoutWallet :many
-SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_code, u.account_status, u.created_at, u.updated_at FROM users u
+SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_id, u.account_status, u.created_at, u.updated_at FROM users u 
 LEFT JOIN user_wallets uw ON uw.user_id = u.id
 WHERE uw.id IS NULL
 ORDER BY u.id ASC
@@ -328,7 +328,7 @@ type ListUsersWithoutWalletRow struct {
 	PartyID         pgtype.Int2        `json:"party_id"`
 	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
 	ReferralCode    pgtype.Text        `json:"referral_code"`
-	ReferredByCode  pgtype.Text        `json:"referred_by_code"`
+	ReferredByID    pgtype.Int8        `json:"referred_by_id"`
 	AccountStatus   pgtype.Text        `json:"account_status"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
@@ -370,7 +370,7 @@ func (q *Queries) ListUsersWithoutWallet(ctx context.Context) ([]ListUsersWithou
 			&i.PartyID,
 			&i.PollingUnitID,
 			&i.ReferralCode,
-			&i.ReferredByCode,
+			&i.ReferredByID,
 			&i.AccountStatus,
 			&i.CreatedAt,
 			&i.UpdatedAt,

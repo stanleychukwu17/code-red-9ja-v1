@@ -2,10 +2,13 @@ package partyapplications
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
+	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -47,6 +50,9 @@ type SubmitApplicationInput struct {
 	SchoolName        string
 	Phone             string
 	Address           string
+	BankAccountNumber string
+	BankCode          string
+	WhatsappPhone     string
 }
 
 func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplicationInput) ([]queries.PartyApplication, error) {
@@ -70,6 +76,11 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 	txQueries := s.queries.WithTx(tx)
 
+	phoneVal := input.Phone
+	if phoneVal == "---" {
+		phoneVal = ""
+	}
+
 	// Update user agent details
 	user, err := txQueries.UpdateUserAgentDetails(ctx, queries.UpdateUserAgentDetailsParams{
 		ID:              input.UserID,
@@ -81,7 +92,7 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		CurrentLga:      pgtype.Int4{Int32: input.CurrentLga, Valid: input.CurrentLga > 0},
 		CurrentCity:     pgtype.Int4{Int32: input.CurrentCity, Valid: input.CurrentCity > 0},
 		CurrentWard:     pgtype.Int4{Int32: input.CurrentWard, Valid: input.CurrentWard > 0},
-		Phone:           input.Phone,
+		Phone:           phoneVal,
 		PollingUnitID:   pgtype.Int4{Int32: input.PollingUnitID, Valid: input.PollingUnitID > 0},
 		Address:         input.Address,
 	})
@@ -101,6 +112,56 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		return nil, fmt.Errorf("failed to update user profile: %w", err)
 	}
 
+	// Update bank account if provided
+	if input.BankAccountNumber != "" && input.BankCode != "" {
+		// First set existing primary accounts to non-primary
+		err = txQueries.UpdateUserBankAccountsToNonPrimary(ctx, input.UserID)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update existing bank accounts: %w", err)
+		}
+
+		// Insert the new primary bank account
+		_, err = txQueries.InsertUserBankAccount(ctx, queries.InsertUserBankAccountParams{
+			UserID:        input.UserID,
+			AccountNumber: input.BankAccountNumber,
+			BankCode:      input.BankCode,
+			IsPrimary:     pgtype.Bool{Bool: true, Valid: true},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert primary bank account: %w", err)
+		}
+	}
+
+	if input.WhatsappPhone != "" {
+		rawPhone := input.WhatsappPhone
+		phonecode := "234"
+		formattedPhone := rawPhone
+
+		if len(rawPhone) > 0 && rawPhone[0] != '+' {
+			if rawPhone[0] == '0' {
+				formattedPhone = "+234" + rawPhone[1:]
+			} else if len(rawPhone) == 10 {
+				formattedPhone = "+234" + rawPhone
+			} else if !strings.HasPrefix(rawPhone, "234") {
+				formattedPhone = "+234" + rawPhone
+			} else {
+				formattedPhone = "+" + rawPhone
+			}
+		}
+
+		_, err = txQueries.UpsertUserPhoneNumber(ctx, queries.UpsertUserPhoneNumberParams{
+			UserID:     input.UserID,
+			Phone:      formattedPhone,
+			Phonecode:  phonecode,
+			RawInput:   rawPhone,
+			OnWhatsapp: pgtype.Bool{Bool: true, Valid: true},
+			IsDefault:  pgtype.Bool{Bool: false, Valid: true},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to upsert whatsapp phone number: %w", err)
+		}
+	}
+
 	apps := make([]queries.PartyApplication, 0, len(input.ElectionGroupIDs))
 	for _, egID := range input.ElectionGroupIDs {
 		// Create application
@@ -116,7 +177,23 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 		if err != nil {
 			return nil, fmt.Errorf("failed to create application: %w", err)
 		}
+
+		// Create user referral record for this election group
+		err = txQueries.CreateUserReferralRecord(ctx, queries.CreateUserReferralRecordParams{
+			UserID:          input.UserID,
+			PartyID:         pgtype.Int2{Int16: int16(input.PartyID), Valid: input.PartyID > 0},
+			ElectionGroupID: pgtype.Int4{Int32: int32(egID), Valid: egID > 0},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create user referral record: %w", err)
+		}
+
 		apps = append(apps, app)
+	}
+
+	// Process referred user's referral record linking & increment total_referrals (best effort)
+	if refErr := s.updateReferralOnApplicationSubmission(ctx, txQueries, input.UserID, int64(input.PartyID), input.ElectionGroupIDs, int16(input.CurrentState), int16(input.CurrentCountry)); refErr != nil {
+		slog.Warn("updateReferralOnApplicationSubmission failed (non-fatal)", "userID", input.UserID, "err", refErr)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
@@ -389,6 +466,50 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			} else {
 				return queries.PartyApplication{}, errors.New("polling unit ID is required for polling agents but not specified in application")
 			}
+		}
+	}
+
+	// Deduct payment based on role payment allocation
+	party, err := txQueries.GetPartyByID(ctx, int16(app.PartyID))
+	if err != nil {
+		return queries.PartyApplication{}, fmt.Errorf("failed to fetch party: %w", err)
+	}
+
+	roleKey := ""
+	switch roleType {
+	case "pollingagent", "polling_agent":
+		roleKey = "pollingAgent"
+	case "ward-election-supervisor", "ward_supervisor":
+		roleKey = "wardElectionSupervisor"
+	case "lga-election-supervisor", "lga_supervisor":
+		roleKey = "lgaElectionSupervisor"
+	case "state-election-supervisor", "state_supervisor":
+		roleKey = "stateElectionSupervisor"
+	}
+
+	var deductionKobo int64 = 0
+	if roleKey != "" && party.AgentPaymentAllocationKobo != nil {
+		var allocs map[string]struct {
+			Default int64 `json:"default"`
+		}
+		if err := json.Unmarshal(party.AgentPaymentAllocationKobo, &allocs); err == nil {
+			if alloc, ok := allocs[roleKey]; ok {
+				// The value is in Kobo now
+				deductionKobo = alloc.Default
+			}
+		}
+	}
+
+	if deductionKobo > 0 {
+		_, err = txQueries.DeductPartyAgentPaymentBalance(ctx, queries.DeductPartyAgentPaymentBalanceParams{
+			AgentPaymentBalanceKobo: deductionKobo,
+			ID:                      party.ID,
+		})
+		if err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return queries.PartyApplication{}, errors.New("insufficient payment balance: please fund your party wallet to accept this application")
+			}
+			return queries.PartyApplication{}, fmt.Errorf("failed to deduct payment balance: %w", err)
 		}
 	}
 
@@ -774,9 +895,302 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		}
 	}
 
+	// --- Referral stat update on acceptance ---
+	// Best-effort: failures are logged but do not fail the whole transaction.
+	if refErr := s.processReferralOnAcceptance(ctx, txQueries, app.UserID, int16(app.PartyID)); refErr != nil {
+		slog.Warn("processReferralOnAcceptance failed (non-fatal)", "userID", app.UserID, "err", refErr)
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PartyApplication{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
 	return updatedApp, nil
+}
+
+// processReferralOnAcceptance updates referral stats when a referred user's application is accepted (or auto-accepted).
+func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *queries.Queries, acceptedUserID int64, partyID int16) error {
+	// 1. Get candidate's referral record
+	referral, err := txQueries.GetReferralByReferredUserID(ctx, acceptedUserID)
+	if err != nil {
+		return nil // Not referred — nothing to do
+	}
+
+	// Idempotency check: if milestone is already BECAME_AGENT, skip
+	if referral.Milestone == "BECAME_AGENT" {
+		return nil
+	}
+
+	userReferralID := int64(0)
+	if referral.UserReferralID.Valid {
+		userReferralID = referral.UserReferralID.Int64
+	}
+
+	electionGroupID := int64(0)
+	if referral.ElectionGroupID.Valid {
+		electionGroupID = int64(referral.ElectionGroupID.Int32)
+	}
+
+	// If user_referral_id is not directly set on referral, try finding matching user_referrals record for referrer
+	if userReferralID <= 0 {
+		referrerID := referral.ReferrerUserID
+		if referrerID > 0 {
+			referrerRecords, err := txQueries.GetReferrerUserReferralsForParty(ctx, queries.GetReferrerUserReferralsForPartyParams{
+				UserID:  referrerID,
+				PartyID: pgtype.Int2{Int16: partyID, Valid: true},
+			})
+			if err == nil && len(referrerRecords) > 0 {
+				userReferralID = referrerRecords[0].ID
+				if referrerRecords[0].ElectionGroupID.Valid {
+					electionGroupID = int64(referrerRecords[0].ElectionGroupID.Int32)
+				}
+			}
+		}
+	}
+
+	if userReferralID <= 0 {
+		return nil
+	}
+
+	// 2. Increment agent_referrals on the user_referral record
+	if err := txQueries.IncrementUserReferralAgentCountByID(ctx, userReferralID); err != nil {
+		slog.Warn("IncrementUserReferralAgentCountByID failed", "userReferralID", userReferralID, "err", err)
+	}
+
+	// Get electionGroupID from user_referrals if still unknown
+	if electionGroupID <= 0 {
+		if urObj, urErr := txQueries.GetUserReferralByID(ctx, userReferralID); urErr == nil && urObj.ElectionGroupID.Valid {
+			electionGroupID = int64(urObj.ElectionGroupID.Int32)
+		}
+	}
+
+	// 3. Check for ongoing party marketing campaign for party & election group
+	var referralAmt pgtype.Numeric
+	hasActiveCampaign := false
+	if electionGroupID > 0 {
+		campaign, campErr := txQueries.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
+			PartyID:         int32(partyID),
+			ElectionGroupID: int32(electionGroupID),
+		})
+		if campErr == nil {
+			hasActiveCampaign = true
+			referralAmt = campaign.ReferralAmount
+		}
+	}
+
+	// 4. Update referral: set milestone = 'BECAME_AGENT' and amount_to_pay if active campaign
+	egIDPg := pgtype.Int4{Int32: int32(electionGroupID), Valid: electionGroupID > 0}
+	if err := txQueries.UpdateReferralOnAgentAcceptance(ctx, queries.UpdateReferralOnAgentAcceptanceParams{
+		ReferredUserID:  acceptedUserID,
+		AmountToPay:     referralAmt,
+		PartyID:         pgtype.Int2{Int16: partyID, Valid: true},
+		ElectionGroupID: egIDPg,
+	}); err != nil {
+		return fmt.Errorf("UpdateReferralOnAgentAcceptance: %w", err)
+	}
+
+	// 5. If active party marketing campaign exists:
+	//    - increment unpaid_referrals
+	//    - update potential_earnings
+	if hasActiveCampaign {
+		if err := txQueries.IncrementUserReferralUnpaidCountByID(ctx, userReferralID); err != nil {
+			slog.Warn("IncrementUserReferralUnpaidCountByID failed", "userReferralID", userReferralID, "err", err)
+		}
+
+		if referralAmt.Valid {
+			if err := txQueries.IncrementUserReferralPotentialEarningsByID(ctx, queries.IncrementUserReferralPotentialEarningsByIDParams{
+				ID:                userReferralID,
+				PotentialEarnings: referralAmt,
+			}); err != nil {
+				slog.Warn("IncrementUserReferralPotentialEarningsByID failed", "userReferralID", userReferralID, "err", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// updateReferralOnApplicationSubmission links a newly submitted application to the applicant's existing referral record
+// if the referral record's election_group_id / party_id / user_referral_id are still unlinked (NULL).
+func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQueries *queries.Queries, userID int64, partyID int64, submittedEGIDs []int64, currentStateID int16, currentCountryID int16) error {
+	// 1. Fetch user's referral record
+	referral, err := txQueries.GetReferralByReferredUserID(ctx, userID)
+	if err != nil {
+		return nil // User was not referred (or no referral record found)
+	}
+
+	// Only proceed if the referral record exists and has no election_group_id or user_referral_id linked yet
+	if referral.ElectionGroupID.Valid && referral.UserReferralID.Valid {
+		return nil // Already linked
+	}
+
+	referrerID := referral.ReferrerUserID
+	if referrerID <= 0 {
+		return nil
+	}
+
+	// 2. Fetch referrer's user_referrals records for this party matching the submitted election group IDs
+	referrerUserReferrals, err := txQueries.GetReferrerUserReferralsForParty(ctx, queries.GetReferrerUserReferralsForPartyParams{
+		UserID:  referrerID,
+		PartyID: pgtype.Int2{Int16: int16(partyID), Valid: partyID > 0},
+	})
+	if err != nil || len(referrerUserReferrals) == 0 {
+		return nil
+	}
+
+	// Map submitted election group IDs for fast lookup
+	submittedEGMap := make(map[int64]bool)
+	for _, egID := range submittedEGIDs {
+		submittedEGMap[egID] = true
+	}
+
+	// Filter referrer's user_referral records to only those matching submitted election group IDs
+	var matchedUserReferrals []queries.UserReferral
+	for _, ur := range referrerUserReferrals {
+		if ur.ElectionGroupID.Valid && submittedEGMap[int64(ur.ElectionGroupID.Int32)] {
+			matchedUserReferrals = append(matchedUserReferrals, ur)
+		}
+	}
+
+	if len(matchedUserReferrals) == 0 {
+		return nil
+	}
+
+	// Fetch state name for state check if currentStateID > 0
+	stateName := ""
+	if currentStateID > 0 {
+		countryID := currentCountryID
+		if countryID <= 0 {
+			countryID = 1
+		}
+		if stateObj, stateErr := txQueries.GetStateByID(ctx, queries.GetStateByIDParams{ID: currentStateID, CountryID: countryID}); stateErr == nil {
+			stateName = stateObj.Name
+		}
+	}
+
+	type candidateUR struct {
+		userReferral      queries.UserReferral
+		egID              int64
+		electionDate      pgtype.Date
+		hasActiveCampaign bool
+	}
+	var candidates []candidateUR
+
+	for _, ur := range matchedUserReferrals {
+		egID := int64(ur.ElectionGroupID.Int32)
+		eg, egErr := txQueries.GetElectionGroupByID(ctx, egID)
+		if egErr != nil {
+			continue
+		}
+
+		// 3. Fetch active party marketing campaign for party & election group
+		campaign, campErr := txQueries.GetActiveMarketingCampaignForElectionGroup(ctx, queries.GetActiveMarketingCampaignForElectionGroupParams{
+			PartyID:         int32(partyID),
+			ElectionGroupID: int32(egID),
+		})
+
+		hasActiveCampaign := false
+		if campErr == nil {
+			// Check if state.name is in party_marketing_campaign.states (JSONB array)
+			if stateName != "" && len(campaign.States) > 0 {
+				var campaignStates []string
+				if err := json.Unmarshal(campaign.States, &campaignStates); err == nil {
+					for _, sName := range campaignStates {
+						if strings.EqualFold(strings.TrimSpace(sName), strings.TrimSpace(stateName)) || sName == "All" || sName == "*" {
+							hasActiveCampaign = true
+							break
+						}
+					}
+				} else {
+					hasActiveCampaign = true
+				}
+			} else {
+				hasActiveCampaign = true
+			}
+		}
+
+		candidates = append(candidates, candidateUR{
+			userReferral:      ur,
+			egID:              egID,
+			electionDate:      eg.ElectionDate,
+			hasActiveCampaign: hasActiveCampaign,
+		})
+	}
+
+	if len(candidates) == 0 {
+		return nil
+	}
+
+	// 4. Select best candidate:
+	//    Filter for candidates with active marketing campaigns in user's state.
+	//    If 1 candidate -> select it.
+	//    If 2 or more -> select user_referral with nearest upcoming election date to today.
+	//    If none have active campaign -> fall back to nearest upcoming election date from all candidates.
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+
+	pickNearest := func(pool []candidateUR) candidateUR {
+		best := pool[0]
+		for _, c := range pool[1:] {
+			if !c.electionDate.Valid {
+				continue
+			}
+			if !best.electionDate.Valid {
+				best = c
+				continue
+			}
+			cDate := c.electionDate.Time
+			bDate := best.electionDate.Time
+			cUpcoming := !cDate.Before(today)
+			bUpcoming := !bDate.Before(today)
+			if cUpcoming && !bUpcoming {
+				best = c
+			} else if cUpcoming && bUpcoming && cDate.Before(bDate) {
+				best = c
+			}
+		}
+		return best
+	}
+
+	var activeCandidates []candidateUR
+	for _, c := range candidates {
+		if c.hasActiveCampaign {
+			activeCandidates = append(activeCandidates, c)
+		}
+	}
+
+	var selected candidateUR
+	if len(activeCandidates) > 0 {
+		selected = pickNearest(activeCandidates)
+	} else {
+		selected = pickNearest(candidates)
+	}
+
+	// 5. Update referral: set user_referral_id, party_id, election_group_id, milestone ('APPLIED') without setting amount_to_pay yet
+	if err := txQueries.UpdateReferralOnApplication(ctx, queries.UpdateReferralOnApplicationParams{
+		ID:              referral.ID,
+		UserReferralID: pgtype.Int8{Int64: selected.userReferral.ID, Valid: true},
+		PartyID:         pgtype.Int2{Int16: int16(partyID), Valid: partyID > 0},
+		ElectionGroupID: pgtype.Int4{Int32: int32(selected.egID), Valid: selected.egID > 0},
+		AmountToPay:     pgtype.Numeric{Valid: false},
+		Milestone:       "APPLIED",
+	}); err != nil {
+		slog.Error("failed to update referral record on application submission", "referral_id", referral.ID, "err", err)
+		return err
+	}
+
+	// 6. Increment selected user_referral.total_referrals count
+	if err := txQueries.IncrementUserReferralTotalCount(ctx, selected.userReferral.ID); err != nil {
+		slog.Error("failed to increment user_referral total_referrals count", "user_referral_id", selected.userReferral.ID, "err", err)
+		return err
+	}
+
+	slog.Info("✅ Successfully updated referral & incremented total_referrals count",
+		"referral_id", referral.ID,
+		"user_referral_id", selected.userReferral.ID,
+		"party_id", partyID,
+		"election_group_id", selected.egID,
+	)
+
+	return nil
 }

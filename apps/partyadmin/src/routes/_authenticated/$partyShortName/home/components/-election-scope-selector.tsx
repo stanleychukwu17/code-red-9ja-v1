@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   getAllCountries,
   getStates,
@@ -36,6 +37,31 @@ export const ElectionScopeSelector = () => {
     selectedWardId,
     setSelectedWardId,
   } = useAppContext();
+
+  // Synchronize Redux selection states with the selected election's fixed scope boundaries
+  useEffect(() => {
+    if (selectedElection) {
+      if (selectedElection.state_id !== undefined) {
+        setSelectedStateId(selectedElection.state_id || undefined);
+      }
+      if (selectedElection.senatorial_district_id !== undefined) {
+        setSelectedDistrictId(selectedElection.senatorial_district_id || undefined);
+      }
+      if (selectedElection.federal_constituency_id !== undefined) {
+        setSelectedFederalConstituencyId(selectedElection.federal_constituency_id || undefined);
+      }
+      if (selectedElection.state_constituency_id !== undefined) {
+        setSelectedStateConstituencyId(selectedElection.state_constituency_id || undefined);
+      }
+      if (selectedElection.lga_id !== undefined) {
+        setSelectedLGAId(selectedElection.lga_id || undefined);
+      }
+      if (selectedElection.ward_id !== undefined) {
+        setSelectedWardId(selectedElection.ward_id || undefined);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedElection?.id]);
 
   // Scope hierarchy values
   const scope = selectedElection?.scope; // e.g., "nationwide", "state", "senatorial-district", etc.

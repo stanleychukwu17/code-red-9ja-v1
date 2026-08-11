@@ -45,7 +45,6 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
 function ApplyPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  console.log("AUTH USER: ", user);
 
   // Form states
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(
@@ -68,12 +67,8 @@ function ApplyPage() {
   const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<
     number | null
   >(user?.polling_unit_id || null);
-  const [bankAccountNumber, setBankAccountNumber] = useState<string>(
-    user?.bank_account_number || "",
-  );
-  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(
-    user?.bank_code || null,
-  );
+  const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
+  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(null);
   const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
   const [phone, setPhone] = useState<string>(user?.phone || "");
   const [whatsappPhone, setWhatsappPhone] = useState<string>(
@@ -86,9 +81,7 @@ function ApplyPage() {
   const [schoolName, setSchoolName] = useState<string>("");
 
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
-  const [isAccountValid, setIsAccountValid] = useState(
-    !!user?.bank_account_number,
-  );
+  const [isAccountValid, setIsAccountValid] = useState(false);
 
   // UI state
   const [step, setStep] = useState<number>(1);
@@ -100,23 +93,35 @@ function ApplyPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // React Query calls
-  const { data: userProfile } = useQuery({
-    queryKey: ["userProfileMe"],
+  const { data: userMeDetails } = useQuery({
+    queryKey: ["userMeDetails"],
     queryFn: async () => {
       const res = await getUserMe();
-      return res?.success && res.data?.user?.profile ? res.data.user.profile : null;
+      return res?.success && res.data?.user ? res.data.user : null;
     },
     staleTime: Infinity,
   });
 
   useEffect(() => {
-    if (userProfile) {
-      if (userProfile.educational_status) setEducationalStatus(userProfile.educational_status);
-      if (userProfile.highest_degree) setHighestDegree(userProfile.highest_degree);
-      if (userProfile.graduation_year) setGraduationYear(userProfile.graduation_year);
-      if (userProfile.school_name) setSchoolName(userProfile.school_name);
+    if (userMeDetails) {
+      if (userMeDetails.profile?.educational_status)
+        setEducationalStatus(userMeDetails.profile.educational_status);
+      if (userMeDetails.profile?.highest_degree)
+        setHighestDegree(userMeDetails.profile.highest_degree);
+      if (userMeDetails.profile?.graduation_year)
+        setGraduationYear(userMeDetails.profile.graduation_year);
+      if (userMeDetails.profile?.school_name)
+        setSchoolName(userMeDetails.profile.school_name);
+
+      if (userMeDetails.bank_account_number) {
+        setBankAccountNumber(userMeDetails.bank_account_number);
+        setIsAccountValid(true);
+      }
+      if (userMeDetails.bank_code) {
+        setSelectedBankCode(userMeDetails.bank_code);
+      }
     }
-  }, [userProfile]);
+  }, [userMeDetails]);
 
   const { data: parties = [], isLoading: partiesLoading } = useQuery({
     queryKey: ["parties"],
@@ -218,7 +223,14 @@ function ApplyPage() {
     hasNextPage: hasNextUnits,
     isFetchingNextPage: isFetchingNextUnits,
   } = useInfiniteQuery({
-    queryKey: ["pollingUnits", selectedStateId, selectedLgaId, selectedWardId, selectedPartyId, selectedElectionIds?.[0]],
+    queryKey: [
+      "pollingUnits",
+      selectedStateId,
+      selectedLgaId,
+      selectedWardId,
+      selectedPartyId,
+      selectedElectionIds?.[0],
+    ],
     queryFn: async ({ pageParam }) => {
       const res = await getPollingUnits({
         data: {
@@ -374,6 +386,28 @@ function ApplyPage() {
           address: streetAddress,
         },
       });
+      console.log("MY DATA:", {
+        party_id: selectedPartyId,
+        election_group_ids: selectedElectionIds,
+        polling_unit_id: Number(selectedPollingUnitId),
+        avatar: user?.avatar || avatarUrl,
+        current_country: 1,
+        current_state: selectedStateId!,
+        current_lga: selectedLgaId!,
+        current_ward: selectedWardId || undefined,
+        current_city: 0,
+        bank_account_number: bankAccountNumber,
+        bank_code: selectedBankCode,
+        whatsapp_phone: whatsappPhone,
+        // data_phone: dataPhone,
+        educational_status: educationalStatus,
+        highest_degree: highestDegree,
+        graduation_year: graduationYear,
+        school_name: schoolName,
+        phone: phone,
+        address: streetAddress,
+      });
+      console.log("RESPONSE:", response);
 
       if (!response.success && response.status !== "success") {
         throw new Error(
@@ -451,7 +485,7 @@ function ApplyPage() {
         )}
         {step === 4 && (
           <Step4
-            avatarUrl={user?.avatar}
+            avatarUrl={avatarUrl || user?.avatar}
             isUploading={isUploading}
             handleUploadClick={handleUploadClick}
             fileInputRef={fileInputRef}

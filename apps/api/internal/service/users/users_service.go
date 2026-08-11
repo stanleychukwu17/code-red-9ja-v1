@@ -9,7 +9,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
 	"strconv"
-
+	"strings"
 	"sync"
 
 	"github.com/jackc/pgx/v5"
@@ -146,13 +146,13 @@ func (s *UsersService) GetUserByFakeID(ctx context.Context, fakeID int64) (queri
 
 	// Cache it in Redis
 	userWithPlacesForCache := queries.UserWithPlaces{
-		User:           userForCache,
-		CountryName:    countryName,
-		StateName:      stateName,
-		CityName:       cityName,
-		Verifications:  verifications,
-		PartyBasicInfo: partyBasicInfo,
-		Roles:          roles,
+		GetUserByFakeIDRow: userForCache,
+		CountryName:        countryName,
+		StateName:          stateName,
+		CityName:           cityName,
+		Verifications:      verifications,
+		PartyBasicInfo:     partyBasicInfo,
+		Roles:              roles,
 	}
 
 	// cache the user data in redis
@@ -429,6 +429,11 @@ func (s *UsersService) GetMoreInfoAboutThisUser(ctx context.Context, userID int6
 	return profile, nil
 }
 
+// GetUserPrimaryBankAccount fetches the primary bank account for a given user
+func (s *UsersService) GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error) {
+	return s.queries.GetUserPrimaryBankAccount(ctx, userID)
+}
+
 // AdminUpdateUser allows admins to perform a comprehensive update of user details.
 func (s *UsersService) AdminUpdateUser(ctx context.Context, id int64, fakeID int64, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, countryID, stateID int16, cityID int32, stateOfOrigin int16) error {
 	avatarFileIdPg := pgtype.Int8{Valid: false}
@@ -586,11 +591,11 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 
 	// Update or create phone numbers
 	for _, p := range phones {
-		whatsappVal := "no"
+		whatsappVal := false
 		if p.OnWhatsapp == "yes" {
-			whatsappVal = "yes"
+			whatsappVal = true
 		}
-		onWhatsapp := pgtype.Text{String: whatsappVal, Valid: true}
+		onWhatsapp := pgtype.Bool{Bool: whatsappVal, Valid: true}
 		isDefault := pgtype.Bool{Bool: p.IsDefault, Valid: true}
 
 		// if p.ID == 0, it means the phone number is new, so create it
@@ -895,4 +900,40 @@ func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
 	}
 
 	return false
+}
+func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error) {
+	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
+	if err != nil {
+		return "", err
+	}
+	if user.ReferralCode.Valid && user.ReferralCode.String != "" {
+		return user.ReferralCode.String, nil
+	}
+
+	if firstName == "" {
+		firstName = "AGENT"
+	}
+	base := strings.ToUpper(firstName)
+	var code string
+	for i := 10; i < 999; i++ {
+		code = fmt.Sprintf("%s%d", base, i)
+		exists, err := s.queries.CheckReferralCodeExists(ctx, pgtype.Text{String: code, Valid: true})
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			break
+		}
+	}
+	err = s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
+		ID:           userID,
+		ReferralCode: pgtype.Text{String: code, Valid: true},
+	})
+	if err != nil {
+		return "", err
+	}
+	// Invalidate the cache
+	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
+	s.rdb.Del(ctx, userInfoKey)
+	return code, nil
 }

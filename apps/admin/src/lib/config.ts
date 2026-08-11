@@ -145,6 +145,8 @@ export const API_URL = {
   lgaById: (id: string | number) => `${api}/lgas/${id}`,
   parties: `${api}/parties`,
   partyById: (id: string | number) => `${api}/parties/${id}`,
+  partyAgentPaymentAllocations: (id: string | number) => `${api}/parties/${id}/agent-payment-allocations`,
+  managePartyVerify: (id: string | number) => `${api}/admin/parties/${id}/verify`,
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
   deleteFile: (id: string | number) => `${api}/files/${id}`,

@@ -23,11 +23,15 @@ import {
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated")({
-  beforeLoad: async () => {
+  beforeLoad: async ({ context }) => {
     const res = await checkIfRefreshTokenInCookie();
 
     if (res.status != "success") {
       throw redirect({ to: APP_URL.auth.login });
+    }
+
+    if (context.userDetails && !context.userDetails.username) {
+      throw redirect({ to: APP_URL.auth.onboarding });
     }
   },
   component: AuthenticatedRoutes,

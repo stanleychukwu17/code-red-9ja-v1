@@ -35,7 +35,7 @@ export function PostHeader({
           variant={isReport ? "default" : "secondary"}
           size="sm"
           className={cn(
-            "px-6 rounded-full h-8",
+            "px-5 rounded-full h-10",
             isReport && "bg-red hover:bg-red/90 text-white",
           )}
           onClick={onPost}

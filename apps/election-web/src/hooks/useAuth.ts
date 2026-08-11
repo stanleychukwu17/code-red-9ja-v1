@@ -8,6 +8,10 @@ import { getElectionScopedFinalResult } from "#/lib/server/final-results";
 import { getFinalResult as getPollingUnitFinalResult } from "#/lib/server/polling_unit_results";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 import { getSupervisorAssignments } from "#/lib/server/supervisor_assignments";
+import {
+  getMyWallet,
+  createUserWallet,
+} from "#/lib/server/users";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
   selectSelectedElection,
@@ -19,6 +23,7 @@ import {
   setSelectedElection as setSelectedElectionAction,
   setSelectedElectionGroup as setSelectedElectionGroupAction,
 } from "#/redux/slice/electionSlice";
+import { updateAuthState } from "#/redux/slice/authSlice";
 
 export interface PartyDetails {
   id?: number;
@@ -57,6 +62,7 @@ export interface UserDetails {
   avatar?: string;
   phone?: string;
   username?: string;
+  referral_code?: string;
   last_name?: string;
   first_name?: string;
   middle_name?: string;
@@ -136,8 +142,6 @@ export const useAuth = () => {
       clearInterval(interval);
     };
   }, [electionDay, dispatch]);
-
-  console.log({ selectedElectionGroup, selectedElection });
 
   // 1. Fetch party details
   const partyId = user?.party?.id ?? user?.party_id;
@@ -334,13 +338,34 @@ export const useAuth = () => {
 
   const finalResultObj = scopedResultData?.data?.final_result || null;
 
-  console.log("🙌🥂 Final Result Obj:", {
-    scopedResultData,
-    finalResultObj,
+  const fetchMyWallet = useServerFn(getMyWallet);
+  const createMyWalletFn = useServerFn(createUserWallet);
+
+  const { data: userWallet } = useQuery({
+    queryKey: ["userWallet", user?.id],
+    enabled: !!user?.id,
+    queryFn: async () => {
+      const res = await fetchMyWallet();
+      if (res?.success && res.data?.wallet) {
+        return res.data.wallet;
+      }
+
+      // If wallet not found, attempt to create it automatically
+      if (user?.fake_id) {
+        const createRes = await createMyWalletFn({
+          data: { id: user.id },
+        });
+        if (createRes?.success && createRes.data?.wallet) {
+          return createRes.data.wallet;
+        }
+      }
+      return null;
+    },
   });
 
   return {
     user,
+    userWallet,
     party: party || {
       id: undefined,
       shortName: "",

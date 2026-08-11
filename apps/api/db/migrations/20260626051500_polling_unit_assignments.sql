@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   results_submitted_count INT NOT NULL DEFAULT 0,
   results_expected_to_submit_count INT NOT NULL DEFAULT 0,
   live_voters_referred_count INT NOT NULL DEFAULT 0,
+  -- {"07:00":2, "07:30": 3, "08:00": 1, ...}
   interval_updates JSONB DEFAULT '{}'::jsonb,
 
   -- Score from 0-100 reflecting how prepared this agent is based on practice test performance

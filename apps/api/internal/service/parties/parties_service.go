@@ -620,6 +620,9 @@ func (s *PartiesService) BuySlots(ctx context.Context, partyID int16, quantity i
 		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Invalidate the cache for the party since their slots have changed
+	s.InvalidatePartyCache(ctx, partyID)
+
 	return updatedParty, nil
 }
 
@@ -634,6 +637,7 @@ func (s *PartiesService) UpdatePartyDiscount(ctx context.Context, partyID int16,
 		return queries.Party{}, fmt.Errorf("failed to parse discount percentage: %w", err)
 	}
 
+	defer s.InvalidatePartyCache(ctx, partyID)
 	return s.queries.UpdatePartyDiscount(ctx, queries.UpdatePartyDiscountParams{
 		DiscountPercentage: numericDiscount,
 		ID:                 partyID,
@@ -710,33 +714,37 @@ func (s *PartiesService) DepositAllowance(ctx context.Context, partyID int16, am
 		return queries.Party{}, fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
+	// Invalidate the cache for the party
+	s.InvalidatePartyCache(ctx, partyID)
+
 	return updatedParty, nil
 }
 
-// UpdateAgentPaymentAllocation updates the state-by-state polling agent payment settings for a party.
-func (s *PartiesService) UpdateAgentPaymentAllocation(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
+// UpdateAgentPaymentAllocationKobo updates the state-by-state polling agent payment settings for a party.
+func (s *PartiesService) UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error) {
 	// Simple validation to ensure valid JSON is supplied
 	var temp map[string]any
 	if err := json.Unmarshal(allowancesJSON, &temp); err != nil {
 		return queries.Party{}, fmt.Errorf("invalid allowances configuration: %w", err)
 	}
 
-	return s.queries.UpdatePartyAgentPaymentAllocation(ctx, queries.UpdatePartyAgentPaymentAllocationParams{
-		AgentPaymentAllocation: allowancesJSON,
+	defer s.InvalidatePartyCache(ctx, partyID)
+	return s.queries.UpdatePartyAgentPaymentAllocationKobo(ctx, queries.UpdatePartyAgentPaymentAllocationKoboParams{
+		AgentPaymentAllocationKobo: allowancesJSON,
 		ID:              partyID,
 	})
 }
 
-// GetAgentPaymentAllocation returns the agent_payment_allocation JSON for a party.
-func (s *PartiesService) GetAgentPaymentAllocation(ctx context.Context, partyID int16) (json.RawMessage, error) {
+// GetAgentPaymentAllocationKobo returns the agent_payment_allocation JSON for a party.
+func (s *PartiesService) GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error) {
 	party, err := s.queries.GetPartyByID(ctx, partyID)
 	if err != nil {
 		return nil, fmt.Errorf("party not found: %w", err)
 	}
-	if len(party.AgentPaymentAllocation) == 0 {
+	if len(party.AgentPaymentAllocationKobo) == 0 {
 		return json.RawMessage("{}"), nil
 	}
-	return json.RawMessage(party.AgentPaymentAllocation), nil
+	return json.RawMessage(party.AgentPaymentAllocationKobo), nil
 }
 
 // UpdatePartyIsVerified updates the is_verified flag of a party.
@@ -1085,7 +1093,14 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to record wallet transaction: %w", err)
 	}
 
-	// 4. Create the marketing campaign record
+	// 4. Get the plan to snapshot referral amount
+	plan, err := qtx.GetPlanByID(ctx, arg.PlanID)
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get plan: %w", err)
+	}
+	arg.ReferralAmount = plan.ReferralAmount
+
+	// 5. Create the marketing campaign record
 	campaign, err := qtx.CreatePartyMarketingCampaign(ctx, arg)
 	if err != nil {
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to create marketing campaign: %w", err)
@@ -1134,6 +1149,7 @@ func (s *PartiesService) UpdatePlanDisplayOrder(ctx context.Context, arg queries
 
 // UpdatePartyAgentAcquisitionTargets updates the agent acquisition targets of a party.
 func (s *PartiesService) UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg queries.UpdatePartyAgentAcquisitionTargetsParams) (queries.Party, error) {
+	defer s.InvalidatePartyCache(ctx, arg.ID)
 	return s.queries.UpdatePartyAgentAcquisitionTargets(ctx, arg)
 }
 
@@ -1148,4 +1164,5 @@ func (s *PartiesService) GetPartyAgentAcquisitionTargets(ctx context.Context, pa
 	}
 	return json.RawMessage(party.AgentAcquisitionTargets), nil
 }
+
 

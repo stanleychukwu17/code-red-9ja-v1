@@ -50,7 +50,8 @@ function RouteComponent() {
     enabled: !!partyId,
   });
 
-  const wallet = walletRes?.data?.wallet;
+	// Safely extract the wallet, handling the case where it might be returned unwrapped from the cache
+  const wallet = walletRes?.data?.wallet || ((walletRes as any)?.id ? (walletRes as any) : undefined);
   const transactions = txRes?.data?.transactions ?? [];
 
   const handleRefresh = () => {
@@ -106,10 +107,10 @@ interface WalletTransaction {
   transaction_reference: string;
   type: "credit" | "debit";
   transaction_category:
-  | "wallet_funding"
-  | "wallet_withdrawal"
-  | "slot_purchase"
-  | "allowance_deposit";
+    | "wallet_funding"
+    | "wallet_withdrawal"
+    | "slot_purchase"
+    | "allowance_deposit";
   amount_kobo: number;
   balance_after_kobo: number;
   payer_name: string | null;
@@ -433,10 +434,10 @@ export function WalletTransactions({
             // created_at is a string representing the timestamp
             const dateStr = tx.created_at
               ? getLocalDate(tx.created_at, {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
               : "—";
 
             return (

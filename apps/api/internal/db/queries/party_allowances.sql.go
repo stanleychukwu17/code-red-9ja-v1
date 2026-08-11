@@ -14,7 +14,7 @@ UPDATE parties
 SET agent_payment_balance_kobo = agent_payment_balance_kobo + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
 type DepositPartyAllowanceParams struct {
@@ -37,29 +37,30 @@ func (q *Queries) DepositPartyAllowance(ctx context.Context, arg DepositPartyAll
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocation,
+		&i.AgentPaymentAllocationKobo,
 		&i.AgentAcquisitionTargets,
+		&i.AutoAcceptApplications,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
 	return i, err
 }
 
-const updatePartyAgentPaymentAllocation = `-- name: UpdatePartyAgentPaymentAllocation :one
+const updatePartyAgentPaymentAllocationKobo = `-- name: UpdatePartyAgentPaymentAllocationKobo :one
 UPDATE parties
-SET agent_payment_allocation = $1,
+SET agent_payment_allocation_kobo = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
 `
 
-type UpdatePartyAgentPaymentAllocationParams struct {
-	AgentPaymentAllocation []byte `json:"agent_payment_allocation"`
-	ID                     int16  `json:"id"`
+type UpdatePartyAgentPaymentAllocationKoboParams struct {
+	AgentPaymentAllocationKobo []byte `json:"agent_payment_allocation_kobo"`
+	ID                         int16  `json:"id"`
 }
 
-func (q *Queries) UpdatePartyAgentPaymentAllocation(ctx context.Context, arg UpdatePartyAgentPaymentAllocationParams) (Party, error) {
-	row := q.db.QueryRow(ctx, updatePartyAgentPaymentAllocation, arg.AgentPaymentAllocation, arg.ID)
+func (q *Queries) UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg UpdatePartyAgentPaymentAllocationKoboParams) (Party, error) {
+	row := q.db.QueryRow(ctx, updatePartyAgentPaymentAllocationKobo, arg.AgentPaymentAllocationKobo, arg.ID)
 	var i Party
 	err := row.Scan(
 		&i.ID,
@@ -73,8 +74,9 @@ func (q *Queries) UpdatePartyAgentPaymentAllocation(ctx context.Context, arg Upd
 		&i.IsVerified,
 		&i.DiscountPercentage,
 		&i.AgentPaymentBalanceKobo,
-		&i.AgentPaymentAllocation,
+		&i.AgentPaymentAllocationKobo,
 		&i.AgentAcquisitionTargets,
+		&i.AutoAcceptApplications,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

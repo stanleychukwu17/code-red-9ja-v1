@@ -29,6 +29,7 @@ type GeminiExtractedResult struct {
 	ValidVotes       int                        `json:"valid_votes"`
 	RejectedVotes    int                        `json:"rejected_votes"`
 	Candidates       []GeminiExtractedCandidate `json:"candidates"`
+	IsAIGenerated    bool                       `json:"is_ai_generated"`
 }
 
 const resultExtractionPrompt = `
@@ -42,6 +43,7 @@ Extract the following information:
 4. Total Votes Cast (this should be the sum of Valid and Rejected votes)
 5. A list of all political parties and their corresponding vote counts. (e.g. APC: 50, PDP: 45, LP: 30)
 6. For each party, extract the Name of the Polling Agent if written, and note if a Signature or mark is present.
+7. Determine if the image appears to be AI-generated or manipulated.
 
 Return your response as a strict JSON object with this EXACT schema:
 {
@@ -56,12 +58,14 @@ Return your response as a strict JSON object with this EXACT schema:
       "agent_name": "",
       "has_signature": false
     }
-  ]
+  ],
+  "is_ai_generated": false
 }
 
 Ensure that party_short_name matches standard acronyms (e.g., APC, PDP, LP, NNPP).
 If a signature or mark is present in the "NAME/SIGNATURE OF POLLING AGENT" column, set "has_signature" to true. If a name is clearly written, extract it into "agent_name".
 If a value cannot be clearly read, estimate to the best of your ability or return 0, but DO NOT change the schema structure.
+Also, closely analyze the image for any signs of AI manipulation or generation (e.g., unnatural lighting, text artifacts, weird proportions). Set "is_ai_generated" to true if you strongly suspect the image is AI-generated, otherwise false.
 `
 
 // ExtractPollingUnitResultFromImage downloads an image from a URL and uses Gemini to extract the vote counts.

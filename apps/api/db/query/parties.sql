@@ -20,7 +20,7 @@ ORDER BY display_order ASC, name ASC;
 -- name: ListAcceptingParties :many
 SELECT 
   id, short_name, name, logo, display_order, status, slots, is_verified,
-  discount_percentage, agent_payment_balance_kobo, agent_payment_allocation, agent_acquisition_targets,
+  discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets,
   created_at, updated_at
 FROM parties
 WHERE 
@@ -29,15 +29,15 @@ WHERE
   AND agent_acquisition_targets != '{}'::jsonb
   
   -- Ensure allocation is set
-  AND agent_payment_allocation IS NOT NULL 
-  AND agent_payment_allocation != '{}'::jsonb
+  AND agent_payment_allocation_kobo IS NOT NULL 
+  AND agent_payment_allocation_kobo != '{}'::jsonb
   
   -- Ensure balance is sufficient
   AND agent_payment_balance_kobo > 0
   AND agent_payment_balance_kobo >= COALESCE(
     (
       SELECT MAX((value->>'default')::bigint)
-      FROM jsonb_each(agent_payment_allocation)
+      FROM jsonb_each(agent_payment_allocation_kobo)
       WHERE value->>'default' IS NOT NULL
     ), 0
   )
@@ -97,4 +97,11 @@ WHERE id = $1;
 UPDATE parties
 SET agent_acquisition_targets = $2, updated_at = NOW()
 WHERE id = $1
+RETURNING *;
+
+-- name: DeductPartyAgentPaymentBalance :one
+UPDATE parties
+SET agent_payment_balance_kobo = agent_payment_balance_kobo - $1,
+    updated_at = NOW()
+WHERE id = $2 AND agent_payment_balance_kobo >= $1
 RETURNING *;

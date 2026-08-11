@@ -63,6 +63,7 @@ type AIVerificationInput struct {
 	ExtractedData   interface{}
 	ConfidenceScore float64
 	DisputedReason  string
+	IsAIGenerated   bool
 }
 
 // SubmitResult inserts a new polling unit result inside a transaction,
@@ -232,11 +233,15 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		status = "disputed"
 	}
 
+	var isAIGenerated pgtype.Bool
+	isAIGenerated = pgtype.Bool{Bool: extracted.IsAIGenerated, Valid: true}
+
 	result, err = qtx.UpdateResultStatus(ctx, queries.UpdateResultStatusParams{
-		ID:                result.ID,
-		Status:            status,
-		AiExtractedData:   rawJSON,
-		AiConfidenceScore: score,
+		ID:                  result.ID,
+		Status:              status,
+		AiExtractedData:     rawJSON,
+		AiConfidenceScore:   score,
+		ResultIsAiGenerated: isAIGenerated,
 	})
 	if err != nil {
 		return queries.PollingUnitResult{}, err
@@ -343,12 +348,16 @@ func (s *Service) ApplyAIVerification(ctx context.Context, input AIVerificationI
 		disputedReason = pgtype.Text{String: input.DisputedReason, Valid: true}
 	}
 
+	var isAIGenerated pgtype.Bool
+	isAIGenerated = pgtype.Bool{Bool: input.IsAIGenerated, Valid: true}
+
 	return s.queries.UpdateResultStatus(ctx, queries.UpdateResultStatusParams{
-		ID:                input.ResultID,
-		Status:            input.Status,
-		AiExtractedData:   extractedData,
-		AiConfidenceScore: score,
-		DisputedReason:    disputedReason,
+		ID:                  input.ResultID,
+		Status:              input.Status,
+		AiExtractedData:     extractedData,
+		AiConfidenceScore:   score,
+		DisputedReason:      disputedReason,
+		ResultIsAiGenerated: isAIGenerated,
 	})
 }
 

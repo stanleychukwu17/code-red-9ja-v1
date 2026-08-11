@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "@tanstack/react-form";
+import { useMutation } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import LogoIcon from "@repo/ui/icons/logo-icon";
 import { Button } from "@repo/ui/components/button";
@@ -92,6 +93,25 @@ function LoginComponent() {
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
+  const loginMutation = useMutation({
+    mutationFn: async (payload: payloadType) => {
+      const response = await loginAdmin({ data: payload });
+      if (!response.success) {
+        throw new Error(response.message || "Invalid email or password.");
+      }
+      return response;
+    },
+    onSuccess: (response) => {
+      dispatch(updateAuthState({ user: response.data?.user }));
+      navigate({ to: "/home" });
+    },
+    onError: (err: any) => {
+      setErrorMsg(
+        err.message || "Connection error: Unable to reach the server.",
+      );
+    },
+  });
+
   const form = useForm({
     defaultValues: {
       country: "",
@@ -133,18 +153,7 @@ function LoginComponent() {
       // add the identifier type to the payload
       payload.identifierType = identifierType;
 
-      try {
-        const response = await loginAdmin({ data: payload });
-
-        if (response.success) {
-          dispatch(updateAuthState({ user: response.data?.user }));
-          navigate({ to: "/home" });
-        } else {
-          setErrorMsg(response.message || "Invalid email or password.");
-        }
-      } catch (err) {
-        setErrorMsg("Connection error: Unable to reach the server.");
-      }
+      loginMutation.mutate(payload);
     },
   });
 
@@ -312,8 +321,8 @@ function LoginComponent() {
                 type="submit"
                 variant="secondary"
                 className="rounded-[4px] mt-2"
-                disabled={!canSubmit}
-                loading={isSubmitting}
+                disabled={!canSubmit || loginMutation.isPending}
+                loading={loginMutation.isPending}
               >
                 Log in
               </Button>
