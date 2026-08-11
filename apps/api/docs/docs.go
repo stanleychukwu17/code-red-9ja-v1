@@ -1461,6 +1461,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/auth/signup/web": {
+            "post": {
+                "description": "Handles the first phase of user registration (country, phone, email, password)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Auth"
+                ],
+                "summary": "Initial sign-up phase",
+                "parameters": [
+                    {
+                        "description": "Initial sign-up details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/authhandler.RegisterPhaseSignUpRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/superadmin": {
             "post": {
                 "description": "Promotes a user to superadmin if their username is in the pre-approved list",

@@ -186,7 +186,7 @@ type RegisterPhaseSignUpRequest struct {
 // @Param request body RegisterPhaseSignUpRequest true "Initial sign-up details"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
-// @Router /auth/signup [post]
+// @Router /auth/signup/web [post]
 // RegisterPhaseSignUp handles the initial registration phase
 func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
 	var req RegisterPhaseSignUpRequest
