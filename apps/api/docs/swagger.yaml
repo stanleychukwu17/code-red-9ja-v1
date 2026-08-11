@@ -2854,6 +2854,35 @@ paths:
       summary: Basic sign-up
       tags:
       - Auth
+  /auth/signup/web:
+    post:
+      consumes:
+      - application/json
+      description: Handles the first phase of user registration (country, phone, email,
+        password)
+      parameters:
+      - description: Initial sign-up details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/authhandler.RegisterPhaseSignUpRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Initial sign-up phase
+      tags:
+      - Auth
   /auth/superadmin:
     post:
       consumes:

@@ -27,7 +27,7 @@ const api = `${API_BASE}/api/v1`;
 export const API_URL = {
   health: `${API_BASE}/health`,
   auth: {
-    registerPhaseSignUp: `${api}/auth/signup`,
+    registerPhaseSignUp: `${api}/auth/signup/web`,
     sendSignupEmailOtp: `${api}/auth/signup/email-otp`,
     verifySignupEmailOtp: `${api}/auth/signup/email-otp/verify`,
     checkNin: `${api}/auth/check_nin`,

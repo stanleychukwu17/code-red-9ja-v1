@@ -73,6 +73,8 @@ function RouteComponent() {
 
   const [serverError, setServerError] = useState<string | null>(null);
 
+  // tanstack useForm hook - set the default values of the form
+  // also handles the submission of the form
   const form = useForm({
     defaultValues: {
       country: "",
@@ -103,6 +105,7 @@ function RouteComponent() {
 
       // send the data to the server
       const result = await startUserRegistration({ data: payload });
+      console.log(result)
 
       // if the request was successful
       if (result.success) {
@@ -118,8 +121,8 @@ function RouteComponent() {
         // set error
         setServerError(
           result.error ||
-            result.message ||
-            "An error occurred during registration",
+          result.message ||
+          "An error occurred during registration",
         );
       }
     },
@@ -251,7 +254,7 @@ function RouteComponent() {
                     maxLength={12}
                     errorMsg={
                       field.state.meta.isTouched &&
-                      field.state.meta.errors.length
+                        field.state.meta.errors.length
                         ? (field.state.meta.errors[0] as string)
                         : undefined
                     }
@@ -298,11 +301,8 @@ function RouteComponent() {
           name="password"
           validators={{
             onChange: ({ value }) =>
-              !value
-                ? "Password is required"
-                : value.length < 5
-                  ? "Password must be at least 5 characters"
-                  : undefined,
+              !value ? "Password is required"
+                : value.length < 5 ? "Password must be at least 5 characters" : undefined,
           }}
           children={(field) => (
             <PasswordInput
