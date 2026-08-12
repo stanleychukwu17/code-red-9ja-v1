@@ -1387,7 +1387,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		return err
 	}
 
-	slog.Info("✅ Successfully updated referral & incremented total_referrals count",
+	slog.Info("Successfully updated referral & incremented total_referrals count",
 		"referral_id", referral.ID,
 		"user_referral_id", selected.userReferral.ID,
 		"party_id", partyID,

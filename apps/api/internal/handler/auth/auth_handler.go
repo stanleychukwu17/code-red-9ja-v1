@@ -353,65 +353,65 @@ type CompleteOnboardingRequest struct {
 
 // CompleteOnboarding handles PATCH /api/v1/auth/onboarding
 func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
-	slog.Info("🔍 CompleteOnboarding handler called")
+	slog.Info("CompleteOnboarding handler called")
 
 	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok || claims == nil {
-		slog.Error("❌ CompleteOnboarding: Unauthorized - no claims in context")
+		slog.Error("CompleteOnboarding: Unauthorized - no claims in context")
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-	slog.Info("🔍 CompleteOnboarding: Claims extracted", "fake_id", claims.FakeID, "roles", claims.Roles)
+	slog.Info("CompleteOnboarding: Claims extracted", "fake_id", claims.FakeID, "roles", claims.Roles)
 
 	var req CompleteOnboardingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		slog.Error("❌ CompleteOnboarding: Invalid request body", "error", err)
+		slog.Error("CompleteOnboarding: Invalid request body", "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
-	slog.Info("🔍 CompleteOnboarding: Request payload decoded", "username", req.Username, "first_name", req.FirstName, "last_name", req.LastName, "referrer_user_id", req.ReferrerUserId)
+	slog.Info("CompleteOnboarding: Request payload decoded", "username", req.Username, "first_name", req.FirstName, "last_name", req.LastName, "referrer_user_id", req.ReferrerUserId)
 
 	if err := h.validate.Struct(req); err != nil {
-		slog.Error("❌ CompleteOnboarding: Validation failed", "error", err)
+		slog.Error("CompleteOnboarding: Validation failed", "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	slog.Info("🔍 CompleteOnboarding: Struct validation passed")
+	slog.Info("CompleteOnboarding: Struct validation passed")
 
 	ctx := r.Context()
 
 	// Check username availability
 	if h.usersService.CheckUsername(ctx, req.Username) {
-		slog.Warn("❌ CompleteOnboarding: Username already taken", "username", req.Username)
+		slog.Warn("CompleteOnboarding: Username already taken", "username", req.Username)
 		h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 		return
 	}
-	slog.Info("🔍 CompleteOnboarding: Username is available", "username", req.Username)
+	slog.Info("CompleteOnboarding: Username is available", "username", req.Username)
 
 	// Fetch the DB user
 	user, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID)
 	if err != nil {
-		slog.Error("❌ CompleteOnboarding: User not found", "fake_id", claims.FakeID, "error", err)
+		slog.Error("CompleteOnboarding: User not found", "fake_id", claims.FakeID, "error", err)
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
 	}
-	slog.Info("🔍 CompleteOnboarding: DB User found", "user_id", user.ID, "fake_id", user.FakeID)
+	slog.Info("CompleteOnboarding: DB User found", "user_id", user.ID, "fake_id", user.FakeID)
 
 	// Parse date of birth
 	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
 	if err != nil {
-		slog.Error("❌ CompleteOnboarding: Invalid date_of_birth format", "date_of_birth", req.DateOfBirth, "error", err)
+		slog.Error("CompleteOnboarding: Invalid date_of_birth format", "date_of_birth", req.DateOfBirth, "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date_of_birth format, expected YYYY-MM-DD")
 		return
 	}
-	slog.Info("🔍 CompleteOnboarding: Parsed DateOfBirth", "dob", dob)
+	slog.Info("CompleteOnboarding: Parsed DateOfBirth", "dob", dob)
 
 	// Generate unique referral code (e.g. DANIEL-88)
 	firstNameUpper := strings.ToUpper(strings.TrimSpace(req.FirstName))
 	n, _ := rand.Int(rand.Reader, big.NewInt(900))
 	suffix := n.Int64() + 100 // 100-999
 	myReferralCode := fmt.Sprintf("%s-%d", firstNameUpper, suffix)
-	slog.Info("🔍 CompleteOnboarding: Generated referral code", "my_referral_code", myReferralCode)
+	slog.Info("CompleteOnboarding: Generated referral code", "my_referral_code", myReferralCode)
 
 	params := queries.UpdateOnboardingProfileParams{
 		ID:              user.ID,
@@ -428,17 +428,17 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 		CountryOfOrigin: pgtype.Int2{Int16: req.CountryOfOrigin, Valid: req.CountryOfOrigin != 0},
 	}
 
-	slog.Info("🔍 CompleteOnboarding: Calling authService.CompleteOnboarding", "user_id", user.ID, "referrer_user_id", req.ReferrerUserId)
+	slog.Info("CompleteOnboarding: Calling authService.CompleteOnboarding", "user_id", user.ID, "referrer_user_id", req.ReferrerUserId)
 	if err = h.authService.CompleteOnboarding(r.Context(), user.ID, user.FakeID.Int64, params, myReferralCode, req.ReferrerUserId); err != nil {
-		slog.Error("❌ CompleteOnboarding: authService.CompleteOnboarding failed", "error", err)
+		slog.Error("CompleteOnboarding: authService.CompleteOnboarding failed", "error", err)
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to complete onboarding: "+err.Error())
 		return
 	}
-	slog.Info("🔍 CompleteOnboarding: authService.CompleteOnboarding succeeded")
+	slog.Info("CompleteOnboarding: authService.CompleteOnboarding succeeded")
 
 	// Re-fetch the updated user to get the new Name and NIN for wallet creation
 	if updatedUser, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID); err == nil {
-		slog.Info("🔍 CompleteOnboarding: Re-fetched updated user for wallet creation", "user_id", updatedUser.ID)
+		slog.Info("CompleteOnboarding: Re-fetched updated user for wallet creation", "user_id", updatedUser.ID)
 		_, walletErr := h.usersService.CreateUserWallet(ctx, queries.User{
 			ID:              updatedUser.ID,
 			FakeID:          updatedUser.FakeID,
@@ -461,15 +461,15 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 			UpdatedAt:       updatedUser.UpdatedAt,
 		})
 		if walletErr != nil {
-			slog.Warn("⚠️ CompleteOnboarding: Immediate wallet creation returned error", "error", walletErr)
+			slog.Warn("CompleteOnboarding: Immediate wallet creation returned error", "error", walletErr)
 		} else {
-			slog.Info("🔍 CompleteOnboarding: Immediate wallet creation succeeded")
+			slog.Info("CompleteOnboarding: Immediate wallet creation succeeded")
 		}
 	} else {
-		slog.Warn("⚠️ CompleteOnboarding: Failed to re-fetch updated user for wallet creation", "error", err)
+		slog.Warn("CompleteOnboarding: Failed to re-fetch updated user for wallet creation", "error", err)
 	}
 
-	slog.Info("✅ CompleteOnboarding: Responding with success")
+	slog.Info("CompleteOnboarding: Responding with success")
 	h.utils.RespondSuccess(w, http.StatusOK, "Onboarding completed successfully", nil)
 }
 
