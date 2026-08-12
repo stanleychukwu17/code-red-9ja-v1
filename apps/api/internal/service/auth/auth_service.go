@@ -1316,28 +1316,37 @@ type EmailOTPResult struct {
 	ExpiresInSeconds       int    `json:"expiresInSeconds,omitempty"`
 }
 
+// SendSignupEmailOTP generates and sends an OTP to a new user's email address during the signup process
 func (s *AuthService) SendSignupEmailOTP(ctx context.Context, email string) (EmailOTPResult, error) {
+	// Normalize email format (e.g. lowercase, trim spaces)
 	email = normalizeEmail(email)
 	if email == "" {
 		return EmailOTPResult{}, errors.New("email is required")
 	}
+
+	// Ensure the email is not already registered in the system
 	if s.usersService.CheckEmail(ctx, email) {
 		return EmailOTPResult{}, errors.New("Email address already exists")
 	}
 
+	// Generate a secure 6-digit OTP and its hash
 	otp, hashedOTP, err := utils.GenerateOTP()
 	if err != nil {
 		return EmailOTPResult{}, err
 	}
+
+	// Send the plain text OTP to the user's email
 	if err := s.sendEmailOTP(ctx, email, otp); err != nil {
 		return EmailOTPResult{}, err
 	}
 
+	// Temporarily store the hashed OTP in Redis with a TTL for subsequent verification
 	otpData, _ := json.Marshal(map[string]string{"hash": hashedOTP})
 	if err := s.rdb.Set(ctx, s.emailOtpKey(email), otpData, emailOtpTTL).Err(); err != nil {
 		return EmailOTPResult{}, err
 	}
 
+	// returns success message and email verification token expiry time
 	return EmailOTPResult{
 		Message:          "OTP sent successfully",
 		ExpiresInSeconds: int(emailOtpTTL.Seconds()),

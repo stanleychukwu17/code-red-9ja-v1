@@ -222,10 +222,6 @@ type SignupRequest struct {
 	Password    string `json:"password" validate:"required,min=5,max=72"`
 }
 
-type SendSignupEmailOTPRequest struct {
-	Email string `json:"email" validate:"required,email"`
-}
-
 type VerifySignupEmailOTPRequest struct {
 	Email string `json:"email" validate:"required,email"`
 	OTP   string `json:"otp" validate:"required,len=6,numeric"`
@@ -267,21 +263,34 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+type SendSignupEmailOTPRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+// SendSignupEmailOTP handles the request to send an OTP to a new user's email during signup
 func (h *Handler) SendSignupEmailOTP(w http.ResponseWriter, r *http.Request) {
 	var req SendSignupEmailOTPRequest
+
+	// Parse the incoming JSON payload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
+
+	// Validate required fields in the request
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
+
+	// Delegate business logic to the auth service
 	result, err := h.authService.SendSignupEmailOTP(r.Context(), req.Email)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+
+	// Respond with success and the email verification token details
 	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
 		"message":                result.Message,
 		"emailVerificationToken": result.EmailVerificationToken,
@@ -587,7 +596,6 @@ func (h *Handler) CheckReferralCode(w http.ResponseWriter, r *http.Request) {
 		"referrerId": referrerId,
 	})
 }
-
 
 // LoginRequest represents the parameters for logging in
 type LoginRequest struct {
