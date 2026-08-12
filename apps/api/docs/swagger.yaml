@@ -1,15 +1,380 @@
 basePath: /api/v1
 definitions:
-  authhandler.AdminLoginData:
+  big.Int:
+    type: object
+  free9ja_api_internal_db_queries.CachedUserRoles:
+    properties:
+      roles:
+        items:
+          $ref: '#/definitions/free9ja_api_internal_db_queries.GetUserRolesRow'
+        type: array
+      roles_code:
+        items:
+          type: string
+        type: array
+    type: object
+  free9ja_api_internal_db_queries.GetPageVerificationsRow:
+    properties:
+      for_who:
+        type: string
+      id:
+        type: integer
+      is_admin_assignable:
+        type: boolean
+      page_id:
+        type: integer
+      page_type:
+        type: string
+      verification_description:
+        $ref: '#/definitions/pgtype.Text'
+      verification_title:
+        type: string
+      verification_type:
+        type: string
+      verification_type_id:
+        type: integer
+      verified_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+    type: object
+  free9ja_api_internal_db_queries.GetUserRolesRow:
+    properties:
+      code:
+        type: string
+      date_assigned:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      role_id:
+        type: integer
+      user_id:
+        type: integer
+      who_assigned:
+        type: integer
+    type: object
+  free9ja_api_internal_db_queries.PartyBasicInfoWithVerifications:
+    properties:
+      id:
+        type: integer
+      is_verified:
+        $ref: '#/definitions/pgtype.Bool'
+      logo:
+        type: string
+      name:
+        type: string
+      short_name:
+        type: string
+      verifications:
+        items:
+          $ref: '#/definitions/free9ja_api_internal_db_queries.GetPageVerificationsRow'
+        type: array
+    type: object
+  free9ja_api_internal_db_queries.PartyWithVerifications:
+    properties:
+      agent_acquisition_targets:
+        items:
+          type: integer
+        type: array
+      agent_payment_allocation_kobo:
+        items:
+          type: integer
+        type: array
+      agent_payment_balance_kobo:
+        type: integer
+      auto_accept_applications:
+        items:
+          type: integer
+        type: array
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      discount_percentage:
+        $ref: '#/definitions/pgtype.Numeric'
+      display_order:
+        type: integer
+      id:
+        type: integer
+      is_verified:
+        $ref: '#/definitions/pgtype.Bool'
+      logo:
+        type: string
+      logo_file_id:
+        $ref: '#/definitions/pgtype.Int8'
+      name:
+        type: string
+      short_name:
+        type: string
+      slots:
+        type: integer
+      status:
+        type: string
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      verifications:
+        items:
+          $ref: '#/definitions/free9ja_api_internal_db_queries.GetPageVerificationsRow'
+        type: array
+    type: object
+  free9ja_api_internal_db_queries.UserWithPlaces:
+    properties:
+      account_status:
+        $ref: '#/definitions/pgtype.Text'
+      address:
+        $ref: '#/definitions/pgtype.Text'
+      avatar:
+        $ref: '#/definitions/pgtype.Text'
+      avatar_file_id:
+        $ref: '#/definitions/pgtype.Int8'
+      city_name:
+        type: string
+      country_name:
+        type: string
+      country_of_origin:
+        $ref: '#/definitions/pgtype.Int2'
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      current_city:
+        $ref: '#/definitions/pgtype.Int4'
+      current_country:
+        type: integer
+      current_lga:
+        $ref: '#/definitions/pgtype.Int4'
+      current_state:
+        type: integer
+      current_ward:
+        $ref: '#/definitions/pgtype.Int4'
+      date_of_birth:
+        $ref: '#/definitions/pgtype.Date'
+      email:
+        $ref: '#/definitions/pgtype.Text'
+      fake_id:
+        $ref: '#/definitions/pgtype.Int8'
+      first_name:
+        $ref: '#/definitions/pgtype.Text'
+      gender:
+        $ref: '#/definitions/pgtype.Text'
+      has_role:
+        $ref: '#/definitions/pgtype.Bool'
+      id:
+        type: integer
+      is_politician:
+        $ref: '#/definitions/pgtype.Bool'
+      is_verified:
+        $ref: '#/definitions/pgtype.Bool'
+      last_name:
+        $ref: '#/definitions/pgtype.Text'
+      middle_name:
+        $ref: '#/definitions/pgtype.Text'
+      party_basic_info:
+        $ref: '#/definitions/free9ja_api_internal_db_queries.PartyBasicInfoWithVerifications'
+      party_id:
+        $ref: '#/definitions/pgtype.Int2'
+      password_hash:
+        type: string
+      phone:
+        $ref: '#/definitions/pgtype.Text'
+      polling_unit_id:
+        $ref: '#/definitions/pgtype.Int4'
+      referral_code:
+        $ref: '#/definitions/pgtype.Text'
+      referred_by_id:
+        $ref: '#/definitions/pgtype.Int8'
+      roles:
+        $ref: '#/definitions/free9ja_api_internal_db_queries.CachedUserRoles'
+      state_name:
+        type: string
+      state_of_origin:
+        $ref: '#/definitions/pgtype.Int2'
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      username:
+        $ref: '#/definitions/pgtype.Text'
+      verifications:
+        items:
+          $ref: '#/definitions/free9ja_api_internal_db_queries.GetPageVerificationsRow'
+        type: array
+      voters_card_image:
+        $ref: '#/definitions/pgtype.Text'
+    type: object
+  free9ja_api_internal_service_auth.LoginUser:
+    properties:
+      account_status:
+        type: string
+      avatar:
+        type: string
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      current_ward:
+        type: integer
+      date_of_birth:
+        type: string
+      email:
+        type: string
+      fake_id:
+        type: integer
+      first_name:
+        type: string
+      gender:
+        type: string
+      id:
+        type: integer
+      last_name:
+        type: string
+      middle_name:
+        type: string
+      party:
+        $ref: '#/definitions/free9ja_api_internal_db_queries.PartyBasicInfoWithVerifications'
+      party_id:
+        type: integer
+      phone:
+        type: string
+      polling_unit_id:
+        type: integer
+      referral_code:
+        type: string
+      roles:
+        items:
+          type: string
+        type: array
+      username:
+        type: string
+      voters_card_image:
+        type: string
+    type: object
+  free9ja_api_internal_service_seed.PartyAdminsData:
+    properties:
+      id:
+        type: integer
+      party_admin:
+        items:
+          type: integer
+        type: array
+      super_party_admin:
+        items:
+          type: integer
+        type: array
+    type: object
+  free9ja_api_internal_service_seed.SeedAdminsRequest:
+    properties:
+      admins:
+        items:
+          type: integer
+        type: array
+      parties:
+        items:
+          additionalProperties:
+            $ref: '#/definitions/free9ja_api_internal_service_seed.PartyAdminsData'
+          type: object
+        type: array
+    type: object
+  free9ja_api_internal_service_seed.SeedUserRequest:
+    properties:
+      account_status:
+        type: string
+      avatar:
+        type: string
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_lga:
+        type: integer
+      current_state:
+        type: integer
+      date_of_birth:
+        type: string
+      education_level:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      gender:
+        type: string
+      home_address:
+        type: string
+      is_politician:
+        type: boolean
+      is_verified:
+        type: boolean
+      last_name:
+        type: string
+      marital_status:
+        type: string
+      middle_name:
+        type: string
+      num:
+        type: integer
+      occupation_id:
+        type: integer
+      party_id:
+        type: integer
+      password:
+        type: string
+      phone:
+        type: string
+      religion:
+        type: string
+      state_of_origin:
+        type: integer
+      username:
+        type: string
+      verification_type_id:
+        type: integer
+    type: object
+  free9ja_api_internal_service_users.PhonePayload:
+    properties:
+      id:
+        type: integer
+      is_default:
+        type: boolean
+      on_whatsapp:
+        type: string
+      phone:
+        type: string
+      phonecode:
+        type: string
+      raw_input:
+        type: string
+    type: object
+  free9ja_api_internal_utils.ErrorResponse:
+    properties:
+      data: {}
+      message:
+        example: Error message description
+        type: string
+      success:
+        example: false
+        type: boolean
+    type: object
+  free9ja_api_internal_utils.SuccessResponse:
+    properties:
+      data:
+        additionalProperties: true
+        type: object
+      message:
+        example: Operation successful
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  internal_handler_auth.AdminLoginData:
     properties:
       accessToken:
         type: string
       refreshToken:
         type: string
       user:
-        $ref: '#/definitions/authservice.LoginUser'
+        $ref: '#/definitions/free9ja_api_internal_service_auth.LoginUser'
     type: object
-  authhandler.AdminLoginRequest:
+  internal_handler_auth.AdminLoginRequest:
     properties:
       identifier:
         maxLength: 50
@@ -31,16 +396,16 @@ definitions:
     - identifierType
     - password
     type: object
-  authhandler.AdminLoginResponse:
+  internal_handler_auth.AdminLoginResponse:
     properties:
       data:
-        $ref: '#/definitions/authhandler.AdminLoginData'
+        $ref: '#/definitions/internal_handler_auth.AdminLoginData'
       message:
         type: string
       success:
         type: boolean
     type: object
-  authhandler.ChangePasswordByEmailRequest:
+  internal_handler_auth.ChangePasswordByEmailRequest:
     properties:
       email:
         type: string
@@ -52,14 +417,14 @@ definitions:
     - email
     - password
     type: object
-  authhandler.CheckNINRequest:
+  internal_handler_auth.CheckNINRequest:
     properties:
       nin:
         type: string
     required:
     - nin
     type: object
-  authhandler.CheckReferralCodeRequest:
+  internal_handler_auth.CheckReferralCodeRequest:
     properties:
       code:
         minLength: 3
@@ -67,7 +432,7 @@ definitions:
     required:
     - code
     type: object
-  authhandler.CheckUsernameRequest:
+  internal_handler_auth.CheckUsernameRequest:
     properties:
       username:
         maxLength: 30
@@ -76,7 +441,7 @@ definitions:
     required:
     - username
     type: object
-  authhandler.ForgotPasswordRequest:
+  internal_handler_auth.ForgotPasswordRequest:
     properties:
       change_password_id:
         type: string
@@ -93,7 +458,7 @@ definitions:
     - password
     - user_fid
     type: object
-  authhandler.LoginRequest:
+  internal_handler_auth.LoginRequest:
     properties:
       country:
         type: string
@@ -119,12 +484,12 @@ definitions:
     - identifierType
     - password
     type: object
-  authhandler.LogoutRequest:
+  internal_handler_auth.LogoutRequest:
     properties:
       refreshToken:
         type: string
     type: object
-  authhandler.PartyLoginRequest:
+  internal_handler_auth.PartyLoginRequest:
     properties:
       identifier:
         maxLength: 50
@@ -146,12 +511,12 @@ definitions:
     - identifierType
     - password
     type: object
-  authhandler.RefreshRequest:
+  internal_handler_auth.RefreshRequest:
     properties:
       refreshToken:
         type: string
     type: object
-  authhandler.RegisterCandidatePlaceholderRequest:
+  internal_handler_auth.RegisterCandidatePlaceholderRequest:
     properties:
       avatar:
         type: string
@@ -206,7 +571,7 @@ definitions:
     - last_name
     - password
     type: object
-  authhandler.RegisterPhaseSignUpRequest:
+  internal_handler_auth.RegisterPhaseSignUpRequest:
     properties:
       confirmPassword:
         type: string
@@ -233,7 +598,7 @@ definitions:
     - password
     - phoneNumber
     type: object
-  authhandler.RegisterRequest:
+  internal_handler_auth.RegisterRequest:
     properties:
       answer1:
         maxLength: 30
@@ -311,7 +676,7 @@ definitions:
     - question2
     - username
     type: object
-  authhandler.SignupRequest:
+  internal_handler_auth.SignupRequest:
     properties:
       countryId:
         type: integer
@@ -329,7 +694,7 @@ definitions:
     - password
     - phoneNumber
     type: object
-  authhandler.VerifySecurityQuestionsRequest:
+  internal_handler_auth.VerifySecurityQuestionsRequest:
     properties:
       answer1:
         type: string
@@ -348,69 +713,14 @@ definitions:
     - question1
     - question2
     type: object
-  authservice.LoginUser:
-    properties:
-      account_status:
-        type: string
-      avatar:
-        type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_lga:
-        type: integer
-      current_state:
-        type: integer
-      current_ward:
-        type: integer
-      date_of_birth:
-        type: string
-      email:
-        type: string
-      fake_id:
-        type: integer
-      first_name:
-        type: string
-      gender:
-        type: string
-      id:
-        type: integer
-      last_name:
-        type: string
-      middle_name:
-        type: string
-      party:
-        $ref: '#/definitions/queries.PartyBasicInfoWithVerifications'
-      party_id:
-        type: integer
-      phone:
-        type: string
-      polling_unit_id:
-        type: integer
-      roles:
-        items:
-          type: string
-        type: array
-      username:
-        type: string
-      voters_card_image:
-        type: string
-    type: object
-  big.Int:
-    type: object
-  bodieshandler.CityResponse:
+  internal_handler_bodies.CityResponse:
     properties:
       id:
         type: integer
       name:
         type: string
     type: object
-  bodieshandler.CountryResponse:
+  internal_handler_bodies.CountryResponse:
     properties:
       id:
         type: integer
@@ -421,77 +731,77 @@ definitions:
       phone_code:
         type: string
     type: object
-  bodieshandler.GetCitiesData:
+  internal_handler_bodies.GetCitiesData:
     properties:
       cities:
         items:
-          $ref: '#/definitions/bodieshandler.CityResponse'
+          $ref: '#/definitions/internal_handler_bodies.CityResponse'
         type: array
     type: object
-  bodieshandler.GetCitiesResponse:
+  internal_handler_bodies.GetCitiesResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetCitiesData'
+        $ref: '#/definitions/internal_handler_bodies.GetCitiesData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/bodieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_bodies.PaginationMeta'
       success:
         type: boolean
     type: object
-  bodieshandler.GetCountriesData:
+  internal_handler_bodies.GetCountriesData:
     properties:
       countries:
         items:
-          $ref: '#/definitions/bodieshandler.CountryResponse'
+          $ref: '#/definitions/internal_handler_bodies.CountryResponse'
         type: array
     type: object
-  bodieshandler.GetCountriesResponse:
+  internal_handler_bodies.GetCountriesResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetCountriesData'
+        $ref: '#/definitions/internal_handler_bodies.GetCountriesData'
       message:
         type: string
       success:
         type: boolean
     type: object
-  bodieshandler.GetLGAsData:
+  internal_handler_bodies.GetLGAsData:
     properties:
       lgas:
         items:
-          $ref: '#/definitions/bodieshandler.LGAResponse'
+          $ref: '#/definitions/internal_handler_bodies.LGAResponse'
         type: array
     type: object
-  bodieshandler.GetLGAsResponse:
+  internal_handler_bodies.GetLGAsResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetLGAsData'
+        $ref: '#/definitions/internal_handler_bodies.GetLGAsData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/bodieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_bodies.PaginationMeta'
       success:
         type: boolean
     type: object
-  bodieshandler.GetStatesData:
+  internal_handler_bodies.GetStatesData:
     properties:
       states:
         items:
-          $ref: '#/definitions/bodieshandler.StateResponse'
+          $ref: '#/definitions/internal_handler_bodies.StateResponse'
         type: array
     type: object
-  bodieshandler.GetStatesResponse:
+  internal_handler_bodies.GetStatesResponse:
     properties:
       data:
-        $ref: '#/definitions/bodieshandler.GetStatesData'
+        $ref: '#/definitions/internal_handler_bodies.GetStatesData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/bodieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_bodies.PaginationMeta'
       success:
         type: boolean
     type: object
-  bodieshandler.LGAResponse:
+  internal_handler_bodies.LGAResponse:
     properties:
       abbreviation:
         type: string
@@ -504,21 +814,21 @@ definitions:
       state_name:
         type: string
     type: object
-  bodieshandler.PaginationMeta:
+  internal_handler_bodies.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  bodieshandler.StateResponse:
+  internal_handler_bodies.StateResponse:
     properties:
       id:
         type: integer
       name:
         type: string
     type: object
-  electiongroupshandler.CreateElectionGroupRequest:
+  internal_handler_election_groups.CreateElectionGroupRequest:
     properties:
       election_date:
         type: string
@@ -531,7 +841,7 @@ definitions:
       states_count:
         type: integer
     type: object
-  electiongroupshandler.UpdateElectionGroupRequest:
+  internal_handler_election_groups.UpdateElectionGroupRequest:
     properties:
       election_date:
         type: string
@@ -544,7 +854,7 @@ definitions:
       states_count:
         type: integer
     type: object
-  electiongroupshandler.UpsertPartyElectionGroupStatsRequest:
+  internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest:
     properties:
       elections_contesting:
         type: integer
@@ -555,7 +865,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateElectionRequest:
+  internal_handler_elections.CreateElectionRequest:
     properties:
       candidates_count:
         type: integer
@@ -580,7 +890,7 @@ definitions:
       ward_id:
         type: integer
     type: object
-  electionshandler.CreateFederalConstituencyElectionRequest:
+  internal_handler_elections.CreateFederalConstituencyElectionRequest:
     properties:
       election_date:
         type: string
@@ -593,7 +903,7 @@ definitions:
       office_id:
         type: integer
     type: object
-  electionshandler.CreateLgaElectionRequest:
+  internal_handler_elections.CreateLgaElectionRequest:
     properties:
       election_date:
         type: string
@@ -606,11 +916,11 @@ definitions:
       office_id:
         type: integer
     type: object
-  electionshandler.CreateNationwideElectionRequest:
+  internal_handler_elections.CreateNationwideElectionRequest:
     properties:
       candidates:
         items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
+          $ref: '#/definitions/internal_handler_elections.ElectionCandidateInput'
         type: array
       election_date:
         type: string
@@ -619,7 +929,7 @@ definitions:
       office_id:
         type: integer
     type: object
-  electionshandler.CreateSenatorialDistrictElectionRequest:
+  internal_handler_elections.CreateSenatorialDistrictElectionRequest:
     properties:
       election_date:
         type: string
@@ -632,7 +942,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateStateConstituencyElectionRequest:
+  internal_handler_elections.CreateStateConstituencyElectionRequest:
     properties:
       election_date:
         type: string
@@ -645,7 +955,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateStateElectionRequest:
+  internal_handler_elections.CreateStateElectionRequest:
     properties:
       election_date:
         type: string
@@ -658,7 +968,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.CreateWardElectionRequest:
+  internal_handler_elections.CreateWardElectionRequest:
     properties:
       election_date:
         type: string
@@ -671,7 +981,7 @@ definitions:
           type: integer
         type: array
     type: object
-  electionshandler.ElectionCandidateInput:
+  internal_handler_elections.ElectionCandidateInput:
     properties:
       candidate_id:
         type: integer
@@ -684,14 +994,14 @@ definitions:
     - party_id
     - party_short_name
     type: object
-  electionshandler.SyncCandidatesRequest:
+  internal_handler_elections.SyncCandidatesRequest:
     properties:
       candidates:
         items:
-          $ref: '#/definitions/electionshandler.ElectionCandidateInput'
+          $ref: '#/definitions/internal_handler_elections.ElectionCandidateInput'
         type: array
     type: object
-  electionshandler.UpdateElectionRequest:
+  internal_handler_elections.UpdateElectionRequest:
     properties:
       candidates_count:
         type: integer
@@ -716,7 +1026,7 @@ definitions:
       ward_id:
         type: integer
     type: object
-  federalconstituencieshandler.CreateFederalConstituencyRequest:
+  internal_handler_federal_constituencies.CreateFederalConstituencyRequest:
     properties:
       name:
         type: string
@@ -725,7 +1035,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  federalconstituencieshandler.FederalConstituencyResponse:
+  internal_handler_federal_constituencies.FederalConstituencyResponse:
     properties:
       id:
         type: integer
@@ -740,32 +1050,32 @@ definitions:
       state_name:
         type: string
     type: object
-  federalconstituencieshandler.GetFederalConstituenciesData:
+  internal_handler_federal_constituencies.GetFederalConstituenciesData:
     properties:
       constituencies:
         items:
-          $ref: '#/definitions/federalconstituencieshandler.FederalConstituencyResponse'
+          $ref: '#/definitions/internal_handler_federal_constituencies.FederalConstituencyResponse'
         type: array
     type: object
-  federalconstituencieshandler.GetFederalConstituenciesResponse:
+  internal_handler_federal_constituencies.GetFederalConstituenciesResponse:
     properties:
       data:
-        $ref: '#/definitions/federalconstituencieshandler.GetFederalConstituenciesData'
+        $ref: '#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesData'
       message:
         type: string
       meta:
-        $ref: '#/definitions/federalconstituencieshandler.PaginationMeta'
+        $ref: '#/definitions/internal_handler_federal_constituencies.PaginationMeta'
       success:
         type: boolean
     type: object
-  federalconstituencieshandler.PaginationMeta:
+  internal_handler_federal_constituencies.PaginationMeta:
     properties:
       has_more:
         type: boolean
       next_cursor:
         type: string
     type: object
-  federalconstituencieshandler.UpdateFederalConstituencyRequest:
+  internal_handler_federal_constituencies.UpdateFederalConstituencyRequest:
     properties:
       name:
         type: string
@@ -774,7 +1084,7 @@ definitions:
       state_id:
         type: integer
     type: object
-  fileshandler.GenerateUploadURLRequest:
+  internal_handler_files.GenerateUploadURLRequest:
     properties:
       file_size:
         type: integer
@@ -789,7 +1099,7 @@ definitions:
       owner_id:
         type: integer
     type: object
-  officeshandler.CreateOfficeRequest:
+  internal_handler_offices.CreateOfficeRequest:
     properties:
       election:
         type: string
@@ -800,7 +1110,7 @@ definitions:
       scope:
         type: string
     type: object
-  officeshandler.UpdateOfficeRequest:
+  internal_handler_offices.UpdateOfficeRequest:
     properties:
       election:
         type: string
@@ -811,7 +1121,7 @@ definitions:
       scope:
         type: string
     type: object
-  pageverificationshandler.AssignVerificationRequest:
+  internal_handler_page_verifications.AssignVerificationRequest:
     properties:
       for_who:
         type: string
@@ -827,14 +1137,16 @@ definitions:
     - page_id
     - verification_type_ids
     type: object
-  partieshandler.BuySlotsRequest:
+  internal_handler_parties.BuySlotsRequest:
     properties:
       quantity:
         type: integer
     type: object
-  partieshandler.CreateMarketingCampaignRequest:
+  internal_handler_parties.CreateMarketingCampaignRequest:
     properties:
       budget:
+        type: number
+      budget_per_day:
         type: number
       duration_in_days:
         type: integer
@@ -851,7 +1163,7 @@ definitions:
       type:
         type: string
     type: object
-  partieshandler.CreatePartyRequest:
+  internal_handler_parties.CreatePartyRequest:
     properties:
       display_order:
         type: integer
@@ -862,7 +1174,7 @@ definitions:
       short_name:
         type: string
     type: object
-  partieshandler.CreatePlanRequest:
+  internal_handler_parties.CreatePlanRequest:
     properties:
       color_hex:
         type: string
@@ -883,38 +1195,38 @@ definitions:
       type:
         type: string
     type: object
-  partieshandler.DepositAllowanceRequest:
+  internal_handler_parties.DepositAllowanceRequest:
     properties:
       amount_kobo:
         type: integer
     type: object
-  partieshandler.SetPartyDiscountRequest:
+  internal_handler_parties.SetPartyDiscountRequest:
     properties:
       discount_percentage:
         type: number
     type: object
-  partieshandler.SetSlotPriceRequest:
+  internal_handler_parties.SetSlotPriceRequest:
     properties:
       price_kobo:
         type: integer
     type: object
-  partieshandler.ToggleVerificationRequest:
+  internal_handler_parties.ToggleVerificationRequest:
     properties:
       is_verified:
         type: boolean
     type: object
-  partieshandler.UpdateAgentTargetsRequest:
+  internal_handler_parties.UpdateAgentTargetsRequest:
     properties:
-      lgaElectionSupervisor:
+      lga_election_supervisor:
         type: integer
-      pollingUnitAgent:
+      polling_agent:
         type: integer
-      stateElectionSupervisor:
+      state_election_supervisor:
         type: integer
-      wardElectionSupervisor:
+      ward_election_supervisor:
         type: integer
     type: object
-  partieshandler.UpdatePartyRequest:
+  internal_handler_parties.UpdatePartyRequest:
     properties:
       display_order:
         type: integer
@@ -925,12 +1237,12 @@ definitions:
       short_name:
         type: string
     type: object
-  partieshandler.UpdatePlanDisplayOrderRequest:
+  internal_handler_parties.UpdatePlanDisplayOrderRequest:
     properties:
       display_order:
         type: integer
     type: object
-  partieshandler.UpdatePlanRequest:
+  internal_handler_parties.UpdatePlanRequest:
     properties:
       color_hex:
         type: string
@@ -953,7 +1265,7 @@ definitions:
       type:
         type: string
     type: object
-  partieshandler.WithdrawRequest:
+  internal_handler_parties.WithdrawRequest:
     properties:
       amount_kobo:
         description: AmountKobo is the withdrawal amount in Kobo (1 NGN = 100 Kobo).
@@ -965,18 +1277,18 @@ definitions:
       narration:
         type: string
     type: object
-  partieshandler.agentPaymentAllocation:
+  internal_handler_parties.agentPaymentAllocation:
     properties:
-      lgaElectionSupervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
-      pollingAgent:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
-      stateElectionSupervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
-      wardElectionSupervisor:
-        $ref: '#/definitions/partieshandler.agentPaymentConfig'
+      lga_election_supervisor:
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
+      polling_agent:
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
+      state_election_supervisor:
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
+      ward_election_supervisor:
+        $ref: '#/definitions/internal_handler_parties.agentPaymentConfig'
     type: object
-  partieshandler.agentPaymentConfig:
+  internal_handler_parties.agentPaymentConfig:
     properties:
       default:
         type: integer
@@ -986,7 +1298,7 @@ definitions:
           type: integer
         type: object
     type: object
-  partyapplicationshandler.ApproveApplicationRequest:
+  internal_handler_party_applications.ApproveApplicationRequest:
     properties:
       lga_id:
         type: integer
@@ -999,12 +1311,12 @@ definitions:
       ward_id:
         type: integer
     type: object
-  partyapplicationshandler.RejectApplicationRequest:
+  internal_handler_party_applications.RejectApplicationRequest:
     properties:
       reason:
         type: string
     type: object
-  partyapplicationshandler.SubmitApplicationRequest:
+  internal_handler_party_applications.SubmitApplicationRequest:
     properties:
       address:
         type: string
@@ -1047,6 +1359,654 @@ definitions:
       voters_card_image:
         type: string
       whatsapp_phone:
+        type: string
+    type: object
+  internal_handler_party_applications.SubmitSupervisorApplicationRequest:
+    properties:
+      degree_certificate_url:
+        type: string
+      election_group_id:
+        type: integer
+      lga_id:
+        type: integer
+      role:
+        type: string
+      state_id:
+        type: integer
+      ward_id:
+        type: integer
+    type: object
+  internal_handler_polling_unit_assignments.CreateAssignmentRequest:
+    properties:
+      election_group_id:
+        type: integer
+      fake_id:
+        type: integer
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      role_type:
+        type: string
+    type: object
+  internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest:
+    properties:
+      arrival_video_url:
+        type: string
+      arrived_at:
+        type: string
+      election_ended_at:
+        type: string
+      election_ended_video_url:
+        type: string
+      election_started_at:
+        type: string
+      election_started_video_url:
+        type: string
+    type: object
+  internal_handler_polling_unit_results.ReviewRequest:
+    properties:
+      disputed_reason:
+        type: string
+      status:
+        description: '"confirmed" or "nullified"'
+        type: string
+    type: object
+  internal_handler_polling_unit_results.SubmitResultRequest:
+    properties:
+      assignment_id:
+        type: integer
+      election_group_id:
+        type: integer
+      election_id:
+        type: integer
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      result_sheet_image_url:
+        type: string
+      result_sheet_video_url:
+        type: string
+      uploaded_by_inec:
+        type: boolean
+    type: object
+  internal_handler_polling_unit_results.VoteRequest:
+    properties:
+      vote_type:
+        description: '"up" or "down"'
+        type: string
+    type: object
+  internal_handler_polling_unit_updates.CreateUpdateRequest:
+    properties:
+      assignment_id:
+        type: integer
+      election_group_id:
+        type: integer
+      is_report:
+        type: boolean
+      media_urls:
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+      party_id:
+        type: integer
+      polling_unit_id:
+        type: integer
+      report_types:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_handler_polling_units.CreatePollingUnitRequest:
+    properties:
+      abbreviation:
+        type: string
+      delimitation:
+        type: string
+      formatted_address:
+        type: string
+      google_place_id:
+        type: string
+      latitude:
+        type: number
+      lga_id:
+        type: integer
+      longitude:
+        type: number
+      name:
+        type: string
+      precise_location:
+        type: string
+      registration_area_id:
+        type: integer
+      remark:
+        type: string
+      state_id:
+        type: integer
+      units:
+        type: string
+      ward_id:
+        type: integer
+    type: object
+  internal_handler_polling_units.GetPollingUnitsData:
+    properties:
+      polling_units:
+        items:
+          $ref: '#/definitions/internal_handler_polling_units.PollingUnitResponse'
+        type: array
+    type: object
+  internal_handler_polling_units.GetPollingUnitsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_handler_polling_units.GetPollingUnitsData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/internal_handler_polling_units.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  internal_handler_polling_units.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  internal_handler_polling_units.PollingUnitResponse:
+    properties:
+      abbreviation:
+        type: string
+      delimitation:
+        type: string
+      formatted_address:
+        type: string
+      google_place_id:
+        type: string
+      id:
+        type: integer
+      latitude:
+        type: number
+      lga_id:
+        type: integer
+      lga_name:
+        type: string
+      longitude:
+        type: number
+      name:
+        type: string
+      precise_location:
+        type: string
+      registration_area_id:
+        type: integer
+      remark:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+      units:
+        type: string
+      ward_id:
+        type: integer
+      ward_name:
+        type: string
+    type: object
+  internal_handler_polling_units.UpdatePollingUnitRequest:
+    properties:
+      abbreviation:
+        type: string
+      delimitation:
+        type: string
+      formatted_address:
+        type: string
+      google_place_id:
+        type: string
+      latitude:
+        type: number
+      lga_id:
+        type: integer
+      longitude:
+        type: number
+      name:
+        type: string
+      precise_location:
+        type: string
+      registration_area_id:
+        type: integer
+      remark:
+        type: string
+      state_id:
+        type: integer
+      units:
+        type: string
+      ward_id:
+        type: integer
+    type: object
+  internal_handler_practice_tests.PracticeTestResponse:
+    properties:
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      earned_amount_kobo:
+        type: integer
+      election_group_id:
+        $ref: '#/definitions/pgtype.Int8'
+      id:
+        type: integer
+      overall_score:
+        $ref: '#/definitions/pgtype.Numeric'
+      role:
+        type: string
+      test_attempts:
+        items:
+          type: integer
+        type: array
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      user_id:
+        type: integer
+    type: object
+  internal_handler_practice_tests.SubmitPracticeTestRequest:
+    properties:
+      election_group_id:
+        type: integer
+      final_score:
+        type: number
+      role:
+        type: string
+      task_stats:
+        items:
+          $ref: '#/definitions/internal_handler_practice_tests.TaskStat'
+        type: array
+    type: object
+  internal_handler_practice_tests.TaskStat:
+    properties:
+      completed:
+        type: boolean
+      failed_attempts:
+        type: integer
+      score:
+        type: number
+      task_id:
+        type: integer
+    type: object
+  internal_handler_referrals.createReferralRequest:
+    properties:
+      milestone:
+        type: string
+      party_id:
+        type: integer
+      referred_user_id:
+        type: integer
+      referrer_user_id:
+        type: integer
+      status:
+        type: string
+    required:
+    - milestone
+    - referred_user_id
+    - referrer_user_id
+    type: object
+  internal_handler_referrals.updateReferralRequest:
+    properties:
+      milestone:
+        type: string
+      paid_at:
+        description: ISO8601 string
+        type: string
+      party_id:
+        type: integer
+      status:
+        type: string
+    type: object
+  internal_handler_senatorial_districts.CreateSenatorialDistrictRequest:
+    properties:
+      coalition_center:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  internal_handler_senatorial_districts.GetSenatorialDistrictsData:
+    properties:
+      districts:
+        items:
+          $ref: '#/definitions/internal_handler_senatorial_districts.SenatorialDistrictResponse'
+        type: array
+    type: object
+  internal_handler_senatorial_districts.GetSenatorialDistrictsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/internal_handler_senatorial_districts.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  internal_handler_senatorial_districts.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  internal_handler_senatorial_districts.SenatorialDistrictResponse:
+    properties:
+      coalition_center:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+    type: object
+  internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest:
+    properties:
+      coalition_center:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest:
+    properties:
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      state_id:
+        type: integer
+    type: object
+  internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData:
+    properties:
+      constituencies:
+        items:
+          $ref: '#/definitions/internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse'
+        type: array
+    type: object
+  internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/internal_handler_state_assembly_constituencies.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  internal_handler_state_assembly_constituencies.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse:
+    properties:
+      federal_constituency_id:
+        type: integer
+      federal_constituency_name:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      senatorial_district_name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
+        type: string
+    type: object
+  internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest:
+    properties:
+      federal_constituency_id:
+        type: integer
+      lga_id:
+        type: integer
+      name:
+        type: string
+      senatorial_district_id:
+        type: integer
+      state_id:
+        type: integer
+    type: object
+  internal_handler_states.CreateStateRequest:
+    properties:
+      country_code:
+        type: string
+      country_id:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  internal_handler_states.UpdateStateRequest:
+    properties:
+      country_code:
+        type: string
+      country_id:
+        type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  internal_handler_system_settings.SystemSettingResponse:
+    properties:
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      description:
+        $ref: '#/definitions/pgtype.Text'
+      key:
+        type: string
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      value:
+        items:
+          type: integer
+        type: array
+    type: object
+  internal_handler_system_settings.UpdateSystemSettingRequest:
+    properties:
+      description:
+        type: string
+      value:
+        items:
+          type: integer
+        type: array
+    required:
+    - value
+    type: object
+  internal_handler_users.GetUsersData:
+    properties:
+      users:
+        items:
+          $ref: '#/definitions/free9ja_api_internal_db_queries.UserWithPlaces'
+        type: array
+    type: object
+  internal_handler_users.GetUsersResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_handler_users.GetUsersData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/internal_handler_users.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  internal_handler_users.MakeUserSuperAdminRequest:
+    properties:
+      name:
+        minLength: 3
+        type: string
+    required:
+    - name
+    type: object
+  internal_handler_users.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  internal_handler_users.UpdateProfileRequest:
+    properties:
+      avatar:
+        type: string
+      avatar_file_id:
+        type: integer
+      current_city:
+        type: integer
+      current_country:
+        type: integer
+      current_state:
+        type: integer
+      first_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      gender:
+        enum:
+        - male
+        - female
+        type: string
+      last_name:
+        maxLength: 30
+        minLength: 2
+        type: string
+      middle_name:
+        maxLength: 30
+        type: string
+    required:
+    - current_country
+    - current_state
+    - first_name
+    - gender
+    - last_name
+    type: object
+  internal_handler_users.UpdateUserPhoneNumbersRequest:
+    properties:
+      phones:
+        items:
+          $ref: '#/definitions/free9ja_api_internal_service_users.PhonePayload'
+        type: array
+      user_fid:
+        type: integer
+    type: object
+  internal_handler_users.UpdateUserRolesRequest:
+    properties:
+      party_id:
+        type: integer
+      roles:
+        items:
+          type: string
+        type: array
+      user_fid:
+        type: integer
+    required:
+    - roles
+    type: object
+  internal_handler_users.UserWithdrawRequest:
+    properties:
+      amount_kobo:
+        type: integer
+      bank_account_number:
+        type: string
+      bank_code:
+        type: string
+      narration:
+        type: string
+    type: object
+  internal_handler_wards.CreateWardRequest:
+    properties:
+      abbreviation:
+        type: string
+      lga_id:
+        type: integer
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  internal_handler_wards.GetWardsData:
+    properties:
+      wards:
+        items:
+          $ref: '#/definitions/internal_handler_wards.WardResponse'
+        type: array
+    type: object
+  internal_handler_wards.GetWardsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_handler_wards.GetWardsData'
+      message:
+        type: string
+      meta:
+        $ref: '#/definitions/internal_handler_wards.PaginationMeta'
+      success:
+        type: boolean
+    type: object
+  internal_handler_wards.PaginationMeta:
+    properties:
+      has_more:
+        type: boolean
+      next_cursor:
+        type: string
+    type: object
+  internal_handler_wards.UpdateWardRequest:
+    properties:
+      abbreviation:
+        type: string
+      lga_id:
+        type: integer
+      name:
+        type: string
+      state_id:
+        type: integer
+    type: object
+  internal_handler_wards.WardResponse:
+    properties:
+      id:
+        type: integer
+      lga_id:
+        type: integer
+      lga_name:
+        type: string
+      name:
+        type: string
+      state_id:
+        type: integer
+      state_name:
         type: string
     type: object
   pgtype.Bool:
@@ -1130,833 +2090,6 @@ definitions:
       valid:
         type: boolean
     type: object
-  polling_unit_updates.CreateUpdateRequest:
-    properties:
-      assignment_id:
-        type: integer
-      election_group_id:
-        type: integer
-      is_report:
-        type: boolean
-      media_urls:
-        items:
-          type: string
-        type: array
-      message:
-        type: string
-      party_id:
-        type: integer
-      polling_unit_id:
-        type: integer
-      report_types:
-        items:
-          type: string
-        type: array
-    type: object
-  pollingunitshandler.CreatePollingUnitRequest:
-    properties:
-      abbreviation:
-        type: string
-      delimitation:
-        type: string
-      formatted_address:
-        type: string
-      google_place_id:
-        type: string
-      latitude:
-        type: number
-      lga_id:
-        type: integer
-      longitude:
-        type: number
-      name:
-        type: string
-      precise_location:
-        type: string
-      registration_area_id:
-        type: integer
-      remark:
-        type: string
-      state_id:
-        type: integer
-      units:
-        type: string
-      ward_id:
-        type: integer
-    type: object
-  pollingunitshandler.GetPollingUnitsData:
-    properties:
-      polling_units:
-        items:
-          $ref: '#/definitions/pollingunitshandler.PollingUnitResponse'
-        type: array
-    type: object
-  pollingunitshandler.GetPollingUnitsResponse:
-    properties:
-      data:
-        $ref: '#/definitions/pollingunitshandler.GetPollingUnitsData'
-      message:
-        type: string
-      meta:
-        $ref: '#/definitions/pollingunitshandler.PaginationMeta'
-      success:
-        type: boolean
-    type: object
-  pollingunitshandler.PaginationMeta:
-    properties:
-      has_more:
-        type: boolean
-      next_cursor:
-        type: string
-    type: object
-  pollingunitshandler.PollingUnitResponse:
-    properties:
-      abbreviation:
-        type: string
-      delimitation:
-        type: string
-      formatted_address:
-        type: string
-      google_place_id:
-        type: string
-      id:
-        type: integer
-      latitude:
-        type: number
-      lga_id:
-        type: integer
-      lga_name:
-        type: string
-      longitude:
-        type: number
-      name:
-        type: string
-      precise_location:
-        type: string
-      registration_area_id:
-        type: integer
-      remark:
-        type: string
-      state_id:
-        type: integer
-      state_name:
-        type: string
-      units:
-        type: string
-      ward_id:
-        type: integer
-      ward_name:
-        type: string
-    type: object
-  pollingunitshandler.UpdatePollingUnitRequest:
-    properties:
-      abbreviation:
-        type: string
-      delimitation:
-        type: string
-      formatted_address:
-        type: string
-      google_place_id:
-        type: string
-      latitude:
-        type: number
-      lga_id:
-        type: integer
-      longitude:
-        type: number
-      name:
-        type: string
-      precise_location:
-        type: string
-      registration_area_id:
-        type: integer
-      remark:
-        type: string
-      state_id:
-        type: integer
-      units:
-        type: string
-      ward_id:
-        type: integer
-    type: object
-  practicetestshandler.PracticeTestResponse:
-    properties:
-      created_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      election_group_id:
-        $ref: '#/definitions/pgtype.Int8'
-      id:
-        type: integer
-      overall_score:
-        $ref: '#/definitions/pgtype.Numeric'
-      role:
-        type: string
-      status:
-        type: string
-      test_attempts:
-        items:
-          type: integer
-        type: array
-      updated_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      user_id:
-        type: integer
-    type: object
-  practicetestshandler.SubmitPracticeTestRequest:
-    properties:
-      election_group_id:
-        type: integer
-      final_score:
-        type: number
-      role:
-        type: string
-      task_stats:
-        items:
-          $ref: '#/definitions/practicetestshandler.TaskStat'
-        type: array
-    type: object
-  practicetestshandler.TaskStat:
-    properties:
-      completed:
-        type: boolean
-      failed_attempts:
-        type: integer
-      score:
-        type: number
-      task_id:
-        type: integer
-    type: object
-  puassignmentshandler.CreateAssignmentRequest:
-    properties:
-      election_group_id:
-        type: integer
-      fake_id:
-        type: integer
-      party_id:
-        type: integer
-      polling_unit_id:
-        type: integer
-      role_type:
-        type: string
-    type: object
-  puassignmentshandler.UpdateAssignmentTrackingRequest:
-    properties:
-      arrival_video_url:
-        type: string
-      arrived_at:
-        type: string
-      election_ended_at:
-        type: string
-      election_ended_video_url:
-        type: string
-      election_started_at:
-        type: string
-      election_started_video_url:
-        type: string
-    type: object
-  queries.CachedUserRoles:
-    properties:
-      roles:
-        items:
-          $ref: '#/definitions/queries.GetUserRolesRow'
-        type: array
-      roles_code:
-        items:
-          type: string
-        type: array
-    type: object
-  queries.GetPageVerificationsRow:
-    properties:
-      for_who:
-        type: string
-      id:
-        type: integer
-      is_admin_assignable:
-        type: boolean
-      page_id:
-        type: integer
-      page_type:
-        type: string
-      verification_description:
-        $ref: '#/definitions/pgtype.Text'
-      verification_title:
-        type: string
-      verification_type:
-        type: string
-      verification_type_id:
-        type: integer
-      verified_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-    type: object
-  queries.GetUserRolesRow:
-    properties:
-      code:
-        type: string
-      date_assigned:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      role_id:
-        type: integer
-      user_id:
-        type: integer
-      who_assigned:
-        type: integer
-    type: object
-  queries.PartyBasicInfoWithVerifications:
-    properties:
-      id:
-        type: integer
-      is_verified:
-        $ref: '#/definitions/pgtype.Bool'
-      logo:
-        type: string
-      name:
-        type: string
-      short_name:
-        type: string
-      verifications:
-        items:
-          $ref: '#/definitions/queries.GetPageVerificationsRow'
-        type: array
-    type: object
-  queries.PartyWithVerifications:
-    properties:
-      agent_acquisition_targets:
-        items:
-          type: integer
-        type: array
-      agent_payment_allocation_kobo:
-        items:
-          type: integer
-        type: array
-      agent_payment_balance_kobo:
-        type: integer
-      auto_accept_applications:
-        items:
-          type: integer
-        type: array
-      created_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      discount_percentage:
-        $ref: '#/definitions/pgtype.Numeric'
-      display_order:
-        type: integer
-      id:
-        type: integer
-      is_verified:
-        $ref: '#/definitions/pgtype.Bool'
-      logo:
-        type: string
-      logo_file_id:
-        $ref: '#/definitions/pgtype.Int8'
-      name:
-        type: string
-      short_name:
-        type: string
-      slots:
-        type: integer
-      status:
-        type: string
-      updated_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      verifications:
-        items:
-          $ref: '#/definitions/queries.GetPageVerificationsRow'
-        type: array
-    type: object
-  queries.UserWithPlaces:
-    properties:
-      account_status:
-        $ref: '#/definitions/pgtype.Text'
-      address:
-        $ref: '#/definitions/pgtype.Text'
-      avatar:
-        $ref: '#/definitions/pgtype.Text'
-      avatar_file_id:
-        $ref: '#/definitions/pgtype.Int8'
-      city_name:
-        type: string
-      country_name:
-        type: string
-      country_of_origin:
-        $ref: '#/definitions/pgtype.Int2'
-      created_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      current_city:
-        $ref: '#/definitions/pgtype.Int4'
-      current_country:
-        type: integer
-      current_lga:
-        $ref: '#/definitions/pgtype.Int4'
-      current_state:
-        type: integer
-      current_ward:
-        $ref: '#/definitions/pgtype.Int4'
-      date_of_birth:
-        $ref: '#/definitions/pgtype.Date'
-      email:
-        $ref: '#/definitions/pgtype.Text'
-      fake_id:
-        $ref: '#/definitions/pgtype.Int8'
-      first_name:
-        $ref: '#/definitions/pgtype.Text'
-      gender:
-        $ref: '#/definitions/pgtype.Text'
-      has_role:
-        $ref: '#/definitions/pgtype.Bool'
-      id:
-        type: integer
-      is_politician:
-        $ref: '#/definitions/pgtype.Bool'
-      is_verified:
-        $ref: '#/definitions/pgtype.Bool'
-      last_name:
-        $ref: '#/definitions/pgtype.Text'
-      middle_name:
-        $ref: '#/definitions/pgtype.Text'
-      party_basic_info:
-        $ref: '#/definitions/queries.PartyBasicInfoWithVerifications'
-      party_id:
-        $ref: '#/definitions/pgtype.Int2'
-      password_hash:
-        type: string
-      phone:
-        $ref: '#/definitions/pgtype.Text'
-      polling_unit_id:
-        $ref: '#/definitions/pgtype.Int4'
-      referral_code:
-        $ref: '#/definitions/pgtype.Text'
-      referred_by_code:
-        $ref: '#/definitions/pgtype.Text'
-      roles:
-        $ref: '#/definitions/queries.CachedUserRoles'
-      state_name:
-        type: string
-      state_of_origin:
-        $ref: '#/definitions/pgtype.Int2'
-      updated_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      username:
-        $ref: '#/definitions/pgtype.Text'
-      verifications:
-        items:
-          $ref: '#/definitions/queries.GetPageVerificationsRow'
-        type: array
-      voters_card_image:
-        $ref: '#/definitions/pgtype.Text'
-    type: object
-  referrals.createReferralRequest:
-    properties:
-      milestone:
-        type: string
-      party_id:
-        type: integer
-      referred_user_id:
-        type: integer
-      referrer_user_id:
-        type: integer
-      status:
-        type: string
-    required:
-    - milestone
-    - referred_user_id
-    - referrer_user_id
-    type: object
-  referrals.updateReferralRequest:
-    properties:
-      milestone:
-        type: string
-      paid_at:
-        description: ISO8601 string
-        type: string
-      party_id:
-        type: integer
-      status:
-        type: string
-    type: object
-  senatorialdistrictshandler.CreateSenatorialDistrictRequest:
-    properties:
-      coalition_center:
-        type: string
-      description:
-        type: string
-      name:
-        type: string
-      state_id:
-        type: integer
-    type: object
-  senatorialdistrictshandler.GetSenatorialDistrictsData:
-    properties:
-      districts:
-        items:
-          $ref: '#/definitions/senatorialdistrictshandler.SenatorialDistrictResponse'
-        type: array
-    type: object
-  senatorialdistrictshandler.GetSenatorialDistrictsResponse:
-    properties:
-      data:
-        $ref: '#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsData'
-      message:
-        type: string
-      meta:
-        $ref: '#/definitions/senatorialdistrictshandler.PaginationMeta'
-      success:
-        type: boolean
-    type: object
-  senatorialdistrictshandler.PaginationMeta:
-    properties:
-      has_more:
-        type: boolean
-      next_cursor:
-        type: string
-    type: object
-  senatorialdistrictshandler.SenatorialDistrictResponse:
-    properties:
-      coalition_center:
-        type: string
-      description:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      state_id:
-        type: integer
-      state_name:
-        type: string
-    type: object
-  senatorialdistrictshandler.UpdateSenatorialDistrictRequest:
-    properties:
-      coalition_center:
-        type: string
-      description:
-        type: string
-      name:
-        type: string
-      state_id:
-        type: integer
-    type: object
-  stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest:
-    properties:
-      federal_constituency_id:
-        type: integer
-      lga_id:
-        type: integer
-      name:
-        type: string
-      senatorial_district_id:
-        type: integer
-      state_id:
-        type: integer
-    type: object
-  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData:
-    properties:
-      constituencies:
-        items:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse'
-        type: array
-    type: object
-  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse:
-    properties:
-      data:
-        $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData'
-      message:
-        type: string
-      meta:
-        $ref: '#/definitions/stateassemblyconstituencieshandler.PaginationMeta'
-      success:
-        type: boolean
-    type: object
-  stateassemblyconstituencieshandler.PaginationMeta:
-    properties:
-      has_more:
-        type: boolean
-      next_cursor:
-        type: string
-    type: object
-  stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse:
-    properties:
-      federal_constituency_id:
-        type: integer
-      federal_constituency_name:
-        type: string
-      id:
-        type: integer
-      name:
-        type: string
-      senatorial_district_id:
-        type: integer
-      senatorial_district_name:
-        type: string
-      state_id:
-        type: integer
-      state_name:
-        type: string
-    type: object
-  stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest:
-    properties:
-      federal_constituency_id:
-        type: integer
-      lga_id:
-        type: integer
-      name:
-        type: string
-      senatorial_district_id:
-        type: integer
-      state_id:
-        type: integer
-    type: object
-  stateshandler.CreateStateRequest:
-    properties:
-      country_code:
-        type: string
-      country_id:
-        type: integer
-      latitude:
-        type: number
-      longitude:
-        type: number
-      name:
-        type: string
-    type: object
-  stateshandler.UpdateStateRequest:
-    properties:
-      country_code:
-        type: string
-      country_id:
-        type: integer
-      latitude:
-        type: number
-      longitude:
-        type: number
-      name:
-        type: string
-    type: object
-  system_settings.SystemSettingResponse:
-    properties:
-      created_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      description:
-        $ref: '#/definitions/pgtype.Text'
-      key:
-        type: string
-      updated_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      value:
-        items:
-          type: integer
-        type: array
-    type: object
-  system_settings.UpdateSystemSettingRequest:
-    properties:
-      description:
-        type: string
-      value:
-        items:
-          type: integer
-        type: array
-    required:
-    - value
-    type: object
-  usershandler.GetUsersData:
-    properties:
-      users:
-        items:
-          $ref: '#/definitions/queries.UserWithPlaces'
-        type: array
-    type: object
-  usershandler.GetUsersResponse:
-    properties:
-      data:
-        $ref: '#/definitions/usershandler.GetUsersData'
-      message:
-        type: string
-      meta:
-        $ref: '#/definitions/usershandler.PaginationMeta'
-      success:
-        type: boolean
-    type: object
-  usershandler.MakeUserSuperAdminRequest:
-    properties:
-      name:
-        minLength: 3
-        type: string
-    required:
-    - name
-    type: object
-  usershandler.PaginationMeta:
-    properties:
-      has_more:
-        type: boolean
-      next_cursor:
-        type: string
-    type: object
-  usershandler.UpdateProfileRequest:
-    properties:
-      avatar:
-        type: string
-      avatar_file_id:
-        type: integer
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_state:
-        type: integer
-      first_name:
-        maxLength: 30
-        minLength: 2
-        type: string
-      gender:
-        enum:
-        - male
-        - female
-        type: string
-      last_name:
-        maxLength: 30
-        minLength: 2
-        type: string
-      middle_name:
-        maxLength: 30
-        type: string
-    required:
-    - current_country
-    - current_state
-    - first_name
-    - gender
-    - last_name
-    type: object
-  usershandler.UpdateUserPhoneNumbersRequest:
-    properties:
-      phones:
-        items:
-          $ref: '#/definitions/usersservice.PhonePayload'
-        type: array
-      user_fid:
-        type: integer
-    type: object
-  usershandler.UpdateUserRolesRequest:
-    properties:
-      party_id:
-        type: integer
-      roles:
-        items:
-          type: string
-        type: array
-      user_fid:
-        type: integer
-    required:
-    - roles
-    type: object
-  usershandler.UserWithdrawRequest:
-    properties:
-      amount_kobo:
-        type: integer
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
-      narration:
-        type: string
-    type: object
-  usersservice.PhonePayload:
-    properties:
-      id:
-        type: integer
-      is_default:
-        type: boolean
-      on_whatsapp:
-        type: string
-      phone:
-        type: string
-      phonecode:
-        type: string
-      raw_input:
-        type: string
-    type: object
-  utils.ErrorResponse:
-    properties:
-      data: {}
-      message:
-        example: Error message description
-        type: string
-      success:
-        example: false
-        type: boolean
-    type: object
-  utils.SuccessResponse:
-    properties:
-      data:
-        additionalProperties: true
-        type: object
-      message:
-        example: Operation successful
-        type: string
-      success:
-        example: true
-        type: boolean
-    type: object
-  wardshandler.CreateWardRequest:
-    properties:
-      abbreviation:
-        type: string
-      lga_id:
-        type: integer
-      name:
-        type: string
-      state_id:
-        type: integer
-    type: object
-  wardshandler.GetWardsData:
-    properties:
-      wards:
-        items:
-          $ref: '#/definitions/wardshandler.WardResponse'
-        type: array
-    type: object
-  wardshandler.GetWardsResponse:
-    properties:
-      data:
-        $ref: '#/definitions/wardshandler.GetWardsData'
-      message:
-        type: string
-      meta:
-        $ref: '#/definitions/wardshandler.PaginationMeta'
-      success:
-        type: boolean
-    type: object
-  wardshandler.PaginationMeta:
-    properties:
-      has_more:
-        type: boolean
-      next_cursor:
-        type: string
-    type: object
-  wardshandler.UpdateWardRequest:
-    properties:
-      abbreviation:
-        type: string
-      lga_id:
-        type: integer
-      name:
-        type: string
-      state_id:
-        type: integer
-    type: object
-  wardshandler.WardResponse:
-    properties:
-      id:
-        type: integer
-      lga_id:
-        type: integer
-      lga_name:
-        type: string
-      name:
-        type: string
-      state_id:
-        type: integer
-      state_name:
-        type: string
-    type: object
 host: localhost:4100
 info:
   contact:
@@ -1971,6 +2104,60 @@ info:
   title: Free9ja API
   version: "1.0"
 paths:
+  /:
+    get:
+      description: get the API root message
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: API Root
+      tags:
+      - root
+  /admin/agent-marketing-campaigns:
+    get:
+      description: Returns a paginated list of all party marketing campaigns with
+        party, plan, election_group, and election details
+      parameters:
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      - description: Election Group ID filter
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Status filter
+        in: query
+        name: status
+        type: string
+      - default: 20
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor (ID)
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Marketing campaigns retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all party marketing campaigns (Admin)
+      tags:
+      - Marketing
   /admin/parties/{id}/discount:
     put:
       consumes:
@@ -1988,7 +2175,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.SetPartyDiscountRequest'
+          $ref: '#/definitions/internal_handler_parties.SetPartyDiscountRequest'
       produces:
       - application/json
       responses:
@@ -2019,7 +2206,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.ToggleVerificationRequest'
+          $ref: '#/definitions/internal_handler_parties.ToggleVerificationRequest'
       produces:
       - application/json
       responses:
@@ -2088,7 +2275,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/referrals.createReferralRequest'
+          $ref: '#/definitions/internal_handler_referrals.createReferralRequest'
       produces:
       - application/json
       responses:
@@ -2128,7 +2315,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/referrals.updateReferralRequest'
+          $ref: '#/definitions/internal_handler_referrals.updateReferralRequest'
       produces:
       - application/json
       responses:
@@ -2170,23 +2357,23 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
+            - $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/system_settings.SystemSettingResponse'
+                  $ref: '#/definitions/internal_handler_system_settings.SystemSettingResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get a system setting
@@ -2207,7 +2394,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/system_settings.UpdateSystemSettingRequest'
+          $ref: '#/definitions/internal_handler_system_settings.UpdateSystemSettingRequest'
       produces:
       - application/json
       responses:
@@ -2215,19 +2402,19 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
+            - $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/system_settings.SystemSettingResponse'
+                  $ref: '#/definitions/internal_handler_system_settings.SystemSettingResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Update a system setting
@@ -2259,7 +2446,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.SetSlotPriceRequest'
+          $ref: '#/definitions/internal_handler_parties.SetSlotPriceRequest'
       produces:
       - application/json
       responses:
@@ -2318,7 +2505,7 @@ paths:
         name: body
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UpdateUserPhoneNumbersRequest'
+          $ref: '#/definitions/internal_handler_users.UpdateUserPhoneNumbersRequest'
       produces:
       - application/json
       responses:
@@ -2428,7 +2615,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pageverificationshandler.AssignVerificationRequest'
+          $ref: '#/definitions/internal_handler_page_verifications.AssignVerificationRequest'
       produces:
       - application/json
       responses:
@@ -2452,6 +2639,159 @@ paths:
       summary: Assign verifications to a page
       tags:
       - Page Verifications
+  /agent-earnings:
+    get:
+      parameters:
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: integer
+      - description: Filter by election group
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by party
+        in: query
+        name: party_id
+        type: integer
+      - description: Filter by status (pending|approved|paid|disputed)
+        in: query
+        name: status
+        type: string
+      - description: Page size (default 50)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: List agent earnings
+      tags:
+      - AgentEarnings
+  /agent-earnings/{id}:
+    get:
+      parameters:
+      - description: Earnings ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a single agent earnings record
+      tags:
+      - AgentEarnings
+  /agent-earnings/{id}/approve:
+    patch:
+      parameters:
+      - description: Earnings ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Approve earnings for payout (admin)
+      tags:
+      - AgentEarnings
+  /agent-earnings/{id}/mark-paid:
+    patch:
+      parameters:
+      - description: Earnings ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Mark approved earnings as paid (admin)
+      tags:
+      - AgentEarnings
+  /agent-earnings/assignment/{assignment_id}:
+    get:
+      parameters:
+      - description: Assignment ID
+        in: path
+        name: assignment_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
+      security:
+      - BearerAuth: []
+      summary: Get earnings for a specific assignment
+      tags:
+      - AgentEarnings
+  /agent-earnings/calculate/{assignment_id}:
+    post:
+      description: Computes and upserts the earnings record for a given assignment.
+        Can be called repeatedly to refresh.
+      parameters:
+      - description: Assignment ID
+        in: path
+        name: assignment_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Calculate agent earnings for an assignment
+      tags:
+      - AgentEarnings
   /agent-marketing-plans:
     get:
       description: Returns all active marketing plans of the specified type (e.g.
@@ -2475,6 +2815,36 @@ paths:
       summary: Get plans by type
       tags:
       - Marketing
+  /api/v1/supervisor-assignments:
+    get:
+      consumes:
+      - application/json
+      description: Get supervisor assignments for a user for a specific election group
+      parameters:
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: integer
+      - description: Election Group ID
+        in: query
+        name: election_group_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
+      summary: Get Supervisor Assignments
+      tags:
+      - SupervisorAssignments
   /auth/admin/login:
     post:
       consumes:
@@ -2486,14 +2856,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.AdminLoginRequest'
+          $ref: '#/definitions/internal_handler_auth.AdminLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authhandler.AdminLoginResponse'
+            $ref: '#/definitions/internal_handler_auth.AdminLoginResponse'
         "400":
           description: Bad Request
           schema:
@@ -2519,7 +2889,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.ChangePasswordByEmailRequest'
+          $ref: '#/definitions/internal_handler_auth.ChangePasswordByEmailRequest'
       produces:
       - application/json
       responses:
@@ -2552,7 +2922,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.CheckNINRequest'
+          $ref: '#/definitions/internal_handler_auth.CheckNINRequest'
       produces:
       - application/json
       responses:
@@ -2580,7 +2950,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.CheckReferralCodeRequest'
+          $ref: '#/definitions/internal_handler_auth.CheckReferralCodeRequest'
       produces:
       - application/json
       responses:
@@ -2608,7 +2978,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.CheckUsernameRequest'
+          $ref: '#/definitions/internal_handler_auth.CheckUsernameRequest'
       produces:
       - application/json
       responses:
@@ -2636,7 +3006,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.ForgotPasswordRequest'
+          $ref: '#/definitions/internal_handler_auth.ForgotPasswordRequest'
       produces:
       - application/json
       responses:
@@ -2669,7 +3039,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.LoginRequest'
+          $ref: '#/definitions/internal_handler_auth.LoginRequest'
       produces:
       - application/json
       responses:
@@ -2702,7 +3072,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.LogoutRequest'
+          $ref: '#/definitions/internal_handler_auth.LogoutRequest'
       produces:
       - application/json
       responses:
@@ -2730,14 +3100,14 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.PartyLoginRequest'
+          $ref: '#/definitions/internal_handler_auth.PartyLoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/authhandler.AdminLoginResponse'
+            $ref: '#/definitions/internal_handler_auth.AdminLoginResponse'
         "400":
           description: Bad Request
           schema:
@@ -2762,7 +3132,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.RefreshRequest'
+          $ref: '#/definitions/internal_handler_auth.RefreshRequest'
       produces:
       - application/json
       responses:
@@ -2795,7 +3165,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.RegisterRequest'
+          $ref: '#/definitions/internal_handler_auth.RegisterRequest'
       produces:
       - application/json
       responses:
@@ -2828,7 +3198,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.RegisterCandidatePlaceholderRequest'
+          $ref: '#/definitions/internal_handler_auth.RegisterCandidatePlaceholderRequest'
       produces:
       - application/json
       responses:
@@ -2862,7 +3232,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UpdateUserRolesRequest'
+          $ref: '#/definitions/internal_handler_users.UpdateUserRolesRequest'
       produces:
       - application/json
       responses:
@@ -2905,7 +3275,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.SignupRequest'
+          $ref: '#/definitions/internal_handler_auth.SignupRequest'
       produces:
       - application/json
       responses:
@@ -2934,7 +3304,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.RegisterPhaseSignUpRequest'
+          $ref: '#/definitions/internal_handler_auth.RegisterPhaseSignUpRequest'
       produces:
       - application/json
       responses:
@@ -2963,7 +3333,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.MakeUserSuperAdminRequest'
+          $ref: '#/definitions/internal_handler_users.MakeUserSuperAdminRequest'
       produces:
       - application/json
       responses:
@@ -2997,7 +3367,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/authhandler.VerifySecurityQuestionsRequest'
+          $ref: '#/definitions/internal_handler_auth.VerifySecurityQuestionsRequest'
       produces:
       - application/json
       responses:
@@ -3089,7 +3459,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetCountriesResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetCountriesResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -3115,7 +3485,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetStatesResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetStatesResponse'
         "400":
           description: Bad Request
           schema:
@@ -3172,7 +3542,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electiongroupshandler.CreateElectionGroupRequest'
+          $ref: '#/definitions/internal_handler_election_groups.CreateElectionGroupRequest'
       produces:
       - application/json
       responses:
@@ -3283,7 +3653,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electiongroupshandler.UpdateElectionGroupRequest'
+          $ref: '#/definitions/internal_handler_election_groups.UpdateElectionGroupRequest'
       produces:
       - application/json
       responses:
@@ -3357,7 +3727,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest'
+          $ref: '#/definitions/internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest'
       produces:
       - application/json
       responses:
@@ -3379,6 +3749,409 @@ paths:
       summary: Upsert party election group stats
       tags:
       - ElectionGroups
+  /election-groups/{id}/stats:
+    get:
+      description: Fetches pre-aggregated election statistics for an election group,
+        extracting a single party from the parties JSONB array if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get global stats for a single election group and optionally a single
+        party
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/federal-constituencies:
+    get:
+      description: Fetches pre-aggregated election statistics at the federal constituency
+        level
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID filter
+        in: query
+        name: state_id
+        type: integer
+      - description: Senatorial District ID filter
+        in: query
+        name: senatorial_district_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List federal constituency stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/federal-constituencies/{fc_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single federal
+        constituency unit, extracting a single party from the parties JSONB array
+        if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Federal Constituency ID
+        in: path
+        name: fc_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get federal constituency stats for a single geographic unit and optionally
+        a single party
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/lgas:
+    get:
+      description: Fetches pre-aggregated election statistics at the LGA level
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID filter
+        in: query
+        name: state_id
+        type: integer
+      - description: Senatorial District ID filter
+        in: query
+        name: senatorial_district_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List LGA stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/lgas/{lga_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single LGA unit,
+        extracting a single party from the parties JSONB array if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: LGA ID
+        in: path
+        name: lga_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get LGA stats for a single geographic unit and optionally a single
+        party
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/polling-units:
+    get:
+      description: Fetches pre-aggregated election statistics at the polling unit
+        level
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID filter
+        in: query
+        name: state_id
+        type: integer
+      - description: LGA ID filter
+        in: query
+        name: lga_id
+        type: integer
+      - description: Ward ID filter
+        in: query
+        name: ward_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List polling unit stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/senatorial-districts:
+    get:
+      description: Fetches pre-aggregated election statistics at the senatorial district
+        level
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID filter
+        in: query
+        name: state_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List senatorial district stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/senatorial-districts/{sd_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single senatorial
+        district unit, extracting a single party from the parties JSONB array if party_id
+        is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Senatorial District ID
+        in: path
+        name: sd_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get senatorial district stats for a single geographic unit and optionally
+        a single party
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/state-constituencies:
+    get:
+      description: Fetches pre-aggregated election statistics at the state constituency
+        level
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID filter
+        in: query
+        name: state_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List state constituency stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/state-constituencies/{sc_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single state constituency
+        unit, extracting a single party from the parties JSONB array if party_id is
+        provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State Constituency ID
+        in: path
+        name: sc_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get state constituency stats for a single geographic unit and optionally
+        a single party
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/states:
+    get:
+      description: Fetches pre-aggregated election statistics at the state level
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List state stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/states/{state_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single state unit,
+        extracting a single party from the parties JSONB array if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID
+        in: path
+        name: state_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get state stats for a single geographic unit and optionally a single
+        party
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/wards:
+    get:
+      description: Fetches pre-aggregated election statistics at the ward level
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: State ID filter
+        in: query
+        name: state_id
+        type: integer
+      - description: LGA ID filter
+        in: query
+        name: lga_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: List ward stats for an election group
+      tags:
+      - ElectionStats
+  /election-groups/{id}/stats/wards/{ward_id}:
+    get:
+      description: Fetches pre-aggregated election statistics for a single ward unit,
+        extracting a single party from the parties JSONB array if party_id is provided.
+      parameters:
+      - description: Election Group ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Ward ID
+        in: path
+        name: ward_id
+        required: true
+        type: integer
+      - description: Party ID filter
+        in: query
+        name: party_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get ward stats for a single geographic unit and optionally a single
+        party
+      tags:
+      - ElectionStats
   /election-groups/{id}/vote-status:
     get:
       description: Returns the vote status (voted, did_not_vote, none) and associated
@@ -3456,7 +4229,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateElectionRequest'
       produces:
       - application/json
       responses:
@@ -3567,7 +4340,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.UpdateElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.UpdateElectionRequest'
       produces:
       - application/json
       responses:
@@ -3641,7 +4414,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.SyncCandidatesRequest'
+          $ref: '#/definitions/internal_handler_elections.SyncCandidatesRequest'
       produces:
       - application/json
       responses:
@@ -3712,7 +4485,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateFederalConstituencyElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateFederalConstituencyElectionRequest'
       produces:
       - application/json
       responses:
@@ -3746,7 +4519,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateLgaElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateLgaElectionRequest'
       produces:
       - application/json
       responses:
@@ -3780,7 +4553,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateNationwideElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateNationwideElectionRequest'
       produces:
       - application/json
       responses:
@@ -3802,6 +4575,333 @@ paths:
       summary: Create a new nationwide election
       tags:
       - Elections
+  /elections/results:
+    get:
+      consumes:
+      - application/json
+      description: Returns the specific final result for the provided scope parameters.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: State Constituency ID
+        in: query
+        name: state_constituency_id
+        type: integer
+      - description: LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Federal Constituency ID
+        in: query
+        name: federal_constituency_id
+        type: integer
+      - description: Senatorial District ID
+        in: query
+        name: senatorial_district_id
+        type: integer
+      - description: State ID
+        in: query
+        name: state_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get scoped final result
+      tags:
+      - ElectionResults
+  /elections/results/federal-constituencies:
+    get:
+      consumes:
+      - application/json
+      description: Returns federal constituencies for a senatorial district with their
+        election_federal_constituency_final_result.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: Senatorial District ID
+        in: query
+        name: senatorial_district_id
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get federal constituencies with results
+      tags:
+      - ElectionResults
+  /elections/results/lgas:
+    get:
+      consumes:
+      - application/json
+      description: Returns LGAs for a federal constituency with their election_lga_final_result.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: Federal Constituency ID
+        in: query
+        name: federal_constituency_id
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get LGAs with results
+      tags:
+      - ElectionResults
+  /elections/results/polling-units:
+    get:
+      consumes:
+      - application/json
+      description: Returns polling units for a ward with their polling_unit_final_result.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: Ward ID
+        in: query
+        name: ward_id
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get polling units with results
+      tags:
+      - ElectionResults
+  /elections/results/senatorial-districts:
+    get:
+      consumes:
+      - application/json
+      description: Returns senatorial districts for a state with their election_senatorial_district_final_result.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: State ID
+        in: query
+        name: state_id
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get senatorial districts with results
+      tags:
+      - ElectionResults
+  /elections/results/states:
+    get:
+      consumes:
+      - application/json
+      description: Returns all Nigerian states with their election_state_final_result
+        for the given election_id.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get states with results
+      tags:
+      - ElectionResults
+  /elections/results/wards:
+    get:
+      consumes:
+      - application/json
+      description: Returns wards for a given LGA or state_assembly_constituency with
+        their election_ward_final_result.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: State Assembly Constituency ID
+        in: query
+        name: state_assembly_constituency_id
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get wards with results
+      tags:
+      - ElectionResults
   /elections/senatorial-district:
     post:
       consumes:
@@ -3814,7 +4914,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateSenatorialDistrictElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateSenatorialDistrictElectionRequest'
       produces:
       - application/json
       responses:
@@ -3848,7 +4948,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateStateElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateStateElectionRequest'
       produces:
       - application/json
       responses:
@@ -3882,7 +4982,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateStateConstituencyElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateStateConstituencyElectionRequest'
       produces:
       - application/json
       responses:
@@ -3916,7 +5016,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/electionshandler.CreateWardElectionRequest'
+          $ref: '#/definitions/internal_handler_elections.CreateWardElectionRequest'
       produces:
       - application/json
       responses:
@@ -3969,7 +5069,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/federalconstituencieshandler.GetFederalConstituenciesResponse'
+            $ref: '#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -3987,7 +5087,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/federalconstituencieshandler.CreateFederalConstituencyRequest'
+          $ref: '#/definitions/internal_handler_federal_constituencies.CreateFederalConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -4118,7 +5218,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/federalconstituencieshandler.UpdateFederalConstituencyRequest'
+          $ref: '#/definitions/internal_handler_federal_constituencies.UpdateFederalConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -4306,7 +5406,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/fileshandler.GenerateUploadURLRequest'
+          $ref: '#/definitions/internal_handler_files.GenerateUploadURLRequest'
       produces:
       - application/json
       responses:
@@ -4335,6 +5435,21 @@ paths:
       summary: Generate a presigned upload URL
       tags:
       - Files
+  /health:
+    get:
+      description: get the status of the server
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
   /lgas:
     get:
       consumes:
@@ -4351,7 +5466,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetLGAsResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetLGAsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -4399,7 +5514,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/officeshandler.CreateOfficeRequest'
+          $ref: '#/definitions/internal_handler_offices.CreateOfficeRequest'
       produces:
       - application/json
       responses:
@@ -4509,7 +5624,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/officeshandler.UpdateOfficeRequest'
+          $ref: '#/definitions/internal_handler_offices.UpdateOfficeRequest'
       produces:
       - application/json
       responses:
@@ -4587,7 +5702,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.CreatePartyRequest'
+          $ref: '#/definitions/internal_handler_parties.CreatePartyRequest'
       produces:
       - application/json
       responses:
@@ -4719,7 +5834,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdatePartyRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdatePartyRequest'
       produces:
       - application/json
       responses:
@@ -4794,7 +5909,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.CreateMarketingCampaignRequest'
+          $ref: '#/definitions/internal_handler_parties.CreateMarketingCampaignRequest'
       produces:
       - application/json
       responses:
@@ -4823,7 +5938,7 @@ paths:
         "200":
           description: Agent targets retrieved successfully
           schema:
-            $ref: '#/definitions/partieshandler.UpdateAgentTargetsRequest'
+            $ref: '#/definitions/internal_handler_parties.UpdateAgentTargetsRequest'
       security:
       - BearerAuth: []
       summary: Get party agent acquisition targets
@@ -4844,7 +5959,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdateAgentTargetsRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdateAgentTargetsRequest'
       produces:
       - application/json
       responses:
@@ -4875,7 +5990,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.DepositAllowanceRequest'
+          $ref: '#/definitions/internal_handler_parties.DepositAllowanceRequest'
       produces:
       - application/json
       responses:
@@ -4928,7 +6043,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.agentPaymentAllocation'
+          $ref: '#/definitions/internal_handler_parties.agentPaymentAllocation'
       produces:
       - application/json
       responses:
@@ -4959,7 +6074,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.BuySlotsRequest'
+          $ref: '#/definitions/internal_handler_parties.BuySlotsRequest'
       produces:
       - application/json
       responses:
@@ -5089,7 +6204,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.DepositAllowanceRequest'
+          $ref: '#/definitions/internal_handler_parties.DepositAllowanceRequest'
       produces:
       - application/json
       responses:
@@ -5171,7 +6286,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.WithdrawRequest'
+          $ref: '#/definitions/internal_handler_parties.WithdrawRequest'
       produces:
       - application/json
       responses:
@@ -5224,10 +6339,10 @@ paths:
           description: OK
           schema:
             allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
+            - $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/queries.PartyWithVerifications'
+                  $ref: '#/definitions/free9ja_api_internal_db_queries.PartyWithVerifications'
               type: object
       summary: Get basic party profile
       tags:
@@ -5287,6 +6402,47 @@ paths:
       summary: Provision missing wallets for political parties
       tags:
       - Parties
+  /party-applications/supervisor:
+    post:
+      consumes:
+      - application/json
+      description: Allows an accepted polling agent to submit an application to become
+        a ward, LGA, or state supervisor. Requires higher education degree.
+      parameters:
+      - description: Submit Supervisor Application payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_party_applications.SubmitSupervisorApplicationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Supervisor application submitted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request payload or eligibility failure
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Already applied for this election group
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit a supervisor application
+      tags:
+      - PollingAgentApplications
   /plans:
     get:
       description: Retrieves marketing plans. Optionally filter by ?type= (e.g. agent-campaign)
@@ -5321,7 +6477,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.CreatePlanRequest'
+          $ref: '#/definitions/internal_handler_parties.CreatePlanRequest'
       produces:
       - application/json
       responses:
@@ -5374,7 +6530,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdatePlanRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdatePlanRequest'
       produces:
       - application/json
       responses:
@@ -5404,7 +6560,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partieshandler.UpdatePlanDisplayOrderRequest'
+          $ref: '#/definitions/internal_handler_parties.UpdatePlanDisplayOrderRequest'
       produces:
       - application/json
       responses:
@@ -5480,7 +6636,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partyapplicationshandler.SubmitApplicationRequest'
+          $ref: '#/definitions/internal_handler_party_applications.SubmitApplicationRequest'
       produces:
       - application/json
       responses:
@@ -5562,7 +6718,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partyapplicationshandler.ApproveApplicationRequest'
+          $ref: '#/definitions/internal_handler_party_applications.ApproveApplicationRequest'
       produces:
       - application/json
       responses:
@@ -5656,7 +6812,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/partyapplicationshandler.RejectApplicationRequest'
+          $ref: '#/definitions/internal_handler_party_applications.RejectApplicationRequest'
       produces:
       - application/json
       responses:
@@ -5793,7 +6949,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/puassignmentshandler.CreateAssignmentRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_assignments.CreateAssignmentRequest'
       produces:
       - application/json
       responses:
@@ -5909,7 +7065,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/puassignmentshandler.UpdateAssignmentTrackingRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest'
       produces:
       - application/json
       responses:
@@ -5943,6 +7099,358 @@ paths:
       summary: Update polling unit assignment tracking (arrival, phases)
       tags:
       - PollingUnitAssignments
+  /polling-unit-final-results:
+    get:
+      description: Fetches a cursor-paginated list of final polling unit results with
+        details
+      parameters:
+      - description: Filter by Election Group ID
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by State ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Filter by Senatorial District ID
+        in: query
+        name: senatorial_district_id
+        type: integer
+      - description: Filter by Federal Constituency ID
+        in: query
+        name: federal_constituency_id
+        type: integer
+      - description: Filter by State Constituency ID
+        in: query
+        name: state_constituency_id
+        type: integer
+      - description: Filter by LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Filter by Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: Filter by presence of media
+        in: query
+        name: has_media
+        type: boolean
+      - description: Cursor (ID to paginate from)
+        in: query
+        name: cursor
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List Polling Unit Final Results
+      tags:
+      - Results
+  /polling-unit-results:
+    get:
+      description: Fetches a cursor-paginated list of polling unit results with filters
+      parameters:
+      - description: Filter by Election ID
+        in: query
+        name: election_id
+        type: integer
+      - description: Filter by Election Group ID
+        in: query
+        name: election_group_id
+        type: integer
+      - description: Filter by Party ID
+        in: query
+        name: party_id
+        type: integer
+      - description: Filter by Polling Unit ID
+        in: query
+        name: polling_unit_id
+        type: integer
+      - description: Filter by Submitter User ID
+        in: query
+        name: submitted_by
+        type: integer
+      - description: Filter by State ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Filter by LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Filter by Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: Filter by status (submitted|ai_verified|confirmed|disputed|nullified)
+        in: query
+        name: status
+        type: string
+      - description: Filter by INEC upload flag
+        in: query
+        name: uploaded_by_inec
+        type: boolean
+      - description: Cursor (ID to paginate from)
+        in: query
+        name: cursor
+        type: integer
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List Polling Unit Results
+      tags:
+      - Results
+    post:
+      consumes:
+      - application/json
+      description: Submit official election results for a polling unit. Assigned agents
+        include assignment_id; general users leave it null.
+      parameters:
+      - description: Result Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_polling_unit_results.SubmitResultRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Submit Polling Unit Result
+      tags:
+      - Results
+  /polling-unit-results/{id}:
+    get:
+      description: Fetch a single polling unit result by ID
+      parameters:
+      - description: Result ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get Polling Unit Result
+      tags:
+      - Results
+  /polling-unit-results/{id}/review:
+    patch:
+      consumes:
+      - application/json
+      description: Platform admin manually confirms or nullifies a polling unit result
+      parameters:
+      - description: Result ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Review Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_polling_unit_results.ReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Review a Polling Unit Result (Admin)
+      tags:
+      - Results
+  /polling-unit-results/{id}/vote:
+    patch:
+      consumes:
+      - application/json
+      description: Cast an up or down vote on a result. Switches vote if already cast
+        in opposite direction.
+      parameters:
+      - description: Result ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Vote Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_handler_polling_unit_results.VoteRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Vote on a Polling Unit Result
+      tags:
+      - Results
+  /polling-unit-results/final:
+    get:
+      description: Fetch the calculated final result for a given polling unit and
+        election
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: Polling Unit ID
+        in: query
+        name: polling_unit_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get Polling Unit Final Result
+      tags:
+      - Results
   /polling-unit-updates:
     get:
       consumes:
@@ -6022,7 +7530,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/polling_unit_updates.CreateUpdateRequest'
+          $ref: '#/definitions/internal_handler_polling_unit_updates.CreateUpdateRequest'
       produces:
       - application/json
       responses:
@@ -6092,7 +7600,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/pollingunitshandler.GetPollingUnitsResponse'
+            $ref: '#/definitions/internal_handler_polling_units.GetPollingUnitsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -6110,7 +7618,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pollingunitshandler.CreatePollingUnitRequest'
+          $ref: '#/definitions/internal_handler_polling_units.CreatePollingUnitRequest'
       produces:
       - application/json
       responses:
@@ -6241,7 +7749,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/pollingunitshandler.UpdatePollingUnitRequest'
+          $ref: '#/definitions/internal_handler_polling_units.UpdatePollingUnitRequest'
       produces:
       - application/json
       responses:
@@ -6309,7 +7817,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/utils.SuccessResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
       security:
       - BearerAuth: []
       summary: List practice tests
@@ -6326,7 +7834,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/practicetestshandler.SubmitPracticeTestRequest'
+          $ref: '#/definitions/internal_handler_practice_tests.SubmitPracticeTestRequest'
       produces:
       - application/json
       responses:
@@ -6334,23 +7842,23 @@ paths:
           description: Created
           schema:
             allOf:
-            - $ref: '#/definitions/utils.SuccessResponse'
+            - $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
             - properties:
                 data:
-                  $ref: '#/definitions/practicetestshandler.PracticeTestResponse'
+                  $ref: '#/definitions/internal_handler_practice_tests.PracticeTestResponse'
               type: object
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Submit a completed practice test session
@@ -6360,14 +7868,15 @@ paths:
     get:
       description: Returns the potential payout for the next practice test the user
         takes, based on their role, party payment allocation, and how many tests they
-        have already taken in the active time window.
+        have already taken in the active time window. All monetary values (potential_window_payout_kobo,
+        potential_test_payout_kobo, readiness_budget_kobo) are returned in kobo.
       parameters:
       - description: The election group to preview payout for
         in: query
         name: election_group_id
         required: true
         type: integer
-      - description: 'Role override (default: pollingagent)'
+      - description: 'Role override (default: polling_agent)'
         in: query
         name: role
         type: string
@@ -6377,15 +7886,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/utils.SuccessResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.SuccessResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/utils.ErrorResponse'
+            $ref: '#/definitions/free9ja_api_internal_utils.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get practice test payout preview
@@ -6418,6 +7927,74 @@ paths:
       summary: Get a referral
       tags:
       - referrals
+  /seed/admins:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers roles for admins from formatted JSON data
+      parameters:
+      - description: List of admins to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/free9ja_api_internal_service_seed.SeedAdminsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Admins seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed admins
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed admins and party admins
+      tags:
+      - Seed
+  /seed/users:
+    post:
+      consumes:
+      - application/json
+      description: Batch registers testing users from formatted JSON data
+      parameters:
+      - description: List of users to seed
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/free9ja_api_internal_service_seed.SeedUserRequest'
+          type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Users seeded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to seed users
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Seed testing users
+      tags:
+      - Seed
   /senatorial-districts:
     get:
       consumes:
@@ -6443,7 +8020,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsResponse'
+            $ref: '#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -6461,7 +8038,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/senatorialdistrictshandler.CreateSenatorialDistrictRequest'
+          $ref: '#/definitions/internal_handler_senatorial_districts.CreateSenatorialDistrictRequest'
       produces:
       - application/json
       responses:
@@ -6592,7 +8169,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/senatorialdistrictshandler.UpdateSenatorialDistrictRequest'
+          $ref: '#/definitions/internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest'
       produces:
       - application/json
       responses:
@@ -6641,7 +8218,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest'
+          $ref: '#/definitions/internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -6773,7 +8350,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest'
+          $ref: '#/definitions/internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -6839,7 +8416,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse'
+            $ref: '#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -6858,7 +8435,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateshandler.CreateStateRequest'
+          $ref: '#/definitions/internal_handler_states.CreateStateRequest'
       produces:
       - application/json
       responses:
@@ -6988,7 +8565,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateshandler.UpdateStateRequest'
+          $ref: '#/definitions/internal_handler_states.UpdateStateRequest'
       produces:
       - application/json
       responses:
@@ -7042,7 +8619,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/bodieshandler.GetCitiesResponse'
+            $ref: '#/definitions/internal_handler_bodies.GetCitiesResponse'
         "400":
           description: Bad Request
           schema:
@@ -7077,7 +8654,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/usershandler.GetUsersResponse'
+            $ref: '#/definitions/internal_handler_users.GetUsersResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -7262,7 +8839,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UserWithdrawRequest'
+          $ref: '#/definitions/internal_handler_users.UserWithdrawRequest'
       produces:
       - application/json
       responses:
@@ -7307,7 +8884,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/usershandler.UpdateProfileRequest'
+          $ref: '#/definitions/internal_handler_users.UpdateProfileRequest'
       produces:
       - application/json
       responses:
@@ -7446,7 +9023,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/wardshandler.GetWardsResponse'
+            $ref: '#/definitions/internal_handler_wards.GetWardsResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -7464,7 +9041,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/wardshandler.CreateWardRequest'
+          $ref: '#/definitions/internal_handler_wards.CreateWardRequest'
       produces:
       - application/json
       responses:
@@ -7594,7 +9171,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/wardshandler.UpdateWardRequest'
+          $ref: '#/definitions/internal_handler_wards.UpdateWardRequest'
       produces:
       - application/json
       responses:
@@ -7631,6 +9208,29 @@ paths:
       summary: Update a ward
       tags:
       - Wards
+  /webhooks/monnify:
+    post:
+      consumes:
+      - application/json
+      description: Receives and processes Monnify payment notification events. Verifies
+        the HMAC-SHA512 signature, then credits the appropriate party wallet for SUCCESSFUL_TRANSACTION
+        events.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Event processed
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid signature or payload
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Monnify payment webhook
+      tags:
+      - Webhooks
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer " followed by your access token.

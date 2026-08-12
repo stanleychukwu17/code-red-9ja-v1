@@ -59,6 +59,7 @@ import {
   submitPracticeTest,
   listPracticeTests,
   getPracticeTestPayoutPreview,
+  type PayoutPreviewResponse,
 } from "#/lib/server/practice_tests";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
@@ -157,7 +158,7 @@ export function PollingAgentPracticePage() {
       submitTest({
         data: {
           electionGroupId: selectedElectionGroupId ?? undefined,
-          role: "pollingagent",
+          role: "polling_agent",
           finalScore: Number(finalScoreVal.toFixed(2)),
           taskStats: testStats.map((s) => ({
             task_id: s.taskId,
@@ -213,7 +214,7 @@ export function PollingAgentPracticePage() {
   };
 
   // Fetch payout preview once an election group is selected
-  const { data: payoutPreviewRes } = useQuery({
+  const { data: payoutPreviewRes } = useQuery<PayoutPreviewResponse | null>({
     queryKey: ["payoutPreview", selectedElectionGroupId],
     queryFn: async () => {
       if (!selectedElectionGroupId) return null;
@@ -222,21 +223,34 @@ export function PollingAgentPracticePage() {
           electionGroupId: selectedElectionGroupId,
           electionDate: selectedElectionDate ?? undefined,
           partyId: party?.id ?? undefined,
+          role: "polling_agent",
         },
       });
     },
     enabled: !!selectedElectionGroupId,
   });
 
-  const potentialTestPayout: number =
-    payoutPreviewRes?.success && payoutPreviewRes?.data
-      ? ((payoutPreviewRes.data.potential_test_payout as number) ?? 0)
-      : 0;
+  const previewData = payoutPreviewRes?.success
+    ? payoutPreviewRes?.data
+    : undefined;
+
+  // Convert kobo fields from backend to naira for frontend display
+  const potentialTestPayout: number = previewData
+    ? (previewData.potential_test_payout_kobo ?? 0) / 100
+    : 0;
+  const potentialWindowPayout: number = previewData
+    ? (previewData.potential_window_payout_kobo ?? 0) / 100
+    : 0;
+  const readinessBudget: number = previewData
+    ? (previewData.readiness_budget_kobo ?? 0) / 100
+    : 0;
 
   const currentScore = testStats.reduce((acc, stat) => acc + stat.score, 0);
   const finalScore = testStats.length > 0 ? currentScore / testStats.length : 0;
   // Live preview: percentage-based score (0-100); divided by 10 for display only
   const currentTaskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
+
+
 
   return (
     <div className="w-full h-full">
@@ -430,7 +444,7 @@ export function WelcomePage({
           <InfoCard
             icon={<FancyMoneyBagIcon className="size-6" />}
             label="Potential Payout"
-            value={`₦0 to ₦${potentialPayout}`}
+            value={`₦${potentialPayout}`}
             variant="yellow"
             className="w-full"
           />

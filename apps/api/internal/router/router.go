@@ -362,6 +362,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/admin/settings/{key}", systemSettingsHandler.UpdateSystemSetting)
 
 		// marketing plan admin mutations (plan data management is admin-only)
+		r.Get("/api/v1/admin/agent-marketing-campaigns", partiesHandler.ListAllPartyMarketingCampaigns)
+		r.Patch("/api/v1/admin/agent-marketing-campaigns/{id}/status", partiesHandler.UpdatePartyMarketingCampaignStatus)
+		r.Delete("/api/v1/admin/agent-marketing-campaigns/{id}", partiesHandler.DeletePartyMarketingCampaign)
 		r.Post("/api/v1/plans", partiesHandler.CreatePlan)
 		r.Put("/api/v1/plans/{id}", partiesHandler.UpdatePlan)
 		r.Delete("/api/v1/plans/{id}", partiesHandler.DeletePlan)

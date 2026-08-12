@@ -2,6 +2,7 @@ package puassignments
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
@@ -31,13 +32,33 @@ func (s *Service) AssignAgent(ctx context.Context, userID, electionGroupID int64
 		assignedByVal = pgtype.Int8{Int64: assignedBy, Valid: true}
 	}
 
+	var potentialPaymentKobo int64 = 0
+	party, err := s.queries.GetPartyByID(ctx, partyID)
+	if err == nil && party.AgentPaymentAllocationKobo != nil {
+		roleKey := roleType
+		if roleKey == "" {
+			roleKey = "polling_agent"
+		}
+		var allocs map[string]struct {
+			Default int64 `json:"default"`
+		}
+		if err := json.Unmarshal(party.AgentPaymentAllocationKobo, &allocs); err == nil {
+			if alloc, ok := allocs[roleKey]; ok {
+				potentialPaymentKobo = alloc.Default
+			} else if alloc, ok := allocs["polling_agent"]; ok {
+				potentialPaymentKobo = alloc.Default
+			}
+		}
+	}
+
 	return s.queries.CreateAssignment(ctx, queries.CreateAssignmentParams{
-		UserID:          userID,
-		PollingUnitID:   pollingUnitID,
-		ElectionGroupID: electionGroupID,
-		PartyID:         partyID,
-		RoleType:        pgtype.Text{String: roleType, Valid: roleType != ""},
-		AssignedBy:      assignedByVal,
+		UserID:               userID,
+		PollingUnitID:        pollingUnitID,
+		ElectionGroupID:      electionGroupID,
+		PartyID:              partyID,
+		RoleType:             pgtype.Text{String: roleType, Valid: roleType != ""},
+		AssignedBy:           assignedByVal,
+		PotentialPaymentKobo: potentialPaymentKobo,
 	})
 }
 

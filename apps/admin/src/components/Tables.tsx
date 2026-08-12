@@ -54,6 +54,11 @@ import {
   PartyTableTile,
   type PartyType,
 } from "./tiles/party-tile";
+import {
+  MarketingTableHeader,
+  MarketingTableTile,
+  type MarketingCampaignType,
+} from "./tiles/marketing-tile";
 
 export {
   type ElectionGroupType,
@@ -68,6 +73,7 @@ export {
   type PollingUnitType,
   type UserType,
   type PartyType,
+  type MarketingCampaignType,
 };
 
 export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
@@ -247,6 +253,20 @@ export function PartiesTable({ items }: { items: PartyType[] }) {
       <div>
         {partyList.map((data) => (
           <PartyTableTile key={data.id || data.short_name} data={data} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
+  const campaignsList = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto">
+      <MarketingTableHeader />
+      <div>
+        {campaignsList.map((data, index) => (
+          <MarketingTableTile key={data.id || index} data={data} />
         ))}
       </div>
     </div>

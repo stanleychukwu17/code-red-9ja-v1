@@ -28,6 +28,9 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
 
   -- Score from 0-100 reflecting how prepared this agent is based on practice test performance
   election_practice_test_readiness_percentage NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (election_practice_test_readiness_percentage BETWEEN 0 AND 100),
+
+  potential_payment_kobo BIGINT NOT NULL DEFAULT 0,
+  earned_amount_kobo BIGINT NOT NULL DEFAULT 0,
   
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),

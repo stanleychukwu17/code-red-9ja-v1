@@ -22,6 +22,7 @@ export const APP_URL = {
   },
   parties: "/parties",
   applications: "/applications",
+  marketing: "/marketing",
   notifications: "/notifications",
   logs: "/logs",
   settings: {
@@ -146,6 +147,22 @@ export const API_URL = {
   parties: `${api}/parties`,
   partyById: (id: string | number) => `${api}/parties/${id}`,
   partyAgentPaymentAllocations: (id: string | number) => `${api}/parties/${id}/agent-payment-allocations`,
+  partyAgentTargets: (id: string | number) => `${api}/parties/${id}/agent-targets`,
+  partyMarketingCampaigns: (id: string | number) => `${api}/parties/${id}/agent-marketing-campaigns`,
+  adminPartyMarketingCampaigns: (args?: { partyId?: number; electionGroupId?: number; status?: string; limit?: number; cursor?: number }) => {
+    const params = new URLSearchParams();
+    if (args?.partyId) params.append("party_id", String(args.partyId));
+    if (args?.electionGroupId) params.append("election_group_id", String(args.electionGroupId));
+    if (args?.status) params.append("status", args.status);
+    if (args?.limit) params.append("limit", String(args.limit));
+    if (args?.cursor) params.append("cursor", String(args.cursor));
+    const qs = params.toString();
+    return `${api}/admin/agent-marketing-campaigns${qs ? `?${qs}` : ""}`;
+  },
+  adminPartyMarketingCampaignStatus: (id: number | string) =>
+    `${api}/admin/agent-marketing-campaigns/${id}/status`,
+  adminPartyMarketingCampaignDelete: (id: number | string) =>
+    `${api}/admin/agent-marketing-campaigns/${id}`,
   managePartyVerify: (id: string | number) => `${api}/admin/parties/${id}/verify`,
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
@@ -192,8 +209,11 @@ export const API_URL = {
   verificationTypes: `${api}/verifications/types`,
   adminVerifications: `${api}/admin/verifications`,
   occupations: `${api}/getOccupations`,
-  systemSettings: {
-    get: (key: string) => `${api}/admin/settings/${key}`,
-    update: (key: string) => `${api}/admin/settings/${key}`,
+  plans: (type?: string, isActive?: boolean) => {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    if (isActive !== undefined) params.set("is_active", String(isActive));
+    const qs = params.toString();
+    return `${api}/plans${qs ? `?${qs}` : ""}`;
   },
 };

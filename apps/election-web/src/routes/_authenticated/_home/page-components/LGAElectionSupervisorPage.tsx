@@ -257,10 +257,6 @@ export function LGAElectionSupervisorPage() {
       </CarouselDotContent>
 
       <HomeBody>
-        {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
-        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
-
         {daysLeft === 0 && !currentAssignment?.arrived_at && (
           <SupervisorStartDutyCard
             onReadyClick={() => {
@@ -273,8 +269,9 @@ export function LGAElectionSupervisorPage() {
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
-        {/* <UploadResultCard />
-        <RequestPayoutCard /> */}
+        {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
+        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
+        {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
         <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

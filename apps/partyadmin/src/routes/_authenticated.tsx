@@ -14,6 +14,8 @@ import UserIcon from "@repo/ui/icons/navbar/user-icon";
 import UserSolidIcon from "@repo/ui/icons/navbar/user-solid-icon";
 import WalletIcon from "@repo/ui/icons/navbar/wallet-icon";
 import WalletSolidIcon from "@repo/ui/icons/navbar/wallet-solid-icon";
+import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
+import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
 import {
   createFileRoute,
   Outlet,
@@ -41,7 +43,11 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: APP_URL.auth.login });
     }
 
-    if (!user?.roles?.includes("super_party_admin") && !user?.roles?.includes("party_admin") && !user?.roles?.includes("super_admin")) {
+    if (
+      !user?.roles?.includes("super_party_admin") &&
+      !user?.roles?.includes("party_admin") &&
+      !user?.roles?.includes("super_admin")
+    ) {
       throw new Error("You do not have access to this platform.");
     }
   },
@@ -107,6 +113,13 @@ function AuthenticatedRoutes() {
       selectedIcon: <WalletSolidIcon className="shrink-0 size-6" />,
       href: APP_URL.partyRoutes.wallet(partyShortName),
     },
+    {
+      id: "marketing",
+      label: "Marketing",
+      icon: <BalonIcon className="shrink-0 size-6" />,
+      selectedIcon: <BalonSolidIcon className="shrink-0 size-6" />,
+      href: APP_URL.partyRoutes.marketing(partyShortName),
+    },
   ];
 
   // handles the mounting of the component
@@ -144,7 +157,14 @@ function AuthenticatedRoutes() {
         onSidebarStateChange={handleSidebarStateChange}
         homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
       />
-      <Outlet />
+      <div className="flex flex-col flex-1 w-full min-w-0 h-full">
+        {/* Main content expands to push footer down */}
+        <main className="flex-1 min-h-svh">
+          <Outlet />
+        </main>
+        {/* Footer stays at the bottom */}
+        <footer className="p-4 border-t text-center font-bold">Free9ja</footer>
+      </div>
     </motion.div>
   );
 }

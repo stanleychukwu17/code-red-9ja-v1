@@ -14,7 +14,12 @@ export const getElections = createServerFn({ method: "GET" })
   .inputValidator(
     (
       data:
-        | { limit?: number; cursor?: string | number; partyShortName?: string }
+        | {
+            limit?: number;
+            cursor?: string | number;
+            partyShortName?: string;
+            election_group_id?: number;
+          }
         | undefined,
     ) => data,
   )
@@ -45,8 +50,14 @@ export const getElections = createServerFn({ method: "GET" })
           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
+      const params = new URLSearchParams();
+      if (limit) params.append("limit", String(limit));
+      if (cursor) params.append("cursor", String(cursor));
+      if (data?.election_group_id)
+        params.append("election_group_id", String(data.election_group_id));
+
       const response = await apiFetch(
-        `${API_URL.elections}?limit=${limit}&cursor=${cursor}`,
+        `${API_URL.elections}?${params.toString()}`,
       );
       const resData = await response.json();
 

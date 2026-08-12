@@ -832,18 +832,20 @@ type Lga struct {
 }
 
 type LgaElectionSupervisor struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	StateID         int16              `json:"state_id"`
-	LgaID           int32              `json:"lga_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PartyID         int16              `json:"party_id"`
-	RoleType        pgtype.Text        `json:"role_type"`
-	AssignedBy      pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                   int64              `json:"id"`
+	UserID               int64              `json:"user_id"`
+	StateID              int16              `json:"state_id"`
+	LgaID                int32              `json:"lga_id"`
+	ElectionGroupID      int64              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
+	RoleType             pgtype.Text        `json:"role_type"`
+	AssignedBy           pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl      pgtype.Text        `json:"arrival_video_url"`
+	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
+	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type NationalMetric struct {
@@ -974,22 +976,23 @@ type PartyElectionGroup struct {
 }
 
 type PartyMarketingCampaign struct {
-	ID              int32                   `json:"id"`
-	PartyID         int32                   `json:"party_id"`
-	ElectionGroupID int32                   `json:"election_group_id"`
-	ElectionID      int32                   `json:"election_id"`
-	PlanID          int32                   `json:"plan_id"`
-	Type            MarketingCampaignType   `json:"type"`
-	States          []byte                  `json:"states"`
-	DurationInDays  int32                   `json:"duration_in_days"`
-	StartDate       pgtype.Timestamptz      `json:"start_date"`
-	EndDate         pgtype.Timestamptz      `json:"end_date"`
-	Status          MarketingCampaignStatus `json:"status"`
-	Budget          pgtype.Numeric          `json:"budget"`
-	ReferralAmount  pgtype.Numeric          `json:"referral_amount"`
-	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
-	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
+	ID                 int32                   `json:"id"`
+	PartyID            int32                   `json:"party_id"`
+	ElectionGroupID    int32                   `json:"election_group_id"`
+	ElectionID         int32                   `json:"election_id"`
+	PlanID             int32                   `json:"plan_id"`
+	Type               MarketingCampaignType   `json:"type"`
+	States             []byte                  `json:"states"`
+	DurationInDays     int32                   `json:"duration_in_days"`
+	StartDate          pgtype.Timestamptz      `json:"start_date"`
+	EndDate            pgtype.Timestamptz      `json:"end_date"`
+	Status             MarketingCampaignStatus `json:"status"`
+	BudgetPerDayKobo   int64                   `json:"budget_per_day_kobo"`
+	BudgetKobo         int64                   `json:"budget_kobo"`
+	ReferralAmountKobo int64                   `json:"referral_amount_kobo"`
+	AmountSpentKobo    int64                   `json:"amount_spent_kobo"`
+	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
 }
 
 type PartyMembership struct {
@@ -1057,13 +1060,13 @@ type Plan struct {
 	ID                   int32                 `json:"id"`
 	Name                 string                `json:"name"`
 	Description          string                `json:"description"`
-	Price                pgtype.Numeric        `json:"price"`
+	PriceKobo            int64                 `json:"price_kobo"`
 	Type                 MarketingCampaignType `json:"type"`
 	Features             []byte                `json:"features"`
 	ScopesRecommendation []byte                `json:"scopes_recommendation"`
 	ColorHex             pgtype.Text           `json:"color_hex"`
 	DarkColorHex         pgtype.Text           `json:"dark_color_hex"`
-	ReferralAmount       pgtype.Numeric        `json:"referral_amount"`
+	ReferralAmountKobo   int64                 `json:"referral_amount_kobo"`
 	IsActive             bool                  `json:"is_active"`
 	DisplayOrder         int32                 `json:"display_order"`
 	CreatedAt            pgtype.Timestamptz    `json:"created_at"`
@@ -1114,6 +1117,8 @@ type PollingUnitAssignment struct {
 	LiveVotersReferredCount                 int32              `json:"live_voters_referred_count"`
 	IntervalUpdates                         []byte             `json:"interval_updates"`
 	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
+	PotentialPaymentKobo                    int64              `json:"potential_payment_kobo"`
+	EarnedAmountKobo                        int64              `json:"earned_amount_kobo"`
 	CreatedAt                               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                               pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1237,17 +1242,19 @@ type StateAssemblyConstituency struct {
 }
 
 type StateElectionSupervisor struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	StateID         int16              `json:"state_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PartyID         int16              `json:"party_id"`
-	RoleType        pgtype.Text        `json:"role_type"`
-	AssignedBy      pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                   int64              `json:"id"`
+	UserID               int64              `json:"user_id"`
+	StateID              int16              `json:"state_id"`
+	ElectionGroupID      int64              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
+	RoleType             pgtype.Text        `json:"role_type"`
+	AssignedBy           pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl      pgtype.Text        `json:"arrival_video_url"`
+	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
+	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type SystemSetting struct {
@@ -1319,15 +1326,15 @@ type UserMoreInfo struct {
 }
 
 type UserPracticeTest struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	ElectionGroupID pgtype.Int8        `json:"election_group_id"`
-	Role            string             `json:"role"`
-	TestAttempts    []byte             `json:"test_attempts"`
-	OverallScore    pgtype.Numeric     `json:"overall_score"`
-	Status          string             `json:"status"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID               int64              `json:"id"`
+	UserID           int64              `json:"user_id"`
+	ElectionGroupID  pgtype.Int8        `json:"election_group_id"`
+	Role             string             `json:"role"`
+	TestAttempts     []byte             `json:"test_attempts"`
+	OverallScore     pgtype.Numeric     `json:"overall_score"`
+	EarnedAmountKobo int64              `json:"earned_amount_kobo"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
 type UserReferral struct {
@@ -1437,17 +1444,19 @@ type Ward struct {
 }
 
 type WardElectionSupervisor struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	StateID         int16              `json:"state_id"`
-	LgaID           int32              `json:"lga_id"`
-	WardID          int32              `json:"ward_id"`
-	ElectionGroupID int64              `json:"election_group_id"`
-	PartyID         int16              `json:"party_id"`
-	RoleType        pgtype.Text        `json:"role_type"`
-	AssignedBy      pgtype.Int8        `json:"assigned_by"`
-	ArrivedAt       pgtype.Timestamptz `json:"arrived_at"`
-	ArrivalVideoUrl pgtype.Text        `json:"arrival_video_url"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID                   int64              `json:"id"`
+	UserID               int64              `json:"user_id"`
+	StateID              int16              `json:"state_id"`
+	LgaID                int32              `json:"lga_id"`
+	WardID               int32              `json:"ward_id"`
+	ElectionGroupID      int64              `json:"election_group_id"`
+	PartyID              int16              `json:"party_id"`
+	RoleType             pgtype.Text        `json:"role_type"`
+	AssignedBy           pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt            pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl      pgtype.Text        `json:"arrival_video_url"`
+	PotentialPaymentKobo int64              `json:"potential_payment_kobo"`
+	EarnedAmountKobo     int64              `json:"earned_amount_kobo"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }

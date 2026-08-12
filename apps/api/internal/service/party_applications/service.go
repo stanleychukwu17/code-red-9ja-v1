@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -235,23 +236,23 @@ func (s *Service) SubmitSupervisorApplication(ctx context.Context, input SubmitS
 	// 1. Verify role type string
 	roleType := strings.TrimSpace(input.Role)
 	switch roleType {
-	case "state-election-supervisor", "state_supervisor":
-		roleType = "state-election-supervisor"
+	case "state_election_supervisor", "state_supervisor", "state-election-supervisor":
+		roleType = "state_election_supervisor"
 		if input.StateID <= 0 {
 			return queries.PartyApplication{}, errors.New("state_id is required for state supervisor application")
 		}
-	case "lga-election-supervisor", "lga_supervisor":
-		roleType = "lga-election-supervisor"
+	case "lga_election_supervisor", "lga_supervisor", "lga-election-supervisor":
+		roleType = "lga_election_supervisor"
 		if input.StateID <= 0 || input.LgaID <= 0 {
 			return queries.PartyApplication{}, errors.New("state_id and lga_id are required for LGA supervisor application")
 		}
-	case "ward-election-supervisor", "ward_supervisor":
-		roleType = "ward-election-supervisor"
+	case "ward_election_supervisor", "ward_supervisor", "ward-election-supervisor":
+		roleType = "ward_election_supervisor"
 		if input.StateID <= 0 || input.LgaID <= 0 || input.WardID <= 0 {
 			return queries.PartyApplication{}, errors.New("state_id, lga_id, and ward_id are required for Ward supervisor application")
 		}
 	default:
-		return queries.PartyApplication{}, errors.New("invalid supervisor role. Must be state-election-supervisor, lga-election-supervisor, or ward-election-supervisor")
+		return queries.PartyApplication{}, errors.New("invalid supervisor role. Must be state_election_supervisor, lga_election_supervisor, or ward_election_supervisor")
 	}
 
 	// 2. Check user's educational degree eligibility
@@ -584,11 +585,11 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	// Create assignment based on role
 	roleType := input.RoleType
 	if roleType == "" {
-		roleType = "pollingagent" // Note: Frontend passes 'pollingagent' or supervisor string
+		roleType = "polling_agent" // Note: Frontend passes 'polling_agent' or supervisor string
 	}
 	// For backward compatibility / handling frontend names
 	if roleType == "polling_agent" {
-		roleType = "pollingagent"
+		roleType = "polling_agent"
 	}
 	var assignedByVal pgtype.Int8
 	if input.AssignedBy > 0 {
@@ -596,7 +597,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	pollingUnitID := input.PollingUnitID
-	if roleType == "pollingagent" {
+	if roleType == "polling_agent" {
 		if pollingUnitID <= 0 {
 			if app.PollingUnitID.Valid {
 				pollingUnitID = app.PollingUnitID.Int32
@@ -612,30 +613,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		return queries.PartyApplication{}, fmt.Errorf("failed to fetch party: %w", err)
 	}
 
-	roleKey := ""
-	switch roleType {
-	case "pollingagent", "polling_agent":
-		roleKey = "pollingAgent"
-	case "ward-election-supervisor", "ward_supervisor":
-		roleKey = "wardElectionSupervisor"
-	case "lga-election-supervisor", "lga_supervisor":
-		roleKey = "lgaElectionSupervisor"
-	case "state-election-supervisor", "state_supervisor":
-		roleKey = "stateElectionSupervisor"
-	}
-
-	var deductionKobo int64 = 0
-	if roleKey != "" && party.AgentPaymentAllocationKobo != nil {
-		var allocs map[string]struct {
-			Default int64 `json:"default"`
-		}
-		if err := json.Unmarshal(party.AgentPaymentAllocationKobo, &allocs); err == nil {
-			if alloc, ok := allocs[roleKey]; ok {
-				// The value is in Kobo now
-				deductionKobo = alloc.Default
-			}
-		}
-	}
+	deductionKobo := resolvePotentialPaymentKobo(party.AgentPaymentAllocationKobo, roleType, input.StateID)
 
 	if deductionKobo > 0 {
 		_, err = txQueries.DeductPartyAgentPaymentBalance(ctx, queries.DeductPartyAgentPaymentBalanceParams{
@@ -672,14 +650,15 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	egID := app.ElectionGroupID
 	partyID := app.PartyID
 
-	if roleType == "state-election-supervisor" || roleType == "state_supervisor" {
+	if roleType == "state_election_supervisor" || roleType == "state_supervisor" {
 		_, err = txQueries.CreateStateSupervisor(ctx, queries.CreateStateSupervisorParams{
-			UserID:          app.UserID,
-			StateID:         input.StateID,
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			RoleType:        pgtype.Text{String: "state-election-supervisor", Valid: true},
-			AssignedBy:      assignedByVal,
+			UserID:               app.UserID,
+			StateID:              input.StateID,
+			ElectionGroupID:      egID,
+			PartyID:              partyID,
+			RoleType:             pgtype.Text{String: "state_election_supervisor", Valid: true},
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
 			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
@@ -708,15 +687,16 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			return queries.PartyApplication{}, fmt.Errorf("failed to adjust state supervisor counts on national: %w", err)
 		}
 
-	} else if roleType == "lga-election-supervisor" || roleType == "lga_supervisor" {
+	} else if roleType == "lga_election_supervisor" || roleType == "lga_supervisor" {
 		_, err = txQueries.CreateLgaSupervisor(ctx, queries.CreateLgaSupervisorParams{
-			UserID:          app.UserID,
-			StateID:         input.StateID,
-			LgaID:           input.LgaID,
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			RoleType:        pgtype.Text{String: "lga-election-supervisor", Valid: true},
-			AssignedBy:      assignedByVal,
+			UserID:               app.UserID,
+			StateID:              input.StateID,
+			LgaID:                input.LgaID,
+			ElectionGroupID:      egID,
+			PartyID:              partyID,
+			RoleType:             pgtype.Text{String: "lga_election_supervisor", Valid: true},
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
 			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
@@ -791,16 +771,17 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 			return queries.PartyApplication{}, fmt.Errorf("failed to adjust LGA supervisor counts on national: %w", err)
 		}
 
-	} else if roleType == "ward-election-supervisor" || roleType == "ward_supervisor" {
+	} else if roleType == "ward_election_supervisor" || roleType == "ward_supervisor" {
 		_, err = txQueries.CreateWardSupervisor(ctx, queries.CreateWardSupervisorParams{
-			UserID:          app.UserID,
-			StateID:         input.StateID,
-			LgaID:           input.LgaID,
-			WardID:          input.WardID,
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			RoleType:        pgtype.Text{String: "ward-election-supervisor", Valid: true},
-			AssignedBy:      assignedByVal,
+			UserID:               app.UserID,
+			StateID:              input.StateID,
+			LgaID:                input.LgaID,
+			WardID:               input.WardID,
+			ElectionGroupID:      egID,
+			PartyID:              partyID,
+			RoleType:             pgtype.Text{String: "ward_election_supervisor", Valid: true},
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
 			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
@@ -905,12 +886,13 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	} else {
 		// Default: polling agent
 		_, err = txQueries.CreateAssignment(ctx, queries.CreateAssignmentParams{
-			UserID:          app.UserID,
-			PollingUnitID:   pollingUnitID,
-			ElectionGroupID: egID,
-			PartyID:         partyID,
-			RoleType:        pgtype.Text{String: "polling_agent", Valid: true},
-			AssignedBy:      assignedByVal,
+			UserID:               app.UserID,
+			PollingUnitID:        pollingUnitID,
+			ElectionGroupID:      egID,
+			PartyID:              partyID,
+			RoleType:             pgtype.Text{String: "polling_agent", Valid: true},
+			AssignedBy:           assignedByVal,
+			PotentialPaymentKobo: deductionKobo,
 		})
 		if err != nil {
 			return queries.PartyApplication{}, fmt.Errorf("failed to assign user to role %s: %w", roleType, err)
@@ -1033,7 +1015,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	}
 
 	// Increment accepted application metrics on scope tables
-	if roleType == "ward-election-supervisor" || roleType == "ward_supervisor" {
+	if roleType == "ward_election_supervisor" || roleType == "ward_supervisor" {
 		if input.WardID > 0 {
 			_ = txQueries.AdjustElectionGroupWardApplicationCounts(ctx, queries.AdjustElectionGroupWardApplicationCountsParams{
 				ElectionGroupID:       egID,
@@ -1047,7 +1029,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				WardSupRejectedDelta: 0,
 			})
 		}
-	} else if roleType == "lga-election-supervisor" || roleType == "lga_supervisor" {
+	} else if roleType == "lga_election_supervisor" || roleType == "lga_supervisor" {
 		if input.LgaID > 0 {
 			_ = txQueries.AdjustElectionGroupLGAApplicationCounts(ctx, queries.AdjustElectionGroupLGAApplicationCountsParams{
 				ElectionGroupID:      egID,
@@ -1064,7 +1046,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				LgaSupRejectedDelta: 0,
 			})
 		}
-	} else if roleType == "state-election-supervisor" || roleType == "state_supervisor" {
+	} else if roleType == "state_election_supervisor" || roleType == "state_supervisor" {
 		if input.StateID > 0 {
 			_ = txQueries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
 				ElectionGroupID:        egID,
@@ -1176,7 +1158,10 @@ func (s *Service) processReferralOnAcceptance(ctx context.Context, txQueries *qu
 		})
 		if campErr == nil {
 			hasActiveCampaign = true
-			referralAmt = campaign.ReferralAmount
+			_ = referralAmt.Scan(fmt.Sprintf("%d.00", campaign.ReferralAmountKobo/100))
+			if campaign.ReferralAmountKobo%100 != 0 {
+				_ = referralAmt.Scan(fmt.Sprintf("%.2f", float64(campaign.ReferralAmountKobo)/100.0))
+			}
 		}
 	}
 
@@ -1395,4 +1380,54 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	)
 
 	return nil
+}
+
+func resolvePotentialPaymentKobo(allocationJSON []byte, roleType string, stateID int16) int64 {
+	if len(allocationJSON) == 0 {
+		return 0
+	}
+	roleKey := ""
+	switch roleType {
+	case "polling_agent", "pollingagent":
+		roleKey = "polling_agent"
+	case "ward_election_supervisor", "ward_supervisor":
+		roleKey = "ward_election_supervisor"
+	case "lga_election_supervisor", "lga_supervisor":
+		roleKey = "lga_election_supervisor"
+	case "state_election_supervisor", "state_supervisor":
+		roleKey = "state_election_supervisor"
+	}
+
+	var allocs map[string]struct {
+		Default int64            `json:"default"`
+		States  map[string]int64 `json:"states"`
+	}
+	if err := json.Unmarshal(allocationJSON, &allocs); err != nil {
+		return 0
+	}
+
+	cfg, ok := allocs[roleKey]
+	if !ok {
+		legacyKeyMap := map[string]string{
+			"polling_agent":            "pollingAgent",
+			"ward_election_supervisor": "wardElectionSupervisor",
+			"lga_election_supervisor":  "lgaElectionSupervisor",
+			"state_election_supervisor": "stateElectionSupervisor",
+		}
+		if legKey, exists := legacyKeyMap[roleKey]; exists {
+			cfg, ok = allocs[legKey]
+		}
+	}
+	if !ok {
+		return 0
+	}
+
+	if stateID > 0 && cfg.States != nil {
+		stateKey := strconv.Itoa(int(stateID))
+		if customPay, found := cfg.States[stateKey]; found && customPay > 0 {
+			return customPay
+		}
+	}
+
+	return cfg.Default
 }

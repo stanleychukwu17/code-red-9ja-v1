@@ -166,6 +166,7 @@ LIMIT sqlc.arg(limit_val)::integer;
 SELECT 
   pa.id,
   pa.party_id,
+  pa.election_group_id,
   pa.polling_unit_id,
   pa.role,
   pa.state_id,
@@ -178,6 +179,23 @@ WHERE pa.user_id = $1
   AND pa.election_group_id = $2 
   AND pa.status = 'pending'
 LIMIT 1;
+
+-- name: GetPendingApplicationsForUserAutoAccept :many
+SELECT 
+  pa.id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.role,
+  pa.state_id,
+  pa.lga_id,
+  pa.ward_id,
+  p.auto_accept_applications
+FROM party_applications pa
+JOIN parties p ON pa.party_id = p.id
+WHERE pa.user_id = $1 
+  AND pa.status = 'pending';
+
 
 -- name: GetAcceptedApplicationForUser :one
 SELECT 

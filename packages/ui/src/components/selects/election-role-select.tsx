@@ -7,10 +7,10 @@ import { GeneralCommand } from "../command/general-command";
 import ArrowDownIcon from "../../icons/arrow-down-icon";
 
 const ELECTION_ROLE_OPTIONS = [
-  { label: "Polling Agent", value: "pollingagent" },
-  { label: "State Election Supervisor", value: "state-election-supervisor" },
-  { label: "LGA Election Supervisor", value: "lga-election-supervisor" },
-  { label: "Ward Election Supervisor", value: "ward-election-supervisor" },
+  { label: "Polling Agent", value: "polling_agent" },
+  { label: "State Election Supervisor", value: "state_election_supervisor" },
+  { label: "LGA Election Supervisor", value: "lga_election_supervisor" },
+  { label: "Ward Election Supervisor", value: "ward_election_supervisor" },
 ];
 
 export const SelectElectionRole = ({

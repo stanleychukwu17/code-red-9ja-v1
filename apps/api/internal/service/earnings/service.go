@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -284,8 +285,15 @@ func (s *Service) ProcessPracticeTestEarnings(
 		}
 	}
 
-	// 5. Mark all been_paid:false attempts as been_paid:true
-	if _, err := qtx.MarkPracticeTestAttemptsPaid(ctx, practiceTestRecordID); err != nil {
+	// 5. Mark all been_paid:false attempts as been_paid:true and credit earned_amount_kobo
+	earnedDelta := delta
+	if earnedDelta < 0 {
+		earnedDelta = 0
+	}
+	if _, err := qtx.MarkPracticeTestAttemptsPaid(ctx, queries.MarkPracticeTestAttemptsPaidParams{
+		EarnedDeltaKobo: earnedDelta,
+		ID:              practiceTestRecordID,
+	}); err != nil {
 		slog.Error("earnings: failed to mark practice test attempts as paid", "practiceTestID", practiceTestRecordID, "error", err)
 		return
 	}
@@ -357,17 +365,309 @@ func toNumeric(f float64) pgtype.Numeric {
 	return n
 }
 
+// ─── Practice Test Payout Evaluation & Processing ─────────────────────────────
+
+type PracticeTestPayoutResult struct {
+	Eligible         bool
+	EarnedAmountKobo int64
+	AssignmentID     int64
+	PartyID          int16
+}
+
+type AssignmentInfo struct {
+	ID      int64
+	PartyID int16
+	StateID int16
+}
+
+func (s *Service) getAssignmentInfo(ctx context.Context, userID, electionGroupID int64, roleType string) (*AssignmentInfo, error) {
+	switch roleType {
+	case "polling_agent", "pollingagent":
+		asgnID, err := s.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		asgn, err := s.q.GetAssignmentForEarnings(ctx, asgnID)
+		if err != nil {
+			return nil, err
+		}
+		return &AssignmentInfo{ID: asgn.ID, PartyID: asgn.PartyID, StateID: 0}, nil
+
+	case "state_election_supervisor", "state_supervisor":
+		sup, err := s.q.GetStateSupervisorByElectionGroup(ctx, queries.GetStateSupervisorByElectionGroupParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
+
+	case "lga_election_supervisor", "lga_supervisor":
+		sup, err := s.q.GetLgaSupervisorByElectionGroup(ctx, queries.GetLgaSupervisorByElectionGroupParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
+
+	case "ward_election_supervisor", "ward_supervisor":
+		sup, err := s.q.GetWardSupervisorByElectionGroup(ctx, queries.GetWardSupervisorByElectionGroupParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+		})
+		if err != nil {
+			return nil, err
+		}
+		return &AssignmentInfo{ID: sup.ID, PartyID: sup.PartyID, StateID: sup.StateID}, nil
+	}
+	return nil, fmt.Errorf("unknown role: %s", roleType)
+}
+
+func (s *Service) EvaluatePracticeTestPayout(
+	ctx context.Context,
+	userID int64,
+	electionGroupID int64,
+	roleType string,
+	finalScore float64,
+) (PracticeTestPayoutResult, error) {
+	if roleType == "" {
+		roleType = "polling_agent"
+	}
+
+	// 1. Fetch election group to verify date is not in past
+	eg, err := s.q.GetElectionGroupByID(ctx, electionGroupID)
+	if err != nil {
+		return PracticeTestPayoutResult{Eligible: false}, nil
+	}
+	if eg.ElectionDate.Valid {
+		now := time.Now()
+		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+		if eg.ElectionDate.Time.Before(today) {
+			slog.Info("earnings: election date is in the past, no practice test payout", "electionGroupID", electionGroupID)
+			return PracticeTestPayoutResult{Eligible: false}, nil
+		}
+	}
+
+	// 2. Fetch assignment info
+	asgnInfo, err := s.getAssignmentInfo(ctx, userID, electionGroupID, roleType)
+	if err != nil {
+		slog.Info("earnings: user has no assignment for role/election group", "userID", userID, "electionGroupID", electionGroupID, "roleType", roleType)
+		return PracticeTestPayoutResult{Eligible: false}, nil
+	}
+
+	// 3. Fetch earnings allocation for role (e.g. earnings_allocation_polling_agent)
+	roleKey := strings.ReplaceAll(roleType, "-", "_")
+	allocationKey := fmt.Sprintf("earnings_allocation_%s", roleKey)
+	allocationSetting, err := s.q.GetSystemSetting(ctx, allocationKey)
+	if err != nil {
+		allocationSetting, _ = s.q.GetSystemSetting(ctx, "earnings_allocation_polling_agent")
+	}
+	var alloc earningsAllocation
+	if len(allocationSetting.Value) > 0 {
+		_ = json.Unmarshal(allocationSetting.Value, &alloc)
+	}
+	readinessPct := alloc.Readiness
+	if readinessPct <= 0 {
+		readinessPct = 20.0
+	}
+
+	// 4. Fetch test requirements for role (e.g. test_requirements_polling_agent)
+	reqKey := fmt.Sprintf("test_requirements_%s", roleKey)
+	reqSetting, err := s.q.GetSystemSetting(ctx, reqKey)
+	if err != nil {
+		reqSetting, _ = s.q.GetSystemSetting(ctx, "test_requirements_polling_agent")
+	}
+	var testReq testRequirements
+	if len(reqSetting.Value) > 0 {
+		_ = json.Unmarshal(reqSetting.Value, &testReq)
+	}
+	if testReq.TotalRequired <= 0 {
+		testReq.TotalRequired = 10
+	}
+
+	// 5. Fetch party base payment
+	party, err := s.q.GetPartyByID(ctx, asgnInfo.PartyID)
+	if err != nil {
+		return PracticeTestPayoutResult{Eligible: false}, fmt.Errorf("get party: %w", err)
+	}
+	stateName := ""
+	if asgnInfo.StateID > 0 {
+		stateName = strconv.Itoa(int(asgnInfo.StateID))
+	}
+	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, stateName)
+
+	// 6. Calculate days to election & cumulative quota from windows
+	now := time.Now()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	daysToElection := 0
+	if eg.ElectionDate.Valid {
+		diff := eg.ElectionDate.Time.Sub(today)
+		daysToElection = int(math.Ceil(diff.Hours() / 24.0))
+		if daysToElection < 0 {
+			daysToElection = 0
+		}
+	}
+
+	allowedCumulativeQuota := 0
+	for _, win := range testReq.Windows {
+		if daysToElection <= win.DaysBeforeElection {
+			allowedCumulativeQuota += win.Quota
+		}
+	}
+	if allowedCumulativeQuota > testReq.TotalRequired {
+		allowedCumulativeQuota = testReq.TotalRequired
+	}
+
+	// 7. Count paid tests already taken
+	paidTestsCount := 0
+	existingTest, err := s.q.GetPracticeTest(ctx, queries.GetPracticeTestParams{
+		UserID:          userID,
+		ElectionGroupID: pgtype.Int8{Int64: electionGroupID, Valid: true},
+		Role:            roleType,
+	})
+	if err == nil && len(existingTest.TestAttempts) > 0 {
+		var attempts []map[string]interface{}
+		if err := json.Unmarshal(existingTest.TestAttempts, &attempts); err == nil {
+			for _, att := range attempts {
+				if paid, ok := att["been_paid"].(bool); ok && paid {
+					paidTestsCount++
+				} else if earned, ok := att["earned_amount_kobo"].(float64); ok && earned > 0 {
+					paidTestsCount++
+				}
+			}
+		}
+	}
+
+	remainingQuota := allowedCumulativeQuota - paidTestsCount
+	if remainingQuota <= 0 {
+		slog.Info("earnings: test submission exceeds allowed window quota",
+			"userID", userID, "daysToElection", daysToElection, "allowedQuota", allowedCumulativeQuota, "paidCount", paidTestsCount)
+		return PracticeTestPayoutResult{
+			Eligible:     false,
+			AssignmentID: asgnInfo.ID,
+			PartyID:      asgnInfo.PartyID,
+		}, nil
+	}
+
+	// 8. Compute payout amount
+	totalReadinessPayKobo := float64(basePaymentKobo) * (readinessPct / 100.0)
+	payPerTestKobo := totalReadinessPayKobo / float64(testReq.TotalRequired)
+	earnedKobo := int64(math.Round(payPerTestKobo * (finalScore / 100.0)))
+
+	slog.Info("earnings: practice test payout evaluated",
+		"userID", userID,
+		"daysToElection", daysToElection,
+		"allowedQuota", allowedCumulativeQuota,
+		"paidCount", paidTestsCount,
+		"payPerTestKobo", payPerTestKobo,
+		"finalScore", finalScore,
+		"earnedKobo", earnedKobo,
+	)
+
+	return PracticeTestPayoutResult{
+		Eligible:         true,
+		EarnedAmountKobo: earnedKobo,
+		AssignmentID:     asgnInfo.ID,
+		PartyID:          asgnInfo.PartyID,
+	}, nil
+}
+
+func (s *Service) ProcessPracticeTestPayout(
+	ctx context.Context,
+	userID int64,
+	electionGroupID int64,
+	roleType string,
+	earnedKobo int64,
+	testRecordID int64,
+) error {
+	if s.pool == nil || earnedKobo <= 0 {
+		return nil
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("begin tx: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.q.WithTx(tx)
+
+	// 1. Update assignment earned_amount_kobo based on role
+	switch roleType {
+	case "polling_agent", "pollingagent":
+		_, _ = qtx.UpdatePollingUnitAssignmentEarnedAmountKobo(ctx, queries.UpdatePollingUnitAssignmentEarnedAmountKoboParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+			EarnedDeltaKobo: earnedKobo,
+		})
+	case "state_election_supervisor", "state_supervisor":
+		_, _ = qtx.UpdateStateSupervisorEarnedAmountKobo(ctx, queries.UpdateStateSupervisorEarnedAmountKoboParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+			EarnedDeltaKobo: earnedKobo,
+		})
+	case "lga_election_supervisor", "lga_supervisor":
+		_, _ = qtx.UpdateLgaSupervisorEarnedAmountKobo(ctx, queries.UpdateLgaSupervisorEarnedAmountKoboParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+			EarnedDeltaKobo: earnedKobo,
+		})
+	case "ward_election_supervisor", "ward_supervisor":
+		_, _ = qtx.UpdateWardSupervisorEarnedAmountKobo(ctx, queries.UpdateWardSupervisorEarnedAmountKoboParams{
+			UserID:          userID,
+			ElectionGroupID: electionGroupID,
+			EarnedDeltaKobo: earnedKobo,
+		})
+	}
+
+	// 2. Credit User Wallet
+	wallet, wErr := qtx.GetUserWalletByUserID(ctx, userID)
+	if wErr != nil {
+		slog.Warn("earnings: user has no wallet for practice test payout", "userID", userID, "error", wErr)
+	} else {
+		updatedWallet, creditErr := qtx.CreditUserWallet(ctx, queries.CreditUserWalletParams{
+			BalanceKobo: earnedKobo,
+			ID:          wallet.ID,
+		})
+		if creditErr != nil {
+			return fmt.Errorf("credit wallet: %w", creditErr)
+		}
+
+		txRef := fmt.Sprintf("practice-test-readiness-%d-%d", testRecordID, time.Now().UnixNano())
+		if _, txErr := qtx.CreateUserWalletTransaction(ctx, queries.CreateUserWalletTransactionParams{
+			WalletID:             wallet.ID,
+			TransactionReference: txRef,
+			Type:                 "credit",
+			AmountKobo:           earnedKobo,
+			BalanceAfterKobo:     updatedWallet.BalanceKobo,
+			Narration:            pgtype.Text{String: fmt.Sprintf("Practice test readiness payout (%s)", roleType), Valid: true},
+		}); txErr != nil {
+			return fmt.Errorf("create wallet tx: %w", txErr)
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
 // resolveBasePayment extracts the kobo amount from agent_payment_allocation JSONB.
-// Format: {"pollingAgent": {"default": 2000000, "states": {"lagos": 2500000}}}
-// roleType normalisation maps DB values like "polling_agent" → "pollingAgent".
+// Format: {"polling_agent": {"default": 2000000, "states": {"lagos": 2500000}}}
 func (s *Service) resolveBasePayment(rawJSON []byte, roleType, stateName string) int64 {
 	var alloc map[string]rolePaymentConfig
 	if err := json.Unmarshal(rawJSON, &alloc); err != nil {
 		return 0
 	}
 
-	camel := roleToCamel(roleType)
-	cfg, ok := alloc[camel]
+	cfg, ok := alloc[roleType]
+	if !ok {
+		camel := roleToCamel(roleType)
+		cfg, ok = alloc[camel]
+	}
 	if !ok {
 		return 0
 	}

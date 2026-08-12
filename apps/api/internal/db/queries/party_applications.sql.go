@@ -150,6 +150,7 @@ const getPendingApplicationForAutoAccept = `-- name: GetPendingApplicationForAut
 SELECT 
   pa.id,
   pa.party_id,
+  pa.election_group_id,
   pa.polling_unit_id,
   pa.role,
   pa.state_id,
@@ -172,6 +173,7 @@ type GetPendingApplicationForAutoAcceptParams struct {
 type GetPendingApplicationForAutoAcceptRow struct {
 	ID                     int64       `json:"id"`
 	PartyID                int16       `json:"party_id"`
+	ElectionGroupID        int64       `json:"election_group_id"`
 	PollingUnitID          pgtype.Int4 `json:"polling_unit_id"`
 	Role                   string      `json:"role"`
 	StateID                pgtype.Int2 `json:"state_id"`
@@ -186,6 +188,7 @@ func (q *Queries) GetPendingApplicationForAutoAccept(ctx context.Context, arg Ge
 	err := row.Scan(
 		&i.ID,
 		&i.PartyID,
+		&i.ElectionGroupID,
 		&i.PollingUnitID,
 		&i.Role,
 		&i.StateID,
@@ -194,6 +197,65 @@ func (q *Queries) GetPendingApplicationForAutoAccept(ctx context.Context, arg Ge
 		&i.AutoAcceptApplications,
 	)
 	return i, err
+}
+
+const getPendingApplicationsForUserAutoAccept = `-- name: GetPendingApplicationsForUserAutoAccept :many
+SELECT 
+  pa.id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.role,
+  pa.state_id,
+  pa.lga_id,
+  pa.ward_id,
+  p.auto_accept_applications
+FROM party_applications pa
+JOIN parties p ON pa.party_id = p.id
+WHERE pa.user_id = $1 
+  AND pa.status = 'pending'
+`
+
+type GetPendingApplicationsForUserAutoAcceptRow struct {
+	ID                     int64       `json:"id"`
+	PartyID                int16       `json:"party_id"`
+	ElectionGroupID        int64       `json:"election_group_id"`
+	PollingUnitID          pgtype.Int4 `json:"polling_unit_id"`
+	Role                   string      `json:"role"`
+	StateID                pgtype.Int2 `json:"state_id"`
+	LgaID                  pgtype.Int4 `json:"lga_id"`
+	WardID                 pgtype.Int4 `json:"ward_id"`
+	AutoAcceptApplications []byte      `json:"auto_accept_applications"`
+}
+
+func (q *Queries) GetPendingApplicationsForUserAutoAccept(ctx context.Context, userID int64) ([]GetPendingApplicationsForUserAutoAcceptRow, error) {
+	rows, err := q.db.Query(ctx, getPendingApplicationsForUserAutoAccept, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPendingApplicationsForUserAutoAcceptRow
+	for rows.Next() {
+		var i GetPendingApplicationsForUserAutoAcceptRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PartyID,
+			&i.ElectionGroupID,
+			&i.PollingUnitID,
+			&i.Role,
+			&i.StateID,
+			&i.LgaID,
+			&i.WardID,
+			&i.AutoAcceptApplications,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPollingUnitsWithAgentCounts = `-- name: GetPollingUnitsWithAgentCounts :many

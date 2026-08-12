@@ -305,10 +305,10 @@ export const updatePartyAgentTargets = createServerFn({ method: "POST" })
     (data: {
       partyID: string | number;
       targets: {
-        pollingUnitAgent: number;
-        wardElectionSupervisor: number;
-        lgaElectionSupervisor: number;
-        stateElectionSupervisor: number;
+        polling_agent: number;
+        ward_election_supervisor: number;
+        lga_election_supervisor: number;
+        state_election_supervisor: number;
       };
     }) => data,
   )
@@ -380,9 +380,10 @@ export const createMarketingCampaign = createServerFn({ method: "POST" })
       electionId: number;
       planId: number;
       type: string;
-      states: string[];
+      states: any[];
       durationInDays: number;
       budget: number;
+      budgetPerDay?: number;
     }) => data,
   )
   .handler(async ({ data }) => {
@@ -399,6 +400,7 @@ export const createMarketingCampaign = createServerFn({ method: "POST" })
             states: JSON.stringify(data.states),
             duration_in_days: data.durationInDays,
             budget: data.budget,
+            budget_per_day: data.budgetPerDay,
           }),
         },
       );

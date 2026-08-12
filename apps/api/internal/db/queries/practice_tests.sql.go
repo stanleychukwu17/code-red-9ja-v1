@@ -12,7 +12,7 @@ import (
 )
 
 const getPracticeTest = `-- name: GetPracticeTest :one
-SELECT id, user_id, election_group_id, role, test_attempts, overall_score, status, created_at, updated_at FROM user_practice_tests
+SELECT id, user_id, election_group_id, role, test_attempts, overall_score, earned_amount_kobo, created_at, updated_at FROM user_practice_tests
 WHERE user_id = $1 
   AND election_group_id = $2
   AND role = $3
@@ -35,7 +35,7 @@ func (q *Queries) GetPracticeTest(ctx context.Context, arg GetPracticeTestParams
 		&i.Role,
 		&i.TestAttempts,
 		&i.OverallScore,
-		&i.Status,
+		&i.EarnedAmountKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -44,7 +44,7 @@ func (q *Queries) GetPracticeTest(ctx context.Context, arg GetPracticeTestParams
 
 const listUserPracticeTests = `-- name: ListUserPracticeTests :many
 SELECT
-  upt.id, upt.user_id, upt.election_group_id, upt.role, upt.test_attempts, upt.overall_score, upt.status, upt.created_at, upt.updated_at,
+  upt.id, upt.user_id, upt.election_group_id, upt.role, upt.test_attempts, upt.overall_score, upt.earned_amount_kobo, upt.created_at, upt.updated_at,
   u.first_name,
   u.last_name,
   u.username
@@ -53,40 +53,37 @@ JOIN users u ON upt.user_id = u.id
 WHERE
   ($1::bigint = 0 OR upt.user_id = $1) AND
   ($2::bigint = 0 OR upt.election_group_id = $2) AND
-  ($3::varchar = '' OR upt.status = $3) AND
-  ($4::bigint = 0 OR upt.id < $4)
+  ($3::bigint = 0 OR upt.id < $3)
 ORDER BY upt.id DESC
-LIMIT $5::int
+LIMIT $4::int
 `
 
 type ListUserPracticeTestsParams struct {
-	UserID          int64  `json:"user_id"`
-	ElectionGroupID int64  `json:"election_group_id"`
-	Status          string `json:"status"`
-	Cursor          int64  `json:"cursor"`
-	LimitVal        int32  `json:"limit_val"`
+	UserID          int64 `json:"user_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+	Cursor          int64 `json:"cursor"`
+	LimitVal        int32 `json:"limit_val"`
 }
 
 type ListUserPracticeTestsRow struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	ElectionGroupID pgtype.Int8        `json:"election_group_id"`
-	Role            string             `json:"role"`
-	TestAttempts    []byte             `json:"test_attempts"`
-	OverallScore    pgtype.Numeric     `json:"overall_score"`
-	Status          string             `json:"status"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	FirstName       pgtype.Text        `json:"first_name"`
-	LastName        pgtype.Text        `json:"last_name"`
-	Username        pgtype.Text        `json:"username"`
+	ID               int64              `json:"id"`
+	UserID           int64              `json:"user_id"`
+	ElectionGroupID  pgtype.Int8        `json:"election_group_id"`
+	Role             string             `json:"role"`
+	TestAttempts     []byte             `json:"test_attempts"`
+	OverallScore     pgtype.Numeric     `json:"overall_score"`
+	EarnedAmountKobo int64              `json:"earned_amount_kobo"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	FirstName        pgtype.Text        `json:"first_name"`
+	LastName         pgtype.Text        `json:"last_name"`
+	Username         pgtype.Text        `json:"username"`
 }
 
 func (q *Queries) ListUserPracticeTests(ctx context.Context, arg ListUserPracticeTestsParams) ([]ListUserPracticeTestsRow, error) {
 	rows, err := q.db.Query(ctx, listUserPracticeTests,
 		arg.UserID,
 		arg.ElectionGroupID,
-		arg.Status,
 		arg.Cursor,
 		arg.LimitVal,
 	)
@@ -104,7 +101,7 @@ func (q *Queries) ListUserPracticeTests(ctx context.Context, arg ListUserPractic
 			&i.Role,
 			&i.TestAttempts,
 			&i.OverallScore,
-			&i.Status,
+			&i.EarnedAmountKobo,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.FirstName,
@@ -133,15 +130,20 @@ SET test_attempts = (
   )
   FROM jsonb_array_elements(test_attempts) AS elem
 ),
+earned_amount_kobo = earned_amount_kobo + $1::bigint,
 updated_at = NOW()
-WHERE id = $1
-RETURNING id, user_id, election_group_id, role, test_attempts, overall_score, status, created_at, updated_at
+WHERE id = $2::bigint
+RETURNING id, user_id, election_group_id, role, test_attempts, overall_score, earned_amount_kobo, created_at, updated_at
 `
 
-// Sets been_paid=true on every attempt that currently has been_paid=false.
-// Uses a JSONB map to flip the flag without touching any other fields.
-func (q *Queries) MarkPracticeTestAttemptsPaid(ctx context.Context, id int64) (UserPracticeTest, error) {
-	row := q.db.QueryRow(ctx, markPracticeTestAttemptsPaid, id)
+type MarkPracticeTestAttemptsPaidParams struct {
+	EarnedDeltaKobo int64 `json:"earned_delta_kobo"`
+	ID              int64 `json:"id"`
+}
+
+// Sets been_paid=true on every attempt that currently has been_paid=false and increments earned_amount_kobo.
+func (q *Queries) MarkPracticeTestAttemptsPaid(ctx context.Context, arg MarkPracticeTestAttemptsPaidParams) (UserPracticeTest, error) {
+	row := q.db.QueryRow(ctx, markPracticeTestAttemptsPaid, arg.EarnedDeltaKobo, arg.ID)
 	var i UserPracticeTest
 	err := row.Scan(
 		&i.ID,
@@ -150,7 +152,7 @@ func (q *Queries) MarkPracticeTestAttemptsPaid(ctx context.Context, id int64) (U
 		&i.Role,
 		&i.TestAttempts,
 		&i.OverallScore,
-		&i.Status,
+		&i.EarnedAmountKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -164,30 +166,31 @@ INSERT INTO user_practice_tests (
   role,
   test_attempts,
   overall_score,
-  status
+  earned_amount_kobo
 ) VALUES (
   $1,
   $2,
   $3,
   JSONB_BUILD_ARRAY($4::jsonb),
   $5,
-  'completed'
+  $6
 )
 ON CONFLICT (user_id, election_group_id, role)
 DO UPDATE SET
   test_attempts = user_practice_tests.test_attempts || $4::jsonb,
   overall_score = GREATEST(user_practice_tests.overall_score, $5),
-  status = 'completed',
+  earned_amount_kobo = user_practice_tests.earned_amount_kobo + $6::bigint,
   updated_at = NOW()
-RETURNING id, user_id, election_group_id, role, test_attempts, overall_score, status, created_at, updated_at
+RETURNING id, user_id, election_group_id, role, test_attempts, overall_score, earned_amount_kobo, created_at, updated_at
 `
 
 type SubmitPracticeTestParams struct {
-	UserID          int64          `json:"user_id"`
-	ElectionGroupID pgtype.Int8    `json:"election_group_id"`
-	Role            string         `json:"role"`
-	Attempt         []byte         `json:"attempt"`
-	OverallScore    pgtype.Numeric `json:"overall_score"`
+	UserID           int64          `json:"user_id"`
+	ElectionGroupID  pgtype.Int8    `json:"election_group_id"`
+	Role             string         `json:"role"`
+	Attempt          []byte         `json:"attempt"`
+	OverallScore     pgtype.Numeric `json:"overall_score"`
+	EarnedAmountKobo int64          `json:"earned_amount_kobo"`
 }
 
 func (q *Queries) SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error) {
@@ -197,6 +200,7 @@ func (q *Queries) SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTest
 		arg.Role,
 		arg.Attempt,
 		arg.OverallScore,
+		arg.EarnedAmountKobo,
 	)
 	var i UserPracticeTest
 	err := row.Scan(
@@ -206,7 +210,7 @@ func (q *Queries) SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTest
 		&i.Role,
 		&i.TestAttempts,
 		&i.OverallScore,
-		&i.Status,
+		&i.EarnedAmountKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

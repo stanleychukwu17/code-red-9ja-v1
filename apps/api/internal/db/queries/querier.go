@@ -105,6 +105,7 @@ type Querier interface {
 	DeleteLGA(ctx context.Context, id int32) error
 	DeleteOffice(ctx context.Context, id int64) error
 	DeleteParty(ctx context.Context, id int16) error
+	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	DeletePartyMembership(ctx context.Context, arg DeletePartyMembershipParams) ([]int32, error)
 	DeletePlan(ctx context.Context, id int32) error
 	DeletePollingUnit(ctx context.Context, id int32) error
@@ -200,6 +201,7 @@ type Querier interface {
 	GetPartyWalletByID(ctx context.Context, id int64) (PartyWallet, error)
 	GetPartyWalletByPartyID(ctx context.Context, partyID int16) (PartyWallet, error)
 	GetPendingApplicationForAutoAccept(ctx context.Context, arg GetPendingApplicationForAutoAcceptParams) (GetPendingApplicationForAutoAcceptRow, error)
+	GetPendingApplicationsForUserAutoAccept(ctx context.Context, userID int64) ([]GetPendingApplicationsForUserAutoAcceptRow, error)
 	GetPlanByID(ctx context.Context, id int32) (Plan, error)
 	// Pass empty string '' to skip a filter.
 	// $1 = type filter ('' = all types), $2 = is_active filter ('' = all, 'true'/'false' to filter)
@@ -281,6 +283,7 @@ type Querier interface {
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
+	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
 	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
@@ -320,9 +323,11 @@ type Querier interface {
 	ListWalletTransactions(ctx context.Context, arg ListWalletTransactionsParams) ([]PartyWalletTransaction, error)
 	MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEarning, error)
 	MarkFileDeleted(ctx context.Context, id int64) (File, error)
-	// Sets been_paid=true on every attempt that currently has been_paid=false.
-	// Uses a JSONB map to flip the flag without touching any other fields.
-	MarkPracticeTestAttemptsPaid(ctx context.Context, id int64) (UserPracticeTest, error)
+	// Sets been_paid=true on every attempt that currently has been_paid=false and increments earned_amount_kobo.
+	MarkPracticeTestAttemptsPaid(ctx context.Context, arg MarkPracticeTestAttemptsPaidParams) (UserPracticeTest, error)
+	// Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.
+	// Skips deduction if the campaign was activated today (start_date::date = CURRENT_DATE) to prevent double deduction on activation day.
+	ProcessDailyMarketingCampaignDeductions(ctx context.Context) ([]PartyMarketingCampaign, error)
 	RecalculateFederalConstituencyMetrics(ctx context.Context) error
 	RecalculateLGAMetrics(ctx context.Context) error
 	RecalculateNationalMetrics(ctx context.Context) error
@@ -426,7 +431,7 @@ type Querier interface {
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
-	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (PollingUnitAssignment, error)
+	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error)
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
 	UpdateCandidatesFromFederalConstituencyElections(ctx context.Context) error
 	UpdateCandidatesFromLGAElections(ctx context.Context) error
@@ -442,6 +447,8 @@ type Querier interface {
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
 	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
+	UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateLgaSupervisorEarnedAmountKoboParams) (LgaElectionSupervisor, error)
+	UpdateMarketingCampaignStatus(ctx context.Context, arg UpdateMarketingCampaignStatusParams) (PartyMarketingCampaign, error)
 	UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMoreInfoAboutThisUserParams) error
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)
 	UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) error
@@ -454,6 +461,7 @@ type Querier interface {
 	UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error)
 	UpdatePlanDisplayOrder(ctx context.Context, arg UpdatePlanDisplayOrderParams) (Plan, error)
 	UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error)
+	UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Context, arg UpdatePollingUnitAssignmentEarnedAmountKoboParams) (PollingUnitAssignment, error)
 	UpdatePollingUnitResult(ctx context.Context, arg UpdatePollingUnitResultParams) (PollingUnitResult, error)
 	UpdateReferral(ctx context.Context, arg UpdateReferralParams) (Referral, error)
 	// Updates the referrals row when the referred user is accepted as an agent.
@@ -465,6 +473,7 @@ type Querier interface {
 	UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenatorialDistrictParams) (SenatorialDistrict, error)
 	UpdateState(ctx context.Context, arg UpdateStateParams) (CState, error)
 	UpdateStateAssemblyConstituency(ctx context.Context, arg UpdateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
+	UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateStateSupervisorEarnedAmountKoboParams) (StateElectionSupervisor, error)
 	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
 	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error)
 	UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error
@@ -484,6 +493,7 @@ type Querier interface {
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
+	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)
 	// Upserts party entry in election_group_federal_constituencies.parties.
 	UpsertElectionGroupFederalConstituencyPartyEntry(ctx context.Context, arg UpsertElectionGroupFederalConstituencyPartyEntryParams) error

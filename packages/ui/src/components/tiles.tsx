@@ -10,11 +10,17 @@ import { Button } from "./button";
 
 export type TileHeaderProps = {
   children: React.ReactNode;
+  className?: string;
 };
 
-export function TileHeader({ children }: TileHeaderProps) {
+export function TileHeader({ children, className }: TileHeaderProps) {
   return (
-    <div className="h-10 border-y border-border flex items-center justify-between gap-5 md:gap-20 px-3 text-[15px] sticky top-0 bg-background/80 backdrop-blur-xl">
+    <div
+      className={cn(
+        "h-10 border-y border-border flex items-center justify-between gap-5 md:gap-20 px-3 text-[15px] sticky top-0 bg-background/80 backdrop-blur-xl",
+        className,
+      )}
+    >
       {children}
     </div>
   );
@@ -41,10 +47,13 @@ export function TileRow({ children, className, onClick }: TileRowProps) {
 
 export type TileLeftProps = {
   children: React.ReactNode;
+  className?: string;
 };
-export function TileLeft({ children }: TileLeftProps) {
+export function TileLeft({ children, className }: TileLeftProps) {
   return (
-    <div className="flex w-full min-w-0 items-center gap-4 px-0">
+    <div
+      className={cn("flex w-full min-w-0 items-center gap-4 px-0", className)}
+    >
       {children}
     </div>
   );
@@ -52,10 +61,16 @@ export function TileLeft({ children }: TileLeftProps) {
 
 export type TileRightProps = {
   children: React.ReactNode;
+  className?: string;
 };
-export function TileRight({ children }: TileRightProps) {
+export function TileRight({ children, className }: TileRightProps) {
   return (
-    <div className="shrink-0 flex items-center gap-3 text-[15px] text-c-70">
+    <div
+      className={cn(
+        "shrink-0 flex items-center gap-3 text-[15px] text-c-70",
+        className,
+      )}
+    >
       {children}
     </div>
   );

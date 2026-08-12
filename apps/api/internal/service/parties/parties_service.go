@@ -1048,26 +1048,35 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 
 	qtx := s.queries.WithTx(tx)
 
+	// 0. Check election group date: cannot create campaign if election_date is today or in the past
+	electionGroup, err := s.queries.GetElectionGroupByID(ctx, int64(arg.ElectionGroupID))
+	if err != nil {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get election group: %w", err)
+	}
+
+	if electionGroup.ElectionDate.Valid {
+		electionTime := electionGroup.ElectionDate.Time
+		today := time.Now().Truncate(24 * time.Hour)
+		electionDateOnly := electionTime.Truncate(24 * time.Hour)
+
+		if !electionDateOnly.After(today) {
+			return queries.PartyMarketingCampaign{}, fmt.Errorf("one can't create an agent marketing campaign for an election group with election_date as today or in the past")
+		}
+	}
+
 	// 1. Get the party wallet to check balance
 	wallet, err := qtx.GetPartyWalletByPartyID(ctx, int16(arg.PartyID))
 	if err != nil {
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get party wallet: %w", err)
 	}
 
-	// Convert pgtype.Numeric budget to int64 kobo (budget is in NGN, multiply by 100)
-	budgetFloat, err := arg.Budget.Float64Value()
-	if err != nil || !budgetFloat.Valid {
-		return queries.PartyMarketingCampaign{}, fmt.Errorf("invalid budget value")
-	}
-	budgetKobo := int64(budgetFloat.Float64 * 100)
-
-	if wallet.BalanceKobo < budgetKobo {
-		return queries.PartyMarketingCampaign{}, fmt.Errorf("insufficient wallet balance: have %d kobo, need %d kobo", wallet.BalanceKobo, budgetKobo)
+	if wallet.BalanceKobo < arg.BudgetKobo {
+		return queries.PartyMarketingCampaign{}, fmt.Errorf("insufficient wallet balance: have %d kobo, need %d kobo", wallet.BalanceKobo, arg.BudgetKobo)
 	}
 
 	// 2. Debit the wallet balance
 	updatedWallet, err := qtx.DebitPartyWallet(ctx, queries.DebitPartyWalletParams{
-		BalanceKobo: budgetKobo,
+		BalanceKobo: arg.BudgetKobo,
 		ID:          wallet.ID,
 	})
 	if err != nil {
@@ -1081,7 +1090,7 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 		TransactionReference: txRef,
 		Type:                 "debit",
 		TransactionCategory:  "marketing_campaign",
-		AmountKobo:           budgetKobo,
+		AmountKobo:           arg.BudgetKobo,
 		BalanceAfterKobo:     updatedWallet.BalanceKobo,
 		PayerName:            pgTextFromString(""),
 		PayerAccountNumber:   pgTextFromString(""),
@@ -1098,7 +1107,7 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 	if err != nil {
 		return queries.PartyMarketingCampaign{}, fmt.Errorf("failed to get plan: %w", err)
 	}
-	arg.ReferralAmount = plan.ReferralAmount
+	arg.ReferralAmountKobo = plan.ReferralAmountKobo
 
 	// 5. Create the marketing campaign record
 	campaign, err := qtx.CreatePartyMarketingCampaign(ctx, arg)
@@ -1116,6 +1125,29 @@ func (s *PartiesService) CreatePartyMarketingCampaign(ctx context.Context, arg q
 // GetPartyMarketingCampaigns retrieves all marketing campaigns for a party
 func (s *PartiesService) GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error) {
 	return s.queries.GetPartyMarketingCampaigns(ctx, partyID)
+}
+
+// ListAllPartyMarketingCampaigns retrieves marketing campaigns with filters and pagination (admin route).
+func (s *PartiesService) ListAllPartyMarketingCampaigns(ctx context.Context, arg queries.ListAllPartyMarketingCampaignsParams) ([]queries.ListAllPartyMarketingCampaignsRow, error) {
+	return s.queries.ListAllPartyMarketingCampaigns(ctx, arg)
+}
+
+// UpdateMarketingCampaignStatus updates a campaign's status, setting start/end dates and deducting per-day budget when activating.
+func (s *PartiesService) UpdateMarketingCampaignStatus(ctx context.Context, id int32, status queries.MarketingCampaignStatus) (queries.PartyMarketingCampaign, error) {
+	return s.queries.UpdateMarketingCampaignStatus(ctx, queries.UpdateMarketingCampaignStatusParams{
+		ID:     id,
+		Status: status,
+	})
+}
+
+// DeletePartyMarketingCampaign deletes a marketing campaign by ID (admin only).
+func (s *PartiesService) DeletePartyMarketingCampaign(ctx context.Context, id int32) error {
+	return s.queries.DeletePartyMarketingCampaign(ctx, id)
+}
+
+// ProcessDailyMarketingCampaignDeductions deducts daily marketing campaign budgets and marks expired campaigns as completed.
+func (s *PartiesService) ProcessDailyMarketingCampaignDeductions(ctx context.Context) ([]queries.PartyMarketingCampaign, error) {
+	return s.queries.ProcessDailyMarketingCampaignDeductions(ctx)
 }
 
 // CreatePlan creates a new marketing plan (admin only).

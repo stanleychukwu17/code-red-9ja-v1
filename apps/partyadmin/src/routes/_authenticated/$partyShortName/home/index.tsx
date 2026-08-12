@@ -288,7 +288,11 @@ function ReadinessComponent() {
         partyId={partyId!}
         fetchAllocation={async (id) => {
           const res = await getPartyAgentPaymentAllocation({ data: id });
-          return res?.data?.agent_payment_allocation_kobo ?? null;
+          return (
+            res?.data?.agent_payment_allocation_kobo ??
+            res?.data?.agent_payment_allocation ??
+            null
+          );
         }}
         updateAllocation={async (id, values) => {
           const res = await updatePartyStateAllowances({
@@ -374,30 +378,12 @@ function ReadinessComponent() {
             durationValue: 5,
           } satisfies Partial<AgentMarketingSetupValue>
         }
-        onSubmit={async (values) => {
+        onSubmit={async (payload) => {
           if (!partyId) return;
-          const durationInDays =
-            values.durationUnit === "months"
-              ? values.durationValue * 30
-              : values.durationValue;
-          // budget = plan.price (NGN) × duration_in_days × number_of_states
-          // The API expects budget as a plain number (NGN, not kobo)
-          // We compute it client-side from the selected plan already stored in the dialog
-          // The dialog exposes planId so we fetch price from the plans cache if needed;
-          // for now we pass the total as 0 and let the backend compute from plan_id × duration × states.length
-          // (backend service already calculates wallet debit from plan price)
-          const statesForApi =
-            values.targetMode === "all" ? statesList : values.states;
           const res = await submitCampaign({
             data: {
-              budget: values.budget ?? 0,
-              durationInDays: durationInDays,
-              electionGroupId: Number(values.electionGroupId),
-              electionId: Number(values.electionId),
-              planId: Number(values.planId),
+              ...payload,
               partyId: partyId,
-              states: statesForApi,
-              type: "agent-campaign",
             },
           });
           if (res?.success) {
@@ -458,6 +444,9 @@ function ReadinessProgressCard({
 
   const pStats = partyStats || {};
   const tStats = targets || {};
+
+  console.log({ pStats });
+  console.log({ tStats });
 
   const puCount = pStats.unique_pu_agents_count || 0;
   const puMax = tStats.polling_units_count || 0;
@@ -549,63 +538,6 @@ function ReadinessProgressCard({
         />
       )}
     </LeaderboardCardWrapper>
-  );
-}
-
-function RoleProgressRow({
-  role,
-  count,
-  max,
-  percent,
-  isComplete,
-}: {
-  role: string;
-  count: string;
-  max: string;
-  percent: number;
-  isComplete?: boolean;
-}) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-4 flex-1">
-        <div
-          className={cn(
-            "size-5 rounded-full flex items-center justify-center shrink-0",
-            isComplete ? "bg-[#06c270]" : "bg-white/20",
-          )}
-        >
-          {isComplete && (
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M10 3L4.5 8.5L2 6"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </div>
-        <span className="text-white/90 font-medium text-[15px]">{role}</span>
-      </div>
-
-      <div className="flex items-center gap-8 justify-between sm:justify-end text-[14px]">
-        <div>
-          <span className="font-semibold">{count}</span>
-          <span className="text-white/40"> / {max}</span>
-        </div>
-        <div className="w-[110px] text-right font-medium">
-          {percent}%{" "}
-          <span className="text-white/40 font-normal">test ready</span>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1094,22 +1026,32 @@ function TargetCard() {
     enabled: !!partyId,
   });
 
+  const st = serverTargets as any;
   const targets = [
     {
       role: "Polling Agent per unit",
-      count: serverTargets?.pollingUnitAgent?.toString() ?? "2",
+      count: (st?.polling_agent ?? st?.pollingUnitAgent)?.toString() ?? "2",
     },
     {
       role: "Ward Supervisor per ward",
-      count: serverTargets?.wardElectionSupervisor?.toString() ?? "2",
+      count:
+        (
+          st?.ward_election_supervisor ?? st?.wardElectionSupervisor
+        )?.toString() ?? "2",
     },
     {
       role: "LGA Supervisor per lga",
-      count: serverTargets?.lgaElectionSupervisor?.toString() ?? "2",
+      count:
+        (
+          st?.lga_election_supervisor ?? st?.lgaElectionSupervisor
+        )?.toString() ?? "2",
     },
     {
       role: "State Supervisor per state",
-      count: serverTargets?.stateElectionSupervisor?.toString() ?? "1",
+      count:
+        (
+          st?.state_election_supervisor ?? st?.stateElectionSupervisor
+        )?.toString() ?? "1",
     },
   ];
 
@@ -1181,13 +1123,14 @@ function AgentPaymentCard({
   party: any;
 }) {
   const allocations = party?.agentPaymentAllocation || {};
-  const pollingAgentPaymentKobo = allocations.pollingAgent?.default || 0;
+  console.log({ allocations });
+  const pollingAgentPaymentKobo = allocations.polling_agent?.default || 0;
   const wardSupervisorPaymentKobo =
-    allocations.wardElectionSupervisor?.default || 0;
+    allocations.ward_election_supervisor?.default || 0;
   const lgaSupervisorPaymentKobo =
-    allocations.lgaElectionSupervisor?.default || 0;
+    allocations.lga_election_supervisor?.default || 0;
   const stateSupervisorPaymentKobo =
-    allocations.stateElectionSupervisor?.default || 0;
+    allocations.state_election_supervisor?.default || 0;
 
   const payments = [
     {

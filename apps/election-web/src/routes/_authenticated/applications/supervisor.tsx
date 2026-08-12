@@ -23,15 +23,17 @@ import { Upload } from "lucide-react";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
 import { useEffect, useRef, useState } from "react";
 
-export const Route = createFileRoute("/_authenticated/applications/supervisor")({
-  head: () => getPageHeader({ title: "Apply as Supervisor" }),
-  component: SupervisorPage,
-});
+export const Route = createFileRoute("/_authenticated/applications/supervisor")(
+  {
+    head: () => getPageHeader({ title: "Apply as Supervisor" }),
+    component: SupervisorPage,
+  },
+);
 
 export type SupervisorRoleType =
-  | "state-election-supervisor"
-  | "lga-election-supervisor"
-  | "ward-election-supervisor";
+  | "state_election_supervisor"
+  | "lga_election_supervisor"
+  | "ward_election_supervisor";
 
 function SupervisorPage() {
   const navigate = useNavigate();
@@ -67,8 +69,11 @@ function SupervisorPage() {
     },
   });
 
-  const acceptedApp = applications.find((app: any) => app.status === "accepted");
-  const activeElectionGroupId = acceptedApp?.election_group_id || acceptedApp?.election_group?.id || null;
+  const acceptedApp = applications.find(
+    (app: any) => app.status === "accepted",
+  );
+  const activeElectionGroupId =
+    acceptedApp?.election_group_id || acceptedApp?.election_group?.id || null;
 
   // Fetch election group details
   const { data: electionGroups = [] } = useQuery({
@@ -107,7 +112,9 @@ function SupervisorPage() {
       });
 
       if (!res?.success) {
-        throw new Error(res?.message || "Failed to submit supervisor application");
+        throw new Error(
+          res?.message || "Failed to submit supervisor application",
+        );
       }
       return res;
     },
@@ -171,7 +178,7 @@ function SupervisorPage() {
   };
 
   const handleNextFromRoleSelect = () => {
-    if (selectedRole === "state-election-supervisor") {
+    if (selectedRole === "state_election_supervisor") {
       setStep(4); // Skip LGA/Ward selection for state supervisor
     } else {
       setStep(3); // Go to LGA or Ward selection
@@ -201,7 +208,7 @@ function SupervisorPage() {
         />
       )}
 
-      {step === 3 && selectedRole === "lga-election-supervisor" && (
+      {step === 3 && selectedRole === "lga_election_supervisor" && (
         <SupervisorRegionSelectStep
           roleName="LGA Supervisor"
           partyLogo={party?.logo}
@@ -218,7 +225,7 @@ function SupervisorPage() {
         />
       )}
 
-      {step === 3 && selectedRole === "ward-election-supervisor" && (
+      {step === 3 && selectedRole === "ward_election_supervisor" && (
         <SupervisorRegionSelectStep
           roleName="Ward Supervisor"
           partyLogo={party?.logo}
@@ -239,9 +246,9 @@ function SupervisorPage() {
       {step === 4 && (
         <SupervisorCertificateUploadStep
           roleName={
-            selectedRole === "state-election-supervisor"
+            selectedRole === "state_election_supervisor"
               ? "State Supervisor"
-              : selectedRole === "lga-election-supervisor"
+              : selectedRole === "lga_election_supervisor"
                 ? "LGA Supervisor"
                 : "Ward Supervisor"
           }
@@ -254,24 +261,28 @@ function SupervisorPage() {
           onFileChange={handleFileChange}
           onSubmit={() => submitMutation.mutate()}
           isSubmitting={submitMutation.isPending}
-          onBack={() => (selectedRole === "state-election-supervisor" ? setStep(2) : setStep(3))}
+          onBack={() =>
+            selectedRole === "state_election_supervisor"
+              ? setStep(2)
+              : setStep(3)
+          }
         />
       )}
 
       {step === 5 && (
         <SupervisorSuccessStep
           roleName={
-            selectedRole === "state-election-supervisor"
+            selectedRole === "state_election_supervisor"
               ? "State Supervisor"
-              : selectedRole === "lga-election-supervisor"
+              : selectedRole === "lga_election_supervisor"
                 ? "LGA Supervisor"
                 : "Ward Supervisor"
           }
           partyLogo={party?.logo}
           regionName={
-            selectedRole === "state-election-supervisor"
+            selectedRole === "state_election_supervisor"
               ? "State Level"
-              : selectedRole === "lga-election-supervisor"
+              : selectedRole === "lga_election_supervisor"
                 ? selectedLgaName || "LGA Level"
                 : selectedWardName || "Ward Level"
           }
@@ -388,30 +399,30 @@ function SupervisorRoleSelectStep({
           <SelectableCard
             title="State Supervisors"
             subtitle="Already Full"
-            isSelected={selectedRole === "state-election-supervisor"}
-            onClick={() => onSelectRole("state-election-supervisor")}
+            isSelected={selectedRole === "state_election_supervisor"}
+            onClick={() => onSelectRole("state_election_supervisor")}
             className={cn(
-              selectedRole === "state-election-supervisor" &&
+              selectedRole === "state_election_supervisor" &&
                 "border-emerald-500 bg-emerald-50/50",
             )}
           />
           <SelectableCard
             title="LGA Supervisors"
             subtitle="Oversees Ward Supervisors in lga."
-            isSelected={selectedRole === "lga-election-supervisor"}
-            onClick={() => onSelectRole("lga-election-supervisor")}
+            isSelected={selectedRole === "lga_election_supervisor"}
+            onClick={() => onSelectRole("lga_election_supervisor")}
             className={cn(
-              selectedRole === "lga-election-supervisor" &&
+              selectedRole === "lga_election_supervisor" &&
                 "border-emerald-500 bg-emerald-50/50",
             )}
           />
           <SelectableCard
             title="Ward Supervisors"
             subtitle="Oversee Polling Agents in ward."
-            isSelected={selectedRole === "ward-election-supervisor"}
-            onClick={() => onSelectRole("ward-election-supervisor")}
+            isSelected={selectedRole === "ward_election_supervisor"}
+            onClick={() => onSelectRole("ward_election_supervisor")}
             className={cn(
-              selectedRole === "ward-election-supervisor" &&
+              selectedRole === "ward_election_supervisor" &&
                 "border-emerald-500 bg-emerald-50/50",
             )}
           />
@@ -465,7 +476,9 @@ function SupervisorRegionSelectStep({
         const res = await getLGAs({ data: { stateID: stateId } });
         return res?.success && res.data?.lgas ? res.data.lgas : [];
       } else {
-        const res = await getWards({ data: { lgaID: lgaId, stateID: stateId } });
+        const res = await getWards({
+          data: { lgaID: lgaId, stateID: stateId },
+        });
         return res?.success && res.data?.wards ? res.data.wards : [];
       }
     },
@@ -494,7 +507,9 @@ function SupervisorRegionSelectStep({
 
         <div className="w-full space-y-3 mt-6">
           {isLoading && (
-            <p className="text-c-50 text-sm text-center py-4">Loading options...</p>
+            <p className="text-c-50 text-sm text-center py-4">
+              Loading options...
+            </p>
           )}
           {!isLoading && regions.length === 0 && (
             <p className="text-c-50 text-sm text-center py-4">
@@ -511,7 +526,8 @@ function SupervisorRegionSelectStep({
                 isSelected={isSelected}
                 onClick={() => onSelect(item.id, item.name)}
                 className={cn(
-                  isSelected && "border-emerald-500 bg-emerald-100/70 text-emerald-950",
+                  isSelected &&
+                    "border-emerald-500 bg-emerald-100/70 text-emerald-950",
                 )}
               />
             );
@@ -571,7 +587,11 @@ function SupervisorCertificateUploadStep({
           <span className="text-c-60 font-semibold text-sm">{roleName}</span>
         </div>
 
-        <TitleText text="Upload Your School Certificate" size="xl" className="text-c-90" />
+        <TitleText
+          text="Upload Your School Certificate"
+          size="xl"
+          className="text-c-90"
+        />
         <DescriptiveText
           text="Take a clear picture of it and upload."
           size="sm"
@@ -686,19 +706,27 @@ function SupervisorSuccessStep({
         <div className="w-full bg-amber-100/70 rounded-2xl px-5 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-xl">👦🏽</span>
-            <span className="text-c-60 font-medium text-base">Role Assigned</span>
+            <span className="text-c-60 font-medium text-base">
+              Role Assigned
+            </span>
           </div>
           <span className="font-bold text-c-90 text-lg">{roleName}</span>
         </div>
 
         {/* Region Box */}
         <div className="w-full space-y-2">
-          <span className="text-base font-bold text-c-80 block">Your LGA / Region</span>
+          <span className="text-base font-bold text-c-80 block">
+            Your LGA / Region
+          </span>
           <div className="px-4 py-4 border border-c-40 rounded-2xl bg-white shadow-sm flex items-center gap-4">
             <PollingUnitIcon className="shrink-0 size-8 text-cyan-600" />
             <div className="space-y-0.5">
-              <p className="font-bold text-c-90 text-lg leading-tight">{regionName}</p>
-              <span className="text-c-50 text-sm block">State: {stateName}</span>
+              <p className="font-bold text-c-90 text-lg leading-tight">
+                {regionName}
+              </p>
+              <span className="text-c-50 text-sm block">
+                State: {stateName}
+              </span>
             </div>
           </div>
         </div>

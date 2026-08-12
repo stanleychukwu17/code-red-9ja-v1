@@ -19,6 +19,8 @@ import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
 import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
 import BrickIcon from "@repo/ui/icons/navbar/brick-icon";
 import BrickSolidIcon from "@repo/ui/icons/navbar/brick-solid-icon";
+import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
+import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -96,6 +98,13 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     icon: <PaperIcon className={ICON_CLASS} />,
     selectedIcon: <PaperSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.applications,
+  },
+  {
+    id: "marketing",
+    label: "Marketing",
+    icon: <BalonIcon className={ICON_CLASS} />,
+    selectedIcon: <BalonSolidIcon className={SELECTED_ICON_CLASS} />,
+    href: APP_URL.marketing,
   },
   {
     id: "notifications",

@@ -250,10 +250,6 @@ export function WardElectionSupervisorPage() {
       </CarouselDotContent>
 
       <HomeBody>
-        {daysLeft !== 0 && <ApplicationsCard />}
-        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-        {daysLeft !== 0 && <PracticeTestCard />}
-
         {daysLeft === 0 && !currentAssignment?.arrived_at && (
           <SupervisorStartDutyCard
             onReadyClick={() => {
@@ -266,8 +262,9 @@ export function WardElectionSupervisorPage() {
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
-        {/* <UploadResultCard />
-        <RequestPayoutCard /> */}
+        {daysLeft !== 0 && <ApplicationsCard />}
+        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
+        {daysLeft !== 0 && <PracticeTestCard />}
 
         <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

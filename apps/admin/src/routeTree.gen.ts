@@ -16,11 +16,13 @@ import { Route as AuthSuperadminRouteImport } from './routes/auth/superadmin'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthenticatedUsersRouteImport } from './routes/_authenticated/users'
 import { Route as AuthenticatedPartiesRouteImport } from './routes/_authenticated/parties'
+import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedBodiesRouteImport } from './routes/_authenticated/bodies'
 import { Route as SettingsPartyadminIndexRouteImport } from './routes/settings/partyadmin/index'
 import { Route as SettingsGeneralIndexRouteImport } from './routes/settings/_general/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
+import { Route as AuthenticatedMarketingIndexRouteImport } from './routes/_authenticated/marketing/index'
 import { Route as AuthenticatedLogsIndexRouteImport } from './routes/_authenticated/logs/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/home/index'
 import { Route as AuthenticatedElectionsIndexRouteImport } from './routes/_authenticated/elections/index'
@@ -72,6 +74,11 @@ const AuthenticatedPartiesRoute = AuthenticatedPartiesRouteImport.update({
   path: '/parties',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedMarketingRoute = AuthenticatedMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedElectionsRoute = AuthenticatedElectionsRouteImport.update({
   id: '/elections',
   path: '/elections',
@@ -97,6 +104,12 @@ const AuthenticatedNotificationsIndexRoute =
     id: '/notifications/',
     path: '/notifications/',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedMarketingIndexRoute =
+  AuthenticatedMarketingIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedMarketingRoute,
   } as any)
 const AuthenticatedLogsIndexRoute = AuthenticatedLogsIndexRouteImport.update({
   id: '/logs/',
@@ -195,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof SettingsRouteWithChildren
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/elections': typeof AuthenticatedElectionsRouteWithChildren
+  '/marketing': typeof AuthenticatedMarketingRouteWithChildren
   '/parties': typeof AuthenticatedPartiesRoute
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
@@ -215,6 +229,7 @@ export interface FileRoutesByFullPath {
   '/elections/': typeof AuthenticatedElectionsIndexRoute
   '/home/': typeof AuthenticatedHomeIndexRoute
   '/logs/': typeof AuthenticatedLogsIndexRoute
+  '/marketing/': typeof AuthenticatedMarketingIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/settings/': typeof SettingsGeneralIndexRoute
   '/settings/partyadmin/': typeof SettingsPartyadminIndexRoute
@@ -242,6 +257,7 @@ export interface FileRoutesByTo {
   '/elections': typeof AuthenticatedElectionsIndexRoute
   '/home': typeof AuthenticatedHomeIndexRoute
   '/logs': typeof AuthenticatedLogsIndexRoute
+  '/marketing': typeof AuthenticatedMarketingIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
   '/settings': typeof SettingsGeneralIndexRoute
   '/settings/partyadmin': typeof SettingsPartyadminIndexRoute
@@ -253,6 +269,7 @@ export interface FileRoutesById {
   '/settings': typeof SettingsRouteWithChildren
   '/_authenticated/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/_authenticated/elections': typeof AuthenticatedElectionsRouteWithChildren
+  '/_authenticated/marketing': typeof AuthenticatedMarketingRouteWithChildren
   '/_authenticated/parties': typeof AuthenticatedPartiesRoute
   '/_authenticated/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
@@ -273,6 +290,7 @@ export interface FileRoutesById {
   '/_authenticated/elections/': typeof AuthenticatedElectionsIndexRoute
   '/_authenticated/home/': typeof AuthenticatedHomeIndexRoute
   '/_authenticated/logs/': typeof AuthenticatedLogsIndexRoute
+  '/_authenticated/marketing/': typeof AuthenticatedMarketingIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
   '/settings/_general/': typeof SettingsGeneralIndexRoute
   '/settings/partyadmin/': typeof SettingsPartyadminIndexRoute
@@ -284,6 +302,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/bodies'
     | '/elections'
+    | '/marketing'
     | '/parties'
     | '/users'
     | '/auth/login'
@@ -304,6 +323,7 @@ export interface FileRouteTypes {
     | '/elections/'
     | '/home/'
     | '/logs/'
+    | '/marketing/'
     | '/notifications/'
     | '/settings/'
     | '/settings/partyadmin/'
@@ -331,6 +351,7 @@ export interface FileRouteTypes {
     | '/elections'
     | '/home'
     | '/logs'
+    | '/marketing'
     | '/notifications'
     | '/settings'
     | '/settings/partyadmin'
@@ -341,6 +362,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/_authenticated/bodies'
     | '/_authenticated/elections'
+    | '/_authenticated/marketing'
     | '/_authenticated/parties'
     | '/_authenticated/users'
     | '/auth/login'
@@ -361,6 +383,7 @@ export interface FileRouteTypes {
     | '/_authenticated/elections/'
     | '/_authenticated/home/'
     | '/_authenticated/logs/'
+    | '/_authenticated/marketing/'
     | '/_authenticated/notifications/'
     | '/settings/_general/'
     | '/settings/partyadmin/'
@@ -425,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPartiesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/marketing': {
+      id: '/_authenticated/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof AuthenticatedMarketingRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/elections': {
       id: '/_authenticated/elections'
       path: '/elections'
@@ -459,6 +489,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/notifications/'
       preLoaderRoute: typeof AuthenticatedNotificationsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/marketing/': {
+      id: '/_authenticated/marketing/'
+      path: '/'
+      fullPath: '/marketing/'
+      preLoaderRoute: typeof AuthenticatedMarketingIndexRouteImport
+      parentRoute: typeof AuthenticatedMarketingRoute
     }
     '/_authenticated/logs/': {
       id: '/_authenticated/logs/'
@@ -619,6 +656,20 @@ const AuthenticatedElectionsRouteWithChildren =
     AuthenticatedElectionsRouteChildren,
   )
 
+interface AuthenticatedMarketingRouteChildren {
+  AuthenticatedMarketingIndexRoute: typeof AuthenticatedMarketingIndexRoute
+}
+
+const AuthenticatedMarketingRouteChildren: AuthenticatedMarketingRouteChildren =
+  {
+    AuthenticatedMarketingIndexRoute: AuthenticatedMarketingIndexRoute,
+  }
+
+const AuthenticatedMarketingRouteWithChildren =
+  AuthenticatedMarketingRoute._addFileChildren(
+    AuthenticatedMarketingRouteChildren,
+  )
+
 interface AuthenticatedUsersRouteChildren {
   AuthenticatedUsersAdminRoute: typeof AuthenticatedUsersAdminRoute
   AuthenticatedUsersPartyAdminRoute: typeof AuthenticatedUsersPartyAdminRoute
@@ -637,6 +688,7 @@ const AuthenticatedUsersRouteWithChildren =
 interface AuthenticatedRouteChildren {
   AuthenticatedBodiesRoute: typeof AuthenticatedBodiesRouteWithChildren
   AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRouteWithChildren
+  AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRouteWithChildren
   AuthenticatedPartiesRoute: typeof AuthenticatedPartiesRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRouteWithChildren
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
@@ -648,6 +700,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedBodiesRoute: AuthenticatedBodiesRouteWithChildren,
   AuthenticatedElectionsRoute: AuthenticatedElectionsRouteWithChildren,
+  AuthenticatedMarketingRoute: AuthenticatedMarketingRouteWithChildren,
   AuthenticatedPartiesRoute: AuthenticatedPartiesRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRouteWithChildren,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,

@@ -75,7 +75,7 @@
     "pgxpool",
     "phonecode",
     "phonenumbers",
-    "pollingagent",
+    "polling_agent",
     "pollingunitshandler",
     "pollingunitsservice",
     "presign",

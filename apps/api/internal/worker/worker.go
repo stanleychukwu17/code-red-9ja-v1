@@ -32,6 +32,7 @@ type TaskProcessor interface {
 	ProcessTaskRefreshStateConstituencyStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshStateStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshGlobalStats(ctx context.Context, task *asynq.Task) error
+	ProcessDailyMarketingCampaignDeductions()
 }
 
 type RedisTaskProcessor struct {
@@ -103,11 +104,9 @@ func (processor *RedisTaskProcessor) Start() error {
 		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRefreshAllElectionStats)
 	}
 
-	// File Cleanup Worker (runs every hour)
-	// processor.cron.AddFunc("@hourly", processor.ProcessFileCleanup)
-
-	// Fallback Database File Cleanup Worker (runs once a week on Sunday at 2 AM)
-	// processor.cron.AddFunc("0 2 * * 0", processor.ProcessFallbackFileCleanup)
+	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)
+	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.
+	processor.cron.AddFunc("5 0 * * *", processor.ProcessDailyMarketingCampaignDeductions)
 
 	processor.cron.Start()
 	slog.Info("cron rollup scheduler started")

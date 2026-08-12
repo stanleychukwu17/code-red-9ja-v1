@@ -131,7 +131,10 @@ func (s *PollingUnitsService) GetPollingUnitsWithCapacity(ctx context.Context, w
 	if len(party.AgentAcquisitionTargets) > 0 {
 		_ = json.Unmarshal(party.AgentAcquisitionTargets, &targets)
 	}
-	targetCount := targets["pollingUnitAgent"]
+	targetCount := targets["polling_agent"]
+	if targetCount <= 0 {
+		targetCount = targets["pollingUnitAgent"]
+	}
 	if targetCount <= 0 {
 		targetCount = 1 // Default if not found or 0
 	}
