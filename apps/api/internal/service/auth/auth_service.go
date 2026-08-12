@@ -1,4 +1,4 @@
-﻿package authservice
+package authservice
 
 import (
 	"context"
@@ -1102,87 +1102,52 @@ func (s *AuthService) CompleteOnboarding(
 	myReferralCode string,
 	referrerUserID *int64,
 ) error {
-	refIDVal := int64(0)
-	if referrerUserID != nil {
-		refIDVal = *referrerUserID
-	}
-	slog.Info("[AuthService.CompleteOnboarding] Started", "user_id", userID, "fake_id", fakeID, "my_referral_code", myReferralCode, "referrer_user_id", refIDVal)
-
 	// 1. Update the users row with all onboarding fields
-	slog.Info("[AuthService.CompleteOnboarding] Step 1: Updating user onboarding profile in DB", "user_id", userID)
 	if err := s.queries.UpdateOnboardingProfile(ctx, params); err != nil {
-		slog.Error("[AuthService.CompleteOnboarding] Step 1 Failed: UpdateOnboardingProfile error", "user_id", userID, "err", err)
 		return fmt.Errorf("update profile: %w", err)
 	}
-	slog.Info("[AuthService.CompleteOnboarding] Step 1 Succeeded: User onboarding profile updated", "user_id", userID)
 
 	var referredByID pgtype.Int8
 	if referrerUserID != nil && *referrerUserID > 0 && *referrerUserID != userID {
 		referredByID = pgtype.Int8{Int64: *referrerUserID, Valid: true}
-		slog.Info("[AuthService.CompleteOnboarding] Valid referrer ID detected", "referrer_user_id", *referrerUserID)
-	} else if referrerUserID != nil {
-		slog.Warn("[AuthService.CompleteOnboarding] Ignored referrer ID (invalid or self-referral)", "referrer_user_id", *referrerUserID, "user_id", userID)
-	} else {
-		slog.Info("[AuthService.CompleteOnboarding] No referrer user ID provided")
 	}
 
-	slog.Info("[AuthService.CompleteOnboarding] Step 2: Updating user's own referral code", "user_id", userID, "my_referral_code", myReferralCode)
-	err := s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
+	if err := s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
 		ID:           userID,
 		ReferralCode: pgtype.Text{String: myReferralCode, Valid: myReferralCode != ""},
-	})
-	if err != nil {
-		slog.Error("[AuthService.CompleteOnboarding] Step 2 Failed: UpdateUserReferralCode error", "user_id", userID, "err", err)
-	} else {
-		slog.Info("[AuthService.CompleteOnboarding] Step 2 Succeeded: Referral code saved", "user_id", userID, "my_referral_code", myReferralCode)
+	}); err != nil {
+		return fmt.Errorf("update referral code: %w", err)
 	}
 
-	if err == nil && referredByID.Valid {
-		slog.Info("[AuthService.CompleteOnboarding] Step 3: Updating users.referred_by_id", "user_id", userID, "referred_by_id", referredByID.Int64)
-		err = s.queries.UpdateUserReferredBy(ctx, queries.UpdateUserReferredByParams{
+	if referredByID.Valid {
+		if err := s.queries.UpdateUserReferredBy(ctx, queries.UpdateUserReferredByParams{
 			ID:           userID,
 			ReferredByID: referredByID,
-		})
-		if err != nil {
-			slog.Error("[AuthService.CompleteOnboarding] Step 3 Failed: UpdateUserReferredBy error", "user_id", userID, "err", err)
-		} else {
-			slog.Info("[AuthService.CompleteOnboarding] Step 3 Succeeded: ReferredBy saved on user", "user_id", userID, "referred_by_id", referredByID.Int64)
+		}); err != nil {
+			return fmt.Errorf("update referred by: %w", err)
 		}
-	}
 
-	if err != nil {
-		slog.Error("[AuthService.CompleteOnboarding] Referral profile update failed", "user_id", userID, "err", err)
-	} else if referredByID.Valid {
-		slog.Info("[AuthService.CompleteOnboarding] Step 4: Creating/upsetting referral record in referrals table", "referrer_user_id", referredByID.Int64, "referred_user_id", userID)
-		refRecord, err := s.queries.CreateReferral(ctx, queries.CreateReferralParams{
+		if _, err := s.queries.CreateReferral(ctx, queries.CreateReferralParams{
 			PartyID:        pgtype.Int2{Valid: false}, // No party at signup
 			ReferrerUserID: referredByID.Int64,
 			ReferredUserID: userID,
 			Milestone:      "SIGNED_UP",
 			Status:         pgtype.Text{String: "pending", Valid: true},
-		})
-		if err != nil {
-			slog.Error("[AuthService.CompleteOnboarding] Step 4 Failed: CreateReferral error", "user_id", userID, "err", err)
-		} else {
-			slog.Info("[AuthService.CompleteOnboarding] Step 4 Succeeded: Referral record created", "referral_id", refRecord.ID, "referrer_user_id", refRecord.ReferrerUserID, "referred_user_id", refRecord.ReferredUserID)
+		}); err != nil {
+			return fmt.Errorf("create referral record: %w", err)
 		}
 	}
 
 	// 2. Persist username, email to Redis for fast lookups
-	slog.Info("[AuthService.CompleteOnboarding] Step 5: Persisting registration details to Redis", "username", params.Username.String, "user_id", userID)
 	if err := s.SaveSomeUserRegistrationDetails(ctx, params.Username.String, "", "", userID, fakeID); err != nil {
-		slog.Error("[AuthService.CompleteOnboarding] Step 5 Failed: SaveSomeUserRegistrationDetails error", "err", err)
 		return fmt.Errorf("save registration details: %w", err)
 	}
-	slog.Info("[AuthService.CompleteOnboarding] Step 5 Succeeded: Redis details saved")
 
 	// 3. Invalidate the Redis user-info cache so the next read is fresh
-	slog.Info("[AuthService.CompleteOnboarding] Step 6: Invalidating cached user info", "fake_id", fakeID)
 	_ = s.usersService.InvalidateCachedUserInfo(ctx, fakeID)
 
 	// 4. Attempt to create user wallet if it wasn't successfully created during Signup
 	if s.usersService != nil {
-		slog.Info("[AuthService.CompleteOnboarding] Step 7: Launching background wallet creation", "user_id", userID, "fake_id", fakeID)
 		go func() {
 			bgCtx := context.Background()
 			registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
@@ -1208,9 +1173,7 @@ func (s *AuthService) CompleteOnboarding(
 					CreatedAt:       registeredUser.CreatedAt,
 					UpdatedAt:       registeredUser.UpdatedAt,
 				}); walletErr != nil {
-					slog.Info("[AuthService.CompleteOnboarding] Background wallet creation result", "user_id", userID, "err", walletErr)
-				} else {
-					slog.Info("[AuthService.CompleteOnboarding] Background wallet creation succeeded", "user_id", userID)
+					slog.Warn("[AuthService.CompleteOnboarding] Background wallet creation returned error", "user_id", userID, "err", walletErr)
 				}
 			} else {
 				slog.Error("[AuthService.CompleteOnboarding] Background wallet creation failed to fetch user", "err", userErr)
@@ -1218,7 +1181,6 @@ func (s *AuthService) CompleteOnboarding(
 		}()
 	}
 
-	slog.Info("[AuthService.CompleteOnboarding] Finished successfully", "user_id", userID)
 	return nil
 }
 
