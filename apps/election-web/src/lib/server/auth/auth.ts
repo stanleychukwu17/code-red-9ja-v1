@@ -34,6 +34,7 @@ export const startUserRegistration = createServerFn({ method: "POST" })
     }
   });
 
+// send signup email otp
 export const sendSignupEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string }) => data)
   .handler(async ({ data }) => {
@@ -55,6 +56,7 @@ export const sendSignupEmailOtp = createServerFn({ method: "POST" })
     }
   });
 
+// send forgot password email otp
 export const sendForgotPasswordEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string }) => data)
   .handler(async ({ data }) => {
@@ -75,6 +77,7 @@ export const sendForgotPasswordEmailOtp = createServerFn({ method: "POST" })
     }
   });
 
+// verify signup email otp
 export const verifySignupEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string; otp: string }) => data)
   .handler(async ({ data }) => {
@@ -95,6 +98,7 @@ export const verifySignupEmailOtp = createServerFn({ method: "POST" })
     }
   });
 
+// signup user
 export const signupUser = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
@@ -277,13 +281,7 @@ export const logoutUser = createServerFn({ method: "POST" }).handler(
 // Verifies security questions for a user
 export const verifySecurityQuestions = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: {
-      nin: string;
-      question1: number;
-      answer1: string;
-      question2: number;
-      answer2: string;
-    }) => data,
+    (data: { nin: string; question1: number; answer1: string; question2: number; answer2: string; }) => data,
   )
   .handler(async ({ data }) => {
     const result = await verifySecurityQuestionsImpl({ data });
