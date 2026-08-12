@@ -5,6 +5,10 @@ import { cn } from "@repo/ui/lib/utils";
 import ArrowDownIcon from "@repo/ui/icons/arrow-down-icon";
 import { ReactNode } from "react";
 
+/**
+ * Renders the main Free9ja logo with text.
+ * Hidden text on small screens, shown on medium+.
+ */
 export function Free9jaLogo() {
   return (
     <div className="flex items-center gap-4 text-primary w-full">
@@ -16,10 +20,11 @@ export function Free9jaLogo() {
   );
 }
 
-export const AuthWrapper = ({
-  children,
-  type,
-}: {
+/**
+ * Main wrapper layout for authentication pages (login, signup, forgot password, OTP).
+ * Handles the dynamic rendering of titles, subtitles, and bottom navigation links.
+ */
+export const AuthWrapper = ({ children, type }: {
   children: React.ReactNode;
   type: "login" | "signup" | "forgot-password" | "verify-otp";
 }) => {
@@ -50,7 +55,7 @@ export const AuthWrapper = ({
     <div className="min-h-screen bg-white flex flex-col">
       {/* Top Header Logo */}
       <AuthHeader />
-      <div className="mx-auto w-full max-w-[400px] flex flex-col justify-center gap-5 px-4 py-12">
+      <div className="mx-auto w-full max-w-100 flex flex-col justify-center gap-5 px-4 py-12">
         <div className="space-y-2 pt-7">
           <h1 className="text-primary text-2xl font-bold">{title}</h1>
           <p className="text-c-60">{subtitle}</p>
@@ -63,29 +68,17 @@ export const AuthWrapper = ({
             {type === "login" ? (
               <p className="h-10 flex items-center text-center">
                 Don't have an account? &nbsp;
-                <Link
-                  to={APP_URL.auth.signup}
-                  className="text-primary font-medium"
-                >
-                  Sign up
-                </Link>
+                <Link to={APP_URL.auth.signup} className="text-primary font-medium">Sign up</Link>
               </p>
             ) : (
               <p className="h-10 flex items-center text-center">
                 Already have an account? &nbsp;
-                <Link
-                  to={APP_URL.auth.login}
-                  className="text-primary font-medium"
-                >
-                  Log in
-                </Link>
+                <Link to={APP_URL.auth.login} className="text-primary font-medium">Log in</Link>
               </p>
             )}
 
             <p className="h-10 flex items-center text-c-70 hover:text-c-90 cursor-pointer transition-colors duration-200">
-              <Link to={APP_URL.auth.forgotPassword} search={{ flow }}>
-                Forgot password
-              </Link>
+              <Link to={APP_URL.auth.forgotPassword} search={{ flow }}> Forgot password </Link>
             </p>
           </div>
         )}
@@ -94,38 +87,34 @@ export const AuthWrapper = ({
   );
 };
 
+/**
+ * Header specifically used for Auth pages, containing the logo.
+ */
 export function AuthHeader({ className }: { className?: string }) {
   return (
-    <div
-      className={cn(
-        "flex items-center gap-2 text-[#234f3e] h-16 md:h-28 px-4 md:px-12",
-        className,
-      )}
-    >
+    <div className={cn("flex items-center gap-2 text-[#234f3e] h-16 md:h-28 px-4 md:px-12", className)}>
       <Free9jaLogo />
     </div>
   );
 }
 
-export function OnboardingWrapper({
-  children,
-  className,
-}: {
+/**
+ * Container wrapper for the onboarding flow to set a consistent max-width.
+ */
+export function OnboardingWrapper({ children, className }: {
   children: ReactNode;
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        "mx-auto flex w-full max-w-[430px] flex-1 flex-col",
-        className,
-      )}
-    >
+    <div className={cn("mx-auto flex w-full max-w-107 flex-1 flex-col", className)}>
       {children}
     </div>
   );
 }
 
+/**
+ * Header for the onboarding flow. Optionally includes a back button.
+ */
 export function OnboardingHeader({ onBack }: { onBack?: () => void }) {
   return (
     <div className="z-50 flex items-center gap-4 md:gap-10 h-16 md:h-28 px-4 md:px-12 sticky top-0 bg-background/80 backdrop-blur-2xl">
@@ -144,11 +133,10 @@ export function OnboardingHeader({ onBack }: { onBack?: () => void }) {
   );
 }
 
-export function OnboardingHeaderContent({
-  title,
-  subtitle,
-  icon,
-}: {
+/**
+ * Renders the title, subtitle, and an icon for an onboarding step.
+ */
+export function OnboardingHeaderContent({ title, subtitle, icon }: {
   title: string;
   subtitle: string;
   icon: ReactNode;
