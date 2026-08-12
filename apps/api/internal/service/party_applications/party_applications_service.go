@@ -1036,13 +1036,13 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	if roleType == "ward-election-supervisor" || roleType == "ward_supervisor" {
 		if input.WardID > 0 {
 			_ = txQueries.AdjustElectionGroupWardApplicationCounts(ctx, queries.AdjustElectionGroupWardApplicationCountsParams{
-				ElectionGroupID:       egID,
-				WardID:                input.WardID,
-				PartyID:               partyID,
-				AppDelta:              0,
-				AcceptedDelta:         1,
-				RejectedDelta:         0,
-				WardSupAppDelta:       0,
+				ElectionGroupID:      egID,
+				WardID:               input.WardID,
+				PartyID:              partyID,
+				AppDelta:             0,
+				AcceptedDelta:        1,
+				RejectedDelta:        0,
+				WardSupAppDelta:      0,
 				WardSupAcceptedDelta: 1,
 				WardSupRejectedDelta: 0,
 			})
@@ -1057,29 +1057,29 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				AcceptedDelta:        1,
 				RejectedDelta:        0,
 				WardSupAppDelta:      0,
-				WardSupAcceptedDelta:0,
-				WardSupRejectedDelta:0,
+				WardSupAcceptedDelta: 0,
+				WardSupRejectedDelta: 0,
 				LgaSupAppDelta:       0,
-				LgaSupAcceptedDelta: 1,
-				LgaSupRejectedDelta: 0,
+				LgaSupAcceptedDelta:  1,
+				LgaSupRejectedDelta:  0,
 			})
 		}
 	} else if roleType == "state-election-supervisor" || roleType == "state_supervisor" {
 		if input.StateID > 0 {
 			_ = txQueries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
-				ElectionGroupID:        egID,
-				StateID:                input.StateID,
-				PartyID:                partyID,
-				AppDelta:               0,
-				AcceptedDelta:          1,
-				RejectedDelta:          0,
-				WardSupAppDelta:        0,
+				ElectionGroupID:       egID,
+				StateID:               input.StateID,
+				PartyID:               partyID,
+				AppDelta:              0,
+				AcceptedDelta:         1,
+				RejectedDelta:         0,
+				WardSupAppDelta:       0,
 				WardSupAcceptedDelta:  0,
 				WardSupRejectedDelta:  0,
-				LgaSupAppDelta:         0,
+				LgaSupAppDelta:        0,
 				LgaSupAcceptedDelta:   0,
 				LgaSupRejectedDelta:   0,
-				StateSupAppDelta:       0,
+				StateSupAppDelta:      0,
 				StateSupAcceptedDelta: 1,
 				StateSupRejectedDelta: 0,
 			})
@@ -1371,7 +1371,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	// 5. Update referral: set user_referral_id, party_id, election_group_id, milestone ('APPLIED') without setting amount_to_pay yet
 	if err := txQueries.UpdateReferralOnApplication(ctx, queries.UpdateReferralOnApplicationParams{
 		ID:              referral.ID,
-		UserReferralID: pgtype.Int8{Int64: selected.userReferral.ID, Valid: true},
+		UserReferralID:  pgtype.Int8{Int64: selected.userReferral.ID, Valid: true},
 		PartyID:         pgtype.Int2{Int16: int16(partyID), Valid: partyID > 0},
 		ElectionGroupID: pgtype.Int4{Int32: int32(selected.egID), Valid: selected.egID > 0},
 		AmountToPay:     pgtype.Numeric{Valid: false},
