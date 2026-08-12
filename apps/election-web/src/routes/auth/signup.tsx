@@ -101,8 +101,8 @@ function RouteComponent() {
       } else {
         setServerError(
           result.error ||
-            result.message ||
-            "An error occurred during registration",
+          result.message ||
+          "An error occurred during registration",
         );
       }
     },
@@ -123,8 +123,8 @@ function RouteComponent() {
       } else {
         setServerError(
           result.error ||
-            result.message ||
-            "An error occurred while sending the verification code",
+          result.message ||
+          "An error occurred while sending the verification code",
         );
       }
     },
@@ -156,8 +156,8 @@ function RouteComponent() {
       } else {
         setServerError(
           result.error ||
-            result.message ||
-            "An error occurred while verifying the code",
+          result.message ||
+          "An error occurred while verifying the code",
         );
       }
     },
@@ -260,7 +260,7 @@ function RouteComponent() {
                       control={control}
                       rules={{ required: "Country is required" }}
                       render={({ field: countryField }) => (
-                        <div className="w-[120px] shrink-0">
+                        <div className="w-30 shrink-0">
                           <SelectCountryCode
                             countries={countries}
                             selectedId={countryField.value}

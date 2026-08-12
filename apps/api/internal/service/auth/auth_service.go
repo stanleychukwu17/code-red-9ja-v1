@@ -1092,7 +1092,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	}, nil
 }
 
-// CompleteOnboarding finalises a newly registered user's profile with all data collected during the onboarding flow.
+// CompleteOnboarding finalizes a newly registered user's profile with all data collected during the onboarding flow.
 // It updates the user row, saves NIN + username to Redis/DB, stores security questions, and sets account status to 'active'.
 func (s *AuthService) CompleteOnboarding(
 	ctx context.Context,
@@ -1153,7 +1153,7 @@ func (s *AuthService) CompleteOnboarding(
 	if err != nil {
 		slog.Error("âŒ [AuthService.CompleteOnboarding] Referral profile update failed", "user_id", userID, "err", err)
 	} else if referredByID.Valid {
-		slog.Info("ðŸ¤ [AuthService.CompleteOnboarding] Step 4: Creating/upserting referral record in referrals table", "referrer_user_id", referredByID.Int64, "referred_user_id", userID)
+		slog.Info("ðŸ¤ [AuthService.CompleteOnboarding] Step 4: Creating/upsetting referral record in referrals table", "referrer_user_id", referredByID.Int64, "referred_user_id", userID)
 		refRecord, err := s.queries.CreateReferral(ctx, queries.CreateReferralParams{
 			PartyID:        pgtype.Int2{Valid: false}, // No party at signup
 			ReferrerUserID: referredByID.Int64,
