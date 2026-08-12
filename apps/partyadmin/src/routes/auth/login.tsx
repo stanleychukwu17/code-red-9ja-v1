@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
@@ -21,7 +22,7 @@ import {
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import store from "#/redux/store";
-import { updateCountryState } from "#/redux/slice/countrySlice";
+
 import { APP_URL } from "#/lib/config";
 import {
   loginPartyApp,
@@ -64,31 +65,13 @@ export const Route = createFileRoute("/auth/login")({
       });
     }
   },
+
   head: () =>
     getPageHeader({
       title: "Log in",
       description: "Log in to your Party Admin account",
     }),
-  loader: async () => {
-    if (typeof window !== "undefined") {
-      const state = store.getState();
-      if (state.country.countries && state.country.countries.length > 0) {
-        return { countries: state.country.countries };
-      }
-    }
 
-    const countries = (await getAllCountries()) as countriesType;
-    if (!countries.success)
-      throw new Error(countries.message || "Failed to load countries");
-
-    if (typeof window !== "undefined") {
-      store.dispatch(
-        updateCountryState({ countries: countries.data.countries }),
-      );
-    }
-
-    return { countries: countries.data.countries };
-  },
   component: LoginComponent,
   errorComponent: ({ error }) => (
     <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
@@ -99,7 +82,14 @@ function LoginComponent() {
   const navigate = useNavigate();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries;
+  const { data: countriesRes } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getAllCountries() as Promise<countriesType>,
+    staleTime: Infinity,
+  });
+  const countries = (
+    countriesRes?.success ? countriesRes.data.countries : []
+  ) as { id: number; name: string; iso2: string; phonecode: string }[];
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
@@ -262,7 +252,7 @@ function LoginComponent() {
                   </SelectContent>
                 </Select>
                 {field.state.meta.isTouched &&
-                field.state.meta.errors.length ? (
+                  field.state.meta.errors.length ? (
                   <span className="text-xs text-destructive">
                     {field.state.meta.errors[0] as string}
                   </span>

@@ -37,7 +37,7 @@ export const Route = createFileRoute("/auth/signup")({
   // Page metadata
   head: () =>
     getPageHeader({
-      title: "Sign up: Join the movement ",
+      title: "Sign up ",
       description: `Create your account to start enjoying premium content on ${APP_NAME}`,
     }),
 

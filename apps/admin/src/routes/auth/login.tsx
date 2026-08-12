@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useForm } from "@tanstack/react-form";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import LogoIcon from "@repo/ui/icons/logo-icon";
 import { Button } from "@repo/ui/components/button";
@@ -17,7 +17,7 @@ import {
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import store from "#/redux/store";
-import { updateCountryState } from "#/redux/slice/countrySlice";
+
 import {
   loginAdmin,
   checkIfRefreshTokenInCookie,
@@ -59,26 +59,7 @@ export const Route = createFileRoute("/auth/login")({
       title: "Log in",
       description: "Log in to your Free9ja Admin account",
     }),
-  loader: async () => {
-    if (typeof window !== "undefined") {
-      const state = store.getState();
-      if (state.country.countries && state.country.countries.length > 0) {
-        return { countries: state.country.countries };
-      }
-    }
 
-    const countries = (await getAllCountries()) as countriesType;
-    if (!countries.success)
-      throw new Error(countries.message || "Failed to load countries");
-
-    if (typeof window !== "undefined") {
-      store.dispatch(
-        updateCountryState({ countries: countries.data.countries }),
-      );
-    }
-
-    return { countries: countries.data.countries };
-  },
   component: LoginComponent,
   errorComponent: ({ error }) => (
     <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
@@ -88,7 +69,14 @@ export const Route = createFileRoute("/auth/login")({
 function LoginComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries;
+  const { data: countriesRes } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getAllCountries() as Promise<countriesType>,
+    staleTime: Infinity,
+  });
+  const countries = (
+    countriesRes?.success ? countriesRes.data.countries : []
+  ) as { id: number; name: string; iso2: string; phonecode: string }[];
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
