@@ -53,6 +53,7 @@ function RouteComponent() {
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
+  // Fetch countries list to populate the country code dropdown
   const { data: countriesRes } = useQuery({
     queryKey: ["countries"],
     queryFn: () => getAllCountries() as Promise<countriesType>,
@@ -62,8 +63,9 @@ function RouteComponent() {
     countriesRes?.success ? countriesRes.data.countries : []
   ) as { id: number; name: string; iso2: string; phonecode: string }[];
 
+  // Local state for handling form progression, OTP, and errors
   const [serverError, setServerError] = useState<string | null>(null);
-  const [otpSent, setOtpSent] = useState(false);
+  const [otpSent, setOtpSent] = useState(true);
   const [otp, setOtp] = useState("");
   const [resendSeconds, setResendSeconds] = useState(0);
   const [pendingSignup, setPendingSignup] = useState<{
@@ -74,13 +76,8 @@ function RouteComponent() {
     countryName: string;
   } | null>(null);
 
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    watch,
-    formState: { errors, isValid, isSubmitting },
-  } = useForm({
+  // Initialize form control and state using react-hook-form
+  const { control, handleSubmit, setValue, watch, formState: { errors, isValid, isSubmitting } } = useForm({
     mode: "onChange",
     defaultValues: {
       country: "",
@@ -91,6 +88,7 @@ function RouteComponent() {
     },
   });
 
+  // Mutation for the final signup step (after OTP verification)
   const signupMutation = useMutation({
     mutationFn: signupUser,
     onSuccess: (result) => {
@@ -111,6 +109,7 @@ function RouteComponent() {
     },
   });
 
+  // Mutation to request an OTP code to be sent to the user's email
   const sendOtpMutation = useMutation({
     mutationFn: sendSignupEmailOtp,
     onSuccess: (result) => {
@@ -133,6 +132,7 @@ function RouteComponent() {
     },
   });
 
+  // Mutation to verify the OTP code entered by the user
   const verifyOtpMutation = useMutation({
     mutationFn: verifySignupEmailOtp,
     onSuccess: (result) => {
@@ -166,6 +166,7 @@ function RouteComponent() {
     },
   });
 
+  // Form submission handler: processes the initial form submit and triggers OTP sending
   const onSubmit = async (value: any) => {
     // clear any previous errors
     setServerError(null);
@@ -193,6 +194,7 @@ function RouteComponent() {
     verifyOtpMutation.mutate({ data: { email: value.email, otp } } as any);
   };
 
+  // Timer effect to handle the OTP resend cooldown
   useEffect(() => {
     if (!otpSent || resendSeconds <= 0) return;
 
@@ -203,7 +205,7 @@ function RouteComponent() {
     return () => clearInterval(interval);
   }, [otpSent, resendSeconds]);
 
-  // auto-select the country where the user is browsing from once visitorCountry is available
+  // auto-select the country where the user is browsing from only when visitorCountry is available
   useEffect(() => {
     if (!visitorCountry) return;
 
@@ -265,9 +267,7 @@ function RouteComponent() {
                             countries={countries}
                             selectedId={countryField.value}
                             update={(val) => countryField.onChange(val)}
-                            errorMsg={
-                              errors.country?.message as string | undefined
-                            }
+                            errorMsg={errors.country?.message as string | undefined}
                           />
                         </div>
                       )}
@@ -375,6 +375,7 @@ function RouteComponent() {
           </>
         ) : (
           <div className="space-y-5 pt-2">
+            {/* OTP Input field */}
             <FormInput
               placeholder="Enter 6-digit code"
               value={otp}
@@ -394,17 +395,20 @@ function RouteComponent() {
               }
               loading={verifyOtpMutation.isPending || signupMutation.isPending}
               onClick={() => {
+                // Retrieve and validate the user's email from the form state
                 const email = (watch("email") || "").trim();
                 if (!email) {
                   setServerError("Email is required");
                   return;
                 }
+
+                // Ensure the initial form payload is still present before attempting verification
                 if (!pendingSignup) {
-                  setServerError(
-                    "Missing signup details. Please go back and try again.",
-                  );
+                  setServerError("Missing signup details. Please go back and try again.");
                   return;
                 }
+
+                // Trigger the mutation to verify the entered OTP against the provided email
                 verifyOtpMutation.mutate({ data: { email, otp } } as any);
               }}
             >
@@ -412,6 +416,7 @@ function RouteComponent() {
             </Button>
 
             <div className="flex items-center justify-between text-sm">
+              {/* Resend OTP button: Shows a countdown timer if a resend was recently requested */}
               <button
                 type="button"
                 className="h-10 flex-items-center pr-5 font-medium text-c-80 hover:text-green cursor-pointer disabled:opacity-50 transition-all duration-300"
@@ -437,6 +442,7 @@ function RouteComponent() {
                 )}
               </button>
 
+              {/* Change email button: Resets the OTP state and returns the user to the initial signup form */}
               <button
                 type="button"
                 className="h-10 flex-items-center pl-5 text-c-80 hover:text-green cursor-pointer transition-all duration-300"
