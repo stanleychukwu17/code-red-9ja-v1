@@ -1,8 +1,7 @@
-package authservice
+﻿package authservice
 
 import (
 	"context"
-	cryptorand "crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +9,6 @@ import (
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/logger"
 	"log/slog"
-	"math/big"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -1077,7 +1075,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
 	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp)
 	if email != "" {
-		// Store email and phone → fakeID mappings so login-by-email/phone works immediately
+		// Store email and phone â†’ fakeID mappings so login-by-email/phone works immediately
 		pipe.Set(ctx, db.RedisEmailFakeID+strings.ToLower(strings.TrimSpace(email)), fakeID, 0)
 	}
 	if e164Phone != "" {
@@ -1108,54 +1106,54 @@ func (s *AuthService) CompleteOnboarding(
 	if referrerUserID != nil {
 		refIDVal = *referrerUserID
 	}
-	slog.Info("🚀 [AuthService.CompleteOnboarding] Started", "user_id", userID, "fake_id", fakeID, "my_referral_code", myReferralCode, "referrer_user_id", refIDVal)
+	slog.Info("ðŸš€ [AuthService.CompleteOnboarding] Started", "user_id", userID, "fake_id", fakeID, "my_referral_code", myReferralCode, "referrer_user_id", refIDVal)
 
 	// 1. Update the users row with all onboarding fields
-	slog.Info("📍 [AuthService.CompleteOnboarding] Step 1: Updating user onboarding profile in DB", "user_id", userID)
+	slog.Info("ðŸ“ [AuthService.CompleteOnboarding] Step 1: Updating user onboarding profile in DB", "user_id", userID)
 	if err := s.queries.UpdateOnboardingProfile(ctx, params); err != nil {
-		slog.Error("❌ [AuthService.CompleteOnboarding] Step 1 Failed: UpdateOnboardingProfile error", "user_id", userID, "err", err)
+		slog.Error("âŒ [AuthService.CompleteOnboarding] Step 1 Failed: UpdateOnboardingProfile error", "user_id", userID, "err", err)
 		return fmt.Errorf("update profile: %w", err)
 	}
-	slog.Info("✅ [AuthService.CompleteOnboarding] Step 1 Succeeded: User onboarding profile updated", "user_id", userID)
-	
+	slog.Info("âœ… [AuthService.CompleteOnboarding] Step 1 Succeeded: User onboarding profile updated", "user_id", userID)
+
 	var referredByID pgtype.Int8
 	if referrerUserID != nil && *referrerUserID > 0 && *referrerUserID != userID {
 		referredByID = pgtype.Int8{Int64: *referrerUserID, Valid: true}
-		slog.Info("🔍 [AuthService.CompleteOnboarding] Valid referrer ID detected", "referrer_user_id", *referrerUserID)
+		slog.Info("ðŸ” [AuthService.CompleteOnboarding] Valid referrer ID detected", "referrer_user_id", *referrerUserID)
 	} else if referrerUserID != nil {
-		slog.Warn("⚠️ [AuthService.CompleteOnboarding] Ignored referrer ID (invalid or self-referral)", "referrer_user_id", *referrerUserID, "user_id", userID)
+		slog.Warn("âš ï¸ [AuthService.CompleteOnboarding] Ignored referrer ID (invalid or self-referral)", "referrer_user_id", *referrerUserID, "user_id", userID)
 	} else {
-		slog.Info("ℹ️ [AuthService.CompleteOnboarding] No referrer user ID provided")
+		slog.Info("â„¹ï¸ [AuthService.CompleteOnboarding] No referrer user ID provided")
 	}
-	
-	slog.Info("📍 [AuthService.CompleteOnboarding] Step 2: Updating user's own referral code", "user_id", userID, "my_referral_code", myReferralCode)
+
+	slog.Info("ðŸ“ [AuthService.CompleteOnboarding] Step 2: Updating user's own referral code", "user_id", userID, "my_referral_code", myReferralCode)
 	err := s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
 		ID:           userID,
 		ReferralCode: pgtype.Text{String: myReferralCode, Valid: myReferralCode != ""},
 	})
 	if err != nil {
-		slog.Error("❌ [AuthService.CompleteOnboarding] Step 2 Failed: UpdateUserReferralCode error", "user_id", userID, "err", err)
+		slog.Error("âŒ [AuthService.CompleteOnboarding] Step 2 Failed: UpdateUserReferralCode error", "user_id", userID, "err", err)
 	} else {
-		slog.Info("✅ [AuthService.CompleteOnboarding] Step 2 Succeeded: Referral code saved", "user_id", userID, "my_referral_code", myReferralCode)
+		slog.Info("âœ… [AuthService.CompleteOnboarding] Step 2 Succeeded: Referral code saved", "user_id", userID, "my_referral_code", myReferralCode)
 	}
 
 	if err == nil && referredByID.Valid {
-		slog.Info("📍 [AuthService.CompleteOnboarding] Step 3: Updating users.referred_by_id", "user_id", userID, "referred_by_id", referredByID.Int64)
+		slog.Info("ðŸ“ [AuthService.CompleteOnboarding] Step 3: Updating users.referred_by_id", "user_id", userID, "referred_by_id", referredByID.Int64)
 		err = s.queries.UpdateUserReferredBy(ctx, queries.UpdateUserReferredByParams{
 			ID:           userID,
 			ReferredByID: referredByID,
 		})
 		if err != nil {
-			slog.Error("❌ [AuthService.CompleteOnboarding] Step 3 Failed: UpdateUserReferredBy error", "user_id", userID, "err", err)
+			slog.Error("âŒ [AuthService.CompleteOnboarding] Step 3 Failed: UpdateUserReferredBy error", "user_id", userID, "err", err)
 		} else {
-			slog.Info("✅ [AuthService.CompleteOnboarding] Step 3 Succeeded: ReferredBy saved on user", "user_id", userID, "referred_by_id", referredByID.Int64)
+			slog.Info("âœ… [AuthService.CompleteOnboarding] Step 3 Succeeded: ReferredBy saved on user", "user_id", userID, "referred_by_id", referredByID.Int64)
 		}
 	}
 
 	if err != nil {
-		slog.Error("❌ [AuthService.CompleteOnboarding] Referral profile update failed", "user_id", userID, "err", err)
+		slog.Error("âŒ [AuthService.CompleteOnboarding] Referral profile update failed", "user_id", userID, "err", err)
 	} else if referredByID.Valid {
-		slog.Info("🤝 [AuthService.CompleteOnboarding] Step 4: Creating/upserting referral record in referrals table", "referrer_user_id", referredByID.Int64, "referred_user_id", userID)
+		slog.Info("ðŸ¤ [AuthService.CompleteOnboarding] Step 4: Creating/upserting referral record in referrals table", "referrer_user_id", referredByID.Int64, "referred_user_id", userID)
 		refRecord, err := s.queries.CreateReferral(ctx, queries.CreateReferralParams{
 			PartyID:        pgtype.Int2{Valid: false}, // No party at signup
 			ReferrerUserID: referredByID.Int64,
@@ -1164,27 +1162,27 @@ func (s *AuthService) CompleteOnboarding(
 			Status:         pgtype.Text{String: "pending", Valid: true},
 		})
 		if err != nil {
-			slog.Error("❌ [AuthService.CompleteOnboarding] Step 4 Failed: CreateReferral error", "user_id", userID, "err", err)
+			slog.Error("âŒ [AuthService.CompleteOnboarding] Step 4 Failed: CreateReferral error", "user_id", userID, "err", err)
 		} else {
-			slog.Info("✅ [AuthService.CompleteOnboarding] Step 4 Succeeded: Referral record created", "referral_id", refRecord.ID, "referrer_user_id", refRecord.ReferrerUserID, "referred_user_id", refRecord.ReferredUserID)
+			slog.Info("âœ… [AuthService.CompleteOnboarding] Step 4 Succeeded: Referral record created", "referral_id", refRecord.ID, "referrer_user_id", refRecord.ReferrerUserID, "referred_user_id", refRecord.ReferredUserID)
 		}
 	}
-	
+
 	// 2. Persist username, email to Redis for fast lookups
-	slog.Info("📍 [AuthService.CompleteOnboarding] Step 5: Persisting registration details to Redis", "username", params.Username.String, "user_id", userID)
+	slog.Info("ðŸ“ [AuthService.CompleteOnboarding] Step 5: Persisting registration details to Redis", "username", params.Username.String, "user_id", userID)
 	if err := s.SaveSomeUserRegistrationDetails(ctx, params.Username.String, "", "", userID, fakeID); err != nil {
-		slog.Error("❌ [AuthService.CompleteOnboarding] Step 5 Failed: SaveSomeUserRegistrationDetails error", "err", err)
+		slog.Error("âŒ [AuthService.CompleteOnboarding] Step 5 Failed: SaveSomeUserRegistrationDetails error", "err", err)
 		return fmt.Errorf("save registration details: %w", err)
 	}
-	slog.Info("✅ [AuthService.CompleteOnboarding] Step 5 Succeeded: Redis details saved")
+	slog.Info("âœ… [AuthService.CompleteOnboarding] Step 5 Succeeded: Redis details saved")
 
 	// 3. Invalidate the Redis user-info cache so the next read is fresh
-	slog.Info("📍 [AuthService.CompleteOnboarding] Step 6: Invalidating cached user info", "fake_id", fakeID)
+	slog.Info("ðŸ“ [AuthService.CompleteOnboarding] Step 6: Invalidating cached user info", "fake_id", fakeID)
 	_ = s.usersService.InvalidateCachedUserInfo(ctx, fakeID)
 
 	// 4. Attempt to create user wallet if it wasn't successfully created during Signup
 	if s.usersService != nil {
-		slog.Info("📍 [AuthService.CompleteOnboarding] Step 7: Launching background wallet creation", "user_id", userID, "fake_id", fakeID)
+		slog.Info("ðŸ“ [AuthService.CompleteOnboarding] Step 7: Launching background wallet creation", "user_id", userID, "fake_id", fakeID)
 		go func() {
 			bgCtx := context.Background()
 			registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
@@ -1210,17 +1208,17 @@ func (s *AuthService) CompleteOnboarding(
 					CreatedAt:       registeredUser.CreatedAt,
 					UpdatedAt:       registeredUser.UpdatedAt,
 				}); walletErr != nil {
-					slog.Info("ℹ️ [AuthService.CompleteOnboarding] Background wallet creation result", "user_id", userID, "err", walletErr)
+					slog.Info("â„¹ï¸ [AuthService.CompleteOnboarding] Background wallet creation result", "user_id", userID, "err", walletErr)
 				} else {
-					slog.Info("✅ [AuthService.CompleteOnboarding] Background wallet creation succeeded", "user_id", userID)
+					slog.Info("âœ… [AuthService.CompleteOnboarding] Background wallet creation succeeded", "user_id", userID)
 				}
 			} else {
-				slog.Error("❌ [AuthService.CompleteOnboarding] Background wallet creation failed to fetch user", "err", userErr)
+				slog.Error("âŒ [AuthService.CompleteOnboarding] Background wallet creation failed to fetch user", "err", userErr)
 			}
 		}()
 	}
 
-	slog.Info("🎉 [AuthService.CompleteOnboarding] Finished successfully", "user_id", userID)
+	slog.Info("ðŸŽ‰ [AuthService.CompleteOnboarding] Finished successfully", "user_id", userID)
 	return nil
 }
 
@@ -1843,182 +1841,4 @@ func (s *AuthService) UpdateUserRoles(ctx context.Context, userID int64, fakeID 
 	}
 
 	return nil
-}
-
-type SeedUserRequest struct {
-	ID             int64   `json:"id"`
-	FakeID         int64   `json:"fake_id"`
-	Email          string  `json:"email"`
-	Avatar         string  `json:"avatar"`
-	Phone          *string `json:"phone"`
-	Username       *string `json:"username"`
-	Password       string  `json:"password"`
-	LastName       string  `json:"last_name"`
-	FirstName      string  `json:"first_name"`
-	MiddleName     *string `json:"middle_name"`
-	Gender         string  `json:"gender"`
-	DateOfBirth    string  `json:"date_of_birth"`
-	Religion       string  `json:"religion"`
-	CurrentCountry int16   `json:"current_country"`
-	CurrentState   int16   `json:"current_state"`
-	CurrentLga     *int32  `json:"current_lga"`
-	CurrentCity    *int32  `json:"current_city"`
-	StateOfOrigin  *int16  `json:"state_of_origin"`
-	MaritalStatus  string  `json:"marital_status"`
-	EducationLevel string  `json:"education_level"`
-	HomeAddress    string  `json:"home_address"`
-	OccupationID   *int16  `json:"occupation_id"`
-}
-
-func (s *AuthService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
-	for _, u := range users {
-		// check if email already exit, if yes, we can skip this user onto the next
-		if s.CheckEmail(ctx, u.Email) {
-			continue
-		}
-
-		// Hash password
-		hashed, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-		if err != nil {
-			return "", err
-		}
-
-		// parse date of birth
-		dob, err := time.Parse(time.DateOnly, u.DateOfBirth)
-		if err != nil {
-			return "", fmt.Errorf("invalid dob format for user %s: %w", u.Email, err)
-		}
-
-		// Prepare params
-		emailVal := pgtype.Text{String: strings.TrimSpace(strings.ToLower(u.Email)), Valid: true}
-		avatarVal := pgtype.Text{String: u.Avatar, Valid: true}
-		usernameVal := pgtype.Text{String: *u.Username, Valid: true}
-		middleNameVal := pgtype.Text{String: *u.MiddleName, Valid: true}
-		genderVal := pgtype.Text{String: u.Gender, Valid: true}
-		currentLgaVal := pgtype.Int4{Int32: *u.CurrentLga, Valid: true}
-		currentCityVal := pgtype.Int4{Int32: *u.CurrentCity, Valid: true}
-		stateOfOriginVal := pgtype.Int2{Int16: *u.StateOfOrigin, Valid: true}
-		occupationIDVal := pgtype.Int2{Int16: *u.OccupationID, Valid: true}
-
-		// check if the user phone number is valid
-		var phoneVal pgtype.Text
-		var iso2 string
-		var phonecode string
-		var formattedPhone string
-		var rawPhoneInput string
-		if u.Phone != nil && *u.Phone != "" {
-			rawPhoneInput = *u.Phone
-			country, err := s.bodiesService.CheckCountry(ctx, u.CurrentCountry)
-			if err != nil {
-				return "", fmt.Errorf("failed to fetch country for user %s: %w", u.Email, err)
-			}
-
-			iso2 = country.Iso2
-			phonecode = country.Phonecode
-			formattedPhone, err = s.ValidatePhoneForCountry(rawPhoneInput, iso2)
-			if err != nil {
-				return "", fmt.Errorf("invalid phone for user %s: %w", u.Email, err)
-			}
-			phoneVal = pgtype.Text{String: formattedPhone, Valid: true}
-		}
-
-		// Generate unique referral code (e.g. DANIEL-88)
-		firstNameUpper := strings.ToUpper(strings.TrimSpace(u.FirstName))
-		if firstNameUpper == "" {
-			firstNameUpper = "USER"
-		}
-		n, _ := cryptorand.Int(cryptorand.Reader, big.NewInt(900))
-		suffix := n.Int64() + 100 // 100-999
-		myReferralCode := fmt.Sprintf("%s-%d", firstNameUpper, suffix)
-
-		params := queries.SeedUserParams{
-			Email:           emailVal,
-			Avatar:          avatarVal,
-			Phone:           phoneVal,
-			Username:        usernameVal,
-			PasswordHash:    string(hashed),
-			LastName:        pgtype.Text{String: u.LastName, Valid: u.LastName != ""},
-			FirstName:       pgtype.Text{String: u.FirstName, Valid: u.FirstName != ""},
-			MiddleName:      middleNameVal,
-			Gender:          genderVal,
-			DateOfBirth:     pgtype.Date{Time: dob, Valid: true},
-			CurrentCountry:  u.CurrentCountry,
-			CurrentState:    u.CurrentState,
-			CurrentLga:      currentLgaVal,
-			CurrentCity:     currentCityVal,
-			StateOfOrigin:   stateOfOriginVal,
-			VotersCardImage: pgtype.Text{},
-			AccountStatus:   pgtype.Text{},
-			PartyID:         pgtype.Int2{},
-			IsPolitician:    pgtype.Bool{Bool: false, Valid: true},
-			IsVerified:      pgtype.Bool{Bool: false, Valid: true},
-		}
-
-		id, err := s.queries.SeedUser(ctx, params)
-		if err != nil {
-			return "", fmt.Errorf("failed to seed user %s: %w", u.Email, err)
-		}
-
-		err = s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
-			ID:           id,
-			ReferralCode: pgtype.Text{String: myReferralCode, Valid: true},
-		})
-		if err != nil {
-			slog.Error("failed to seed user referral profile", "user_id", id, "err", err)
-		}
-
-		_, err = s.queries.CreateMoreInfoAboutThisUser(ctx, queries.CreateMoreInfoAboutThisUserParams{
-			UserID:            id,
-			OccupationID:      occupationIDVal,
-			EducationalStatus: pgtype.Text{},
-			HighestDegree:     pgtype.Text{},
-			GraduationYear:    pgtype.Text{},
-			SchoolName:        pgtype.Text{},
-			Religion:          pgtype.Text{String: u.Religion, Valid: u.Religion != ""},
-			MaritalStatus:     pgtype.Text{String: u.MaritalStatus, Valid: u.MaritalStatus != ""},
-			Address:           pgtype.Text{String: u.HomeAddress, Valid: u.HomeAddress != ""},
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to seed user profile for %s: %w", u.Email, err)
-		}
-
-		_, err = s.queries.CreateUserVerification(ctx, queries.CreateUserVerificationParams{
-			UserID:             id,
-			NinVerified:        pgtype.Bool{Bool: false, Valid: true},
-			PhoneVerified:      pgtype.Bool{Bool: false, Valid: true},
-			EmailVerified:      pgtype.Bool{Bool: false, Valid: true},
-			VotersCardVerified: pgtype.Bool{Bool: false, Valid: true},
-		})
-		if err != nil {
-			return "", fmt.Errorf("failed to create user verification for %s: %w", u.Email, err)
-		}
-
-		// Save details to Redis cache
-		fakeID := u.FakeID
-		if fakeID == 0 {
-			fakeID = utils.GenerateFakeID(id)
-			_ = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{ID: id, FakeID: pgtype.Int8{Int64: fakeID, Valid: true}})
-		}
-
-		emailStr := emailVal.String
-		usernameStr := usernameVal.String
-		_ = s.SaveSomeUserRegistrationDetails(ctx, usernameStr, emailStr, "", id, fakeID)
-
-		// save the user phone number
-		if formattedPhone != "" {
-			_ = s.usersService.UpdateUserPhoneNumbers(ctx, id, fakeID, []usersservice.PhonePayload{
-				{
-					Phone:     formattedPhone,
-					RawInput:  rawPhoneInput,
-					Phonecode: phonecode,
-					IsDefault: true,
-				},
-			})
-		}
-
-		// get and save the user details to cache in redis
-		_, _ = s.GetUserDetailsByFakeID(ctx, fakeID)
-
-	}
-	return "Users seeded successfully", nil
 }

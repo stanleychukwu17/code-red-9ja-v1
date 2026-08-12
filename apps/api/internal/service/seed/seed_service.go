@@ -283,7 +283,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 }
 
 type PartyAdminsData struct {
-	ID              int16   `json:"id"`
+	ID              int16   `json:"id"` // partyID
 	PartyAdmin      []int64 `json:"party_admin"`
 	SuperPartyAdmin []int64 `json:"super_party_admin"`
 }
@@ -387,6 +387,7 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 		}
 	}
 
+	// wait for all goroutines to finish
 	if err := eg.Wait(); err != nil {
 		return "", err
 	}
