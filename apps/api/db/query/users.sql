@@ -52,15 +52,6 @@ SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username
 FROM users u
 WHERE u.fake_id = $1 LIMIT 1;
 
--- name: CreateUserSecurityQuestions :one
-INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id;
-
--- name: GetUserSecurityQuestionsByNIN :one
-SELECT * FROM user_security_questions
-WHERE nin = $1 LIMIT 1;
-
 -- name: UpdateUserStatus :exec
 UPDATE users
 SET account_status = $2
