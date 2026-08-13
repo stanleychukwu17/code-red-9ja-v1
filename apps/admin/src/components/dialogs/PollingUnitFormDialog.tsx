@@ -208,7 +208,7 @@ export function PollingUnitFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
         <DialogHeader
           title={mode === "update" ? "Update Polling Unit" : "Create Polling Unit"}
         />
@@ -318,7 +318,7 @@ export function PollingUnitFormDialog({
             {/* Parent Cascade Selects */}
             <div className="space-y-4 p-4 rounded-xl bg-c-10 border border-c-20">
               <h4 className="text-xs font-semibold uppercase tracking-wider text-c-60">Location Hierarchy</h4>
-              
+
               {/* State Select */}
               <div className="flex flex-col gap-1.5">
                 <Label title="State" />
