@@ -3,22 +3,18 @@ package utils
 // URLMap defines the structure for all API endpoints to avoid hardcoding strings.
 
 type AuthURLMap struct {
-	RegisterPhaseSignUp     string
-	SendSignupEmailOTP      string
-	VerifySignupEmailOTP    string
-	Register                string
-	CheckNin                string
-	CheckUsername           string
-	CheckReferralCode       string
-	Login                   string
-	Logout                  string
-	ForgotPassword          string
-	Refresh                 string
-	VerifySecurityQuestions string
-	AdminLogin              string
-	PartyLogin              string
-	ChangePasswordByEmail   string
-	SuperAdmin              string
+	SendSignupEmailOTP    string
+	VerifySignupEmailOTP  string
+	CheckNin              string
+	CheckUsername         string
+	CheckReferralCode     string
+	Login                 string
+	Logout                string
+	Refresh               string
+	AdminLogin            string
+	PartyLogin            string
+	ChangePasswordByEmail string
+	SuperAdmin            string
 }
 
 type BodiesURLMap struct {
@@ -53,22 +49,18 @@ var ApiUrls = URLMap{
 	Health: "/health",
 	Root:   "/api/v1",
 	Auth: AuthURLMap{
-		RegisterPhaseSignUp:     "/api/v1/auth/signup/web",
-		SendSignupEmailOTP:      "/api/v1/auth/signup/email-otp",
-		VerifySignupEmailOTP:    "/api/v1/auth/signup/email-otp/verify",
-		CheckNin:                "/api/v1/auth/check_nin",
-		CheckUsername:           "/api/v1/auth/check_username",
-		CheckReferralCode:       "/api/v1/auth/check_referral_code",
-		Register:                "/api/v1/auth/register",
-		Login:                   "/api/v1/auth/login",
-		Logout:                  "/api/v1/auth/logout",
-		ForgotPassword:          "/api/v1/auth/forgot_password",
-		Refresh:                 "/api/v1/auth/refresh",
-		VerifySecurityQuestions: "/api/v1/auth/verify_security_questions",
-		AdminLogin:              "/api/v1/auth/admin/login",
-		PartyLogin:              "/api/v1/auth/partyapp/login",
-		ChangePasswordByEmail:   "/api/v1/auth/change_password_by_email",
-		SuperAdmin:              "/api/v1/auth/superadmin",
+		SendSignupEmailOTP:    "/api/v1/auth/signup/email-otp",
+		VerifySignupEmailOTP:  "/api/v1/auth/signup/email-otp/verify",
+		CheckNin:              "/api/v1/auth/check_nin",
+		CheckUsername:         "/api/v1/auth/check_username",
+		CheckReferralCode:     "/api/v1/auth/check_referral_code",
+		Login:                 "/api/v1/auth/login",
+		Logout:                "/api/v1/auth/logout",
+		Refresh:               "/api/v1/auth/refresh",
+		AdminLogin:            "/api/v1/auth/admin/login",
+		PartyLogin:            "/api/v1/auth/partyapp/login",
+		ChangePasswordByEmail: "/api/v1/auth/change_password_by_email",
+		SuperAdmin:            "/api/v1/auth/superadmin",
 	},
 	Bodies: BodiesURLMap{
 		GetAll:                         "/api/v1/countries",

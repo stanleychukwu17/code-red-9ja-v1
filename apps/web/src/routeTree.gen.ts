@@ -12,12 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PartiesRouteImport } from './routes/parties'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthSignupRouteImport } from './routes/auth/signup'
-import { Route as AuthSecurityQuestionsRouteImport } from './routes/auth/security-questions'
-import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
-import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
-import { Route as AuthChangePasswordRouteImport } from './routes/auth/change-password'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedStatesIndexRouteImport } from './routes/_authenticated/states/index'
 import { Route as AuthenticatedSearchIndexRouteImport } from './routes/_authenticated/search/index'
@@ -46,34 +41,9 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthSignupRoute = AuthSignupRouteImport.update({
-  id: '/auth/signup',
-  path: '/auth/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthSecurityQuestionsRoute = AuthSecurityQuestionsRouteImport.update({
-  id: '/auth/security-questions',
-  path: '/auth/security-questions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
-  id: '/auth/onboarding',
-  path: '/auth/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/auth/forgot-password',
-  path: '/auth/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthChangePasswordRoute = AuthChangePasswordRouteImport.update({
-  id: '/auth/change-password',
-  path: '/auth/change-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
@@ -157,12 +127,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
-  '/auth/change-password': typeof AuthChangePasswordRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
-  '/auth/onboarding': typeof AuthOnboardingRoute
-  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
-  '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/candidates/': typeof AuthenticatedCandidatesIndexRoute
@@ -180,12 +145,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
-  '/auth/change-password': typeof AuthChangePasswordRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
-  '/auth/onboarding': typeof AuthOnboardingRoute
-  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
-  '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/app-users': typeof AuthenticatedAppUsersIndexRoute
   '/candidates': typeof AuthenticatedCandidatesIndexRoute
@@ -205,12 +165,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/parties': typeof PartiesRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
-  '/auth/change-password': typeof AuthChangePasswordRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
-  '/auth/onboarding': typeof AuthOnboardingRoute
-  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
-  '/auth/signup': typeof AuthSignupRoute
   '/_authenticated/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/_authenticated/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
@@ -230,12 +185,7 @@ export interface FileRouteTypes {
     | '/'
     | '/parties'
     | '/home'
-    | '/auth/change-password'
-    | '/auth/forgot-password'
     | '/auth/login'
-    | '/auth/onboarding'
-    | '/auth/security-questions'
-    | '/auth/signup'
     | '/polling-unit/$pollingUnitId'
     | '/app-users/'
     | '/candidates/'
@@ -253,12 +203,7 @@ export interface FileRouteTypes {
     | '/'
     | '/parties'
     | '/home'
-    | '/auth/change-password'
-    | '/auth/forgot-password'
     | '/auth/login'
-    | '/auth/onboarding'
-    | '/auth/security-questions'
-    | '/auth/signup'
     | '/polling-unit/$pollingUnitId'
     | '/app-users'
     | '/candidates'
@@ -277,12 +222,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/parties'
     | '/_authenticated/home'
-    | '/auth/change-password'
-    | '/auth/forgot-password'
     | '/auth/login'
-    | '/auth/onboarding'
-    | '/auth/security-questions'
-    | '/auth/signup'
     | '/_authenticated/polling-unit/$pollingUnitId'
     | '/_authenticated/app-users/'
     | '/_authenticated/candidates/'
@@ -301,12 +241,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PartiesRoute: typeof PartiesRoute
-  AuthChangePasswordRoute: typeof AuthChangePasswordRoute
-  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
-  AuthOnboardingRoute: typeof AuthOnboardingRoute
-  AuthSecurityQuestionsRoute: typeof AuthSecurityQuestionsRoute
-  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -332,46 +267,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/signup': {
-      id: '/auth/signup'
-      path: '/auth/signup'
-      fullPath: '/auth/signup'
-      preLoaderRoute: typeof AuthSignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/security-questions': {
-      id: '/auth/security-questions'
-      path: '/auth/security-questions'
-      fullPath: '/auth/security-questions'
-      preLoaderRoute: typeof AuthSecurityQuestionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/onboarding': {
-      id: '/auth/onboarding'
-      path: '/auth/onboarding'
-      fullPath: '/auth/onboarding'
-      preLoaderRoute: typeof AuthOnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth/login': {
       id: '/auth/login'
       path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/forgot-password': {
-      id: '/auth/forgot-password'
-      path: '/auth/forgot-password'
-      fullPath: '/auth/forgot-password'
-      preLoaderRoute: typeof AuthForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/change-password': {
-      id: '/auth/change-password'
-      path: '/auth/change-password'
-      fullPath: '/auth/change-password'
-      preLoaderRoute: typeof AuthChangePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/home': {
@@ -510,12 +410,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PartiesRoute: PartiesRoute,
-  AuthChangePasswordRoute: AuthChangePasswordRoute,
-  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
-  AuthOnboardingRoute: AuthOnboardingRoute,
-  AuthSecurityQuestionsRoute: AuthSecurityQuestionsRoute,
-  AuthSignupRoute: AuthSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

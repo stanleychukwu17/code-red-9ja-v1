@@ -7,32 +7,11 @@ import {
   loginAdminImpl,
   logoutUserImpl,
   refreshUserTokenImpl,
-  verifySecurityQuestionsImpl,
+
   resetPasswordImpl,
   signupUserImpl,
   changePasswordByEmailImpl,
 } from "#/lib/server/auth/auth.server";
-
-// Starts the registration process for a new user
-export const startUserRegistration = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
-  .handler(async ({ data }) => {
-    try {
-      const response = await fetch(API_URL.auth.registerPhaseSignUp, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return {
-        status: "error",
-        message: "An unexpected error occurred during registration",
-      };
-    }
-  });
 
 // send signup email otp
 export const sendSignupEmailOtp = createServerFn({ method: "POST" })
@@ -191,27 +170,6 @@ export const checkReferralCode = createServerFn({ method: "POST" })
     }
   });
 
-// Completes the registration process by sending a POST request to the server with the user's data.
-export const completeRegistration = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
-  .handler(async ({ data }) => {
-    try {
-      const response = await fetch(API_URL.auth.register, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return {
-        status: "error",
-        message: "An unexpected error occurred during final registration",
-      };
-    }
-  });
-
 // Sends a POST request to the server to log in a user with their identifier (email, phone number, or username) and password.
 export const loginUser = createServerFn({ method: "POST" })
   .inputValidator(
@@ -268,16 +226,6 @@ export const logoutUser = createServerFn({ method: "POST" }).handler(
     return result;
   },
 );
-
-// Verifies security questions for a user
-export const verifySecurityQuestions = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: { nin: string; question1: number; answer1: string; question2: number; answer2: string; }) => data,
-  )
-  .handler(async ({ data }) => {
-    const result = await verifySecurityQuestionsImpl({ data });
-    return result;
-  });
 
 // Resets user password
 export const resetPassword = createServerFn({ method: "POST" })

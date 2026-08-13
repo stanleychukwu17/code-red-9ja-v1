@@ -65,7 +65,7 @@ function RouteComponent() {
 
   // Local state for handling form progression, OTP, and errors
   const [serverError, setServerError] = useState<string | null>(null);
-  const [otpSent, setOtpSent] = useState(true);
+  const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [resendSeconds, setResendSeconds] = useState(0);
   const [pendingSignup, setPendingSignup] = useState<{
@@ -88,27 +88,6 @@ function RouteComponent() {
     },
   });
 
-  // Mutation for the final signup step (after OTP verification)
-  const signupMutation = useMutation({
-    mutationFn: signupUser,
-    onSuccess: (result) => {
-      if (result.success) {
-        // Cookies are set server-side on signup — navigate to onboarding.
-        // The onboarding route will check the authenticated user's fields.
-        navigate({ to: APP_URL.auth.onboarding });
-      } else {
-        setServerError(
-          result.error ||
-          result.message ||
-          "An error occurred during registration",
-        );
-      }
-    },
-    onError: () => {
-      setServerError("An error occurred during registration");
-    },
-  });
-
   // Mutation to request an OTP code to be sent to the user's email
   const sendOtpMutation = useMutation({
     mutationFn: sendSignupEmailOtp,
@@ -116,9 +95,6 @@ function RouteComponent() {
       if (result.success) {
         setOtpSent(true);
         setResendSeconds(60);
-        // setServerError(
-        //   "We sent a verification code to your email. Enter it below to continue.",
-        // );
       } else {
         setServerError(
           result.error ||
@@ -137,16 +113,13 @@ function RouteComponent() {
     mutationFn: verifySignupEmailOtp,
     onSuccess: (result) => {
       if (result.success) {
-        const token =
-          result.data?.emailVerificationToken ||
-          result.emailVerificationToken ||
-          "";
+        const token = result.data?.emailVerificationToken || result.emailVerificationToken || "";
+
         if (!pendingSignup) {
-          setServerError(
-            "Missing signup details. Please submit the form again.",
-          );
+          setServerError("Missing signup details. Please submit the form again.");
           return;
         }
+
         signupMutation.mutate({
           data: {
             ...pendingSignup,
@@ -154,15 +127,28 @@ function RouteComponent() {
           },
         });
       } else {
-        setServerError(
-          result.error ||
-          result.message ||
-          "An error occurred while verifying the code",
-        );
+        setServerError(result.error || result.message || "An error occurred while verifying the code");
       }
     },
     onError: () => {
       setServerError("An error occurred while verifying the code");
+    },
+  });
+
+  // Mutation for the final signup step (after OTP verification)
+  const signupMutation = useMutation({
+    mutationFn: signupUser,
+    onSuccess: (result) => {
+      if (result.success) {
+        // Cookies are set server-side on signup — navigate to onboarding.
+        // The onboarding route will check the authenticated user's fields.
+        navigate({ to: APP_URL.auth.onboarding });
+      } else {
+        setServerError(result.error || result.message || "An error occurred during registration");
+      }
+    },
+    onError: () => {
+      setServerError("An error occurred during registration");
     },
   });
 
@@ -194,7 +180,7 @@ function RouteComponent() {
     verifyOtpMutation.mutate({ data: { email: value.email, otp } } as any);
   };
 
-  // Timer effect to handle the OTP resend cooldown
+  // Timer effect to handle the OTP resend cool-down
   useEffect(() => {
     if (!otpSent || resendSeconds <= 0) return;
 

@@ -221,24 +221,20 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/metrics", promhttp.Handler().ServeHTTP) // Prometheus metrics
 
 	// for auths
-	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp)         // Register first phase
-	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                       // Basic signup endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)           // Send email OTP
-	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)       // Verify email OTP
+	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                        // Basic signup endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)            // Send email OTP
+	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)        // Verify email OTP
 	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP) // Send forgot-password OTP
-	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                               // Check NIN endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                     // Check Username endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)             // Check Referral Code endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                               // Register endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                     // Login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                   // Logout endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                 // Refresh token endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.VerifySecurityQuestions, authHandler.VerifySecurityQuestions) // Verify security questions endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.ForgotPassword, authHandler.ForgotPassword)                   // Forgot password endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)     // Change password by email endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                  // Make superAdmin endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                                // Check NIN endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                      // Check Username endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)              // Check Referral Code endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                      // Login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                    // Logout endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                  // Refresh token endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)      // Change password by email endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                            // Admin login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                            // Party login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
 
 	// for seeds
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)   // Seed users endpoint
@@ -691,4 +687,3 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 	})
 }
-

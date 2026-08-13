@@ -1354,16 +1354,6 @@ type UserRole struct {
 	WhoAssignedUserID int64              `json:"who_assigned_user_id"`
 }
 
-type UserSecurityQuestion struct {
-	ID        int64  `json:"id"`
-	UserFid   int64  `json:"user_fid"`
-	Nin       string `json:"nin"`
-	Question1 int16  `json:"question1"`
-	Answer1   string `json:"answer1"`
-	Question2 int16  `json:"question2"`
-	Answer2   string `json:"answer2"`
-}
-
 type UserVerification struct {
 	UserID                 int64              `json:"user_id"`
 	NinVerified            pgtype.Bool        `json:"nin_verified"`

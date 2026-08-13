@@ -610,26 +610,10 @@ type RedisOnboardingData struct {
 	Completed string `json:"completed"`
 }
 
-type RegisterResult struct {
-	UserID int64
-	FakeID int64
-	User   *queries.UserWithPlaces
-}
-
 func (s *AuthService) Register(ctx context.Context, params queries.CreateUserParams, referredByCode string, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (RegisterResult, error) {
 	// check security questions are different
 	if question1 == question2 {
 		return RegisterResult{}, errors.New("security questions must be different")
-	}
-
-	// Hash security question answers
-	hashedAnswer1, err := bcrypt.GenerateFromPassword([]byte(answer1), bcrypt.DefaultCost)
-	if err != nil {
-		return RegisterResult{}, err
-	}
-	hashedAnswer2, err := bcrypt.GenerateFromPassword([]byte(answer2), bcrypt.DefaultCost)
-	if err != nil {
-		return RegisterResult{}, err
 	}
 
 	// Hash password
@@ -803,19 +787,6 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 			Phonecode: country_dts.Phonecode,
 			IsDefault: true,
 		},
-	})
-	if err != nil {
-		return RegisterResult{}, err
-	}
-
-	// save security questions and answers
-	_, err = s.queries.CreateUserSecurityQuestions(ctx, queries.CreateUserSecurityQuestionsParams{
-		UserFid:   fake_id,
-		Nin:       nin,
-		Question1: question1,
-		Answer1:   string(hashedAnswer1),
-		Question2: question2,
-		Answer2:   string(hashedAnswer2),
 	})
 	if err != nil {
 		return RegisterResult{}, err
@@ -1405,7 +1376,7 @@ func (s *AuthService) VerifySignupEmailOTP(ctx context.Context, email, otp strin
 	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
 		return EmailOTPResult{}, errors.New("invalid otp state")
 	}
-	
+
 	// Compare the submitted plain-text OTP with the stored bcrypt hash
 	if err := bcrypt.CompareHashAndPassword([]byte(stored.Hash), []byte(strings.TrimSpace(otp))); err != nil {
 		return EmailOTPResult{}, errors.New("invalid otp")
@@ -1416,7 +1387,7 @@ func (s *AuthService) VerifySignupEmailOTP(ctx context.Context, email, otp strin
 	if err := s.rdb.Set(ctx, s.emailOtpVerifiedKey(email), verificationToken, emailOtpVerifiedTTL).Err(); err != nil {
 		return EmailOTPResult{}, err
 	}
-	
+
 	// Clean up the used OTP key to prevent replay attacks
 	_ = s.rdb.Del(ctx, s.emailOtpKey(email)).Err()
 
@@ -1522,59 +1493,6 @@ func (s *AuthService) GetUserDetailsByFakeID(ctx context.Context, fakeID int64) 
 	return s.usersService.GetUserByFakeID(ctx, fakeID)
 }
 
-type VerifySecurityQuestionsResult struct {
-	ChangePasswordID string `json:"change_password_id"`
-	UserFID          int64  `json:"user_fid"`
-}
-
-func (s *AuthService) VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (VerifySecurityQuestionsResult, error) {
-	// Check if the user exists in Redis using the nin
-	userFidStr := s.rdb.Get(ctx, db.RedisNINFakeID+nin).Val()
-	if userFidStr == "" {
-		return VerifySecurityQuestionsResult{}, errors.New("invalid nin or security questions not found")
-	}
-
-	// check if there is already an existing request from db.RedisChangePassword
-	if s.rdb.Exists(ctx, db.RedisChangePassword+userFidStr).Val() > 0 {
-		return VerifySecurityQuestionsResult{}, errors.New("you already have an existing request for password change, please wait for 10mins and try again")
-	}
-
-	secQ, err := s.queries.GetUserSecurityQuestionsByNIN(ctx, nin)
-	if err != nil {
-		return VerifySecurityQuestionsResult{}, errors.New("invalid nin or security questions not found")
-	}
-
-	// Verify answers
-	if secQ.Question1 != q1 || secQ.Question2 != q2 {
-		return VerifySecurityQuestionsResult{}, errors.New("incorrect security questions")
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(secQ.Answer1), []byte(a1))
-	if err != nil {
-		return VerifySecurityQuestionsResult{}, errors.New("incorrect answer for question 1")
-	}
-
-	err = bcrypt.CompareHashAndPassword([]byte(secQ.Answer2), []byte(a2))
-	if err != nil {
-		return VerifySecurityQuestionsResult{}, errors.New("incorrect answer for question 2")
-	}
-
-	// Generate a unique ID
-	changePasswordID := uuid.NewString()
-
-	// Save user_fid in Redis with an expiry of 5 minutes
-	redisKey := db.RedisChangePassword + userFidStr
-	err = s.rdb.Set(ctx, redisKey, changePasswordID, 5*time.Minute).Err()
-	if err != nil {
-		return VerifySecurityQuestionsResult{}, fmt.Errorf("failed to save state in redis: %w", err)
-	}
-
-	return VerifySecurityQuestionsResult{
-		ChangePasswordID: changePasswordID,
-		UserFID:          secQ.UserFid,
-	}, nil
-}
-
 // ChangePasswordByEmail resets a user's password using their email address
 func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, newPassword string) error {
 	email = strings.TrimSpace(strings.ToLower(email))
@@ -1628,67 +1546,10 @@ func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, newPassw
 	return nil
 }
 
-func (s *AuthService) ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error {
-	redisKey := fmt.Sprintf("%s%d", db.RedisChangePassword, userFid)
-
-	// Check if token exists in Redis
-	storedID, err := s.rdb.Get(ctx, redisKey).Result()
-	if err != nil || storedID != changePasswordID {
-		return errors.New("invalid or expired reset token")
-	}
-
-	// Hash the new password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	// Update the user's password
-	err = s.queries.UpdateUserPasswordByFid(ctx, queries.UpdateUserPasswordByFidParams{
-		FakeID:       pgtype.Int8{Int64: userFid, Valid: true},
-		PasswordHash: string(hashedPassword),
-	})
-	if err != nil {
-		return fmt.Errorf("failed to update password: %w", err)
-	}
-
-	// Delete the redis key upon success
-	s.rdb.Del(ctx, redisKey)
-
-	// Invalidate all active user sessions and refresh tokens
-	// Get all user sessions
-	userRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, userFid)
-	sessions, err := s.rdb.SMembers(ctx, userRedisKey).Result()
-	if err == nil && len(sessions) > 0 {
-		// Create a pipeline to execute all delete operations atomically
-		pipe := s.rdb.TxPipeline()
-
-		// Iterate over each session
-		for _, sessionID := range sessions {
-			// Get all tokens for the session
-			redisSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
-			tokens, _ := s.rdb.SMembers(ctx, redisSessionKey).Result()
-
-			// Delete each token
-			for _, token := range tokens {
-				redisTokenKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, token)
-				pipe.Del(ctx, redisTokenKey)
-			}
-
-			// Delete the session set itself
-			pipe.Del(ctx, redisSessionKey)
-		}
-
-		// Delete the user sessions set
-		pipe.Del(ctx, userRedisKey)
-
-		// Execute the pipeline
-		_, _ = pipe.Exec(ctx)
-	}
-
-	// Invalidate cached user info
-	_ = s.usersService.InvalidateCachedUserInfo(ctx, userFid)
-	return nil
+type RegisterResult struct {
+	UserID int64
+	FakeID int64
+	User   *queries.UserWithPlaces
 }
 
 // RegisterCandidatePlaceholder creates a new candidate user in the system with placeholder status

@@ -5,7 +5,6 @@ const API_BASE = import.meta.env.VITE_API_URL;
 
 export const APP_URL = {
   auth: {
-    forgotPassword: "/auth/forgot-password",
     login: "/auth/login",
     logout: "/auth/logout",
     onboarding: "/auth/onboarding",
@@ -27,17 +26,11 @@ const api = `${API_BASE}/api/v1`;
 export const API_URL = {
   health: `${API_BASE}/health`,
   auth: {
-    registerPhaseSignUp: `${api}/auth/signup/web`,
     sendSignupEmailOtp: `${api}/auth/signup/email-otp`,
     verifySignupEmailOtp: `${api}/auth/signup/email-otp/verify`,
-    checkNin: `${api}/auth/check_nin`,
-    checkUsername: `${api}/auth/check_username`,
-    register: `${api}/auth/register`,
     login: `${api}/auth/login`,
     refresh: `${api}/auth/refresh`,
     logout: `${api}/auth/logout`,
-    verifySecurityQuestions: `${api}/auth/verify_security_questions`,
-    forgotPassword: `${api}/auth/forgot_password`,
   },
   "getAllCountries": `${api}/countries`,
   "getStates": (countryId: number) => `${api}/countries/${countryId}/states`,

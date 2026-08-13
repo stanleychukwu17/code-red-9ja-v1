@@ -20,10 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// AuthService interface defines the methods for authentication services
 type AuthService interface {
-	Register(ctx context.Context, params queries.CreateUserParams, referredByCode string, nin string, onboardingID string, question1 int16, answer1 string, question2 int16, answer2 string) (auth.RegisterResult, error)
-	RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16, emailVerificationToken string) (auth.RegisterPhaseSignUpResult, error)
 	Signup(ctx context.Context, email, phone, password string, countryID int16) (auth.SignupResult, error)
 	SendSignupEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
 	VerifySignupEmailOTP(ctx context.Context, email, otp string) (auth.EmailOTPResult, error)
@@ -35,9 +32,7 @@ type AuthService interface {
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
-	VerifySecurityQuestions(ctx context.Context, nin string, q1 int16, a1 string, q2 int16, a2 string) (auth.VerifySecurityQuestionsResult, error)
 	ChangePasswordByEmail(ctx context.Context, email, newPassword string) error
-	ForgotPassword(ctx context.Context, changePasswordID string, userFid int64, password string) error
 	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 }
@@ -73,145 +68,6 @@ func NewHandler(authService AuthService, usersService UsersService, filesService
 		validate:     validator.New(),
 		utils:        utils,
 	}
-}
-
-// RegisterRequest represents the structure of the incoming JSON request body for user registration
-type RegisterRequest struct {
-	Email          string `json:"email" validate:"omitempty,email"`
-	Phone          string `json:"phone" validate:"required,min=5,max=15"`
-	OnboardingID   string `json:"onboarding_id" validate:"required"`
-	Username       string `json:"username" validate:"required,min=2,max=30"`
-	Nin            string `json:"nin" validate:"required,numeric,len=11"`
-	Question1      int16  `json:"question1" validate:"required"`
-	Answer1        string `json:"answer1" validate:"required,min=2,max=30"`
-	Question2      int16  `json:"question2" validate:"required"`
-	Answer2        string `json:"answer2" validate:"required,min=2,max=30"`
-	Password       string `json:"password" validate:"required,min=5,max=72"`
-	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
-	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
-	MiddleName     string `json:"middle_name" validate:"omitempty,min=2,max=30"`
-	Gender         string `json:"gender" validate:"required,oneof=male female"`
-	DateOfBirth    string `json:"date_of_birth" validate:"required"` // Expects YYYY-MM-DD
-	CurrentCountry int16  `json:"current_country" validate:"required"`
-	CurrentState   int16  `json:"current_state" validate:"required"`
-	CurrentCity    int32  `json:"current_city"`
-	ReferredByCode string `json:"referred_by_code" validate:"omitempty,max=15"`
-}
-
-// @Summary Register a new user
-// @Description Creates a new user account with full details
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body RegisterRequest true "Registration details"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /auth/register [post]
-// Register handles the user registration process
-func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
-
-	// Decode the incoming JSON request body into the RegisterRequest struct
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	// Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.(validator.ValidationErrors)[0].Translate(nil))
-		return
-	}
-
-	if req.Question1 == req.Question2 {
-		h.utils.RespondError(w, http.StatusBadRequest, "Security questions must be different")
-		return
-	}
-
-	// Parse the date of birth string into a time.Time object
-	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date format for date_of_birth. Use YYYY-MM-DD")
-		return
-	}
-
-	// Map the request data to the database creation parameters
-	// Note: Password hashing is handled within the service layer
-	params := queries.CreateUserParams{
-		Email:          pgtype.Text{String: req.Email, Valid: req.Email != ""},
-		Phone:          pgtype.Text{String: req.Phone, Valid: req.Phone != ""},
-		Username:       pgtype.Text{String: req.Username, Valid: true},
-		PasswordHash:   req.Password, // Hashed in the service layer
-		LastName:       pgtype.Text{String: req.LastName, Valid: true},
-		FirstName:      pgtype.Text{String: req.FirstName, Valid: true},
-		MiddleName:     pgtype.Text{String: req.MiddleName, Valid: req.MiddleName != ""},
-		Gender:         pgtype.Text{String: req.Gender, Valid: true},
-		DateOfBirth:    pgtype.Date{Time: dob, Valid: true},
-		CurrentCountry: req.CurrentCountry,
-		CurrentState:   req.CurrentState,
-		CurrentCity:    pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
-	}
-
-	// Call the auth service to register the new user
-	id, err := h.authService.Register(r.Context(), params, req.ReferredByCode, req.Nin, req.OnboardingID, req.Question1, req.Answer1, req.Question2, req.Answer2)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create user: "+err.Error())
-		return
-	}
-
-	// Return a successful response with the newly created user ID
-	h.utils.RespondSuccess(w, http.StatusCreated, "User registered successfully", map[string]interface{}{
-		"id": id,
-	})
-}
-
-// RegisterPhaseSignUpRequest represents the structure for the initial sign-up phase
-type RegisterPhaseSignUpRequest struct {
-	Country                string `json:"country" validate:"required"`
-	CountryID              int16  `json:"countryId" validate:"required"`
-	PhoneNumber            string `json:"phoneNumber" validate:"required"`
-	Email                  string `json:"email" validate:"required,email"`
-	Password               string `json:"password" validate:"required,min=5,max=72"`
-	ConfirmPassword        string `json:"confirmPassword" validate:"required,eqfield=Password"`
-	EmailVerificationToken string `json:"emailVerificationToken" validate:"required"`
-}
-
-// RegisterPhaseSignUp godoc
-// @Summary Initial sign-up phase
-// @Description Handles the first phase of user registration (country, phone, email, password)
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body RegisterPhaseSignUpRequest true "Initial sign-up details"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Router /auth/signup/web [post]
-// RegisterPhaseSignUp handles the initial registration phase
-func (h *Handler) RegisterPhaseSignUp(w http.ResponseWriter, r *http.Request) {
-	var req RegisterPhaseSignUpRequest
-
-	// Decode the incoming JSON request body into the RegisterPhaseSignUpRequest struct
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	// Validate the struct fields using the defined validation tags (email, phone, min/max length, etc.)
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	result, err := h.authService.RegisterPhaseSignUp(r.Context(), req.Email, req.PhoneNumber, req.CountryID, req.EmailVerificationToken)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Initial sign-up data is valid", map[string]interface{}{
-		"id": result.ID,
-	})
 }
 
 // SignupRequest represents the structure for the basic sign-up phase
@@ -305,26 +161,26 @@ func (h *Handler) SendSignupEmailOTP(w http.ResponseWriter, r *http.Request) {
 // VerifySignupEmailOTP handles the request to verify the OTP sent to a new user's email during signup
 func (h *Handler) VerifySignupEmailOTP(w http.ResponseWriter, r *http.Request) {
 	var req VerifySignupEmailOTPRequest
-	
+
 	// Parse the incoming JSON payload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
-	
+
 	// Validate required fields (email and OTP)
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	
+
 	// Delegate business logic to verify the OTP
 	result, err := h.authService.VerifySignupEmailOTP(r.Context(), req.Email, req.OTP)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	
+
 	// Respond with success and the email verification token details
 	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
 		"message":                result.Message,
@@ -336,26 +192,26 @@ func (h *Handler) VerifySignupEmailOTP(w http.ResponseWriter, r *http.Request) {
 // SendForgotPasswordEmailOTP handles the request to send an OTP for password recovery
 func (h *Handler) SendForgotPasswordEmailOTP(w http.ResponseWriter, r *http.Request) {
 	var req SendSignupEmailOTPRequest
-	
+
 	// Parse the incoming JSON payload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
-	
+
 	// Validate required fields in the request
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	
+
 	// Delegate business logic to generate and send the OTP
 	result, err := h.authService.SendForgotPasswordEmailOTP(r.Context(), req.Email)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	
+
 	// Respond with success and OTP expiration details
 	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
 		"message":          result.Message,
@@ -754,94 +610,6 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Logout successful", nil)
-}
-
-// VerifySecurityQuestionsRequest represents the structure for verifying security questions
-type VerifySecurityQuestionsRequest struct {
-	Nin       string `json:"nin" validate:"required,numeric,len=11"`
-	Question1 int16  `json:"question1" validate:"required"`
-	Answer1   string `json:"answer1" validate:"required"`
-	Question2 int16  `json:"question2" validate:"required"`
-	Answer2   string `json:"answer2" validate:"required"`
-}
-
-// VerifySecurityQuestions godoc
-// @Summary Verify security questions
-// @Description Checks the answers to security questions and returns a unique ID if successful
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body VerifySecurityQuestionsRequest true "Security questions and answers"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /auth/verify_security_questions [post]
-// VerifySecurityQuestions checks the answers and returns a unique ID if successful
-func (h *Handler) VerifySecurityQuestions(w http.ResponseWriter, r *http.Request) {
-	var req VerifySecurityQuestionsRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	result, err := h.authService.VerifySecurityQuestions(r.Context(), req.Nin, req.Question1, req.Answer1, req.Question2, req.Answer2)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Security questions verified successfully", map[string]interface{}{
-		"change_password_id": result.ChangePasswordID,
-		"user_fid":           result.UserFID,
-	})
-}
-
-// ForgotPasswordRequest represents the structure for resetting password
-type ForgotPasswordRequest struct {
-	Password         string `json:"password" validate:"required,min=5"`
-	ConfirmPassword  string `json:"confirmPassword" validate:"required,eqfield=Password"`
-	ChangePasswordID string `json:"change_password_id" validate:"required"`
-	UserFid          int64  `json:"user_fid" validate:"required"`
-}
-
-// ForgotPassword godoc
-// @Summary Forgot password
-// @Description Handles resetting the user's password
-// @Tags Auth
-// @Accept json
-// @Produce json
-// @Param request body ForgotPasswordRequest true "New password details"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /auth/forgot_password [post]
-// ForgotPassword handles resetting the user's password
-func (h *Handler) ForgotPassword(w http.ResponseWriter, r *http.Request) {
-	var req ForgotPasswordRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
-		return
-	}
-
-	err := h.authService.ForgotPassword(r.Context(), req.ChangePasswordID, req.UserFid, req.Password)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusUnauthorized, err.Error())
-		return
-	}
-
-	h.utils.RespondSuccess(w, http.StatusOK, "Password reset successfully", nil)
 }
 
 // ChangePasswordByEmailRequest represents the structure for resetting password using email

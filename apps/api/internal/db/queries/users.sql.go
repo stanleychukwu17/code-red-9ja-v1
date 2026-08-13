@@ -266,35 +266,6 @@ func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (i
 	return id, err
 }
 
-const createUserSecurityQuestions = `-- name: CreateUserSecurityQuestions :one
-INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id
-`
-
-type CreateUserSecurityQuestionsParams struct {
-	UserFid   int64  `json:"user_fid"`
-	Nin       string `json:"nin"`
-	Question1 int16  `json:"question1"`
-	Answer1   string `json:"answer1"`
-	Question2 int16  `json:"question2"`
-	Answer2   string `json:"answer2"`
-}
-
-func (q *Queries) CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createUserSecurityQuestions,
-		arg.UserFid,
-		arg.Nin,
-		arg.Question1,
-		arg.Answer1,
-		arg.Question2,
-		arg.Answer2,
-	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const createUserVerification = `-- name: CreateUserVerification :one
 INSERT INTO user_verifications (user_id, nin_verified, phone_verified, email_verified, voters_card_verified)
 VALUES ($1, $2, $3, $4, $5)
@@ -628,26 +599,6 @@ func (q *Queries) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64)
 		return nil, err
 	}
 	return items, nil
-}
-
-const getUserSecurityQuestionsByNIN = `-- name: GetUserSecurityQuestionsByNIN :one
-SELECT id, user_fid, nin, question1, answer1, question2, answer2 FROM user_security_questions
-WHERE nin = $1 LIMIT 1
-`
-
-func (q *Queries) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error) {
-	row := q.db.QueryRow(ctx, getUserSecurityQuestionsByNIN, nin)
-	var i UserSecurityQuestion
-	err := row.Scan(
-		&i.ID,
-		&i.UserFid,
-		&i.Nin,
-		&i.Question1,
-		&i.Answer1,
-		&i.Question2,
-		&i.Answer2,
-	)
-	return i, err
 }
 
 const getUserVerification = `-- name: GetUserVerification :one

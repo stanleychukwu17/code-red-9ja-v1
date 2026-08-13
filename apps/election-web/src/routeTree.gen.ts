@@ -11,11 +11,9 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthSignupRouteImport } from './routes/auth/signup'
-import { Route as AuthSecurityQuestionsRouteImport } from './routes/auth/security-questions'
 import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
-import { Route as AuthChangePasswordRouteImport } from './routes/auth/change-password'
 import { Route as AuthenticatedVoteIndexRouteImport } from './routes/_authenticated/vote/index'
 import { Route as AuthenticatedUploadResultIndexRouteImport } from './routes/_authenticated/upload-result/index'
 import { Route as AuthenticatedUpdatePollingUnitIndexRouteImport } from './routes/_authenticated/update-polling-unit/index'
@@ -46,11 +44,6 @@ const AuthSignupRoute = AuthSignupRouteImport.update({
   path: '/auth/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthSecurityQuestionsRoute = AuthSecurityQuestionsRouteImport.update({
-  id: '/auth/security-questions',
-  path: '/auth/security-questions',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
   id: '/auth/onboarding',
   path: '/auth/onboarding',
@@ -64,11 +57,6 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/auth/forgot-password',
   path: '/auth/forgot-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthChangePasswordRoute = AuthChangePasswordRouteImport.update({
-  id: '/auth/change-password',
-  path: '/auth/change-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedVoteIndexRoute = AuthenticatedVoteIndexRouteImport.update({
@@ -190,11 +178,9 @@ const AuthenticatedHomeNotVotingReasonRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedHomeIndexRoute
-  '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
-  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
   '/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
@@ -217,11 +203,9 @@ export interface FileRoutesByFullPath {
   '/vote/': typeof AuthenticatedVoteIndexRoute
 }
 export interface FileRoutesByTo {
-  '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
-  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
   '/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/applications/apply': typeof AuthenticatedApplicationsApplyRoute
@@ -247,11 +231,9 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/auth/change-password': typeof AuthChangePasswordRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/onboarding': typeof AuthOnboardingRoute
-  '/auth/security-questions': typeof AuthSecurityQuestionsRoute
   '/auth/signup': typeof AuthSignupRoute
   '/_authenticated/_home/not-voting-reason': typeof AuthenticatedHomeNotVotingReasonRoute
   '/_authenticated/applications/apply': typeof AuthenticatedApplicationsApplyRoute
@@ -278,11 +260,9 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/auth/change-password'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/onboarding'
-    | '/auth/security-questions'
     | '/auth/signup'
     | '/not-voting-reason'
     | '/applications/apply'
@@ -305,11 +285,9 @@ export interface FileRouteTypes {
     | '/vote/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/auth/change-password'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/onboarding'
-    | '/auth/security-questions'
     | '/auth/signup'
     | '/not-voting-reason'
     | '/applications/apply'
@@ -334,11 +312,9 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authenticated'
-    | '/auth/change-password'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/onboarding'
-    | '/auth/security-questions'
     | '/auth/signup'
     | '/_authenticated/_home/not-voting-reason'
     | '/_authenticated/applications/apply'
@@ -364,11 +340,9 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  AuthChangePasswordRoute: typeof AuthChangePasswordRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthOnboardingRoute: typeof AuthOnboardingRoute
-  AuthSecurityQuestionsRoute: typeof AuthSecurityQuestionsRoute
   AuthSignupRoute: typeof AuthSignupRoute
 }
 
@@ -386,13 +360,6 @@ declare module '@tanstack/react-router' {
       path: '/auth/signup'
       fullPath: '/auth/signup'
       preLoaderRoute: typeof AuthSignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/security-questions': {
-      id: '/auth/security-questions'
-      path: '/auth/security-questions'
-      fullPath: '/auth/security-questions'
-      preLoaderRoute: typeof AuthSecurityQuestionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/onboarding': {
@@ -414,13 +381,6 @@ declare module '@tanstack/react-router' {
       path: '/auth/forgot-password'
       fullPath: '/auth/forgot-password'
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/change-password': {
-      id: '/auth/change-password'
-      path: '/auth/change-password'
-      fullPath: '/auth/change-password'
-      preLoaderRoute: typeof AuthChangePasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/vote/': {
@@ -620,11 +580,9 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  AuthChangePasswordRoute: AuthChangePasswordRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthOnboardingRoute: AuthOnboardingRoute,
-  AuthSecurityQuestionsRoute: AuthSecurityQuestionsRoute,
   AuthSignupRoute: AuthSignupRoute,
 }
 export const routeTree = rootRouteImport

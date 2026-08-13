@@ -1,5 +1,7 @@
+// Core UI components and utilities
 import { StickyFooter } from "#/components/Footers";
 import { APP_URL } from "#/lib/config";
+// Server-side authentication helpers
 import {
   checkNin,
   checkUsername,
@@ -7,15 +9,8 @@ import {
   completeOnboarding,
 } from "#/lib/server/auth/auth";
 import { getAllCountries, getCities, getStates } from "#/lib/server/countries";
-import { useAppDispatch } from "#/redux/hooks";
-import { updateOnboardingData } from "#/redux/slice/authSlice";
-import {
-  OnboardingHeader,
-  OnboardingHeaderContent,
-  OnboardingWrapper,
-} from "#/routes/auth/_components/-auth-wrapper";
+import { OnboardingHeader, OnboardingHeaderContent, OnboardingWrapper, } from "#/routes/auth/_components/-auth-wrapper";
 import { Button } from "@repo/ui/components/button";
-import { DescriptiveText } from "@repo/ui/components/custom/Texts";
 import { FormInput, Label } from "@repo/ui/components/input";
 import { SelectCity } from "@repo/ui/components/selects/city-select";
 import { SelectCountry } from "@repo/ui/components/selects/country-select";
@@ -30,17 +25,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { Shield, Users } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, } from "react";
 import { useDebounceValue } from "usehooks-ts";
 import { FormError } from "./-form-error";
 
+// Ordered list of onboarding steps (commented steps are currently disabled)
 export const ONBOARDING_STEPS = [
   "details",
   "username",
@@ -55,6 +44,7 @@ export type OnboardingStep = (typeof ONBOARDING_STEPS)[number];
 
 type StateOption = { id: number; value: string; label: string };
 
+// Shape of the onboarding form state, covering all possible steps
 type OnboardingState = {
   // username step
   username: string;
@@ -90,8 +80,8 @@ type OnboardingFlowProps = {
   step: OnboardingStep;
 };
 
+// Main component that orchestrates the multi‑step onboarding flow
 export function OnboardingFlow({ step }: OnboardingFlowProps) {
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
   const [data, setData] = useState<OnboardingState>({
@@ -148,20 +138,14 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const [ninError, setNinError] = useState<string | null>(null);
   const [isNinAvailable, setIsNinAvailable] = useState<boolean | null>(null);
   const [isCheckingReferralCode, setIsCheckingReferralCode] = useState(false);
-  const [referralCodeError, setReferralCodeError] = useState<string | null>(
-    null,
-  );
-  const [isReferralCodeValid, setIsReferralCodeValid] = useState<
-    boolean | null
-  >(null);
+  const [referralCodeError, setReferralCodeError] = useState<string | null>(null);
+  const [isReferralCodeValid, setIsReferralCodeValid] = useState<boolean | null>(null);
   const [referrerName, setReferrerName] = useState<string | null>(null);
   const [referrerId, setReferrerId] = useState<number | null>(null);
 
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
-  const [isUsernameAvailable, setIsUsernameAvailable] = useState<
-    boolean | null
-  >(null);
+  const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
   const [securityError, setSecurityError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -185,7 +169,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
 
   // Residence and Origin state is now directly managed by the Select components using react-query hooks internally
 
-  // â”€â”€ Navigation helpers â”€â”€
+  // ----- Navigation helpers -----
+  // onStepChange updates the URL query to reflect the current onboarding step
   const onStepChange = useCallback(
     (nextStep: OnboardingStep) => {
       navigate({
@@ -197,18 +182,22 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     [navigate],
   );
 
+  // Move forward to the next onboarding step if available
   const goNext = useCallback(() => {
     const nextStep = ONBOARDING_STEPS[currentStepIndex + 1];
     if (nextStep) onStepChange(nextStep);
   }, [currentStepIndex, onStepChange]);
 
+  // Navigate back to the previous onboarding step
   const goBack = useCallback(() => {
     const previousStep = ONBOARDING_STEPS[currentStepIndex - 1];
     if (previousStep) onStepChange(previousStep);
   }, [currentStepIndex, onStepChange]);
 
-  // ── Final submit ──
+  // ----- Final submission -----
+  // Handles the final API call when the user completes the onboarding flow
   const onFinish = useCallback(() => {
+    // Validation for optional security step (currently commented out)
     // if (!data.securityQuestion1 || !data.securityQuestion2) {
     //   setSecurityError("Please select both security questions.");
     //   return;
@@ -262,7 +251,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     });
   }, [data, completeOnboardingMutation]);
 
-  // ── Username active check ──
+  // ----- Username availability check (debounced) -----
+  // Runs a server check after the user stops typing for 500 ms
   const [debouncedUsername] = useDebounceValue(data.username, 500);
 
   useEffect(() => {
@@ -429,11 +419,11 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
       ? isUsernameAvailable === true
       : step === "details"
         ? Boolean(
-            data.firstName && data.surname && data.gender && data.dateOfBirth,
-          )
+          data.firstName && data.surname && data.gender && data.dateOfBirth,
+        )
         : // : step === "nin"
-          //   ? isNinAvailable === true
-          step === "origin"
+        //   ? isNinAvailable === true
+        step === "origin"
           ? Boolean(data.stateOfOriginId)
           : step === "location"
             ? Boolean(data.stateId)
@@ -442,15 +432,15 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
                 ? isReferralCodeValid === true
                 : true
               : // : step === "security"
-                //   ? Boolean(
-                //       data.securityQuestion1 &&
-                //       data.securityAnswer1.trim() &&
-                //       data.securityQuestion2 &&
-                //       data.securityAnswer2.trim(),
-                //     )
-                false;
+              //   ? Boolean(
+              //       data.securityQuestion1 &&
+              //       data.securityAnswer1.trim() &&
+              //       data.securityQuestion2 &&
+              //       data.securityAnswer2.trim(),
+              //     )
+              false;
 
-  // â”€â”€ Render current step â”€â”€
+  // Render current step
   return (
     <>
       {step === "details" && (

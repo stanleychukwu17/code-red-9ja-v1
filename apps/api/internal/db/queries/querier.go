@@ -83,7 +83,6 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error)
 	CreateUserReferralRecord(ctx context.Context, arg CreateUserReferralRecordParams) error
-	CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error)
 	CreateUserVerification(ctx context.Context, arg CreateUserVerificationParams) (int64, error)
 	CreateUserWallet(ctx context.Context, arg CreateUserWalletParams) (UserWallet, error)
 	CreateUserWalletTransaction(ctx context.Context, arg CreateUserWalletTransactionParams) (UserWalletTransaction, error)
@@ -240,7 +239,6 @@ type Querier interface {
 	// Returns the referred_by_id for a user given their internal user ID.
 	GetUserReferredByID(ctx context.Context, id int64) (pgtype.Int8, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
-	GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error)
 	GetUserVerification(ctx context.Context, userID int64) (UserVerification, error)
 	GetUserVotesByElectionGroup(ctx context.Context, arg GetUserVotesByElectionGroupParams) ([]GetUserVotesByElectionGroupRow, error)
 	GetUserWalletByAccountReference(ctx context.Context, accountReference string) (UserWallet, error)
