@@ -191,7 +191,7 @@ function LoginComponent() {
       </div>
 
       {/* Center Form */}
-      <div className="mx-auto w-full max-w-[420px] flex flex-col justify-center py-12">
+      <div className="mx-auto w-full max-w-105 flex flex-col justify-center py-12">
         <h1 className="text-[28px] font-bold text-[#181818] mb-1">Log in</h1>
         <p className="text-[15px] text-[#767676] mb-6">
           Log in to Party Admin Dashboard
@@ -270,7 +270,7 @@ function LoginComponent() {
             children={(field) => (
               <FormInput
                 type="text"
-                className="rounded-[4px]"
+                className="rounded-sm"
                 placeholder="Email or Username or Phone number"
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -297,7 +297,7 @@ function LoginComponent() {
             children={(field) => (
               <PasswordInput
                 placeholder="Password"
-                className="rounded-[4px]"
+                className="rounded-sm"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -318,7 +318,7 @@ function LoginComponent() {
                 variant="secondary"
                 disabled={!canSubmit}
                 loading={isSubmitting}
-                className="rounded-[4px] mt-2"
+                className="rounded-sm mt-2"
               >
                 Log in
               </Button>

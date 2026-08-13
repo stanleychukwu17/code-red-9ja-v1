@@ -297,7 +297,7 @@ function RouteComponent() {
             <FormInput
               type="text"
               placeholder="Email or Username or Phone number"
-              className="rounded-[4px]"
+              className="rounded-sm"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
@@ -323,7 +323,7 @@ function RouteComponent() {
           children={(field) => (
             <PasswordInput
               placeholder="Password"
-              className="rounded-[4px]"
+              className="rounded-sm"
               value={field.state.value}
               onBlur={field.handleBlur}
               onChange={(e) => field.handleChange(e.target.value)}
@@ -341,7 +341,7 @@ function RouteComponent() {
           children={([canSubmit, isSubmitting]) => (
             <Button
               type="submit"
-              className="rounded-[4px]"
+              className="rounded-sm"
               variant="secondary"
               disabled={!canSubmit}
               loading={isSubmitting}

@@ -154,17 +154,17 @@ export function ProfileScreenContent({
     () =>
       candidate && candidateName
         ? [
-            {
-              id: "nathan-bwala",
-              author: candidateName,
-              meta: candidate.feedMeta,
-              content: candidate.feedText,
-              likes: "71",
-              comments: "12",
-              avatarColor: "#30374A",
-              avatarImage: candidate.image,
-            },
-          ]
+          {
+            id: "nathan-bwala",
+            author: candidateName,
+            meta: candidate.feedMeta,
+            content: candidate.feedText,
+            likes: "71",
+            comments: "12",
+            avatarColor: "#30374A",
+            avatarImage: candidate.image,
+          },
+        ]
         : [],
     [candidate, candidateName],
   );
@@ -453,7 +453,7 @@ function AboutSection({ aboutText }: { aboutText: string }) {
         <Text className="text-[16px] text-[#969196]">Place of Origin</Text>
         <View className="mt-4 flex-row items-center justify-between">
           <Text className="text-[18px] text-[#3A3638]">Adamawa, Nigeria</Text>
-          <View className="h-5 w-7 overflow-hidden rounded-[4px]">
+          <View className="h-5 w-7 overflow-hidden rounded-sm">
             <View className="flex-1 flex-row">
               <View className="flex-1 bg-[#0B9D53]" />
               <View className="flex-1 bg-white" />

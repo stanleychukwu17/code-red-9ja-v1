@@ -38,7 +38,7 @@ function RouteComponent() {
 
   return (
     <div className="flex-1 px-4 pb-8 pt-6 md:px-12 md:pt-7">
-      <div className="mx-auto flex w-full max-w-[620px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-155 flex-col gap-6">
         <h1 className="text-[34px] font-bold tracking-[-0.04em] text-[#232124]">
           Search
         </h1>
@@ -62,11 +62,10 @@ function RouteComponent() {
                 key={tab}
                 type="button"
                 onClick={() => setActiveTab(tab)}
-                className={`rounded-full px-5 py-3 text-[16px] font-bold transition ${
-                  active
+                className={`rounded-full px-5 py-3 text-[16px] font-bold transition ${active
                     ? "bg-[#e4efe7] text-[#2f7351]"
                     : "bg-transparent text-[#a4a0a2]"
-                }`}
+                  }`}
               >
                 {tab}
               </button>
