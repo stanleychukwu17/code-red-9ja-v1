@@ -30,9 +30,17 @@ export function SelectResponsiveWrapper({
   className,
   align = "start",
 }: SelectResponsiveWrapperProps) {
+  const [mounted, setMounted] = React.useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
-  if (isDesktop) {
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Use desktop layout on SSR/initial render to match server markup consistently
+  const showDesktop = !mounted || isDesktop;
+
+  if (showDesktop) {
     return (
       <RadixPopover.Root open={open} onOpenChange={onOpenChange}>
         <RadixPopover.Trigger asChild>{trigger}</RadixPopover.Trigger>
@@ -58,7 +66,7 @@ export function SelectResponsiveWrapper({
       onOpenChange={onOpenChange}
       shouldScaleBackground={false}
     >
-      <DrawerTrigger asChild className={className}>
+      <DrawerTrigger asChild>
         {trigger}
       </DrawerTrigger>
       <DrawerContent className="rounded-t-[28px] border-t-0 bg-background focus:outline-none">

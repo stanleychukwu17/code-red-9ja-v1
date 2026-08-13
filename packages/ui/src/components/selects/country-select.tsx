@@ -25,13 +25,7 @@ interface CountriesResponse {
 }
 
 export const SelectCountry = ({
-  update,
-  errorMsg,
-  selectedId,
-  className,
-  disabled,
-  align = "start",
-  fetchCountries,
+  align = "start", update, errorMsg, selectedId, className, disabled, fetchCountries,
 }: SelectProps<Country, number | string> & {
   fetchCountries: () => Promise<any>;
 }) => {
@@ -49,6 +43,7 @@ export const SelectCountry = ({
       if (res && res.success && res.data) return res;
       throw new Error(res?.message || "Failed to fetch countries");
     },
+    staleTime: Infinity,
   });
 
   const countries = data?.data?.countries || [];
