@@ -948,6 +948,10 @@ type SignupResult struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
+// Signup performs the primary backend registration logic.
+// It checks if the email or phone number is already registered, hashes the password,
+// creates the new user record in the database, and returns the user's ID along with
+// generated access and refresh tokens.
 func (s *AuthService) Signup(ctx context.Context, email, phone, password string, countryID int16) (SignupResult, error) {
 	// Check if email exists
 	if email != "" && s.usersService.CheckEmail(ctx, email) {
@@ -1249,10 +1253,8 @@ type RegisterPhaseSignUpResult struct {
 }
 
 const (
-	emailOtpPrefix         = "register:email_otp:"
-	emailOtpVerifiedPrefix = "register:email_otp_verified:"
-	emailOtpTTL            = 10 * time.Minute
-	emailOtpVerifiedTTL    = 30 * time.Minute
+	emailOtpTTL         = 10 * time.Minute
+	emailOtpVerifiedTTL = 30 * time.Minute
 )
 
 func normalizeEmail(email string) string {
@@ -1260,11 +1262,11 @@ func normalizeEmail(email string) string {
 }
 
 func (s *AuthService) emailOtpKey(email string) string {
-	return emailOtpPrefix + normalizeEmail(email)
+	return db.RedisRegisterEmailOtp + normalizeEmail(email)
 }
 
 func (s *AuthService) emailOtpVerifiedKey(email string) string {
-	return emailOtpVerifiedPrefix + normalizeEmail(email)
+	return db.RedisRegisterEmailOtpVerified + normalizeEmail(email)
 }
 
 func (s *AuthService) sendEmailOTP(ctx context.Context, to, otp string) error {
@@ -1383,31 +1385,39 @@ func (s *AuthService) SendForgotPasswordEmailOTP(ctx context.Context, email stri
 	}, nil
 }
 
+// VerifySignupEmailOTP validates the submitted OTP against the stored hash and generates a verification token upon success
 func (s *AuthService) VerifySignupEmailOTP(ctx context.Context, email, otp string) (EmailOTPResult, error) {
 	email = normalizeEmail(email)
 	if email == "" {
 		return EmailOTPResult{}, errors.New("email is required")
 	}
 
+	// Fetch the temporarily stored OTP hash from Redis
 	raw, err := s.rdb.Get(ctx, s.emailOtpKey(email)).Result()
 	if err != nil {
 		return EmailOTPResult{}, errors.New("otp expired or not found")
 	}
 
+	// Unmarshal the stored JSON to extract the hash
 	var stored struct {
 		Hash string `json:"hash"`
 	}
 	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
 		return EmailOTPResult{}, errors.New("invalid otp state")
 	}
+	
+	// Compare the submitted plain-text OTP with the stored bcrypt hash
 	if err := bcrypt.CompareHashAndPassword([]byte(stored.Hash), []byte(strings.TrimSpace(otp))); err != nil {
 		return EmailOTPResult{}, errors.New("invalid otp")
 	}
 
+	// OTP is valid; generate a temporary token for the next registration step
 	verificationToken := uuid.NewString()
 	if err := s.rdb.Set(ctx, s.emailOtpVerifiedKey(email), verificationToken, emailOtpVerifiedTTL).Err(); err != nil {
 		return EmailOTPResult{}, err
 	}
+	
+	// Clean up the used OTP key to prevent replay attacks
 	_ = s.rdb.Del(ctx, s.emailOtpKey(email)).Err()
 
 	return EmailOTPResult{
@@ -1417,12 +1427,14 @@ func (s *AuthService) VerifySignupEmailOTP(ctx context.Context, email, otp strin
 	}, nil
 }
 
+// VerifySignupEmailToken validates the temporary token generated after a successful OTP verification
 func (s *AuthService) VerifySignupEmailToken(ctx context.Context, email, token string) error {
 	email = normalizeEmail(email)
 	if email == "" || token == "" {
 		return errors.New("email verification is required")
 	}
 
+	// Check if the token exists in Redis and matches the provided token
 	stored, err := s.rdb.Get(ctx, s.emailOtpVerifiedKey(email)).Result()
 	if err != nil || stored != token {
 		return errors.New("email verification expired or invalid")
@@ -1430,6 +1442,9 @@ func (s *AuthService) VerifySignupEmailToken(ctx context.Context, email, token s
 	return nil
 }
 
+// RegisterPhaseSignUp handles the initial step of user registration.
+// It validates the provided email, phone number, and country ID, checks for uniqueness,
+// verifies the email token, and temporarily stores the initial registration data in Redis.
 func (s *AuthService) RegisterPhaseSignUp(ctx context.Context, email, phone string, countryID int16, emailVerificationToken string) (RegisterPhaseSignUpResult, error) {
 	// email checks
 	email = normalizeEmail(email)

@@ -240,22 +240,26 @@ type VerifySignupEmailOTPRequest struct {
 func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	var req SignupRequest
 
+	// Parse the incoming JSON payload into the request struct
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
 
+	// Validate required fields (email, phone, password, country)
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
 
+	// Delegate business logic to create the user and generate authentication tokens
 	result, err := h.authService.Signup(r.Context(), req.Email, req.PhoneNumber, req.Password, req.CountryID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
+	// Respond with success, including the user's ID and authentication tokens
 	h.utils.RespondSuccess(w, http.StatusOK, "Sign-up successful", map[string]interface{}{
 		"id":           result.ID,
 		"accessToken":  result.AccessToken,
@@ -298,21 +302,30 @@ func (h *Handler) SendSignupEmailOTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// VerifySignupEmailOTP handles the request to verify the OTP sent to a new user's email during signup
 func (h *Handler) VerifySignupEmailOTP(w http.ResponseWriter, r *http.Request) {
 	var req VerifySignupEmailOTPRequest
+	
+	// Parse the incoming JSON payload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
+	
+	// Validate required fields (email and OTP)
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
+	
+	// Delegate business logic to verify the OTP
 	result, err := h.authService.VerifySignupEmailOTP(r.Context(), req.Email, req.OTP)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	
+	// Respond with success and the email verification token details
 	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
 		"message":                result.Message,
 		"emailVerificationToken": result.EmailVerificationToken,
@@ -320,21 +333,30 @@ func (h *Handler) VerifySignupEmailOTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// SendForgotPasswordEmailOTP handles the request to send an OTP for password recovery
 func (h *Handler) SendForgotPasswordEmailOTP(w http.ResponseWriter, r *http.Request) {
 	var req SendSignupEmailOTPRequest
+	
+	// Parse the incoming JSON payload
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
+	
+	// Validate required fields in the request
 	if err := h.validate.Struct(req); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
+	
+	// Delegate business logic to generate and send the OTP
 	result, err := h.authService.SendForgotPasswordEmailOTP(r.Context(), req.Email)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	
+	// Respond with success and OTP expiration details
 	h.utils.RespondSuccess(w, http.StatusOK, result.Message, map[string]interface{}{
 		"message":          result.Message,
 		"expiresInSeconds": result.ExpiresInSeconds,

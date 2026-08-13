@@ -14,11 +14,13 @@ const (
 	RedisRegisterOnboarding = "register:onboarding:"
 
 	// STRING: Keys used to map registration details to user fake ID
-	RedisUsernameFakeID = "register:username_user_fake_id:"
-	RedisEmailFakeID    = "register:email_user_fake_id:"
-	RedisPhoneFakeID    = "register:phone_user_fake_id:"
-	RedisNINFakeID      = "register:nin_user_fake_id:"
-	RedisChangePassword = "register:user_change_password:"
+	RedisUsernameFakeID           = "register:username_user_fake_id:"
+	RedisEmailFakeID              = "register:email_user_fake_id:"
+	RedisPhoneFakeID              = "register:phone_user_fake_id:"
+	RedisNINFakeID                = "register:nin_user_fake_id:"
+	RedisChangePassword           = "register:user_change_password:"
+	RedisRegisterEmailOtp         = "register:email_otp:"
+	RedisRegisterEmailOtpVerified = "register:email_otp_verified:"
 	//--END--
 
 	//--START-- for login, refreshing jwt token, logout,
