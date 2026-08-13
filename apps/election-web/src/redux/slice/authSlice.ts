@@ -2,21 +2,11 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
 export interface AuthProps {
-  country: string;
+  country?: string;
   countryId?: number;
-  iso2?: string;
-  phoneNumber: string;
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
   id?: string;
-  accessToken?: string;
   changePasswordId?: string;
   changeUserFid?: number;
-  question1?: number;
-  answer1?: string;
-  question2?: number;
-  answer2?: string;
   registrationCompleted?: boolean;
   registrationCompletedAt?: string;
   passwordChangeCompleted?: boolean;
