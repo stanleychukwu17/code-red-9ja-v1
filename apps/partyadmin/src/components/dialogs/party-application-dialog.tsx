@@ -314,7 +314,7 @@ export function PartyApplicationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
+        <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
           <DialogHeader title="Party Application" />
 
           <DialogPadding className="space-y-5 pt-3 pb-5 max-h-[65vh] overflow-y-auto">
@@ -432,46 +432,46 @@ export function PartyApplicationDialog({
                   {(role === "state-election-supervisor" ||
                     role === "lga-election-supervisor" ||
                     role === "ward-election-supervisor") && (
-                    <div className="space-y-1">
-                      <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
-                        State
-                      </label>
-                      <SelectState
-                        selectedId={
-                          selectedState ? String(selectedState) : undefined
-                        }
-                        countryOriginalId={161}
-                        fetchStates={fetchStatesAdapter}
-                        update={(state) => {
-                          setSelectedState(state.id);
-                          setSelectedLga("");
-                          setSelectedWard("");
-                        }}
-                      />
-                    </div>
-                  )}
+                      <div className="space-y-1">
+                        <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                          State
+                        </label>
+                        <SelectState
+                          selectedId={
+                            selectedState ? String(selectedState) : undefined
+                          }
+                          countryOriginalId={161}
+                          fetchStates={fetchStatesAdapter}
+                          update={(state) => {
+                            setSelectedState(state.id);
+                            setSelectedLga("");
+                            setSelectedWard("");
+                          }}
+                        />
+                      </div>
+                    )}
 
                   {(role === "lga-election-supervisor" ||
                     role === "ward-election-supervisor") && (
-                    <div className="space-y-1">
-                      <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
-                        LGA
-                      </label>
-                      <SelectLga
-                        selectedId={
-                          selectedLga ? String(selectedLga) : undefined
-                        }
-                        stateId={
-                          selectedState ? Number(selectedState) : undefined
-                        }
-                        fetchLGAs={fetchLgasAdapter}
-                        update={(lga) => {
-                          setSelectedLga(lga.id);
-                          setSelectedWard("");
-                        }}
-                      />
-                    </div>
-                  )}
+                      <div className="space-y-1">
+                        <label className="text-[12px] font-semibold text-c-50 uppercase tracking-wider">
+                          LGA
+                        </label>
+                        <SelectLga
+                          selectedId={
+                            selectedLga ? String(selectedLga) : undefined
+                          }
+                          stateId={
+                            selectedState ? Number(selectedState) : undefined
+                          }
+                          fetchLGAs={fetchLgasAdapter}
+                          update={(lga) => {
+                            setSelectedLga(lga.id);
+                            setSelectedWard("");
+                          }}
+                        />
+                      </div>
+                    )}
 
                   {role === "ward-election-supervisor" && (
                     <div className="space-y-1">
@@ -739,7 +739,7 @@ export function ChoosePollingUnitDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
         <DialogHeader title="Choose Polling Unit" />
 
         <DialogPadding className="relative space-y-4 pb-5 max-h-[75vh] overflow-y-auto">
