@@ -3,7 +3,7 @@
 # Navigate to the directory where seed_users.json is located
 cd "$(dirname "$0")" || exit 1
 
-BASE_URL="http://localhost:4100"
+BASE_URL="http://localhost:4000"
 
 # seed users
 echo "Seeding users to ${BASE_URL}/api/v1/seed/users..."

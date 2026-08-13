@@ -491,14 +491,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
 
-		// Single unit dedicated endpoints
-		r.Get("/api/v1/election-groups/{id}/stats", electionStatsHandler.GetSingleElectionGroupStats)
-		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}", electionStatsHandler.GetSingleStateStats)
-		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts/{sd_id}", electionStatsHandler.GetSingleSenatorialDistrictStats)
-		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies/{fc_id}", electionStatsHandler.GetSingleFederalConstituencyStats)
-		r.Get("/api/v1/election-groups/{id}/stats/state-constituencies/{sc_id}", electionStatsHandler.GetSingleStateConstituencyStats)
-		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}", electionStatsHandler.GetSingleLGAStats)
-		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}", electionStatsHandler.GetSingleWardStats)
+		// Single unit dedicated party stats endpoints
+		r.Get("/api/v1/election-groups/{id}/stats/parties/{party_id}", electionStatsHandler.GetSingleElectionGroupStats)
+		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}/parties/{party_id}", electionStatsHandler.GetSingleStateStats)
+		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts/{sd_id}/parties/{party_id}", electionStatsHandler.GetSingleSenatorialDistrictStats)
+		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies/{fc_id}/parties/{party_id}", electionStatsHandler.GetSingleFederalConstituencyStats)
+		r.Get("/api/v1/election-groups/{id}/stats/state-constituencies/{sc_id}/parties/{party_id}", electionStatsHandler.GetSingleStateConstituencyStats)
+		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}", electionStatsHandler.GetSingleLGAStats)
+		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}", electionStatsHandler.GetSingleWardStats)
 
 		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesHandler.WithdrawFromPartyWallet)

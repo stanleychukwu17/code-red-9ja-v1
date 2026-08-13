@@ -20,6 +20,7 @@ import {
   getPartyAgentTargets,
   updatePartyAgentTargets,
   depositPartyAllowance,
+  getPartyWalletTransactions,
 } from "#/lib/server/parties";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
@@ -36,6 +37,7 @@ import {
   type AgentMarketingSetupValue,
 } from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
 import { DepositAgentPaymentDialog } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
+import { getApplications } from "#/lib/server/applications";
 import {
   LeaderboardCardWrapper,
   ObjectiveTile,
@@ -44,6 +46,7 @@ import { toast } from "sonner";
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { SelectDateRange } from "@repo/ui/components/selects/date-range-select";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
+import { TransactionRow, type WalletTransaction } from "../wallet/index";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
   head: () => getPageHeader({ title: "Readiness Dashboard" }),
@@ -63,7 +66,6 @@ function ReadinessComponent() {
     selectedWardId,
     activeMarketingCampaigns,
   } = useAppContext();
-  console.log({ party, activeMarketingCampaigns });
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -188,7 +190,7 @@ function ReadinessComponent() {
       fetchElectionStatsFn({
         data: {
           electionGroupId: selectedElectionGroup?.id as number,
-          partyId: party?.id,
+          partyId: party?.id!,
           stateId: selectedStateId,
           senatorialDistrictId: selectedDistrictId,
           federalConstituencyId: selectedFederalConstituencyId,
@@ -199,6 +201,7 @@ function ReadinessComponent() {
       }),
     enabled: !!selectedElectionGroup?.id,
   });
+  console.log({ electionStatsData });
 
   const resolvedStats =
     electionStatsData?.data?.party_stats ||
@@ -243,7 +246,16 @@ function ReadinessComponent() {
             onDepositMarketing={() => setIsMarketingDialogOpen(true)}
             onPaymentAllocation={() => setIsBudgetDialogOpen(true)}
           />
-          <SubTabsSection />
+          <SubTabsSection
+            partyStats={resolvedStats}
+            electionGroupId={selectedElectionGroup?.id}
+            stateId={selectedStateId}
+            senatorialDistrictId={selectedDistrictId}
+            federalConstituencyId={selectedFederalConstituencyId}
+            stateAssemblyConstituencyId={selectedStateConstituencyId}
+            lgaId={selectedLGAId}
+            wardId={selectedWardId}
+          />
         </div>
 
         {/* Right Hand Column */}
@@ -425,10 +437,10 @@ function ReadinessProgressCard({
     value: string;
   }) => {
     return (
-      <p className="text-white font-medium">
+      <span className="text-white font-medium">
         {label}
         <span className="text-white/50"> {value}</span>
-      </p>
+      </span>
     );
   };
 
@@ -444,9 +456,6 @@ function ReadinessProgressCard({
 
   const pStats = partyStats || {};
   const tStats = targets || {};
-
-  console.log({ pStats });
-  console.log({ tStats });
 
   const puCount = pStats.unique_pu_agents_count || 0;
   const puMax = tStats.polling_units_count || 0;
@@ -647,7 +656,25 @@ function ActionBanner({
   );
 }
 
-function SubTabsSection() {
+function SubTabsSection({
+  partyStats,
+  electionGroupId,
+  stateId,
+  senatorialDistrictId,
+  federalConstituencyId,
+  stateAssemblyConstituencyId,
+  lgaId,
+  wardId,
+}: {
+  partyStats?: any;
+  electionGroupId?: number;
+  stateId?: number;
+  senatorialDistrictId?: number;
+  federalConstituencyId?: number;
+  stateAssemblyConstituencyId?: number;
+  lgaId?: number;
+  wardId?: number;
+}) {
   const [activeTab, setActiveTab] = React.useState<
     "main" | "activities" | "transactions"
   >("main");
@@ -665,11 +692,6 @@ function SubTabsSection() {
               onClick: () => setActiveTab("main"),
             },
             {
-              id: "activities",
-              label: "Activities",
-              onClick: () => setActiveTab("activities"),
-            },
-            {
               id: "transactions",
               label: "Transactions",
               onClick: () => setActiveTab("transactions"),
@@ -678,17 +700,21 @@ function SubTabsSection() {
           activeTabClassName="bg-[#222] text-white shadow-sm"
           containerClassName="h-10"
         />
-
-        <SelectDateRange
-          selectedId={dateRange}
-          update={(val) => setDateRange(val)}
-          className="h-[42px] rounded-xl max-w-[180px]"
-        />
       </div>
 
       <div className="pt-2">
-        {activeTab === "main" && <MainSubTabContent />}
-        {activeTab === "activities" && <ActivitiesSubTabContent />}
+        {activeTab === "main" && (
+          <MainSubTabContent
+            partyStats={partyStats}
+            electionGroupId={electionGroupId}
+            stateId={stateId}
+            senatorialDistrictId={senatorialDistrictId}
+            federalConstituencyId={federalConstituencyId}
+            stateAssemblyConstituencyId={stateAssemblyConstituencyId}
+            lgaId={lgaId}
+            wardId={wardId}
+          />
+        )}
         {activeTab === "transactions" && <TransactionsSubTabContent />}
       </div>
     </div>
@@ -719,31 +745,187 @@ function SubTab({
   );
 }
 
-function MainSubTabContent() {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {/* Top Row */}
-      <RoleStatCard
-        role="Total Applications"
-        count="34,890"
-        className="bg-[#f7f7f7] border-0"
-      />
-      <RoleStatCard
-        role="Accepted Agents"
-        count="31,420"
-        className="bg-green/10 border-0 [&_p]:text-green"
-      />
-      <RoleStatCard
-        role="Rejected Agents"
-        count="0"
-        className="bg-red/10 border-0 [&_p]:text-red"
-      />
+function MainSubTabContent({
+  partyStats,
+  electionGroupId,
+  stateId,
+  senatorialDistrictId,
+  federalConstituencyId,
+  stateAssemblyConstituencyId,
+  lgaId,
+  wardId,
+}: {
+  partyStats?: any;
+  electionGroupId?: number;
+  stateId?: number;
+  senatorialDistrictId?: number;
+  federalConstituencyId?: number;
+  stateAssemblyConstituencyId?: number;
+  lgaId?: number;
+  wardId?: number;
+}) {
+  const getApplicationsFn = useServerFn(getApplications);
+  const { data: appsData, isLoading } = useQuery({
+    queryKey: [
+      "recent-party-applications",
+      electionGroupId,
+      stateId,
+      senatorialDistrictId,
+      federalConstituencyId,
+      stateAssemblyConstituencyId,
+      lgaId,
+      wardId,
+    ],
+    queryFn: () =>
+      getApplicationsFn({
+        data: {
+          electionGroupId,
+          stateId,
+          senatorialDistrictId,
+          federalConstituencyId,
+          stateAssemblyConstituencyId,
+          lgaId,
+          wardId,
+          limit: 5,
+        },
+      }),
+    enabled: !!electionGroupId,
+  });
 
-      {/* Bottom Row */}
-      <RoleStatCard role="Polling Agents" count="31,420" />
-      <RoleStatCard role="Ward Supervisors" count="581" />
-      <RoleStatCard role="LGA Supervisors" count="121" />
-      <RoleStatCard role="State Supervisors" count="5" />
+  const applications: any[] = appsData?.data?.applications || [];
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "polling_agent":
+        return "Polling Agent";
+      case "ward_supervisor":
+        return "Ward Supervisor";
+      case "lga_supervisor":
+        return "LGA Supervisor";
+      case "state_supervisor":
+        return "State Supervisor";
+      default:
+        return role || "Agent";
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "state_supervisor":
+        return "text-[#00a859]";
+      case "lga_supervisor":
+        return "text-[#8b5cf6]";
+      case "ward_supervisor":
+        return "text-blue-600";
+      default:
+        return "text-c-50";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "accepted":
+        return "text-green";
+      case "rejected":
+        return "text-red-500";
+      default:
+        return "text-amber-500";
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {/* Top Row */}
+        <RoleStatCard
+          role="Total Applications"
+          count={(partyStats?.applications_count || 0).toLocaleString()}
+          className="bg-[#f7f7f7] border-0"
+        />
+        <RoleStatCard
+          role="Accepted Agents"
+          count={(
+            partyStats?.accepted_applications_count || 0
+          ).toLocaleString()}
+          className="bg-green/10 border-0 [&_p]:text-green"
+        />
+        <RoleStatCard
+          role="Rejected Agents"
+          count={(
+            partyStats?.rejected_applications_count || 0
+          ).toLocaleString()}
+          className="bg-red/10 border-0 [&_p]:text-red"
+        />
+      </div>
+      <div>
+        {isLoading ? (
+          <div className="p-4 text-center text-c-50 text-sm">
+            Loading recent applications...
+          </div>
+        ) : applications.length === 0 ? (
+          <div className="p-4 text-center text-c-50 text-sm">
+            No recent applications found.
+          </div>
+        ) : (
+          applications.map((app: any) => {
+            const name =
+              `${app.first_name || ""} ${app.last_name || ""}`.trim() ||
+              app.username ||
+              "Applicant";
+            const role = getRoleLabel(app.role);
+            const roleColor = getRoleColor(app.role);
+            const statusColor = getStatusColor(app.status);
+            const time = formatTime(app.created_at);
+            const location =
+              app.polling_unit_name || app.lga_name || app.state_name || "";
+
+            return (
+              <div
+                key={app.id}
+                className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer"
+              >
+                <img
+                  src={app.avatar || `https://i.pravatar.cc/150?u=${app.id}`}
+                  alt=""
+                  className="size-11 rounded-full object-cover shrink-0"
+                />
+                <div className="space-y-1 w-full">
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-c-90 w-full">{name}</p>
+                    {location && (
+                      <p className="shrink-0 text-xs text-c-50">{location}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-c-50 w-full">
+                      <span className={roleColor}>{role}</span> · {time}
+                    </p>
+                    <p
+                      className={cn(
+                        "capitalize text-sm font-medium",
+                        statusColor,
+                      )}
+                    >
+                      {app.status}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
@@ -772,146 +954,37 @@ function RoleStatCard({
   );
 }
 
-function ActivitiesSubTabContent() {
-  const activities = [
-    {
-      name: "Kamsi Uzorchukwu",
-      role: "Polling Agent",
-      time: "2m ago",
-      amount: "-₦50,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=1",
-      roleColor: "text-c-50",
-    },
-    {
-      name: "Maxwel Nnodi",
-      role: "Polling Agent",
-      time: "4m ago",
-      amount: "-₦50,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=2",
-      roleColor: "text-c-50",
-    },
-    {
-      name: "Favour Udezue",
-      role: "Ward Supervisor",
-      time: "3h ago",
-      amount: "-₦70,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=3",
-      roleColor: "text-[#8b5cf6]",
-    },
-    {
-      name: "Tobi Obafemi",
-      role: "State Supervisor",
-      time: "May 29, 14:56",
-      amount: "-₦500,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=4",
-      roleColor: "text-[#00a859]",
-    },
-  ];
-
-  return (
-    <div>
-      {activities.map((a, i) => (
-        <div
-          key={i}
-          className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer"
-        >
-          <img
-            src={a.avatar}
-            alt=""
-            className="size-11 rounded-full object-cover shrink-0"
-          />
-          <div className="space-y-1 w-full">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-c-90 w-full">{a.name}</p>
-              <p className="shrink-0 font-medium text-c-90">{a.amount}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-c-50 w-full">
-                <span className={a.roleColor}>{a.role}</span> · {a.time}
-              </p>
-              <p className="text-green">{a.status}</p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function TransactionsSubTabContent() {
-  const transactions = [
-    {
-      type: "Agent Payment: Deposited",
-      time: "2m ago",
-      amount: "-₦50,000,000",
-      status: "Successful",
-      isDeposit: false,
-    },
-    {
-      type: "Slots: Purchased",
-      time: "2m ago",
-      amount: "-₦8,000,000",
-      status: "Successful",
-      isDeposit: false,
-    },
-    {
-      type: "Marketing Funds: Deposited",
-      time: "2m ago",
-      amount: "-₦8,000,000",
-      status: "Successful",
-      isDeposit: false,
-    },
-    {
-      type: "Wallet Balance: Funded",
-      time: "2m ago",
-      amount: "+₦50,000,000",
-      status: "Successful",
-      isDeposit: true,
-    },
-  ];
+  const { party } = useAppContext();
+  const partyId = party?.id;
+  const getPartyWalletTransactionsFn = useServerFn(getPartyWalletTransactions);
+
+  const { data: txRes, isLoading } = useQuery({
+    queryKey: ["partyWalletTransactions", partyId],
+    queryFn: () =>
+      getPartyWalletTransactionsFn({
+        data: { partyID: partyId!, limit: 5, offset: 0 },
+      }),
+    enabled: !!partyId,
+  });
+
+  const transactions: WalletTransaction[] = txRes?.data?.transactions ?? [];
 
   return (
     <div>
-      {transactions.map((t, i) => (
-        <div
-          key={i}
-          className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3"
-        >
-          <div
-            className={cn(
-              "size-11 rounded-full flex items-center justify-center shrink-0",
-              t.isDeposit ? "bg-green/20 text-green" : "bg-c-10 text-c-80",
-            )}
-          >
-            {t.isDeposit ? (
-              <ArrowHandleIcon className="size-4 rotate-90" />
-            ) : (
-              <ArrowHandleIcon className="size-4 -rotate-90" />
-            )}
-          </div>
-          <div className="space-y-1 w-full">
-            <div className="flex items-center gap-2 w-full">
-              <p className="font-medium w-full text-c-90">{t.type}</p>
-              <p
-                className={cn(
-                  "shrink-0 font-semibold",
-                  t.isDeposit ? "text-green" : "text-c-90",
-                )}
-              >
-                {t.amount}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 w-full">
-              <p className="text-sm text-c-50 w-full">{t.time}</p>
-              <p className="shrink-0 text-green">{t.status}</p>
-            </div>
-          </div>
+      {isLoading ? (
+        <div className="p-4 text-center text-c-50 text-sm">
+          Loading transactions...
         </div>
-      ))}
+      ) : transactions.length === 0 ? (
+        <div className="p-4 text-center text-c-50 text-sm">
+          No transactions found.
+        </div>
+      ) : (
+        transactions.map((tx) => (
+          <TransactionRow key={tx.id} transaction={tx} />
+        ))
+      )}
     </div>
   );
 }
@@ -1123,7 +1196,6 @@ function AgentPaymentCard({
   party: any;
 }) {
   const allocations = party?.agentPaymentAllocation || {};
-  console.log({ allocations });
   const pollingAgentPaymentKobo = allocations.polling_agent?.default || 0;
   const wardSupervisorPaymentKobo =
     allocations.ward_election_supervisor?.default || 0;

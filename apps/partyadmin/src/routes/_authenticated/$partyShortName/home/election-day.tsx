@@ -84,7 +84,7 @@ function ElectionDayComponent() {
       fetchElectionStatsFn({
         data: {
           electionGroupId: selectedElectionGroup?.id as number,
-          partyId: party?.id,
+          partyId: party?.id!,
           stateId: selectedStateId,
           senatorialDistrictId: selectedDistrictId,
           federalConstituencyId: selectedFederalConstituencyId,

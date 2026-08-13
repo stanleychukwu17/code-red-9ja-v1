@@ -351,14 +351,20 @@ func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.Par
 	return s.queries.GetApplicationByID(ctx, id)
 }
 
-func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
+func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, stateID int16, senatorialDistrictID, federalConstituencyID, stateAssemblyConstituencyID, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
 	return s.queries.ListApplications(ctx, queries.ListApplicationsParams{
-		UserID:          userID,
-		LimitVal:        limit,
-		Cursor:          cursor,
-		PartyID:         partyID,
-		ElectionGroupID: electionGroupID,
-		Status:          status,
+		UserID:                      userID,
+		PartyID:                     partyID,
+		ElectionGroupID:             electionGroupID,
+		Status:                      status,
+		StateID:                     stateID,
+		SenatorialDistrictID:        senatorialDistrictID,
+		FederalConstituencyID:       federalConstituencyID,
+		StateAssemblyConstituencyID: stateAssemblyConstituencyID,
+		LgaID:                       lgaID,
+		WardID:                      wardID,
+		Cursor:                      cursor,
+		LimitVal:                    limit,
 	})
 }
 
@@ -1018,13 +1024,13 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 	if roleType == "ward_election_supervisor" || roleType == "ward_supervisor" {
 		if input.WardID > 0 {
 			_ = txQueries.AdjustElectionGroupWardApplicationCounts(ctx, queries.AdjustElectionGroupWardApplicationCountsParams{
-				ElectionGroupID:       egID,
-				WardID:                input.WardID,
-				PartyID:               partyID,
-				AppDelta:              0,
-				AcceptedDelta:         1,
-				RejectedDelta:         0,
-				WardSupAppDelta:       0,
+				ElectionGroupID:      egID,
+				WardID:               input.WardID,
+				PartyID:              partyID,
+				AppDelta:             0,
+				AcceptedDelta:        1,
+				RejectedDelta:        0,
+				WardSupAppDelta:      0,
 				WardSupAcceptedDelta: 1,
 				WardSupRejectedDelta: 0,
 			})
@@ -1039,29 +1045,29 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 				AcceptedDelta:        1,
 				RejectedDelta:        0,
 				WardSupAppDelta:      0,
-				WardSupAcceptedDelta:0,
-				WardSupRejectedDelta:0,
+				WardSupAcceptedDelta: 0,
+				WardSupRejectedDelta: 0,
 				LgaSupAppDelta:       0,
-				LgaSupAcceptedDelta: 1,
-				LgaSupRejectedDelta: 0,
+				LgaSupAcceptedDelta:  1,
+				LgaSupRejectedDelta:  0,
 			})
 		}
 	} else if roleType == "state_election_supervisor" || roleType == "state_supervisor" {
 		if input.StateID > 0 {
 			_ = txQueries.AdjustElectionGroupStateApplicationCounts(ctx, queries.AdjustElectionGroupStateApplicationCountsParams{
-				ElectionGroupID:        egID,
-				StateID:                input.StateID,
-				PartyID:                partyID,
-				AppDelta:               0,
-				AcceptedDelta:          1,
-				RejectedDelta:          0,
-				WardSupAppDelta:        0,
+				ElectionGroupID:       egID,
+				StateID:               input.StateID,
+				PartyID:               partyID,
+				AppDelta:              0,
+				AcceptedDelta:         1,
+				RejectedDelta:         0,
+				WardSupAppDelta:       0,
 				WardSupAcceptedDelta:  0,
 				WardSupRejectedDelta:  0,
-				LgaSupAppDelta:         0,
+				LgaSupAppDelta:        0,
 				LgaSupAcceptedDelta:   0,
 				LgaSupRejectedDelta:   0,
-				StateSupAppDelta:       0,
+				StateSupAppDelta:      0,
 				StateSupAcceptedDelta: 1,
 				StateSupRejectedDelta: 0,
 			})
@@ -1280,9 +1286,19 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		if campErr == nil {
 			// Check if state.name is in party_marketing_campaign.states (JSONB array)
 			if stateName != "" && len(campaign.States) > 0 {
-				var campaignStates []string
-				if err := json.Unmarshal(campaign.States, &campaignStates); err == nil {
-					for _, sName := range campaignStates {
+				var rawStates []json.RawMessage
+				if err := json.Unmarshal(campaign.States, &rawStates); err == nil {
+					for _, raw := range rawStates {
+						var sName string
+						if err := json.Unmarshal(raw, &sName); err != nil {
+							var obj struct {
+								Name string `json:"name"`
+							}
+							if err := json.Unmarshal(raw, &obj); err == nil {
+								sName = obj.Name
+							}
+						}
+
 						if strings.EqualFold(strings.TrimSpace(sName), strings.TrimSpace(stateName)) || sName == "All" || sName == "*" {
 							hasActiveCampaign = true
 							break
@@ -1356,7 +1372,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 	// 5. Update referral: set user_referral_id, party_id, election_group_id, milestone ('APPLIED') without setting amount_to_pay yet
 	if err := txQueries.UpdateReferralOnApplication(ctx, queries.UpdateReferralOnApplicationParams{
 		ID:              referral.ID,
-		UserReferralID: pgtype.Int8{Int64: selected.userReferral.ID, Valid: true},
+		UserReferralID:  pgtype.Int8{Int64: selected.userReferral.ID, Valid: true},
 		PartyID:         pgtype.Int2{Int16: int16(partyID), Valid: partyID > 0},
 		ElectionGroupID: pgtype.Int4{Int32: int32(selected.egID), Valid: selected.egID > 0},
 		AmountToPay:     pgtype.Numeric{Valid: false},
@@ -1372,7 +1388,7 @@ func (s *Service) updateReferralOnApplicationSubmission(ctx context.Context, txQ
 		return err
 	}
 
-	slog.Info("✅ Successfully updated referral & incremented total_referrals count",
+	slog.Info("Successfully updated referral & incremented total_referrals count",
 		"referral_id", referral.ID,
 		"user_referral_id", selected.userReferral.ID,
 		"party_id", partyID,

@@ -422,7 +422,7 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        party_id path int true "Party ID"
 // @Param        short_name path string true "Party Short Name"
-// @Success      200  {object}  utils.SuccessResponse{data=queries.PartyWithVerifications}
+// @Success      200  {object}  utils.SuccessResponse
 // @Router       /parties/{party_id}/{short_name}/profile [get]
 func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	partyIDStr := chi.URLParam(r, "party_id")

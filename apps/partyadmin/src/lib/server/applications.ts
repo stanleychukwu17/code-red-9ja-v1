@@ -4,8 +4,22 @@ import { API_URL } from "#/lib/config";
 
 export const getApplications = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: { status?: string; limit?: number; cursor?: number } | undefined) =>
-      data,
+    (
+      data:
+        | {
+            status?: string;
+            limit?: number;
+            cursor?: number;
+            electionGroupId?: number;
+            stateId?: number;
+            senatorialDistrictId?: number;
+            federalConstituencyId?: number;
+            stateAssemblyConstituencyId?: number;
+            lgaId?: number;
+            wardId?: number;
+          }
+        | undefined,
+    ) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -14,9 +28,23 @@ export const getApplications = createServerFn({ method: "GET" })
       const cursor = data?.cursor;
 
       const params = new URLSearchParams();
-      params.append("status", status);
+      if (status) params.append("status", status);
       params.append("limit", String(limit));
       if (cursor) params.append("cursor", String(cursor));
+      if (data?.electionGroupId)
+        params.append("election_group_id", String(data.electionGroupId));
+      if (data?.stateId) params.append("state_id", String(data.stateId));
+      if (data?.senatorialDistrictId)
+        params.append("senatorial_district_id", String(data.senatorialDistrictId));
+      if (data?.federalConstituencyId)
+        params.append("federal_constituency_id", String(data.federalConstituencyId));
+      if (data?.stateAssemblyConstituencyId)
+        params.append(
+          "state_assembly_constituency_id",
+          String(data.stateAssemblyConstituencyId),
+        );
+      if (data?.lgaId) params.append("lga_id", String(data.lgaId));
+      if (data?.wardId) params.append("ward_id", String(data.wardId));
       const url = `${API_URL.partyApplications}?${params.toString()}`;
       const response = await apiFetch(url);
       const resData = await response.json();

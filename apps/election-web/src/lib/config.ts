@@ -157,24 +157,27 @@ export const API_URL = {
       stateId: number | string,
       partyId?: number | string,
     ) => {
-      const qs = partyId ? `?party_id=${partyId}` : "";
-      return `${api}/election-groups/${id}/stats/states/${stateId}${qs}`;
+      return partyId
+        ? `${api}/election-groups/${id}/stats/states/${stateId}/parties/${partyId}`
+        : `${api}/election-groups/${id}/stats/states/${stateId}`;
     },
     singleLGAStats: (
       id: number | string,
       lgaId: number | string,
       partyId?: number | string,
     ) => {
-      const qs = partyId ? `?party_id=${partyId}` : "";
-      return `${api}/election-groups/${id}/stats/lgas/${lgaId}${qs}`;
+      return partyId
+        ? `${api}/election-groups/${id}/stats/lgas/${lgaId}/parties/${partyId}`
+        : `${api}/election-groups/${id}/stats/lgas/${lgaId}`;
     },
     singleWardStats: (
       id: number | string,
       wardId: number | string,
       partyId?: number | string,
     ) => {
-      const qs = partyId ? `?party_id=${partyId}` : "";
-      return `${api}/election-groups/${id}/stats/wards/${wardId}${qs}`;
+      return partyId
+        ? `${api}/election-groups/${id}/stats/wards/${wardId}/parties/${partyId}`
+        : `${api}/election-groups/${id}/stats/wards/${wardId}`;
     },
   },
 

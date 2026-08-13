@@ -408,18 +408,30 @@ WHERE
   ($2::smallint = 0 OR pa.party_id = $2) AND
   ($3::bigint = 0 OR pa.election_group_id = $3) AND
   ($4::varchar = '' OR pa.status = $4) AND
-  ($5::bigint = 0 OR pa.id < $5)
+  ($5::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = $5) AND
+  ($6::integer = 0 OR pu.senatorial_district_id = $6) AND
+  ($7::integer = 0 OR pu.federal_constituency_id = $7) AND
+  ($8::integer = 0 OR pu.state_constituency_id = $8) AND
+  ($9::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = $9) AND
+  ($10::integer = 0 OR COALESCE(pa.ward_id, u.current_ward, pu.ward_id) = $10) AND
+  ($11::bigint = 0 OR pa.id < $11)
 ORDER BY pa.id DESC
-LIMIT $6
+LIMIT $12
 `
 
 type ListApplicationsParams struct {
-	UserID          int64  `json:"user_id"`
-	PartyID         int16  `json:"party_id"`
-	ElectionGroupID int64  `json:"election_group_id"`
-	Status          string `json:"status"`
-	Cursor          int64  `json:"cursor"`
-	LimitVal        int32  `json:"limit_val"`
+	UserID                      int64  `json:"user_id"`
+	PartyID                     int16  `json:"party_id"`
+	ElectionGroupID             int64  `json:"election_group_id"`
+	Status                      string `json:"status"`
+	StateID                     int16  `json:"state_id"`
+	SenatorialDistrictID        int32  `json:"senatorial_district_id"`
+	FederalConstituencyID       int32  `json:"federal_constituency_id"`
+	StateAssemblyConstituencyID int32  `json:"state_assembly_constituency_id"`
+	LgaID                       int32  `json:"lga_id"`
+	WardID                      int32  `json:"ward_id"`
+	Cursor                      int64  `json:"cursor"`
+	LimitVal                    int32  `json:"limit_val"`
 }
 
 type ListApplicationsRow struct {
@@ -465,12 +477,18 @@ type ListApplicationsRow struct {
 	AgentsCount       int32              `json:"agents_count"`
 }
 
-func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error) {
-	rows, err := q.db.Query(ctx, listApplications,
+func (s *Queries) ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error) {
+	rows, err := s.db.Query(ctx, listApplications,
 		arg.UserID,
 		arg.PartyID,
 		arg.ElectionGroupID,
 		arg.Status,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateAssemblyConstituencyID,
+		arg.LgaID,
+		arg.WardID,
 		arg.Cursor,
 		arg.LimitVal,
 	)

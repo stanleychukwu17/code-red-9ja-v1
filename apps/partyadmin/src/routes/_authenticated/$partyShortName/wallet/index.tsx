@@ -6,6 +6,7 @@ import { cn } from "@repo/ui/lib/utils";
 import FancyBillIcon from "@repo/ui/icons/fancy-bill-icon";
 import FancyWalletIcon from "@repo/ui/icons/fancy-wallet-icon";
 import TransactionSendIcon from "@repo/ui/icons/transaction-send-icon";
+import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 import {
   AlertTriangle,
   ArrowDownToLine,
@@ -50,8 +51,10 @@ function RouteComponent() {
     enabled: !!partyId,
   });
 
-	// Safely extract the wallet, handling the case where it might be returned unwrapped from the cache
-  const wallet = walletRes?.data?.wallet || ((walletRes as any)?.id ? (walletRes as any) : undefined);
+  // Safely extract the wallet, handling the case where it might be returned unwrapped from the cache
+  const wallet =
+    walletRes?.data?.wallet ||
+    ((walletRes as any)?.id ? (walletRes as any) : undefined);
   const transactions = txRes?.data?.transactions ?? [];
 
   const handleRefresh = () => {
@@ -101,7 +104,7 @@ import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { getLocalDate } from "@repo/ui/lib/date";
 
 /** Matches the Go PartyWalletTransaction struct serialised to JSON */
-interface WalletTransaction {
+export interface WalletTransaction {
   id: number;
   wallet_id: number;
   transaction_reference: string;
@@ -110,6 +113,7 @@ interface WalletTransaction {
     | "wallet_funding"
     | "wallet_withdrawal"
     | "slot_purchase"
+    | "marketing_campaign"
     | "allowance_deposit";
   amount_kobo: number;
   balance_after_kobo: number;
@@ -388,72 +392,93 @@ export function WalletTransactions({
           No transactions found.
         </div>
       ) : (
-        <div className="space-y-6">
-          {transactions.map((tx) => {
-            const isCredit = tx.type === "credit";
-            const amountNaira = (tx.amount_kobo ?? 0) / 100;
-            const formattedAmount = `${isCredit ? "+" : "-"} ₦${amountNaira.toLocaleString(
-              "en-NG",
-              {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              },
-            )}`;
-
-            // Derive label, icon and colour from the semantic transaction_category field
-            type TxMeta = { label: string; icon: React.ReactNode };
-            const categoryMeta: Record<
-              WalletTransaction["transaction_category"],
-              TxMeta
-            > = {
-              wallet_funding: {
-                label: "Wallet Funded",
-                icon: <CheckCircle2 className="size-6 text-[#10dd84]" />,
-              },
-              wallet_withdrawal: {
-                label: "Wallet Withdrawal",
-                icon: <ArrowUpFromLine className="size-6 text-[#a0a0a0]" />,
-              },
-              slot_purchase: {
-                label: "Polling Agent Slots",
-                icon: <Coins className="size-6 text-[#9b7b49]" />,
-              },
-              allowance_deposit: {
-                label: "Agent Allowance Deposit",
-                icon: <Landmark className="size-6 text-[#6366f1]" />,
-              },
-            };
-            const meta = categoryMeta[tx.transaction_category] ?? {
-              label: isCredit ? "Wallet Funded" : "Wallet Debit",
-              icon: <ArrowUpFromLine className="size-6 text-[#a0a0a0]" />,
-            };
-
-            // Use the narration from the backend when present, otherwise fall back to the category label
-            const narration = tx.narration ? tx.narration : meta.label;
-
-            // created_at is a string representing the timestamp
-            const dateStr = tx.created_at
-              ? getLocalDate(tx.created_at, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })
-              : "—";
-
-            return (
-              <TransactionRow
-                key={tx.id}
-                title={narration}
-                date={dateStr}
-                amount={formattedAmount}
-                status="Successful"
-                icon={meta.icon}
-              />
-            );
-          })}
+        <div>
+          {transactions.map((tx) => (
+            <TransactionRow key={tx.id} transaction={tx} />
+          ))}
         </div>
       )}
     </section>
+  );
+}
+
+export function TransactionRow({
+  transaction,
+}: {
+  transaction: WalletTransaction;
+}) {
+  const isDeposit = transaction.type === "credit";
+
+  const getTransactionTitle = (tx: WalletTransaction) => {
+    switch (tx.transaction_category) {
+      case "wallet_funding":
+        return "Wallet Balance: Funded";
+      case "wallet_withdrawal":
+        return "Wallet Balance: Withdrawn";
+      case "slot_purchase":
+        return "Slots: Purchased";
+      case "allowance_deposit":
+        return "Agent Payment: Deposited";
+      case "marketing_campaign":
+        return "Marketing Funds: Deposited";
+      default:
+        return (
+          tx.narration ||
+          (isDeposit ? "Wallet Balance: Funded" : "Wallet Balance: Debited")
+        );
+    }
+  };
+
+  const title = getTransactionTitle(transaction);
+  const amountNaira = (transaction.amount_kobo ?? 0) / 100;
+  const formattedAmount = `${isDeposit ? "+" : "-"}₦${amountNaira.toLocaleString(
+    "en-NG",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    },
+  )}`;
+
+  const dateStr = transaction.created_at
+    ? getLocalDate(transaction.created_at, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
+    : "—";
+
+  return (
+    <div className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer">
+      <div
+        className={cn(
+          "size-11 rounded-full flex items-center justify-center shrink-0",
+          isDeposit ? "bg-green/20 text-green" : "bg-c-10 text-c-80",
+        )}
+      >
+        {isDeposit ? (
+          <ArrowHandleIcon className="size-4 rotate-90" />
+        ) : (
+          <ArrowHandleIcon className="size-4 -rotate-90" />
+        )}
+      </div>
+      <div className="space-y-1 w-full">
+        <div className="flex items-center gap-2 w-full">
+          <p className="w-full text-c-90">{title}</p>
+          <p
+            className={cn(
+              "shrink-0 font-medium",
+              isDeposit ? "text-green" : "text-c-90",
+            )}
+          >
+            {formattedAmount}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 w-full">
+          <p className="text-sm text-c-50 w-full">{dateStr}</p>
+          <p className="shrink-0 text-green">Successful</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -505,36 +530,6 @@ function BillRow({
           {amount}
         </div>
         <div className={cn("text-sm", statusClassName)}>{status}</div>
-      </div>
-    </div>
-  );
-}
-
-function TransactionRow({
-  title,
-  date,
-  amount,
-  status,
-  icon,
-}: {
-  title: ReactNode;
-  date: string;
-  amount: string;
-  status: string;
-  icon: ReactNode;
-}) {
-  return (
-    <div className="grid grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-6">
-      <div className="flex size-10 items-center justify-center rounded-full bg-white">
-        {icon || <TransactionSendIcon />}
-      </div>
-      <div className="space-y-1">
-        <div className="text-c-80">{title}</div>
-        <div className="text-sm text-c-50">{date}</div>
-      </div>
-      <div className="space-y-1 text-right">
-        <div className="text-c-80">{amount}</div>
-        <div className="text-sm text-purple">{status}</div>
       </div>
     </div>
   );

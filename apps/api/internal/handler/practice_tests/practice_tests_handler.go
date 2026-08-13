@@ -37,15 +37,15 @@ func NewHandler(q *queries.Queries, u *utils.Utils, earningsSvc *earningsservice
 // ─── response mapper ──────────────────────────────────────────────────────────
 
 type PracticeTestResponse struct {
-	ID               int64              `json:"id"`
-	UserID           int64              `json:"user_id"`
-	ElectionGroupID  pgtype.Int8        `json:"election_group_id"`
-	Role             string             `json:"role"`
-	TestAttempts     json.RawMessage    `json:"test_attempts"`
-	OverallScore     pgtype.Numeric     `json:"overall_score"`
-	EarnedAmountKobo int64              `json:"earned_amount_kobo"`
-	CreatedAt        pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	ID               int64       `json:"id"`
+	UserID           int64       `json:"user_id"`
+	ElectionGroupID  *int64      `json:"election_group_id,omitempty"`
+	Role             string      `json:"role"`
+	TestAttempts     interface{} `json:"test_attempts"`
+	OverallScore     float64     `json:"overall_score"`
+	EarnedAmountKobo int64       `json:"earned_amount_kobo"`
+	CreatedAt        string      `json:"created_at"`
+	UpdatedAt        string      `json:"updated_at"`
 }
 
 type PracticeTestWithUserResponse struct {
@@ -60,16 +60,30 @@ func mapPracticeTest(t queries.UserPracticeTest) PracticeTestResponse {
 	if len(attempts) == 0 {
 		attempts = json.RawMessage("[]")
 	}
+	var egID *int64
+	if t.ElectionGroupID.Valid {
+		egID = &t.ElectionGroupID.Int64
+	}
+	scoreFloat, _ := t.OverallScore.Float64Value()
+
+	var createdAtStr, updatedAtStr string
+	if t.CreatedAt.Valid {
+		createdAtStr = t.CreatedAt.Time.Format(time.RFC3339)
+	}
+	if t.UpdatedAt.Valid {
+		updatedAtStr = t.UpdatedAt.Time.Format(time.RFC3339)
+	}
+
 	return PracticeTestResponse{
 		ID:               t.ID,
 		UserID:           t.UserID,
-		ElectionGroupID:  t.ElectionGroupID,
+		ElectionGroupID:  egID,
 		Role:             t.Role,
 		TestAttempts:     attempts,
-		OverallScore:     t.OverallScore,
+		OverallScore:     scoreFloat.Float64,
 		EarnedAmountKobo: t.EarnedAmountKobo,
-		CreatedAt:        t.CreatedAt,
-		UpdatedAt:        t.UpdatedAt,
+		CreatedAt:        createdAtStr,
+		UpdatedAt:        updatedAtStr,
 	}
 }
 
@@ -78,17 +92,31 @@ func mapPracticeTestRow(t queries.ListUserPracticeTestsRow) PracticeTestWithUser
 	if len(attempts) == 0 {
 		attempts = json.RawMessage("[]")
 	}
+	var egID *int64
+	if t.ElectionGroupID.Valid {
+		egID = &t.ElectionGroupID.Int64
+	}
+	scoreFloat, _ := t.OverallScore.Float64Value()
+
+	var createdAtStr, updatedAtStr string
+	if t.CreatedAt.Valid {
+		createdAtStr = t.CreatedAt.Time.Format(time.RFC3339)
+	}
+	if t.UpdatedAt.Valid {
+		updatedAtStr = t.UpdatedAt.Time.Format(time.RFC3339)
+	}
+
 	resp := PracticeTestWithUserResponse{
 		PracticeTestResponse: PracticeTestResponse{
 			ID:               t.ID,
 			UserID:           t.UserID,
-			ElectionGroupID:  t.ElectionGroupID,
+			ElectionGroupID:  egID,
 			Role:             t.Role,
 			TestAttempts:     attempts,
-			OverallScore:     t.OverallScore,
+			OverallScore:     scoreFloat.Float64,
 			EarnedAmountKobo: t.EarnedAmountKobo,
-			CreatedAt:        t.CreatedAt,
-			UpdatedAt:        t.UpdatedAt,
+			CreatedAt:        createdAtStr,
+			UpdatedAt:        updatedAtStr,
 		},
 	}
 	if t.FirstName.Valid {

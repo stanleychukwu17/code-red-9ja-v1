@@ -28,20 +28,29 @@ func NewHandler(q *queries.Queries, u *utils.Utils) *Handler {
 }
 
 type SystemSettingResponse struct {
-	Key         string             `json:"key"`
-	Value       json.RawMessage    `json:"value"`
-	Description pgtype.Text        `json:"description"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	Key         string      `json:"key"`
+	Value       interface{} `json:"value"`
+	Description string      `json:"description"`
+	CreatedAt   string      `json:"created_at"`
+	UpdatedAt   string      `json:"updated_at"`
 }
 
 func mapSystemSettingResponse(s queries.SystemSetting) SystemSettingResponse {
+	var val interface{}
+	_ = json.Unmarshal(s.Value, &val)
+	var createdStr, updatedStr string
+	if s.CreatedAt.Valid {
+		createdStr = s.CreatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
+	if s.UpdatedAt.Valid {
+		updatedStr = s.UpdatedAt.Time.Format("2006-01-02T15:04:05Z07:00")
+	}
 	return SystemSettingResponse{
 		Key:         s.Key,
-		Value:       json.RawMessage(s.Value),
-		Description: s.Description,
-		CreatedAt:   s.CreatedAt,
-		UpdatedAt:   s.UpdatedAt,
+		Value:       val,
+		Description: s.Description.String,
+		CreatedAt:   createdStr,
+		UpdatedAt:   updatedStr,
 	}
 }
 
@@ -84,8 +93,8 @@ func (h *Handler) GetSystemSetting(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateSystemSettingRequest struct {
-	Value       json.RawMessage `json:"value" validate:"required"`
-	Description *string         `json:"description"`
+	Value       interface{} `json:"value" validate:"required"`
+	Description *string     `json:"description"`
 }
 
 // UpdateSystemSetting godoc
@@ -114,10 +123,11 @@ func (h *Handler) UpdateSystemSetting(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(req.Value) == 0 || string(req.Value) == "null" {
+	if req.Value == nil {
 		h.u.RespondError(w, http.StatusBadRequest, "Value is required")
 		return
 	}
+	valBytes, _ := json.Marshal(req.Value)
 
 	var desc pgtype.Text
 	if req.Description != nil {
@@ -128,7 +138,7 @@ func (h *Handler) UpdateSystemSetting(w http.ResponseWriter, r *http.Request) {
 
 	setting, err := h.q.UpdateSystemSetting(r.Context(), queries.UpdateSystemSettingParams{
 		Key:         key,
-		Value:       req.Value,
+		Value:       valBytes,
 		Description: desc,
 	})
 	if err != nil {

@@ -381,9 +381,9 @@ func (h *Handler) DeleteElectionGroup(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpsertPartyElectionGroupStatsRequest struct {
-	PartyID               int64           `json:"party_id"`
-	PollingAgentsCoverage json.RawMessage `json:"polling_agents_coverage"`
-	ElectionsContesting   int32           `json:"elections_contesting"`
+	PartyID               int64       `json:"party_id"`
+	PollingAgentsCoverage interface{} `json:"polling_agents_coverage"`
+	ElectionsContesting   int32       `json:"elections_contesting"`
 }
 
 // UpsertPartyElectionGroupStats godoc
@@ -417,7 +417,8 @@ func (h *Handler) UpsertPartyElectionGroupStats(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), int16(req.PartyID), electionGroupID, req.PollingAgentsCoverage, req.ElectionsContesting)
+	coverageBytes, _ := json.Marshal(req.PollingAgentsCoverage)
+	stats, err := h.service.UpsertPartyElectionGroupStats(r.Context(), int16(req.PartyID), electionGroupID, coverageBytes, req.ElectionsContesting)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to upsert party election group stats: "+err.Error())
 		return
