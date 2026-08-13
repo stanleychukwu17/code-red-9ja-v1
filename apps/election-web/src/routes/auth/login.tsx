@@ -50,8 +50,6 @@ export const Route = createFileRoute("/auth/login")({
       description: "Log in to your Free9ja Elections account",
     }),
 
-
-
   component: LoginComponent,
 
   errorComponent: ({ error }) => (
@@ -62,17 +60,17 @@ export const Route = createFileRoute("/auth/login")({
 function LoginComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
+  const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
+
   const { data: countriesRes } = useQuery({
     queryKey: ["countries"],
     queryFn: () => getAllCountries() as Promise<countriesType>,
     staleTime: Infinity,
   });
-  const countries = (
-    countriesRes?.success ? countriesRes.data.countries : []
-  ) as { id: number; name: string; iso2: string; phonecode: string }[];
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
-  const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
+
+  const countries = (countriesRes?.success ? countriesRes.data.countries : []) as { id: number; name: string; iso2: string; phonecode: string }[];
 
   const { control, handleSubmit, setValue, formState: { errors, isValid, isSubmitting }, } = useForm({
     mode: "onChange",
