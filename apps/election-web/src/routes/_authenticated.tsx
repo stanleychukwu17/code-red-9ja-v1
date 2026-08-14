@@ -18,7 +18,6 @@ import { updateAuthState } from "@/redux/slice/authSlice";
 import {
   logoutUser,
   checkIfRefreshTokenInCookie,
-  getUserDetailsCookie,
 } from "#/lib/server/auth/auth";
 import { APP_URL } from "#/lib/config";
 
@@ -66,8 +65,7 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
 
 function AuthenticatedRoutes() {
   const [mounted, setMounted] = useState(false);
-  const { userDetails, sitePreference: initialSitePreference } =
-    Route.useRouteContext();
+  const { userDetails, sitePreference: initialSitePreference } = Route.useRouteContext();
   const dispatch = useAppDispatch();
   const reduxSitePreference = useAppSelector((state) => state.site);
 
@@ -91,6 +89,8 @@ function AuthenticatedRoutes() {
     dispatch(updateAuthState({ user: null }));
   };
 
+  // This logic persists the sidebar's expanded/collapsed state to Redux (and subsequently cookies)
+  // so that the user's preference is retained across page reloads.
   const handleSidebarStateChange = (sideBarState: "expanded" | "collapsed") => {
     dispatch(updateSiteState({ sideBarState }));
   };

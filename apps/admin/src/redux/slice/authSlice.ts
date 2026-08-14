@@ -17,18 +17,16 @@ export interface AuthState {
 
 const initialState: AuthState = {
   user: null,
-  userHydrated: false 
+  userHydrated: false
 };
 
 export const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-
     updateAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
       Object.assign(state, action.payload); // merges the current state with the received action.payload
     },
-
   },
 });
 

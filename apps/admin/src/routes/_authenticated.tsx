@@ -126,6 +126,8 @@ function AuthenticatedRoutes() {
     dispatch(updateAuthState({ user: null }));
   };
 
+  // This logic persists the sidebar's expanded/collapsed state to Redux (and subsequently cookies)
+  // so that the user's preference is retained across page reloads.
   const handleSidebarStateChange = (sideBarState: "expanded" | "collapsed") => {
     dispatch(updateSiteState({ sideBarState }));
   };

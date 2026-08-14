@@ -1,11 +1,7 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "#/hooks/useAuth";
-import {
-  OnboardingFlow,
-  ONBOARDING_STEPS,
-  type OnboardingStep,
-} from "./_components/-onboarding-flow";
+import { OnboardingFlow, ONBOARDING_STEPS, type OnboardingStep } from "./_components/-onboarding-flow";
 import { APP_URL } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
 
