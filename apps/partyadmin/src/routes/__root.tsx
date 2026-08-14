@@ -24,7 +24,7 @@ export const Route = createRootRoute({
   beforeLoad: async () => {
     const userDetails = await getUserDetailsCookie();
     const sitePreference = await getSitePreference();
-    return { userDetails, sitePreference };
+    return { userDetails, sitePreference }; // <-- Anything returned here enters the route context
   },
   head: () => ({
     meta: [
