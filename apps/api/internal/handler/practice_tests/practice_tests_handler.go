@@ -198,7 +198,10 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 		electionGroupID = pgtype.Int8{Int64: req.ElectionGroupID, Valid: true}
 	}
 
-	// Evaluate eligibility and calculate payout
+	// 1. Process auto-accept for any pending party applications first so assignment exists
+	h.processAutoAccept(r.Context(), userID)
+
+	// 2. Evaluate eligibility and calculate payout
 	var payoutEarnedKobo int64 = 0
 	var beenPaid bool = false
 	if req.ElectionGroupID != 0 && h.earnings != nil {
@@ -265,102 +268,70 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 		}()
 	}
 
-	// Background task for auto-accepting party applications across all applied election groups
-	go func(uid int64, testID int64, finalScore float64) {
-		ctx := context.Background()
-
-		// 1. Fetch all pending applications for this user
-		apps, err := h.q.GetPendingApplicationsForUserAutoAccept(ctx, uid)
-		if err != nil {
-			slog.Warn("⚠️ [AutoAccept] Could not fetch pending applications for user", "userID", uid, "error", err)
-			return
-		}
-
-		slog.Info("🔍 [AutoAccept] Checking pending applications for user", "userID", uid, "pendingAppsCount", len(apps))
-
-		for _, app := range apps {
-			// 2. Parse the auto_accept_applications JSONB
-			var autoAcceptConfig map[string]bool
-			if len(app.AutoAcceptApplications) > 0 {
-				if err := json.Unmarshal(app.AutoAcceptApplications, &autoAcceptConfig); err != nil {
-					slog.Error("Failed to parse auto_accept_applications config", "error", err, "partyID", app.PartyID)
-					continue
-				}
-			}
-
-			// 3. Check if auto-accept is enabled for this role
-			roleKey := ""
-			switch app.Role {
-			case "polling_agent", "pollingagent":
-				roleKey = "pollingAgent"
-			case "ward-election-supervisor", "ward_election_supervisor":
-				roleKey = "wardElectionSupervisor"
-			case "lga-election-supervisor", "lga_election_supervisor":
-				roleKey = "lgaElectionSupervisor"
-			case "state-election-supervisor", "state_election_supervisor":
-				roleKey = "stateElectionSupervisor"
-			}
-
-			isAutoAcceptEnabled := roleKey != "" && autoAcceptConfig[roleKey]
-			slog.Info("📋 [AutoAccept] Evaluated application",
-				"applicationID", app.ID,
-				"partyID", app.PartyID,
-				"role", app.Role,
-				"roleKey", roleKey,
-				"autoAcceptEnabled", isAutoAcceptEnabled,
-			)
-
-			if isAutoAcceptEnabled {
-				slog.Info("🚀 [AutoAccept] Auto-accepting party application", "applicationID", app.ID, "userID", uid, "role", app.Role, "electionGroupID", app.ElectionGroupID)
-
-				_, err = h.partyApps.ApproveApplication(ctx, partyapplications.ApproveApplicationInput{
-					ApplicationID: app.ID,
-					PollingUnitID: app.PollingUnitID.Int32,
-					RoleType:      app.Role,
-					StateID:       app.StateID.Int16,
-					LgaID:         app.LgaID.Int32,
-					WardID:        app.WardID.Int32,
-					AssignedBy:    uid,
-				})
-				if err != nil {
-					slog.Error("❌ [AutoAccept] Failed to auto-accept party application", "error", err, "applicationID", app.ID)
-					continue
-				}
-
-				slog.Info("🎉 [AutoAccept] Party application approved successfully", "applicationID", app.ID)
-
-				// If polling agent, immediately process practice test earnings & stats
-				if h.earnings != nil && (app.Role == "polling_agent" || app.Role == "pollingagent") {
-					newAssignmentID, assignErr := h.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
-						UserID:          uid,
-						ElectionGroupID: app.ElectionGroupID,
-					})
-					if assignErr != nil {
-						slog.Warn("⚠️ [AutoAccept] Could not find new assignment for earnings processing",
-							"userID", uid, "electionGroupID", app.ElectionGroupID, "error", assignErr)
-					} else {
-						h.earnings.ProcessPracticeTestEarnings(ctx, newAssignmentID, testID, finalScore)
-						slog.Info("💰 [AutoAccept] Readiness earnings processed for new assignment",
-							"assignmentID", newAssignmentID, "readinessPct", finalScore)
-
-						if app.PollingUnitID.Valid && app.PollingUnitID.Int32 > 0 {
-							if refreshErr := h.q.RefreshSingleElectionGroupPollingUnitStats(ctx, queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-								ElectionGroupID: app.ElectionGroupID,
-								PollingUnitID:   app.PollingUnitID.Int32,
-							}); refreshErr != nil {
-								slog.Warn("⚠️ [AutoAccept] Failed to refresh EGPU stats",
-									"electionGroupID", app.ElectionGroupID, "pollingUnitID", app.PollingUnitID.Int32, "error", refreshErr)
-							}
-						}
-					}
-				}
-			}
-		}
-	}(userID, test.ID, req.FinalScore)
-
 	h.u.RespondSuccess(w, http.StatusCreated, "Practice test submitted", map[string]interface{}{
 		"practice_test": mapPracticeTest(test),
 	})
+}
+
+// processAutoAccept checks and auto-approves any pending applications for the user
+func (h *Handler) processAutoAccept(ctx context.Context, uid int64) {
+	apps, err := h.q.GetPendingApplicationsForUserAutoAccept(ctx, uid)
+	if err != nil {
+		slog.Warn("⚠️ [AutoAccept] Could not fetch pending applications for user", "userID", uid, "error", err)
+		return
+	}
+
+	slog.Info("🔍 [AutoAccept] Checking pending applications for user", "userID", uid, "pendingAppsCount", len(apps))
+
+	for _, app := range apps {
+		var autoAcceptConfig map[string]bool
+		if len(app.AutoAcceptApplications) > 0 {
+			if err := json.Unmarshal(app.AutoAcceptApplications, &autoAcceptConfig); err != nil {
+				slog.Error("Failed to parse auto_accept_applications config", "error", err, "partyID", app.PartyID)
+				continue
+			}
+		}
+
+		role := strings.ReplaceAll(app.Role, "-", "_")
+		switch role {
+		case "pollingagent":
+			role = "polling_agent"
+		case "ward_supervisor":
+			role = "ward_election_supervisor"
+		case "lga_supervisor":
+			role = "lga_election_supervisor"
+		case "state_supervisor":
+			role = "state_election_supervisor"
+		}
+
+		isAutoAcceptEnabled := autoAcceptConfig[role] || autoAcceptConfig[app.Role]
+		if isAutoAcceptEnabled {
+			slog.Info("🚀 [AutoAccept] Auto-accepting party application", "applicationID", app.ID, "userID", uid, "role", app.Role, "electionGroupID", app.ElectionGroupID)
+
+			_, err = h.partyApps.ApproveApplication(ctx, partyapplications.ApproveApplicationInput{
+				ApplicationID: app.ID,
+				PollingUnitID: app.PollingUnitID.Int32,
+				RoleType:      app.Role,
+				StateID:       app.StateID.Int16,
+				LgaID:         app.LgaID.Int32,
+				WardID:        app.WardID.Int32,
+				AssignedBy:    uid,
+			})
+			if err != nil {
+				slog.Error("❌ [AutoAccept] Failed to auto-accept party application", "error", err, "applicationID", app.ID)
+				continue
+			}
+
+			slog.Info("🎉 [AutoAccept] Party application approved successfully", "applicationID", app.ID)
+
+			if app.PollingUnitID.Valid && app.PollingUnitID.Int32 > 0 {
+				_ = h.q.RefreshSingleElectionGroupPollingUnitStats(ctx, queries.RefreshSingleElectionGroupPollingUnitStatsParams{
+					ElectionGroupID: app.ElectionGroupID,
+					PollingUnitID:   app.PollingUnitID.Int32,
+				})
+			}
+		}
+	}
 }
 
 // ─── GET /api/v1/practice-tests/payout-preview ───────────────────────────────
@@ -585,26 +556,25 @@ func resolveBasePaymentKobo(rawJSON []byte, roleType string) int64 {
 	if err := json.Unmarshal(rawJSON, &alloc); err != nil {
 		return 0
 	}
-	cfg, ok := alloc[roleType]
+
+	role := strings.ReplaceAll(roleType, "-", "_")
+	switch role {
+	case "ward_supervisor":
+		role = "ward_election_supervisor"
+	case "lga_supervisor":
+		role = "lga_election_supervisor"
+	case "state_supervisor":
+		role = "state_election_supervisor"
+	}
+
+	cfg, ok := alloc[role]
 	if !ok {
-		camel := roleToCamelCase(roleType)
-		cfg, ok = alloc[camel]
+		cfg, ok = alloc[roleType]
 	}
 	if !ok {
 		return 0
 	}
 	return cfg.Default
-}
-
-// roleToCamelCase converts "polling_agent" → "pollingAgent"
-func roleToCamelCase(role string) string {
-	parts := strings.Split(role, "_")
-	for i := 1; i < len(parts); i++ {
-		if len(parts[i]) > 0 {
-			parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
-		}
-	}
-	return strings.Join(parts, "")
 }
 
 // ─── GET /api/v1/practice-tests ──────────────────────────────────────────────

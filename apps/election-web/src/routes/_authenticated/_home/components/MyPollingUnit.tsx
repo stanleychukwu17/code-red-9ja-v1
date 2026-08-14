@@ -2,7 +2,7 @@ import { Button } from "@repo/ui/components/button";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 import PlusIcon from "@repo/ui/icons/plus-icon";
 import { useNavigate } from "@tanstack/react-router";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import LockedIcon from "@repo/ui/icons/locked-icon";
 import UnLockedIcon from "@repo/ui/icons/unlocked-icon";
 import { cn } from "@repo/ui/lib/utils";
@@ -18,10 +18,14 @@ const LockIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export function MyPollingUnit({ onPracticeClick }: { onPracticeClick?: () => void }) {
+export function MyPollingUnit({
+  onPracticeClick,
+}: {
+  onPracticeClick?: () => void;
+}) {
   const navigate = useNavigate();
   const { selectedAssignment, isLive, setIsLive, isLock, setIsLocked } =
-    useAuth();
+    useAppContext();
 
   const interceptClick = (e: React.MouseEvent, action: () => void) => {
     if (onPracticeClick) {
@@ -48,7 +52,9 @@ export function MyPollingUnit({ onPracticeClick }: { onPracticeClick?: () => voi
           </h3>
         </div>
         <Button
-          onClick={(e) => interceptClick(e, () => navigate({ to: "/update-polling-unit" }))}
+          onClick={(e) =>
+            interceptClick(e, () => navigate({ to: "/update-polling-unit" }))
+          }
           variant="secondary"
           size="sm"
           className="rounded-full px-3"

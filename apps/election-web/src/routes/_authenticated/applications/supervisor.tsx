@@ -1,6 +1,6 @@
 import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import {
   getApplications,
   getLGAs,
@@ -37,7 +37,7 @@ export type SupervisorRoleType =
 
 function SupervisorPage() {
   const navigate = useNavigate();
-  const { user, party } = useAuth();
+  const { user, party } = useAppContext();
 
   const [step, setStep] = useQueryState(
     "step",

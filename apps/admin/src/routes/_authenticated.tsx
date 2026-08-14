@@ -67,16 +67,16 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "elections",
     label: "Elections",
-    icon: <CubeIcon className={ICON_CLASS} />,
-    selectedIcon: <CubeSolidIcon className={SELECTED_ICON_CLASS} />,
+    icon: <CalendarIcon className={ICON_CLASS} />,
+    selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.elections,
   },
   {
     id: "bodies",
     label: "Bodies",
-    icon: <CalendarIcon className={ICON_CLASS} />,
-    selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.bodies,
+    icon: <CubeIcon className={ICON_CLASS} />,
+    selectedIcon: <CubeSolidIcon className={SELECTED_ICON_CLASS} />,
   },
   {
     id: "users",

@@ -394,7 +394,7 @@ export function WalletTransactions({
       ) : (
         <div>
           {transactions.map((tx) => (
-            <TransactionRow key={tx.id} transaction={tx} />
+            <TransactionCard key={tx.id} transaction={tx} />
           ))}
         </div>
       )}
@@ -402,7 +402,7 @@ export function WalletTransactions({
   );
 }
 
-export function TransactionRow({
+export function TransactionCard({
   transaction,
 }: {
   transaction: WalletTransaction;
@@ -448,7 +448,7 @@ export function TransactionRow({
     : "—";
 
   return (
-    <div className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer">
+    <div className="h-16 flex items-center px-0 md:px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer">
       <div
         className={cn(
           "size-11 rounded-full flex items-center justify-center shrink-0",
@@ -461,9 +461,9 @@ export function TransactionRow({
           <ArrowHandleIcon className="size-4 -rotate-90" />
         )}
       </div>
-      <div className="space-y-1 w-full">
+      <div className="space-y-1 w-full text-sm md:text-base">
         <div className="flex items-center gap-2 w-full">
-          <p className="w-full text-c-90">{title}</p>
+          <p className="w-full text-c-90 line-clamp-1">{title}</p>
           <p
             className={cn(
               "shrink-0 font-medium",

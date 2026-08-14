@@ -5318,6 +5318,24 @@ func (_m *Querier) IncrementAssignmentResultCount(ctx context.Context, id int64)
 	return r0
 }
 
+// IncrementAssignmentIntervalUpdates provides a mock function with given fields: ctx, arg
+func (_m *Querier) IncrementAssignmentIntervalUpdates(ctx context.Context, arg queries.IncrementAssignmentIntervalUpdatesParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IncrementAssignmentIntervalUpdates")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.IncrementAssignmentIntervalUpdatesParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
 // IncrementElectionGroupMetrics provides a mock function with given fields: ctx, arg
 func (_m *Querier) IncrementElectionGroupMetrics(ctx context.Context, arg queries.IncrementElectionGroupMetricsParams) error {
 	ret := _m.Called(ctx, arg)

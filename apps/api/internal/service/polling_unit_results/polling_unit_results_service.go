@@ -22,10 +22,19 @@ type Service struct {
 	queries     *queries.Queries
 	pool        *pgxpool.Pool
 	distributor worker.TaskDistributor
+	earningsSvc earningsService
+}
+
+type earningsService interface {
+	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
 func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor) *Service {
 	return &Service{queries: q, pool: pool, distributor: distributor}
+}
+
+func (s *Service) SetEarningsService(es earningsService) {
+	s.earningsSvc = es
 }
 
 // CandidateResult is the per-candidate entry stored in the JSONB column.
@@ -279,6 +288,10 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitResult{}, err
+	}
+
+	if input.AssignmentID != nil && s.earningsSvc != nil {
+		go s.earningsSvc.ProcessTaskEarnings(context.Background(), *input.AssignmentID, "results")
 	}
 
 	// Enqueue the final result calculation task after the DB transaction commits.

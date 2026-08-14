@@ -93,6 +93,27 @@ func (q *Queries) CreatePollingUnitUpdate(ctx context.Context, arg CreatePolling
 	return i, err
 }
 
+const incrementAssignmentIntervalUpdates = `-- name: IncrementAssignmentIntervalUpdates :exec
+UPDATE polling_unit_assignments
+SET interval_updates = jsonb_set(
+  COALESCE(interval_updates, '{}'::jsonb),
+  ARRAY[$1::text],
+  (COALESCE((COALESCE(interval_updates, '{}'::jsonb)->>$1::text)::int, 0) + 1)::text::jsonb,
+  true
+)
+WHERE id = $2::bigint
+`
+
+type IncrementAssignmentIntervalUpdatesParams struct {
+	IntervalKey string `json:"interval_key"`
+	ID          int64  `json:"id"`
+}
+
+func (q *Queries) IncrementAssignmentIntervalUpdates(ctx context.Context, arg IncrementAssignmentIntervalUpdatesParams) error {
+	_, err := q.db.Exec(ctx, incrementAssignmentIntervalUpdates, arg.IntervalKey, arg.ID)
+	return err
+}
+
 const incrementElectionGroupMetrics = `-- name: IncrementElectionGroupMetrics :exec
 UPDATE election_groups
 SET 

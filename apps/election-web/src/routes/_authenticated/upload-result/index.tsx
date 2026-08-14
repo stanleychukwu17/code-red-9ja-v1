@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { PageHeader } from "#/components/Headers";
 import { Button } from "@repo/ui/components/button";
 import { StickyFooter } from "#/components/Footers";
@@ -20,6 +20,8 @@ import TwinkleLittleStarIcon from "@repo/ui/icons/twinkle-little-star-icon";
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
+
+import { getPotentialPayout } from "#/lib/server/practice_tests";
 
 export const Route = createFileRoute("/_authenticated/upload-result/")({
   component: UploadResultFlow,
@@ -51,8 +53,31 @@ function BackgroundDesign() {
 function UploadResultFlow() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
-  const { party, selectedElectionGroup, selectedAssignment, pollingUnitId } =
-    useAuth();
+  const {
+    user,
+    selectedElectionGroup,
+    pollingUnitId,
+    party,
+    selectedAssignment,
+  } = useAppContext();
+
+  const assignmentId = selectedAssignment?.id;
+
+  const { data: payoutRes } = useQuery({
+    queryKey: ["potentialPayout", assignmentId, "results"],
+    queryFn: async () => {
+      if (!assignmentId) return null;
+      return getPotentialPayout({
+        data: {
+          assignmentId: Number(assignmentId),
+          taskType: "results",
+        },
+      });
+    },
+    enabled: !!assignmentId,
+  });
+
+  const payoutData = payoutRes?.success ? payoutRes?.data?.payout : undefined;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [currentElectionIndex, setCurrentElectionIndex] = useState(0);
@@ -255,7 +280,11 @@ function UploadResultFlow() {
               <RewardSumCard
                 label="Reward for this upload"
                 subtext="Potential pay so far"
-                value="+₦2,500"
+                value={
+                  payoutData?.potential_payout_kobo !== undefined
+                    ? `+₦${(payoutData.potential_payout_kobo / 100).toLocaleString()}`
+                    : "+₦0"
+                }
                 subValue="₦3,829.00 total"
                 variant="purple"
                 icon={<FancyMoneyBagIcon className="size-6" />}

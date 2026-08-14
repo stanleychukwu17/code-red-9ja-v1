@@ -76,7 +76,8 @@ SELECT
   a.election_started_at,
   a.election_started_video_url,
   a.election_ended_at,
-  a.election_ended_video_url
+  a.election_ended_video_url,
+  a.live_voters_referred_count
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -132,4 +133,11 @@ UPDATE polling_unit_assignments
 SET earned_amount_kobo = earned_amount_kobo + sqlc.arg(earned_delta_kobo)::bigint,
     updated_at = NOW()
 WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
+RETURNING *;
+
+-- name: IncrementAssignmentLiveVotersReferredCount :one
+UPDATE polling_unit_assignments
+SET live_voters_referred_count = live_voters_referred_count + 1,
+    updated_at = NOW()
+WHERE id = $1
 RETURNING *;

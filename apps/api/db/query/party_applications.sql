@@ -101,9 +101,6 @@ WHERE
   (sqlc.arg(election_group_id)::bigint = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
   (sqlc.arg(state_id)::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = sqlc.arg(state_id)) AND
-  (sqlc.arg(senatorial_district_id)::integer = 0 OR pu.senatorial_district_id = sqlc.arg(senatorial_district_id)) AND
-  (sqlc.arg(federal_constituency_id)::integer = 0 OR pu.federal_constituency_id = sqlc.arg(federal_constituency_id)) AND
-  (sqlc.arg(state_assembly_constituency_id)::integer = 0 OR pu.state_constituency_id = sqlc.arg(state_assembly_constituency_id)) AND
   (sqlc.arg(lga_id)::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = sqlc.arg(lga_id)) AND
   (sqlc.arg(ward_id)::integer = 0 OR COALESCE(pa.ward_id, u.current_ward, pu.ward_id) = sqlc.arg(ward_id)) AND
   (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))

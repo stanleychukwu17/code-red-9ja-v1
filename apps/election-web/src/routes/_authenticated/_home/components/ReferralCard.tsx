@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
@@ -13,7 +13,7 @@ export function ReferralCard({
   onClick: () => void;
   onCopyClick?: () => void;
 }) {
-  const { party, user } = useAuth();
+  const { party, user } = useAppContext();
   const [_, copy] = useCopyToClipboard();
   const partyName = party?.shortName || party?.name || "Accord";
 

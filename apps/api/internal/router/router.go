@@ -146,6 +146,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
 
+	earningsService := earningsservice.NewService(q, pool)
+	pollingUnitAssignmentsService.SetEarningsService(earningsService)
+	pollingUnitUpdatesService.SetEarningsService(earningsService)
+	pollingUnitResultsService.SetEarningsService(earningsService)
+	electionsService.SetEarningsService(earningsService)
+
 	// Initialize the R2 service
 	var r2Svc *r2service.R2Service
 	var r2Err error
@@ -556,7 +562,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// practice tests routes
 		r.Post("/api/v1/practice-tests", practiceTestsHandler.SubmitPracticeTest)
 		r.Get("/api/v1/practice-tests", practiceTestsHandler.ListPracticeTests)
-		r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
+		// DEPRECATED: r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
 	})
 
 	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin
@@ -582,6 +588,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// Admins/party_admins: trigger calculation, list, approve, mark paid
 		r.Post("/api/v1/agent-earnings/calculate/{assignment_id}", agentEarningsHandler.CalculateEarnings)
+		r.Get("/api/v1/agent-earnings/potential-payout", agentEarningsHandler.GetPotentialPayout)
+		r.Get("/api/v1/agent-earnings/estimate-payout", agentEarningsHandler.EstimatePotentialPayout)
+		r.Get("/api/v1/agent-earnings/allocations", agentEarningsHandler.GetAllocations)
 		r.Get("/api/v1/agent-earnings", agentEarningsHandler.ListEarnings)
 		r.Get("/api/v1/agent-earnings/{id}", agentEarningsHandler.GetEarnings)
 		r.Get("/api/v1/agent-earnings/assignment/{assignment_id}", agentEarningsHandler.GetEarningsByAssignment)

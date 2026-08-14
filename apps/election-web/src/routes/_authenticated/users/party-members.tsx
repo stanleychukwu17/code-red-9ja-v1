@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import {
   Layout,
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/users/party-members")({
 
 function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const {
     data,
@@ -69,7 +70,12 @@ function RouteComponent() {
 
   return (
     <Layout>
-      <PageHeader title="Users" activeTab="party-members" tabs={USERS_TABS} />
+      <PageHeader
+        title="Users"
+        activeTab="party-members"
+        tabs={USERS_TABS}
+        onBackClick={() => navigate({ to: "/" })}
+      />
       <PageSearchLayer
         rightComponent={
           <>
@@ -113,7 +119,6 @@ function RouteComponent() {
           )}
         </>
       )}
-
     </Layout>
   );
 }

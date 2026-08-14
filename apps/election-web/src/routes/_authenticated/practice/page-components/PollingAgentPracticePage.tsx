@@ -1,6 +1,6 @@
 import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -58,8 +58,9 @@ import { showFeedbackToast } from "./utils";
 import {
   submitPracticeTest,
   listPracticeTests,
-  getPracticeTestPayoutPreview,
-  type PayoutPreviewResponse,
+  getPotentialPayout,
+  getEstimatePayout,
+  type PotentialPayoutResponse,
 } from "#/lib/server/practice_tests";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
@@ -67,7 +68,7 @@ import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { party, user } = useAuth();
+  const { party, user } = useAppContext();
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
@@ -133,7 +134,8 @@ export function PollingAgentPracticePage() {
 
   const { mutate: submitTest } = useMutation({
     mutationFn: submitPracticeTest,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("SUBMITTED FORM RESPONSE:", data);
       queryClient.invalidateQueries({ queryKey: ["practiceTests"] });
       setCurrentPage("final");
     },
@@ -155,10 +157,10 @@ export function PollingAgentPracticePage() {
           ? testStats.reduce((acc, s) => acc + s.score, 0) / testStats.length
           : 0;
 
-      submitTest({
+      const submissionPayload = {
         data: {
           electionGroupId: selectedElectionGroupId ?? undefined,
-          role: "polling_agent",
+          role: "polling_agent" as const,
           finalScore: Number(finalScoreVal.toFixed(2)),
           taskStats: testStats.map((s) => ({
             task_id: s.taskId,
@@ -167,7 +169,10 @@ export function PollingAgentPracticePage() {
             completed: s.completed,
           })),
         },
-      });
+      };
+
+      console.log("SUBMITTED:", submissionPayload);
+      submitTest(submissionPayload);
     }
   };
 
@@ -213,44 +218,69 @@ export function PollingAgentPracticePage() {
     setCurrentFailedAttempts((prev) => prev + 1);
   };
 
-  // Fetch payout preview once an election group is selected
-  const { data: payoutPreviewRes } = useQuery<PayoutPreviewResponse | null>({
-    queryKey: ["payoutPreview", selectedElectionGroupId],
+  // Fetch assignment to get assignment ID for potential payout calculation
+  const { data: assignments = [] } = useQuery({
+    queryKey: ["pollingAgentAssignments", user?.id, selectedElectionGroupId],
+    enabled: !!user?.id && !!selectedElectionGroupId,
     queryFn: async () => {
-      if (!selectedElectionGroupId) return null;
-      return getPracticeTestPayoutPreview({
+      const response = await getPollingUnitAssignments({
         data: {
-          electionGroupId: selectedElectionGroupId,
-          electionDate: selectedElectionDate ?? undefined,
-          partyId: party?.id ?? undefined,
-          role: "polling_agent",
+          user_id: user?.id,
+          election_group_id: selectedElectionGroupId ?? undefined,
         },
       });
+      if (!response?.success || !response.data?.assignments) return [];
+      return response.data.assignments;
     },
-    enabled: !!selectedElectionGroupId,
   });
 
-  const previewData = payoutPreviewRes?.success
-    ? payoutPreviewRes?.data
+  const assignmentId = assignments.length > 0 ? assignments[0].id : null;
+
+  // Fetch potential payout using /api/v1/agent-earnings/potential-payout if assignment exists,
+  // otherwise fallback to /api/v1/agent-earnings/estimate-payout
+  const { data: potentialPayoutRes } = useQuery<PotentialPayoutResponse | null>(
+    {
+      queryKey: [
+        "potentialPayout",
+        assignmentId ?? "no-assignment",
+        selectedElectionGroupId,
+        party?.id,
+        "readiness",
+      ],
+      queryFn: async () => {
+        if (assignmentId) {
+          return getPotentialPayout({
+            data: {
+              assignmentId,
+              taskType: "readiness",
+            },
+          });
+        }
+        return getEstimatePayout({
+          data: {
+            taskType: "readiness",
+            role: "polling_agent",
+            electionGroupId: selectedElectionGroupId ?? undefined,
+            partyId: party?.id ?? undefined,
+          },
+        });
+      },
+    },
+  );
+
+  const payoutData = potentialPayoutRes?.success
+    ? potentialPayoutRes?.data?.payout
     : undefined;
 
   // Convert kobo fields from backend to naira for frontend display
-  const potentialTestPayout: number = previewData
-    ? (previewData.potential_test_payout_kobo ?? 0) / 100
-    : 0;
-  const potentialWindowPayout: number = previewData
-    ? (previewData.potential_window_payout_kobo ?? 0) / 100
-    : 0;
-  const readinessBudget: number = previewData
-    ? (previewData.readiness_budget_kobo ?? 0) / 100
+  const potentialTestPayout: number = payoutData
+    ? (payoutData.potential_payout_kobo ?? 0) / 100
     : 0;
 
   const currentScore = testStats.reduce((acc, stat) => acc + stat.score, 0);
   const finalScore = testStats.length > 0 ? currentScore / testStats.length : 0;
   // Live preview: percentage-based score (0-100); divided by 10 for display only
   const currentTaskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
-
-
 
   return (
     <div className="w-full h-full">
@@ -396,7 +426,7 @@ export function PollingAgentPracticePage() {
             setSelectedElectionDate(null);
             setTestStats([]);
             setTaskId(1);
-            setCurrentPage("select-election");
+            setCurrentPage("welcome");
           }}
           onGoToHome={() => {
             setCurrentFailedAttempts(0);
@@ -421,7 +451,7 @@ export function WelcomePage({
   practiceTestNumber: number;
   onNextClick: () => void;
 }) {
-  const { party } = useAuth();
+  const { party } = useAppContext();
   const navigate = useNavigate();
 
   return (
@@ -573,7 +603,7 @@ export function ApplicationAcceptedPage({
   onGoToHome: () => void;
   electionGroupId: number | null;
 }) {
-  const { party, user } = useAuth();
+  const { party, user } = useAppContext();
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["pollingAgentAssignments", user?.id, electionGroupId],
@@ -787,7 +817,7 @@ export function TaskCompletedPage({
           <div className="absolute top-5 right-5 size-10 bg-[#3A556A] rounded-full blur-[32px] opacity-50 -z-10" />
         </div>
 
-        <p className="text-center text-lg text-c-50">TASK 1 SCORE</p>
+        <p className="text-center text-lg text-c-50">TASK SCORE</p>
         <TaskScore score={score} maxScore={maxScore} />
         {score !== maxScore && (
           <p
@@ -807,7 +837,9 @@ export function TaskCompletedPage({
 
         <div className="px-5 py-3.5 rounded-xl bg-c-5 flex items-center">
           <p className="font-medium text-c-50 w-full">Cummulative Score:</p>
-          <p className="font-bold text-c-80">2.5/10</p>
+          <p className="font-bold text-c-80">
+            {score}/{maxScore}
+          </p>
         </div>
 
         <div className="space-y-2 mt-5">
@@ -864,7 +896,11 @@ export function FinalScorePage({
   if (testsRes?.success && testsRes.data?.practice_tests?.length > 0) {
     try {
       const record = testsRes.data.practice_tests[0];
-      const attempts = JSON.parse(record.test_attempts || "[]");
+      const rawAttempts = record.test_attempts;
+      const attempts =
+        typeof rawAttempts === "string"
+          ? JSON.parse(rawAttempts)
+          : (rawAttempts ?? []);
       practiceHistory = Array.isArray(attempts) ? attempts : [];
     } catch (e) {
       console.error("Failed to parse test attempts", e);
@@ -1169,7 +1205,7 @@ export function DashboardPage({
   failedAttemptCount: number;
 }) {
   const navigate = useNavigate();
-  const { selectedElectionGroup } = useAuth();
+  const { selectedElectionGroup } = useAppContext();
 
   const [activeTab, setActiveTab] = useState<
     "Earnings" | "Contact" | "Uploads"

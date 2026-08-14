@@ -12,9 +12,6 @@ export const getApplications = createServerFn({ method: "GET" })
             cursor?: number;
             electionGroupId?: number;
             stateId?: number;
-            senatorialDistrictId?: number;
-            federalConstituencyId?: number;
-            stateAssemblyConstituencyId?: number;
             lgaId?: number;
             wardId?: number;
           }
@@ -34,15 +31,6 @@ export const getApplications = createServerFn({ method: "GET" })
       if (data?.electionGroupId)
         params.append("election_group_id", String(data.electionGroupId));
       if (data?.stateId) params.append("state_id", String(data.stateId));
-      if (data?.senatorialDistrictId)
-        params.append("senatorial_district_id", String(data.senatorialDistrictId));
-      if (data?.federalConstituencyId)
-        params.append("federal_constituency_id", String(data.federalConstituencyId));
-      if (data?.stateAssemblyConstituencyId)
-        params.append(
-          "state_assembly_constituency_id",
-          String(data.stateAssemblyConstituencyId),
-        );
       if (data?.lgaId) params.append("lga_id", String(data.lgaId));
       if (data?.wardId) params.append("ward_id", String(data.wardId));
       const url = `${API_URL.partyApplications}?${params.toString()}`;

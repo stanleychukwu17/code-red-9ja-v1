@@ -6,7 +6,7 @@ import {
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
 import { Loader2 } from "lucide-react";
 
@@ -30,7 +30,7 @@ export function CandidatesLeaderboard({
     party,
     selectedSupervisorAssignment,
     isLock,
-  } = useAuth();
+  } = useAppContext();
 
   const interceptClick = (e: React.MouseEvent, action?: () => void) => {
     if (onPracticeClick) {

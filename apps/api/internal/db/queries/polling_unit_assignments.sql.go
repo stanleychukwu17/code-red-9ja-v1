@@ -234,6 +234,47 @@ func (q *Queries) GetPartyElectionGroupCoverageDistribution(ctx context.Context,
 	return items, nil
 }
 
+const incrementAssignmentLiveVotersReferredCount = `-- name: IncrementAssignmentLiveVotersReferredCount :one
+UPDATE polling_unit_assignments
+SET live_voters_referred_count = live_voters_referred_count + 1,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+`
+
+func (q *Queries) IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error) {
+	row := q.db.QueryRow(ctx, incrementAssignmentLiveVotersReferredCount, id)
+	var i PollingUnitAssignment
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PollingUnitID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.ElectionStartedAt,
+		&i.ElectionStartedVideoUrl,
+		&i.ElectionEndedAt,
+		&i.ElectionEndedVideoUrl,
+		&i.LastUpdateAt,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
+		&i.ResultsExpectedToSubmitCount,
+		&i.LiveVotersReferredCount,
+		&i.IntervalUpdates,
+		&i.ElectionPracticeTestReadinessPercentage,
+		&i.PotentialPaymentKobo,
+		&i.EarnedAmountKobo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listAssignments = `-- name: ListAssignments :many
 SELECT 
   a.id,
@@ -263,7 +304,8 @@ SELECT
   a.election_started_at,
   a.election_started_video_url,
   a.election_ended_at,
-  a.election_ended_video_url
+  a.election_ended_video_url,
+  a.live_voters_referred_count
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -315,6 +357,7 @@ type ListAssignmentsRow struct {
 	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
 	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
 	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
+	LiveVotersReferredCount int32              `json:"live_voters_referred_count"`
 }
 
 func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error) {
@@ -362,6 +405,7 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 			&i.ElectionStartedVideoUrl,
 			&i.ElectionEndedAt,
 			&i.ElectionEndedVideoUrl,
+			&i.LiveVotersReferredCount,
 		); err != nil {
 			return nil, err
 		}

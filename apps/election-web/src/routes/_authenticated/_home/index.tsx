@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { createFileRoute } from "@tanstack/react-router";
 import { GeneralPage } from "./page-components/GeneralPage";
 import { LGAElectionSupervisorPage } from "./page-components/LGAElectionSupervisorPage";
@@ -11,7 +11,7 @@ export const Route = createFileRoute("/_authenticated/_home/")({
 });
 
 function RouteComponent() {
-  const { selectedSupervisorAssignment, selectedAssignment } = useAuth();
+  const { selectedSupervisorAssignment, selectedAssignment } = useAppContext();
 
   if (selectedSupervisorAssignment) {
     if (selectedSupervisorAssignment.type === "state") {

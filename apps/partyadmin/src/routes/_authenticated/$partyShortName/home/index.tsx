@@ -46,7 +46,7 @@ import { toast } from "sonner";
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { SelectDateRange } from "@repo/ui/components/selects/date-range-select";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
-import { TransactionRow, type WalletTransaction } from "../wallet/index";
+import { TransactionCard, type WalletTransaction } from "../wallet/index";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
   head: () => getPageHeader({ title: "Readiness Dashboard" }),
@@ -250,9 +250,6 @@ function ReadinessComponent() {
             partyStats={resolvedStats}
             electionGroupId={selectedElectionGroup?.id}
             stateId={selectedStateId}
-            senatorialDistrictId={selectedDistrictId}
-            federalConstituencyId={selectedFederalConstituencyId}
-            stateAssemblyConstituencyId={selectedStateConstituencyId}
             lgaId={selectedLGAId}
             wardId={selectedWardId}
           />
@@ -660,18 +657,12 @@ function SubTabsSection({
   partyStats,
   electionGroupId,
   stateId,
-  senatorialDistrictId,
-  federalConstituencyId,
-  stateAssemblyConstituencyId,
   lgaId,
   wardId,
 }: {
   partyStats?: any;
   electionGroupId?: number;
   stateId?: number;
-  senatorialDistrictId?: number;
-  federalConstituencyId?: number;
-  stateAssemblyConstituencyId?: number;
   lgaId?: number;
   wardId?: number;
 }) {
@@ -708,9 +699,6 @@ function SubTabsSection({
             partyStats={partyStats}
             electionGroupId={electionGroupId}
             stateId={stateId}
-            senatorialDistrictId={senatorialDistrictId}
-            federalConstituencyId={federalConstituencyId}
-            stateAssemblyConstituencyId={stateAssemblyConstituencyId}
             lgaId={lgaId}
             wardId={wardId}
           />
@@ -749,18 +737,12 @@ function MainSubTabContent({
   partyStats,
   electionGroupId,
   stateId,
-  senatorialDistrictId,
-  federalConstituencyId,
-  stateAssemblyConstituencyId,
   lgaId,
   wardId,
 }: {
   partyStats?: any;
   electionGroupId?: number;
   stateId?: number;
-  senatorialDistrictId?: number;
-  federalConstituencyId?: number;
-  stateAssemblyConstituencyId?: number;
   lgaId?: number;
   wardId?: number;
 }) {
@@ -770,9 +752,6 @@ function MainSubTabContent({
       "recent-party-applications",
       electionGroupId,
       stateId,
-      senatorialDistrictId,
-      federalConstituencyId,
-      stateAssemblyConstituencyId,
       lgaId,
       wardId,
     ],
@@ -781,9 +760,6 @@ function MainSubTabContent({
         data: {
           electionGroupId,
           stateId,
-          senatorialDistrictId,
-          federalConstituencyId,
-          stateAssemblyConstituencyId,
           lgaId,
           wardId,
           limit: 5,
@@ -893,7 +869,7 @@ function MainSubTabContent({
             return (
               <div
                 key={app.id}
-                className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer"
+                className="h-16 flex items-center px-0 md:px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer"
               >
                 <img
                   src={app.avatar || `https://i.pravatar.cc/150?u=${app.id}`}
@@ -901,22 +877,15 @@ function MainSubTabContent({
                   className="size-11 rounded-full object-cover shrink-0"
                 />
                 <div className="space-y-1 w-full">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-5">
                     <p className="font-semibold text-c-90 w-full">{name}</p>
-                    {location && (
-                      <p className="shrink-0 text-xs text-c-50">{location}</p>
-                    )}
+                    <span className={roleColor}>{role}</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-c-50 w-full">
-                      <span className={roleColor}>{role}</span> · {time}
+                  <div className="flex items-center gap-5">
+                    <p className="text-sm text-c-50 w-full line-clamp-1">
+                      {location && <span>{location} ·</span>} {time}
                     </p>
-                    <p
-                      className={cn(
-                        "capitalize text-sm font-medium",
-                        statusColor,
-                      )}
-                    >
+                    <p className={cn("capitalize", statusColor)}>
                       {app.status}
                     </p>
                   </div>
@@ -982,7 +951,7 @@ function TransactionsSubTabContent() {
         </div>
       ) : (
         transactions.map((tx) => (
-          <TransactionRow key={tx.id} transaction={tx} />
+          <TransactionCard key={tx.id} transaction={tx} />
         ))
       )}
     </div>

@@ -106,6 +106,8 @@ SELECT
   a.results_expected_to_submit_count,
   a.live_voters_referred_count,
   a.election_practice_test_readiness_percentage,
+  a.potential_payment_kobo,
+  a.interval_updates,
   cs.name AS state_name,
   eg.election_date
 FROM polling_unit_assignments a

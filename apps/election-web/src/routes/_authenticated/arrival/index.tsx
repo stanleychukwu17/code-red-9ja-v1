@@ -13,10 +13,11 @@ import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 import { updateAssignmentTracking } from "#/lib/server/polling_unit_assignments";
 import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
 
-import { useMutation } from "@tanstack/react-query";
-import { useAuth } from "#/hooks/useAuth";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAppContext } from "#/hooks/useAppContext";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
+import { getPotentialPayout } from "#/lib/server/practice_tests";
 
 export const Route = createFileRoute("/_authenticated/arrival/")({
   component: ArrivalVideo,
@@ -26,7 +27,25 @@ function ArrivalVideo() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
-  const { selectedElectionGroup, pollingUnitId, party } = useAuth();
+  const { selectedElectionGroup, pollingUnitId, party, selectedAssignment } =
+    useAppContext();
+  const effectiveAssignmentId = assignmentId || selectedAssignment?.id;
+
+  const { data: payoutRes } = useQuery({
+    queryKey: ["potentialPayout", effectiveAssignmentId, "attendance"],
+    queryFn: async () => {
+      if (!effectiveAssignmentId) return null;
+      return getPotentialPayout({
+        data: {
+          assignmentId: Number(effectiveAssignmentId),
+          taskType: "attendance",
+        },
+      });
+    },
+    enabled: !!effectiveAssignmentId,
+  });
+
+  const payoutData = payoutRes?.success ? payoutRes?.data?.payout : undefined;
   const tutorialVideo =
     "https://res.cloudinary.com/dhtcwqsx4/video/upload/v1782937548/Free9ja/videos/I_like_this_but_he_shouldn_t_b_wsibes.mp4";
 
@@ -205,7 +224,11 @@ function ArrivalVideo() {
             <RewardSumCard
               label="Reward for this"
               subtext="Potential pay so far"
-              value="+₦500"
+              value={
+                payoutData?.potential_payout_kobo !== undefined
+                  ? `+₦${(payoutData.potential_payout_kobo / 100).toLocaleString()}`
+                  : "+₦0"
+              }
               subValue="₦0.00 total"
               variant="purple"
             />

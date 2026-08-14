@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TriangleAlert, Plus } from "lucide-react";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
 import { useState, useRef } from "react";
@@ -15,7 +15,8 @@ import { VideoPreview } from "#/components/VideoPreview";
 
 import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 import { updateAssignmentTracking } from "#/lib/server/polling_unit_assignments";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { getPotentialPayout } from "#/lib/server/practice_tests";
 
 export const Route = createFileRoute("/_authenticated/election-end/")({
   component: ElectionEnd,
@@ -25,7 +26,24 @@ function ElectionEnd() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
-  const { selectedElectionGroup } = useAuth();
+  const { selectedElectionGroup, selectedAssignment } = useAppContext();
+  const effectiveAssignmentId = assignmentId || selectedAssignment?.id;
+
+  const { data: payoutRes } = useQuery({
+    queryKey: ["potentialPayout", effectiveAssignmentId, "election_end"],
+    queryFn: async () => {
+      if (!effectiveAssignmentId) return null;
+      return getPotentialPayout({
+        data: {
+          assignmentId: Number(effectiveAssignmentId),
+          taskType: "election_end",
+        },
+      });
+    },
+    enabled: !!effectiveAssignmentId,
+  });
+
+  const payoutData = payoutRes?.success ? payoutRes?.data?.payout : undefined;
   const tutorialVideo =
     "https://res.cloudinary.com/dhtcwqsx4/video/upload/v1782937548/Free9ja/videos/I_like_this_but_he_shouldn_t_b_wsibes.mp4";
 
@@ -262,7 +280,11 @@ function ElectionEnd() {
                 <RewardSumCard
                   label="Reward for this"
                   subtext="Potential pay so far"
-                  value="+₦500"
+                  value={
+                    payoutData?.potential_payout_kobo !== undefined
+                      ? `+₦${(payoutData.potential_payout_kobo / 100).toLocaleString()}`
+                      : "+₦0"
+                  }
                   subValue="₦3,829.00 total"
                   variant="purple"
                 />

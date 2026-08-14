@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import * as React from "react";
 import {
@@ -9,7 +9,6 @@ import {
   AddButton,
 } from "@repo/ui/components/custom/AdminLayouts";
 import { PartiesTable, type PartyType } from "#/components/Tables";
-import { PartyFormDialog } from "#/components/dialogs/PartyFormDialog";
 import { getParties } from "#/lib/server/parties";
 import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -20,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/parties/")({
 });
 
 function RouteComponent() {
+  const navigate = useNavigate();
   const {
     data: parties = [],
     isLoading,
@@ -45,7 +45,11 @@ function RouteComponent() {
 
   return (
     <Layout>
-      <PageHeader title="Parties" activeTab="" />
+      <PageHeader
+        title="Parties"
+        activeTab=""
+        onBackClick={() => navigate({ to: "/" })}
+      />
       <PageSearchLayer
         rightComponent={
           <>
@@ -70,7 +74,6 @@ function RouteComponent() {
       ) : (
         <PartiesTable items={parties} />
       )}
-
     </Layout>
   );
 }

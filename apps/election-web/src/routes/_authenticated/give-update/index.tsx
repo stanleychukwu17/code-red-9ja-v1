@@ -11,11 +11,12 @@ import { toast } from "sonner";
 import { PostFooter } from "#/components/PostFooter";
 import { PostHeader } from "#/components/PostHeader";
 import { PostInputArea } from "#/components/PostInputArea";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { confirmFileUpload, getPresignedUploadURL } from "#/lib/server/parties";
 import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { showFeedbackToast } from "../practice/page-components/utils";
+import { getPotentialPayout } from "#/lib/server/practice_tests";
 
 export const Route = createFileRoute("/_authenticated/give-update/")({
   component: GiveUpdate,
@@ -28,7 +29,25 @@ function GiveUpdate() {
     user,
     selectedElectionGroup,
     selectedAssignment: currentAssignment,
-  } = useAuth();
+  } = useAppContext();
+
+  const assignmentId = currentAssignment?.id;
+
+  const { data: payoutRes } = useQuery({
+    queryKey: ["potentialPayout", assignmentId, "updates"],
+    queryFn: async () => {
+      if (!assignmentId) return null;
+      return getPotentialPayout({
+        data: {
+          assignmentId: Number(assignmentId),
+          taskType: "updates",
+        },
+      });
+    },
+    enabled: !!assignmentId,
+  });
+
+  const payoutData = payoutRes?.success ? payoutRes?.data?.payout : undefined;
 
   const [step, setStep] = useState(search.isReport ? 2 : 1);
 
@@ -197,7 +216,7 @@ function GiveUpdate() {
     <PageWrapper>
       {step === 1 ? (
         <>
-          <PageHeader />
+          <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
           <div className="px-4 space-y-8">
             <TitleText
@@ -234,7 +253,11 @@ function GiveUpdate() {
               <RewardSumCard
                 label="Potential pay"
                 subtext="Pay so far"
-                value="+₦2,000"
+                value={
+                  payoutData?.potential_payout_kobo !== undefined
+                    ? `+₦${(payoutData.potential_payout_kobo / 100).toLocaleString()}`
+                    : "+₦0"
+                }
                 subValue="₦3,829.00 total"
                 variant="purple"
               />

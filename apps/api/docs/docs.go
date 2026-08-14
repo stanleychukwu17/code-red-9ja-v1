@@ -223,7 +223,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.SetPartyDiscountRequest"
+                            "$ref": "#/definitions/internal_handler_parties.SetPartyDiscountRequest"
                         }
                     }
                 ],
@@ -270,7 +270,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.ToggleVerificationRequest"
+                            "$ref": "#/definitions/internal_handler_parties.ToggleVerificationRequest"
                         }
                     }
                 ],
@@ -376,7 +376,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/referrals.createReferralRequest"
+                            "$ref": "#/definitions/internal_handler_referrals.createReferralRequest"
                         }
                     }
                 ],
@@ -437,7 +437,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/referrals.updateReferralRequest"
+                            "$ref": "#/definitions/internal_handler_referrals.updateReferralRequest"
                         }
                     }
                 ],
@@ -505,7 +505,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.SetSlotPriceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.SetSlotPriceRequest"
                         }
                     }
                 ],
@@ -553,13 +553,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/system_settings.SystemSettingResponse"
+                                            "$ref": "#/definitions/internal_handler_system_settings.SystemSettingResponse"
                                         }
                                     }
                                 }
@@ -569,19 +569,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -617,7 +617,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/system_settings.UpdateSystemSettingRequest"
+                            "$ref": "#/definitions/internal_handler_system_settings.UpdateSystemSettingRequest"
                         }
                     }
                 ],
@@ -627,13 +627,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/system_settings.SystemSettingResponse"
+                                            "$ref": "#/definitions/internal_handler_system_settings.SystemSettingResponse"
                                         }
                                     }
                                 }
@@ -643,13 +643,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -783,7 +783,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateUserPhoneNumbersRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateUserPhoneNumbersRequest"
                         }
                     }
                 ],
@@ -837,7 +837,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pageverificationshandler.AssignVerificationRequest"
+                            "$ref": "#/definitions/internal_handler_page_verifications.AssignVerificationRequest"
                         }
                     }
                 ],
@@ -986,7 +986,63 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/allocations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get agent task percentage allocations and potential payouts in Kobo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role Type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)",
+                        "name": "role_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -1019,7 +1075,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1053,25 +1109,83 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/potential-payout": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get potential payout in Kobo for a given task type",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)",
+                        "name": "task_type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -1104,7 +1218,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1137,7 +1251,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1170,7 +1284,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1244,13 +1358,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -1276,7 +1390,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginRequest"
                         }
                     }
                 ],
@@ -1284,7 +1398,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginResponse"
                         }
                     },
                     "400": {
@@ -1324,7 +1438,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.ChangePasswordByEmailRequest"
+                            "$ref": "#/definitions/internal_handler_auth.ChangePasswordByEmailRequest"
                         }
                     }
                 ],
@@ -1373,7 +1487,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckNINRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckNINRequest"
                         }
                     }
                 ],
@@ -1415,7 +1529,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckReferralCodeRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckReferralCodeRequest"
                         }
                     }
                 ],
@@ -1457,7 +1571,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckUsernameRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckUsernameRequest"
                         }
                     }
                 ],
@@ -1499,7 +1613,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.ForgotPasswordRequest"
+                            "$ref": "#/definitions/internal_handler_auth.ForgotPasswordRequest"
                         }
                     }
                 ],
@@ -1548,7 +1662,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.LoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.LoginRequest"
                         }
                     }
                 ],
@@ -1597,7 +1711,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.LogoutRequest"
+                            "$ref": "#/definitions/internal_handler_auth.LogoutRequest"
                         }
                     }
                 ],
@@ -1639,7 +1753,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.PartyLoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.PartyLoginRequest"
                         }
                     }
                 ],
@@ -1647,7 +1761,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginResponse"
                         }
                     },
                     "400": {
@@ -1687,7 +1801,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RefreshRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RefreshRequest"
                         }
                     }
                 ],
@@ -1736,7 +1850,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RegisterRequest"
                         }
                     }
                 ],
@@ -1785,7 +1899,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterCandidatePlaceholderRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RegisterCandidatePlaceholderRequest"
                         }
                     }
                 ],
@@ -1834,7 +1948,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateUserRolesRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateUserRolesRequest"
                         }
                     }
                 ],
@@ -1897,7 +2011,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.SignupRequest"
+                            "$ref": "#/definitions/internal_handler_auth.SignupRequest"
                         }
                     }
                 ],
@@ -1939,7 +2053,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterPhaseSignUpRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RegisterPhaseSignUpRequest"
                         }
                     }
                 ],
@@ -1981,7 +2095,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.MakeUserSuperAdminRequest"
+                            "$ref": "#/definitions/internal_handler_users.MakeUserSuperAdminRequest"
                         }
                     }
                 ],
@@ -2030,7 +2144,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.VerifySecurityQuestionsRequest"
+                            "$ref": "#/definitions/internal_handler_auth.VerifySecurityQuestionsRequest"
                         }
                     }
                 ],
@@ -2161,7 +2275,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetCountriesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetCountriesResponse"
                         }
                     },
                     "500": {
@@ -2199,7 +2313,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetStatesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetStatesResponse"
                         }
                     },
                     "400": {
@@ -2286,7 +2400,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.CreateElectionGroupRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.CreateElectionGroupRequest"
                         }
                     }
                 ],
@@ -2394,7 +2508,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.UpdateElectionGroupRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.UpdateElectionGroupRequest"
                         }
                     }
                 ],
@@ -2553,7 +2667,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest"
                         }
                     }
                 ],
@@ -3343,7 +3457,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateElectionRequest"
                         }
                     }
                 ],
@@ -3443,7 +3557,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateFederalConstituencyElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateFederalConstituencyElectionRequest"
                         }
                     }
                 ],
@@ -3492,7 +3606,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateLgaElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateLgaElectionRequest"
                         }
                     }
                 ],
@@ -3541,7 +3655,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateNationwideElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateNationwideElectionRequest"
                         }
                     }
                 ],
@@ -4067,7 +4181,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateSenatorialDistrictElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateSenatorialDistrictElectionRequest"
                         }
                     }
                 ],
@@ -4116,7 +4230,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateStateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateStateElectionRequest"
                         }
                     }
                 ],
@@ -4165,7 +4279,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateStateConstituencyElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateStateConstituencyElectionRequest"
                         }
                     }
                 ],
@@ -4219,7 +4333,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateWardElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateWardElectionRequest"
                         }
                     }
                 ],
@@ -4327,7 +4441,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.UpdateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.UpdateElectionRequest"
                         }
                     }
                 ],
@@ -4484,7 +4598,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.SyncCandidatesRequest"
+                            "$ref": "#/definitions/internal_handler_elections.SyncCandidatesRequest"
                         }
                     }
                 ],
@@ -4556,7 +4670,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.GetFederalConstituenciesResponse"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesResponse"
                         }
                     },
                     "500": {
@@ -4586,7 +4700,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.CreateFederalConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.CreateFederalConstituencyRequest"
                         }
                     }
                 ],
@@ -4708,7 +4822,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.UpdateFederalConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.UpdateFederalConstituencyRequest"
                         }
                     }
                 ],
@@ -4908,7 +5022,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/fileshandler.GenerateUploadURLRequest"
+                            "$ref": "#/definitions/internal_handler_files.GenerateUploadURLRequest"
                         }
                     }
                 ],
@@ -5145,7 +5259,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetLGAsResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetLGAsResponse"
                         }
                     },
                     "500": {
@@ -5220,7 +5334,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/officeshandler.CreateOfficeRequest"
+                            "$ref": "#/definitions/internal_handler_offices.CreateOfficeRequest"
                         }
                     }
                 ],
@@ -5328,7 +5442,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/officeshandler.UpdateOfficeRequest"
+                            "$ref": "#/definitions/internal_handler_offices.UpdateOfficeRequest"
                         }
                     }
                 ],
@@ -5491,7 +5605,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreatePartyRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreatePartyRequest"
                         }
                     }
                 ],
@@ -5689,7 +5803,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePartyRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePartyRequest"
                         }
                     }
                 ],
@@ -5870,7 +5984,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreateMarketingCampaignRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreateMarketingCampaignRequest"
                         }
                     }
                 ],
@@ -5913,7 +6027,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Agent targets retrieved successfully",
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdateAgentTargetsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdateAgentTargetsRequest"
                         }
                     }
                 }
@@ -5949,7 +6063,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdateAgentTargetsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdateAgentTargetsRequest"
                         }
                     }
                 ],
@@ -5996,7 +6110,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.DepositAllowanceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.DepositAllowanceRequest"
                         }
                     }
                 ],
@@ -6076,7 +6190,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.agentPaymentAllocation"
+                            "$ref": "#/definitions/internal_handler_parties.agentPaymentAllocation"
                         }
                     }
                 ],
@@ -6123,7 +6237,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.BuySlotsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.BuySlotsRequest"
                         }
                     }
                 ],
@@ -6311,7 +6425,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.DepositAllowanceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.DepositAllowanceRequest"
                         }
                     }
                 ],
@@ -6426,7 +6540,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.WithdrawRequest"
+                            "$ref": "#/definitions/internal_handler_parties.WithdrawRequest"
                         }
                     }
                 ],
@@ -6499,7 +6613,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -6603,7 +6717,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.SubmitApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.SubmitApplicationRequest"
                         }
                     }
                 ],
@@ -6720,7 +6834,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.SubmitSupervisorApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.SubmitSupervisorApplicationRequest"
                         }
                     }
                 ],
@@ -6840,7 +6954,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.ApproveApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.ApproveApplicationRequest"
                         }
                     }
                 ],
@@ -6978,7 +7092,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.RejectApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.RejectApplicationRequest"
                         }
                     }
                 ],
@@ -7079,7 +7193,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreatePlanRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreatePlanRequest"
                         }
                     }
                 ],
@@ -7126,7 +7240,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePlanRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePlanRequest"
                         }
                     }
                 ],
@@ -7209,7 +7323,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePlanDisplayOrderRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePlanDisplayOrderRequest"
                         }
                     }
                 ],
@@ -7328,7 +7442,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/puassignmentshandler.CreateAssignmentRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_assignments.CreateAssignmentRequest"
                         }
                     }
                 ],
@@ -7500,7 +7614,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/puassignmentshandler.UpdateAssignmentTrackingRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest"
                         }
                     }
                 ],
@@ -7782,7 +7896,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_results.SubmitResultRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.SubmitResultRequest"
                         }
                     }
                 ],
@@ -7957,7 +8071,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_results.ReviewRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.ReviewRequest"
                         }
                     }
                 ],
@@ -8032,7 +8146,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_results.VoteRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.VoteRequest"
                         }
                     }
                 ],
@@ -8196,7 +8310,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_updates.CreateUpdateRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_updates.CreateUpdateRequest"
                         }
                     }
                 ],
@@ -8293,7 +8407,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.GetPollingUnitsResponse"
+                            "$ref": "#/definitions/internal_handler_polling_units.GetPollingUnitsResponse"
                         }
                     },
                     "500": {
@@ -8323,7 +8437,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.CreatePollingUnitRequest"
+                            "$ref": "#/definitions/internal_handler_polling_units.CreatePollingUnitRequest"
                         }
                     }
                 ],
@@ -8445,7 +8559,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.UpdatePollingUnitRequest"
+                            "$ref": "#/definitions/internal_handler_polling_units.UpdatePollingUnitRequest"
                         }
                     }
                 ],
@@ -8612,7 +8726,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -8641,7 +8755,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/practicetestshandler.SubmitPracticeTestRequest"
+                            "$ref": "#/definitions/internal_handler_practice_tests.SubmitPracticeTestRequest"
                         }
                     }
                 ],
@@ -8651,13 +8765,13 @@ const docTemplate = `{
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
+                                            "$ref": "#/definitions/internal_handler_practice_tests.PracticeTestResponse"
                                         }
                                     }
                                 }
@@ -8667,19 +8781,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -8719,19 +8833,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -8799,7 +8913,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/seedservice.SeedAdminsRequest"
+                            "$ref": "#/definitions/free9ja_api_internal_service_seed.SeedAdminsRequest"
                         }
                     }
                 ],
@@ -8850,7 +8964,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/seedservice.SeedUserRequest"
+                                "$ref": "#/definitions/free9ja_api_internal_service_seed.SeedUserRequest"
                             }
                         }
                     }
@@ -8917,7 +9031,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsResponse"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsResponse"
                         }
                     },
                     "500": {
@@ -8947,7 +9061,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.CreateSenatorialDistrictRequest"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.CreateSenatorialDistrictRequest"
                         }
                     }
                 ],
@@ -9069,7 +9183,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.UpdateSenatorialDistrictRequest"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest"
                         }
                     }
                 ],
@@ -9205,7 +9319,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest"
                         }
                     }
                 ],
@@ -9327,7 +9441,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest"
                         }
                     }
                 ],
@@ -9486,7 +9600,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse"
+                            "$ref": "#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse"
                         }
                     },
                     "500": {
@@ -9518,7 +9632,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.CreateStateRequest"
+                            "$ref": "#/definitions/internal_handler_states.CreateStateRequest"
                         }
                     }
                 ],
@@ -9640,7 +9754,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.UpdateStateRequest"
+                            "$ref": "#/definitions/internal_handler_states.UpdateStateRequest"
                         }
                     }
                 ],
@@ -9782,7 +9896,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetCitiesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetCitiesResponse"
                         }
                     },
                     "400": {
@@ -10061,7 +10175,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UserWithdrawRequest"
+                            "$ref": "#/definitions/internal_handler_users.UserWithdrawRequest"
                         }
                     }
                 ],
@@ -10129,7 +10243,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateProfileRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateProfileRequest"
                         }
                     }
                 ],
@@ -10385,7 +10499,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.GetWardsResponse"
+                            "$ref": "#/definitions/internal_handler_wards.GetWardsResponse"
                         }
                     },
                     "500": {
@@ -10415,7 +10529,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.CreateWardRequest"
+                            "$ref": "#/definitions/internal_handler_wards.CreateWardRequest"
                         }
                     }
                 ],
@@ -10537,7 +10651,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.UpdateWardRequest"
+                            "$ref": "#/definitions/internal_handler_wards.UpdateWardRequest"
                         }
                     }
                 ],
@@ -10686,7 +10800,185 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "authhandler.AdminLoginData": {
+        "free9ja_api_internal_service_seed.PartyAdminsData": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "partyID",
+                    "type": "integer"
+                },
+                "party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "super_party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "free9ja_api_internal_service_seed.SeedAdminsRequest": {
+            "type": "object",
+            "properties": {
+                "admins": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "parties": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/definitions/free9ja_api_internal_service_seed.PartyAdminsData"
+                        }
+                    }
+                }
+            }
+        },
+        "free9ja_api_internal_service_seed.SeedUserRequest": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "education_level": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "home_address": {
+                    "type": "string"
+                },
+                "is_politician": {
+                    "type": "boolean"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "marital_status": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "num": {
+                    "type": "integer"
+                },
+                "occupation_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "religion": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "verification_type_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "free9ja_api_internal_service_users.PhonePayload": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "on_whatsapp": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "phonecode": {
+                    "type": "string"
+                },
+                "raw_input": {
+                    "type": "string"
+                }
+            }
+        },
+        "free9ja_api_internal_utils.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Error message description"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "free9ja_api_internal_utils.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Operation successful"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "internal_handler_auth.AdminLoginData": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -10696,11 +10988,11 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/authhandler.LoginUser"
+                    "$ref": "#/definitions/internal_handler_auth.LoginUser"
                 }
             }
         },
-        "authhandler.AdminLoginRequest": {
+        "internal_handler_auth.AdminLoginRequest": {
             "type": "object",
             "required": [
                 "identifier",
@@ -10730,11 +11022,11 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.AdminLoginResponse": {
+        "internal_handler_auth.AdminLoginResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/authhandler.AdminLoginData"
+                    "$ref": "#/definitions/internal_handler_auth.AdminLoginData"
                 },
                 "message": {
                     "type": "string"
@@ -10744,7 +11036,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.ChangePasswordByEmailRequest": {
+        "internal_handler_auth.ChangePasswordByEmailRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -10761,7 +11053,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.CheckNINRequest": {
+        "internal_handler_auth.CheckNINRequest": {
             "type": "object",
             "required": [
                 "nin"
@@ -10772,7 +11064,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.CheckReferralCodeRequest": {
+        "internal_handler_auth.CheckReferralCodeRequest": {
             "type": "object",
             "required": [
                 "code"
@@ -10784,7 +11076,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.CheckUsernameRequest": {
+        "internal_handler_auth.CheckUsernameRequest": {
             "type": "object",
             "required": [
                 "username"
@@ -10797,7 +11089,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.ForgotPasswordRequest": {
+        "internal_handler_auth.ForgotPasswordRequest": {
             "type": "object",
             "required": [
                 "change_password_id",
@@ -10821,7 +11113,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.LoginRequest": {
+        "internal_handler_auth.LoginRequest": {
             "type": "object",
             "required": [
                 "country",
@@ -10856,7 +11148,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.LoginUser": {
+        "internal_handler_auth.LoginUser": {
             "type": "object",
             "properties": {
                 "avatar": {
@@ -10903,7 +11195,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.LogoutRequest": {
+        "internal_handler_auth.LogoutRequest": {
             "type": "object",
             "properties": {
                 "refreshToken": {
@@ -10911,7 +11203,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.PartyLoginRequest": {
+        "internal_handler_auth.PartyLoginRequest": {
             "type": "object",
             "required": [
                 "identifier",
@@ -10941,7 +11233,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.RefreshRequest": {
+        "internal_handler_auth.RefreshRequest": {
             "type": "object",
             "properties": {
                 "refreshToken": {
@@ -10949,7 +11241,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.RegisterCandidatePlaceholderRequest": {
+        "internal_handler_auth.RegisterCandidatePlaceholderRequest": {
             "type": "object",
             "required": [
                 "current_country",
@@ -11023,7 +11315,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.RegisterPhaseSignUpRequest": {
+        "internal_handler_auth.RegisterPhaseSignUpRequest": {
             "type": "object",
             "required": [
                 "confirmPassword",
@@ -11060,7 +11352,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.RegisterRequest": {
+        "internal_handler_auth.RegisterRequest": {
             "type": "object",
             "required": [
                 "answer1",
@@ -11161,7 +11453,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.SignupRequest": {
+        "internal_handler_auth.SignupRequest": {
             "type": "object",
             "required": [
                 "countryId",
@@ -11186,7 +11478,7 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.VerifySecurityQuestionsRequest": {
+        "internal_handler_auth.VerifySecurityQuestionsRequest": {
             "type": "object",
             "required": [
                 "answer1",
@@ -11213,7 +11505,7 @@ const docTemplate = `{
                 }
             }
         },
-        "bodieshandler.CityResponse": {
+        "internal_handler_bodies.CityResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11224,7 +11516,7 @@ const docTemplate = `{
                 }
             }
         },
-        "bodieshandler.CountryResponse": {
+        "internal_handler_bodies.CountryResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11241,50 +11533,50 @@ const docTemplate = `{
                 }
             }
         },
-        "bodieshandler.GetCitiesData": {
+        "internal_handler_bodies.GetCitiesData": {
             "type": "object",
             "properties": {
                 "cities": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.CityResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.CityResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetCitiesResponse": {
+        "internal_handler_bodies.GetCitiesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetCitiesData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetCitiesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "bodieshandler.GetCountriesData": {
+        "internal_handler_bodies.GetCountriesData": {
             "type": "object",
             "properties": {
                 "countries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.CountryResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.CountryResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetCountriesResponse": {
+        "internal_handler_bodies.GetCountriesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetCountriesData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetCountriesData"
                 },
                 "message": {
                     "type": "string"
@@ -11294,63 +11586,63 @@ const docTemplate = `{
                 }
             }
         },
-        "bodieshandler.GetLGAsData": {
+        "internal_handler_bodies.GetLGAsData": {
             "type": "object",
             "properties": {
                 "lgas": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.LGAResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.LGAResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetLGAsResponse": {
+        "internal_handler_bodies.GetLGAsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetLGAsData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetLGAsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "bodieshandler.GetStatesData": {
+        "internal_handler_bodies.GetStatesData": {
             "type": "object",
             "properties": {
                 "states": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.StateResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.StateResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetStatesResponse": {
+        "internal_handler_bodies.GetStatesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetStatesData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetStatesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "bodieshandler.LGAResponse": {
+        "internal_handler_bodies.LGAResponse": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -11370,7 +11662,7 @@ const docTemplate = `{
                 }
             }
         },
-        "bodieshandler.PaginationMeta": {
+        "internal_handler_bodies.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -11381,7 +11673,7 @@ const docTemplate = `{
                 }
             }
         },
-        "bodieshandler.StateResponse": {
+        "internal_handler_bodies.StateResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11392,7 +11684,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electiongroupshandler.CreateElectionGroupRequest": {
+        "internal_handler_election_groups.CreateElectionGroupRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11412,7 +11704,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electiongroupshandler.UpdateElectionGroupRequest": {
+        "internal_handler_election_groups.UpdateElectionGroupRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11432,7 +11724,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electiongroupshandler.UpsertPartyElectionGroupStatsRequest": {
+        "internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest": {
             "type": "object",
             "properties": {
                 "elections_contesting": {
@@ -11444,7 +11736,7 @@ const docTemplate = `{
                 "polling_agents_coverage": {}
             }
         },
-        "electionshandler.CreateElectionRequest": {
+        "internal_handler_elections.CreateElectionRequest": {
             "type": "object",
             "properties": {
                 "candidates_count": {
@@ -11482,7 +11774,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.CreateFederalConstituencyElectionRequest": {
+        "internal_handler_elections.CreateFederalConstituencyElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11502,7 +11794,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.CreateLgaElectionRequest": {
+        "internal_handler_elections.CreateLgaElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11522,13 +11814,13 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.CreateNationwideElectionRequest": {
+        "internal_handler_elections.CreateNationwideElectionRequest": {
             "type": "object",
             "properties": {
                 "candidates": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
+                        "$ref": "#/definitions/internal_handler_elections.ElectionCandidateInput"
                     }
                 },
                 "election_date": {
@@ -11542,7 +11834,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.CreateSenatorialDistrictElectionRequest": {
+        "internal_handler_elections.CreateSenatorialDistrictElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11562,7 +11854,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.CreateStateConstituencyElectionRequest": {
+        "internal_handler_elections.CreateStateConstituencyElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11582,7 +11874,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.CreateStateElectionRequest": {
+        "internal_handler_elections.CreateStateElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11602,7 +11894,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.CreateWardElectionRequest": {
+        "internal_handler_elections.CreateWardElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11622,7 +11914,7 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.ElectionCandidateInput": {
+        "internal_handler_elections.ElectionCandidateInput": {
             "type": "object",
             "required": [
                 "candidate_id",
@@ -11641,18 +11933,18 @@ const docTemplate = `{
                 }
             }
         },
-        "electionshandler.SyncCandidatesRequest": {
+        "internal_handler_elections.SyncCandidatesRequest": {
             "type": "object",
             "properties": {
                 "candidates": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
+                        "$ref": "#/definitions/internal_handler_elections.ElectionCandidateInput"
                     }
                 }
             }
         },
-        "electionshandler.UpdateElectionRequest": {
+        "internal_handler_elections.UpdateElectionRequest": {
             "type": "object",
             "properties": {
                 "candidates_count": {
@@ -11690,7 +11982,7 @@ const docTemplate = `{
                 }
             }
         },
-        "federalconstituencieshandler.CreateFederalConstituencyRequest": {
+        "internal_handler_federal_constituencies.CreateFederalConstituencyRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -11704,7 +11996,7 @@ const docTemplate = `{
                 }
             }
         },
-        "federalconstituencieshandler.FederalConstituencyResponse": {
+        "internal_handler_federal_constituencies.FederalConstituencyResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11727,35 +12019,35 @@ const docTemplate = `{
                 }
             }
         },
-        "federalconstituencieshandler.GetFederalConstituenciesData": {
+        "internal_handler_federal_constituencies.GetFederalConstituenciesData": {
             "type": "object",
             "properties": {
                 "constituencies": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/federalconstituencieshandler.FederalConstituencyResponse"
+                        "$ref": "#/definitions/internal_handler_federal_constituencies.FederalConstituencyResponse"
                     }
                 }
             }
         },
-        "federalconstituencieshandler.GetFederalConstituenciesResponse": {
+        "internal_handler_federal_constituencies.GetFederalConstituenciesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/federalconstituencieshandler.GetFederalConstituenciesData"
+                    "$ref": "#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/federalconstituencieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_federal_constituencies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "federalconstituencieshandler.PaginationMeta": {
+        "internal_handler_federal_constituencies.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -11766,7 +12058,7 @@ const docTemplate = `{
                 }
             }
         },
-        "federalconstituencieshandler.UpdateFederalConstituencyRequest": {
+        "internal_handler_federal_constituencies.UpdateFederalConstituencyRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -11780,7 +12072,7 @@ const docTemplate = `{
                 }
             }
         },
-        "fileshandler.GenerateUploadURLRequest": {
+        "internal_handler_files.GenerateUploadURLRequest": {
             "type": "object",
             "properties": {
                 "file_size": {
@@ -11803,7 +12095,7 @@ const docTemplate = `{
                 }
             }
         },
-        "officeshandler.CreateOfficeRequest": {
+        "internal_handler_offices.CreateOfficeRequest": {
             "type": "object",
             "properties": {
                 "election": {
@@ -11820,7 +12112,7 @@ const docTemplate = `{
                 }
             }
         },
-        "officeshandler.UpdateOfficeRequest": {
+        "internal_handler_offices.UpdateOfficeRequest": {
             "type": "object",
             "properties": {
                 "election": {
@@ -11837,7 +12129,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pageverificationshandler.AssignVerificationRequest": {
+        "internal_handler_page_verifications.AssignVerificationRequest": {
             "type": "object",
             "required": [
                 "for_who",
@@ -11860,7 +12152,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.BuySlotsRequest": {
+        "internal_handler_parties.BuySlotsRequest": {
             "type": "object",
             "properties": {
                 "quantity": {
@@ -11868,7 +12160,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.CreateMarketingCampaignRequest": {
+        "internal_handler_parties.CreateMarketingCampaignRequest": {
             "type": "object",
             "properties": {
                 "budget": {
@@ -11907,7 +12199,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.CreatePartyRequest": {
+        "internal_handler_parties.CreatePartyRequest": {
             "type": "object",
             "properties": {
                 "display_order": {
@@ -11924,7 +12216,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.CreatePlanRequest": {
+        "internal_handler_parties.CreatePlanRequest": {
             "type": "object",
             "properties": {
                 "color_hex": {
@@ -11959,7 +12251,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.DepositAllowanceRequest": {
+        "internal_handler_parties.DepositAllowanceRequest": {
             "type": "object",
             "properties": {
                 "amount_kobo": {
@@ -11967,7 +12259,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.SetPartyDiscountRequest": {
+        "internal_handler_parties.SetPartyDiscountRequest": {
             "type": "object",
             "properties": {
                 "discount_percentage": {
@@ -11975,7 +12267,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.SetSlotPriceRequest": {
+        "internal_handler_parties.SetSlotPriceRequest": {
             "type": "object",
             "properties": {
                 "price_kobo": {
@@ -11983,7 +12275,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.ToggleVerificationRequest": {
+        "internal_handler_parties.ToggleVerificationRequest": {
             "type": "object",
             "properties": {
                 "is_verified": {
@@ -11991,7 +12283,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.UpdateAgentTargetsRequest": {
+        "internal_handler_parties.UpdateAgentTargetsRequest": {
             "type": "object",
             "properties": {
                 "lga_election_supervisor": {
@@ -12008,7 +12300,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.UpdatePartyRequest": {
+        "internal_handler_parties.UpdatePartyRequest": {
             "type": "object",
             "properties": {
                 "display_order": {
@@ -12025,7 +12317,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.UpdatePlanDisplayOrderRequest": {
+        "internal_handler_parties.UpdatePlanDisplayOrderRequest": {
             "type": "object",
             "properties": {
                 "display_order": {
@@ -12033,7 +12325,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.UpdatePlanRequest": {
+        "internal_handler_parties.UpdatePlanRequest": {
             "type": "object",
             "properties": {
                 "color_hex": {
@@ -12071,7 +12363,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.WithdrawRequest": {
+        "internal_handler_parties.WithdrawRequest": {
             "type": "object",
             "properties": {
                 "amount_kobo": {
@@ -12089,24 +12381,24 @@ const docTemplate = `{
                 }
             }
         },
-        "partieshandler.agentPaymentAllocation": {
+        "internal_handler_parties.agentPaymentAllocation": {
             "type": "object",
             "properties": {
                 "lga_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 },
                 "polling_agent": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 },
                 "state_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 },
                 "ward_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 }
             }
         },
-        "partieshandler.agentPaymentConfig": {
+        "internal_handler_parties.agentPaymentConfig": {
             "type": "object",
             "properties": {
                 "default": {
@@ -12121,7 +12413,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partyapplicationshandler.ApproveApplicationRequest": {
+        "internal_handler_party_applications.ApproveApplicationRequest": {
             "type": "object",
             "properties": {
                 "lga_id": {
@@ -12141,7 +12433,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partyapplicationshandler.RejectApplicationRequest": {
+        "internal_handler_party_applications.RejectApplicationRequest": {
             "type": "object",
             "properties": {
                 "reason": {
@@ -12149,7 +12441,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partyapplicationshandler.SubmitApplicationRequest": {
+        "internal_handler_party_applications.SubmitApplicationRequest": {
             "type": "object",
             "properties": {
                 "address": {
@@ -12217,7 +12509,7 @@ const docTemplate = `{
                 }
             }
         },
-        "partyapplicationshandler.SubmitSupervisorApplicationRequest": {
+        "internal_handler_party_applications.SubmitSupervisorApplicationRequest": {
             "type": "object",
             "properties": {
                 "degree_certificate_url": {
@@ -12240,7 +12532,50 @@ const docTemplate = `{
                 }
             }
         },
-        "polling_unit_results.ReviewRequest": {
+        "internal_handler_polling_unit_assignments.CreateAssignmentRequest": {
+            "type": "object",
+            "properties": {
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "fake_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "role_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest": {
+            "type": "object",
+            "properties": {
+                "arrival_video_url": {
+                    "type": "string"
+                },
+                "arrived_at": {
+                    "type": "string"
+                },
+                "election_ended_at": {
+                    "type": "string"
+                },
+                "election_ended_video_url": {
+                    "type": "string"
+                },
+                "election_started_at": {
+                    "type": "string"
+                },
+                "election_started_video_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_results.ReviewRequest": {
             "type": "object",
             "properties": {
                 "disputed_reason": {
@@ -12252,7 +12587,7 @@ const docTemplate = `{
                 }
             }
         },
-        "polling_unit_results.SubmitResultRequest": {
+        "internal_handler_polling_unit_results.SubmitResultRequest": {
             "type": "object",
             "properties": {
                 "assignment_id": {
@@ -12281,7 +12616,7 @@ const docTemplate = `{
                 }
             }
         },
-        "polling_unit_results.VoteRequest": {
+        "internal_handler_polling_unit_results.VoteRequest": {
             "type": "object",
             "properties": {
                 "vote_type": {
@@ -12290,7 +12625,7 @@ const docTemplate = `{
                 }
             }
         },
-        "polling_unit_updates.CreateUpdateRequest": {
+        "internal_handler_polling_unit_updates.CreateUpdateRequest": {
             "type": "object",
             "properties": {
                 "assignment_id": {
@@ -12325,7 +12660,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pollingunitshandler.CreatePollingUnitRequest": {
+        "internal_handler_polling_units.CreatePollingUnitRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -12372,35 +12707,35 @@ const docTemplate = `{
                 }
             }
         },
-        "pollingunitshandler.GetPollingUnitsData": {
+        "internal_handler_polling_units.GetPollingUnitsData": {
             "type": "object",
             "properties": {
                 "polling_units": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/pollingunitshandler.PollingUnitResponse"
+                        "$ref": "#/definitions/internal_handler_polling_units.PollingUnitResponse"
                     }
                 }
             }
         },
-        "pollingunitshandler.GetPollingUnitsResponse": {
+        "internal_handler_polling_units.GetPollingUnitsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/pollingunitshandler.GetPollingUnitsData"
+                    "$ref": "#/definitions/internal_handler_polling_units.GetPollingUnitsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/pollingunitshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_polling_units.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "pollingunitshandler.PaginationMeta": {
+        "internal_handler_polling_units.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -12411,7 +12746,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pollingunitshandler.PollingUnitResponse": {
+        "internal_handler_polling_units.PollingUnitResponse": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -12470,7 +12805,7 @@ const docTemplate = `{
                 }
             }
         },
-        "pollingunitshandler.UpdatePollingUnitRequest": {
+        "internal_handler_polling_units.UpdatePollingUnitRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -12517,7 +12852,7 @@ const docTemplate = `{
                 }
             }
         },
-        "practicetestshandler.PracticeTestResponse": {
+        "internal_handler_practice_tests.PracticeTestResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -12547,7 +12882,7 @@ const docTemplate = `{
                 }
             }
         },
-        "practicetestshandler.SubmitPracticeTestRequest": {
+        "internal_handler_practice_tests.SubmitPracticeTestRequest": {
             "type": "object",
             "properties": {
                 "election_group_id": {
@@ -12562,12 +12897,12 @@ const docTemplate = `{
                 "task_stats": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/practicetestshandler.TaskStat"
+                        "$ref": "#/definitions/internal_handler_practice_tests.TaskStat"
                     }
                 }
             }
         },
-        "practicetestshandler.TaskStat": {
+        "internal_handler_practice_tests.TaskStat": {
             "type": "object",
             "properties": {
                 "completed": {
@@ -12584,50 +12919,7 @@ const docTemplate = `{
                 }
             }
         },
-        "puassignmentshandler.CreateAssignmentRequest": {
-            "type": "object",
-            "properties": {
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "fake_id": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "role_type": {
-                    "type": "string"
-                }
-            }
-        },
-        "puassignmentshandler.UpdateAssignmentTrackingRequest": {
-            "type": "object",
-            "properties": {
-                "arrival_video_url": {
-                    "type": "string"
-                },
-                "arrived_at": {
-                    "type": "string"
-                },
-                "election_ended_at": {
-                    "type": "string"
-                },
-                "election_ended_video_url": {
-                    "type": "string"
-                },
-                "election_started_at": {
-                    "type": "string"
-                },
-                "election_started_video_url": {
-                    "type": "string"
-                }
-            }
-        },
-        "referrals.createReferralRequest": {
+        "internal_handler_referrals.createReferralRequest": {
             "type": "object",
             "required": [
                 "milestone",
@@ -12652,7 +12944,7 @@ const docTemplate = `{
                 }
             }
         },
-        "referrals.updateReferralRequest": {
+        "internal_handler_referrals.updateReferralRequest": {
             "type": "object",
             "properties": {
                 "milestone": {
@@ -12670,131 +12962,7 @@ const docTemplate = `{
                 }
             }
         },
-        "seedservice.PartyAdminsData": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "description": "partyID",
-                    "type": "integer"
-                },
-                "party_admin": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "super_party_admin": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "seedservice.SeedAdminsRequest": {
-            "type": "object",
-            "properties": {
-                "admins": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "parties": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "$ref": "#/definitions/seedservice.PartyAdminsData"
-                        }
-                    }
-                }
-            }
-        },
-        "seedservice.SeedUserRequest": {
-            "type": "object",
-            "properties": {
-                "account_status": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "type": "string"
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_lga": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "date_of_birth": {
-                    "type": "string"
-                },
-                "education_level": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "home_address": {
-                    "type": "string"
-                },
-                "is_politician": {
-                    "type": "boolean"
-                },
-                "is_verified": {
-                    "type": "boolean"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "marital_status": {
-                    "type": "string"
-                },
-                "middle_name": {
-                    "type": "string"
-                },
-                "num": {
-                    "type": "integer"
-                },
-                "occupation_id": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "religion": {
-                    "type": "string"
-                },
-                "state_of_origin": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                },
-                "verification_type_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "senatorialdistrictshandler.CreateSenatorialDistrictRequest": {
+        "internal_handler_senatorial_districts.CreateSenatorialDistrictRequest": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -12811,35 +12979,35 @@ const docTemplate = `{
                 }
             }
         },
-        "senatorialdistrictshandler.GetSenatorialDistrictsData": {
+        "internal_handler_senatorial_districts.GetSenatorialDistrictsData": {
             "type": "object",
             "properties": {
                 "districts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/senatorialdistrictshandler.SenatorialDistrictResponse"
+                        "$ref": "#/definitions/internal_handler_senatorial_districts.SenatorialDistrictResponse"
                     }
                 }
             }
         },
-        "senatorialdistrictshandler.GetSenatorialDistrictsResponse": {
+        "internal_handler_senatorial_districts.GetSenatorialDistrictsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsData"
+                    "$ref": "#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/senatorialdistrictshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_senatorial_districts.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "senatorialdistrictshandler.PaginationMeta": {
+        "internal_handler_senatorial_districts.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -12850,7 +13018,7 @@ const docTemplate = `{
                 }
             }
         },
-        "senatorialdistrictshandler.SenatorialDistrictResponse": {
+        "internal_handler_senatorial_districts.SenatorialDistrictResponse": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -12873,7 +13041,7 @@ const docTemplate = `{
                 }
             }
         },
-        "senatorialdistrictshandler.UpdateSenatorialDistrictRequest": {
+        "internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -12890,7 +13058,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest": {
+        "internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest": {
             "type": "object",
             "properties": {
                 "federal_constituency_id": {
@@ -12910,35 +13078,35 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData": {
+        "internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData": {
             "type": "object",
             "properties": {
                 "constituencies": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse"
+                        "$ref": "#/definitions/internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse"
                     }
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse": {
+        "internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData"
+                    "$ref": "#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/stateassemblyconstituencieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_state_assembly_constituencies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "stateassemblyconstituencieshandler.PaginationMeta": {
+        "internal_handler_state_assembly_constituencies.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -12949,7 +13117,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse": {
+        "internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse": {
             "type": "object",
             "properties": {
                 "federal_constituency_id": {
@@ -12978,7 +13146,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest": {
+        "internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest": {
             "type": "object",
             "properties": {
                 "federal_constituency_id": {
@@ -12998,7 +13166,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateshandler.CreateStateRequest": {
+        "internal_handler_states.CreateStateRequest": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -13018,7 +13186,7 @@ const docTemplate = `{
                 }
             }
         },
-        "stateshandler.UpdateStateRequest": {
+        "internal_handler_states.UpdateStateRequest": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -13038,7 +13206,7 @@ const docTemplate = `{
                 }
             }
         },
-        "system_settings.SystemSettingResponse": {
+        "internal_handler_system_settings.SystemSettingResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -13056,7 +13224,7 @@ const docTemplate = `{
                 "value": {}
             }
         },
-        "system_settings.UpdateSystemSettingRequest": {
+        "internal_handler_system_settings.UpdateSystemSettingRequest": {
             "type": "object",
             "required": [
                 "value"
@@ -13068,7 +13236,7 @@ const docTemplate = `{
                 "value": {}
             }
         },
-        "usershandler.MakeUserSuperAdminRequest": {
+        "internal_handler_users.MakeUserSuperAdminRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -13080,7 +13248,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UpdateProfileRequest": {
+        "internal_handler_users.UpdateProfileRequest": {
             "type": "object",
             "required": [
                 "current_country",
@@ -13128,13 +13296,13 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UpdateUserPhoneNumbersRequest": {
+        "internal_handler_users.UpdateUserPhoneNumbersRequest": {
             "type": "object",
             "properties": {
                 "phones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/usersservice.PhonePayload"
+                        "$ref": "#/definitions/free9ja_api_internal_service_users.PhonePayload"
                     }
                 },
                 "user_fid": {
@@ -13142,7 +13310,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UpdateUserRolesRequest": {
+        "internal_handler_users.UpdateUserRolesRequest": {
             "type": "object",
             "required": [
                 "roles"
@@ -13162,7 +13330,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usershandler.UserWithdrawRequest": {
+        "internal_handler_users.UserWithdrawRequest": {
             "type": "object",
             "properties": {
                 "amount_kobo": {
@@ -13179,61 +13347,7 @@ const docTemplate = `{
                 }
             }
         },
-        "usersservice.PhonePayload": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "is_default": {
-                    "type": "boolean"
-                },
-                "on_whatsapp": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "phonecode": {
-                    "type": "string"
-                },
-                "raw_input": {
-                    "type": "string"
-                }
-            }
-        },
-        "utils.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "message": {
-                    "type": "string",
-                    "example": "Error message description"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": false
-                }
-            }
-        },
-        "utils.SuccessResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Operation successful"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
-        "wardshandler.CreateWardRequest": {
+        "internal_handler_wards.CreateWardRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -13250,35 +13364,35 @@ const docTemplate = `{
                 }
             }
         },
-        "wardshandler.GetWardsData": {
+        "internal_handler_wards.GetWardsData": {
             "type": "object",
             "properties": {
                 "wards": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/wardshandler.WardResponse"
+                        "$ref": "#/definitions/internal_handler_wards.WardResponse"
                     }
                 }
             }
         },
-        "wardshandler.GetWardsResponse": {
+        "internal_handler_wards.GetWardsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/wardshandler.GetWardsData"
+                    "$ref": "#/definitions/internal_handler_wards.GetWardsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/wardshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_wards.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "wardshandler.PaginationMeta": {
+        "internal_handler_wards.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -13289,7 +13403,7 @@ const docTemplate = `{
                 }
             }
         },
-        "wardshandler.UpdateWardRequest": {
+        "internal_handler_wards.UpdateWardRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -13306,7 +13420,7 @@ const docTemplate = `{
                 }
             }
         },
-        "wardshandler.WardResponse": {
+        "internal_handler_wards.WardResponse": {
             "type": "object",
             "properties": {
                 "id": {

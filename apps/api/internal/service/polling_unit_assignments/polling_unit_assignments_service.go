@@ -16,6 +16,11 @@ type Service struct {
 	queries         *queries.Queries
 	rdb             *redis.Client
 	taskDistributor worker.TaskDistributor
+	earningsSvc     earningsService
+}
+
+type earningsService interface {
+	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
 func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.TaskDistributor) *Service {
@@ -24,6 +29,10 @@ func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.Ta
 		rdb:             rdb,
 		taskDistributor: taskDistributor,
 	}
+}
+
+func (s *Service) SetEarningsService(es earningsService) {
+	s.earningsSvc = es
 }
 
 func (s *Service) AssignAgent(ctx context.Context, userID, electionGroupID int64, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
@@ -128,6 +137,19 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 	})
 	if err != nil {
 		return updated, err
+	}
+
+	// Trigger earnings calculation & wallet credit based on updated fields
+	if s.earningsSvc != nil {
+		if arrivedAt != nil && *arrivedAt != "" {
+			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "attendance")
+		}
+		if electionStartedAt != nil && *electionStartedAt != "" {
+			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "election_start")
+		}
+		if electionEndedAt != nil && *electionEndedAt != "" {
+			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "election_end")
+		}
 	}
 
 	// Enqueue a background task to recalculate the PU stats (which will cascade to Ward, LGA, etc.)

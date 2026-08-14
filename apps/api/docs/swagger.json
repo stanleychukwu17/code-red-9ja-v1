@@ -217,7 +217,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.SetPartyDiscountRequest"
+                            "$ref": "#/definitions/internal_handler_parties.SetPartyDiscountRequest"
                         }
                     }
                 ],
@@ -264,7 +264,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.ToggleVerificationRequest"
+                            "$ref": "#/definitions/internal_handler_parties.ToggleVerificationRequest"
                         }
                     }
                 ],
@@ -370,7 +370,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/referrals.createReferralRequest"
+                            "$ref": "#/definitions/internal_handler_referrals.createReferralRequest"
                         }
                     }
                 ],
@@ -431,7 +431,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/referrals.updateReferralRequest"
+                            "$ref": "#/definitions/internal_handler_referrals.updateReferralRequest"
                         }
                     }
                 ],
@@ -499,7 +499,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.SetSlotPriceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.SetSlotPriceRequest"
                         }
                     }
                 ],
@@ -547,13 +547,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/system_settings.SystemSettingResponse"
+                                            "$ref": "#/definitions/internal_handler_system_settings.SystemSettingResponse"
                                         }
                                     }
                                 }
@@ -563,19 +563,19 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -611,7 +611,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/system_settings.UpdateSystemSettingRequest"
+                            "$ref": "#/definitions/internal_handler_system_settings.UpdateSystemSettingRequest"
                         }
                     }
                 ],
@@ -621,13 +621,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/system_settings.SystemSettingResponse"
+                                            "$ref": "#/definitions/internal_handler_system_settings.SystemSettingResponse"
                                         }
                                     }
                                 }
@@ -637,13 +637,13 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -777,7 +777,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateUserPhoneNumbersRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateUserPhoneNumbersRequest"
                         }
                     }
                 ],
@@ -831,7 +831,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pageverificationshandler.AssignVerificationRequest"
+                            "$ref": "#/definitions/internal_handler_page_verifications.AssignVerificationRequest"
                         }
                     }
                 ],
@@ -980,7 +980,63 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/allocations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get agent task percentage allocations and potential payouts in Kobo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role Type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)",
+                        "name": "role_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -1013,7 +1069,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1047,25 +1103,83 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/potential-payout": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get potential payout in Kobo for a given task type",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)",
+                        "name": "task_type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -1098,7 +1212,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1131,7 +1245,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1164,7 +1278,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -1238,13 +1352,13 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -1270,7 +1384,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginRequest"
                         }
                     }
                 ],
@@ -1278,7 +1392,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginResponse"
                         }
                     },
                     "400": {
@@ -1318,7 +1432,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.ChangePasswordByEmailRequest"
+                            "$ref": "#/definitions/internal_handler_auth.ChangePasswordByEmailRequest"
                         }
                     }
                 ],
@@ -1367,7 +1481,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckNINRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckNINRequest"
                         }
                     }
                 ],
@@ -1409,7 +1523,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckReferralCodeRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckReferralCodeRequest"
                         }
                     }
                 ],
@@ -1451,7 +1565,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.CheckUsernameRequest"
+                            "$ref": "#/definitions/internal_handler_auth.CheckUsernameRequest"
                         }
                     }
                 ],
@@ -1493,7 +1607,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.ForgotPasswordRequest"
+                            "$ref": "#/definitions/internal_handler_auth.ForgotPasswordRequest"
                         }
                     }
                 ],
@@ -1542,7 +1656,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.LoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.LoginRequest"
                         }
                     }
                 ],
@@ -1591,7 +1705,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.LogoutRequest"
+                            "$ref": "#/definitions/internal_handler_auth.LogoutRequest"
                         }
                     }
                 ],
@@ -1633,7 +1747,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.PartyLoginRequest"
+                            "$ref": "#/definitions/internal_handler_auth.PartyLoginRequest"
                         }
                     }
                 ],
@@ -1641,7 +1755,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/authhandler.AdminLoginResponse"
+                            "$ref": "#/definitions/internal_handler_auth.AdminLoginResponse"
                         }
                     },
                     "400": {
@@ -1681,7 +1795,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RefreshRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RefreshRequest"
                         }
                     }
                 ],
@@ -1730,7 +1844,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RegisterRequest"
                         }
                     }
                 ],
@@ -1779,7 +1893,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterCandidatePlaceholderRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RegisterCandidatePlaceholderRequest"
                         }
                     }
                 ],
@@ -1828,7 +1942,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateUserRolesRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateUserRolesRequest"
                         }
                     }
                 ],
@@ -1891,7 +2005,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.SignupRequest"
+                            "$ref": "#/definitions/internal_handler_auth.SignupRequest"
                         }
                     }
                 ],
@@ -1933,7 +2047,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterPhaseSignUpRequest"
+                            "$ref": "#/definitions/internal_handler_auth.RegisterPhaseSignUpRequest"
                         }
                     }
                 ],
@@ -1975,7 +2089,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.MakeUserSuperAdminRequest"
+                            "$ref": "#/definitions/internal_handler_users.MakeUserSuperAdminRequest"
                         }
                     }
                 ],
@@ -2024,7 +2138,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/authhandler.VerifySecurityQuestionsRequest"
+                            "$ref": "#/definitions/internal_handler_auth.VerifySecurityQuestionsRequest"
                         }
                     }
                 ],
@@ -2155,7 +2269,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetCountriesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetCountriesResponse"
                         }
                     },
                     "500": {
@@ -2193,7 +2307,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetStatesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetStatesResponse"
                         }
                     },
                     "400": {
@@ -2280,7 +2394,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.CreateElectionGroupRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.CreateElectionGroupRequest"
                         }
                     }
                 ],
@@ -2388,7 +2502,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.UpdateElectionGroupRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.UpdateElectionGroupRequest"
                         }
                     }
                 ],
@@ -2547,7 +2661,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electiongroupshandler.UpsertPartyElectionGroupStatsRequest"
+                            "$ref": "#/definitions/internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest"
                         }
                     }
                 ],
@@ -3337,7 +3451,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateElectionRequest"
                         }
                     }
                 ],
@@ -3437,7 +3551,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateFederalConstituencyElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateFederalConstituencyElectionRequest"
                         }
                     }
                 ],
@@ -3486,7 +3600,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateLgaElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateLgaElectionRequest"
                         }
                     }
                 ],
@@ -3535,7 +3649,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateNationwideElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateNationwideElectionRequest"
                         }
                     }
                 ],
@@ -4061,7 +4175,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateSenatorialDistrictElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateSenatorialDistrictElectionRequest"
                         }
                     }
                 ],
@@ -4110,7 +4224,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateStateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateStateElectionRequest"
                         }
                     }
                 ],
@@ -4159,7 +4273,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateStateConstituencyElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateStateConstituencyElectionRequest"
                         }
                     }
                 ],
@@ -4213,7 +4327,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.CreateWardElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.CreateWardElectionRequest"
                         }
                     }
                 ],
@@ -4321,7 +4435,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.UpdateElectionRequest"
+                            "$ref": "#/definitions/internal_handler_elections.UpdateElectionRequest"
                         }
                     }
                 ],
@@ -4478,7 +4592,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/electionshandler.SyncCandidatesRequest"
+                            "$ref": "#/definitions/internal_handler_elections.SyncCandidatesRequest"
                         }
                     }
                 ],
@@ -4550,7 +4664,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.GetFederalConstituenciesResponse"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesResponse"
                         }
                     },
                     "500": {
@@ -4580,7 +4694,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.CreateFederalConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.CreateFederalConstituencyRequest"
                         }
                     }
                 ],
@@ -4702,7 +4816,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/federalconstituencieshandler.UpdateFederalConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_federal_constituencies.UpdateFederalConstituencyRequest"
                         }
                     }
                 ],
@@ -4902,7 +5016,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/fileshandler.GenerateUploadURLRequest"
+                            "$ref": "#/definitions/internal_handler_files.GenerateUploadURLRequest"
                         }
                     }
                 ],
@@ -5139,7 +5253,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetLGAsResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetLGAsResponse"
                         }
                     },
                     "500": {
@@ -5214,7 +5328,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/officeshandler.CreateOfficeRequest"
+                            "$ref": "#/definitions/internal_handler_offices.CreateOfficeRequest"
                         }
                     }
                 ],
@@ -5322,7 +5436,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/officeshandler.UpdateOfficeRequest"
+                            "$ref": "#/definitions/internal_handler_offices.UpdateOfficeRequest"
                         }
                     }
                 ],
@@ -5485,7 +5599,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreatePartyRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreatePartyRequest"
                         }
                     }
                 ],
@@ -5683,7 +5797,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePartyRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePartyRequest"
                         }
                     }
                 ],
@@ -5864,7 +5978,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreateMarketingCampaignRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreateMarketingCampaignRequest"
                         }
                     }
                 ],
@@ -5907,7 +6021,7 @@
                     "200": {
                         "description": "Agent targets retrieved successfully",
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdateAgentTargetsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdateAgentTargetsRequest"
                         }
                     }
                 }
@@ -5943,7 +6057,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdateAgentTargetsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdateAgentTargetsRequest"
                         }
                     }
                 ],
@@ -5990,7 +6104,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.DepositAllowanceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.DepositAllowanceRequest"
                         }
                     }
                 ],
@@ -6070,7 +6184,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.agentPaymentAllocation"
+                            "$ref": "#/definitions/internal_handler_parties.agentPaymentAllocation"
                         }
                     }
                 ],
@@ -6117,7 +6231,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.BuySlotsRequest"
+                            "$ref": "#/definitions/internal_handler_parties.BuySlotsRequest"
                         }
                     }
                 ],
@@ -6305,7 +6419,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.DepositAllowanceRequest"
+                            "$ref": "#/definitions/internal_handler_parties.DepositAllowanceRequest"
                         }
                     }
                 ],
@@ -6420,7 +6534,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.WithdrawRequest"
+                            "$ref": "#/definitions/internal_handler_parties.WithdrawRequest"
                         }
                     }
                 ],
@@ -6493,7 +6607,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -6597,7 +6711,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.SubmitApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.SubmitApplicationRequest"
                         }
                     }
                 ],
@@ -6714,7 +6828,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.SubmitSupervisorApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.SubmitSupervisorApplicationRequest"
                         }
                     }
                 ],
@@ -6834,7 +6948,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.ApproveApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.ApproveApplicationRequest"
                         }
                     }
                 ],
@@ -6972,7 +7086,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partyapplicationshandler.RejectApplicationRequest"
+                            "$ref": "#/definitions/internal_handler_party_applications.RejectApplicationRequest"
                         }
                     }
                 ],
@@ -7073,7 +7187,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.CreatePlanRequest"
+                            "$ref": "#/definitions/internal_handler_parties.CreatePlanRequest"
                         }
                     }
                 ],
@@ -7120,7 +7234,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePlanRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePlanRequest"
                         }
                     }
                 ],
@@ -7203,7 +7317,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/partieshandler.UpdatePlanDisplayOrderRequest"
+                            "$ref": "#/definitions/internal_handler_parties.UpdatePlanDisplayOrderRequest"
                         }
                     }
                 ],
@@ -7322,7 +7436,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/puassignmentshandler.CreateAssignmentRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_assignments.CreateAssignmentRequest"
                         }
                     }
                 ],
@@ -7494,7 +7608,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/puassignmentshandler.UpdateAssignmentTrackingRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest"
                         }
                     }
                 ],
@@ -7776,7 +7890,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_results.SubmitResultRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.SubmitResultRequest"
                         }
                     }
                 ],
@@ -7951,7 +8065,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_results.ReviewRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.ReviewRequest"
                         }
                     }
                 ],
@@ -8026,7 +8140,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_results.VoteRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_results.VoteRequest"
                         }
                     }
                 ],
@@ -8190,7 +8304,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/polling_unit_updates.CreateUpdateRequest"
+                            "$ref": "#/definitions/internal_handler_polling_unit_updates.CreateUpdateRequest"
                         }
                     }
                 ],
@@ -8287,7 +8401,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.GetPollingUnitsResponse"
+                            "$ref": "#/definitions/internal_handler_polling_units.GetPollingUnitsResponse"
                         }
                     },
                     "500": {
@@ -8317,7 +8431,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.CreatePollingUnitRequest"
+                            "$ref": "#/definitions/internal_handler_polling_units.CreatePollingUnitRequest"
                         }
                     }
                 ],
@@ -8439,7 +8553,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/pollingunitshandler.UpdatePollingUnitRequest"
+                            "$ref": "#/definitions/internal_handler_polling_units.UpdatePollingUnitRequest"
                         }
                     }
                 ],
@@ -8606,7 +8720,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     }
                 }
@@ -8635,7 +8749,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/practicetestshandler.SubmitPracticeTestRequest"
+                            "$ref": "#/definitions/internal_handler_practice_tests.SubmitPracticeTestRequest"
                         }
                     }
                 ],
@@ -8645,13 +8759,13 @@
                         "schema": {
                             "allOf": [
                                 {
-                                    "$ref": "#/definitions/utils.SuccessResponse"
+                                    "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                                 },
                                 {
                                     "type": "object",
                                     "properties": {
                                         "data": {
-                                            "$ref": "#/definitions/practicetestshandler.PracticeTestResponse"
+                                            "$ref": "#/definitions/internal_handler_practice_tests.PracticeTestResponse"
                                         }
                                     }
                                 }
@@ -8661,19 +8775,19 @@
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -8713,19 +8827,19 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/utils.SuccessResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.SuccessResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/utils.ErrorResponse"
+                            "$ref": "#/definitions/free9ja_api_internal_utils.ErrorResponse"
                         }
                     }
                 }
@@ -8793,7 +8907,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/seedservice.SeedAdminsRequest"
+                            "$ref": "#/definitions/free9ja_api_internal_service_seed.SeedAdminsRequest"
                         }
                     }
                 ],
@@ -8844,7 +8958,7 @@
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/seedservice.SeedUserRequest"
+                                "$ref": "#/definitions/free9ja_api_internal_service_seed.SeedUserRequest"
                             }
                         }
                     }
@@ -8911,7 +9025,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsResponse"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsResponse"
                         }
                     },
                     "500": {
@@ -8941,7 +9055,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.CreateSenatorialDistrictRequest"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.CreateSenatorialDistrictRequest"
                         }
                     }
                 ],
@@ -9063,7 +9177,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/senatorialdistrictshandler.UpdateSenatorialDistrictRequest"
+                            "$ref": "#/definitions/internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest"
                         }
                     }
                 ],
@@ -9199,7 +9313,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest"
                         }
                     }
                 ],
@@ -9321,7 +9435,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest"
+                            "$ref": "#/definitions/internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest"
                         }
                     }
                 ],
@@ -9480,7 +9594,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse"
+                            "$ref": "#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse"
                         }
                     },
                     "500": {
@@ -9512,7 +9626,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.CreateStateRequest"
+                            "$ref": "#/definitions/internal_handler_states.CreateStateRequest"
                         }
                     }
                 ],
@@ -9634,7 +9748,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateshandler.UpdateStateRequest"
+                            "$ref": "#/definitions/internal_handler_states.UpdateStateRequest"
                         }
                     }
                 ],
@@ -9776,7 +9890,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/bodieshandler.GetCitiesResponse"
+                            "$ref": "#/definitions/internal_handler_bodies.GetCitiesResponse"
                         }
                     },
                     "400": {
@@ -10055,7 +10169,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UserWithdrawRequest"
+                            "$ref": "#/definitions/internal_handler_users.UserWithdrawRequest"
                         }
                     }
                 ],
@@ -10123,7 +10237,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/usershandler.UpdateProfileRequest"
+                            "$ref": "#/definitions/internal_handler_users.UpdateProfileRequest"
                         }
                     }
                 ],
@@ -10379,7 +10493,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.GetWardsResponse"
+                            "$ref": "#/definitions/internal_handler_wards.GetWardsResponse"
                         }
                     },
                     "500": {
@@ -10409,7 +10523,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.CreateWardRequest"
+                            "$ref": "#/definitions/internal_handler_wards.CreateWardRequest"
                         }
                     }
                 ],
@@ -10531,7 +10645,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/wardshandler.UpdateWardRequest"
+                            "$ref": "#/definitions/internal_handler_wards.UpdateWardRequest"
                         }
                     }
                 ],
@@ -10680,7 +10794,185 @@
         }
     },
     "definitions": {
-        "authhandler.AdminLoginData": {
+        "free9ja_api_internal_service_seed.PartyAdminsData": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "partyID",
+                    "type": "integer"
+                },
+                "party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "super_party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "free9ja_api_internal_service_seed.SeedAdminsRequest": {
+            "type": "object",
+            "properties": {
+                "admins": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "parties": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/definitions/free9ja_api_internal_service_seed.PartyAdminsData"
+                        }
+                    }
+                }
+            }
+        },
+        "free9ja_api_internal_service_seed.SeedUserRequest": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "education_level": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "home_address": {
+                    "type": "string"
+                },
+                "is_politician": {
+                    "type": "boolean"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "marital_status": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "num": {
+                    "type": "integer"
+                },
+                "occupation_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "religion": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "verification_type_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "free9ja_api_internal_service_users.PhonePayload": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "is_default": {
+                    "type": "boolean"
+                },
+                "on_whatsapp": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "phonecode": {
+                    "type": "string"
+                },
+                "raw_input": {
+                    "type": "string"
+                }
+            }
+        },
+        "free9ja_api_internal_utils.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "data": {},
+                "message": {
+                    "type": "string",
+                    "example": "Error message description"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "free9ja_api_internal_utils.SuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Operation successful"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "internal_handler_auth.AdminLoginData": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -10690,11 +10982,11 @@
                     "type": "string"
                 },
                 "user": {
-                    "$ref": "#/definitions/authhandler.LoginUser"
+                    "$ref": "#/definitions/internal_handler_auth.LoginUser"
                 }
             }
         },
-        "authhandler.AdminLoginRequest": {
+        "internal_handler_auth.AdminLoginRequest": {
             "type": "object",
             "required": [
                 "identifier",
@@ -10724,11 +11016,11 @@
                 }
             }
         },
-        "authhandler.AdminLoginResponse": {
+        "internal_handler_auth.AdminLoginResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/authhandler.AdminLoginData"
+                    "$ref": "#/definitions/internal_handler_auth.AdminLoginData"
                 },
                 "message": {
                     "type": "string"
@@ -10738,7 +11030,7 @@
                 }
             }
         },
-        "authhandler.ChangePasswordByEmailRequest": {
+        "internal_handler_auth.ChangePasswordByEmailRequest": {
             "type": "object",
             "required": [
                 "email",
@@ -10755,7 +11047,7 @@
                 }
             }
         },
-        "authhandler.CheckNINRequest": {
+        "internal_handler_auth.CheckNINRequest": {
             "type": "object",
             "required": [
                 "nin"
@@ -10766,7 +11058,7 @@
                 }
             }
         },
-        "authhandler.CheckReferralCodeRequest": {
+        "internal_handler_auth.CheckReferralCodeRequest": {
             "type": "object",
             "required": [
                 "code"
@@ -10778,7 +11070,7 @@
                 }
             }
         },
-        "authhandler.CheckUsernameRequest": {
+        "internal_handler_auth.CheckUsernameRequest": {
             "type": "object",
             "required": [
                 "username"
@@ -10791,7 +11083,7 @@
                 }
             }
         },
-        "authhandler.ForgotPasswordRequest": {
+        "internal_handler_auth.ForgotPasswordRequest": {
             "type": "object",
             "required": [
                 "change_password_id",
@@ -10815,7 +11107,7 @@
                 }
             }
         },
-        "authhandler.LoginRequest": {
+        "internal_handler_auth.LoginRequest": {
             "type": "object",
             "required": [
                 "country",
@@ -10850,7 +11142,7 @@
                 }
             }
         },
-        "authhandler.LoginUser": {
+        "internal_handler_auth.LoginUser": {
             "type": "object",
             "properties": {
                 "avatar": {
@@ -10897,7 +11189,7 @@
                 }
             }
         },
-        "authhandler.LogoutRequest": {
+        "internal_handler_auth.LogoutRequest": {
             "type": "object",
             "properties": {
                 "refreshToken": {
@@ -10905,7 +11197,7 @@
                 }
             }
         },
-        "authhandler.PartyLoginRequest": {
+        "internal_handler_auth.PartyLoginRequest": {
             "type": "object",
             "required": [
                 "identifier",
@@ -10935,7 +11227,7 @@
                 }
             }
         },
-        "authhandler.RefreshRequest": {
+        "internal_handler_auth.RefreshRequest": {
             "type": "object",
             "properties": {
                 "refreshToken": {
@@ -10943,7 +11235,7 @@
                 }
             }
         },
-        "authhandler.RegisterCandidatePlaceholderRequest": {
+        "internal_handler_auth.RegisterCandidatePlaceholderRequest": {
             "type": "object",
             "required": [
                 "current_country",
@@ -11017,7 +11309,7 @@
                 }
             }
         },
-        "authhandler.RegisterPhaseSignUpRequest": {
+        "internal_handler_auth.RegisterPhaseSignUpRequest": {
             "type": "object",
             "required": [
                 "confirmPassword",
@@ -11054,7 +11346,7 @@
                 }
             }
         },
-        "authhandler.RegisterRequest": {
+        "internal_handler_auth.RegisterRequest": {
             "type": "object",
             "required": [
                 "answer1",
@@ -11155,7 +11447,7 @@
                 }
             }
         },
-        "authhandler.SignupRequest": {
+        "internal_handler_auth.SignupRequest": {
             "type": "object",
             "required": [
                 "countryId",
@@ -11180,7 +11472,7 @@
                 }
             }
         },
-        "authhandler.VerifySecurityQuestionsRequest": {
+        "internal_handler_auth.VerifySecurityQuestionsRequest": {
             "type": "object",
             "required": [
                 "answer1",
@@ -11207,7 +11499,7 @@
                 }
             }
         },
-        "bodieshandler.CityResponse": {
+        "internal_handler_bodies.CityResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11218,7 +11510,7 @@
                 }
             }
         },
-        "bodieshandler.CountryResponse": {
+        "internal_handler_bodies.CountryResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11235,50 +11527,50 @@
                 }
             }
         },
-        "bodieshandler.GetCitiesData": {
+        "internal_handler_bodies.GetCitiesData": {
             "type": "object",
             "properties": {
                 "cities": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.CityResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.CityResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetCitiesResponse": {
+        "internal_handler_bodies.GetCitiesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetCitiesData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetCitiesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "bodieshandler.GetCountriesData": {
+        "internal_handler_bodies.GetCountriesData": {
             "type": "object",
             "properties": {
                 "countries": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.CountryResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.CountryResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetCountriesResponse": {
+        "internal_handler_bodies.GetCountriesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetCountriesData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetCountriesData"
                 },
                 "message": {
                     "type": "string"
@@ -11288,63 +11580,63 @@
                 }
             }
         },
-        "bodieshandler.GetLGAsData": {
+        "internal_handler_bodies.GetLGAsData": {
             "type": "object",
             "properties": {
                 "lgas": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.LGAResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.LGAResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetLGAsResponse": {
+        "internal_handler_bodies.GetLGAsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetLGAsData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetLGAsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "bodieshandler.GetStatesData": {
+        "internal_handler_bodies.GetStatesData": {
             "type": "object",
             "properties": {
                 "states": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/bodieshandler.StateResponse"
+                        "$ref": "#/definitions/internal_handler_bodies.StateResponse"
                     }
                 }
             }
         },
-        "bodieshandler.GetStatesResponse": {
+        "internal_handler_bodies.GetStatesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/bodieshandler.GetStatesData"
+                    "$ref": "#/definitions/internal_handler_bodies.GetStatesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/bodieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_bodies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "bodieshandler.LGAResponse": {
+        "internal_handler_bodies.LGAResponse": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -11364,7 +11656,7 @@
                 }
             }
         },
-        "bodieshandler.PaginationMeta": {
+        "internal_handler_bodies.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -11375,7 +11667,7 @@
                 }
             }
         },
-        "bodieshandler.StateResponse": {
+        "internal_handler_bodies.StateResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11386,7 +11678,7 @@
                 }
             }
         },
-        "electiongroupshandler.CreateElectionGroupRequest": {
+        "internal_handler_election_groups.CreateElectionGroupRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11406,7 +11698,7 @@
                 }
             }
         },
-        "electiongroupshandler.UpdateElectionGroupRequest": {
+        "internal_handler_election_groups.UpdateElectionGroupRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11426,7 +11718,7 @@
                 }
             }
         },
-        "electiongroupshandler.UpsertPartyElectionGroupStatsRequest": {
+        "internal_handler_election_groups.UpsertPartyElectionGroupStatsRequest": {
             "type": "object",
             "properties": {
                 "elections_contesting": {
@@ -11438,7 +11730,7 @@
                 "polling_agents_coverage": {}
             }
         },
-        "electionshandler.CreateElectionRequest": {
+        "internal_handler_elections.CreateElectionRequest": {
             "type": "object",
             "properties": {
                 "candidates_count": {
@@ -11476,7 +11768,7 @@
                 }
             }
         },
-        "electionshandler.CreateFederalConstituencyElectionRequest": {
+        "internal_handler_elections.CreateFederalConstituencyElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11496,7 +11788,7 @@
                 }
             }
         },
-        "electionshandler.CreateLgaElectionRequest": {
+        "internal_handler_elections.CreateLgaElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11516,13 +11808,13 @@
                 }
             }
         },
-        "electionshandler.CreateNationwideElectionRequest": {
+        "internal_handler_elections.CreateNationwideElectionRequest": {
             "type": "object",
             "properties": {
                 "candidates": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
+                        "$ref": "#/definitions/internal_handler_elections.ElectionCandidateInput"
                     }
                 },
                 "election_date": {
@@ -11536,7 +11828,7 @@
                 }
             }
         },
-        "electionshandler.CreateSenatorialDistrictElectionRequest": {
+        "internal_handler_elections.CreateSenatorialDistrictElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11556,7 +11848,7 @@
                 }
             }
         },
-        "electionshandler.CreateStateConstituencyElectionRequest": {
+        "internal_handler_elections.CreateStateConstituencyElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11576,7 +11868,7 @@
                 }
             }
         },
-        "electionshandler.CreateStateElectionRequest": {
+        "internal_handler_elections.CreateStateElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11596,7 +11888,7 @@
                 }
             }
         },
-        "electionshandler.CreateWardElectionRequest": {
+        "internal_handler_elections.CreateWardElectionRequest": {
             "type": "object",
             "properties": {
                 "election_date": {
@@ -11616,7 +11908,7 @@
                 }
             }
         },
-        "electionshandler.ElectionCandidateInput": {
+        "internal_handler_elections.ElectionCandidateInput": {
             "type": "object",
             "required": [
                 "candidate_id",
@@ -11635,18 +11927,18 @@
                 }
             }
         },
-        "electionshandler.SyncCandidatesRequest": {
+        "internal_handler_elections.SyncCandidatesRequest": {
             "type": "object",
             "properties": {
                 "candidates": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/electionshandler.ElectionCandidateInput"
+                        "$ref": "#/definitions/internal_handler_elections.ElectionCandidateInput"
                     }
                 }
             }
         },
-        "electionshandler.UpdateElectionRequest": {
+        "internal_handler_elections.UpdateElectionRequest": {
             "type": "object",
             "properties": {
                 "candidates_count": {
@@ -11684,7 +11976,7 @@
                 }
             }
         },
-        "federalconstituencieshandler.CreateFederalConstituencyRequest": {
+        "internal_handler_federal_constituencies.CreateFederalConstituencyRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -11698,7 +11990,7 @@
                 }
             }
         },
-        "federalconstituencieshandler.FederalConstituencyResponse": {
+        "internal_handler_federal_constituencies.FederalConstituencyResponse": {
             "type": "object",
             "properties": {
                 "id": {
@@ -11721,35 +12013,35 @@
                 }
             }
         },
-        "federalconstituencieshandler.GetFederalConstituenciesData": {
+        "internal_handler_federal_constituencies.GetFederalConstituenciesData": {
             "type": "object",
             "properties": {
                 "constituencies": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/federalconstituencieshandler.FederalConstituencyResponse"
+                        "$ref": "#/definitions/internal_handler_federal_constituencies.FederalConstituencyResponse"
                     }
                 }
             }
         },
-        "federalconstituencieshandler.GetFederalConstituenciesResponse": {
+        "internal_handler_federal_constituencies.GetFederalConstituenciesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/federalconstituencieshandler.GetFederalConstituenciesData"
+                    "$ref": "#/definitions/internal_handler_federal_constituencies.GetFederalConstituenciesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/federalconstituencieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_federal_constituencies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "federalconstituencieshandler.PaginationMeta": {
+        "internal_handler_federal_constituencies.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -11760,7 +12052,7 @@
                 }
             }
         },
-        "federalconstituencieshandler.UpdateFederalConstituencyRequest": {
+        "internal_handler_federal_constituencies.UpdateFederalConstituencyRequest": {
             "type": "object",
             "properties": {
                 "name": {
@@ -11774,7 +12066,7 @@
                 }
             }
         },
-        "fileshandler.GenerateUploadURLRequest": {
+        "internal_handler_files.GenerateUploadURLRequest": {
             "type": "object",
             "properties": {
                 "file_size": {
@@ -11797,7 +12089,7 @@
                 }
             }
         },
-        "officeshandler.CreateOfficeRequest": {
+        "internal_handler_offices.CreateOfficeRequest": {
             "type": "object",
             "properties": {
                 "election": {
@@ -11814,7 +12106,7 @@
                 }
             }
         },
-        "officeshandler.UpdateOfficeRequest": {
+        "internal_handler_offices.UpdateOfficeRequest": {
             "type": "object",
             "properties": {
                 "election": {
@@ -11831,7 +12123,7 @@
                 }
             }
         },
-        "pageverificationshandler.AssignVerificationRequest": {
+        "internal_handler_page_verifications.AssignVerificationRequest": {
             "type": "object",
             "required": [
                 "for_who",
@@ -11854,7 +12146,7 @@
                 }
             }
         },
-        "partieshandler.BuySlotsRequest": {
+        "internal_handler_parties.BuySlotsRequest": {
             "type": "object",
             "properties": {
                 "quantity": {
@@ -11862,7 +12154,7 @@
                 }
             }
         },
-        "partieshandler.CreateMarketingCampaignRequest": {
+        "internal_handler_parties.CreateMarketingCampaignRequest": {
             "type": "object",
             "properties": {
                 "budget": {
@@ -11901,7 +12193,7 @@
                 }
             }
         },
-        "partieshandler.CreatePartyRequest": {
+        "internal_handler_parties.CreatePartyRequest": {
             "type": "object",
             "properties": {
                 "display_order": {
@@ -11918,7 +12210,7 @@
                 }
             }
         },
-        "partieshandler.CreatePlanRequest": {
+        "internal_handler_parties.CreatePlanRequest": {
             "type": "object",
             "properties": {
                 "color_hex": {
@@ -11953,7 +12245,7 @@
                 }
             }
         },
-        "partieshandler.DepositAllowanceRequest": {
+        "internal_handler_parties.DepositAllowanceRequest": {
             "type": "object",
             "properties": {
                 "amount_kobo": {
@@ -11961,7 +12253,7 @@
                 }
             }
         },
-        "partieshandler.SetPartyDiscountRequest": {
+        "internal_handler_parties.SetPartyDiscountRequest": {
             "type": "object",
             "properties": {
                 "discount_percentage": {
@@ -11969,7 +12261,7 @@
                 }
             }
         },
-        "partieshandler.SetSlotPriceRequest": {
+        "internal_handler_parties.SetSlotPriceRequest": {
             "type": "object",
             "properties": {
                 "price_kobo": {
@@ -11977,7 +12269,7 @@
                 }
             }
         },
-        "partieshandler.ToggleVerificationRequest": {
+        "internal_handler_parties.ToggleVerificationRequest": {
             "type": "object",
             "properties": {
                 "is_verified": {
@@ -11985,7 +12277,7 @@
                 }
             }
         },
-        "partieshandler.UpdateAgentTargetsRequest": {
+        "internal_handler_parties.UpdateAgentTargetsRequest": {
             "type": "object",
             "properties": {
                 "lga_election_supervisor": {
@@ -12002,7 +12294,7 @@
                 }
             }
         },
-        "partieshandler.UpdatePartyRequest": {
+        "internal_handler_parties.UpdatePartyRequest": {
             "type": "object",
             "properties": {
                 "display_order": {
@@ -12019,7 +12311,7 @@
                 }
             }
         },
-        "partieshandler.UpdatePlanDisplayOrderRequest": {
+        "internal_handler_parties.UpdatePlanDisplayOrderRequest": {
             "type": "object",
             "properties": {
                 "display_order": {
@@ -12027,7 +12319,7 @@
                 }
             }
         },
-        "partieshandler.UpdatePlanRequest": {
+        "internal_handler_parties.UpdatePlanRequest": {
             "type": "object",
             "properties": {
                 "color_hex": {
@@ -12065,7 +12357,7 @@
                 }
             }
         },
-        "partieshandler.WithdrawRequest": {
+        "internal_handler_parties.WithdrawRequest": {
             "type": "object",
             "properties": {
                 "amount_kobo": {
@@ -12083,24 +12375,24 @@
                 }
             }
         },
-        "partieshandler.agentPaymentAllocation": {
+        "internal_handler_parties.agentPaymentAllocation": {
             "type": "object",
             "properties": {
                 "lga_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 },
                 "polling_agent": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 },
                 "state_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 },
                 "ward_election_supervisor": {
-                    "$ref": "#/definitions/partieshandler.agentPaymentConfig"
+                    "$ref": "#/definitions/internal_handler_parties.agentPaymentConfig"
                 }
             }
         },
-        "partieshandler.agentPaymentConfig": {
+        "internal_handler_parties.agentPaymentConfig": {
             "type": "object",
             "properties": {
                 "default": {
@@ -12115,7 +12407,7 @@
                 }
             }
         },
-        "partyapplicationshandler.ApproveApplicationRequest": {
+        "internal_handler_party_applications.ApproveApplicationRequest": {
             "type": "object",
             "properties": {
                 "lga_id": {
@@ -12135,7 +12427,7 @@
                 }
             }
         },
-        "partyapplicationshandler.RejectApplicationRequest": {
+        "internal_handler_party_applications.RejectApplicationRequest": {
             "type": "object",
             "properties": {
                 "reason": {
@@ -12143,7 +12435,7 @@
                 }
             }
         },
-        "partyapplicationshandler.SubmitApplicationRequest": {
+        "internal_handler_party_applications.SubmitApplicationRequest": {
             "type": "object",
             "properties": {
                 "address": {
@@ -12211,7 +12503,7 @@
                 }
             }
         },
-        "partyapplicationshandler.SubmitSupervisorApplicationRequest": {
+        "internal_handler_party_applications.SubmitSupervisorApplicationRequest": {
             "type": "object",
             "properties": {
                 "degree_certificate_url": {
@@ -12234,7 +12526,50 @@
                 }
             }
         },
-        "polling_unit_results.ReviewRequest": {
+        "internal_handler_polling_unit_assignments.CreateAssignmentRequest": {
+            "type": "object",
+            "properties": {
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "fake_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "role_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_assignments.UpdateAssignmentTrackingRequest": {
+            "type": "object",
+            "properties": {
+                "arrival_video_url": {
+                    "type": "string"
+                },
+                "arrived_at": {
+                    "type": "string"
+                },
+                "election_ended_at": {
+                    "type": "string"
+                },
+                "election_ended_video_url": {
+                    "type": "string"
+                },
+                "election_started_at": {
+                    "type": "string"
+                },
+                "election_started_video_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_handler_polling_unit_results.ReviewRequest": {
             "type": "object",
             "properties": {
                 "disputed_reason": {
@@ -12246,7 +12581,7 @@
                 }
             }
         },
-        "polling_unit_results.SubmitResultRequest": {
+        "internal_handler_polling_unit_results.SubmitResultRequest": {
             "type": "object",
             "properties": {
                 "assignment_id": {
@@ -12275,7 +12610,7 @@
                 }
             }
         },
-        "polling_unit_results.VoteRequest": {
+        "internal_handler_polling_unit_results.VoteRequest": {
             "type": "object",
             "properties": {
                 "vote_type": {
@@ -12284,7 +12619,7 @@
                 }
             }
         },
-        "polling_unit_updates.CreateUpdateRequest": {
+        "internal_handler_polling_unit_updates.CreateUpdateRequest": {
             "type": "object",
             "properties": {
                 "assignment_id": {
@@ -12319,7 +12654,7 @@
                 }
             }
         },
-        "pollingunitshandler.CreatePollingUnitRequest": {
+        "internal_handler_polling_units.CreatePollingUnitRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -12366,35 +12701,35 @@
                 }
             }
         },
-        "pollingunitshandler.GetPollingUnitsData": {
+        "internal_handler_polling_units.GetPollingUnitsData": {
             "type": "object",
             "properties": {
                 "polling_units": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/pollingunitshandler.PollingUnitResponse"
+                        "$ref": "#/definitions/internal_handler_polling_units.PollingUnitResponse"
                     }
                 }
             }
         },
-        "pollingunitshandler.GetPollingUnitsResponse": {
+        "internal_handler_polling_units.GetPollingUnitsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/pollingunitshandler.GetPollingUnitsData"
+                    "$ref": "#/definitions/internal_handler_polling_units.GetPollingUnitsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/pollingunitshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_polling_units.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "pollingunitshandler.PaginationMeta": {
+        "internal_handler_polling_units.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -12405,7 +12740,7 @@
                 }
             }
         },
-        "pollingunitshandler.PollingUnitResponse": {
+        "internal_handler_polling_units.PollingUnitResponse": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -12464,7 +12799,7 @@
                 }
             }
         },
-        "pollingunitshandler.UpdatePollingUnitRequest": {
+        "internal_handler_polling_units.UpdatePollingUnitRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -12511,7 +12846,7 @@
                 }
             }
         },
-        "practicetestshandler.PracticeTestResponse": {
+        "internal_handler_practice_tests.PracticeTestResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -12541,7 +12876,7 @@
                 }
             }
         },
-        "practicetestshandler.SubmitPracticeTestRequest": {
+        "internal_handler_practice_tests.SubmitPracticeTestRequest": {
             "type": "object",
             "properties": {
                 "election_group_id": {
@@ -12556,12 +12891,12 @@
                 "task_stats": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/practicetestshandler.TaskStat"
+                        "$ref": "#/definitions/internal_handler_practice_tests.TaskStat"
                     }
                 }
             }
         },
-        "practicetestshandler.TaskStat": {
+        "internal_handler_practice_tests.TaskStat": {
             "type": "object",
             "properties": {
                 "completed": {
@@ -12578,50 +12913,7 @@
                 }
             }
         },
-        "puassignmentshandler.CreateAssignmentRequest": {
-            "type": "object",
-            "properties": {
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "fake_id": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "polling_unit_id": {
-                    "type": "integer"
-                },
-                "role_type": {
-                    "type": "string"
-                }
-            }
-        },
-        "puassignmentshandler.UpdateAssignmentTrackingRequest": {
-            "type": "object",
-            "properties": {
-                "arrival_video_url": {
-                    "type": "string"
-                },
-                "arrived_at": {
-                    "type": "string"
-                },
-                "election_ended_at": {
-                    "type": "string"
-                },
-                "election_ended_video_url": {
-                    "type": "string"
-                },
-                "election_started_at": {
-                    "type": "string"
-                },
-                "election_started_video_url": {
-                    "type": "string"
-                }
-            }
-        },
-        "referrals.createReferralRequest": {
+        "internal_handler_referrals.createReferralRequest": {
             "type": "object",
             "required": [
                 "milestone",
@@ -12646,7 +12938,7 @@
                 }
             }
         },
-        "referrals.updateReferralRequest": {
+        "internal_handler_referrals.updateReferralRequest": {
             "type": "object",
             "properties": {
                 "milestone": {
@@ -12664,131 +12956,7 @@
                 }
             }
         },
-        "seedservice.PartyAdminsData": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "description": "partyID",
-                    "type": "integer"
-                },
-                "party_admin": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "super_party_admin": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                }
-            }
-        },
-        "seedservice.SeedAdminsRequest": {
-            "type": "object",
-            "properties": {
-                "admins": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "parties": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "additionalProperties": {
-                            "$ref": "#/definitions/seedservice.PartyAdminsData"
-                        }
-                    }
-                }
-            }
-        },
-        "seedservice.SeedUserRequest": {
-            "type": "object",
-            "properties": {
-                "account_status": {
-                    "type": "string"
-                },
-                "avatar": {
-                    "type": "string"
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_lga": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "date_of_birth": {
-                    "type": "string"
-                },
-                "education_level": {
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "home_address": {
-                    "type": "string"
-                },
-                "is_politician": {
-                    "type": "boolean"
-                },
-                "is_verified": {
-                    "type": "boolean"
-                },
-                "last_name": {
-                    "type": "string"
-                },
-                "marital_status": {
-                    "type": "string"
-                },
-                "middle_name": {
-                    "type": "string"
-                },
-                "num": {
-                    "type": "integer"
-                },
-                "occupation_id": {
-                    "type": "integer"
-                },
-                "party_id": {
-                    "type": "integer"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "religion": {
-                    "type": "string"
-                },
-                "state_of_origin": {
-                    "type": "integer"
-                },
-                "username": {
-                    "type": "string"
-                },
-                "verification_type_id": {
-                    "type": "integer"
-                }
-            }
-        },
-        "senatorialdistrictshandler.CreateSenatorialDistrictRequest": {
+        "internal_handler_senatorial_districts.CreateSenatorialDistrictRequest": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -12805,35 +12973,35 @@
                 }
             }
         },
-        "senatorialdistrictshandler.GetSenatorialDistrictsData": {
+        "internal_handler_senatorial_districts.GetSenatorialDistrictsData": {
             "type": "object",
             "properties": {
                 "districts": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/senatorialdistrictshandler.SenatorialDistrictResponse"
+                        "$ref": "#/definitions/internal_handler_senatorial_districts.SenatorialDistrictResponse"
                     }
                 }
             }
         },
-        "senatorialdistrictshandler.GetSenatorialDistrictsResponse": {
+        "internal_handler_senatorial_districts.GetSenatorialDistrictsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/senatorialdistrictshandler.GetSenatorialDistrictsData"
+                    "$ref": "#/definitions/internal_handler_senatorial_districts.GetSenatorialDistrictsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/senatorialdistrictshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_senatorial_districts.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "senatorialdistrictshandler.PaginationMeta": {
+        "internal_handler_senatorial_districts.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -12844,7 +13012,7 @@
                 }
             }
         },
-        "senatorialdistrictshandler.SenatorialDistrictResponse": {
+        "internal_handler_senatorial_districts.SenatorialDistrictResponse": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -12867,7 +13035,7 @@
                 }
             }
         },
-        "senatorialdistrictshandler.UpdateSenatorialDistrictRequest": {
+        "internal_handler_senatorial_districts.UpdateSenatorialDistrictRequest": {
             "type": "object",
             "properties": {
                 "coalition_center": {
@@ -12884,7 +13052,7 @@
                 }
             }
         },
-        "stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest": {
+        "internal_handler_state_assembly_constituencies.CreateStateAssemblyConstituencyRequest": {
             "type": "object",
             "properties": {
                 "federal_constituency_id": {
@@ -12904,35 +13072,35 @@
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData": {
+        "internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData": {
             "type": "object",
             "properties": {
                 "constituencies": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse"
+                        "$ref": "#/definitions/internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse"
                     }
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse": {
+        "internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData"
+                    "$ref": "#/definitions/internal_handler_state_assembly_constituencies.GetStateAssemblyConstituenciesData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/stateassemblyconstituencieshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_state_assembly_constituencies.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "stateassemblyconstituencieshandler.PaginationMeta": {
+        "internal_handler_state_assembly_constituencies.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -12943,7 +13111,7 @@
                 }
             }
         },
-        "stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse": {
+        "internal_handler_state_assembly_constituencies.StateAssemblyConstituencyResponse": {
             "type": "object",
             "properties": {
                 "federal_constituency_id": {
@@ -12972,7 +13140,7 @@
                 }
             }
         },
-        "stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest": {
+        "internal_handler_state_assembly_constituencies.UpdateStateAssemblyConstituencyRequest": {
             "type": "object",
             "properties": {
                 "federal_constituency_id": {
@@ -12992,7 +13160,7 @@
                 }
             }
         },
-        "stateshandler.CreateStateRequest": {
+        "internal_handler_states.CreateStateRequest": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -13012,7 +13180,7 @@
                 }
             }
         },
-        "stateshandler.UpdateStateRequest": {
+        "internal_handler_states.UpdateStateRequest": {
             "type": "object",
             "properties": {
                 "country_code": {
@@ -13032,7 +13200,7 @@
                 }
             }
         },
-        "system_settings.SystemSettingResponse": {
+        "internal_handler_system_settings.SystemSettingResponse": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -13050,7 +13218,7 @@
                 "value": {}
             }
         },
-        "system_settings.UpdateSystemSettingRequest": {
+        "internal_handler_system_settings.UpdateSystemSettingRequest": {
             "type": "object",
             "required": [
                 "value"
@@ -13062,7 +13230,7 @@
                 "value": {}
             }
         },
-        "usershandler.MakeUserSuperAdminRequest": {
+        "internal_handler_users.MakeUserSuperAdminRequest": {
             "type": "object",
             "required": [
                 "name"
@@ -13074,7 +13242,7 @@
                 }
             }
         },
-        "usershandler.UpdateProfileRequest": {
+        "internal_handler_users.UpdateProfileRequest": {
             "type": "object",
             "required": [
                 "current_country",
@@ -13122,13 +13290,13 @@
                 }
             }
         },
-        "usershandler.UpdateUserPhoneNumbersRequest": {
+        "internal_handler_users.UpdateUserPhoneNumbersRequest": {
             "type": "object",
             "properties": {
                 "phones": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/usersservice.PhonePayload"
+                        "$ref": "#/definitions/free9ja_api_internal_service_users.PhonePayload"
                     }
                 },
                 "user_fid": {
@@ -13136,7 +13304,7 @@
                 }
             }
         },
-        "usershandler.UpdateUserRolesRequest": {
+        "internal_handler_users.UpdateUserRolesRequest": {
             "type": "object",
             "required": [
                 "roles"
@@ -13156,7 +13324,7 @@
                 }
             }
         },
-        "usershandler.UserWithdrawRequest": {
+        "internal_handler_users.UserWithdrawRequest": {
             "type": "object",
             "properties": {
                 "amount_kobo": {
@@ -13173,61 +13341,7 @@
                 }
             }
         },
-        "usersservice.PhonePayload": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "is_default": {
-                    "type": "boolean"
-                },
-                "on_whatsapp": {
-                    "type": "string"
-                },
-                "phone": {
-                    "type": "string"
-                },
-                "phonecode": {
-                    "type": "string"
-                },
-                "raw_input": {
-                    "type": "string"
-                }
-            }
-        },
-        "utils.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "data": {},
-                "message": {
-                    "type": "string",
-                    "example": "Error message description"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": false
-                }
-            }
-        },
-        "utils.SuccessResponse": {
-            "type": "object",
-            "properties": {
-                "data": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Operation successful"
-                },
-                "success": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
-        "wardshandler.CreateWardRequest": {
+        "internal_handler_wards.CreateWardRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -13244,35 +13358,35 @@
                 }
             }
         },
-        "wardshandler.GetWardsData": {
+        "internal_handler_wards.GetWardsData": {
             "type": "object",
             "properties": {
                 "wards": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/wardshandler.WardResponse"
+                        "$ref": "#/definitions/internal_handler_wards.WardResponse"
                     }
                 }
             }
         },
-        "wardshandler.GetWardsResponse": {
+        "internal_handler_wards.GetWardsResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/wardshandler.GetWardsData"
+                    "$ref": "#/definitions/internal_handler_wards.GetWardsData"
                 },
                 "message": {
                     "type": "string"
                 },
                 "meta": {
-                    "$ref": "#/definitions/wardshandler.PaginationMeta"
+                    "$ref": "#/definitions/internal_handler_wards.PaginationMeta"
                 },
                 "success": {
                     "type": "boolean"
                 }
             }
         },
-        "wardshandler.PaginationMeta": {
+        "internal_handler_wards.PaginationMeta": {
             "type": "object",
             "properties": {
                 "has_more": {
@@ -13283,7 +13397,7 @@
                 }
             }
         },
-        "wardshandler.UpdateWardRequest": {
+        "internal_handler_wards.UpdateWardRequest": {
             "type": "object",
             "properties": {
                 "abbreviation": {
@@ -13300,7 +13414,7 @@
                 }
             }
         },
-        "wardshandler.WardResponse": {
+        "internal_handler_wards.WardResponse": {
             "type": "object",
             "properties": {
                 "id": {

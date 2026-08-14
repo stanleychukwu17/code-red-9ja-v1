@@ -1,7 +1,7 @@
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import { AppAvatar } from "@repo/ui/components/avatar";
 
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import {
   SelectElectionGroupAndElection,
   type Election,
@@ -34,7 +34,7 @@ export function HomeHeader({
     selectedElection,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAuth();
+  } = useAppContext();
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 
@@ -62,7 +62,7 @@ export function HomeHeader({
           alt={user?.first_name || "User"}
           className="size-7 shrink-0"
         />
-        <div 
+        <div
           className="flex-1 min-w-0 sm:max-w-[180px]"
           onClickCapture={(e) => {
             if (onPracticeClick) {
@@ -98,7 +98,7 @@ export function HomeHeader({
               {daysLeft} {daysLeft === 1 ? "day" : "days"} left
             </span>
           ))}
-        <div 
+        <div
           className="relative cursor-pointer p-1"
           onClick={(e) => interceptClick(e)}
         >

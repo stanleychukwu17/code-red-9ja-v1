@@ -5,7 +5,7 @@ import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 import { useQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import MapPinIcon from "@repo/ui/icons/map-pin-icon";
 import { TitleText } from "@repo/ui/components/custom/Texts";
 import { Target } from "lucide-react";
@@ -31,7 +31,7 @@ const isElectionInPast = (val: any) => {
 
 export function ApplicationsCard() {
   const navigate = useNavigate();
-  const { user, selectedAssignment } = useAuth();
+  const { user, selectedAssignment } = useAppContext();
 
   const { data: applicationsData } = useQuery({
     queryKey: ["pollingAgentApplications", user?.id],

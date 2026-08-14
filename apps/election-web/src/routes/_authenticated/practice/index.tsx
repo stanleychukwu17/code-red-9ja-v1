@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { createFileRoute } from "@tanstack/react-router";
 import { PollingAgentPracticePage } from "./page-components/PollingAgentPracticePage";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated/practice/")({
 });
 
 function RouteComponent() {
-  const { selectedSupervisorAssignment, selectedAssignment } = useAuth();
+  const { selectedSupervisorAssignment, selectedAssignment } = useAppContext();
 
   if (selectedSupervisorAssignment) {
     if (selectedSupervisorAssignment.type === "state") {

@@ -16,12 +16,21 @@ ON CONFLICT (key) DO NOTHING;
 
 -- Seed target for live voters referred
 INSERT INTO system_settings (key, value, description)
-VALUES ('live_voters_referred', '20'::jsonb, 'The target number of live voters an agent is expected to refer')
+VALUES ('target_live_voters_referred_count', '20'::jsonb, 'The target number of live voters an agent is expected to refer')
 ON CONFLICT (key) DO NOTHING;
 
--- Seed target for updates count
+-- Seed update schedule config
 INSERT INTO system_settings (key, value, description)
-VALUES ('target_updates_count', '20'::jsonb, 'The target number of updates an agent is expected to give')
+VALUES (
+  'update_schedule_config',
+  '{
+    "target_updates_count": 20,
+    "start_time": "07:00",
+    "end_time": "17:00",
+    "interval_minutes": 30
+  }'::jsonb,
+  'Configuration for election update schedule including target updates count, start time (HH:MM), end time (HH:MM), and interval in minutes'
+)
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed initial earnings allocations

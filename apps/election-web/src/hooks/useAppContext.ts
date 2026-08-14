@@ -1,29 +1,25 @@
-import { useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useRouteContext } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
-import { getPartyById, getParties } from "#/lib/server/parties";
 import { getElectionCandidates } from "#/lib/server/elections";
 import { getElectionScopedFinalResult } from "#/lib/server/final-results";
-import { getFinalResult as getPollingUnitFinalResult } from "#/lib/server/polling_unit_results";
+import { getParties, getPartyById } from "#/lib/server/parties";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
+import { getFinalResult as getPollingUnitFinalResult } from "#/lib/server/polling_unit_results";
 import { getSupervisorAssignments } from "#/lib/server/supervisor_assignments";
-import {
-  getMyWallet,
-  createUserWallet,
-} from "#/lib/server/users";
+import { createUserWallet, getMyWallet } from "#/lib/server/users";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
+  selectIsLive,
+  selectIsLocked,
   selectSelectedElection,
   selectSelectedElectionGroup,
-  selectIsLive,
   setIsLive,
-  selectIsLocked,
   setIsLocked,
   setSelectedElection as setSelectedElectionAction,
   setSelectedElectionGroup as setSelectedElectionGroupAction,
 } from "#/redux/slice/electionSlice";
-import { updateAuthState } from "#/redux/slice/authSlice";
+import { useQuery } from "@tanstack/react-query";
+import { useRouteContext } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect } from "react";
 
 export interface PartyDetails {
   id?: number;
@@ -97,7 +93,7 @@ export interface UserDetails {
   };
 }
 
-export const useAuth = () => {
+export const useAppContext = () => {
   const dispatch = useAppDispatch();
 
   // Try getting user from Router context (SSR or pre-hydration) and Redux (active client session)
@@ -396,7 +392,7 @@ export const useAuth = () => {
 };
 
 export const useParty = () => {
-  const auth = useAuth();
+  const auth = useAppContext();
   return auth.party;
 };
 

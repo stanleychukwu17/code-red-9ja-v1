@@ -27,7 +27,7 @@ export function LiveVotersReferredDialog({
 }) {
   const [error, setError] = React.useState<string | null>(null);
   const queryClient = useQueryClient();
-  const settingKey = "live_voters_referred";
+  const settingKey = "target_live_voters_referred_count";
 
   const { data: settingRes, isLoading } = useQuery({
     queryKey: ["systemSetting", settingKey],
@@ -65,7 +65,8 @@ export function LiveVotersReferredDialog({
         data: {
           key: settingKey,
           value: values.targetNumber,
-          description: "The target number of live voters an agent is expected to refer",
+          description:
+            "The target number of live voters an agent is expected to refer",
         },
       });
 
@@ -105,7 +106,8 @@ export function LiveVotersReferredDialog({
           >
             <DialogPadding className="space-y-4 pb-6">
               <p className="text-c-50 leading-[22px]">
-                Set the target for how many live voters agents are expected to refer.
+                Set the target for how many live voters agents are expected to
+                refer.
               </p>
 
               {error && (

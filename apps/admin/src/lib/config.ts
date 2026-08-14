@@ -216,4 +216,8 @@ export const API_URL = {
     const qs = params.toString();
     return `${api}/plans${qs ? `?${qs}` : ""}`;
   },
+  systemSettings: {
+    get: (key: string) => `${api}/admin/settings/${key}`,
+    update: (key: string) => `${api}/admin/settings/${key}`,
+  },
 };

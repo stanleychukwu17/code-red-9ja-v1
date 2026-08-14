@@ -5,7 +5,7 @@ import { Link2 } from "lucide-react";
 import { useCopyToClipboard, useIntersectionObserver } from "usehooks-ts";
 import { toast } from "sonner";
 
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { getPageHeader } from "#/lib/shared/meta";
 import { getReferralStats, getReferredUsers } from "#/lib/server/referrals";
 import {
@@ -80,7 +80,7 @@ function SummaryItem({
 
 function ReferralsPage() {
   const navigate = useNavigate();
-  const { party, selectedElectionGroup, user } = useAuth();
+  const { party, selectedElectionGroup, user } = useAppContext();
   const [_, copy] = useCopyToClipboard();
 
   const { ref: loadMoreRef, isIntersecting } = useIntersectionObserver({
@@ -155,7 +155,8 @@ function ReferralsPage() {
   });
 
   const items = useMemo(() => {
-    const rawItems = infiniteData?.pages.flatMap((page) => page?.items || []) || [];
+    const rawItems =
+      infiniteData?.pages.flatMap((page) => page?.items || []) || [];
     return rawItems.filter((item): item is ReferredUserItem => Boolean(item));
   }, [infiniteData]);
 

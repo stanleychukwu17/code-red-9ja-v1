@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { useQuery } from "@tanstack/react-query";
 import { getSingleLgaStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
@@ -40,7 +40,7 @@ export function LGAElectionSupervisorPage() {
     selectedElectionGroup,
     selectedElection,
     selectedSupervisorAssignment,
-  } = useAuth();
+  } = useAppContext();
 
   const currentAssignment = selectedSupervisorAssignment?.data;
 

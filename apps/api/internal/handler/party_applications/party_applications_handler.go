@@ -21,7 +21,7 @@ type PartyApplicationsService interface {
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) ([]queries.PartyApplication, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
-	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, stateID int16, senatorialDistrictID, federalConstituencyID, stateAssemblyConstituencyID, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
+	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error)
 	CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyApplication, error)
@@ -290,10 +290,10 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := false
 	isPartyAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 		}
-		if rCode == "party_admin" {
+		if rCode == "party_admin" || rCode == "super_party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -313,26 +313,11 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var stateID int16
-	var senatorialDistrictID, federalConstituencyID, stateAssemblyConstituencyID, lgaID, wardID int32
+	var lgaID, wardID int32
 
 	if val := r.URL.Query().Get("state_id"); val != "" {
 		if v, _ := strconv.ParseInt(val, 10, 16); v > 0 {
 			stateID = int16(v)
-		}
-	}
-	if val := r.URL.Query().Get("senatorial_district_id"); val != "" {
-		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
-			senatorialDistrictID = int32(v)
-		}
-	}
-	if val := r.URL.Query().Get("federal_constituency_id"); val != "" {
-		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
-			federalConstituencyID = int32(v)
-		}
-	}
-	if val := r.URL.Query().Get("state_assembly_constituency_id"); val != "" {
-		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
-			stateAssemblyConstituencyID = int32(v)
 		}
 	}
 	if val := r.URL.Query().Get("lga_id"); val != "" {
@@ -352,9 +337,6 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		"electionGroupID", electionGroupID,
 		"status", status,
 		"stateID", stateID,
-		"senatorialDistrictID", senatorialDistrictID,
-		"federalConstituencyID", federalConstituencyID,
-		"stateAssemblyConstituencyID", stateAssemblyConstituencyID,
 		"lgaID", lgaID,
 		"wardID", wardID,
 		"limit", limit,
@@ -363,7 +345,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		"isPlatformAdmin", isPlatformAdmin,
 		"isPartyAdmin", isPartyAdmin,
 	)
-	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, senatorialDistrictID, federalConstituencyID, stateAssemblyConstituencyID, lgaID, wardID, limit, cursor)
+	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, limit, cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list applications: "+err.Error())
 		return

@@ -351,20 +351,17 @@ func (s *Service) GetApplicationByID(ctx context.Context, id int64) (queries.Par
 	return s.queries.GetApplicationByID(ctx, id)
 }
 
-func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, stateID int16, senatorialDistrictID, federalConstituencyID, stateAssemblyConstituencyID, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
+func (s *Service) ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error) {
 	return s.queries.ListApplications(ctx, queries.ListApplicationsParams{
-		UserID:                      userID,
-		PartyID:                     partyID,
-		ElectionGroupID:             electionGroupID,
-		Status:                      status,
-		StateID:                     stateID,
-		SenatorialDistrictID:        senatorialDistrictID,
-		FederalConstituencyID:       federalConstituencyID,
-		StateAssemblyConstituencyID: stateAssemblyConstituencyID,
-		LgaID:                       lgaID,
-		WardID:                      wardID,
-		Cursor:                      cursor,
-		LimitVal:                    limit,
+		UserID:          userID,
+		PartyID:         partyID,
+		ElectionGroupID: electionGroupID,
+		Status:          status,
+		StateID:         stateID,
+		LgaID:           lgaID,
+		WardID:          wardID,
+		Cursor:          cursor,
+		LimitVal:        limit,
 	})
 }
 
