@@ -16,7 +16,6 @@ import { SelectCity } from "@repo/ui/components/selects/city-select";
 import { SelectCountry } from "@repo/ui/components/selects/country-select";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectGender } from "@repo/ui/components/selects/gender-select";
-import { SelectSecurityQuestion } from "@repo/ui/components/selects/security-question-select";
 import { SelectState } from "@repo/ui/components/selects/state-select";
 import MapPinIcon from "@repo/ui/icons/onboarding/map-pin-icon";
 import NINIcon from "@repo/ui/icons/onboarding/nin-icon ";
@@ -69,11 +68,6 @@ type OnboardingState = {
   stateId: number | undefined;
   city: string;
   cityId: number | undefined;
-  // security step
-  securityQuestion1: number | undefined;
-  securityAnswer1: string;
-  securityQuestion2: number | undefined;
-  securityAnswer2: string;
 };
 
 type OnboardingFlowProps = {
@@ -103,10 +97,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     stateId: undefined,
     city: "",
     cityId: undefined,
-    securityQuestion1: undefined,
-    securityAnswer1: "",
-    securityQuestion2: undefined,
-    securityAnswer2: "",
   });
 
   const currentStepIndex = Math.max(0, ONBOARDING_STEPS.indexOf(step));
@@ -146,7 +136,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
-  const [securityError, setSecurityError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const completeOnboardingFn = useServerFn(completeOnboarding);
@@ -197,20 +186,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   // ----- Final submission -----
   // Handles the final API call when the user completes the onboarding flow
   const onFinish = useCallback(() => {
-    // Validation for optional security step (currently commented out)
-    // if (!data.securityQuestion1 || !data.securityQuestion2) {
-    //   setSecurityError("Please select both security questions.");
-    //   return;
-    // }
-    // if (data.securityQuestion1 === data.securityQuestion2) {
-    //   setSecurityError("Please choose two different security questions.");
-    //   return;
-    // }
-    // if (!data.securityAnswer1 || !data.securityAnswer2) {
-    //   setSecurityError("Please provide answers for both questions.");
-    //   return;
-    // }
-
     if (!data.countryId) {
       setSubmitError("Please select a country of residence.");
       return;
@@ -222,7 +197,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     }
 
     setSubmitError(null);
-    setSecurityError(null);
 
     const dob = data.dateOfBirth
       ? data.dateOfBirth.toISOString().split("T")[0]
@@ -243,10 +217,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
         current_country: data.countryId ?? 0,
         current_state: data.stateId,
         current_city: data.cityId ?? 0,
-        question1: data.securityQuestion1 ?? 0,
-        answer1: data.securityAnswer1?.trim() || "",
-        question2: data.securityQuestion2 ?? 0,
-        answer2: data.securityAnswer2?.trim() || "",
       },
     });
   }, [data, completeOnboardingMutation]);
@@ -516,20 +486,6 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           setError={setReferralCodeError}
         />
       )}
-
-      {/* {step === "security" && (
-        <SecurityStep
-          data={data}
-          setData={setData}
-          canContinue={canContinue}
-          onBack={goBack}
-          onAction={onFinish}
-          isSubmitting={isSubmitting}
-          securityError={securityError}
-          setSecurityError={setSecurityError}
-          submitError={submitError}
-        />
-      )} */}
     </>
   );
 }
@@ -912,85 +868,6 @@ function ReferralStep({
           <p className=" font-bold text-green">{referrerName}</p>
         )}
       </div>
-    </FlowScreen>
-  );
-}
-
-type SecurityStepProps = {
-  data: OnboardingState;
-  setData: React.Dispatch<React.SetStateAction<OnboardingState>>;
-  canContinue: boolean;
-  onBack: () => void;
-  onAction: () => void;
-  isSubmitting: boolean;
-  securityError: string | null;
-  setSecurityError: (e: string | null) => void;
-  submitError: string | null;
-};
-
-function SecurityStep({
-  data,
-  setData,
-  canContinue,
-  onBack,
-  onAction,
-  isSubmitting,
-  securityError,
-  setSecurityError,
-  submitError,
-}: SecurityStepProps) {
-  return (
-    <FlowScreen
-      icon={<Shield className="size-6 text-primary" strokeWidth={1.8} />}
-      title="Security questions"
-      subtitle="Two questions to help recover your account."
-      onBack={onBack}
-      actionLabel="Complete setup"
-      actionDisabled={!canContinue || isSubmitting}
-      actionLoading={isSubmitting}
-      onAction={onAction}
-    >
-      <FormError message={securityError || submitError} />
-
-      {/* Question 1 */}
-      <div className="flex flex-col gap-1">
-        <Label title="Security question 1" />
-        <SelectSecurityQuestion
-          selectedId={data.securityQuestion1}
-          update={(val) => {
-            setSecurityError(null);
-            setData((c) => ({ ...c, securityQuestion1: val }));
-          }}
-        />
-      </div>
-      <FormInput
-        id="sa1-input"
-        placeholder="Your answer"
-        value={data.securityAnswer1}
-        onChange={(e) =>
-          setData((c) => ({ ...c, securityAnswer1: e.target.value }))
-        }
-      />
-
-      {/* Question 2 */}
-      <div className="flex flex-col gap-1 mt-2">
-        <Label title="Security question 2" />
-        <SelectSecurityQuestion
-          selectedId={data.securityQuestion2}
-          update={(val) => {
-            setSecurityError(null);
-            setData((c) => ({ ...c, securityQuestion2: val }));
-          }}
-        />
-      </div>
-      <FormInput
-        id="sa2-input"
-        placeholder="Your answer"
-        value={data.securityAnswer2}
-        onChange={(e) =>
-          setData((c) => ({ ...c, securityAnswer2: e.target.value }))
-        }
-      />
     </FlowScreen>
   );
 }
