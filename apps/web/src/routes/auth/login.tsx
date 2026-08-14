@@ -15,11 +15,10 @@ import {
 } from "@repo/ui/components/select";
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
-import { updateAuthState, clearOnboardingData } from "#/redux/slice/authSlice";
+import { updateAuthState } from "#/redux/slice/authSlice";
 import { useQuery } from "@tanstack/react-query";
 import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { FormError } from "./_components/-form-error";
-import { SuccessMessage } from "./_components/-success-message";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "@/lib/server/countries";
 import { APP_URL, APP_NAME } from "#/lib/config";
@@ -74,9 +73,6 @@ function RouteComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showRegistrationSuccess, setShowRegistrationSuccess] = useState<boolean>(false);
-  const [showPasswordChangeSuccess, setShowPasswordChangeSuccess] = useState<boolean>(false);
-  const onboardingData = useAppSelector((state) => state.auth.onboardingData);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
@@ -178,44 +174,6 @@ function RouteComponent() {
     return () => clearTimeout(timeoutId);
   }, [visitorCountry, countries, form]);
 
-  // check if registration was just completed (within 5 minutes)
-  useEffect(() => {
-    if (
-      onboardingData?.registrationCompleted &&
-      onboardingData?.registrationCompletedAt
-    ) {
-      const completionTime = new Date(onboardingData.registrationCompletedAt);
-      const currentTime = new Date();
-      const timeDiff = currentTime.getTime() - completionTime.getTime();
-      const fiveMinutesInMs = 5 * 60 * 1000;
-
-      if (timeDiff < fiveMinutesInMs) {
-        setShowRegistrationSuccess(true);
-        // clear the onboarding data after showing the message
-        dispatch(clearOnboardingData());
-      }
-    }
-  }, [onboardingData, dispatch]);
-
-  // check if password was just changed (within 5 minutes)
-  useEffect(() => {
-    if (
-      onboardingData?.passwordChangeCompleted &&
-      onboardingData?.passwordChangeCompletedAt
-    ) {
-      const completionTime = new Date(onboardingData.passwordChangeCompletedAt);
-      const currentTime = new Date();
-      const timeDiff = currentTime.getTime() - completionTime.getTime();
-      const fiveMinutesInMs = 5 * 60 * 1000;
-
-      if (timeDiff < fiveMinutesInMs) {
-        setShowPasswordChangeSuccess(true);
-        // clear the onboarding data after showing the message
-        dispatch(clearOnboardingData());
-      }
-    }
-  }, [onboardingData, dispatch]);
-
   return (
     <AuthWrapper type="login">
       <form
@@ -226,18 +184,6 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
-        {showRegistrationSuccess && (
-          <SuccessMessage
-            title="Registration completed successfully!"
-            description="You can now log in with your credentials."
-          />
-        )}
-        {showPasswordChangeSuccess && (
-          <SuccessMessage
-            title="Password changed successfully!"
-            description="You can now log in with your new password."
-          />
-        )}
         <FormError message={errorMsg} />
         <form.Field
           name="country"
