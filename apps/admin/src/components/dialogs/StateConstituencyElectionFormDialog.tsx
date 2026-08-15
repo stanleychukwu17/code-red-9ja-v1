@@ -286,7 +286,7 @@ export function StateConstituencyElectionFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
           <DialogHeader title="State Constituency Election" />
 
           <form
@@ -475,7 +475,7 @@ function StateConstituencySelectorDialog({
 }: StateConstituencySelectorDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl bg-white">
+      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
         <DialogHeader title="Select State Constituencies" />
         <DialogPadding className="space-y-4 pb-6">
           <p className="text-sm text-c-60">

@@ -17,7 +17,10 @@ import { SelectWard } from "@repo/ui/components/selects/ward-select";
 import { getLGAs } from "#/lib/server/countries";
 import { getStates } from "#/lib/server/states";
 import { getWards } from "#/lib/server/wards";
-import { createPollingUnit, updatePollingUnit } from "#/lib/server/polling_units";
+import {
+  createPollingUnit,
+  updatePollingUnit,
+} from "#/lib/server/polling_units";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 export interface PollingUnit {
@@ -101,12 +104,21 @@ export function PollingUnitFormDialog({
         form.setFieldValue("units", pollingUnit.units || "");
         form.setFieldValue("delimitation", pollingUnit.delimitation || "");
         form.setFieldValue("remark", pollingUnit.remark || "");
-        form.setFieldValue("registrationAreaId", pollingUnit.registration_area_id ?? undefined);
+        form.setFieldValue(
+          "registrationAreaId",
+          pollingUnit.registration_area_id ?? undefined,
+        );
         form.setFieldValue("stateId", pollingUnit.state_id);
         form.setFieldValue("latitude", pollingUnit.latitude ?? undefined);
         form.setFieldValue("longitude", pollingUnit.longitude ?? undefined);
-        form.setFieldValue("preciseLocation", pollingUnit.precise_location || "");
-        form.setFieldValue("formattedAddress", pollingUnit.formatted_address || "");
+        form.setFieldValue(
+          "preciseLocation",
+          pollingUnit.precise_location || "",
+        );
+        form.setFieldValue(
+          "formattedAddress",
+          pollingUnit.formatted_address || "",
+        );
         form.setFieldValue("googlePlaceId", pollingUnit.google_place_id || "");
 
         // Defer cascading fields setup
@@ -208,9 +220,11 @@ export function PollingUnitFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
-          title={mode === "update" ? "Update Polling Unit" : "Create Polling Unit"}
+          title={
+            mode === "update" ? "Update Polling Unit" : "Create Polling Unit"
+          }
         />
 
         <form
@@ -274,7 +288,9 @@ export function PollingUnitFormDialog({
                       value={field.state.value ?? ""}
                       onChange={(e) => {
                         const val = e.target.value;
-                        field.handleChange(val === "" ? undefined : Number(val));
+                        field.handleChange(
+                          val === "" ? undefined : Number(val),
+                        );
                       }}
                     />
                   )}
@@ -317,8 +333,10 @@ export function PollingUnitFormDialog({
 
             {/* Parent Cascade Selects */}
             <div className="space-y-4 p-4 rounded-xl bg-c-10 border border-c-20">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-c-60">Location Hierarchy</h4>
-              
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-c-60">
+                Location Hierarchy
+              </h4>
+
               {/* State Select */}
               <div className="flex flex-col gap-1.5">
                 <Label title="State" />
@@ -418,7 +436,9 @@ export function PollingUnitFormDialog({
                       value={field.state.value ?? ""}
                       onChange={(e) => {
                         const val = e.target.value;
-                        field.handleChange(val === "" ? undefined : Number(val));
+                        field.handleChange(
+                          val === "" ? undefined : Number(val),
+                        );
                       }}
                     />
                   )}
@@ -437,7 +457,9 @@ export function PollingUnitFormDialog({
                       value={field.state.value ?? ""}
                       onChange={(e) => {
                         const val = e.target.value;
-                        field.handleChange(val === "" ? undefined : Number(val));
+                        field.handleChange(
+                          val === "" ? undefined : Number(val),
+                        );
                       }}
                     />
                   )}

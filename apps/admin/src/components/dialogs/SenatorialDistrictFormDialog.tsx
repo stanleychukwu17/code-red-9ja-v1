@@ -61,7 +61,10 @@ export function SenatorialDistrictFormDialog({
       if (mode === "update" && senatorialDistrict) {
         form.setFieldValue("name", senatorialDistrict.name || "");
         form.setFieldValue("description", senatorialDistrict.description || "");
-        form.setFieldValue("coalitionCenter", senatorialDistrict.coalition_center || "");
+        form.setFieldValue(
+          "coalitionCenter",
+          senatorialDistrict.coalition_center || "",
+        );
         form.setFieldValue("stateId", senatorialDistrict.state_id);
       } else {
         form.setFieldValue("name", "");
@@ -125,7 +128,7 @@ export function SenatorialDistrictFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
           title={
             mode === "update"
@@ -150,9 +153,7 @@ export function SenatorialDistrictFormDialog({
                 name="name"
                 validators={{
                   onChange: ({ value }) =>
-                    !value
-                      ? "Senatorial district name is required"
-                      : undefined,
+                    !value ? "Senatorial district name is required" : undefined,
                 }}
                 children={(field) => (
                   <div className="w-full">

@@ -318,7 +318,7 @@ export function PartyApplicationDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
+        <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl   overflow-hidden">
           <DialogHeader title="Party Application" />
 
           <DialogPadding className="space-y-5 pt-3 pb-5 max-h-[65vh] overflow-y-auto">

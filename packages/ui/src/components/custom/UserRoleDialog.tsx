@@ -2,7 +2,13 @@ import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Button } from "../button";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogPadding } from "../dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogPadding,
+} from "../dialog";
 import { useForm } from "@tanstack/react-form";
 import { Loader2 } from "lucide-react";
 import { TinyError } from "./TinyError";
@@ -78,7 +84,7 @@ export function UserRoleDialog({
           // Only send party_id if the selected roles require it (party admin roles)
           party_id:
             selectedRoles.includes("party_admin") ||
-              selectedRoles.includes("super_party_admin")
+            selectedRoles.includes("super_party_admin")
               ? values.party_id
               : undefined,
         },
@@ -108,12 +114,17 @@ export function UserRoleDialog({
                   ...page,
                   data: {
                     ...page.data,
-                    users: page.data?.users?.map((u: any) => u.fake_id === updatedDetails.fake_id ? updatedDetails : u) || []
-                  }
-                }
-              })
+                    users:
+                      page.data?.users?.map((u: any) =>
+                        u.fake_id === updatedDetails.fake_id
+                          ? updatedDetails
+                          : u,
+                      ) || [],
+                  },
+                };
+              }),
             };
-          }
+          },
         );
       }
 
@@ -129,7 +140,7 @@ export function UserRoleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[600px] p-0 rounded-2xl border-none shadow-2xl bg-white flex flex-col">
+      <DialogContent className="max-w-[600px] p-0 rounded-2xl border-none shadow-2xl flex flex-col">
         <DialogHeader title={`Edit Roles for ${user?.first_name || "User"}`} />
 
         {/* Main form container handling submission and flex layout */}
@@ -161,7 +172,10 @@ export function UserRoleDialog({
                             <SelectRole
                               selectedId={role}
                               update={(val) => {
-                                if (field.state.value.includes(val) && field.state.value[index] !== val) {
+                                if (
+                                  field.state.value.includes(val) &&
+                                  field.state.value[index] !== val
+                                ) {
                                   return; // Prevent adding duplicate roles
                                 }
                                 const newRoles = [...field.state.value];
@@ -171,7 +185,8 @@ export function UserRoleDialog({
                             />
                           </div>
                           {/* Conditionally render Party selector for admin roles */}
-                          {(role === "party_admin" || role === "super_party_admin") && (
+                          {(role === "party_admin" ||
+                            role === "super_party_admin") && (
                             <SelectParty
                               selectedId={partyId ? String(partyId) : undefined}
                               update={(party) => setPartyId(party?.id)}
@@ -199,8 +214,7 @@ export function UserRoleDialog({
                             Remove
                           </button>
                         </div>
-                      ),
-                      )}
+                      ))}
                       {/* Button to append a new default role to the array */}
                       <button
                         type="button"

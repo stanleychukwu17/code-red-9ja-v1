@@ -86,7 +86,7 @@ export function BuyAgentSlotsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl  ">
         {/* Header */}
         <DialogHeader title="Buy slots" />
 

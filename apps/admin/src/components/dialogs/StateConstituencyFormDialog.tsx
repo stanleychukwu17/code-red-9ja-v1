@@ -69,15 +69,24 @@ export function StateConstituencyFormDialog({
 
   // Watch stateId and other values for clearing/filtering dependent select dropdowns
   const selectedStateId = useStore(form.store, (state) => state.values.stateId);
-  const selectedDistrictId = useStore(form.store, (state) => state.values.senatorialDistrictId);
+  const selectedDistrictId = useStore(
+    form.store,
+    (state) => state.values.senatorialDistrictId,
+  );
 
   React.useEffect(() => {
     if (open) {
       if (mode === "update" && stateConstituency) {
         form.setFieldValue("name", stateConstituency.name || "");
         form.setFieldValue("stateId", stateConstituency.state_id);
-        form.setFieldValue("senatorialDistrictId", stateConstituency.senatorial_district_id);
-        form.setFieldValue("federalConstituencyId", stateConstituency.federal_constituency_id);
+        form.setFieldValue(
+          "senatorialDistrictId",
+          stateConstituency.senatorial_district_id,
+        );
+        form.setFieldValue(
+          "federalConstituencyId",
+          stateConstituency.federal_constituency_id,
+        );
         form.setFieldValue("lgaId", stateConstituency.lga_id);
       } else {
         form.setFieldValue("name", "");
@@ -153,7 +162,7 @@ export function StateConstituencyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
           title={
             mode === "update"
@@ -178,9 +187,7 @@ export function StateConstituencyFormDialog({
                 name="name"
                 validators={{
                   onChange: ({ value }) =>
-                    !value
-                      ? "State constituency name is required"
-                      : undefined,
+                    !value ? "State constituency name is required" : undefined,
                 }}
                 children={(field) => (
                   <div className="w-full">
@@ -305,7 +312,6 @@ export function StateConstituencyFormDialog({
                 )}
               />
             </div>
-
           </DialogPadding>
           <DialogFooter>
             <Button

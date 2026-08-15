@@ -63,7 +63,10 @@ export function LgaFormDialog({
 
   // Watch stateId changes using useStore
   const stateId = useStore(form.store, (state) => state.values.stateId);
-  const senatorialDistrictId = useStore(form.store, (state) => state.values.senatorialDistrictId);
+  const senatorialDistrictId = useStore(
+    form.store,
+    (state) => state.values.senatorialDistrictId,
+  );
 
   React.useEffect(() => {
     if (open) {
@@ -72,7 +75,10 @@ export function LgaFormDialog({
         form.setFieldValue("abbreviation", lga.abbreviation || "");
         form.setFieldValue("stateId", lga.state_id);
         form.setFieldValue("senatorialDistrictId", lga.senatorial_district_id);
-        form.setFieldValue("federalConstituencyId", lga.federal_constituency_id);
+        form.setFieldValue(
+          "federalConstituencyId",
+          lga.federal_constituency_id,
+        );
       } else {
         form.setFieldValue("name", "");
         form.setFieldValue("abbreviation", "");
@@ -147,10 +153,8 @@ export function LgaFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
-        <DialogHeader
-          title={mode === "update" ? "Update LGA" : "Create LGA"}
-        />
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+        <DialogHeader title={mode === "update" ? "Update LGA" : "Create LGA"} />
 
         <form
           onSubmit={(e) => {

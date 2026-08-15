@@ -21,7 +21,6 @@ import {
 } from "#/lib/server/federal_constituencies";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
-
 export interface FederalConstituency {
   id: number;
   name: string;
@@ -132,7 +131,7 @@ export function FederalConstituencyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
           title={
             mode === "update"

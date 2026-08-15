@@ -109,7 +109,7 @@ export function TestRequirementsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[520px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[520px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader title={`Test Requirements (${roleName})`} />
 
         {isLoading ? (

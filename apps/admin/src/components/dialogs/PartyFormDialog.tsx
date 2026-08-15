@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -109,7 +109,11 @@ export function PartyFormDialog({
 
   // TanStack Query Mutation for saving/creating/updating a party
   const saveMutation = useMutation({
-    mutationFn: async (values: { acronym: string; fullName: string; displayOrder: number }) => {
+    mutationFn: async (values: {
+      acronym: string;
+      fullName: string;
+      displayOrder: number;
+    }) => {
       let finalLogoUrl = logoUrl;
 
       // Upload the party logo if a new one was selected
@@ -160,8 +164,8 @@ export function PartyFormDialog({
           await confirmFileUpload({ data: { id: file_id, success: true } });
 
           finalLogoUrl = public_url;
-          setSelectedInputLogo(null)
-          setLogoUrl(public_url)
+          setSelectedInputLogo(null);
+          setLogoUrl(public_url);
         } finally {
           setIsUploadingLogo(false);
         }
@@ -209,7 +213,7 @@ export function PartyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-145 p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
           title={mode === "update" ? "Edit Party" : "Create Party"}
         />
@@ -347,7 +351,9 @@ export function PartyFormDialog({
                     className="flex h-11 items-center gap-2 rounded-12 bg-[#1a1a1a] hover:bg-black disabled:bg-[#ccc] disabled:cursor-not-allowed px-4 text-[15px] font-semibold text-white transition cursor-pointer"
                   >
                     <Plus className="size-5" />
-                    <span>{isUploadingLogo ? "Uploading..." : "Upload image"}</span>
+                    <span>
+                      {isUploadingLogo ? "Uploading..." : "Upload image"}
+                    </span>
                   </button>
                   {logoUrl && (
                     <button
@@ -369,7 +375,9 @@ export function PartyFormDialog({
               children={([canSubmit]) => (
                 <Button
                   type="submit"
-                  disabled={!canSubmit || saveMutation.isPending || isUploadingLogo}
+                  disabled={
+                    !canSubmit || saveMutation.isPending || isUploadingLogo
+                  }
                   loading={saveMutation.isPending}
                   variant="secondary"
                   size="xl"

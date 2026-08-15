@@ -145,7 +145,7 @@ function SegmentedToggle({
               "min-w-[126px] rounded-full px-5 py-3 text-[17px] font-medium transition-colors",
               active
                 ? "bg-c-90 text-white shadow-[0_4px_12px_rgba(0,0,0,0.16)]"
-                : "text-c-80 hover:bg-white",
+                : "text-c-80 hover: ",
             )}
           >
             {option.label}

@@ -11,7 +11,10 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { SelectRank } from "@repo/ui/components/selects/rank-select";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
-import { createElectionGroup, updateElectionGroup } from "#/lib/server/election_groups";
+import {
+  createElectionGroup,
+  updateElectionGroup,
+} from "#/lib/server/election_groups";
 import { Loader2 } from "lucide-react";
 import { FancyInput } from "@repo/ui/components/input";
 import type { ElectionGroupType } from "../tiles/election-group-tile";
@@ -69,7 +72,7 @@ export function ElectionGroupFormDialog({
         throw new Error("Election date is required");
       }
       const rankNum = Number(values.rank) || 1;
-      
+
       let res;
       if (mode === "update") {
         if (!electionGroup?.id) {
@@ -115,8 +118,14 @@ export function ElectionGroupFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
-        <DialogHeader title={mode === "update" ? "Update Election Group" : "Create Election Group"} />
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+        <DialogHeader
+          title={
+            mode === "update"
+              ? "Update Election Group"
+              : "Create Election Group"
+          }
+        />
 
         <form
           onSubmit={(e) => {

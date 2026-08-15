@@ -89,7 +89,7 @@ export function LiveVotersReferredDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[480px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[480px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader title="Update Target Live Voters Referred" />
 
         {isLoading ? (

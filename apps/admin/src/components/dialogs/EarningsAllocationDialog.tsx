@@ -121,7 +121,11 @@ export function EarningsAllocationDialog({
   React.useEffect(() => {
     if (open && settingData) {
       ALLOCATION_FIELDS.forEach(({ name }) => {
-        const val = settingData[name] ?? (name === "target_live_voters_referred_count" ? (settingData as any).live_voters_referred : undefined);
+        const val =
+          settingData[name] ??
+          (name === "target_live_voters_referred_count"
+            ? (settingData as any).live_voters_referred
+            : undefined);
         form.setFieldValue(name, parsePercent(val));
       });
       setError(null);
@@ -162,7 +166,7 @@ export function EarningsAllocationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[480px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[480px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader title={`Earnings Allocation (${roleName})`} />
 
         {isLoading ? (

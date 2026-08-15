@@ -154,7 +154,7 @@ export function ManageCandidatesDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible max-h-[90vh] flex flex-col">
           <DialogHeader title="Manage candidates" />
 
           <DialogPadding className="flex-1 overflow-y-auto space-y-6 pb-6 pt-4 min-h-0">
