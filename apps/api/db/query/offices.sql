@@ -1,6 +1,6 @@
 -- name: CreateOffice :one
-INSERT INTO offices (name, election, scope, rank)
-VALUES ($1, $2, $3, $4)
+INSERT INTO offices (name, election, scope, rank, inec_election_type_id)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING *;
 
 -- name: GetOfficeByID :one
@@ -15,8 +15,8 @@ ORDER BY id ASC;
 
 -- name: UpdateOffice :one
 UPDATE offices
-SET name = $1, election = $2, scope = $3, rank = $4, updated_at = NOW()
-WHERE id = $5
+SET name = $1, election = $2, scope = $3, rank = $4, inec_election_type_id = $5, updated_at = NOW()
+WHERE id = $6
 RETURNING *;
 
 -- name: DeleteOffice :exec

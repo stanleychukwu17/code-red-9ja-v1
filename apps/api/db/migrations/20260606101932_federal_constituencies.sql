@@ -280,468 +280,468 @@ INSERT INTO federal_constituencies (id, name, state_id, state_name, senatorial_d
 (122, 'Ezeagu / Udi', 14, 'Enugu', 42, 'Enugu West'),
 
 -- ============================================================
--- ABUJA FCT (state_id: 37) - 2 Federal Constituencies
+-- ABUJA FCT (state_id: 15) - 2 Federal Constituencies
 -- ============================================================
 
 -- FCT Senatorial District (SD ID: 43)
-(123, 'Abaji / Gwagwalada / Kuje / Kwali', 37, 'Abuja FCT', 43, 'FCT Senatorial District'),
-(124, 'AMAC / Bwari', 37, 'Abuja FCT', 43, 'FCT Senatorial District'),
+(123, 'Abaji / Gwagwalada / Kuje / Kwali', 15, 'Abuja FCT', 43, 'FCT Senatorial District'),
+(124, 'AMAC / Bwari', 15, 'Abuja FCT', 43, 'FCT Senatorial District'),
 
 -- ============================================================
--- GOMBE STATE (state_id: 15) - 6 Federal Constituencies
+-- GOMBE STATE (state_id: 16) - 6 Federal Constituencies
 -- ============================================================
 
 -- Gombe Central Senatorial District (SD ID: 44)
-(125, 'Akko', 15, 'Gombe', 44, 'Gombe Central'),
-(126, 'Yamaltu / Deba', 15, 'Gombe', 44, 'Gombe Central'),
+(125, 'Akko', 16, 'Gombe', 44, 'Gombe Central'),
+(126, 'Yamaltu / Deba', 16, 'Gombe', 44, 'Gombe Central'),
 
 -- Gombe North Senatorial District (SD ID: 45)
-(127, 'Dukku / Nafada', 15, 'Gombe', 45, 'Gombe North'),
-(128, 'Gombe / Kwami / Funakaye', 15, 'Gombe', 45, 'Gombe North'),
+(127, 'Dukku / Nafada', 16, 'Gombe', 45, 'Gombe North'),
+(128, 'Gombe / Kwami / Funakaye', 16, 'Gombe', 45, 'Gombe North'),
 
 -- Gombe South Senatorial District (SD ID: 46)
-(129, 'Balanga / Billiri', 15, 'Gombe', 46, 'Gombe South'),
-(130, 'Kaltungo / Shongom', 15, 'Gombe', 46, 'Gombe South'),
+(129, 'Balanga / Billiri', 16, 'Gombe', 46, 'Gombe South'),
+(130, 'Kaltungo / Shongom', 16, 'Gombe', 46, 'Gombe South'),
 
 -- ============================================================
--- IMO STATE (state_id: 16) - 10 Federal Constituencies
+-- IMO STATE (state_id: 17) - 10 Federal Constituencies
 -- ============================================================
 
 -- Imo North Senatorial District (SD ID: 47)
-(131, 'Ehime Mbano / Ihitte Uboma / Obowo', 16, 'Imo', 47, 'Imo North'),
-(132, 'Okigwe / Onuimo', 16, 'Imo', 47, 'Imo North'),
+(131, 'Ehime Mbano / Ihitte Uboma / Obowo', 17, 'Imo', 47, 'Imo North'),
+(132, 'Okigwe / Onuimo', 17, 'Imo', 47, 'Imo North'),
 
 -- Imo East Senatorial District (SD ID: 48)
-(133, 'Aboh Mbaise / Ngor Okpala', 16, 'Imo', 48, 'Imo East'),
-(134, 'Ahiazu / Ezinihitte Mbaise', 16, 'Imo', 48, 'Imo East'),
-(135, 'Ikeduru / Mbaitoli', 16, 'Imo', 48, 'Imo East'),
-(136, 'Owerri Municipal / Owerri North / Owerri West', 16, 'Imo', 48, 'Imo East'),
+(133, 'Aboh Mbaise / Ngor Okpala', 17, 'Imo', 48, 'Imo East'),
+(134, 'Ahiazu / Ezinihitte Mbaise', 17, 'Imo', 48, 'Imo East'),
+(135, 'Ikeduru / Mbaitoli', 17, 'Imo', 48, 'Imo East'),
+(136, 'Owerri Municipal / Owerri North / Owerri West', 17, 'Imo', 48, 'Imo East'),
 
 -- Imo West Senatorial District (SD ID: 49)
-(137, 'Ideato North / Ideato South', 16, 'Imo', 49, 'Imo West'),
-(138, 'Isu / Njaba / Nkwerre / Nwangele', 16, 'Imo', 49, 'Imo West'),
-(139, 'Oguta / Ohaji-Egbema / Oru West', 16, 'Imo', 49, 'Imo West'),
-(140, 'Orlu / Orsu / Oru East', 16, 'Imo', 49, 'Imo West'),
+(137, 'Ideato North / Ideato South', 17, 'Imo', 49, 'Imo West'),
+(138, 'Isu / Njaba / Nkwerre / Nwangele', 17, 'Imo', 49, 'Imo West'),
+(139, 'Oguta / Ohaji-Egbema / Oru West', 17, 'Imo', 49, 'Imo West'),
+(140, 'Orlu / Orsu / Oru East', 17, 'Imo', 49, 'Imo West'),
 
 -- ============================================================
--- JIGAWA STATE (state_id: 17) - 11 Federal Constituencies
+-- JIGAWA STATE (state_id: 18) - 11 Federal Constituencies
 -- ============================================================
 
 -- Jigawa North-East Senatorial District (SD ID: 50)
-(141, 'Hadejia / Kafin Hausa / Auyo', 17, 'Jigawa', 50, 'Jigawa North-East'),
-(142, 'Birniwa / Guri / Kiri Kasamma', 17, 'Jigawa', 50, 'Jigawa North-East'),
-(143, 'Kaugama / Malam Madori', 17, 'Jigawa', 50, 'Jigawa North-East'),
+(141, 'Hadejia / Kafin Hausa / Auyo', 18, 'Jigawa', 50, 'Jigawa North-East'),
+(142, 'Birniwa / Guri / Kiri Kasamma', 18, 'Jigawa', 50, 'Jigawa North-East'),
+(143, 'Kaugama / Malam Madori', 18, 'Jigawa', 50, 'Jigawa North-East'),
 
 -- Jigawa North-West Senatorial District (SD ID: 51)
-(144, 'Babura / Garki', 17, 'Jigawa', 51, 'Jigawa North-West'),
-(145, 'Gumel / Maigatari / Sule Tankarkar / Gagarawa', 17, 'Jigawa', 51, 'Jigawa North-West'),
-(146, 'Kazaure / Roni / Gwiwa / Yankwashi', 17, 'Jigawa', 51, 'Jigawa North-West'),
+(144, 'Babura / Garki', 18, 'Jigawa', 51, 'Jigawa North-West'),
+(145, 'Gumel / Maigatari / Sule Tankarkar / Gagarawa', 18, 'Jigawa', 51, 'Jigawa North-West'),
+(146, 'Kazaure / Roni / Gwiwa / Yankwashi', 18, 'Jigawa', 51, 'Jigawa North-West'),
 
 -- Jigawa South-West Senatorial District (SD ID: 52)
-(147, 'Birnin Kudu / Buji', 17, 'Jigawa', 52, 'Jigawa South-West'),
-(148, 'Dutse / Kiyawa', 17, 'Jigawa', 52, 'Jigawa South-West'),
-(149, 'Gwaram', 17, 'Jigawa', 52, 'Jigawa South-West'),
-(150, 'Jahun / Miga', 17, 'Jigawa', 52, 'Jigawa South-West'),
-(151, 'Ringim / Taura', 17, 'Jigawa', 52, 'Jigawa South-West'),
+(147, 'Birnin Kudu / Buji', 18, 'Jigawa', 52, 'Jigawa South-West'),
+(148, 'Dutse / Kiyawa', 18, 'Jigawa', 52, 'Jigawa South-West'),
+(149, 'Gwaram', 18, 'Jigawa', 52, 'Jigawa South-West'),
+(150, 'Jahun / Miga', 18, 'Jigawa', 52, 'Jigawa South-West'),
+(151, 'Ringim / Taura', 18, 'Jigawa', 52, 'Jigawa South-West'),
 
 -- ============================================================
--- KADUNA STATE (state_id: 18) - 16 Federal Constituencies
+-- KADUNA STATE (state_id: 19) - 16 Federal Constituencies
 -- ============================================================
 
 -- Kaduna North Senatorial District (SD ID: 53)
-(152, 'Ikara / Kubau', 18, 'Kaduna', 53, 'Kaduna North'),
-(153, 'Makarfi / Kudan', 18, 'Kaduna', 53, 'Kaduna North'),
-(154, 'Sabon Gari', 18, 'Kaduna', 53, 'Kaduna North'),
-(155, 'Zaria', 18, 'Kaduna', 53, 'Kaduna North'),
-(156, 'Lere', 18, 'Kaduna', 53, 'Kaduna North'),
-(157, 'Soba', 18, 'Kaduna', 53, 'Kaduna North'),
+(152, 'Ikara / Kubau', 19, 'Kaduna', 53, 'Kaduna North'),
+(153, 'Makarfi / Kudan', 19, 'Kaduna', 53, 'Kaduna North'),
+(154, 'Sabon Gari', 19, 'Kaduna', 53, 'Kaduna North'),
+(155, 'Zaria', 19, 'Kaduna', 53, 'Kaduna North'),
+(156, 'Lere', 19, 'Kaduna', 53, 'Kaduna North'),
+(157, 'Soba', 19, 'Kaduna', 53, 'Kaduna North'),
 
 -- Kaduna Central Senatorial District (SD ID: 54)
-(158, 'Birnin Gwari / Giwa', 18, 'Kaduna', 54, 'Kaduna Central'),
-(159, 'Chikun / Kajuru', 18, 'Kaduna', 54, 'Kaduna Central'),
-(160, 'Igabi', 18, 'Kaduna', 54, 'Kaduna Central'),
-(161, 'Kaduna North', 18, 'Kaduna', 54, 'Kaduna Central'),
-(162, 'Kaduna South', 18, 'Kaduna', 54, 'Kaduna Central'),
+(158, 'Birnin Gwari / Giwa', 19, 'Kaduna', 54, 'Kaduna Central'),
+(159, 'Chikun / Kajuru', 19, 'Kaduna', 54, 'Kaduna Central'),
+(160, 'Igabi', 19, 'Kaduna', 54, 'Kaduna Central'),
+(161, 'Kaduna North', 19, 'Kaduna', 54, 'Kaduna Central'),
+(162, 'Kaduna South', 19, 'Kaduna', 54, 'Kaduna Central'),
 
 -- Kaduna South Senatorial District (SD ID: 55)
-(163, 'Jaba / Zangon Kataf', 18, 'Kaduna', 55, 'Kaduna South'),
-(164, 'Jemaa / Sanga', 18, 'Kaduna', 55, 'Kaduna South'),
-(165, 'Kachia / Kagarko', 18, 'Kaduna', 55, 'Kaduna South'),
-(166, 'Kaura', 18, 'Kaduna', 55, 'Kaduna South'),
-(167, 'Kauru', 18, 'Kaduna', 55, 'Kaduna South'),
+(163, 'Jaba / Zangon Kataf', 19, 'Kaduna', 55, 'Kaduna South'),
+(164, 'Jemaa / Sanga', 19, 'Kaduna', 55, 'Kaduna South'),
+(165, 'Kachia / Kagarko', 19, 'Kaduna', 55, 'Kaduna South'),
+(166, 'Kaura', 19, 'Kaduna', 55, 'Kaduna South'),
+(167, 'Kauru', 19, 'Kaduna', 55, 'Kaduna South'),
 
 -- ============================================================
--- KANO STATE (state_id: 19) - 24 Federal Constituencies
+-- KANO STATE (state_id: 20) - 24 Federal Constituencies
 -- ============================================================
 
 -- Kano Central Senatorial District (SD ID: 56)
-(168, 'Dala', 19, 'Kano', 56, 'Kano Central'),
-(169, 'Dawakin Kudu / Warawa', 19, 'Kano', 56, 'Kano Central'),
-(170, 'Fagge', 19, 'Kano', 56, 'Kano Central'),
-(171, 'Gezawa / Gabasawa', 19, 'Kano', 56, 'Kano Central'),
-(172, 'Gwale', 19, 'Kano', 56, 'Kano Central'),
-(173, 'Kano Municipal', 19, 'Kano', 56, 'Kano Central'),
-(174, 'Kumbotso', 19, 'Kano', 56, 'Kano Central'),
-(175, 'Nasarawa', 19, 'Kano', 56, 'Kano Central'),
-(176, 'Tarauni', 19, 'Kano', 56, 'Kano Central'),
-(177, 'Ungogo', 19, 'Kano', 56, 'Kano Central'),
+(168, 'Dala', 20, 'Kano', 56, 'Kano Central'),
+(169, 'Dawakin Kudu / Warawa', 20, 'Kano', 56, 'Kano Central'),
+(170, 'Fagge', 20, 'Kano', 56, 'Kano Central'),
+(171, 'Gezawa / Gabasawa', 20, 'Kano', 56, 'Kano Central'),
+(172, 'Gwale', 20, 'Kano', 56, 'Kano Central'),
+(173, 'Kano Municipal', 20, 'Kano', 56, 'Kano Central'),
+(174, 'Kumbotso', 20, 'Kano', 56, 'Kano Central'),
+(175, 'Nasarawa', 20, 'Kano', 56, 'Kano Central'),
+(176, 'Tarauni', 20, 'Kano', 56, 'Kano Central'),
+(177, 'Ungogo', 20, 'Kano', 56, 'Kano Central'),
 
 -- Kano North Senatorial District (SD ID: 57)
-(178, 'Bagwai / Shanono', 19, 'Kano', 57, 'Kano North'),
-(179, 'Bichi', 19, 'Kano', 57, 'Kano North'),
-(180, 'Dambatta / Makoda', 19, 'Kano', 57, 'Kano North'),
-(181, 'Dawakin Tofa / Tofa / Rimin Gado', 19, 'Kano', 57, 'Kano North'),
-(182, 'Gwarzo / Kabo', 19, 'Kano', 57, 'Kano North'),
-(183, 'Karaye / Rogo', 19, 'Kano', 57, 'Kano North'),
-(184, 'Kunchi / Tsanyawa', 19, 'Kano', 57, 'Kano North'),
-(185, 'Minjibir / Ungogo', 19, 'Kano', 57, 'Kano North'),
+(178, 'Bagwai / Shanono', 20, 'Kano', 57, 'Kano North'),
+(179, 'Bichi', 20, 'Kano', 57, 'Kano North'),
+(180, 'Dambatta / Makoda', 20, 'Kano', 57, 'Kano North'),
+(181, 'Dawakin Tofa / Tofa / Rimin Gado', 20, 'Kano', 57, 'Kano North'),
+(182, 'Gwarzo / Kabo', 20, 'Kano', 57, 'Kano North'),
+(183, 'Karaye / Rogo', 20, 'Kano', 57, 'Kano North'),
+(184, 'Kunchi / Tsanyawa', 20, 'Kano', 57, 'Kano North'),
+(185, 'Minjibir / Ungogo', 20, 'Kano', 57, 'Kano North'),
 
 -- Kano South Senatorial District (SD ID: 58)
-(186, 'Albasu / Ajingi / Gaya', 19, 'Kano', 58, 'Kano South'),
-(187, 'Bebeji / Kiru', 19, 'Kano', 58, 'Kano South'),
-(188, 'Doguwa / Tudun Wada', 19, 'Kano', 58, 'Kano South'),
-(189, 'Kura / Madobi / Garun Mallam', 19, 'Kano', 58, 'Kano South'),
-(190, 'Rano / Bunkure / Kibiya', 19, 'Kano', 58, 'Kano South'),
-(191, 'Takai / Sumaila', 19, 'Kano', 58, 'Kano South'),
+(186, 'Albasu / Ajingi / Gaya', 20, 'Kano', 58, 'Kano South'),
+(187, 'Bebeji / Kiru', 20, 'Kano', 58, 'Kano South'),
+(188, 'Doguwa / Tudun Wada', 20, 'Kano', 58, 'Kano South'),
+(189, 'Kura / Madobi / Garun Mallam', 20, 'Kano', 58, 'Kano South'),
+(190, 'Rano / Bunkure / Kibiya', 20, 'Kano', 58, 'Kano South'),
+(191, 'Takai / Sumaila', 20, 'Kano', 58, 'Kano South'),
 
 -- ============================================================
--- KATSINA STATE (state_id: 20) - 15 Federal Constituencies
+-- KATSINA STATE (state_id: 21) - 15 Federal Constituencies
 -- ============================================================
 
 -- Katsina Central Senatorial District (SD ID: 59)
-(192, 'Batagarawa / Charanchi / Rimi', 20, 'Katsina', 59, 'Katsina Central'),
-(193, 'Batsari / Safana / Danmusa', 20, 'Katsina', 59, 'Katsina Central'),
-(194, 'Dutsin-Ma / Kurfi', 20, 'Katsina', 59, 'Katsina Central'),
-(195, 'Jibia / Kaita', 20, 'Katsina', 59, 'Katsina Central'),
-(196, 'Katsina Central', 20, 'Katsina', 59, 'Katsina Central'),
+(192, 'Batagarawa / Charanchi / Rimi', 21, 'Katsina', 59, 'Katsina Central'),
+(193, 'Batsari / Safana / Danmusa', 21, 'Katsina', 59, 'Katsina Central'),
+(194, 'Dutsin-Ma / Kurfi', 21, 'Katsina', 59, 'Katsina Central'),
+(195, 'Jibia / Kaita', 21, 'Katsina', 59, 'Katsina Central'),
+(196, 'Katsina Central', 21, 'Katsina', 59, 'Katsina Central'),
 
 -- Katsina North Senatorial District (SD ID: 60)
-(197, 'Bindawa / Mani', 20, 'Katsina', 60, 'Katsina North'),
-(198, 'Daura / Sandamu / Maiadua', 20, 'Katsina', 60, 'Katsina North'),
-(199, 'Ingawa / Kankia / Kusada', 20, 'Katsina', 60, 'Katsina North'),
-(200, 'Mashi / Dutsi', 20, 'Katsina', 60, 'Katsina North'),
-(201, 'Zango / Baure', 20, 'Katsina', 60, 'Katsina North'),
+(197, 'Bindawa / Mani', 21, 'Katsina', 60, 'Katsina North'),
+(198, 'Daura / Sandamu / Maiadua', 21, 'Katsina', 60, 'Katsina North'),
+(199, 'Ingawa / Kankia / Kusada', 21, 'Katsina', 60, 'Katsina North'),
+(200, 'Mashi / Dutsi', 21, 'Katsina', 60, 'Katsina North'),
+(201, 'Zango / Baure', 21, 'Katsina', 60, 'Katsina North'),
 
 -- Katsina South Senatorial District (SD ID: 61)
-(202, 'Bakori / Danja', 20, 'Katsina', 61, 'Katsina South'),
-(203, 'Faskari / Kankara / Sabuwa', 20, 'Katsina', 61, 'Katsina South'),
-(204, 'Funtua / Dandume', 20, 'Katsina', 61, 'Katsina South'),
-(205, 'Malumfashi / Kafur', 20, 'Katsina', 61, 'Katsina South'),
-(206, 'Matazu / Musawa', 20, 'Katsina', 61, 'Katsina South'),
+(202, 'Bakori / Danja', 21, 'Katsina', 61, 'Katsina South'),
+(203, 'Faskari / Kankara / Sabuwa', 21, 'Katsina', 61, 'Katsina South'),
+(204, 'Funtua / Dandume', 21, 'Katsina', 61, 'Katsina South'),
+(205, 'Malumfashi / Kafur', 21, 'Katsina', 61, 'Katsina South'),
+(206, 'Matazu / Musawa', 21, 'Katsina', 61, 'Katsina South'),
 
 -- ============================================================
--- KEBBI STATE (state_id: 21) - 8 Federal Constituencies
+-- KEBBI STATE (state_id: 22) - 8 Federal Constituencies
 -- ============================================================
 
 -- Kebbi Central Senatorial District (SD ID: 62)
-(207, 'Aleiro / Gwandu / Jega', 21, 'Kebbi', 62, 'Kebbi Central'),
-(208, 'Birnin Kebbi / Kalgo / Bunza', 21, 'Kebbi', 62, 'Kebbi Central'),
-(209, 'Maiyama / Koko/Besse', 21, 'Kebbi', 62, 'Kebbi Central'),
+(207, 'Aleiro / Gwandu / Jega', 22, 'Kebbi', 62, 'Kebbi Central'),
+(208, 'Birnin Kebbi / Kalgo / Bunza', 22, 'Kebbi', 62, 'Kebbi Central'),
+(209, 'Maiyama / Koko/Besse', 22, 'Kebbi', 62, 'Kebbi Central'),
 
 -- Kebbi North Senatorial District (SD ID: 63)
-(210, 'Arewa / Dandi', 21, 'Kebbi', 63, 'Kebbi North'),
-(211, 'Argungu / Augie', 21, 'Kebbi', 63, 'Kebbi North'),
-(212, 'Bagudo / Suru', 21, 'Kebbi', 63, 'Kebbi North'),
+(210, 'Arewa / Dandi', 22, 'Kebbi', 63, 'Kebbi North'),
+(211, 'Argungu / Augie', 22, 'Kebbi', 63, 'Kebbi North'),
+(212, 'Bagudo / Suru', 22, 'Kebbi', 63, 'Kebbi North'),
 
 -- Kebbi South Senatorial District (SD ID: 64)
-(213, 'Fakai / Sakaba / Wasagu/Danko / Zuru', 21, 'Kebbi', 64, 'Kebbi South'),
-(214, 'Yauri / Shanga / Ngaski', 21, 'Kebbi', 64, 'Kebbi South'),
+(213, 'Fakai / Sakaba / Wasagu/Danko / Zuru', 22, 'Kebbi', 64, 'Kebbi South'),
+(214, 'Yauri / Shanga / Ngaski', 22, 'Kebbi', 64, 'Kebbi South'),
 
 -- ============================================================
--- KOGI STATE (state_id: 22) - 9 Federal Constituencies
+-- KOGI STATE (state_id: 23) - 9 Federal Constituencies
 -- ============================================================
 
 -- Kogi Central Senatorial District (SD ID: 65)
-(215, 'Adavi / Okehi', 22, 'Kogi', 65, 'Kogi Central'),
-(216, 'Ajaokuta', 22, 'Kogi', 65, 'Kogi Central'),
-(217, 'Okene / Ogori-Magongo', 22, 'Kogi', 65, 'Kogi Central'),
+(215, 'Adavi / Okehi', 23, 'Kogi', 65, 'Kogi Central'),
+(216, 'Ajaokuta', 23, 'Kogi', 65, 'Kogi Central'),
+(217, 'Okene / Ogori-Magongo', 23, 'Kogi', 65, 'Kogi Central'),
 
 -- Kogi East Senatorial District (SD ID: 66)
-(218, 'Ankpa / Omala / Olamaboro', 22, 'Kogi', 66, 'Kogi East'),
-(219, 'Dekina / Bassa', 22, 'Kogi', 66, 'Kogi East'),
-(220, 'Idah / Ibaji / Igalamela-Odolu / Ofu', 22, 'Kogi', 66, 'Kogi East'),
+(218, 'Ankpa / Omala / Olamaboro', 23, 'Kogi', 66, 'Kogi East'),
+(219, 'Dekina / Bassa', 23, 'Kogi', 66, 'Kogi East'),
+(220, 'Idah / Ibaji / Igalamela-Odolu / Ofu', 23, 'Kogi', 66, 'Kogi East'),
 
 -- Kogi West Senatorial District (SD ID: 67)
-(221, 'Kabba/Bunu / Ijumu', 22, 'Kogi', 67, 'Kogi West'),
-(222, 'Lokoja / Kogi (Koton Karfe)', 22, 'Kogi', 67, 'Kogi West'),
-(223, 'Yagba East / Yagba West / Mopa-Muro', 22, 'Kogi', 67, 'Kogi West'),
+(221, 'Kabba/Bunu / Ijumu', 23, 'Kogi', 67, 'Kogi West'),
+(222, 'Lokoja / Kogi (Koton Karfe)', 23, 'Kogi', 67, 'Kogi West'),
+(223, 'Yagba East / Yagba West / Mopa-Muro', 23, 'Kogi', 67, 'Kogi West'),
 
 -- ============================================================
--- KWARA STATE (state_id: 23) - 6 Federal Constituencies
+-- KWARA STATE (state_id: 24) - 6 Federal Constituencies
 -- ============================================================
 
 -- Kwara Central Senatorial District (SD ID: 68)
-(224, 'Ilorin East / Ilorin South', 23, 'Kwara', 68, 'Kwara Central'),
-(225, 'Ilorin West / Asa', 23, 'Kwara', 68, 'Kwara Central'),
+(224, 'Ilorin East / Ilorin South', 24, 'Kwara', 68, 'Kwara Central'),
+(225, 'Ilorin West / Asa', 24, 'Kwara', 68, 'Kwara Central'),
 
 -- Kwara North Senatorial District (SD ID: 69)
-(226, 'Baruten / Kaiama', 23, 'Kwara', 69, 'Kwara North'),
-(227, 'Edu / Moro / Pategi', 23, 'Kwara', 69, 'Kwara North'),
+(226, 'Baruten / Kaiama', 24, 'Kwara', 69, 'Kwara North'),
+(227, 'Edu / Moro / Pategi', 24, 'Kwara', 69, 'Kwara North'),
 
 -- Kwara South Senatorial District (SD ID: 70)
-(228, 'Ekiti / Isin / Irepodun / Oke-Ero', 23, 'Kwara', 70, 'Kwara South'),
-(229, 'Ifelodun / Offa / Oyun', 23, 'Kwara', 70, 'Kwara South'),
+(228, 'Ekiti / Isin / Irepodun / Oke-Ero', 24, 'Kwara', 70, 'Kwara South'),
+(229, 'Ifelodun / Offa / Oyun', 24, 'Kwara', 70, 'Kwara South'),
 
 -- ============================================================
--- LAGOS STATE (state_id: 24) - 24 Federal Constituencies
+-- LAGOS STATE (state_id: 25) - 24 Federal Constituencies
 -- ============================================================
 
 -- Lagos Central Senatorial District (SD ID: 71)
-(230, 'Apapa', 24, 'Lagos', 71, 'Lagos Central'),
-(231, 'Eti-Osa', 24, 'Lagos', 71, 'Lagos Central'),
-(232, 'Lagos Island I', 24, 'Lagos', 71, 'Lagos Central'),
-(233, 'Lagos Island II', 24, 'Lagos', 71, 'Lagos Central'),
-(234, 'Lagos Mainland', 24, 'Lagos', 71, 'Lagos Central'),
-(235, 'Surulere I', 24, 'Lagos', 71, 'Lagos Central'),
-(236, 'Surulere II', 24, 'Lagos', 71, 'Lagos Central'),
+(230, 'Apapa', 25, 'Lagos', 71, 'Lagos Central'),
+(231, 'Eti-Osa', 25, 'Lagos', 71, 'Lagos Central'),
+(232, 'Lagos Island I', 25, 'Lagos', 71, 'Lagos Central'),
+(233, 'Lagos Island II', 25, 'Lagos', 71, 'Lagos Central'),
+(234, 'Lagos Mainland', 25, 'Lagos', 71, 'Lagos Central'),
+(235, 'Surulere I', 25, 'Lagos', 71, 'Lagos Central'),
+(236, 'Surulere II', 25, 'Lagos', 71, 'Lagos Central'),
 
 -- Lagos East Senatorial District (SD ID: 72)
-(237, 'Epe', 24, 'Lagos', 72, 'Lagos East'),
-(238, 'Ibeju-Lekki', 24, 'Lagos', 72, 'Lagos East'),
-(239, 'Ikorodu', 24, 'Lagos', 72, 'Lagos East'),
-(240, 'Kosofe', 24, 'Lagos', 72, 'Lagos East'),
-(241, 'Somolu', 24, 'Lagos', 72, 'Lagos East'),
+(237, 'Epe', 25, 'Lagos', 72, 'Lagos East'),
+(238, 'Ibeju-Lekki', 25, 'Lagos', 72, 'Lagos East'),
+(239, 'Ikorodu', 25, 'Lagos', 72, 'Lagos East'),
+(240, 'Kosofe', 25, 'Lagos', 72, 'Lagos East'),
+(241, 'Somolu', 25, 'Lagos', 72, 'Lagos East'),
 
 -- Lagos West Senatorial District (SD ID: 73)
-(242, 'Agege', 24, 'Lagos', 73, 'Lagos West'),
-(243, 'Ajeromi-Ifelodun', 24, 'Lagos', 73, 'Lagos West'),
-(244, 'Alimosho', 24, 'Lagos', 73, 'Lagos West'),
-(245, 'Amuwo-Odofin', 24, 'Lagos', 73, 'Lagos West'),
-(246, 'Badagry', 24, 'Lagos', 73, 'Lagos West'),
-(247, 'Ifako-Ijaiye', 24, 'Lagos', 73, 'Lagos West'),
-(248, 'Ikeja', 24, 'Lagos', 73, 'Lagos West'),
-(249, 'Mushin I', 24, 'Lagos', 73, 'Lagos West'),
-(250, 'Mushin II', 24, 'Lagos', 73, 'Lagos West'),
-(251, 'Ojo', 24, 'Lagos', 73, 'Lagos West'),
-(252, 'Oshodi-Isolo I', 24, 'Lagos', 73, 'Lagos West'),
-(253, 'Oshodi-Isolo II', 24, 'Lagos', 73, 'Lagos West'),
+(242, 'Agege', 25, 'Lagos', 73, 'Lagos West'),
+(243, 'Ajeromi-Ifelodun', 25, 'Lagos', 73, 'Lagos West'),
+(244, 'Alimosho', 25, 'Lagos', 73, 'Lagos West'),
+(245, 'Amuwo-Odofin', 25, 'Lagos', 73, 'Lagos West'),
+(246, 'Badagry', 25, 'Lagos', 73, 'Lagos West'),
+(247, 'Ifako-Ijaiye', 25, 'Lagos', 73, 'Lagos West'),
+(248, 'Ikeja', 25, 'Lagos', 73, 'Lagos West'),
+(249, 'Mushin I', 25, 'Lagos', 73, 'Lagos West'),
+(250, 'Mushin II', 25, 'Lagos', 73, 'Lagos West'),
+(251, 'Ojo', 25, 'Lagos', 73, 'Lagos West'),
+(252, 'Oshodi-Isolo I', 25, 'Lagos', 73, 'Lagos West'),
+(253, 'Oshodi-Isolo II', 25, 'Lagos', 73, 'Lagos West'),
 
 -- ============================================================
--- NASARAWA STATE (state_id: 25) - 5 Federal Constituencies
+-- NASARAWA STATE (state_id: 26) - 5 Federal Constituencies
 -- ============================================================
 
 -- Nasarawa North Senatorial District (SD ID: 74)
-(254, 'Akwanga / Nasarawa Eggon / Wamba', 25, 'Nasarawa', 74, 'Nasarawa North'),
+(254, 'Akwanga / Nasarawa Eggon / Wamba', 26, 'Nasarawa', 74, 'Nasarawa North'),
 
 -- Nasarawa South Senatorial District (SD ID: 75)
-(255, 'Awe / Doma / Keana', 25, 'Nasarawa', 75, 'Nasarawa South'),
-(256, 'Lafia / Obi', 25, 'Nasarawa', 75, 'Nasarawa South'),
+(255, 'Awe / Doma / Keana', 26, 'Nasarawa', 75, 'Nasarawa South'),
+(256, 'Lafia / Obi', 26, 'Nasarawa', 75, 'Nasarawa South'),
 
 -- Nasarawa West Senatorial District (SD ID: 76)
-(257, 'Keffi / Karu / Kokona', 25, 'Nasarawa', 76, 'Nasarawa West'),
-(258, 'Nasarawa / Toto', 25, 'Nasarawa', 76, 'Nasarawa West'),
+(257, 'Keffi / Karu / Kokona', 26, 'Nasarawa', 76, 'Nasarawa West'),
+(258, 'Nasarawa / Toto', 26, 'Nasarawa', 76, 'Nasarawa West'),
 
 -- ============================================================
--- NIGER STATE (state_id: 26) - 10 Federal Constituencies
+-- NIGER STATE (state_id: 27) - 10 Federal Constituencies
 -- ============================================================
 
 -- Niger East Senatorial District (SD ID: 77)
-(259, 'Chanchaga', 26, 'Niger', 77, 'Niger East'),
-(260, 'Bosso / Paikoro', 26, 'Niger', 77, 'Niger East'),
-(261, 'Gurara / Suleja / Tafa', 26, 'Niger', 77, 'Niger East'),
-(262, 'Shiroro / Rafi / Munya', 26, 'Niger', 77, 'Niger East'),
+(259, 'Chanchaga', 27, 'Niger', 77, 'Niger East'),
+(260, 'Bosso / Paikoro', 27, 'Niger', 77, 'Niger East'),
+(261, 'Gurara / Suleja / Tafa', 27, 'Niger', 77, 'Niger East'),
+(262, 'Shiroro / Rafi / Munya', 27, 'Niger', 77, 'Niger East'),
 
 -- Niger North Senatorial District (SD ID: 78)
-(263, 'Agwara / Borgu', 26, 'Niger', 78, 'Niger North'),
-(264, 'Bida / Gbako / Katcha', 26, 'Niger', 78, 'Niger North'),
-(265, 'Kontagora / Wushishi / Mariga / Mashegu', 26, 'Niger', 78, 'Niger North'),
-(266, 'Rijau / Magama', 26, 'Niger', 78, 'Niger North'),
+(263, 'Agwara / Borgu', 27, 'Niger', 78, 'Niger North'),
+(264, 'Bida / Gbako / Katcha', 27, 'Niger', 78, 'Niger North'),
+(265, 'Kontagora / Wushishi / Mariga / Mashegu', 27, 'Niger', 78, 'Niger North'),
+(266, 'Rijau / Magama', 27, 'Niger', 78, 'Niger North'),
 
 -- Niger South Senatorial District (SD ID: 79)
-(267, 'Lapai / Agaie', 26, 'Niger', 79, 'Niger South'),
-(268, 'Lavun / Mokwa / Edati', 26, 'Niger', 79, 'Niger South'),
+(267, 'Lapai / Agaie', 27, 'Niger', 79, 'Niger South'),
+(268, 'Lavun / Mokwa / Edati', 27, 'Niger', 79, 'Niger South'),
 
 -- ============================================================
--- OGUN STATE (state_id: 27) - 9 Federal Constituencies
+-- OGUN STATE (state_id: 28) - 9 Federal Constituencies
 -- ============================================================
 
 -- Ogun Central Senatorial District (SD ID: 80)
-(269, 'Abeokuta North / Obafemi-Owode / Odeda', 27, 'Ogun', 80, 'Ogun Central'),
-(270, 'Abeokuta South', 27, 'Ogun', 80, 'Ogun Central'),
-(271, 'Ifo / Ewekoro', 27, 'Ogun', 80, 'Ogun Central'),
+(269, 'Abeokuta North / Obafemi-Owode / Odeda', 28, 'Ogun', 80, 'Ogun Central'),
+(270, 'Abeokuta South', 28, 'Ogun', 80, 'Ogun Central'),
+(271, 'Ifo / Ewekoro', 28, 'Ogun', 80, 'Ogun Central'),
 
 -- Ogun East Senatorial District (SD ID: 81)
-(272, 'Ijebu North / Ijebu East / Ogun Waterside', 27, 'Ogun', 81, 'Ogun East'),
-(273, 'Ijebu Ode / Odogbolu / Ijebu North East', 27, 'Ogun', 81, 'Ogun East'),
-(274, 'Ikenne / Shagamu / Remo North', 27, 'Ogun', 81, 'Ogun East'),
+(272, 'Ijebu North / Ijebu East / Ogun Waterside', 28, 'Ogun', 81, 'Ogun East'),
+(273, 'Ijebu Ode / Odogbolu / Ijebu North East', 28, 'Ogun', 81, 'Ogun East'),
+(274, 'Ikenne / Shagamu / Remo North', 28, 'Ogun', 81, 'Ogun East'),
 
 -- Ogun West Senatorial District (SD ID: 82)
-(275, 'Ado-Odo / Ota', 27, 'Ogun', 82, 'Ogun West'),
-(276, 'Egbado North / Imeko Afon', 27, 'Ogun', 82, 'Ogun West'),
-(277, 'Egbado South / Ipokia', 27, 'Ogun', 82, 'Ogun West'),
+(275, 'Ado-Odo / Ota', 28, 'Ogun', 82, 'Ogun West'),
+(276, 'Egbado North / Imeko Afon', 28, 'Ogun', 82, 'Ogun West'),
+(277, 'Egbado South / Ipokia', 28, 'Ogun', 82, 'Ogun West'),
 
 -- ============================================================
--- ONDO STATE (state_id: 28) - 9 Federal Constituencies
+-- ONDO STATE (state_id: 29) - 9 Federal Constituencies
 -- ============================================================
 
 -- Ondo Central Senatorial District (SD ID: 83)
-(278, 'Akure North / Akure South', 28, 'Ondo', 83, 'Ondo Central'),
-(279, 'Idanre / Ifedore', 28, 'Ondo', 83, 'Ondo Central'),
-(280, 'Ondo East / Ondo West', 28, 'Ondo', 83, 'Ondo Central'),
+(278, 'Akure North / Akure South', 29, 'Ondo', 83, 'Ondo Central'),
+(279, 'Idanre / Ifedore', 29, 'Ondo', 83, 'Ondo Central'),
+(280, 'Ondo East / Ondo West', 29, 'Ondo', 83, 'Ondo Central'),
 
 -- Ondo North Senatorial District (SD ID: 84)
-(281, 'Akoko North-East / Akoko North-West', 28, 'Ondo', 84, 'Ondo North'),
-(282, 'Akoko South-East / Akoko South-West', 28, 'Ondo', 84, 'Ondo North'),
-(283, 'Ose / Owo', 28, 'Ondo', 84, 'Ondo North'),
+(281, 'Akoko North-East / Akoko North-West', 29, 'Ondo', 84, 'Ondo North'),
+(282, 'Akoko South-East / Akoko South-West', 29, 'Ondo', 84, 'Ondo North'),
+(283, 'Ose / Owo', 29, 'Ondo', 84, 'Ondo North'),
 
 -- Ondo South Senatorial District (SD ID: 85)
-(284, 'Ilaje / Ese-Odo', 28, 'Ondo', 85, 'Ondo South'),
-(285, 'Ile-Oluji-Okeigbo / Odigbo', 28, 'Ondo', 85, 'Ondo South'),
-(286, 'Okitipupa / Irele', 28, 'Ondo', 85, 'Ondo South'),
+(284, 'Ilaje / Ese-Odo', 29, 'Ondo', 85, 'Ondo South'),
+(285, 'Ile-Oluji-Okeigbo / Odigbo', 29, 'Ondo', 85, 'Ondo South'),
+(286, 'Okitipupa / Irele', 29, 'Ondo', 85, 'Ondo South'),
 
 -- ============================================================
--- OSUN STATE (state_id: 29) - 9 Federal Constituencies
+-- OSUN STATE (state_id: 30) - 9 Federal Constituencies
 -- ============================================================
 
 -- Osun Central Senatorial District (SD ID: 86)
-(287, 'Boluwaduro / Ifedayo / Ila', 29, 'Osun', 86, 'Osun Central'),
-(288, 'Ifelodun / Boripe / Odo-Otin', 29, 'Osun', 86, 'Osun Central'),
-(289, 'Olorunda / Irepodun / Orolu / Osogbo', 29, 'Osun', 86, 'Osun Central'),
+(287, 'Boluwaduro / Ifedayo / Ila', 30, 'Osun', 86, 'Osun Central'),
+(288, 'Ifelodun / Boripe / Odo-Otin', 30, 'Osun', 86, 'Osun Central'),
+(289, 'Olorunda / Irepodun / Orolu / Osogbo', 30, 'Osun', 86, 'Osun Central'),
 
 -- Osun East Senatorial District (SD ID: 87)
-(290, 'Atakunmosa East / Atakunmosa West / Ilesa East / Ilesa West', 29, 'Osun', 87, 'Osun East'),
-(291, 'Ife Central / Ife East / Ife North / Ife South', 29, 'Osun', 87, 'Osun East'),
-(292, 'Obokun / Oriade', 29, 'Osun', 87, 'Osun East'),
+(290, 'Atakunmosa East / Atakunmosa West / Ilesa East / Ilesa West', 30, 'Osun', 87, 'Osun East'),
+(291, 'Ife Central / Ife East / Ife North / Ife South', 30, 'Osun', 87, 'Osun East'),
+(292, 'Obokun / Oriade', 30, 'Osun', 87, 'Osun East'),
 
 -- Osun West Senatorial District (SD ID: 88)
-(293, 'Ayedaade / Irewole / Isokan', 29, 'Osun', 88, 'Osun West'),
-(294, 'Ayedire / Iwo / Ola-Oluwa', 29, 'Osun', 88, 'Osun West'),
-(295, 'Ede North / Ede South / Egbedore / Ejigbo', 29, 'Osun', 88, 'Osun West'),
+(293, 'Ayedaade / Irewole / Isokan', 30, 'Osun', 88, 'Osun West'),
+(294, 'Ayedire / Iwo / Ola-Oluwa', 30, 'Osun', 88, 'Osun West'),
+(295, 'Ede North / Ede South / Egbedore / Ejigbo', 30, 'Osun', 88, 'Osun West'),
 
 -- ============================================================
--- OYO STATE (state_id: 30) - 14 Federal Constituencies
+-- OYO STATE (state_id: 31) - 14 Federal Constituencies
 -- ============================================================
 
 -- Oyo Central Senatorial District (SD ID: 89)
-(296, 'Afijio / Atiba / Oyo East / Oyo West', 30, 'Oyo', 89, 'Oyo Central'),
-(297, 'Akinyele / Lagelu', 30, 'Oyo', 89, 'Oyo Central'),
-(298, 'Egbeda / Ona-Ara', 30, 'Oyo', 89, 'Oyo Central'),
-(299, 'Oluyole', 30, 'Oyo', 89, 'Oyo Central'),
-(300, 'Ogo-Oluwa / Surulere', 30, 'Oyo', 89, 'Oyo Central'),
+(296, 'Afijio / Atiba / Oyo East / Oyo West', 31, 'Oyo', 89, 'Oyo Central'),
+(297, 'Akinyele / Lagelu', 31, 'Oyo', 89, 'Oyo Central'),
+(298, 'Egbeda / Ona-Ara', 31, 'Oyo', 89, 'Oyo Central'),
+(299, 'Oluyole', 31, 'Oyo', 89, 'Oyo Central'),
+(300, 'Ogo-Oluwa / Surulere', 31, 'Oyo', 89, 'Oyo Central'),
 
 -- Oyo North Senatorial District (SD ID: 90)
-(301, 'Atisbo / Saki East / Saki West', 30, 'Oyo', 90, 'Oyo North'),
-(302, 'Irepo / Olorunsogo / Oorelope', 30, 'Oyo', 90, 'Oyo North'),
-(303, 'Iseyin / Itesiwaju / Kajola / Iwajowa', 30, 'Oyo', 90, 'Oyo North'),
-(304, 'Ogbomoso North / Ogbomoso South / Oriire', 30, 'Oyo', 90, 'Oyo North'),
+(301, 'Atisbo / Saki East / Saki West', 31, 'Oyo', 90, 'Oyo North'),
+(302, 'Irepo / Olorunsogo / Oorelope', 31, 'Oyo', 90, 'Oyo North'),
+(303, 'Iseyin / Itesiwaju / Kajola / Iwajowa', 31, 'Oyo', 90, 'Oyo North'),
+(304, 'Ogbomoso North / Ogbomoso South / Oriire', 31, 'Oyo', 90, 'Oyo North'),
 
 -- Oyo South Senatorial District (SD ID: 91)
-(305, 'Ibadan North', 30, 'Oyo', 91, 'Oyo South'),
-(306, 'Ibadan North-East / Ibadan South-East', 30, 'Oyo', 91, 'Oyo South'),
-(307, 'Ibadan North-West / Ibadan South-West', 30, 'Oyo', 91, 'Oyo South'),
-(308, 'Ibarapa Central / Ibarapa North', 30, 'Oyo', 91, 'Oyo South'),
-(309, 'Ido / Ibarapa East', 30, 'Oyo', 91, 'Oyo South'),
+(305, 'Ibadan North', 31, 'Oyo', 91, 'Oyo South'),
+(306, 'Ibadan North-East / Ibadan South-East', 31, 'Oyo', 91, 'Oyo South'),
+(307, 'Ibadan North-West / Ibadan South-West', 31, 'Oyo', 91, 'Oyo South'),
+(308, 'Ibarapa Central / Ibarapa North', 31, 'Oyo', 91, 'Oyo South'),
+(309, 'Ido / Ibarapa East', 31, 'Oyo', 91, 'Oyo South'),
 
 -- ============================================================
--- PLATEAU STATE (state_id: 31) - 8 Federal Constituencies
+-- PLATEAU STATE (state_id: 32) - 8 Federal Constituencies
 -- ============================================================
 
 -- Plateau Central Senatorial District (SD ID: 92)
-(310, 'Bokkos / Mangu', 31, 'Plateau', 92, 'Plateau Central'),
-(311, 'Pankshin / Kanke / Kanam', 31, 'Plateau', 92, 'Plateau Central'),
+(310, 'Bokkos / Mangu', 32, 'Plateau', 92, 'Plateau Central'),
+(311, 'Pankshin / Kanke / Kanam', 32, 'Plateau', 92, 'Plateau Central'),
 
 -- Plateau North Senatorial District (SD ID: 93)
-(312, 'Barkin Ladi / Riyom', 31, 'Plateau', 93, 'Plateau North'),
-(313, 'Jos North / Bassa', 31, 'Plateau', 93, 'Plateau North'),
-(314, 'Jos South / Jos East', 31, 'Plateau', 93, 'Plateau North'),
+(312, 'Barkin Ladi / Riyom', 32, 'Plateau', 93, 'Plateau North'),
+(313, 'Jos North / Bassa', 32, 'Plateau', 93, 'Plateau North'),
+(314, 'Jos South / Jos East', 32, 'Plateau', 93, 'Plateau North'),
 
 -- Plateau South Senatorial District (SD ID: 94)
-(315, 'Langtang North / Langtang South', 31, 'Plateau', 94, 'Plateau South'),
-(316, 'Mikang / Quaan Pan / Shendam', 31, 'Plateau', 94, 'Plateau South'),
-(317, 'Wase', 31, 'Plateau', 94, 'Plateau South'),
+(315, 'Langtang North / Langtang South', 32, 'Plateau', 94, 'Plateau South'),
+(316, 'Mikang / Quaan Pan / Shendam', 32, 'Plateau', 94, 'Plateau South'),
+(317, 'Wase', 32, 'Plateau', 94, 'Plateau South'),
 
 -- ============================================================
--- RIVERS STATE (state_id: 32) - 13 Federal Constituencies
+-- RIVERS STATE (state_id: 33) - 13 Federal Constituencies
 -- ============================================================
 
 -- Rivers East Senatorial District (SD ID: 95)
-(318, 'Etche / Omuma', 32, 'Rivers', 95, 'Rivers East'),
-(319, 'Ikwerre / Emohua', 32, 'Rivers', 95, 'Rivers East'),
-(320, 'Obio/Akpor', 32, 'Rivers', 95, 'Rivers East'),
-(321, 'Okrika / Ogu/Bolo', 32, 'Rivers', 95, 'Rivers East'),
-(322, 'Port Harcourt I', 32, 'Rivers', 95, 'Rivers East'),
-(323, 'Port Harcourt II', 32, 'Rivers', 95, 'Rivers East'),
+(318, 'Etche / Omuma', 33, 'Rivers', 95, 'Rivers East'),
+(319, 'Ikwerre / Emohua', 33, 'Rivers', 95, 'Rivers East'),
+(320, 'Obio/Akpor', 33, 'Rivers', 95, 'Rivers East'),
+(321, 'Okrika / Ogu/Bolo', 33, 'Rivers', 95, 'Rivers East'),
+(322, 'Port Harcourt I', 33, 'Rivers', 95, 'Rivers East'),
+(323, 'Port Harcourt II', 33, 'Rivers', 95, 'Rivers East'),
 
 -- Rivers South-East Senatorial District (SD ID: 96)
-(324, 'Andoni / Opobo/Nkoro', 32, 'Rivers', 96, 'Rivers South-East'),
-(325, 'Gokana / Khana', 32, 'Rivers', 96, 'Rivers South-East'),
-(326, 'Eleme / Tai / Oyigbo', 32, 'Rivers', 96, 'Rivers South-East'),
+(324, 'Andoni / Opobo/Nkoro', 33, 'Rivers', 96, 'Rivers South-East'),
+(325, 'Gokana / Khana', 33, 'Rivers', 96, 'Rivers South-East'),
+(326, 'Eleme / Tai / Oyigbo', 33, 'Rivers', 96, 'Rivers South-East'),
 
 -- Rivers West Senatorial District (SD ID: 97)
-(327, 'Abua/Odual / Ahoada East', 32, 'Rivers', 97, 'Rivers West'),
-(328, 'Ahoada West / Ogba/Egbema/Ndoni', 32, 'Rivers', 97, 'Rivers West'),
-(329, 'Degema / Bonny', 32, 'Rivers', 97, 'Rivers West'),
-(330, 'Asari-Toru / Akuku-Toru', 32, 'Rivers', 97, 'Rivers West'),
+(327, 'Abua/Odual / Ahoada East', 33, 'Rivers', 97, 'Rivers West'),
+(328, 'Ahoada West / Ogba/Egbema/Ndoni', 33, 'Rivers', 97, 'Rivers West'),
+(329, 'Degema / Bonny', 33, 'Rivers', 97, 'Rivers West'),
+(330, 'Asari-Toru / Akuku-Toru', 33, 'Rivers', 97, 'Rivers West'),
 
 -- ============================================================
--- SOKOTO STATE (state_id: 33) - 11 Federal Constituencies
+-- SOKOTO STATE (state_id: 34) - 11 Federal Constituencies
 -- ============================================================
 
 -- Sokoto East Senatorial District (SD ID: 98)
-(331, 'Gada / Goronyo', 33, 'Sokoto', 98, 'Sokoto East'),
-(332, 'Isa / Sabon Birni', 33, 'Sokoto', 98, 'Sokoto East'),
-(333, 'Illela / Gwadabawa', 33, 'Sokoto', 98, 'Sokoto East'),
-(334, 'Rabah / Wurno', 33, 'Sokoto', 98, 'Sokoto East'),
+(331, 'Gada / Goronyo', 34, 'Sokoto', 98, 'Sokoto East'),
+(332, 'Isa / Sabon Birni', 34, 'Sokoto', 98, 'Sokoto East'),
+(333, 'Illela / Gwadabawa', 34, 'Sokoto', 98, 'Sokoto East'),
+(334, 'Rabah / Wurno', 34, 'Sokoto', 98, 'Sokoto East'),
 
 -- Sokoto North Senatorial District (SD ID: 99)
-(335, 'Binji / Silame', 33, 'Sokoto', 99, 'Sokoto North'),
-(336, 'Kware / Wamako', 33, 'Sokoto', 99, 'Sokoto North'),
-(337, 'Sokoto North / Sokoto South', 33, 'Sokoto', 99, 'Sokoto North'),
-(338, 'Tangaza / Gudu', 33, 'Sokoto', 99, 'Sokoto North'),
+(335, 'Binji / Silame', 34, 'Sokoto', 99, 'Sokoto North'),
+(336, 'Kware / Wamako', 34, 'Sokoto', 99, 'Sokoto North'),
+(337, 'Sokoto North / Sokoto South', 34, 'Sokoto', 99, 'Sokoto North'),
+(338, 'Tangaza / Gudu', 34, 'Sokoto', 99, 'Sokoto North'),
 
 -- Sokoto South Senatorial District (SD ID: 100)
-(339, 'Kebbe / Tambuwal', 33, 'Sokoto', 100, 'Sokoto South'),
-(340, 'Bodinga / Dange-Shuni / Tureta', 33, 'Sokoto', 100, 'Sokoto South'),
-(341, 'Yabo / Shagari', 33, 'Sokoto', 100, 'Sokoto South'),
+(339, 'Kebbe / Tambuwal', 34, 'Sokoto', 100, 'Sokoto South'),
+(340, 'Bodinga / Dange-Shuni / Tureta', 34, 'Sokoto', 100, 'Sokoto South'),
+(341, 'Yabo / Shagari', 34, 'Sokoto', 100, 'Sokoto South'),
 
 -- ============================================================
--- TARABA STATE (state_id: 34) - 6 Federal Constituencies
+-- TARABA STATE (state_id: 35) - 6 Federal Constituencies
 -- ============================================================
 
 -- Taraba North Senatorial District (SD ID: 101)
-(342, 'Jalingo / Yorro / Zing', 34, 'Taraba', 101, 'Taraba North'),
-(343, 'Karim Lamido / Lau / Ardo-Kola', 34, 'Taraba', 101, 'Taraba North'),
+(342, 'Jalingo / Yorro / Zing', 35, 'Taraba', 101, 'Taraba North'),
+(343, 'Karim Lamido / Lau / Ardo-Kola', 35, 'Taraba', 101, 'Taraba North'),
 
 -- Taraba Central Senatorial District (SD ID: 102)
-(344, 'Bali / Gassol', 34, 'Taraba', 102, 'Taraba Central'),
-(345, 'Sardauna / Gashaka / Kurmi', 34, 'Taraba', 102, 'Taraba Central'),
+(344, 'Bali / Gassol', 35, 'Taraba', 102, 'Taraba Central'),
+(345, 'Sardauna / Gashaka / Kurmi', 35, 'Taraba', 102, 'Taraba Central'),
 
 -- Taraba South Senatorial District (SD ID: 103)
-(346, 'Donga / Ussa / Takum / Yangtu Special Development Area', 34, 'Taraba', 103, 'Taraba South'),
-(347, 'Wukari / Ibi', 34, 'Taraba', 103, 'Taraba South'),
+(346, 'Donga / Ussa / Takum / Yangtu Special Development Area', 35, 'Taraba', 103, 'Taraba South'),
+(347, 'Wukari / Ibi', 35, 'Taraba', 103, 'Taraba South'),
 
 -- ============================================================
--- YOBE STATE (state_id: 35) - 6 Federal Constituencies
+-- YOBE STATE (state_id: 36) - 6 Federal Constituencies
 -- ============================================================
 
 -- Yobe North Senatorial District (SD ID: 104)
-(348, 'Bade / Jakusko', 35, 'Yobe', 104, 'Yobe North'),
-(349, 'Machina / Nguru / Karasuwa / Yusufari', 35, 'Yobe', 104, 'Yobe North'),
+(348, 'Bade / Jakusko', 36, 'Yobe', 104, 'Yobe North'),
+(349, 'Machina / Nguru / Karasuwa / Yusufari', 36, 'Yobe', 104, 'Yobe North'),
 
 -- Yobe East Senatorial District (SD ID: 105)
-(350, 'Damaturu / Gujba / Gulani / Tarmuwa', 35, 'Yobe', 105, 'Yobe East'),
-(351, 'Geidam / Yunusari / Bursari', 35, 'Yobe', 105, 'Yobe East'),
+(350, 'Damaturu / Gujba / Gulani / Tarmuwa', 36, 'Yobe', 105, 'Yobe East'),
+(351, 'Geidam / Yunusari / Bursari', 36, 'Yobe', 105, 'Yobe East'),
 
 -- Yobe South Senatorial District (SD ID: 106)
-(352, 'Fika / Fune', 35, 'Yobe', 106, 'Yobe South'),
-(353, 'Potiskum / Nangere', 35, 'Yobe', 106, 'Yobe South'),
+(352, 'Fika / Fune', 36, 'Yobe', 106, 'Yobe South'),
+(353, 'Potiskum / Nangere', 36, 'Yobe', 106, 'Yobe South'),
 
 -- ============================================================
--- ZAMFARA STATE (state_id: 36) - 7 Federal Constituencies
+-- ZAMFARA STATE (state_id: 37) - 7 Federal Constituencies
 -- ============================================================
 
 -- Zamfara North Senatorial District (SD ID: 107)
-(354, 'Zurmi / Shinkafi', 36, 'Zamfara', 107, 'Zamfara North'),
-(355, 'Kaura Namoda / Birnin Magaji', 36, 'Zamfara', 107, 'Zamfara North'),
+(354, 'Zurmi / Shinkafi', 37, 'Zamfara', 107, 'Zamfara North'),
+(355, 'Kaura Namoda / Birnin Magaji', 37, 'Zamfara', 107, 'Zamfara North'),
 
 -- Zamfara Central Senatorial District (SD ID: 108)
-(356, 'Gusau / Tsafe', 36, 'Zamfara', 108, 'Zamfara Central'),
-(357, 'Bungudu / Maru', 36, 'Zamfara', 108, 'Zamfara Central'),
+(356, 'Gusau / Tsafe', 37, 'Zamfara', 108, 'Zamfara Central'),
+(357, 'Bungudu / Maru', 37, 'Zamfara', 108, 'Zamfara Central'),
 
 -- Zamfara West Senatorial District (SD ID: 109)
-(358, 'Bakura / Maradun', 36, 'Zamfara', 109, 'Zamfara West'),
-(359, 'Anka / Talata Mafara', 36, 'Zamfara', 109, 'Zamfara West'),
-(360, 'Gummi / Bukkuyum', 36, 'Zamfara', 109, 'Zamfara West');
+(358, 'Bakura / Maradun', 37, 'Zamfara', 109, 'Zamfara West'),
+(359, 'Anka / Talata Mafara', 37, 'Zamfara', 109, 'Zamfara West'),
+(360, 'Gummi / Bukkuyum', 37, 'Zamfara', 109, 'Zamfara West');
 
 
 -- +goose Down

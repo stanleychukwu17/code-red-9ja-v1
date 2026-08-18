@@ -25,6 +25,10 @@ export const APP_URL = {
   marketing: "/marketing",
   notifications: "/notifications",
   logs: "/logs",
+  inecResultGrabber: {
+    main: "/inec-result-grabber",
+    logs: "/inec-result-grabber/logs",
+  },
   settings: {
     general: "/settings",
     partyadmin: "/settings/partyadmin",
@@ -219,5 +223,30 @@ export const API_URL = {
   systemSettings: {
     get: (key: string) => `${api}/admin/settings/${key}`,
     update: (key: string) => `${api}/admin/settings/${key}`,
+  },
+  inecResultGrabbers: (args?: { limit?: number; cursor?: string | number }) => {
+    const params = new URLSearchParams();
+    if (args?.limit) params.append("limit", String(args.limit));
+    if (args?.cursor) params.append("cursor", String(args.cursor));
+    const qs = params.toString();
+    return `${api}/admin/inec-result-grabbers${qs ? `?${qs}` : ""}`;
+  },
+  inecResultGrabberLogs: (args?: { grabberId?: number | string; limit?: number; cursor?: string | number }) => {
+    const params = new URLSearchParams();
+    if (args?.grabberId) params.append("grabber_id", String(args.grabberId));
+    if (args?.limit) params.append("limit", String(args.limit));
+    if (args?.cursor) params.append("cursor", String(args.cursor));
+    const qs = params.toString();
+    return `${api}/admin/inec-result-grabber-logs${qs ? `?${qs}` : ""}`;
+  },
+  syncINECResultGrabber: (id: number | string, uploadToR2?: boolean, aiExtract?: boolean) => {
+    const params = new URLSearchParams();
+    if (uploadToR2 !== undefined) params.append("upload_to_r2", String(uploadToR2));
+    if (aiExtract !== undefined) params.append("ai_extract", String(aiExtract));
+    const qs = params.toString();
+    return `${api}/admin/inec-result-grabbers/${id}/sync${qs ? `?${qs}` : ""}`;
+  },
+  toggleINECResultGrabberPause: (id: number | string) => {
+    return `${api}/admin/inec-result-grabbers/${id}/toggle-pause`;
   },
 };

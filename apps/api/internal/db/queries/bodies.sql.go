@@ -656,6 +656,38 @@ func (q *Queries) GetOccupations(ctx context.Context) ([]Occupation, error) {
 	return items, nil
 }
 
+const getPollingUnitByDelimitation = `-- name: GetPollingUnitByDelimitation :one
+SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
+WHERE delimitation = $1 LIMIT 1
+`
+
+func (q *Queries) GetPollingUnitByDelimitation(ctx context.Context, delimitation pgtype.Text) (PollingUnit, error) {
+	row := q.db.QueryRow(ctx, getPollingUnitByDelimitation, delimitation)
+	var i PollingUnit
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Abbreviation,
+		&i.Units,
+		&i.Delimitation,
+		&i.Remark,
+		&i.RegistrationAreaID,
+		&i.WardID,
+		&i.WardName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.StateID,
+		&i.StateName,
+		&i.Latitude,
+		&i.Longitude,
+		&i.PreciseLocation,
+		&i.FormattedAddress,
+		&i.GooglePlaceID,
+		&i.Status,
+	)
+	return i, err
+}
+
 const getPollingUnitByID = `-- name: GetPollingUnitByID :one
 SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
 WHERE id = $1 LIMIT 1
@@ -1111,6 +1143,44 @@ func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, err
 			&i.StateAssemblyConstituencyID,
 			&i.StateAssemblyConstituencyName,
 			&i.Status,
+			&i.PollingUnitsCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllStates = `-- name: ListAllStates :many
+SELECT id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
+ORDER BY name ASC
+`
+
+func (q *Queries) ListAllStates(ctx context.Context) ([]CState, error) {
+	rows, err := q.db.Query(ctx, listAllStates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CState
+	for rows.Next() {
+		var i CState
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CountryID,
+			&i.CountryCode,
+			&i.Latitude,
+			&i.Longitude,
+			&i.SenatorialDistrictsCount,
+			&i.FederalConstituenciesCount,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
 			&i.PollingUnitsCount,
 		); err != nil {
 			return nil, err

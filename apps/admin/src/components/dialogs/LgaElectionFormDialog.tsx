@@ -24,8 +24,10 @@ import {
   SelectionHeader,
   SelectionTabs,
   SelectedItemsContainer,
+  GroupSectionTitle,
+  SelectableChip,
 } from "./SelectionCommon";
-import { Label } from "@repo/ui/components/input";
+import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface StateItem {
@@ -448,6 +450,35 @@ function LgaSelectorDialog({
   selectedLgas,
   onToggleLgaSelection,
 }: LgaSelectorDialogProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+  const filteredGroupedLgas = React.useMemo(() => {
+    if (!searchQuery.trim()) return groupedAllLgas;
+    const q = searchQuery.toLowerCase();
+    const result: Record<string, LgaItem[]> = {};
+
+    for (const [stateName, lgas] of Object.entries(groupedAllLgas)) {
+      const stateMatches = stateName.toLowerCase().includes(q);
+      if (stateMatches) {
+        result[stateName] = lgas;
+      } else {
+        const filtered = lgas.filter((l) => l.name.toLowerCase().includes(q));
+        if (filtered.length > 0) {
+          result[stateName] = filtered;
+        }
+      }
+    }
+    return result;
+  }, [groupedAllLgas, searchQuery]);
+
+  const hasResults = Object.keys(filteredGroupedLgas).length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
@@ -457,36 +488,39 @@ function LgaSelectorDialog({
             Select the LGAs to add to this election.
           </p>
 
+          <IconInput
+            placeholder="Search LGAs or states..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-1 pt-2">
-            {Object.entries(groupedAllLgas).map(([stateName, stateLgas]) => (
-              <div key={stateName} className="space-y-2">
-                <h4 className="text-[14px] font-bold text-c-75 border-b pb-1">
-                  {stateName}
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {stateLgas.map((lga) => {
-                    const isSelected = selectedLgas.some(
-                      (l) => l.id === lga.id,
-                    );
-                    return (
-                      <button
-                        key={lga.id}
-                        type="button"
-                        onClick={() => onToggleLgaSelection(lga)}
-                        className={cn(
-                          "px-3.5 py-2 rounded-lg text-sm font-semibold transition cursor-pointer border",
-                          isSelected
-                            ? "bg-[#e8fbf3] text-[#00cf79] border-[#00cf79]"
-                            : "bg-c-5/40 text-c-70 border-[#dfdfdf] hover:bg-black/5",
-                        )}
-                      >
-                        {lga.name}
-                      </button>
-                    );
-                  })}
+            {!hasResults ? (
+              <p className="text-sm text-c-50 py-4 text-center">
+                No LGAs found matching your search.
+              </p>
+            ) : (
+              Object.entries(filteredGroupedLgas).map(([stateName, stateLgas]) => (
+                <div key={stateName} className="space-y-2">
+                  <GroupSectionTitle title={stateName} />
+                  <div className="flex flex-wrap gap-2">
+                    {stateLgas.map((lga) => {
+                      const isSelected = selectedLgas.some(
+                        (l) => l.id === lga.id,
+                      );
+                      return (
+                        <SelectableChip
+                          key={lga.id}
+                          label={lga.name}
+                          isSelected={isSelected}
+                          onClick={() => onToggleLgaSelection(lga)}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </DialogPadding>
         <DialogFooter>

@@ -1,0 +1,375 @@
+STATE CONSTITUENCY ELECTION
+
+INEC API BASE URL: https://dolphin-app-sleqh.ondigitalocean.app/api/v1
+
+1. Grab List of Election Types: "GET /elections?election_type=5f129a04df41d910dcdc1d54"
+
+{
+    "success": true,
+    "request_time": 1786994510992,
+    "data": [
+        {
+            "status": "ACTIVE",
+            "version": 33,
+            "election_lgas": [],
+            "parties": [],
+            "is_mapped": false,
+            "_id": "6a35d6ee52574004bac51620",
+            "full_name": "House of Assemby election - 2026-06-20 - ZURU",
+            "election_id": 5007,
+            "domain_id": 585,
+            "domain_type": "App\\Models\\StateConstituency",
+            "election_type_id": 5,
+            "state_id": 22,
+            "state": {
+                "status": "ACTIVE",
+                "_id": "5f0eb6e16dda22674979bf37",
+                "presidential_id": 1,
+                "presidential": "5f0eb67db39f166717b8411f",
+                "name": "KEBBI",
+                "code": "21",
+                "state_id": 22,
+                "created_at": "2020-07-15T07:57:21.644Z",
+                "updated_at": "2020-07-15T07:57:21.644Z",
+                "__v": 0
+            },
+            "election_date": "2026-06-19T23:00:00.000Z",
+            "domain": {
+                "status": "ACTIVE",
+                "_id": "5f0f374293d20b39ceee21fb",
+                "state_id": 22,
+                "state": "5f0eb6e16dda22674979bf37",
+                "name": "ZURU",
+                "code": "SC/582/KB",
+                "state_constituency_id": 585,
+                "created_at": "2020-07-15T17:05:06.126Z",
+                "updated_at": "2020-07-15T17:05:06.126Z",
+                "__v": 0
+            },
+            "election_type": {
+                "status": "ACTIVE",
+                "_id": "5f129a04df41d910dcdc1d54",
+                "name": "House of Assemby election",
+                "code": "ASSEMBLY",
+                "election_type_id": 5,
+                "created_at": "2020-07-18T06:43:16.884Z",
+                "updated_at": "2020-07-18T06:43:16.884Z",
+                "__v": 0
+            },
+            "onModel": "StateConstituency",
+            "created_at": "2026-06-19T23:55:26.568Z",
+            "updated_at": "2026-06-19T23:55:26.568Z",
+            "__v": 0
+        },
+        ...
+    ]
+}
+
+2. LGAs: "GET /elections/6a35d6ee52574004bac51620/lga"
+
+{
+    "success": true,
+    "request_time": 1786994567136,
+    "data": [
+        {
+            "wards": [
+                {
+                    "status": "ACTIVE",
+                    "_id": "5f0f3d4c8f77bb3acad0a266",
+                    "state_id": 22,
+                    "state": "5f0eb6e16dda22674979bf37",
+                    "lga_id": 3570,
+                    "lga": "5f0f399b4d89fc3a883de293",
+                    "state_constituency_id": 585,
+                    "state_constituency": "5f0f374293d20b39ceee21fb",
+                    "federal_constituency_id": 209,
+                    "federal_constituency": "5f0f37ff2d77c83a06f0f3d6",
+                    "senatorial_district_id": 64,
+                    "senatorial_district": "5f0f3955970bd83a6f4539f0",
+                    "name": "ZODI",
+                    "code": "10",
+                    "old_name": "",
+                    "ward_id": 22851,
+                    "created_at": "2020-07-15T17:30:52.461Z",
+                    "updated_at": "2020-07-15T17:30:52.461Z",
+                    "__v": 0
+                },
+                ...
+            ],
+            "election_wards": [],
+            "status": "ACTIVE",
+            "is_mapped": false,
+            "_id": "6a35d6f452574004bac517e8",
+            "valid_votes": 0,
+            "invalid_votes": 0,
+            "total_votes": 0,
+            "total_accredited": 0,
+            "total_registered": 0,
+            "ballots_issued": 0,
+            "ballots_used": 0,
+            "lga": {
+                "status": "ACTIVE",
+                "_id": "5f0f399b4d89fc3a883de293",
+                "state_id": 22,
+                "state": "5f0eb6e16dda22674979bf37",
+                "name": "ZURU",
+                "code": "21",
+                "lga_id": 3570,
+                "created_at": "2020-07-15T17:15:07.156Z",
+                "updated_at": "2020-07-15T17:15:07.156Z",
+                "__v": 0
+            },
+            "election": {
+                "status": "ACTIVE",
+                "version": 33,
+                "election_lgas": [],
+                "parties": [],
+                "is_mapped": false,
+                "_id": "6a35d6ee52574004bac51620",
+                "full_name": "House of Assemby election - 2026-06-20 - ZURU",
+                "election_id": 5007,
+                "domain_id": 585,
+                "domain_type": "App\\Models\\StateConstituency",
+                "election_type_id": 5,
+                "state_id": 22,
+                "state": "5f0eb6e16dda22674979bf37",
+                "election_date": "2026-06-19T23:00:00.000Z",
+                "domain": "5f0f374293d20b39ceee21fb",
+                "election_type": "5f129a04df41d910dcdc1d54",
+                "onModel": "StateConstituency",
+                "created_at": "2026-06-19T23:55:26.568Z",
+                "updated_at": "2026-06-19T23:55:26.568Z",
+                "__v": 0
+            },
+            "election_id": 5007,
+            "state": {
+                "status": "ACTIVE",
+                "_id": "5f0eb6e16dda22674979bf37",
+                "presidential_id": 1,
+                "presidential": "5f0eb67db39f166717b8411f",
+                "name": "KEBBI",
+                "code": "21",
+                "state_id": 22,
+                "created_at": "2020-07-15T07:57:21.644Z",
+                "updated_at": "2020-07-15T07:57:21.644Z",
+                "__v": 0
+            },
+            "created_at": "2026-06-19T23:55:32.118Z",
+            "updated_at": "2026-06-19T23:55:32.118Z",
+            "__v": 0
+        }
+    ],
+    "results": [
+        {
+            "_id": "5f0f399b4d89fc3a883de293",
+            "count": 197
+        }
+    ],
+    "pus": [
+        {
+            "_id": "5f0f399b4d89fc3a883de293",
+            "count": 200
+        }
+    ]
+}
+
+3. Polling Units: "GET /elections/6a35d6ee52574004bac51620/pus?ward=5f0f3d4c8f77bb3acad0a266"
+
+{
+    "success": true,
+    "request_time": 1786994637040,
+    "data": [
+        {
+            "status": "ACTIVE",
+            "is_zero_pu": false,
+            "_id": "6a35d6f352574004bac51661",
+            "polling_unit_id": 72837,
+            "election_id": 5007,
+            "election": {
+                "status": "ACTIVE",
+                "version": 33,
+                "election_lgas": [],
+                "parties": [],
+                "is_mapped": false,
+                "_id": "6a35d6ee52574004bac51620",
+                "full_name": "House of Assemby election - 2026-06-20 - ZURU",
+                "election_id": 5007,
+                "domain_id": 585,
+                "domain_type": "App\\Models\\StateConstituency",
+                "election_type_id": 5,
+                "state_id": 22,
+                "state": "5f0eb6e16dda22674979bf37",
+                "election_date": "2026-06-19T23:00:00.000Z",
+                "domain": "5f0f374293d20b39ceee21fb",
+                "election_type": "5f129a04df41d910dcdc1d54",
+                "onModel": "StateConstituency",
+                "created_at": "2026-06-19T23:55:26.568Z",
+                "updated_at": "2026-06-19T23:55:26.568Z",
+                "__v": 0
+            },
+            "polling_unit": {
+                "status": "ACTIVE",
+                "generation": 1,
+                "db_generation": 1,
+                "is_accredited": 1,
+                "is_zero_pu": false,
+                "_id": "5f0f59f8c440353badb1f41c",
+                "state_id": 22,
+                "state": "5f0eb6e16dda22674979bf37",
+                "lga_id": 3570,
+                "lga": {
+                    "status": "ACTIVE",
+                    "_id": "5f0f399b4d89fc3a883de293",
+                    "state_id": 22,
+                    "state": "5f0eb6e16dda22674979bf37",
+                    "name": "ZURU",
+                    "code": "21",
+                    "lga_id": 3570,
+                    "created_at": "2020-07-15T17:15:07.156Z",
+                    "updated_at": "2020-07-15T17:15:07.156Z",
+                    "__v": 0
+                },
+                "ward_id": 22851,
+                "ward": {
+                    "status": "ACTIVE",
+                    "_id": "5f0f3d4c8f77bb3acad0a266",
+                    "state_id": 22,
+                    "state": "5f0eb6e16dda22674979bf37",
+                    "lga_id": 3570,
+                    "lga": "5f0f399b4d89fc3a883de293",
+                    "state_constituency_id": 585,
+                    "state_constituency": "5f0f374293d20b39ceee21fb",
+                    "federal_constituency_id": 209,
+                    "federal_constituency": "5f0f37ff2d77c83a06f0f3d6",
+                    "senatorial_district_id": 64,
+                    "senatorial_district": "5f0f3955970bd83a6f4539f0",
+                    "name": "ZODI",
+                    "code": "10",
+                    "old_name": "",
+                    "ward_id": 22851,
+                    "created_at": "2020-07-15T17:30:52.461Z",
+                    "updated_at": "2020-07-15T17:30:52.461Z",
+                    "__v": 0
+                },
+                "state_constituency_id": 585,
+                "state_constituency": "5f0f374293d20b39ceee21fb",
+                "federal_constituency_id": 209,
+                "federal_constituency": "5f0f37ff2d77c83a06f0f3d6",
+                "senatorial_district_id": 64,
+                "senatorial_district": "5f0f3955970bd83a6f4539f0",
+                "name": "RAFI HITTA",
+                "code": "008",
+                "pu_code": "21/21/10/008",
+                "old_name": "",
+                "polling_unit_id": 72837,
+                "created_at": "2020-07-15T19:33:12.874Z",
+                "updated_at": "2023-02-23T21:09:42.827Z",
+                "__v": 0,
+                "pu_code_string": "212110008"
+            },
+            "name": "RAFI HITTA",
+            "code": "008",
+            "pu_code": "21/21/10/008",
+            "ward_id": 22851,
+            "ward": {
+                "status": "ACTIVE",
+                "_id": "5f0f3d4c8f77bb3acad0a266",
+                "state_id": 22,
+                "state": "5f0eb6e16dda22674979bf37",
+                "lga_id": 3570,
+                "lga": "5f0f399b4d89fc3a883de293",
+                "state_constituency_id": 585,
+                "state_constituency": "5f0f374293d20b39ceee21fb",
+                "federal_constituency_id": 209,
+                "federal_constituency": "5f0f37ff2d77c83a06f0f3d6",
+                "senatorial_district_id": 64,
+                "senatorial_district": "5f0f3955970bd83a6f4539f0",
+                "name": "ZODI",
+                "code": "10",
+                "old_name": "",
+                "ward_id": 22851,
+                "created_at": "2020-07-15T17:30:52.461Z",
+                "updated_at": "2020-07-15T17:30:52.461Z",
+                "__v": 0
+            },
+            "lga_id": 3570,
+            "lga": "5f0f399b4d89fc3a883de293",
+            "state": "5f0eb6e16dda22674979bf37",
+            "old_documents": [],
+            "created_at": "2026-06-19T23:55:31.781Z",
+            "updated_at": "2026-06-20T17:38:34.772Z",
+            "__v": 0,
+            "document": {
+                "external": true,
+                "status": 1,
+                "is_supplement": false,
+                "_id": "6a36d01a24ae14113457b106",
+                "url": "https://inc-s3-cache.incportals.com/cached/express/results/2990/22/468/5326/72141/48429870-1cd9-4daf-b008-b41900b77668.jpg",
+                "size": 1000,
+                "updated_at": "2026-06-20T17:38:34.772Z"
+            },
+            "session": "1781977114772"
+        },
+        ...
+    ],
+    "lgas": [
+        {
+            "status": "ACTIVE",
+            "_id": "5f0f399b4d89fc3a883de293",
+            "state_id": 22,
+            "state": "5f0eb6e16dda22674979bf37",
+            "name": "ZURU",
+            "code": "21",
+            "lga_id": 3570,
+            "created_at": "2020-07-15T17:15:07.156Z",
+            "updated_at": "2020-07-15T17:15:07.156Z",
+            "__v": 0
+        }
+    ],
+    "wards": [
+        {
+            "status": "ACTIVE",
+            "_id": "5f0f3d4c8f77bb3acad0a266",
+            "state_id": 22,
+            "state": "5f0eb6e16dda22674979bf37",
+            "lga_id": 3570,
+            "lga": "5f0f399b4d89fc3a883de293",
+            "state_constituency_id": 585,
+            "state_constituency": "5f0f374293d20b39ceee21fb",
+            "federal_constituency_id": 209,
+            "federal_constituency": "5f0f37ff2d77c83a06f0f3d6",
+            "senatorial_district_id": 64,
+            "senatorial_district": "5f0f3955970bd83a6f4539f0",
+            "name": "ZODI",
+            "code": "10",
+            "old_name": "",
+            "ward_id": 22851,
+            "created_at": "2020-07-15T17:30:52.461Z",
+            "updated_at": "2020-07-15T17:30:52.461Z",
+            "__v": 0
+        }
+    ],
+    "election": {
+        "status": "ACTIVE",
+        "version": 33,
+        "election_lgas": [],
+        "parties": [],
+        "is_mapped": false,
+        "_id": "6a35d6ee52574004bac51620",
+        "full_name": "House of Assemby election - 2026-06-20 - ZURU",
+        "election_id": 5007,
+        "domain_id": 585,
+        "domain_type": "App\\Models\\StateConstituency",
+        "election_type_id": 5,
+        "state_id": 22,
+        "state": "5f0eb6e16dda22674979bf37",
+        "election_date": "2026-06-19T23:00:00.000Z",
+        "domain": "5f0f374293d20b39ceee21fb",
+        "election_type": "5f129a04df41d910dcdc1d54",
+        "onModel": "StateConstituency",
+        "created_at": "2026-06-19T23:55:26.568Z",
+        "updated_at": "2026-06-19T23:55:26.568Z",
+        "__v": 0
+    }
+}
+

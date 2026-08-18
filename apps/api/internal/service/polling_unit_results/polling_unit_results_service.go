@@ -210,7 +210,7 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 			ElectionID:            input.ElectionID,
 			ElectionGroupID:       input.ElectionGroupID,
 			PollingUnitID:         input.PollingUnitID,
-			SubmittedBy:           user.ID,
+			SubmittedBy:           pgtype.Int8{Int64: user.ID, Valid: true},
 			PartyID:               partyID,
 			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
 			SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},

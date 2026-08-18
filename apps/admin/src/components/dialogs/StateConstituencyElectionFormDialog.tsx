@@ -25,8 +25,10 @@ import {
   SelectionHeader,
   SelectionTabs,
   SelectedItemsContainer,
+  GroupSectionTitle,
+  SelectableChip,
 } from "./SelectionCommon";
-import { Label } from "@repo/ui/components/input";
+import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface StateItem {
@@ -473,6 +475,39 @@ function StateConstituencySelectorDialog({
   selectedConstituencies,
   onToggleConstituencySelection,
 }: StateConstituencySelectorDialogProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+  const filteredGroupedConstituencies = React.useMemo(() => {
+    if (!searchQuery.trim()) return groupedAllConstituencies;
+    const q = searchQuery.toLowerCase();
+    const result: Record<string, StateConstituencyItem[]> = {};
+
+    for (const [stateName, constituencies] of Object.entries(
+      groupedAllConstituencies,
+    )) {
+      const stateMatches = stateName.toLowerCase().includes(q);
+      if (stateMatches) {
+        result[stateName] = constituencies;
+      } else {
+        const filtered = constituencies.filter((c) =>
+          c.name.toLowerCase().includes(q),
+        );
+        if (filtered.length > 0) {
+          result[stateName] = filtered;
+        }
+      }
+    }
+    return result;
+  }, [groupedAllConstituencies, searchQuery]);
+
+  const hasResults = Object.keys(filteredGroupedConstituencies).length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
@@ -482,39 +517,42 @@ function StateConstituencySelectorDialog({
             Select the state constituencies to add to this election.
           </p>
 
+          <IconInput
+            placeholder="Search constituencies or states..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-1 pt-2">
-            {Object.entries(groupedAllConstituencies).map(
-              ([stateName, stateConstituencies]) => (
-                <div key={stateName} className="space-y-2">
-                  <h4 className="text-[14px] font-bold text-c-75 border-b pb-1">
-                    {stateName}
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {stateConstituencies.map((constituency) => {
-                      const isSelected = selectedConstituencies.some(
-                        (c) => c.id === constituency.id,
-                      );
-                      return (
-                        <button
-                          key={constituency.id}
-                          type="button"
-                          onClick={() =>
-                            onToggleConstituencySelection(constituency)
-                          }
-                          className={cn(
-                            "px-3.5 py-2 rounded-lg text-sm font-semibold transition cursor-pointer border",
-                            isSelected
-                              ? "bg-[#e8fbf3] text-[#00cf79] border-[#00cf79]"
-                              : "bg-c-5/40 text-c-70 border-[#dfdfdf] hover:bg-black/5",
-                          )}
-                        >
-                          {constituency.name}
-                        </button>
-                      );
-                    })}
+            {!hasResults ? (
+              <p className="text-sm text-c-50 py-4 text-center">
+                No state constituencies found matching your search.
+              </p>
+            ) : (
+              Object.entries(filteredGroupedConstituencies).map(
+                ([stateName, stateConstituencies]) => (
+                  <div key={stateName} className="space-y-2">
+                    <GroupSectionTitle title={stateName} />
+                    <div className="flex flex-wrap gap-2">
+                      {stateConstituencies.map((constituency) => {
+                        const isSelected = selectedConstituencies.some(
+                          (c) => c.id === constituency.id,
+                        );
+                        return (
+                          <SelectableChip
+                            key={constituency.id}
+                            label={constituency.name}
+                            isSelected={isSelected}
+                            onClick={() =>
+                              onToggleConstituencySelection(constituency)
+                            }
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ),
+                ),
+              )
             )}
           </div>
         </DialogPadding>

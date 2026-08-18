@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -28,6 +29,7 @@ import (
 	electionshandler "free9ja/api/internal/handler/elections"
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
+	inecgrabberhandler "free9ja/api/internal/handler/inec_grabber"
 	officeshandler "free9ja/api/internal/handler/offices"
 	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
@@ -58,6 +60,7 @@ import (
 	electionsservice "free9ja/api/internal/service/elections"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	filesservice "free9ja/api/internal/service/files"
+	inecgrabberservice "free9ja/api/internal/service/inec_grabber"
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
@@ -205,6 +208,22 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	if r2Svc != nil {
 		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
 	}
+
+	geminiKey := ""
+	if cfg != nil {
+		geminiKey = cfg.GeminiAPIKey
+	}
+	var notifier inecgrabberservice.ResultNotifierFunc
+	if distributor != nil {
+		notifier = func(ctx context.Context, electionID int64, puID int32) {
+			_ = distributor.DistributeTaskCalculateFinalResult(ctx, &worker.CalculateFinalResultPayload{
+				ElectionID:    electionID,
+				PollingUnitID: puID,
+			})
+		}
+	}
+	inecGrabberService := inecgrabberservice.NewINECGrabberService(q, pool, rdb, r2Svc, geminiKey, notifier)
+	inecGrabberHandler := inecgrabberhandler.NewINECGrabberHandler(inecGrabberService, utilsInstance)
 
 	// Core middleware
 	mainRouter.Use(corsMiddleware)                     // Handles Cross-Origin Resource Sharing
@@ -443,6 +462,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/admin/referrals", referralsHandler.ListReferrals)
 		r.Get("/api/v1/admin/referrals/{id}", referralsHandler.GetReferral)
 		r.Put("/api/v1/admin/referrals/{id}", referralsHandler.UpdateReferral)
+
+		// INEC result grabber admin endpoints
+		r.Get("/api/v1/admin/inec-result-grabbers", inecGrabberHandler.ListGrabbers)
+		r.Post("/api/v1/admin/inec-result-grabbers/{id}/sync", inecGrabberHandler.SyncGrabber)
+		r.Post("/api/v1/admin/inec-result-grabbers/{id}/toggle-pause", inecGrabberHandler.TogglePause)
+		r.Get("/api/v1/admin/inec-result-grabber-logs", inecGrabberHandler.ListAllLogs)
+		r.Get("/api/v1/admin/inec-result-grabbers/{id}/logs", inecGrabberHandler.ListLogs)
+		r.Get("/api/v1/admin/unmatched-polling-unit-results", inecGrabberHandler.ListUnmatchedResults)
+		r.Post("/api/v1/admin/unmatched-polling-unit-results/{id}/resolve", inecGrabberHandler.ResolveUnmatchedResult)
 
 		// only admins can permanently delete files
 		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))

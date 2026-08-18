@@ -816,6 +816,36 @@ type File struct {
 	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
 }
 
+type InecResultGrabber struct {
+	ID                            int64              `json:"id"`
+	ElectionGroupID               int64              `json:"election_group_id"`
+	ElectionID                    int64              `json:"election_id"`
+	Name                          pgtype.Text        `json:"name"`
+	Scope                         string             `json:"scope"`
+	ElectionDate                  pgtype.Date        `json:"election_date"`
+	LgasWithCompleteResultsCount  int32              `json:"lgas_with_complete_results_count"`
+	WardsWithCompleteResultsCount int32              `json:"wards_with_complete_results_count"`
+	UploadedResultsCount          int32              `json:"uploaded_results_count"`
+	SyncStatus                    string             `json:"sync_status"`
+	SyncErrorMessage              pgtype.Text        `json:"sync_error_message"`
+	CreatedAt                     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                     pgtype.Timestamptz `json:"updated_at"`
+}
+
+type InecResultGrabberLog struct {
+	ID                    int64              `json:"id"`
+	InecResultGrabberID   int64              `json:"inec_result_grabber_id"`
+	ElectionGroupID       int64              `json:"election_group_id"`
+	ElectionID            int64              `json:"election_id"`
+	ResultsCollectedCount int32              `json:"results_collected_count"`
+	Status                string             `json:"status"`
+	ErrorMessage          pgtype.Text        `json:"error_message"`
+	StartedAt             pgtype.Timestamptz `json:"started_at"`
+	EndedAt               pgtype.Timestamptz `json:"ended_at"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+}
+
 type Lga struct {
 	ID                       int32  `json:"id"`
 	Name                     string `json:"name"`
@@ -875,14 +905,15 @@ type Occupation struct {
 }
 
 type Office struct {
-	ID             int64              `json:"id"`
-	Name           string             `json:"name"`
-	Election       string             `json:"election"`
-	Scope          string             `json:"scope"`
-	Rank           int32              `json:"rank"`
-	InstancesCount int32              `json:"instances_count"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	ID                 int64              `json:"id"`
+	Name               string             `json:"name"`
+	Election           string             `json:"election"`
+	Scope              string             `json:"scope"`
+	Rank               int32              `json:"rank"`
+	InstancesCount     int32              `json:"instances_count"`
+	InecElectionTypeID pgtype.Text        `json:"inec_election_type_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PageVerificationType struct {
@@ -1129,7 +1160,7 @@ type PollingUnitResult struct {
 	ElectionID            int64              `json:"election_id"`
 	ElectionGroupID       int64              `json:"election_group_id"`
 	PollingUnitID         int32              `json:"polling_unit_id"`
-	SubmittedBy           int64              `json:"submitted_by"`
+	SubmittedBy           pgtype.Int8        `json:"submitted_by"`
 	PartyID               pgtype.Int2        `json:"party_id"`
 	StateID               pgtype.Int2        `json:"state_id"`
 	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
@@ -1263,6 +1294,40 @@ type SystemSetting struct {
 	Description pgtype.Text        `json:"description"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+type UnmatchedPollingUnitResult struct {
+	ID                    int64              `json:"id"`
+	ElectionID            int64              `json:"election_id"`
+	ElectionGroupID       int64              `json:"election_group_id"`
+	SubmittedBy           pgtype.Int8        `json:"submitted_by"`
+	PartyID               pgtype.Int2        `json:"party_id"`
+	RawPollingUnitCode    pgtype.Text        `json:"raw_polling_unit_code"`
+	RawPollingUnitName    pgtype.Text        `json:"raw_polling_unit_name"`
+	RawWardName           pgtype.Text        `json:"raw_ward_name"`
+	RawLgaName            pgtype.Text        `json:"raw_lga_name"`
+	RawStateName          pgtype.Text        `json:"raw_state_name"`
+	StateID               pgtype.Int2        `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4        `json:"lga_id"`
+	WardID                pgtype.Int4        `json:"ward_id"`
+	AccreditedVoters      int32              `json:"accredited_voters"`
+	VotesCast             int32              `json:"votes_cast"`
+	ValidVotes            int32              `json:"valid_votes"`
+	RejectedVotes         int32              `json:"rejected_votes"`
+	CandidateResults      []byte             `json:"candidate_results"`
+	ResultSheetImageUrl   pgtype.Text        `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl   pgtype.Text        `json:"result_sheet_video_url"`
+	ResolutionStatus      string             `json:"resolution_status"`
+	ResolutionNotes       pgtype.Text        `json:"resolution_notes"`
+	ResolvedPollingUnitID pgtype.Int4        `json:"resolved_polling_unit_id"`
+	ResolvedResultID      pgtype.Int8        `json:"resolved_result_id"`
+	ResolvedBy            pgtype.Int8        `json:"resolved_by"`
+	ResolvedAt            pgtype.Timestamptz `json:"resolved_at"`
+	CreatedAt             pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
 }
 
 type User struct {

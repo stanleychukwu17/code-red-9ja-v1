@@ -15,6 +15,7 @@ import {
   createElectionGroup,
   updateElectionGroup,
 } from "#/lib/server/election_groups";
+import { getElections, updateElection } from "#/lib/server/elections";
 import { Loader2 } from "lucide-react";
 import { FancyInput } from "@repo/ui/components/input";
 import type { ElectionGroupType } from "../tiles/election-group-tile";
@@ -50,9 +51,12 @@ export function ElectionGroupFormDialog({
   React.useEffect(() => {
     if (open) {
       if (mode === "update" && electionGroup) {
+        const cleanDate = electionGroup.election_date
+          ? (electionGroup.election_date.split("T")[0] ?? "")
+          : "";
         form.setFieldValue("name", electionGroup.name || "");
         form.setFieldValue("rank", String(electionGroup.rank || 1));
-        form.setFieldValue("electionDate", electionGroup.election_date || "");
+        form.setFieldValue("electionDate", cleanDate);
       } else {
         form.setFieldValue("name", "");
         form.setFieldValue("rank", "1");
@@ -72,6 +76,9 @@ export function ElectionGroupFormDialog({
         throw new Error("Election date is required");
       }
       const rankNum = Number(values.rank) || 1;
+      const cleanDate = values.electionDate
+        ? (values.electionDate.split("T")[0] ?? "")
+        : "";
 
       let res;
       if (mode === "update") {
@@ -85,9 +92,42 @@ export function ElectionGroupFormDialog({
             rank: rankNum,
             elections_count: electionGroup.elections_count,
             states_count: electionGroup.states_count,
-            election_date: values.electionDate,
+            election_date: cleanDate,
           },
         });
+
+        // Iterate over all elections in this group and update their election dates as well
+        const oldCleanDate = electionGroup.election_date
+          ? (electionGroup.election_date.split("T")[0] ?? "")
+          : "";
+        if (cleanDate && cleanDate !== oldCleanDate) {
+          const electionsRes = await getElections({
+            data: { election_group_id: electionGroup.id, limit: 1000 },
+          });
+          if (electionsRes?.success && electionsRes.data?.elections) {
+            const electionsList = electionsRes.data.elections;
+            await Promise.all(
+              electionsList.map((item: any) =>
+                updateElection({
+                  data: {
+                    id: item.id,
+                    name: item.name,
+                    candidates_count: item.candidates_count || 0,
+                    election_date: cleanDate,
+                    election_group_id: electionGroup.id,
+                    office_id: item.office_id,
+                    state_id: item.state_id,
+                    senatorial_district_id: item.senatorial_district_id,
+                    federal_constituency_id: item.federal_constituency_id,
+                    state_constituency_id: item.state_constituency_id,
+                    lga_id: item.lga_id,
+                    ward_id: item.ward_id,
+                  },
+                }),
+              ),
+            );
+          }
+        }
       } else {
         res = await createElectionGroup({
           data: {
@@ -95,7 +135,7 @@ export function ElectionGroupFormDialog({
             rank: rankNum,
             elections_count: 0,
             states_count: 0,
-            election_date: values.electionDate,
+            election_date: cleanDate,
           },
         });
       }
@@ -108,6 +148,7 @@ export function ElectionGroupFormDialog({
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       queryClient.invalidateQueries({ queryKey: ["election-groups-select"] });
+      queryClient.invalidateQueries({ queryKey: ["elections"] });
       onSuccess?.(data.id, variables.electionDate);
       onClose();
     },

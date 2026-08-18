@@ -113,16 +113,7 @@ CREATE TABLE elections (
   results_submitted_count INT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT chk_election_scope_location CHECK (
-    (scope = 'nationwide' AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'state' AND state_id IS NOT NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'senatorial-district' AND senatorial_district_id IS NOT NULL AND state_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'federal-constituency' AND federal_constituency_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'state-constituency' AND state_constituency_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'lga' AND lga_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'ward' AND ward_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL)
-  )
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);

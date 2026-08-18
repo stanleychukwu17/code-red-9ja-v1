@@ -11,6 +11,7 @@ import (
 
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
+	inecgrabber "free9ja/api/internal/service/inec_grabber"
 	r2service "free9ja/api/internal/service/r2"
 )
 
@@ -91,13 +92,13 @@ func (processor *RedisTaskProcessor) Start() error {
 	if !statsEnabled {
 		slog.Warn("STATS_REFRESH_ENABLED=false — skipping all stats cron registration (dev mode)")
 	} else {
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
+		processor.cron.AddFunc("*/1 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
 
 		// Geographic Stats: event-driven cascade is the primary mechanism.
 		// This cron is a 30-minute safety-net fallback for any missed cascades.
@@ -108,10 +109,56 @@ func (processor *RedisTaskProcessor) Start() error {
 	// Recommended schedule: "5 0 * * *" (5 minutes past midnight) to process previous day's campaign allocations cleanly.
 	processor.cron.AddFunc("5 0 * * *", processor.ProcessDailyMarketingCampaignDeductions)
 
+	// INEC Result Grabber sync cron job (runs every 15 minutes)
+	processor.cron.AddFunc("*/15 * * * *", processor.ProcessINECResultGrabberSync)
+
 	processor.cron.Start()
 	slog.Info("cron rollup scheduler started")
 
 	return processor.server.Start(mux)
+}
+
+func (processor *RedisTaskProcessor) ProcessINECResultGrabberSync() {
+	ctx := context.Background()
+	geminiKey := ""
+	if processor.cfg != nil {
+		geminiKey = processor.cfg.GeminiAPIKey
+	}
+	var notifier inecgrabber.ResultNotifierFunc
+	if processor.taskDistributor != nil {
+		notifier = func(ctx context.Context, electionID int64, puID int32) {
+			_ = processor.taskDistributor.DistributeTaskCalculateFinalResult(ctx, &CalculateFinalResultPayload{
+				ElectionID:    electionID,
+				PollingUnitID: puID,
+			})
+		}
+	}
+	grabberSvc := inecgrabber.NewINECGrabberService(processor.q, processor.pool, processor.rdb, processor.r2Svc, geminiKey, notifier)
+
+	cfg, err := grabberSvc.GetINECAPIConfig(ctx)
+	if err != nil {
+		slog.Error("cron INEC grabber: failed to load config", "err", err)
+		return
+	}
+
+	activeGrabbers, err := processor.q.ListActiveINECResultGrabbers(ctx, int32(cfg.ActiveSyncDaysLimit))
+	if err != nil {
+		slog.Error("cron INEC grabber: failed to list active grabbers", "err", err)
+		return
+	}
+
+	if len(activeGrabbers) == 0 {
+		return
+	}
+
+	slog.Info("cron INEC grabber: starting sync for active grabbers", "count", len(activeGrabbers))
+	for _, grabber := range activeGrabbers {
+		opts := inecgrabber.SyncOptions{}
+		_, err := grabberSvc.SyncGrabber(ctx, grabber.ID, opts)
+		if err != nil {
+			slog.Error("cron INEC grabber: sync error for grabber", "grabber_id", grabber.ID, "err", err)
+		}
+	}
 }
 
 func (processor *RedisTaskProcessor) Shutdown() {

@@ -25,8 +25,9 @@ import {
   SelectionHeader,
   SelectionTabs,
   SelectedItemsContainer,
+  SelectableChip,
 } from "./SelectionCommon";
-import { Label } from "@repo/ui/components/input";
+import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface StateItem {
@@ -347,6 +348,20 @@ function StateSelectorDialog({
   selectedStates: StateItem[];
   onToggleStateSelection: (state: StateItem) => void;
 }) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+  const filteredStates = React.useMemo(() => {
+    if (!searchQuery.trim()) return allNigeriaStates;
+    const q = searchQuery.toLowerCase();
+    return allNigeriaStates.filter((s) => s.name.toLowerCase().includes(q));
+  }, [allNigeriaStates, searchQuery]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
@@ -358,25 +373,32 @@ function StateSelectorDialog({
             to hold in.
           </p>
 
+          <IconInput
+            placeholder="Search states..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           <div className="flex flex-wrap gap-2.5 max-h-[50vh] overflow-y-auto pr-1 pt-2">
-            {allNigeriaStates.map((state) => {
-              const isSelected = selectedStates.some((s) => s.id === state.id);
-              return (
-                <button
-                  key={state.id}
-                  type="button"
-                  onClick={() => onToggleStateSelection(state)}
-                  className={cn(
-                    "px-4 py-2 rounded-lg text-sm transition cursor-pointer",
-                    isSelected
-                      ? "bg-secondary/20 font-medium text-c-80"
-                      : "bg-c-5 text-c-80 hover:bg-black/5",
-                  )}
-                >
-                  {state.name}
-                </button>
-              );
-            })}
+            {filteredStates.length === 0 ? (
+              <p className="text-sm text-c-50 py-4 w-full text-center">
+                No states found matching your search.
+              </p>
+            ) : (
+              filteredStates.map((state) => {
+                const isSelected = selectedStates.some(
+                  (s) => s.id === state.id,
+                );
+                return (
+                  <SelectableChip
+                    key={state.id}
+                    label={state.name}
+                    isSelected={isSelected}
+                    onClick={() => onToggleStateSelection(state)}
+                  />
+                );
+              })
+            )}
           </div>
         </DialogPadding>
         <DialogFooter>

@@ -14,6 +14,10 @@ WHERE id = $1 and state_id = $2 LIMIT 1;
 SELECT id, name, iso2, phonecode FROM c_countries
 ORDER BY name ASC;
 
+-- name: ListAllStates :many
+SELECT * FROM c_states
+ORDER BY name ASC;
+
 -- name: GetStatesByCountryID :many
 SELECT * FROM c_states
 WHERE country_id = $1
@@ -177,6 +181,10 @@ WHERE id = $1;
 -- name: GetPollingUnitByID :one
 SELECT * FROM polling_units
 WHERE id = $1 LIMIT 1;
+
+-- name: GetPollingUnitByDelimitation :one
+SELECT * FROM polling_units
+WHERE delimitation = $1 LIMIT 1;
 
 -- name: CreatePollingUnit :one
 INSERT INTO polling_units (name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id)

@@ -18,6 +18,7 @@ type Querier interface {
 	AdminUpdateUser(ctx context.Context, arg AdminUpdateUserParams) error
 	ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarning, error)
 	AssignUserRole(ctx context.Context, arg AssignUserRoleParams) error
+	CalculateElectionMetrics(ctx context.Context, electionID int64) (CalculateElectionMetricsRow, error)
 	CheckFileOwner(ctx context.Context, arg CheckFileOwnerParams) (bool, error)
 	CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIfPageHasAnyVerificationParams) (bool, error)
 	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
@@ -36,6 +37,7 @@ type Querier interface {
 	CreateElectionVote(ctx context.Context, arg CreateElectionVoteParams) (ElectionVote, error)
 	CreateFederalConstituency(ctx context.Context, arg CreateFederalConstituencyParams) (FederalConstituency, error)
 	CreateFile(ctx context.Context, arg CreateFileParams) (File, error)
+	CreateINECResultGrabberLog(ctx context.Context, arg CreateINECResultGrabberLogParams) (InecResultGrabberLog, error)
 	CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, error)
 	CreateLgaSupervisor(ctx context.Context, arg CreateLgaSupervisorParams) (LgaElectionSupervisor, error)
 	CreateMoreInfoAboutThisUser(ctx context.Context, arg CreateMoreInfoAboutThisUserParams) (int64, error)
@@ -53,6 +55,7 @@ type Querier interface {
 	CreateState(ctx context.Context, arg CreateStateParams) (CState, error)
 	CreateStateAssemblyConstituency(ctx context.Context, arg CreateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
 	CreateStateSupervisor(ctx context.Context, arg CreateStateSupervisorParams) (StateElectionSupervisor, error)
+	CreateUnmatchedPollingUnitResult(ctx context.Context, arg CreateUnmatchedPollingUnitResultParams) (UnmatchedPollingUnitResult, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
 	CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (int64, error)
 	CreateUserReferralRecord(ctx context.Context, arg CreateUserReferralRecordParams) error
@@ -125,6 +128,8 @@ type Querier interface {
 	GetFileByID(ctx context.Context, id int64) (File, error)
 	GetFileByKey(ctx context.Context, fileKey string) (File, error)
 	GetFileByPublicUrl(ctx context.Context, publicUrl string) (File, error)
+	GetINECResultGrabberByElectionID(ctx context.Context, electionID int64) (GetINECResultGrabberByElectionIDRow, error)
+	GetINECResultGrabberByID(ctx context.Context, id int64) (GetINECResultGrabberByIDRow, error)
 	GetLGAByID(ctx context.Context, id int32) (Lga, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]Lga, error)
 	GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLgaSupervisorByElectionGroupParams) (LgaElectionSupervisor, error)
@@ -152,6 +157,7 @@ type Querier interface {
 	// Pass empty string '' to skip a filter.
 	// $1 = type filter ('' = all types), $2 = is_active filter ('' = all, 'true'/'false' to filter)
 	GetPlans(ctx context.Context, arg GetPlansParams) ([]Plan, error)
+	GetPollingUnitByDelimitation(ctx context.Context, delimitation pgtype.Text) (PollingUnit, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit, error)
 	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
@@ -174,6 +180,7 @@ type Querier interface {
 	GetStateSupervisorByElectionGroup(ctx context.Context, arg GetStateSupervisorByElectionGroupParams) (StateElectionSupervisor, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]CState, error)
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
+	GetUnmatchedPollingUnitResultByID(ctx context.Context, id int64) (UnmatchedPollingUnitResult, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
@@ -222,8 +229,10 @@ type Querier interface {
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
+	ListActiveINECResultGrabbers(ctx context.Context, activeSyncDaysLimit int32) ([]ListActiveINECResultGrabbersRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error)
+	ListAllStates(ctx context.Context) ([]CState, error)
 	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
 	ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error)
 	ListCountries(ctx context.Context) ([]ListCountriesRow, error)
@@ -234,6 +243,9 @@ type Querier interface {
 	ListElectionInstances(ctx context.Context) ([]Election, error)
 	ListElectionsDetailedByGroupID(ctx context.Context, electionGroupID int64) ([]ListElectionsDetailedByGroupIDRow, error)
 	ListFiles(ctx context.Context, arg ListFilesParams) ([]File, error)
+	ListINECResultGrabberLogs(ctx context.Context, arg ListINECResultGrabberLogsParams) ([]InecResultGrabberLog, error)
+	ListINECResultGrabberLogsPaginated(ctx context.Context, arg ListINECResultGrabberLogsPaginatedParams) ([]ListINECResultGrabberLogsPaginatedRow, error)
+	ListINECResultGrabbersPaginated(ctx context.Context, arg ListINECResultGrabbersPaginatedParams) ([]ListINECResultGrabbersPaginatedRow, error)
 	ListOffices(ctx context.Context) ([]Office, error)
 	ListParties(ctx context.Context) ([]Party, error)
 	ListPartiesWithoutWallet(ctx context.Context) ([]Party, error)
@@ -243,6 +255,7 @@ type Querier interface {
 	ListReferrals(ctx context.Context, arg ListReferralsParams) ([]Referral, error)
 	ListReferralsByReferrer(ctx context.Context, arg ListReferralsByReferrerParams) ([]Referral, error)
 	ListReferredUsersWithDetails(ctx context.Context, arg ListReferredUsersWithDetailsParams) ([]ListReferredUsersWithDetailsRow, error)
+	ListUnmatchedPollingUnitResults(ctx context.Context, arg ListUnmatchedPollingUnitResultsParams) ([]UnmatchedPollingUnitResult, error)
 	ListUserPracticeTests(ctx context.Context, arg ListUserPracticeTestsParams) ([]ListUserPracticeTestsRow, error)
 	ListUserWalletTransactions(ctx context.Context, arg ListUserWalletTransactionsParams) ([]UserWalletTransaction, error)
 	// ListUsers fetches a paginated list of users with optional filtering.
@@ -282,6 +295,7 @@ type Querier interface {
 	RollupWardFinalResults(ctx context.Context) error
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
+	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
@@ -300,6 +314,8 @@ type Querier interface {
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)
 	UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error)
 	UpdateFileOwner(ctx context.Context, arg UpdateFileOwnerParams) (File, error)
+	UpdateINECResultGrabberMetrics(ctx context.Context, arg UpdateINECResultGrabberMetricsParams) (InecResultGrabber, error)
+	UpdateINECResultGrabberSyncStatus(ctx context.Context, arg UpdateINECResultGrabberSyncStatusParams) (InecResultGrabber, error)
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
 	UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateLgaSupervisorEarnedAmountKoboParams) (LgaElectionSupervisor, error)
 	UpdateMarketingCampaignStatus(ctx context.Context, arg UpdateMarketingCampaignStatusParams) (PartyMarketingCampaign, error)
@@ -329,6 +345,7 @@ type Querier interface {
 	UpdateStateAssemblyConstituency(ctx context.Context, arg UpdateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
 	UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateStateSupervisorEarnedAmountKoboParams) (StateElectionSupervisor, error)
 	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
+	UpdateUnmatchedPollingUnitResultStatus(ctx context.Context, arg UpdateUnmatchedPollingUnitResultStatusParams) (UnmatchedPollingUnitResult, error)
 	UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error)
 	UpdateUserAgentMoreInfo(ctx context.Context, arg UpdateUserAgentMoreInfoParams) error
 	UpdateUserAvatar(ctx context.Context, arg UpdateUserAvatarParams) error

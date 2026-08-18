@@ -19,9 +19,36 @@ INSERT INTO polling_unit_results (
   candidate_results,
   result_sheet_image_url,
   result_sheet_video_url,
-  uploaded_by_inec
+  uploaded_by_inec,
+  status,
+  ai_extracted_data,
+  result_is_ai_generated,
+  ai_confidence_score
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+  sqlc.narg('assignment_id'),
+  sqlc.arg('election_id'),
+  sqlc.arg('election_group_id'),
+  sqlc.arg('polling_unit_id'),
+  sqlc.narg('submitted_by'),
+  sqlc.narg('party_id'),
+  sqlc.narg('state_id'),
+  sqlc.narg('senatorial_district_id'),
+  sqlc.narg('federal_constituency_id'),
+  sqlc.narg('state_constituency_id'),
+  sqlc.narg('lga_id'),
+  sqlc.narg('ward_id'),
+  sqlc.arg('accredited_voters'),
+  sqlc.arg('votes_cast'),
+  sqlc.arg('valid_votes'),
+  sqlc.arg('rejected_votes'),
+  sqlc.arg('candidate_results'),
+  sqlc.narg('result_sheet_image_url'),
+  sqlc.narg('result_sheet_video_url'),
+  sqlc.arg('uploaded_by_inec'),
+  COALESCE(sqlc.narg('status')::varchar(30), 'submitted'),
+  sqlc.narg('ai_extracted_data'),
+  sqlc.narg('result_is_ai_generated'),
+  sqlc.narg('ai_confidence_score')
 ) RETURNING *;
 
 -- name: UpdatePollingUnitResult :one

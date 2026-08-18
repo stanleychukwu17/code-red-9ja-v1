@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -139,6 +140,21 @@ func BuildKey(folder, originalName, uniqueID string) string {
 
 	// Format: {folder}/{YYYY-MM-DD}/{sanitized-filename}-{uuid}.{ext}
 	return fmt.Sprintf("%s/%s/%s-%s%s", folder, date, sanitized, uniqueID, ext)
+}
+
+// UploadFile uploads content from a reader directly to R2 at the specified key.
+func (s *R2Service) UploadFile(ctx context.Context, key string, body io.Reader, contentLength int64, contentType string) (string, error) {
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:        aws.String(s.bucketName),
+		Key:           aws.String(key),
+		Body:          body,
+		ContentLength: aws.Int64(contentLength),
+		ContentType:   aws.String(contentType),
+	})
+	if err != nil {
+		return "", fmt.Errorf("r2service: failed to upload object %q: %w", key, err)
+	}
+	return s.PublicURL(key), nil
 }
 
 // PresignedUploadURL returns a pre-signed PUT URL that the client can use

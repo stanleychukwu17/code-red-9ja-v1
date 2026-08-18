@@ -25,8 +25,10 @@ import {
   SelectionHeader,
   SelectionTabs,
   SelectedItemsContainer,
+  GroupSectionTitle,
+  SelectableChip,
 } from "./SelectionCommon";
-import { Label } from "@repo/ui/components/input";
+import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface StateItem {
@@ -459,6 +461,37 @@ function SenatorialDistrictSelectorDialog({
   selectedDistricts,
   onToggleDistrictSelection,
 }: SenatorialDistrictSelectorDialogProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+  const filteredGroupedDistricts = React.useMemo(() => {
+    if (!searchQuery.trim()) return groupedAllDistricts;
+    const q = searchQuery.toLowerCase();
+    const result: Record<string, SenatorialDistrictItem[]> = {};
+
+    for (const [stateName, districts] of Object.entries(groupedAllDistricts)) {
+      const stateMatches = stateName.toLowerCase().includes(q);
+      if (stateMatches) {
+        result[stateName] = districts;
+      } else {
+        const filtered = districts.filter((d) =>
+          d.name.toLowerCase().includes(q),
+        );
+        if (filtered.length > 0) {
+          result[stateName] = filtered;
+        }
+      }
+    }
+    return result;
+  }, [groupedAllDistricts, searchQuery]);
+
+  const hasResults = Object.keys(filteredGroupedDistricts).length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
@@ -468,37 +501,40 @@ function SenatorialDistrictSelectorDialog({
             Select the senatorial districts to add to this election.
           </p>
 
+          <IconInput
+            placeholder="Search districts or states..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-1 pt-2">
-            {Object.entries(groupedAllDistricts).map(
-              ([stateName, stateDistricts]) => (
-                <div key={stateName} className="space-y-2">
-                  <h4 className="text-[14px] font-bold text-c-75 border-b pb-1">
-                    {stateName}
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {stateDistricts.map((district) => {
-                      const isSelected = selectedDistricts.some(
-                        (d) => d.id === district.id,
-                      );
-                      return (
-                        <button
-                          key={district.id}
-                          type="button"
-                          onClick={() => onToggleDistrictSelection(district)}
-                          className={cn(
-                            "px-3.5 py-2 rounded-lg text-sm font-semibold transition cursor-pointer border",
-                            isSelected
-                              ? "bg-[#e8fbf3] text-[#00cf79] border-[#00cf79]"
-                              : "bg-c-5/40 text-c-70 border-[#dfdfdf] hover:bg-black/5",
-                          )}
-                        >
-                          {district.name}
-                        </button>
-                      );
-                    })}
+            {!hasResults ? (
+              <p className="text-sm text-c-50 py-4 text-center">
+                No senatorial districts found matching your search.
+              </p>
+            ) : (
+              Object.entries(filteredGroupedDistricts).map(
+                ([stateName, stateDistricts]) => (
+                  <div key={stateName} className="space-y-2">
+                    <GroupSectionTitle title={stateName} />
+                    <div className="flex flex-wrap gap-2">
+                      {stateDistricts.map((district) => {
+                        const isSelected = selectedDistricts.some(
+                          (d) => d.id === district.id,
+                        );
+                        return (
+                          <SelectableChip
+                            key={district.id}
+                            label={district.name}
+                            isSelected={isSelected}
+                            onClick={() => onToggleDistrictSelection(district)}
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ),
+                ),
+              )
             )}
           </div>
         </DialogPadding>

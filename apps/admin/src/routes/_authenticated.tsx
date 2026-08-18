@@ -106,19 +106,26 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     selectedIcon: <BalonSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.marketing,
   },
-  {
-    id: "notifications",
-    label: "Notifications",
-    icon: <NotificationIcon className={ICON_CLASS} />,
-    selectedIcon: <NotificationSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: APP_URL.notifications,
-  },
+  // {
+  //   id: "notifications",
+  //   label: "Notifications",
+  //   icon: <NotificationIcon className={ICON_CLASS} />,
+  //   selectedIcon: <NotificationSolidIcon className={SELECTED_ICON_CLASS} />,
+  //   href: APP_URL.notifications,
+  // },
   {
     id: "logs",
     label: "Logs",
     icon: <BrickIcon className={ICON_CLASS} />,
     selectedIcon: <BrickSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.logs,
+  },
+  {
+    id: "inec-result-grabber",
+    label: "INEC Results",
+    icon: <PaperIcon className={ICON_CLASS} />,
+    selectedIcon: <PaperSolidIcon className={SELECTED_ICON_CLASS} />,
+    href: APP_URL.inecResultGrabber.main,
   },
 ];
 

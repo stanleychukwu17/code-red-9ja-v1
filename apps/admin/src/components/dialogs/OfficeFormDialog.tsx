@@ -22,6 +22,7 @@ export interface Office {
   election: string;
   scope: string;
   rank: number;
+  inec_election_type_id?: string;
   instances_count?: number;
   created_at?: string;
   updated_at?: string;
@@ -49,6 +50,7 @@ export function OfficeFormDialog({
       scope: "nationwide",
       rank: "1",
       election: "",
+      inec_election_type_id: "",
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
@@ -62,11 +64,13 @@ export function OfficeFormDialog({
         form.setFieldValue("scope", office.scope || "nationwide");
         form.setFieldValue("rank", String(office.rank || 1));
         form.setFieldValue("election", office.election || "");
+        form.setFieldValue("inec_election_type_id", office.inec_election_type_id || "");
       } else {
         form.setFieldValue("name", "");
         form.setFieldValue("scope", "nationwide");
         form.setFieldValue("rank", "1");
         form.setFieldValue("election", "");
+        form.setFieldValue("inec_election_type_id", "");
       }
       setError(null);
     }
@@ -78,9 +82,12 @@ export function OfficeFormDialog({
       scope: string;
       rank: string;
       election: string;
+      inec_election_type_id?: string;
     }) => {
       let res;
       const rankNum = Number(values.rank) || 1;
+      const inecTypeId = values.inec_election_type_id?.trim() || undefined;
+
       if (mode === "update") {
         if (!office?.id) {
           throw new Error("Missing ID for update");
@@ -92,6 +99,7 @@ export function OfficeFormDialog({
             scope: values.scope,
             rank: rankNum,
             election: values.election.trim(),
+            inec_election_type_id: inecTypeId,
           },
         });
       } else {
@@ -101,6 +109,7 @@ export function OfficeFormDialog({
             scope: values.scope,
             rank: rankNum,
             election: values.election.trim(),
+            inec_election_type_id: inecTypeId,
           },
         });
       }
@@ -122,7 +131,7 @@ export function OfficeFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl overflow-visible">
         <DialogHeader
           title={mode === "update" ? "Update Office" : "Create Office"}
         />
@@ -190,7 +199,7 @@ export function OfficeFormDialog({
               </div>
             </div>
 
-            {/* Office */}
+            {/* Election */}
             <div className="flex flex-col gap-1.5">
               <label className="text-[14px] text-c-50">Election</label>
               <form.Field
@@ -212,6 +221,24 @@ export function OfficeFormDialog({
                         {field.state.meta.errors.join(", ")}
                       </p>
                     )}
+                  </div>
+                )}
+              />
+            </div>
+
+            {/* INEC Election Type ID */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[14px] text-c-50">INEC Election Type ID (Optional)</label>
+              <form.Field
+                name="inec_election_type_id"
+                children={(field) => (
+                  <div>
+                    <Input
+                      type="text"
+                      placeholder="E.g., 5f129a04df41d910dcdc1d50"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
                   </div>
                 )}
               />

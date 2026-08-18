@@ -24,12 +24,14 @@ import { Route as SettingsGeneralIndexRouteImport } from './routes/settings/_gen
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
 import { Route as AuthenticatedMarketingIndexRouteImport } from './routes/_authenticated/marketing/index'
 import { Route as AuthenticatedLogsIndexRouteImport } from './routes/_authenticated/logs/index'
+import { Route as AuthenticatedInecResultGrabberIndexRouteImport } from './routes/_authenticated/inec-result-grabber/index'
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/home/index'
 import { Route as AuthenticatedElectionsIndexRouteImport } from './routes/_authenticated/elections/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
 import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
 import { Route as AuthenticatedUsersPartyAdminRouteImport } from './routes/_authenticated/users/party-admin'
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
+import { Route as AuthenticatedInecResultGrabberLogsRouteImport } from './routes/_authenticated/inec-result-grabber/logs'
 import { Route as AuthenticatedElectionsOfficesRouteImport } from './routes/_authenticated/elections/offices'
 import { Route as AuthenticatedElectionsInstancesRouteImport } from './routes/_authenticated/elections/instances'
 import { Route as AuthenticatedBodiesWardsRouteImport } from './routes/_authenticated/bodies/wards'
@@ -116,6 +118,12 @@ const AuthenticatedLogsIndexRoute = AuthenticatedLogsIndexRouteImport.update({
   path: '/logs/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedInecResultGrabberIndexRoute =
+  AuthenticatedInecResultGrabberIndexRouteImport.update({
+    id: '/inec-result-grabber/',
+    path: '/inec-result-grabber/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedHomeIndexRoute = AuthenticatedHomeIndexRouteImport.update({
   id: '/home/',
   path: '/home/',
@@ -149,6 +157,12 @@ const AuthenticatedUsersAdminRoute = AuthenticatedUsersAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedUsersRoute,
 } as any)
+const AuthenticatedInecResultGrabberLogsRoute =
+  AuthenticatedInecResultGrabberLogsRouteImport.update({
+    id: '/inec-result-grabber/logs',
+    path: '/inec-result-grabber/logs',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedElectionsOfficesRoute =
   AuthenticatedElectionsOfficesRouteImport.update({
     id: '/offices',
@@ -222,12 +236,14 @@ export interface FileRoutesByFullPath {
   '/bodies/wards': typeof AuthenticatedBodiesWardsRoute
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
+  '/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/elections/': typeof AuthenticatedElectionsIndexRoute
   '/home/': typeof AuthenticatedHomeIndexRoute
+  '/inec-result-grabber/': typeof AuthenticatedInecResultGrabberIndexRoute
   '/logs/': typeof AuthenticatedLogsIndexRoute
   '/marketing/': typeof AuthenticatedMarketingIndexRoute
   '/notifications/': typeof AuthenticatedNotificationsIndexRoute
@@ -250,12 +266,14 @@ export interface FileRoutesByTo {
   '/bodies/wards': typeof AuthenticatedBodiesWardsRoute
   '/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/elections/offices': typeof AuthenticatedElectionsOfficesRoute
+  '/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/elections': typeof AuthenticatedElectionsIndexRoute
   '/home': typeof AuthenticatedHomeIndexRoute
+  '/inec-result-grabber': typeof AuthenticatedInecResultGrabberIndexRoute
   '/logs': typeof AuthenticatedLogsIndexRoute
   '/marketing': typeof AuthenticatedMarketingIndexRoute
   '/notifications': typeof AuthenticatedNotificationsIndexRoute
@@ -283,12 +301,14 @@ export interface FileRoutesById {
   '/_authenticated/bodies/wards': typeof AuthenticatedBodiesWardsRoute
   '/_authenticated/elections/instances': typeof AuthenticatedElectionsInstancesRoute
   '/_authenticated/elections/offices': typeof AuthenticatedElectionsOfficesRoute
+  '/_authenticated/inec-result-grabber/logs': typeof AuthenticatedInecResultGrabberLogsRoute
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
   '/_authenticated/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/elections/': typeof AuthenticatedElectionsIndexRoute
   '/_authenticated/home/': typeof AuthenticatedHomeIndexRoute
+  '/_authenticated/inec-result-grabber/': typeof AuthenticatedInecResultGrabberIndexRoute
   '/_authenticated/logs/': typeof AuthenticatedLogsIndexRoute
   '/_authenticated/marketing/': typeof AuthenticatedMarketingIndexRoute
   '/_authenticated/notifications/': typeof AuthenticatedNotificationsIndexRoute
@@ -316,12 +336,14 @@ export interface FileRouteTypes {
     | '/bodies/wards'
     | '/elections/instances'
     | '/elections/offices'
+    | '/inec-result-grabber/logs'
     | '/users/admin'
     | '/users/party-admin'
     | '/users/users'
     | '/applications/'
     | '/elections/'
     | '/home/'
+    | '/inec-result-grabber/'
     | '/logs/'
     | '/marketing/'
     | '/notifications/'
@@ -344,12 +366,14 @@ export interface FileRouteTypes {
     | '/bodies/wards'
     | '/elections/instances'
     | '/elections/offices'
+    | '/inec-result-grabber/logs'
     | '/users/admin'
     | '/users/party-admin'
     | '/users/users'
     | '/applications'
     | '/elections'
     | '/home'
+    | '/inec-result-grabber'
     | '/logs'
     | '/marketing'
     | '/notifications'
@@ -376,12 +400,14 @@ export interface FileRouteTypes {
     | '/_authenticated/bodies/wards'
     | '/_authenticated/elections/instances'
     | '/_authenticated/elections/offices'
+    | '/_authenticated/inec-result-grabber/logs'
     | '/_authenticated/users/admin'
     | '/_authenticated/users/party-admin'
     | '/_authenticated/users/users'
     | '/_authenticated/applications/'
     | '/_authenticated/elections/'
     | '/_authenticated/home/'
+    | '/_authenticated/inec-result-grabber/'
     | '/_authenticated/logs/'
     | '/_authenticated/marketing/'
     | '/_authenticated/notifications/'
@@ -504,6 +530,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLogsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/inec-result-grabber/': {
+      id: '/_authenticated/inec-result-grabber/'
+      path: '/inec-result-grabber'
+      fullPath: '/inec-result-grabber/'
+      preLoaderRoute: typeof AuthenticatedInecResultGrabberIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/home/': {
       id: '/_authenticated/home/'
       path: '/home'
@@ -545,6 +578,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/users/admin'
       preLoaderRoute: typeof AuthenticatedUsersAdminRouteImport
       parentRoute: typeof AuthenticatedUsersRoute
+    }
+    '/_authenticated/inec-result-grabber/logs': {
+      id: '/_authenticated/inec-result-grabber/logs'
+      path: '/inec-result-grabber/logs'
+      fullPath: '/inec-result-grabber/logs'
+      preLoaderRoute: typeof AuthenticatedInecResultGrabberLogsRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/elections/offices': {
       id: '/_authenticated/elections/offices'
@@ -691,8 +731,10 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRouteWithChildren
   AuthenticatedPartiesRoute: typeof AuthenticatedPartiesRoute
   AuthenticatedUsersRoute: typeof AuthenticatedUsersRouteWithChildren
+  AuthenticatedInecResultGrabberLogsRoute: typeof AuthenticatedInecResultGrabberLogsRoute
   AuthenticatedApplicationsIndexRoute: typeof AuthenticatedApplicationsIndexRoute
   AuthenticatedHomeIndexRoute: typeof AuthenticatedHomeIndexRoute
+  AuthenticatedInecResultGrabberIndexRoute: typeof AuthenticatedInecResultGrabberIndexRoute
   AuthenticatedLogsIndexRoute: typeof AuthenticatedLogsIndexRoute
   AuthenticatedNotificationsIndexRoute: typeof AuthenticatedNotificationsIndexRoute
 }
@@ -703,8 +745,12 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedMarketingRoute: AuthenticatedMarketingRouteWithChildren,
   AuthenticatedPartiesRoute: AuthenticatedPartiesRoute,
   AuthenticatedUsersRoute: AuthenticatedUsersRouteWithChildren,
+  AuthenticatedInecResultGrabberLogsRoute:
+    AuthenticatedInecResultGrabberLogsRoute,
   AuthenticatedApplicationsIndexRoute: AuthenticatedApplicationsIndexRoute,
   AuthenticatedHomeIndexRoute: AuthenticatedHomeIndexRoute,
+  AuthenticatedInecResultGrabberIndexRoute:
+    AuthenticatedInecResultGrabberIndexRoute,
   AuthenticatedLogsIndexRoute: AuthenticatedLogsIndexRoute,
   AuthenticatedNotificationsIndexRoute: AuthenticatedNotificationsIndexRoute,
 }

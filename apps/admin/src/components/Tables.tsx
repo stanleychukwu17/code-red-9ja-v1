@@ -59,6 +59,16 @@ import {
   MarketingTableTile,
   type MarketingCampaignType,
 } from "./tiles/marketing-tile";
+import {
+  INECGrabberTableHeader,
+  INECGrabberTableTile,
+  type INECResultGrabberType,
+} from "./tiles/inec-grabber-tile";
+import {
+  INECGrabberLogTableHeader,
+  INECGrabberLogTableTile,
+  type INECResultGrabberLogType,
+} from "./tiles/inec-grabber-log-tile";
 
 export {
   type ElectionGroupType,
@@ -267,6 +277,42 @@ export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
       <div>
         {campaignsList.map((data, index) => (
           <MarketingTableTile key={data.id || index} data={data} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function INECResultGrabberTable({
+  items,
+}: {
+  items: INECResultGrabberType[];
+}) {
+  const grabberList = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full">
+      <INECGrabberTableHeader />
+      <div>
+        {grabberList.map((data, index) => (
+          <INECGrabberTableTile key={data.id || index} data={data} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function INECResultGrabberLogsTable({
+  items,
+}: {
+  items: INECResultGrabberLogType[];
+}) {
+  const logsList = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full">
+      <INECGrabberLogTableHeader />
+      <div>
+        {logsList.map((data, index) => (
+          <INECGrabberLogTableTile key={data.id || index} data={data} />
         ))}
       </div>
     </div>

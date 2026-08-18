@@ -300,33 +300,64 @@ INSERT INTO polling_unit_results (
   candidate_results,
   result_sheet_image_url,
   result_sheet_video_url,
-  uploaded_by_inec
+  uploaded_by_inec,
+  status,
+  ai_extracted_data,
+  result_is_ai_generated,
+  ai_confidence_score
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11,
+  $12,
+  $13,
+  $14,
+  $15,
+  $16,
+  $17,
+  $18,
+  $19,
+  $20,
+  COALESCE($21::varchar(30), 'submitted'),
+  $22,
+  $23,
+  $24
 ) RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 `
 
 type SubmitPollingUnitResultParams struct {
-	AssignmentID          pgtype.Int8 `json:"assignment_id"`
-	ElectionID            int64       `json:"election_id"`
-	ElectionGroupID       int64       `json:"election_group_id"`
-	PollingUnitID         int32       `json:"polling_unit_id"`
-	SubmittedBy           int64       `json:"submitted_by"`
-	PartyID               pgtype.Int2 `json:"party_id"`
-	StateID               pgtype.Int2 `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
-	LgaID                 pgtype.Int4 `json:"lga_id"`
-	WardID                pgtype.Int4 `json:"ward_id"`
-	AccreditedVoters      int32       `json:"accredited_voters"`
-	VotesCast             int32       `json:"votes_cast"`
-	ValidVotes            int32       `json:"valid_votes"`
-	RejectedVotes         int32       `json:"rejected_votes"`
-	CandidateResults      []byte      `json:"candidate_results"`
-	ResultSheetImageUrl   pgtype.Text `json:"result_sheet_image_url"`
-	ResultSheetVideoUrl   pgtype.Text `json:"result_sheet_video_url"`
-	UploadedByInec        bool        `json:"uploaded_by_inec"`
+	AssignmentID          pgtype.Int8    `json:"assignment_id"`
+	ElectionID            int64          `json:"election_id"`
+	ElectionGroupID       int64          `json:"election_group_id"`
+	PollingUnitID         int32          `json:"polling_unit_id"`
+	SubmittedBy           pgtype.Int8    `json:"submitted_by"`
+	PartyID               pgtype.Int2    `json:"party_id"`
+	StateID               pgtype.Int2    `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4    `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4    `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4    `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4    `json:"lga_id"`
+	WardID                pgtype.Int4    `json:"ward_id"`
+	AccreditedVoters      int32          `json:"accredited_voters"`
+	VotesCast             int32          `json:"votes_cast"`
+	ValidVotes            int32          `json:"valid_votes"`
+	RejectedVotes         int32          `json:"rejected_votes"`
+	CandidateResults      []byte         `json:"candidate_results"`
+	ResultSheetImageUrl   pgtype.Text    `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl   pgtype.Text    `json:"result_sheet_video_url"`
+	UploadedByInec        bool           `json:"uploaded_by_inec"`
+	Status                pgtype.Text    `json:"status"`
+	AiExtractedData       []byte         `json:"ai_extracted_data"`
+	ResultIsAiGenerated   pgtype.Bool    `json:"result_is_ai_generated"`
+	AiConfidenceScore     pgtype.Numeric `json:"ai_confidence_score"`
 }
 
 func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error) {
@@ -351,6 +382,10 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 		arg.ResultSheetImageUrl,
 		arg.ResultSheetVideoUrl,
 		arg.UploadedByInec,
+		arg.Status,
+		arg.AiExtractedData,
+		arg.ResultIsAiGenerated,
+		arg.AiConfidenceScore,
 	)
 	var i PollingUnitResult
 	err := row.Scan(

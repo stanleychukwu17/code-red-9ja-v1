@@ -22,7 +22,7 @@ CREATE INDEX idx_state_assembly_constituencies_federal_constituency_id ON state_
 
 INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name) VALUES
 -- ============================================================
--- ABIA STATE (state_id: 303) - 24 Seats
+-- ABIA STATE (state_id: 1) - 24 Seats
 -- ============================================================
 -- Abia North SD (SD ID: 1)
 (1, 'Arochukwu I', 3, 'AROCHUKWU', 1, 'Abia', 1, 'Abia North', 1, 'Arochukwu / Ohafia'),
@@ -53,7 +53,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (24, 'Obi Ngwa', 9, 'OBINGWA', 1, 'Abia', 3, 'Abia South', 8, 'Ukwa East / Ukwa West'),
 
 -- ============================================================
--- ADAMAWA STATE (state_id: 320) - 25 Seats
+-- ADAMAWA STATE (state_id: 2) - 25 Seats
 -- ============================================================
 -- Adamawa North SD (SD ID: 4)
 (25, 'Michika', 30, 'MICHIKA', 2, 'Adamawa', 4, 'Adamawa North', 9, 'Michika / Madagali'),
@@ -85,7 +85,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (49, 'Toungo', 36, 'TOUNGO', 2, 'Adamawa', 5, 'Adamawa South', 16, 'Jada / Ganye / Mayo Belwa / Toungo'),
 
 -- ============================================================
--- AKWA IBOM STATE (state_id: 304) - 26 Seats
+-- AKWA IBOM STATE (state_id: 3) - 26 Seats
 -- ============================================================
 -- AK North-East SD (SD ID: 7)
 (50, 'Etinan', 45, 'ETINAN', 3, 'Akwa Ibom', 7, 'Akwa Ibom North-East', 17, 'Etinan / Nsit Ibom / Nsit Ubium'),
@@ -118,7 +118,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (75, 'Oron', 63, 'ORON', 3, 'Akwa Ibom', 9, 'Akwa Ibom South', 25, 'Oron / Mbo / Okobo / Udung Uko / Urue Offong/Oruko'),
 
 -- ============================================================
--- ANAMBRA STATE (state_id: 315) - 30 Seats
+-- ANAMBRA STATE (state_id: 4) - 30 Seats
 -- ============================================================
 -- Anambra North SD (SD ID: 10)
 (76, 'Anambra East', 72, 'ANAMBRA EAST', 4, 'Anambra', 10, 'Anambra North', 27, 'Anambra East / Anambra West'),
@@ -155,7 +155,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (105, 'Orumba South II', 89, 'ORUMBA  SOUTH', 4, 'Anambra', 12, 'Anambra South', 37, 'Orumba North / Orumba South'),
 
 -- ============================================================
--- BAUCHI STATE (state_id: 312) - 31 Seats
+-- BAUCHI STATE (state_id: 5) - 31 Seats
 -- ============================================================
 -- Bauchi South SD (SD ID: 13)
 (106, 'Alkaleri', 91, 'ALKALERI', 5, 'Bauchi', 13, 'Bauchi South', 38, 'Alkaleri / Kirfi'),
@@ -193,7 +193,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (136, 'Zaki II', 110, 'ZAKI', 5, 'Bauchi', 15, 'Bauchi North', 49, 'Zaki'),
 
 -- ============================================================
--- BAYELSA STATE (state_id: 305) - 24 Seats
+-- BAYELSA STATE (state_id: 6) - 24 Seats
 -- ============================================================
 -- Bayelsa East SD (SD ID: 16)
 (137, 'Brass I', 111, 'BRASS', 6, 'Bayelsa', 16, 'Bayelsa East', 50, 'Brass / Nembe'),
@@ -224,7 +224,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (160, 'Ekeremor IV', 112, 'EKEREMOR', 6, 'Bayelsa', 18, 'Bayelsa West', 54, 'Sagbama / Ekeremor'),
 
 -- ============================================================
--- BENUE STATE (state_id: 291) - 29 Seats
+-- BENUE STATE (state_id: 7) - 29 Seats
 -- ============================================================
 -- Benue North-East SD (SD ID: 19)
 (161, 'Katsina-Ala I', 127, 'KATSINA-ALA', 7, 'Benue', 19, 'Benue North-East', 55, 'Katsina-Ala / Ukum / Logo'),
@@ -261,7 +261,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (189, 'Ohimini', 135, 'OHIMINI', 7, 'Benue', 21, 'Benue South', 65, 'Otukpo / Ohimini'),
 
 -- ============================================================
--- BORNO STATE (state_id: 307) - 28 Seats
+-- BORNO STATE (state_id: 8) - 28 Seats
 -- ============================================================
 -- Borno North SD (SD ID: 22)
 (190, 'Kaga', 155, 'KAGA', 8, 'Borno', 22, 'Borno North', 66, 'Kaga / Gubio / Magumeri'),
@@ -296,7 +296,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (217, 'Chibok', 147, 'CHIBOK', 8, 'Borno', 24, 'Borno South', 75, 'Damboa / Gwoza / Chibok'),
 
 -- ============================================================
--- CROSS RIVER STATE (state_id: 314) - 25 Seats
+-- CROSS RIVER STATE (state_id: 9) - 25 Seats
 -- ============================================================
 -- Cross River North SD (SD ID: 25)
 (218, 'Obanliku', 180, 'OBANLIKU', 9, 'Cross River', 25, 'Cross River North', 76, 'Obanliku / Obudu / Bekwarra'),
@@ -328,7 +328,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (242, 'Calabar Municipal III', 176, 'CALABAR MUNICIPALITY', 9, 'Cross River', 27, 'Cross River South', 82, 'Calabar Municipal / Odukpani'),
 
 -- ============================================================
--- DELTA STATE (state_id: 316) - 29 Seats
+-- DELTA STATE (state_id: 10) - 29 Seats
 -- ============================================================
 -- Delta Central SD (SD ID: 28)
 (243, 'Ethiope East', 191, 'ETHIOPE  EAST', 10, 'Delta', 28, 'Delta Central', 84, 'Ethiope East / Ethiope West'),
@@ -364,7 +364,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (271, 'Warri South West', 211, 'WARRI SOUTH  WEST', 10, 'Delta', 30, 'Delta South', 93, 'Warri North / Warri South / Warri South West'),
 
 -- ============================================================
--- EBONYI STATE (state_id: 311) - 24 Seats
+-- EBONYI STATE (state_id: 11) - 24 Seats
 -- ============================================================
 -- Ebonyi North SD (SD ID: 31)
 (272, 'Abakaliki I', 212, 'ABAKALIKI', 11, 'Ebonyi', 31, 'Ebonyi North', 94, 'Abakaliki / Izzi'),
@@ -395,7 +395,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (295, 'Onicha II', 224, 'ONICHA', 11, 'Ebonyi', 33, 'Ebonyi South', 99, 'Ivo / Ohaozara / Onicha'),
 
 -- ============================================================
--- EDO STATE (state_id: 318) - 24 Seats
+-- EDO STATE (state_id: 12) - 24 Seats
 -- ============================================================
 -- Edo South SD (SD ID: 34)
 (296, 'Egor', 226, 'EGOR', 12, 'Edo', 34, 'Edo South', 100, 'Egor / Ikpoba-Okha'),
@@ -426,7 +426,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (319, 'Akoko-Edo III', 225, 'AKOKO EDO', 12, 'Edo', 36, 'Edo North', 108, 'Akoko-Edo'),
 
 -- ============================================================
--- EKITI STATE (state_id: 309) - 26 Seats
+-- EKITI STATE (state_id: 13) - 26 Seats
 -- ============================================================
 -- Ekiti Central SD (SD ID: 37)
 (320, 'Ado Ekiti I', 243, 'ADO EKITI', 13, 'Ekiti', 37, 'Ekiti Central', 109, 'Ado Ekiti / Irepodun / Ifelodun'),
@@ -459,7 +459,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (345, 'Gbonyin', 249, 'GBONYIN', 13, 'Ekiti', 39, 'Ekiti South', 114, 'Ekiti East / Emure / Gbonyin'),
 
 -- ============================================================
--- ENUGU STATE (state_id: 289) - 24 Seats
+-- ENUGU STATE (state_id: 14) - 24 Seats
 -- ============================================================
 -- Enugu North SD (SD ID: 40)
 (346, 'Igbo-Eze North', 266, 'IGBO EZE NORTH', 14, 'Enugu', 40, 'Enugu North', 115, 'Igbo-Eze North / Udenu'),
@@ -490,7 +490,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (369, 'Udi II', 274, 'UDI', 14, 'Enugu', 42, 'Enugu West', 122, 'Ezeagu / Udi'),
 
 -- ============================================================
--- GOMBE STATE (state_id: 310) - 24 Seats
+-- GOMBE STATE (state_id: 16) - 24 Seats
 -- ============================================================
 -- Gombe Central SD (SD ID: 44)
 (370, 'Akko I', 282, 'AKKO', 16, 'Gombe', 44, 'Gombe Central', 125, 'Akko'),
@@ -521,7 +521,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (393, 'Shongom III', 291, 'SHONGOM', 16, 'Gombe', 46, 'Gombe South', 130, 'Kaltungo / Shongom'),
 
 -- ============================================================
--- IMO STATE (state_id: 308) - 27 Seats
+-- IMO STATE (state_id: 17) - 27 Seats
 -- ============================================================
 -- Imo North SD (SD ID: 47)
 (394, 'Ehime Mbano', 295, 'EHIME MBANO', 17, 'Imo', 47, 'Imo North', 131, 'Ehime Mbano / Ihitte Uboma / Obowo'),
@@ -555,7 +555,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (420, 'Orlu', 313, 'ORLU', 17, 'Imo', 49, 'Imo West', 140, 'Orlu / Orsu / Oru East'),
 
 -- ============================================================
--- JIGAWA STATE (state_id: 288) - 30 Seats
+-- JIGAWA STATE (state_id: 18) - 30 Seats
 -- ============================================================
 -- Jigawa North-East SD (SD ID: 50)
 (421, 'Hadejia', 332, 'HADEJIA', 18, 'Jigawa', 50, 'Jigawa North-East', 141, 'Hadejia / Kafin Hausa / Auyo'),
@@ -592,7 +592,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (450, 'Yankwashi', 346, 'YANKWASHI', 18, 'Jigawa', 51, 'Jigawa North-West', 146, 'Kazaure / Roni / Gwiwa / Yankwashi'),
 
 -- ============================================================
--- KADUNA STATE (state_id: 294) - 34 Seats
+-- KADUNA STATE (state_id: 19) - 34 Seats
 -- ============================================================
 -- Kaduna North SD (SD ID: 53)
 (451, 'Ikara', 351, 'IKARA', 19, 'Kaduna', 53, 'Kaduna North', 152, 'Ikara / Kubau'),
@@ -635,7 +635,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (486, 'Kauru II', 360, 'KAURU', 19, 'Kaduna', 55, 'Kaduna South', 167, 'Kauru'),
 
 -- ============================================================
--- KANO STATE (state_id: 300) - 40 Seats
+-- KANO STATE (state_id: 20) - 40 Seats
 -- ============================================================
 -- Kano Central SD (SD ID: 56)
 (487, 'Dala I', 376, 'DALA', 20, 'Kano', 56, 'Kano Central', 168, 'Dala'),
@@ -696,7 +696,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (540, 'Garko I', 383, 'GARKO', 20, 'Kano', 58, 'Kano South', 191, 'Wudil / Garko'),
 
 -- ============================================================
--- KATSINA STATE (state_id: 313) - 34 Seats
+-- KATSINA STATE (state_id: 21) - 34 Seats
 -- ============================================================
 -- Katsina Central SD (SD ID: 59)
 (541, 'Batagarawa I', 415, 'BATAGARAWA', 21, 'Katsina', 59, 'Katsina Central', 192, 'Batagarawa / Charanchi / Rimi'),
@@ -738,7 +738,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (575, 'Musawa I', 442, 'MUSAWA', 21, 'Katsina', 61, 'Katsina South', 206, 'Matazu / Musawa'),
 
 -- ============================================================
--- KEBBI STATE (state_id: 290) - 24 Seats
+-- KEBBI STATE (state_id: 22) - 24 Seats
 -- ============================================================
 -- Kebbi Central SD (SD ID: 62)
 (576, 'Aleiro', 448, 'ALIERO', 22, 'Kebbi', 62, 'Kebbi Central', 207, 'Aleiro / Gwandu / Jega'),
@@ -772,7 +772,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (602, 'Ngaski', 462, 'NGASKI', 22, 'Kebbi', 64, 'Kebbi South', 214, 'Yauri / Shanga / Ngaski'),
 
 -- ============================================================
--- KOGI STATE (state_id: 298) - 25 Seats
+-- KOGI STATE (state_id: 23) - 25 Seats
 -- ============================================================
 -- Kogi Central SD (SD ID: 65)
 (603, 'Adavi', 469, 'ADAVI', 23, 'Kogi', 65, 'Kogi Central', 215, 'Adavi / Okehi'),
@@ -804,7 +804,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (627, 'Mopa-Muro', 481, 'MOPA MORO', 23, 'Kogi', 67, 'Kogi West', 223, 'Yagba East / Yagba West / Mopa-Muro'),
 
 -- ============================================================
--- KWARA STATE (state_id: 295) - 24 Seats
+-- KWARA STATE (state_id: 24) - 24 Seats
 -- ============================================================
 -- Kwara Central SD (SD ID: 68)
 (628, 'Ilorin East', 495, 'ILORIN EAST', 24, 'Kwara', 68, 'Kwara Central', 224, 'Ilorin East / Ilorin South'),
@@ -833,7 +833,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (649, 'Oyun', 504, 'OYUN', 24, 'Kwara', 70, 'Kwara South', 229, 'Ifelodun / Offa / Oyun'),
 
 -- ============================================================
--- LAGOS STATE (state_id: 306) - 40 Seats
+-- LAGOS STATE (state_id: 25) - 40 Seats
 -- ============================================================
 -- Lagos Central SD (SD ID: 71)
 (650, 'Apapa I', 510, 'APAPA', 25, 'Lagos', 71, 'Lagos Central', 230, 'Apapa'),
@@ -880,7 +880,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (689, 'Oshodi-Isolo I', 523, 'OSHODI/ISOLO', 25, 'Lagos', 73, 'Lagos West', 252, 'Oshodi-Isolo I'),
 
 -- ============================================================
--- NASARAWA STATE (state_id: 301) - 24 Seats
+-- NASARAWA STATE (state_id: 26) - 24 Seats
 -- ============================================================
 -- Nasarawa North SD (SD ID: 74)
 (690, 'Akwanga I', 526, 'AKWANGA', 26, 'Nasarawa', 74, 'Nasarawa North', 254, 'Akwanga / Nasarawa Eggon / Wamba'),
@@ -911,7 +911,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (713, 'Toto II', 535, 'TOTO', 26, 'Nasarawa', 76, 'Nasarawa West', 258, 'Nasarawa / Toto'),
 
 -- ============================================================
--- NIGER STATE (state_id: 317) - 29 Seats
+-- NIGER STATE (state_id: 27) - 29 Seats
 -- ============================================================
 -- Niger East SD (SD ID: 77)
 (714, 'Chanchaga', 542, 'CHANCHAGA', 27, 'Niger', 77, 'Niger East', 259, 'Chanchaga'),
@@ -945,7 +945,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (741, 'Edati', 543, 'EDATTI', 27, 'Niger', 79, 'Niger South', 268, 'Lavun / Mokwa / Edati'),
 
 -- ============================================================
--- OGUN STATE (state_id: 323) - 26 Seats
+-- OGUN STATE (state_id: 28) - 26 Seats
 -- ============================================================
 -- Ogun Central SD (SD ID: 80)
 (743, 'Abeokuta North I', 562, 'ABEOKUTA NORTH', 28, 'Ogun', 80, 'Ogun Central', 269, 'Abeokuta North / Obafemi-Owode / Odeda'),
@@ -978,7 +978,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (768, 'Ipokia II', 575, 'IPOKIA', 28, 'Ogun', 82, 'Ogun West', 277, 'Egbado South / Ipokia'),
 
 -- ============================================================
--- ONDO STATE (state_id: 321) - 26 Seats
+-- ONDO STATE (state_id: 29) - 26 Seats
 -- ============================================================
 -- Ondo Central SD (SD ID: 83)
 (769, 'Akure North', 586, 'AKURE NORTH', 29, 'Ondo', 83, 'Ondo Central', 278, 'Akure North / Akure South'),
@@ -1011,7 +1011,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (794, 'Okitipupa II', 595, 'OKITIPUPA', 29, 'Ondo', 85, 'Ondo South', 286, 'Okitipupa / Irele'),
 
 -- ============================================================
--- OSUN STATE (state_id: 322) - 26 Seats
+-- OSUN STATE (state_id: 30) - 26 Seats
 -- ============================================================
 -- Osun Central SD (SD ID: 86)
 (795, 'Boluwaduro/Boripe', 604, 'BOLUWADURO', 30, 'Osun', 86, 'Osun Central', 287, 'Boluwaduro / Ifedayo / Ila'),
@@ -1048,7 +1048,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (1014, 'Ejigbo', 609, 'EJIGBO', 30, 'Osun', 88, 'Osun West', 295, 'Ede North / Ede South / Egbedore / Ejigbo'),
 
 -- ============================================================
--- OYO STATE (state_id: 296) - 32 Seats
+-- OYO STATE (state_id: 31) - 32 Seats
 -- ============================================================
 -- Oyo Central SD (SD ID: 89)
 (821, 'Afijio', 628, 'AFIJIO', 31, 'Oyo', 89, 'Oyo Central', 296, 'Afijio / Atiba / Oyo East / Oyo West'),
@@ -1093,7 +1093,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (1020, 'Ibarapa East', 639, 'IBARAPA EAST', 31, 'Oyo', 91, 'Oyo South', 309, 'Ido / Ibarapa East'),
 
 -- ============================================================
--- PLATEAU STATE (state_id: 302) - 24 Seats
+-- PLATEAU STATE (state_id: 32) - 24 Seats
 -- ============================================================
 -- Plateau Central SD (SD ID: 92)
 (853, 'Bokkos', 661, 'BOKKOS', 32, 'Plateau', 92, 'Plateau Central', 310, 'Bokkos / Mangu'),
@@ -1124,7 +1124,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (876, 'Wase', 675, 'WASE', 32, 'Plateau', 94, 'Plateau South', 317, 'Wase'),
 
 -- ============================================================
--- RIVERS STATE (state_id: 4926) - 32 Seats
+-- RIVERS STATE (state_id: 33) - 32 Seats
 -- ============================================================
 -- Rivers East SD (SD ID: 95)
 (877, 'Etche I', 686, 'ETCHE', 33, 'Rivers', 95, 'Rivers East', 318, 'Etche / Omuma'),
@@ -1163,7 +1163,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (908, 'Akuku-Toru II', 679, 'AKUKU TORU', 33, 'Rivers', 97, 'Rivers West', 330, 'Asari-Toru / Akuku-Toru'),
 
 -- ============================================================
--- SOKOTO STATE (state_id: 292) - 30 Seats
+-- SOKOTO STATE (state_id: 34) - 30 Seats
 -- ============================================================
 -- Sokoto East SD (SD ID: 98)
 (909, 'Gada East', 702, 'GADA', 34, 'Sokoto', 98, 'Sokoto East', 331, 'Gada / Goronyo'),
@@ -1200,7 +1200,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (938, 'Shagari', 712, 'SHAGARI', 34, 'Sokoto', 100, 'Sokoto South', 341, 'Yabo / Shagari'),
 
 -- ============================================================
--- TARABA STATE (state_id: 319) - 24 Seats
+-- TARABA STATE (state_id: 35) - 24 Seats
 -- ============================================================
 -- Taraba North SD (SD ID: 101)
 (939, 'Jalingo I', 728, 'JALINGO', 35, 'Taraba', 101, 'Taraba North', 342, 'Jalingo / Yorro / Zing'),
@@ -1231,7 +1231,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (962, 'Ibi', 727, 'IBI', 35, 'Taraba', 103, 'Taraba South', 347, 'Wukari / Ibi'),
 
 -- ============================================================
--- YOBE STATE (state_id: 297) - 24 Seats
+-- YOBE STATE (state_id: 36) - 24 Seats
 -- ============================================================
 -- Yobe North SD (SD ID: 104)
 (963, 'Bade I', 738, 'BADE', 36, 'Yobe', 104, 'Yobe North', 348, 'Bade / Jakusko'),
@@ -1262,7 +1262,7 @@ INSERT INTO state_assembly_constituencies (id, name, lga_id, lga_name, state_id,
 (986, 'Nangere II', 749, 'NANGERE', 36, 'Yobe', 106, 'Yobe South', 353, 'Potiskum / Nangere'),
 
 -- ============================================================
--- ZAMFARA STATE (state_id: 299) - 24 Seats
+-- ZAMFARA STATE (state_id: 37) - 24 Seats
 -- ============================================================
 -- Zamfara North SD (SD ID: 107)
 (987, 'Zurmi East', 768, 'ZURMI', 37, 'Zamfara', 107, 'Zamfara North', 354, 'Zurmi / Shinkafi'),
