@@ -9,10 +9,8 @@ import {
 export type PollingUnitType = {
   id: number;
   name: string;
-  abbreviation?: string | null;
-  units?: string | null;
-  delimitation?: string | null;
-  remark?: string | null;
+  code?: string | null;
+  pu_code?: string | null;
   registration_area_id?: number | null;
   ward_id: number;
   ward_name: string;
@@ -53,7 +51,7 @@ export function PollingUnitTableHeader() {
 }
 
 export function PollingUnitTableTile({ data }: { data: PollingUnitType }) {
-  const puCode = data.delimitation || data.abbreviation || "-";
+  const puCode = data.pu_code || data.code || "-";
   return (
     <TileRow>
       <TileLeft>

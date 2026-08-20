@@ -168,8 +168,119 @@ const docTemplate = `{
                 }
             }
         },
+        "/admin/inec-result-grabber-logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves paginated execution logs across grabbers",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "INEC Result Grabber"
+                ],
+                "summary": "List all INEC result grabber logs",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by grabber ID",
+                        "name": "grabber_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit results (default 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor for pagination",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Logs retrieved successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/inec-result-grabbers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves paginated INEC result grabbers with election details and metrics",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "INEC Result Grabber"
+                ],
+                "summary": "List INEC result grabbers",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limit results (default 20)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor for pagination",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "INEC result grabbers retrieved successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/admin/inec-result-grabbers/{id}/logs": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves paginated execution logs for a specific INEC result grabber",
                 "consumes": [
                     "application/json"
@@ -229,7 +340,12 @@ const docTemplate = `{
         },
         "/admin/inec-result-grabbers/{id}/sync": {
             "post": {
-                "description": "Triggers a sync batch for a specific INEC result grabber record to poll INEC API, import uploaded PU results, and update metrics",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Triggers a manual sync run for the specified INEC result grabber",
                 "consumes": [
                     "application/json"
                 ],
@@ -239,7 +355,7 @@ const docTemplate = `{
                 "tags": [
                     "INEC Result Grabber"
                 ],
-                "summary": "Trigger INEC result grabber sync",
+                "summary": "Manually trigger INEC result grabber sync",
                 "parameters": [
                     {
                         "type": "integer",
@@ -250,27 +366,27 @@ const docTemplate = `{
                     },
                     {
                         "type": "boolean",
-                        "description": "Upload result images to Cloudflare R2 bucket (default from system settings)",
+                        "description": "Upload result sheet images to R2 (default from config)",
                         "name": "upload_to_r2",
                         "in": "query"
                     },
                     {
                         "type": "boolean",
-                        "description": "Extract vote counts using Gemini AI (default from system settings)",
+                        "description": "Extract candidate results via AI (default from config)",
                         "name": "ai_extract",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "INEC result grabber sync completed",
+                        "description": "Sync completed successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Invalid grabber ID",
+                        "description": "Invalid request params",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -281,6 +397,39 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/inec-result-grabbers/{id}/toggle-pause": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "INEC Result Grabber"
+                ],
+                "summary": "Toggle pause/resume status of INEC result grabber",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "INEC Result Grabber ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/queries.InecResultGrabber"
                         }
                     }
                 }
@@ -752,6 +901,11 @@ const docTemplate = `{
         },
         "/admin/unmatched-polling-unit-results": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves paginated queue of results submitted without a matching polling unit in the system",
                 "consumes": [
                     "application/json"
@@ -809,6 +963,11 @@ const docTemplate = `{
         },
         "/admin/unmatched-polling-unit-results/{id}/resolve": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Resolves an unmatched result by mapping to an existing/new polling unit or rejecting it",
                 "consumes": [
                     "application/json"
@@ -2056,6 +2215,96 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/bodies/metrics": {
+            "get": {
+                "description": "Fetches aggregated metrics for electoral bodies nationwide",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bodies"
+                ],
+                "summary": "Get national body metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/bodies/sync-electoral-units": {
+            "post": {
+                "description": "Fetches and synchronizes all electoral units from INEC API (unauthenticated)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bodies"
+                ],
+                "summary": "Synchronize electoral units from INEC API",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/bodies/sync-electoral-units-state-flow": {
+            "post": {
+                "description": "Fetches and synchronizes all electoral units from INEC API using Governorship election state flow (unauthenticated)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bodies"
+                ],
+                "summary": "Synchronize electoral units from INEC API using State (Governorship) Flow",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -7349,7 +7598,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest"
+                            "$ref": "#/definitions/stateassemblyconstituencieshandler.CreateStateConstituencyRequest"
                         }
                     }
                 ],
@@ -7471,7 +7720,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest"
+                            "$ref": "#/definitions/stateassemblyconstituencieshandler.UpdateStateConstituencyRequest"
                         }
                     }
                 ],
@@ -7630,7 +7879,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse"
+                            "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateConstituenciesResponse"
                         }
                     },
                     "500": {
@@ -9806,6 +10055,9 @@ const docTemplate = `{
         "federalconstituencieshandler.CreateFederalConstituencyRequest": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -9882,6 +10134,9 @@ const docTemplate = `{
         "federalconstituencieshandler.UpdateFederalConstituencyRequest": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "name": {
                     "type": "string"
                 },
@@ -10374,6 +10629,59 @@ const docTemplate = `{
                 }
             }
         },
+        "pgtype.Date": {
+            "type": "object",
+            "properties": {
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.InfinityModifier": {
+            "type": "integer",
+            "format": "int32",
+            "enum": [
+                1,
+                0,
+                -1
+            ],
+            "x-enum-varnames": [
+                "Infinity",
+                "Finite",
+                "NegativeInfinity"
+            ]
+        },
+        "pgtype.Text": {
+            "type": "object",
+            "properties": {
+                "string": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "pgtype.Timestamptz": {
+            "type": "object",
+            "properties": {
+                "infinityModifier": {
+                    "$ref": "#/definitions/pgtype.InfinityModifier"
+                },
+                "time": {
+                    "type": "string"
+                },
+                "valid": {
+                    "type": "boolean"
+                }
+            }
+        },
         "polling_unit_updates.CreateUpdateRequest": {
             "type": "object",
             "properties": {
@@ -10412,10 +10720,7 @@ const docTemplate = `{
         "pollingunitshandler.CreatePollingUnitRequest": {
             "type": "object",
             "properties": {
-                "abbreviation": {
-                    "type": "string"
-                },
-                "delimitation": {
+                "code": {
                     "type": "string"
                 },
                 "formatted_address": {
@@ -10439,17 +10744,14 @@ const docTemplate = `{
                 "precise_location": {
                     "type": "string"
                 },
+                "pu_code": {
+                    "type": "string"
+                },
                 "registration_area_id": {
                     "type": "integer"
                 },
-                "remark": {
-                    "type": "string"
-                },
                 "state_id": {
                     "type": "integer"
-                },
-                "units": {
-                    "type": "string"
                 },
                 "ward_id": {
                     "type": "integer"
@@ -10498,10 +10800,7 @@ const docTemplate = `{
         "pollingunitshandler.PollingUnitResponse": {
             "type": "object",
             "properties": {
-                "abbreviation": {
-                    "type": "string"
-                },
-                "delimitation": {
+                "code": {
                     "type": "string"
                 },
                 "formatted_address": {
@@ -10531,19 +10830,16 @@ const docTemplate = `{
                 "precise_location": {
                     "type": "string"
                 },
+                "pu_code": {
+                    "type": "string"
+                },
                 "registration_area_id": {
                     "type": "integer"
-                },
-                "remark": {
-                    "type": "string"
                 },
                 "state_id": {
                     "type": "integer"
                 },
                 "state_name": {
-                    "type": "string"
-                },
-                "units": {
                     "type": "string"
                 },
                 "ward_id": {
@@ -10557,10 +10853,7 @@ const docTemplate = `{
         "pollingunitshandler.UpdatePollingUnitRequest": {
             "type": "object",
             "properties": {
-                "abbreviation": {
-                    "type": "string"
-                },
-                "delimitation": {
+                "code": {
                     "type": "string"
                 },
                 "formatted_address": {
@@ -10584,17 +10877,14 @@ const docTemplate = `{
                 "precise_location": {
                     "type": "string"
                 },
+                "pu_code": {
+                    "type": "string"
+                },
                 "registration_area_id": {
                     "type": "integer"
                 },
-                "remark": {
-                    "type": "string"
-                },
                 "state_id": {
                     "type": "integer"
-                },
-                "units": {
-                    "type": "string"
                 },
                 "ward_id": {
                     "type": "integer"
@@ -10711,6 +11001,50 @@ const docTemplate = `{
                 }
             }
         },
+        "queries.InecResultGrabber": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "election_date": {
+                    "$ref": "#/definitions/pgtype.Date"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "election_id": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "lgas_with_complete_results_count": {
+                    "type": "integer"
+                },
+                "name": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "sync_error_message": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "sync_status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "uploaded_results_count": {
+                    "type": "integer"
+                },
+                "wards_with_complete_results_count": {
+                    "type": "integer"
+                }
+            }
+        },
         "referrals.createReferralRequest": {
             "type": "object",
             "required": [
@@ -10758,6 +11092,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "coalition_center": {
+                    "type": "string"
+                },
+                "code": {
                     "type": "string"
                 },
                 "description": {
@@ -10839,6 +11176,9 @@ const docTemplate = `{
                 "coalition_center": {
                     "type": "string"
                 },
+                "code": {
+                    "type": "string"
+                },
                 "description": {
                     "type": "string"
                 },
@@ -10850,9 +11190,12 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest": {
+        "stateassemblyconstituencieshandler.CreateStateConstituencyRequest": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "federal_constituency_id": {
                     "type": "integer"
                 },
@@ -10870,22 +11213,22 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData": {
+        "stateassemblyconstituencieshandler.GetStateConstituenciesData": {
             "type": "object",
             "properties": {
                 "constituencies": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse"
+                        "$ref": "#/definitions/stateassemblyconstituencieshandler.StateConstituencyResponse"
                     }
                 }
             }
         },
-        "stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse": {
+        "stateassemblyconstituencieshandler.GetStateConstituenciesResponse": {
             "type": "object",
             "properties": {
                 "data": {
-                    "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData"
+                    "$ref": "#/definitions/stateassemblyconstituencieshandler.GetStateConstituenciesData"
                 },
                 "message": {
                     "type": "string"
@@ -10909,9 +11252,12 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse": {
+        "stateassemblyconstituencieshandler.StateConstituencyResponse": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "federal_constituency_id": {
                     "type": "integer"
                 },
@@ -10938,9 +11284,12 @@ const docTemplate = `{
                 }
             }
         },
-        "stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest": {
+        "stateassemblyconstituencieshandler.UpdateStateConstituencyRequest": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "federal_constituency_id": {
                     "type": "integer"
                 },
@@ -11196,7 +11545,7 @@ const docTemplate = `{
         "wardshandler.CreateWardRequest": {
             "type": "object",
             "properties": {
-                "abbreviation": {
+                "code": {
                     "type": "string"
                 },
                 "lga_id": {
@@ -11252,7 +11601,7 @@ const docTemplate = `{
         "wardshandler.UpdateWardRequest": {
             "type": "object",
             "properties": {
-                "abbreviation": {
+                "code": {
                     "type": "string"
                 },
                 "lga_id": {
@@ -11269,6 +11618,9 @@ const docTemplate = `{
         "wardshandler.WardResponse": {
             "type": "object",
             "properties": {
+                "code": {
+                    "type": "string"
+                },
                 "id": {
                     "type": "integer"
                 },

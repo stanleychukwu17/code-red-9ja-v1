@@ -591,13 +591,13 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 		filterCol = "w.lga_id"
 		filterVal = lgaID
 	} else {
-		filterCol = "w.state_assembly_constituency_id"
+		filterCol = "w.state_constituency_id"
 		filterVal = stateConstID
 	}
 
 	query := `
 		SELECT
-			w.id, w.name, w.lga_id, w.state_id, w.state_assembly_constituency_id,
+			w.id, w.name, w.lga_id, w.state_id, w.state_constituency_id,
 			fr.id, fr.election_id, fr.ward_id, fr.lga_id, fr.state_id,
 			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
 			fr.candidate_results, fr.created_at, fr.updated_at
@@ -633,7 +633,7 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 		Name                          string  `json:"name"`
 		LgaID                         *int32  `json:"lga_id"`
 		StateID                       int16   `json:"state_id"`
-		StateAssemblyConstituencyID   *int32  `json:"state_assembly_constituency_id"`
+		StateConstituencyID   *int32  `json:"state_constituency_id"`
 		ElectionWardFinalResult               *WardFR `json:"election_ward_final_result"`
 	}
 
@@ -663,7 +663,7 @@ func (h *Handler) GetWardsWithResults(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		lastID = wID
-		row := Row{ID: wID, Name: wName, LgaID: wLgaID, StateID: wStateID, StateAssemblyConstituencyID: wSACID}
+		row := Row{ID: wID, Name: wName, LgaID: wLgaID, StateID: wStateID, StateConstituencyID: wSACID}
 		if frID != nil {
 			cr := json.RawMessage("[]")
 			if frCandidateResults != nil {

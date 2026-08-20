@@ -23,7 +23,7 @@ import { TinyError } from "@repo/ui/components/custom/TinyError";
 export interface Lga {
   id: number;
   name: string;
-  abbreviation: string;
+  code: string;
   state_id: number;
   state_name: string;
   senatorial_district_id: number;
@@ -51,7 +51,7 @@ export function LgaFormDialog({
   const form = useForm({
     defaultValues: {
       name: "",
-      abbreviation: "",
+      code: "",
       stateId: undefined as number | undefined,
       senatorialDistrictId: undefined as number | undefined,
       federalConstituencyId: undefined as number | undefined,
@@ -72,7 +72,7 @@ export function LgaFormDialog({
     if (open) {
       if (mode === "update" && lga) {
         form.setFieldValue("name", lga.name || "");
-        form.setFieldValue("abbreviation", lga.abbreviation || "");
+        form.setFieldValue("code", lga.code || "");
         form.setFieldValue("stateId", lga.state_id);
         form.setFieldValue("senatorialDistrictId", lga.senatorial_district_id);
         form.setFieldValue(
@@ -81,7 +81,7 @@ export function LgaFormDialog({
         );
       } else {
         form.setFieldValue("name", "");
-        form.setFieldValue("abbreviation", "");
+        form.setFieldValue("code", "");
         form.setFieldValue("stateId", undefined);
         form.setFieldValue("senatorialDistrictId", undefined);
         form.setFieldValue("federalConstituencyId", undefined);
@@ -93,7 +93,7 @@ export function LgaFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
-      abbreviation: string;
+      code: string;
       stateId: number | undefined;
       senatorialDistrictId: number | undefined;
       federalConstituencyId: number | undefined;
@@ -101,22 +101,16 @@ export function LgaFormDialog({
       if (!values.stateId) {
         throw new Error("State is required");
       }
-      if (!values.abbreviation) {
-        throw new Error("Abbreviation is required");
-      }
-      if (!values.senatorialDistrictId) {
-        throw new Error("Senatorial district is required");
-      }
-      if (!values.federalConstituencyId) {
-        throw new Error("Federal constituency is required");
+      if (!values.code) {
+        throw new Error("Code is required");
       }
 
       const payload = {
         name: values.name.trim(),
-        abbreviation: values.abbreviation.trim(),
+        code: values.code.trim(),
         state_id: values.stateId,
-        senatorial_district_id: values.senatorialDistrictId,
-        federal_constituency_id: values.federalConstituencyId,
+        senatorial_district_id: values.senatorialDistrictId ?? 0,
+        federal_constituency_id: values.federalConstituencyId ?? 0,
       };
 
       let res;
@@ -188,19 +182,19 @@ export function LgaFormDialog({
               />
             </div>
 
-            {/* LGA Abbreviation */}
+            {/* LGA Code */}
             <div className="w-full">
               <form.Field
-                name="abbreviation"
+                name="code"
                 validators={{
                   onChange: ({ value }) =>
-                    !value ? "Abbreviation is required" : undefined,
+                    !value ? "Code is required" : undefined,
                 }}
                 children={(field) => (
                   <div className="w-full">
                     <FancyInput
                       type="text"
-                      placeholder="Abbreviation"
+                      placeholder="Code"
                       errorMsg={field.state.meta.errors?.join(", ")}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -241,13 +235,9 @@ export function LgaFormDialog({
 
             {/* Senatorial District Select */}
             <div className="flex flex-col gap-1.5">
-              <Label title="Senatorial District" />
+              <Label title="Senatorial District (Optional)" />
               <form.Field
                 name="senatorialDistrictId"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value ? "Senatorial district is required" : undefined,
-                }}
                 children={(field) => (
                   <SelectSenatorialDistrict
                     selectedId={field.state.value}
@@ -266,13 +256,9 @@ export function LgaFormDialog({
 
             {/* Federal Constituency Select */}
             <div className="flex flex-col gap-1.5">
-              <Label title="Federal Constituency" />
+              <Label title="Federal Constituency (Optional)" />
               <form.Field
                 name="federalConstituencyId"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value ? "Federal constituency is required" : undefined,
-                }}
                 children={(field) => (
                   <SelectFederalConstituency
                     selectedId={field.state.value}

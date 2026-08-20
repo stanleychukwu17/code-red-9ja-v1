@@ -5,10 +5,8 @@ import { API_URL } from "../config";
 
 interface PollingUnitInput {
   name: string;
-  abbreviation?: string | null;
-  units?: string | null;
-  delimitation?: string | null;
-  remark?: string | null;
+  code?: string | null;
+  pu_code?: string | null;
   registration_area_id?: number | null;
   ward_id: number;
   state_id: number;

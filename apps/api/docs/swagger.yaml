@@ -691,6 +691,8 @@ definitions:
     type: object
   federalconstituencieshandler.CreateFederalConstituencyRequest:
     properties:
+      code:
+        type: string
       name:
         type: string
       senatorial_district_id:
@@ -740,6 +742,8 @@ definitions:
     type: object
   federalconstituencieshandler.UpdateFederalConstituencyRequest:
     properties:
+      code:
+        type: string
       name:
         type: string
       senatorial_district_id:
@@ -1062,6 +1066,42 @@ definitions:
       ward_id:
         type: integer
     type: object
+  pgtype.Date:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Text:
+    properties:
+      string:
+        type: string
+      valid:
+        type: boolean
+    type: object
+  pgtype.Timestamptz:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        type: string
+      valid:
+        type: boolean
+    type: object
   polling_unit_updates.CreateUpdateRequest:
     properties:
       assignment_id:
@@ -1087,9 +1127,7 @@ definitions:
     type: object
   pollingunitshandler.CreatePollingUnitRequest:
     properties:
-      abbreviation:
-        type: string
-      delimitation:
+      code:
         type: string
       formatted_address:
         type: string
@@ -1105,14 +1143,12 @@ definitions:
         type: string
       precise_location:
         type: string
+      pu_code:
+        type: string
       registration_area_id:
         type: integer
-      remark:
-        type: string
       state_id:
         type: integer
-      units:
-        type: string
       ward_id:
         type: integer
     type: object
@@ -1143,9 +1179,7 @@ definitions:
     type: object
   pollingunitshandler.PollingUnitResponse:
     properties:
-      abbreviation:
-        type: string
-      delimitation:
+      code:
         type: string
       formatted_address:
         type: string
@@ -1165,15 +1199,13 @@ definitions:
         type: string
       precise_location:
         type: string
+      pu_code:
+        type: string
       registration_area_id:
         type: integer
-      remark:
-        type: string
       state_id:
         type: integer
       state_name:
-        type: string
-      units:
         type: string
       ward_id:
         type: integer
@@ -1182,9 +1214,7 @@ definitions:
     type: object
   pollingunitshandler.UpdatePollingUnitRequest:
     properties:
-      abbreviation:
-        type: string
-      delimitation:
+      code:
         type: string
       formatted_address:
         type: string
@@ -1200,14 +1230,12 @@ definitions:
         type: string
       precise_location:
         type: string
+      pu_code:
+        type: string
       registration_area_id:
         type: integer
-      remark:
-        type: string
       state_id:
         type: integer
-      units:
-        type: string
       ward_id:
         type: integer
     type: object
@@ -1283,6 +1311,35 @@ definitions:
       election_started_video_url:
         type: string
     type: object
+  queries.InecResultGrabber:
+    properties:
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      election_date:
+        $ref: '#/definitions/pgtype.Date'
+      election_group_id:
+        type: integer
+      election_id:
+        type: integer
+      id:
+        type: integer
+      lgas_with_complete_results_count:
+        type: integer
+      name:
+        $ref: '#/definitions/pgtype.Text'
+      scope:
+        type: string
+      sync_error_message:
+        $ref: '#/definitions/pgtype.Text'
+      sync_status:
+        type: string
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamptz'
+      uploaded_results_count:
+        type: integer
+      wards_with_complete_results_count:
+        type: integer
+    type: object
   referrals.createReferralRequest:
     properties:
       milestone:
@@ -1315,6 +1372,8 @@ definitions:
   senatorialdistrictshandler.CreateSenatorialDistrictRequest:
     properties:
       coalition_center:
+        type: string
+      code:
         type: string
       description:
         type: string
@@ -1367,6 +1426,8 @@ definitions:
     properties:
       coalition_center:
         type: string
+      code:
+        type: string
       description:
         type: string
       name:
@@ -1374,8 +1435,10 @@ definitions:
       state_id:
         type: integer
     type: object
-  stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest:
+  stateassemblyconstituencieshandler.CreateStateConstituencyRequest:
     properties:
+      code:
+        type: string
       federal_constituency_id:
         type: integer
       lga_id:
@@ -1387,17 +1450,17 @@ definitions:
       state_id:
         type: integer
     type: object
-  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData:
+  stateassemblyconstituencieshandler.GetStateConstituenciesData:
     properties:
       constituencies:
         items:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse'
+          $ref: '#/definitions/stateassemblyconstituencieshandler.StateConstituencyResponse'
         type: array
     type: object
-  stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse:
+  stateassemblyconstituencieshandler.GetStateConstituenciesResponse:
     properties:
       data:
-        $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesData'
+        $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateConstituenciesData'
       message:
         type: string
       meta:
@@ -1412,8 +1475,10 @@ definitions:
       next_cursor:
         type: string
     type: object
-  stateassemblyconstituencieshandler.StateAssemblyConstituencyResponse:
+  stateassemblyconstituencieshandler.StateConstituencyResponse:
     properties:
+      code:
+        type: string
       federal_constituency_id:
         type: integer
       federal_constituency_name:
@@ -1431,8 +1496,10 @@ definitions:
       state_name:
         type: string
     type: object
-  stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest:
+  stateassemblyconstituencieshandler.UpdateStateConstituencyRequest:
     properties:
+      code:
+        type: string
       federal_constituency_id:
         type: integer
       lga_id:
@@ -1605,7 +1672,7 @@ definitions:
     type: object
   wardshandler.CreateWardRequest:
     properties:
-      abbreviation:
+      code:
         type: string
       lga_id:
         type: integer
@@ -1641,7 +1708,7 @@ definitions:
     type: object
   wardshandler.UpdateWardRequest:
     properties:
-      abbreviation:
+      code:
         type: string
       lga_id:
         type: integer
@@ -1652,6 +1719,8 @@ definitions:
     type: object
   wardshandler.WardResponse:
     properties:
+      code:
+        type: string
       id:
         type: integer
       lga_id:
@@ -1774,6 +1843,75 @@ paths:
       summary: Update marketing campaign status (Admin)
       tags:
       - Marketing
+  /admin/inec-result-grabber-logs:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves paginated execution logs across grabbers
+      parameters:
+      - description: Filter by grabber ID
+        in: query
+        name: grabber_id
+        type: integer
+      - description: Limit results (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logs retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all INEC result grabber logs
+      tags:
+      - INEC Result Grabber
+  /admin/inec-result-grabbers:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves paginated INEC result grabbers with election details
+        and metrics
+      parameters:
+      - description: Limit results (default 20)
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: INEC result grabbers retrieved successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List INEC result grabbers
+      tags:
+      - INEC Result Grabber
   /admin/inec-result-grabbers/{id}/logs:
     get:
       consumes:
@@ -1811,6 +1949,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - BearerAuth: []
       summary: List INEC result grabber sync logs
       tags:
       - INEC Result Grabber
@@ -1818,20 +1958,18 @@ paths:
     post:
       consumes:
       - application/json
-      description: Triggers a sync batch for a specific INEC result grabber record
-        to poll INEC API, import uploaded PU results, and update metrics
+      description: Triggers a manual sync run for the specified INEC result grabber
       parameters:
       - description: INEC Result Grabber ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Upload result images to Cloudflare R2 bucket (default from system
-          settings)
+      - description: Upload result sheet images to R2 (default from config)
         in: query
         name: upload_to_r2
         type: boolean
-      - description: Extract vote counts using Gemini AI (default from system settings)
+      - description: Extract candidate results via AI (default from config)
         in: query
         name: ai_extract
         type: boolean
@@ -1839,12 +1977,12 @@ paths:
       - application/json
       responses:
         "200":
-          description: INEC result grabber sync completed
+          description: Sync completed successfully
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Invalid grabber ID
+          description: Invalid request params
           schema:
             additionalProperties: true
             type: object
@@ -1853,7 +1991,29 @@ paths:
           schema:
             additionalProperties: true
             type: object
-      summary: Trigger INEC result grabber sync
+      security:
+      - BearerAuth: []
+      summary: Manually trigger INEC result grabber sync
+      tags:
+      - INEC Result Grabber
+  /admin/inec-result-grabbers/{id}/toggle-pause:
+    post:
+      parameters:
+      - description: INEC Result Grabber ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/queries.InecResultGrabber'
+      security:
+      - BearerAuth: []
+      summary: Toggle pause/resume status of INEC result grabber
       tags:
       - INEC Result Grabber
   /admin/parties/{id}/discount:
@@ -2193,6 +2353,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - BearerAuth: []
       summary: List unmatched polling unit results
       tags:
       - INEC Result Grabber
@@ -2232,6 +2394,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - BearerAuth: []
       summary: Resolve unmatched polling unit result
       tags:
       - INEC Result Grabber
@@ -3042,6 +3206,68 @@ paths:
       summary: Validate bank account
       tags:
       - Banks
+  /bodies/metrics:
+    get:
+      consumes:
+      - application/json
+      description: Fetches aggregated metrics for electoral bodies nationwide
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Get national body metrics
+      tags:
+      - Bodies
+  /bodies/sync-electoral-units:
+    post:
+      consumes:
+      - application/json
+      description: Fetches and synchronizes all electoral units from INEC API (unauthenticated)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Synchronize electoral units from INEC API
+      tags:
+      - Bodies
+  /bodies/sync-electoral-units-state-flow:
+    post:
+      consumes:
+      - application/json
+      description: Fetches and synchronizes all electoral units from INEC API using
+        Governorship election state flow (unauthenticated)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      summary: Synchronize electoral units from INEC API using State (Governorship)
+        Flow
+      tags:
+      - Bodies
   /countries:
     get:
       consumes:
@@ -6644,7 +6870,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.CreateStateAssemblyConstituencyRequest'
+          $ref: '#/definitions/stateassemblyconstituencieshandler.CreateStateConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -6776,7 +7002,7 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/stateassemblyconstituencieshandler.UpdateStateAssemblyConstituencyRequest'
+          $ref: '#/definitions/stateassemblyconstituencieshandler.UpdateStateConstituencyRequest'
       produces:
       - application/json
       responses:
@@ -6842,7 +7068,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateAssemblyConstituenciesResponse'
+            $ref: '#/definitions/stateassemblyconstituencieshandler.GetStateConstituenciesResponse'
         "500":
           description: Internal Server Error
           schema:

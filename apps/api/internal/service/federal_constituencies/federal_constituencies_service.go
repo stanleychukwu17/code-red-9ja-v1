@@ -7,6 +7,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -25,6 +26,7 @@ func NewFederalConstituenciesService(q *queries.Queries, rdb *redis.Client) *Fed
 func (s *FederalConstituenciesService) CreateFederalConstituency(
 	ctx context.Context,
 	name string,
+	code string,
 	stateID int32,
 	stateName string,
 	senatorialDistrictID int32,
@@ -32,10 +34,11 @@ func (s *FederalConstituenciesService) CreateFederalConstituency(
 ) (queries.FederalConstituency, error) {
 	arg := queries.CreateFederalConstituencyParams{
 		Name:                   name,
+		Code:                   pgtype.Text{String: code, Valid: code != ""},
 		StateID:                stateID,
 		StateName:              stateName,
-		SenatorialDistrictID:   senatorialDistrictID,
-		SenatorialDistrictName: senatorialDistrictName,
+		SenatorialDistrictID:   pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
+		SenatorialDistrictName: pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
 	}
 
 	fc, err := s.queries.CreateFederalConstituency(ctx, arg)
@@ -57,6 +60,7 @@ func (s *FederalConstituenciesService) UpdateFederalConstituency(
 	ctx context.Context,
 	id int32,
 	name string,
+	code string,
 	stateID int32,
 	stateName string,
 	senatorialDistrictID int32,
@@ -71,10 +75,11 @@ func (s *FederalConstituenciesService) UpdateFederalConstituency(
 	arg := queries.UpdateFederalConstituencyParams{
 		ID:                     id,
 		Name:                   name,
+		Code:                   pgtype.Text{String: code, Valid: code != ""},
 		StateID:                stateID,
 		StateName:              stateName,
-		SenatorialDistrictID:   senatorialDistrictID,
-		SenatorialDistrictName: senatorialDistrictName,
+		SenatorialDistrictID:   pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
+		SenatorialDistrictName: pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
 	}
 
 	fc, err := s.queries.UpdateFederalConstituency(ctx, arg)

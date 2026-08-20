@@ -11,6 +11,25 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkUnmatchedPollingUnitResultExists = `-- name: CheckUnmatchedPollingUnitResultExists :one
+SELECT EXISTS (
+  SELECT 1 FROM unmatched_polling_unit_results
+  WHERE election_id = $1 AND raw_polling_unit_code = $2
+)
+`
+
+type CheckUnmatchedPollingUnitResultExistsParams struct {
+	ElectionID         int64       `json:"election_id"`
+	RawPollingUnitCode pgtype.Text `json:"raw_polling_unit_code"`
+}
+
+func (q *Queries) CheckUnmatchedPollingUnitResultExists(ctx context.Context, arg CheckUnmatchedPollingUnitResultExistsParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkUnmatchedPollingUnitResultExists, arg.ElectionID, arg.RawPollingUnitCode)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createUnmatchedPollingUnitResult = `-- name: CreateUnmatchedPollingUnitResult :one
 INSERT INTO unmatched_polling_unit_results (
   election_id,

@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"free9ja/api/internal/db/queries"
+	bodiesservice "free9ja/api/internal/service/bodies"
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/redis/go-redis/v9"
@@ -18,10 +20,12 @@ type BodiesService interface {
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]queries.CState, error)
 	GetCitiesByStateID(ctx context.Context, stateID int16) ([]queries.GetCitiesByStateIDRow, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]queries.Lga, error)
-	CreateLGA(ctx context.Context, name string, abbreviation string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)
+	CreateLGA(ctx context.Context, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)
 	GetLGAByID(ctx context.Context, id int32) (queries.Lga, error)
-	UpdateLGA(ctx context.Context, id int32, name string, abbreviation string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)
+	UpdateLGA(ctx context.Context, id int32, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string, federalConstituencyID int32, federalConstituencyName string) (queries.Lga, error)
 	DeleteLGA(ctx context.Context, id int32) error
+	SyncElectoralUnits(ctx context.Context) (*bodiesservice.SyncReport, error)
+	SyncElectoralUnitsStateFlow(ctx context.Context) (*bodiesservice.SyncReport, error)
 }
 
 type Handler struct {
@@ -111,6 +115,18 @@ func (h *Handler) GetStates(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []queries.CState
+		for _, s := range states {
+			if strings.Contains(strings.ToLower(s.Name), searchLower) || strings.Contains(strings.ToLower(s.CountryCode), searchLower) {
+				filtered = append(filtered, s)
+			}
+		}
+		states = filtered
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "States fetched successfully", map[string]interface{}{
 		"states": states,
 	})
@@ -165,6 +181,22 @@ func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []queries.Lga
+		for _, l := range lgas {
+			if strings.Contains(strings.ToLower(l.Name), searchLower) ||
+				strings.Contains(strings.ToLower(l.Code), searchLower) ||
+				strings.Contains(strings.ToLower(l.StateName), searchLower) ||
+				strings.Contains(strings.ToLower(l.SenatorialDistrictName.String), searchLower) ||
+				strings.Contains(strings.ToLower(l.FederalConstituencyName.String), searchLower) {
+				filtered = append(filtered, l)
+			}
+		}
+		lgas = filtered
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "LGAs fetched successfully", map[string]interface{}{
 		"lgas": lgas,
 	})
@@ -172,7 +204,7 @@ func (h *Handler) GetLGAs(w http.ResponseWriter, r *http.Request) {
 
 type CreateLGARequest struct {
 	Name                  string `json:"name"`
-	Abbreviation          string `json:"abbreviation"`
+	Code                  string `json:"code"`
 	StateID               int32  `json:"state_id"`
 	SenatorialDistrictID  int32  `json:"senatorial_district_id"`
 	FederalConstituencyID int32  `json:"federal_constituency_id"`
@@ -180,7 +212,7 @@ type CreateLGARequest struct {
 
 type UpdateLGARequest struct {
 	Name                  string `json:"name"`
-	Abbreviation          string `json:"abbreviation"`
+	Code                  string `json:"code"`
 	StateID               int32  `json:"state_id"`
 	SenatorialDistrictID  int32  `json:"senatorial_district_id"`
 	FederalConstituencyID int32  `json:"federal_constituency_id"`
@@ -193,8 +225,8 @@ func (h *Handler) CreateLGA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.Abbreviation == "" || req.StateID == 0 || req.SenatorialDistrictID == 0 || req.FederalConstituencyID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, abbreviation, state_id, senatorial_district_id, and federal_constituency_id are required")
+	if req.Name == "" || req.Code == "" || req.StateID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name, code, and state_id are required")
 		return
 	}
 
@@ -207,19 +239,27 @@ func (h *Handler) CreateLGA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sd, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
-		return
+	sdName := ""
+	if req.SenatorialDistrictID > 0 {
+		sd, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
+			return
+		}
+		sdName = sd.Name
 	}
 
-	fc, err := h.queries.GetFederalConstituencyByID(r.Context(), req.FederalConstituencyID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid federal constituency ID: "+err.Error())
-		return
+	fcName := ""
+	if req.FederalConstituencyID > 0 {
+		fc, err := h.queries.GetFederalConstituencyByID(r.Context(), req.FederalConstituencyID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid federal constituency ID: "+err.Error())
+			return
+		}
+		fcName = fc.Name
 	}
 
-	lga, err := h.bodiesService.CreateLGA(r.Context(), req.Name, req.Abbreviation, req.StateID, state.Name, req.SenatorialDistrictID, sd.Name, req.FederalConstituencyID, fc.Name)
+	lga, err := h.bodiesService.CreateLGA(r.Context(), req.Name, req.Code, req.StateID, state.Name, req.SenatorialDistrictID, sdName, req.FederalConstituencyID, fcName)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create LGA: "+err.Error())
 		return
@@ -244,8 +284,8 @@ func (h *Handler) UpdateLGA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.Abbreviation == "" || req.StateID == 0 || req.SenatorialDistrictID == 0 || req.FederalConstituencyID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, abbreviation, state_id, senatorial_district_id, and federal_constituency_id are required")
+	if req.Name == "" || req.Code == "" || req.StateID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name, code, and state_id are required")
 		return
 	}
 
@@ -264,19 +304,27 @@ func (h *Handler) UpdateLGA(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sd, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
-		return
+	sdName := ""
+	if req.SenatorialDistrictID > 0 {
+		sd, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
+			return
+		}
+		sdName = sd.Name
 	}
 
-	fc, err := h.queries.GetFederalConstituencyByID(r.Context(), req.FederalConstituencyID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid federal constituency ID: "+err.Error())
-		return
+	fcName := ""
+	if req.FederalConstituencyID > 0 {
+		fc, err := h.queries.GetFederalConstituencyByID(r.Context(), req.FederalConstituencyID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid federal constituency ID: "+err.Error())
+			return
+		}
+		fcName = fc.Name
 	}
 
-	lga, err := h.bodiesService.UpdateLGA(r.Context(), int32(id), req.Name, req.Abbreviation, req.StateID, state.Name, req.SenatorialDistrictID, sd.Name, req.FederalConstituencyID, fc.Name)
+	lga, err := h.bodiesService.UpdateLGA(r.Context(), int32(id), req.Name, req.Code, req.StateID, state.Name, req.SenatorialDistrictID, sdName, req.FederalConstituencyID, fcName)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update LGA: "+err.Error())
 		return
@@ -317,8 +365,8 @@ func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := h.queries.RecalculateStateAssemblyConstituencyMetrics(ctx); err != nil {
-		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state assembly constituency metrics: "+err.Error())
+	if err := h.queries.RecalculateStateConstituencyMetrics(ctx); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to recalculate state constituency metrics: "+err.Error())
 		return
 	}
 
@@ -359,6 +407,15 @@ func (h *Handler) RecalculateBodyMetrics(w http.ResponseWriter, r *http.Request)
 	h.utils.RespondSuccess(w, http.StatusOK, "Successfully recalculated all body metrics", nil)
 }
 
+// GetNationalMetrics godoc
+// @Summary      Get national body metrics
+// @Description  Fetches aggregated metrics for electoral bodies nationwide
+// @Tags         Bodies
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      500  {string} string
+// @Router       /bodies/metrics [get]
 func (h *Handler) GetNationalMetrics(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -372,3 +429,52 @@ func (h *Handler) GetNationalMetrics(w http.ResponseWriter, r *http.Request) {
 		"metrics": metrics,
 	})
 }
+
+// SyncElectoralUnits godoc
+// @Summary      Synchronize electoral units from INEC API
+// @Description  Fetches and synchronizes all electoral units from INEC API (unauthenticated)
+// @Tags         Bodies
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      500  {string} string
+// @Router       /bodies/sync-electoral-units [post]
+func (h *Handler) SyncElectoralUnits(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	report, err := h.bodiesService.SyncElectoralUnits(ctx)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to synchronize electoral units: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Successfully synchronized electoral units from INEC API", map[string]interface{}{
+		"report": report,
+	})
+}
+
+// SyncElectoralUnitsStateFlow godoc
+// @Summary      Synchronize electoral units from INEC API using State (Governorship) Flow
+// @Description  Fetches and synchronizes all electoral units from INEC API using Governorship election state flow (unauthenticated)
+// @Tags         Bodies
+// @Accept       json
+// @Produce      json
+// @Success      200  {object} map[string]interface{}
+// @Failure      500  {string} string
+// @Router       /bodies/sync-electoral-units-state-flow [post]
+func (h *Handler) SyncElectoralUnitsStateFlow(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	report, err := h.bodiesService.SyncElectoralUnitsStateFlow(ctx)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to synchronize electoral units (State Flow): "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Successfully synchronized electoral units from INEC API (State Flow)", map[string]interface{}{
+		"report": report,
+	})
+}
+
+
+

@@ -15,7 +15,7 @@ import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-
 import { getOffices } from "#/lib/server/offices";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getStates } from "#/lib/server/states";
-import { getStateAssemblyConstituencies } from "#/lib/server/state_assembly_constituencies";
+import { getStateConstituencies } from "#/lib/server/state_constituencies";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 
@@ -83,7 +83,7 @@ export function StateConstituencyElectionFormDialog({
   const { data: constituenciesData } = useQuery({
     queryKey: ["state-constituencies-all"],
     queryFn: async () => {
-      const res = await getStateAssemblyConstituencies({
+      const res = await getStateConstituencies({
         data: { limit: 1000 },
       });
       if (res && res.success && res.data?.constituencies) {
@@ -173,6 +173,18 @@ export function StateConstituencyElectionFormDialog({
     }
   }, [open]);
 
+  // Auto-select matching State Constituency office when offices data loads
+  React.useEffect(() => {
+    if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
+      const matching = officesData.find(
+        (o: any) => o.scope === "state-constituency",
+      );
+      if (matching) {
+        form.setFieldValue("officeId", matching.id);
+      }
+    }
+  }, [open, officesData, selectedOfficeId]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
@@ -189,40 +201,11 @@ export function StateConstituencyElectionFormDialog({
         throw new Error("At least one state constituency must be selected");
       }
 
-      let finalGroupId = values.electionGroupId;
-
-      if (!finalGroupId) {
-        const year = new Date(values.electionDate).getFullYear();
-        const typeName = selectedType
-          ? selectedType.name
-          : "State Constituency";
-        const autoGroupName = `${year} ${typeName} Election`;
-
-        const { createElectionGroup } =
-          await import("#/lib/server/election_groups");
-        const groupRes = await createElectionGroup({
-          data: {
-            name: autoGroupName,
-            rank: selectedType ? selectedType.rank : 1,
-            elections_count: selectedConstituencies.length,
-            states_count: 37,
-            election_date: values.electionDate,
-          },
-        });
-
-        if (!groupRes.success) {
-          throw new Error(
-            groupRes.message || "Failed to auto-create election group",
-          );
-        }
-        finalGroupId = groupRes.data.id;
-      }
-
       const res = await createStateConstituencyElection({
         data: {
           office_id: values.officeId,
           election_date: values.electionDate,
-          election_group_id: finalGroupId!,
+          election_group_id: values.electionGroupId,
           state_constituency_ids: selectedConstituencies.map((c) => c.id),
         },
       });
@@ -235,6 +218,7 @@ export function StateConstituencyElectionFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },

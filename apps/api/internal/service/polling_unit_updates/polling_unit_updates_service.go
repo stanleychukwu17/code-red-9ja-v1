@@ -137,9 +137,9 @@ func (s *Service) CreateUpdate(ctx context.Context, input CreateUpdateInput) (qu
 		StateID:                     pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
 		LgaID:                       pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
 		WardID:                      pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
-		SenatorialDistrictID:        pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
-		FederalConstituencyID:       pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
-		StateAssemblyConstituencyID: ward.StateAssemblyConstituencyID,
+		SenatorialDistrictID:        lga.SenatorialDistrictID,
+		FederalConstituencyID:       lga.FederalConstituencyID,
+		StateAssemblyConstituencyID: ward.StateConstituencyID,
 		Message:                     input.Message,
 		MediaUrls:                   input.MediaUrls,
 		IsReport:                    pgtype.Bool{Bool: input.IsReport, Valid: true},
@@ -287,3 +287,4 @@ func isVideoURL(url string) bool {
 	}
 	return false
 }
+

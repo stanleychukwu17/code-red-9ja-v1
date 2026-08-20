@@ -26,10 +26,8 @@ import { TinyError } from "@repo/ui/components/custom/TinyError";
 export interface PollingUnit {
   id: number;
   name: string;
-  abbreviation?: string | null;
-  units?: string | null;
-  delimitation?: string | null;
-  remark?: string | null;
+  code?: string | null;
+  pu_code?: string | null;
   registration_area_id?: number | null;
   ward_id: number;
   ward_name: string;
@@ -63,10 +61,8 @@ export function PollingUnitFormDialog({
   const form = useForm({
     defaultValues: {
       name: "",
-      abbreviation: "",
-      units: "",
-      delimitation: "",
-      remark: "",
+      code: "",
+      puCode: "",
       registrationAreaId: undefined as number | undefined,
       stateId: undefined as number | undefined,
       lgaId: undefined as number | undefined,
@@ -100,10 +96,8 @@ export function PollingUnitFormDialog({
     if (open) {
       if (mode === "update" && pollingUnit) {
         form.setFieldValue("name", pollingUnit.name || "");
-        form.setFieldValue("abbreviation", pollingUnit.abbreviation || "");
-        form.setFieldValue("units", pollingUnit.units || "");
-        form.setFieldValue("delimitation", pollingUnit.delimitation || "");
-        form.setFieldValue("remark", pollingUnit.remark || "");
+        form.setFieldValue("code", pollingUnit.code || "");
+        form.setFieldValue("puCode", pollingUnit.pu_code || "");
         form.setFieldValue(
           "registrationAreaId",
           pollingUnit.registration_area_id ?? undefined,
@@ -130,10 +124,8 @@ export function PollingUnitFormDialog({
         }, 0);
       } else {
         form.setFieldValue("name", "");
-        form.setFieldValue("abbreviation", "");
-        form.setFieldValue("units", "");
-        form.setFieldValue("delimitation", "");
-        form.setFieldValue("remark", "");
+        form.setFieldValue("code", "");
+        form.setFieldValue("puCode", "");
         form.setFieldValue("registrationAreaId", undefined);
         form.setFieldValue("stateId", undefined);
         form.setFieldValue("lgaId", undefined);
@@ -151,10 +143,8 @@ export function PollingUnitFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
-      abbreviation: string;
-      units: string;
-      delimitation: string;
-      remark: string;
+      code: string;
+      puCode: string;
       registrationAreaId: number | undefined;
       stateId: number | undefined;
       lgaId: number | undefined;
@@ -171,10 +161,8 @@ export function PollingUnitFormDialog({
 
       const payload = {
         name: values.name.trim(),
-        abbreviation: values.abbreviation.trim() || null,
-        units: values.units.trim() || null,
-        delimitation: values.delimitation.trim() || null,
-        remark: values.remark.trim() || null,
+        code: values.code.trim() || null,
+        pu_code: values.puCode.trim() || null,
         registration_area_id: values.registrationAreaId ?? null,
         state_id: values.stateId,
         lga_id: values.lgaId,
@@ -260,16 +248,16 @@ export function PollingUnitFormDialog({
               />
             </div>
 
-            {/* Grid for Abbreviation & Registration Area ID */}
+            {/* Grid for Code & PU Code */}
             <div className="grid grid-cols-2 gap-4">
               <div className="flex flex-col gap-1.5">
-                <Label title="Abbreviation / Code" />
+                <Label title="Code" />
                 <form.Field
-                  name="abbreviation"
+                  name="code"
                   children={(field) => (
                     <Input
                       type="text"
-                      placeholder="E.g., 01-02-03-004"
+                      placeholder="E.g., 115"
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                     />
@@ -278,57 +266,40 @@ export function PollingUnitFormDialog({
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <Label title="Registration Area ID" />
+                <Label title="PU Code" />
                 <form.Field
-                  name="registrationAreaId"
+                  name="puCode"
                   children={(field) => (
                     <Input
-                      type="number"
-                      placeholder="E.g., 12"
-                      value={field.state.value ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        field.handleChange(
-                          val === "" ? undefined : Number(val),
-                        );
-                      }}
+                      type="text"
+                      placeholder="E.g., 37/06/02/115"
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
                     />
                   )}
                 />
               </div>
             </div>
 
-            {/* Grid for Units & Delimitation */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label title="Units Count" />
-                <form.Field
-                  name="units"
-                  children={(field) => (
-                    <Input
-                      type="text"
-                      placeholder="E.g., 1"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label title="Delimitation Code" />
-                <form.Field
-                  name="delimitation"
-                  children={(field) => (
-                    <Input
-                      type="text"
-                      placeholder="E.g., DEL-01"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  )}
-                />
-              </div>
+            {/* Registration Area ID */}
+            <div className="flex flex-col gap-1.5">
+              <Label title="Registration Area ID" />
+              <form.Field
+                name="registrationAreaId"
+                children={(field) => (
+                  <Input
+                    type="number"
+                    placeholder="E.g., 12"
+                    value={field.state.value ?? ""}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      field.handleChange(
+                        val === "" ? undefined : Number(val),
+                      );
+                    }}
+                  />
+                )}
+              />
             </div>
 
             {/* Parent Cascade Selects */}
@@ -498,37 +469,20 @@ export function PollingUnitFormDialog({
               />
             </div>
 
-            {/* Google Place ID & Remark */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1.5">
-                <Label title="Google Place ID" />
-                <form.Field
-                  name="googlePlaceId"
-                  children={(field) => (
-                    <Input
-                      type="text"
-                      placeholder="E.g., ChIJs..."
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  )}
-                />
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <Label title="Remark / Note" />
-                <form.Field
-                  name="remark"
-                  children={(field) => (
-                    <Input
-                      type="text"
-                      placeholder="E.g., Active / Inactive"
-                      value={field.state.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                    />
-                  )}
-                />
-              </div>
+            {/* Google Place ID */}
+            <div className="flex flex-col gap-1.5">
+              <Label title="Google Place ID" />
+              <form.Field
+                name="googlePlaceId"
+                children={(field) => (
+                  <Input
+                    type="text"
+                    placeholder="E.g., ChIJs..."
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                  />
+                )}
+              />
             </div>
           </DialogPadding>
 

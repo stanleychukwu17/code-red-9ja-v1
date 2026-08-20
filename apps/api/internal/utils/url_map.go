@@ -27,7 +27,7 @@ type BodiesURLMap struct {
 	GetCities                      string
 	GetSenatorialDistricts         string
 	GetFederalConstituencies       string
-	GetStateAssemblyConstituencies string
+	GetStateConstituencies string
 	GetLGAs                        string
 	GetWards                       string
 	GetPollingUnits                string
@@ -76,7 +76,7 @@ var ApiUrls = URLMap{
 		GetCities:                      "/api/v1/states/{stateID}/cities",
 		GetSenatorialDistricts:         "/api/v1/senatorial-districts",
 		GetFederalConstituencies:       "/api/v1/federal-constituencies",
-		GetStateAssemblyConstituencies: "/api/v1/state-constituencies",
+		GetStateConstituencies: "/api/v1/state-constituencies",
 		GetLGAs:                        "/api/v1/lgas",
 		GetWards:                       "/api/v1/wards",
 		GetPollingUnits:                "/api/v1/polling-units",

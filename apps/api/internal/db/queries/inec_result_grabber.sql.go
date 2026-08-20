@@ -67,7 +67,7 @@ func (q *Queries) CalculateElectionMetrics(ctx context.Context, electionID int64
 }
 
 const getINECResultGrabberByElectionID = `-- name: GetINECResultGrabberByElectionID :one
-SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.lgas_with_complete_results_count, g.wards_with_complete_results_count, g.uploaded_results_count, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.office_id, o.inec_election_type_id, o.name AS office_name
+SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.lgas_with_complete_results_count, g.wards_with_complete_results_count, g.uploaded_results_count, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
 JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id
@@ -90,6 +90,7 @@ type GetINECResultGrabberByElectionIDRow struct {
 	UpdatedAt                     pgtype.Timestamptz `json:"updated_at"`
 	Scope_2                       string             `json:"scope_2"`
 	ElectionDate_2                pgtype.Date        `json:"election_date_2"`
+	StateID                       pgtype.Int2        `json:"state_id"`
 	OfficeID                      int64              `json:"office_id"`
 	InecElectionTypeID            pgtype.Text        `json:"inec_election_type_id"`
 	OfficeName                    string             `json:"office_name"`
@@ -114,6 +115,7 @@ func (q *Queries) GetINECResultGrabberByElectionID(ctx context.Context, election
 		&i.UpdatedAt,
 		&i.Scope_2,
 		&i.ElectionDate_2,
+		&i.StateID,
 		&i.OfficeID,
 		&i.InecElectionTypeID,
 		&i.OfficeName,
@@ -122,7 +124,7 @@ func (q *Queries) GetINECResultGrabberByElectionID(ctx context.Context, election
 }
 
 const getINECResultGrabberByID = `-- name: GetINECResultGrabberByID :one
-SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.lgas_with_complete_results_count, g.wards_with_complete_results_count, g.uploaded_results_count, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.office_id, o.inec_election_type_id, o.name AS office_name
+SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.lgas_with_complete_results_count, g.wards_with_complete_results_count, g.uploaded_results_count, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
 JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id
@@ -145,6 +147,7 @@ type GetINECResultGrabberByIDRow struct {
 	UpdatedAt                     pgtype.Timestamptz `json:"updated_at"`
 	Scope_2                       string             `json:"scope_2"`
 	ElectionDate_2                pgtype.Date        `json:"election_date_2"`
+	StateID                       pgtype.Int2        `json:"state_id"`
 	OfficeID                      int64              `json:"office_id"`
 	InecElectionTypeID            pgtype.Text        `json:"inec_election_type_id"`
 	OfficeName                    string             `json:"office_name"`
@@ -169,6 +172,7 @@ func (q *Queries) GetINECResultGrabberByID(ctx context.Context, id int64) (GetIN
 		&i.UpdatedAt,
 		&i.Scope_2,
 		&i.ElectionDate_2,
+		&i.StateID,
 		&i.OfficeID,
 		&i.InecElectionTypeID,
 		&i.OfficeName,
@@ -177,7 +181,7 @@ func (q *Queries) GetINECResultGrabberByID(ctx context.Context, id int64) (GetIN
 }
 
 const listActiveINECResultGrabbers = `-- name: ListActiveINECResultGrabbers :many
-SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.lgas_with_complete_results_count, g.wards_with_complete_results_count, g.uploaded_results_count, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.office_id, o.inec_election_type_id, o.name AS office_name
+SELECT g.id, g.election_group_id, g.election_id, g.name, g.scope, g.election_date, g.lgas_with_complete_results_count, g.wards_with_complete_results_count, g.uploaded_results_count, g.sync_status, g.sync_error_message, g.created_at, g.updated_at, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
 JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id
@@ -186,39 +190,6 @@ WHERE e.election_date <= NOW()
   AND g.sync_status NOT IN ('syncing', 'completed', 'paused')
 ORDER BY g.id ASC
 `
-
-const toggleINECResultGrabberPause = `-- name: ToggleINECResultGrabberPause :one
-UPDATE inec_result_grabber
-SET
-  sync_status = CASE 
-    WHEN sync_status = 'paused' THEN 'pending'
-    ELSE 'paused'
-  END,
-  updated_at = NOW()
-WHERE id = $1
-RETURNING id, election_group_id, election_id, name, scope, election_date, lgas_with_complete_results_count, wards_with_complete_results_count, uploaded_results_count, sync_status, sync_error_message, created_at, updated_at
-`
-
-func (q *Queries) ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error) {
-	row := q.db.QueryRow(ctx, toggleINECResultGrabberPause, id)
-	var i InecResultGrabber
-	err := row.Scan(
-		&i.ID,
-		&i.ElectionGroupID,
-		&i.ElectionID,
-		&i.Name,
-		&i.Scope,
-		&i.ElectionDate,
-		&i.LgasWithCompleteResultsCount,
-		&i.WardsWithCompleteResultsCount,
-		&i.UploadedResultsCount,
-		&i.SyncStatus,
-		&i.SyncErrorMessage,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
 
 type ListActiveINECResultGrabbersRow struct {
 	ID                            int64              `json:"id"`
@@ -236,6 +207,7 @@ type ListActiveINECResultGrabbersRow struct {
 	UpdatedAt                     pgtype.Timestamptz `json:"updated_at"`
 	Scope_2                       string             `json:"scope_2"`
 	ElectionDate_2                pgtype.Date        `json:"election_date_2"`
+	StateID                       pgtype.Int2        `json:"state_id"`
 	OfficeID                      int64              `json:"office_id"`
 	InecElectionTypeID            pgtype.Text        `json:"inec_election_type_id"`
 	OfficeName                    string             `json:"office_name"`
@@ -266,6 +238,7 @@ func (q *Queries) ListActiveINECResultGrabbers(ctx context.Context, activeSyncDa
 			&i.UpdatedAt,
 			&i.Scope_2,
 			&i.ElectionDate_2,
+			&i.StateID,
 			&i.OfficeID,
 			&i.InecElectionTypeID,
 			&i.OfficeName,
@@ -353,6 +326,39 @@ func (q *Queries) ListINECResultGrabbersPaginated(ctx context.Context, arg ListI
 		return nil, err
 	}
 	return items, nil
+}
+
+const toggleINECResultGrabberPause = `-- name: ToggleINECResultGrabberPause :one
+UPDATE inec_result_grabber
+SET
+  sync_status = CASE 
+    WHEN sync_status = 'paused' THEN 'pending'
+    ELSE 'paused'
+  END,
+  updated_at = NOW()
+WHERE id = $1
+RETURNING id, election_group_id, election_id, name, scope, election_date, lgas_with_complete_results_count, wards_with_complete_results_count, uploaded_results_count, sync_status, sync_error_message, created_at, updated_at
+`
+
+func (q *Queries) ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error) {
+	row := q.db.QueryRow(ctx, toggleINECResultGrabberPause, id)
+	var i InecResultGrabber
+	err := row.Scan(
+		&i.ID,
+		&i.ElectionGroupID,
+		&i.ElectionID,
+		&i.Name,
+		&i.Scope,
+		&i.ElectionDate,
+		&i.LgasWithCompleteResultsCount,
+		&i.WardsWithCompleteResultsCount,
+		&i.UploadedResultsCount,
+		&i.SyncStatus,
+		&i.SyncErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateINECResultGrabberMetrics = `-- name: UpdateINECResultGrabberMetrics :one

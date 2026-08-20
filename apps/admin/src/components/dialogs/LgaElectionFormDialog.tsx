@@ -161,6 +161,16 @@ export function LgaElectionFormDialog({
     }
   }, [open]);
 
+  // Auto-select matching LGA office when offices data loads
+  React.useEffect(() => {
+    if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
+      const matching = officesData.find((o: any) => o.scope === "lga");
+      if (matching) {
+        form.setFieldValue("officeId", matching.id);
+      }
+    }
+  }, [open, officesData, selectedOfficeId]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
@@ -177,38 +187,11 @@ export function LgaElectionFormDialog({
         throw new Error("At least one LGA must be selected");
       }
 
-      let finalGroupId = values.electionGroupId;
-
-      if (!finalGroupId) {
-        const year = new Date(values.electionDate).getFullYear();
-        const typeName = selectedType ? selectedType.name : "LGA";
-        const autoGroupName = `${year} ${typeName} Election`;
-
-        const { createElectionGroup } =
-          await import("#/lib/server/election_groups");
-        const groupRes = await createElectionGroup({
-          data: {
-            name: autoGroupName,
-            rank: selectedType ? selectedType.rank : 1,
-            elections_count: selectedLgas.length,
-            states_count: 37,
-            election_date: values.electionDate,
-          },
-        });
-
-        if (!groupRes.success) {
-          throw new Error(
-            groupRes.message || "Failed to auto-create election group",
-          );
-        }
-        finalGroupId = groupRes.data.id;
-      }
-
       const res = await createLgaElection({
         data: {
           office_id: values.officeId,
           election_date: values.electionDate,
-          election_group_id: finalGroupId!,
+          election_group_id: values.electionGroupId,
           lga_ids: selectedLgas.map((l) => l.id),
         },
       });
@@ -219,6 +202,7 @@ export function LgaElectionFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },

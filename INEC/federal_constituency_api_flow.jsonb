@@ -2,7 +2,7 @@ FEDERAL CONSTITUENCY ELECTION
 
 INEC API BASE URL: https://dolphin-app-sleqh.ondigitalocean.app/api/v1
 
-1. Grab List of Election Types: "GET /elections?election_type=5f129a04df41d910dcdc1d53"
+1. Grab List of Election Types: "GET /elections?election_type=5f129a04df41d910dcdc1d53&state_id=2"
 
 {
     "success": true,

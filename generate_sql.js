@@ -1,15 +1,20 @@
-const fs = require('fs');
+const fs = require("fs");
 
-let original = fs.readFileSync('apps/api/db/query/final_results.sql.bak', 'utf8');
+let original = fs.readFileSync(
+  "apps/api/db/query/final_results.sql.bak",
+  "utf8",
+);
 
 // Strip BOM
-if (original.charCodeAt(0) === 0xFEFF) {
+if (original.charCodeAt(0) === 0xfeff) {
   original = original.slice(1);
 }
 
-const parts = original.split('-- name: RollupWardFinalResults :exec');
+const parts = original.split("-- name: RollupWardFinalResults :exec");
 const header = parts[0];
-const footerIndex = parts[1].indexOf('-- name: UpdateCandidatesFromWardElections :exec');
+const footerIndex = parts[1].indexOf(
+  "-- name: UpdateCandidatesFromWardElections :exec",
+);
 const footer = parts[1].substring(footerIndex);
 
 const newQueries = `
@@ -135,7 +140,7 @@ WITH agg AS (
         COUNT(r.ward_id) as wards_counted
     FROM ward_final_result r
     JOIN wards w ON r.ward_id = w.id
-    JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id
+    JOIN state_constituencies s ON w.state_assembly_constituency_id = s.id
     GROUP BY r.election_id, s.id, r.state_id, s.senatorial_district_id, s.federal_constituency_id, s.lga_id
 ),
 ward_winners AS (
@@ -143,7 +148,7 @@ ward_winners AS (
         p.election_id, s.id as state_constituency_id, (c.value->>'party_short_name')::text as party_short_name
     FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
-    JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id,
+    JOIN state_constituencies s ON w.state_assembly_constituency_id = s.id,
     jsonb_array_elements(p.candidate_results) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.ward_id, (c.value->>'vote_count')::int DESC
@@ -153,7 +158,7 @@ ward_winners_live AS (
         p.election_id, s.id as state_constituency_id, (c.value->>'party_short_name')::text as party_short_name
     FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
-    JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id,
+    JOIN state_constituencies s ON w.state_assembly_constituency_id = s.id,
     jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE (c.value->>'vote_count')::int > 0
     ORDER BY p.election_id, p.ward_id, (c.value->>'vote_count')::int DESC
@@ -166,7 +171,7 @@ cand_agg AS (
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
-    JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id, 
+    JOIN state_constituencies s ON w.state_assembly_constituency_id = s.id, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, s.id, c.value->>'party_short_name'
 ),
@@ -198,7 +203,7 @@ cand_live_agg AS (
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM ward_final_result p
     JOIN wards w ON p.ward_id = w.id
-    JOIN state_assembly_constituencies s ON w.state_assembly_constituency_id = s.id, 
+    JOIN state_constituencies s ON w.state_assembly_constituency_id = s.id, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, s.id, c.value->>'party_short_name'
 ),
@@ -938,7 +943,10 @@ DO UPDATE SET
     candidate_results = EXCLUDED.candidate_results,
     candidate_results_live = EXCLUDED.candidate_results_live,
     updated_at = NOW();
-`
+`;
 
-fs.writeFileSync('apps/api/db/query/final_results.sql', header + newQueries + '\n' + footer);
+fs.writeFileSync(
+  "apps/api/db/query/final_results.sql",
+  header + newQueries + "\n" + footer,
+);
 console.log("Success");

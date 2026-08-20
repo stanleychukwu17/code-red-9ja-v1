@@ -20,7 +20,7 @@
 --   lga_id                    INT       REFERENCES lgas(id) ON DELETE SET NULL,
 --   ward_id                   INT       REFERENCES wards(id) ON DELETE SET NULL,
 --   polling_unit_id           INT       REFERENCES polling_units(id) ON DELETE SET NULL,
---   state_constituency_id     INT       REFERENCES state_assembly_constituencies(id) ON DELETE SET NULL,
+--   state_constituency_id     INT       REFERENCES state_constituencies(id) ON DELETE SET NULL,
 --   federal_constituency_id   INT       REFERENCES federal_constituencies(id) ON DELETE SET NULL,
 --   senatorial_district_id    INT       REFERENCES senatorial_districts(id) ON DELETE SET NULL,
 

@@ -3,6 +3,7 @@ package inecgrabber
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -31,6 +32,7 @@ func NewINECGrabberHandler(svc *inecservice.INECGrabberService, u *utils.Utils) 
 // @Tags         INEC Result Grabber
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        id path int true "INEC Result Grabber ID"
 // @Param        upload_to_r2 query bool false "Upload result sheet images to R2 (default from config)"
 // @Param        ai_extract query bool false "Extract candidate results via AI (default from config)"
@@ -42,6 +44,7 @@ func (h *INECGrabberHandler) SyncGrabber(w http.ResponseWriter, r *http.Request)
 	idStr := chi.URLParam(r, "id")
 	grabberID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
+		slog.Warn("SyncGrabber request received with invalid ID", "id", idStr, "err", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid grabber ID")
 		return
 	}
@@ -71,11 +74,19 @@ func (h *INECGrabberHandler) SyncGrabber(w http.ResponseWriter, r *http.Request)
 		}
 	}
 
+	slog.Info("INEC SyncGrabber API hit",
+		"grabber_id", grabberID,
+		"upload_to_r2", opts.UploadToR2,
+		"ai_extract", opts.AIExtract,
+		"force", opts.Force,
+	)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
 	defer cancel()
 
 	logRecord, syncErr := h.svc.SyncGrabber(ctx, grabberID, opts)
 	if syncErr != nil {
+		slog.Error("INEC SyncGrabber API execution failed", "grabber_id", grabberID, "err", syncErr)
 		if logRecord == nil {
 			h.utils.RespondError(w, http.StatusBadRequest, syncErr.Error())
 			return
@@ -83,6 +94,13 @@ func (h *INECGrabberHandler) SyncGrabber(w http.ResponseWriter, r *http.Request)
 		h.utils.RespondError(w, http.StatusInternalServerError, syncErr.Error())
 		return
 	}
+
+	slog.Info("INEC SyncGrabber API execution completed successfully",
+		"grabber_id", grabberID,
+		"log_id", logRecord.ID,
+		"results_collected", logRecord.ResultsCollectedCount,
+		"status", logRecord.Status,
+	)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "INEC result grabber sync completed", map[string]interface{}{
 		"log": logRecord,
@@ -93,6 +111,7 @@ func (h *INECGrabberHandler) SyncGrabber(w http.ResponseWriter, r *http.Request)
 // @Summary      Toggle pause/resume status of INEC result grabber
 // @Tags         INEC Result Grabber
 // @Produce      json
+// @Security     BearerAuth
 // @Param        id path int true "INEC Result Grabber ID"
 // @Success      200 {object} queries.InecResultGrabber
 // @Router       /admin/inec-result-grabbers/{id}/toggle-pause [post]
@@ -126,6 +145,7 @@ func (h *INECGrabberHandler) TogglePause(w http.ResponseWriter, r *http.Request)
 // @Tags         INEC Result Grabber
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        id path int true "INEC Result Grabber ID"
 // @Param        limit query int false "Limit results (default 20)"
 // @Param        offset query int false "Offset results (default 0)"
@@ -164,6 +184,7 @@ func (h *INECGrabberHandler) ListLogs(w http.ResponseWriter, r *http.Request) {
 // @Tags         INEC Result Grabber
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        election_id query int false "Filter by election ID"
 // @Param        resolution_status query string false "Filter by status (pending, resolved_mapped, resolved_created_pu, rejected)"
 // @Param        limit query int false "Limit results (default 20)"
@@ -213,6 +234,7 @@ type ResolveUnmatchedRequest struct {
 // @Tags         INEC Result Grabber
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        id path int true "Unmatched Result ID"
 // @Param        request body ResolveUnmatchedRequest true "Resolution payload"
 // @Success      200 {object} map[string]interface{} "Unmatched result resolved successfully"
@@ -257,6 +279,7 @@ func (h *INECGrabberHandler) ResolveUnmatchedResult(w http.ResponseWriter, r *ht
 // @Tags         INEC Result Grabber
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        limit query int false "Limit results (default 20)"
 // @Param        cursor query int false "Cursor for pagination"
 // @Success      200 {object} map[string]interface{} "INEC result grabbers retrieved successfully"
@@ -306,6 +329,7 @@ func (h *INECGrabberHandler) ListGrabbers(w http.ResponseWriter, r *http.Request
 // @Tags         INEC Result Grabber
 // @Accept       json
 // @Produce      json
+// @Security     BearerAuth
 // @Param        grabber_id query int false "Filter by grabber ID"
 // @Param        limit query int false "Limit results (default 20)"
 // @Param        cursor query int false "Cursor for pagination"

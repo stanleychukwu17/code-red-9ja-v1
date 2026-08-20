@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { deleteStateAssemblyConstituency } from "#/lib/server/state_assembly_constituencies";
+import { deleteStateConstituency } from "#/lib/server/state_constituencies";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
@@ -15,7 +15,10 @@ interface StateConstituencyDropdownProps {
   className?: string;
 }
 
-export const StateConstituencyDropdown = ({ data, className }: StateConstituencyDropdownProps) => {
+export const StateConstituencyDropdown = ({
+  data,
+  className,
+}: StateConstituencyDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openDeleteAlert, setOpenDeleteAlert] = useState(false);
@@ -23,7 +26,7 @@ export const StateConstituencyDropdown = ({ data, className }: StateConstituency
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await deleteStateAssemblyConstituency({ data: data.id });
+      const res = await deleteStateConstituency({ data: data.id });
       if (!res.success) {
         throw new Error(res.message || "Failed to delete state constituency");
       }

@@ -382,7 +382,7 @@ SELECT
   lg.name AS lga_name,
   ct.name AS city_name,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_code,
+  pu.pu_code AS polling_unit_code,
   COALESCE(
     (
       SELECT COUNT(*)::integer 

@@ -25,7 +25,7 @@ type ElectionStatsService interface {
 	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error)
 	GetFederalConstituencyByID(ctx context.Context, id int32) (queries.FederalConstituency, error)
-	GetStateAssemblyConstituencyByID(ctx context.Context, id int32) (queries.StateAssemblyConstituency, error)
+	GetStateConstituencyByID(ctx context.Context, id int32) (queries.StateConstituency, error)
 }
 
 type Service struct {
@@ -114,6 +114,6 @@ func (s *Service) GetFederalConstituencyByID(ctx context.Context, id int32) (que
 	return s.queries.GetFederalConstituencyByID(ctx, id)
 }
 
-func (s *Service) GetStateAssemblyConstituencyByID(ctx context.Context, id int32) (queries.StateAssemblyConstituency, error) {
-	return s.queries.GetStateAssemblyConstituencyByID(ctx, id)
+func (s *Service) GetStateConstituencyByID(ctx context.Context, id int32) (queries.StateConstituency, error) {
+	return s.queries.GetStateConstituencyByID(ctx, id)
 }

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { TDropdownGroup } from "@repo/ui/lib/types";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
-import { Calculator, Ellipsis } from "lucide-react";
+import { Calculator, Ellipsis, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -10,7 +10,11 @@ import {
 } from "@repo/ui/components/dropdown-menu";
 import { Button } from "@repo/ui/components/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { recalculateBodies } from "#/lib/server/states";
+import {
+  recalculateBodies,
+  syncElectoralUnits,
+  syncElectoralUnitsStateFlow,
+} from "#/lib/server/states";
 
 interface BodiesDropdownProps {
   className?: string;
@@ -33,7 +37,51 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
       queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
       queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
       queryClient.invalidateQueries({
-        queryKey: ["state_assembly_constituencies"],
+        queryKey: ["state_constituencies"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["lgas"] });
+      queryClient.invalidateQueries({ queryKey: ["wards"] });
+      queryClient.invalidateQueries({ queryKey: ["polling_units"] });
+    },
+  });
+
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const res = await syncElectoralUnits();
+      if (res && res.success === false) {
+        throw new Error(res.message || "Failed to sync electoral units");
+      }
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["states"] });
+      queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
+      queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
+      queryClient.invalidateQueries({
+        queryKey: ["state_constituencies"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["lgas"] });
+      queryClient.invalidateQueries({ queryKey: ["wards"] });
+      queryClient.invalidateQueries({ queryKey: ["polling_units"] });
+    },
+  });
+
+  const syncStateFlowMutation = useMutation({
+    mutationFn: async () => {
+      const res = await syncElectoralUnitsStateFlow();
+      if (res && res.success === false) {
+        throw new Error(
+          res.message || "Failed to sync electoral units (State Flow)"
+        );
+      }
+      return res;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["states"] });
+      queryClient.invalidateQueries({ queryKey: ["senatorial_districts"] });
+      queryClient.invalidateQueries({ queryKey: ["federal_constituencies"] });
+      queryClient.invalidateQueries({
+        queryKey: ["state_constituencies"],
       });
       queryClient.invalidateQueries({ queryKey: ["lgas"] });
       queryClient.invalidateQueries({ queryKey: ["wards"] });
@@ -50,11 +98,39 @@ export const BodiesDropdown = ({ className }: BodiesDropdownProps) => {
     });
   };
 
+  const handleSyncElectoralUnits = () => {
+    setOpenMenu(false);
+    toast.promise(syncMutation.mutateAsync(), {
+      loading: "Syncing electoral units...",
+      success: "Successfully synced electoral units",
+      error: (error: any) => error.message || "An error occurred",
+    });
+  };
+
+  const handleSyncElectoralUnitsStateFlow = () => {
+    setOpenMenu(false);
+    toast.promise(syncStateFlowMutation.mutateAsync(), {
+      loading: "Syncing electoral units (State Flow)...",
+      success: "Successfully synced electoral units (State Flow)",
+      error: (error: any) => error.message || "An error occurred",
+    });
+  };
+
   const group1: TDropdownGroup = [
     {
       title: "Recalculate Counts",
       icon: <Calculator className="size-4" />,
       action: handleRecalculate,
+    },
+    {
+      title: "Sync Electoral Units",
+      icon: <RefreshCw className="size-4" />,
+      action: handleSyncElectoralUnits,
+    },
+    {
+      title: "Sync Electoral Units (State Flow)",
+      icon: <RefreshCw className="size-4" />,
+      action: handleSyncElectoralUnitsStateFlow,
     },
   ];
 

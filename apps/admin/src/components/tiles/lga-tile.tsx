@@ -9,7 +9,7 @@ import { LgaDropdown } from "../dropdowns/LgaDropdown";
 export type LgaType = {
   id: number;
   name: string;
-  abbreviation: string;
+  code: string;
   state_id: number;
   state_name: string;
   senatorial_district_id: number;

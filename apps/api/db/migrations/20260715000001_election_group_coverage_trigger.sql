@@ -43,7 +43,7 @@ BEGIN
   -- Fetch full geography from polling_units + wards + lgas
   SELECT
     pu.id, pu.ward_id, pu.lga_id, pu.state_id,
-    w.state_assembly_constituency_id,
+    w.state_constituency_id,
     l.federal_constituency_id,
     l.senatorial_district_id
   INTO v_pu
@@ -56,7 +56,7 @@ BEGIN
     RETURN NULL;
   END IF;
 
-  v_state_const_id := v_pu.state_assembly_constituency_id;
+  v_state_const_id := v_pu.state_constituency_id;
   v_fed_const_id   := v_pu.federal_constituency_id;
   v_senat_id       := v_pu.senatorial_district_id;
   v_state_id       := v_pu.state_id;
@@ -120,7 +120,7 @@ BEGIN
       SELECT
         v_eg_id, sc.id, v_state_id,
         sc.wards_count, sc.polling_units_count
-      FROM state_assembly_constituencies sc WHERE sc.id = v_state_const_id
+      FROM state_constituencies sc WHERE sc.id = v_state_const_id
       ON CONFLICT (election_group_id, state_constituency_id) DO NOTHING;
     END IF;
 
@@ -218,7 +218,7 @@ BEGIN
 
   IF TG_OP = 'INSERT' THEN
     -- Fetch ward + lga details for denormalized IDs
-    SELECT w.id, w.state_assembly_constituency_id, w.polling_units_count
+    SELECT w.id, w.state_constituency_id, w.polling_units_count
     INTO v_ward
     FROM wards w WHERE w.id = v_ward_id;
 
@@ -248,15 +248,15 @@ BEGIN
     ON CONFLICT (election_group_id, lga_id) DO NOTHING;
 
     -- 3. election_group_state_constituencies
-    IF v_ward.state_assembly_constituency_id IS NOT NULL THEN
+    IF v_ward.state_constituency_id IS NOT NULL THEN
       INSERT INTO election_group_state_constituencies (
         election_group_id, state_constituency_id, state_id,
         wards_count, polling_units_count
       )
       SELECT
         v_eg_id, sc.id, v_state_id, sc.wards_count, sc.polling_units_count
-      FROM state_assembly_constituencies sc
-      WHERE sc.id = v_ward.state_assembly_constituency_id
+      FROM state_constituencies sc
+      WHERE sc.id = v_ward.state_constituency_id
       ON CONFLICT (election_group_id, state_constituency_id) DO NOTHING;
     END IF;
 

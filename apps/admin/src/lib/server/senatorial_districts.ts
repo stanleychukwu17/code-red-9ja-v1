@@ -6,6 +6,7 @@ export const createSenatorialDistrict = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
+      code?: string;
       description: string;
       coalition_center: string;
       state_id: number;
@@ -30,6 +31,7 @@ export const updateSenatorialDistrict = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
+      code?: string;
       description: string;
       coalition_center: string;
       state_id: number;
@@ -72,10 +74,10 @@ export const getSenatorialDistrictById = createServerFn({ method: "GET" })
   });
 
 export const getSenatorialDistricts = createServerFn()
-  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { stateId, limit, cursor } }) => {
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number; search?: string }) => data)
+  .handler(async ({ data: { stateId, limit, cursor, search } }) => {
     try {
-      return await apiFetchJson(API_URL.getSenatorialDistricts(stateId, limit, cursor));
+      return await apiFetchJson(API_URL.getSenatorialDistricts(stateId, limit, cursor, search));
     } catch (error: any) {
       return { status: "failed", error: error?.message || "Failed to fetch senatorial districts from API" };
     }

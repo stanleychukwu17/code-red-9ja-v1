@@ -42,7 +42,7 @@ import (
 	referralshandler "free9ja/api/internal/handler/referrals"
 	seedhandler "free9ja/api/internal/handler/seed"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
-	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
+	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_constituencies"
 	stateshandler "free9ja/api/internal/handler/states"
 	supervisorassignmentshandler "free9ja/api/internal/handler/supervisor_assignments"
 	systemsettingshandler "free9ja/api/internal/handler/system_settings"
@@ -76,7 +76,7 @@ import (
 	referralsservice "free9ja/api/internal/service/referrals"
 	seedservice "free9ja/api/internal/service/seed"
 	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
-	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
+	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_constituencies"
 	statesservice "free9ja/api/internal/service/states"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	usersservice "free9ja/api/internal/service/users"
@@ -135,7 +135,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
 	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
-	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateAssemblyConstituenciesService(q, rdb)
+	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
 	referralsService := referralsservice.NewReferralsService(q)
 
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
@@ -280,7 +280,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get(utils.ApiUrls.Bodies.GetCities, bodiesHandler.GetCities)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetSenatorialDistricts, senatorialDistrictsHandler.GetSenatorialDistricts)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetFederalConstituencies, federalConstituenciesHandler.GetFederalConstituencies)
-	mainRouter.Get(utils.ApiUrls.Bodies.GetStateAssemblyConstituencies, stateAssemblyConstituenciesHandler.GetStateAssemblyConstituencies)
+	mainRouter.Get(utils.ApiUrls.Bodies.GetStateConstituencies, stateAssemblyConstituenciesHandler.GetStateConstituencies)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetLGAs, bodiesHandler.GetLGAs)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetWards, wardsHandler.GetWards)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetPollingUnits, pollingUnitsHandler.GetPollingUnits)
@@ -317,6 +317,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// bodies national metrics (public)
 	mainRouter.Get("/api/v1/bodies/metrics", bodiesHandler.GetNationalMetrics)
+	mainRouter.Post("/api/v1/bodies/sync-electoral-units", bodiesHandler.SyncElectoralUnits)
+	mainRouter.Post("/api/v1/bodies/sync-electoral-units-state-flow", bodiesHandler.SyncElectoralUnitsStateFlow)
 
 	// states public routes
 	mainRouter.Get("/api/v1/states/{id}", statesHandler.GetState)
@@ -325,7 +327,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/senatorial-districts/{id}", senatorialDistrictsHandler.GetSenatorialDistrict)
 
 	// state assembly constituencies public routes
-	mainRouter.Get("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.GetStateAssemblyConstituency)
+	mainRouter.Get("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.GetStateConstituency)
 
 	// federal constituencies public routes
 	mainRouter.Get("/api/v1/federal-constituencies/{id}", federalConstituenciesHandler.GetFederalConstituency)
@@ -415,9 +417,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/senatorial-districts/{id}", senatorialDistrictsHandler.DeleteSenatorialDistrict)
 
 		// state assembly constituencies admin mutations
-		r.Post("/api/v1/state-assembly-constituencies", stateAssemblyConstituenciesHandler.CreateStateAssemblyConstituency)
-		r.Put("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.UpdateStateAssemblyConstituency)
-		r.Delete("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.DeleteStateAssemblyConstituency)
+		r.Post("/api/v1/state-assembly-constituencies", stateAssemblyConstituenciesHandler.CreateStateConstituency)
+		r.Put("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.UpdateStateConstituency)
+		r.Delete("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.DeleteStateConstituency)
 
 		// federal constituencies admin mutations
 		r.Post("/api/v1/federal-constituencies", federalConstituenciesHandler.CreateFederalConstituency)

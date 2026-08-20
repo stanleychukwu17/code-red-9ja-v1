@@ -128,6 +128,16 @@ export function StateElectionFormDialog({
     }
   }, [open]);
 
+  // Auto-select matching State office (Governor) when offices data loads
+  React.useEffect(() => {
+    if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
+      const matching = officesData.find((o: any) => o.scope === "state");
+      if (matching) {
+        form.setFieldValue("officeId", matching.id);
+      }
+    }
+  }, [open, officesData, selectedOfficeId]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;

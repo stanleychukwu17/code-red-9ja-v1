@@ -13,8 +13,8 @@ import {
 } from "@repo/ui/components/dialog";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
-import { useForm } from "@tanstack/react-form";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm, useStore } from "@tanstack/react-form";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Plus } from "lucide-react";
 import * as React from "react";
 import type { UserResult } from "./UserFormDialog";
@@ -63,6 +63,23 @@ export function NationwideElectionFormDialog({
     },
   });
 
+  const selectedOfficeId = useStore(
+    form.store,
+    (state) => state.values.officeId,
+  );
+
+  const { data: officesData } = useQuery({
+    queryKey: ["election-types", "list"],
+    queryFn: async () => {
+      const res = await getOffices();
+      if (res && res.success && res.data?.offices) {
+        return res.data.offices;
+      }
+      return [];
+    },
+    enabled: open,
+  });
+
   React.useEffect(() => {
     if (open) {
       form.setFieldValue("electionGroupId", undefined);
@@ -75,6 +92,17 @@ export function NationwideElectionFormDialog({
       setSelectedGroupDate(null);
     }
   }, [open]);
+
+  // Auto-select matching Nationwide office (President) when offices data loads
+  React.useEffect(() => {
+    if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
+      const matching = officesData.find((o: any) => o.scope === "nationwide");
+      if (matching) {
+        form.setFieldValue("officeId", matching.id);
+        setSelectedOfficeName(matching.name);
+      }
+    }
+  }, [open, officesData, selectedOfficeId]);
 
   const electionGroupButtonText = React.useMemo(() => {
     const year = selectedElectionDate

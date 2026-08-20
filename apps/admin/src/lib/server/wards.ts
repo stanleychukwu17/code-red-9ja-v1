@@ -6,7 +6,7 @@ export const createWard = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
-      abbreviation: string;
+      code: string;
       lga_id: number;
       state_id: number;
     }) => data,
@@ -30,7 +30,7 @@ export const updateWard = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
-      abbreviation: string;
+      code: string;
       lga_id: number;
       state_id: number;
     }) => data,
@@ -72,10 +72,10 @@ export const getWardById = createServerFn({ method: "GET" })
   });
 
 export const getWards = createServerFn()
-  .inputValidator((data: { localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { localGovernmentId, stateId, limit, cursor } }) => {
+  .inputValidator((data: { localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number; search?: string }) => data)
+  .handler(async ({ data: { localGovernmentId, stateId, limit, cursor, search } }) => {
     try {
-      return await apiFetchJson(API_URL.getWards(localGovernmentId, stateId, limit, cursor));
+      return await apiFetchJson(API_URL.getWards(localGovernmentId, stateId, limit, cursor, search));
     } catch (error: any) {
       return { status: "failed", error: error?.message || "Failed to fetch wards from API" };
     }

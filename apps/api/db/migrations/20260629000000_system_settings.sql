@@ -113,7 +113,7 @@ VALUES (
     "upload_to_r2_default": true,
     "ai_extract_default": true,
     "endpoints": {
-      "elections": "/elections?election_type={inec_election_type_id}",
+      "elections": "/elections?election_type={inec_election_type_id}&state_id={state_id}",
       "lgas": "/elections/{election_id}/lga",
       "state_lgas": "/elections/{election_id}/lga/state/{state_id}",
       "polling_units": "/elections/{election_id}/pus?ward={ward_id}"

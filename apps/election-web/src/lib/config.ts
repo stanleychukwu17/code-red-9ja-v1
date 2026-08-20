@@ -89,7 +89,7 @@ export const API_URL = {
     return `${api}/federal-constituencies${qs ? `?${qs}` : ""}`;
   },
 
-  getStateAssemblyConstituencies: (
+  getStateConstituencies: (
     stateId?: number,
     federalConstituencyId?: number,
     limit?: number,

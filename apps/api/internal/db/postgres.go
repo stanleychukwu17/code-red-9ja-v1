@@ -16,8 +16,8 @@ func NewPostgresPool(ctx context.Context, connString string) (*pgxpool.Pool, err
 		return nil, fmt.Errorf("failed to parse connection string: %w", err)
 	}
 
-	dbConfig.MaxConns = 20
-	dbConfig.MinConns = 2
+	dbConfig.MaxConns = 100
+	dbConfig.MinConns = 10
 	dbConfig.MaxConnLifetime = 30 * time.Minute
 	dbConfig.MaxConnIdleTime = 15 * time.Minute
 

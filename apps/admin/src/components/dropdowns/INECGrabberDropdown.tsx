@@ -27,19 +27,17 @@ export const INECGrabberDropdown = ({
 
   const syncMutation = useMutation({
     mutationFn: async () => {
-      const res = await syncINECResultGrabber({ data: { id: data.id } });
+      const res = await syncINECResultGrabber({
+        data: { id: data.id, aiExtract: false, uploadToR2: false },
+      });
       if (!res.success) {
         throw new Error(res.message || "Failed to trigger INEC grabber sync");
       }
       return res.data;
     },
     onSuccess: () => {
-      toast.success("INEC grabber sync triggered successfully.");
       queryClient.invalidateQueries({ queryKey: ["inec-result-grabbers"] });
       queryClient.invalidateQueries({ queryKey: ["inec-result-grabber-logs"] });
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to trigger sync");
     },
   });
 
@@ -52,26 +50,28 @@ export const INECGrabberDropdown = ({
       return res.data;
     },
     onSuccess: () => {
-      toast.success(
-        isPaused
-          ? "INEC grabber sync resumed."
-          : "INEC grabber sync paused.",
-      );
       queryClient.invalidateQueries({ queryKey: ["inec-result-grabbers"] });
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to toggle status");
     },
   });
 
   const handleSync = () => {
     setOpenMenu(false);
-    syncMutation.mutate();
+    toast.promise(syncMutation.mutateAsync(), {
+      loading: "Syncing INEC results...",
+      success: "INEC grabber sync triggered successfully.",
+      error: (error: any) => error.message || "Failed to trigger sync",
+    });
   };
 
   const handleTogglePause = () => {
     setOpenMenu(false);
-    togglePauseMutation.mutate();
+    toast.promise(togglePauseMutation.mutateAsync(), {
+      loading: isPaused ? "Resuming sync..." : "Pausing sync...",
+      success: isPaused
+        ? "INEC grabber sync resumed."
+        : "INEC grabber sync paused.",
+      error: (error: any) => error.message || "Failed to toggle status",
+    });
   };
 
   const group1: TDropdownGroup = [
@@ -83,7 +83,11 @@ export const INECGrabberDropdown = ({
     },
     {
       title: isPaused ? "Resume Sync" : "Pause Sync",
-      icon: isPaused ? <Play className="size-4" /> : <Pause className="size-4" />,
+      icon: isPaused ? (
+        <Play className="size-4" />
+      ) : (
+        <Pause className="size-4" />
+      ),
       action: handleTogglePause,
       disabled: togglePauseMutation.isPending,
     },

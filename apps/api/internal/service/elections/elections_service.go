@@ -40,6 +40,7 @@ func (s *ElectionsService) SetEarningsService(es earningsService) {
 
 func (s *ElectionsService) invalidateCache(ctx context.Context, id *int64) {
 	s.rdb.Del(ctx, "elections:all")
+	s.rdb.Del(ctx, "election_groups:all")
 	if id != nil {
 		s.rdb.Del(ctx, fmt.Sprintf("election:%d", *id))
 	}
@@ -123,7 +124,7 @@ func (s *ElectionsService) CreateElection(
 			name = fmt.Sprintf("%s Election (Federal Constituency %d)", et.Election, *federalConstituencyID)
 		}
 	} else if stateConstituencyID != nil {
-		constituencies, err := txQueries.GetStateAssemblyConstituencies(ctx, queries.GetStateAssemblyConstituenciesParams{
+		constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{
 			StateID:               0,
 			FederalConstituencyID: 0,
 		})
@@ -286,10 +287,7 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 		// Create new group
-		metrics, err := txQueries.GetNationalMetrics(ctx)
-		if err != nil {
-			return queries.Election{}, fmt.Errorf("failed to fetch national metrics: %w", err)
-		}
+		metrics := getSafeNationalMetrics(ctx, txQueries)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -414,10 +412,7 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 		// Create new group
-		metrics, err := txQueries.GetNationalMetrics(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-		}
+		metrics := getSafeNationalMetrics(ctx, txQueries)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -549,10 +544,7 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 		// Create new group
-		metrics, err := txQueries.GetNationalMetrics(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-		}
+		metrics := getSafeNationalMetrics(ctx, txQueries)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -695,10 +687,7 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 		// Create new group
-		metrics, err := txQueries.GetNationalMetrics(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-		}
+		metrics := getSafeNationalMetrics(ctx, txQueries)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -746,8 +735,8 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			if cRow.StateID > 0 {
 				stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
 			}
-			if cRow.SenatorialDistrictID > 0 {
-				senatorialDistrictID = pgtype.Int4{Int32: cRow.SenatorialDistrictID, Valid: true}
+			if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
+				senatorialDistrictID = cRow.SenatorialDistrictID
 			}
 		}
 
@@ -850,10 +839,7 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 		// Create new group
-		metrics, err := txQueries.GetNationalMetrics(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-		}
+		metrics := getSafeNationalMetrics(ctx, txQueries)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -877,14 +863,14 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 	createdElections := make([]queries.Election, 0, len(stateConstituencyIDs))
 
 	// Pre-fetch all state constituencies into map for O(1) lookups
-	constituencies, err := txQueries.GetStateAssemblyConstituencies(ctx, queries.GetStateAssemblyConstituenciesParams{
+	constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{
 		StateID:               0,
 		FederalConstituencyID: 0,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch state constituencies: %w", err)
 	}
-	scMap := make(map[int32]queries.StateAssemblyConstituency, len(constituencies))
+	scMap := make(map[int32]queries.StateConstituency, len(constituencies))
 	for _, c := range constituencies {
 		scMap[c.ID] = c
 	}
@@ -903,11 +889,11 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 			if cRow.StateID > 0 {
 				stateID = pgtype.Int2{Int16: int16(cRow.StateID), Valid: true}
 			}
-			if cRow.SenatorialDistrictID > 0 {
-				senatorialDistrictID = pgtype.Int4{Int32: cRow.SenatorialDistrictID, Valid: true}
+			if cRow.SenatorialDistrictID.Valid && cRow.SenatorialDistrictID.Int32 > 0 {
+				senatorialDistrictID = cRow.SenatorialDistrictID
 			}
-			if cRow.FederalConstituencyID > 0 {
-				federalConstituencyID = pgtype.Int4{Int32: cRow.FederalConstituencyID, Valid: true}
+			if cRow.FederalConstituencyID.Valid && cRow.FederalConstituencyID.Int32 > 0 {
+				federalConstituencyID = cRow.FederalConstituencyID
 			}
 			if cRow.LgaID > 0 {
 				lgaID = pgtype.Int4{Int32: cRow.LgaID, Valid: true}
@@ -1015,10 +1001,7 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 		// Create new group
-		metrics, err := txQueries.GetNationalMetrics(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-		}
+		metrics := getSafeNationalMetrics(ctx, txQueries)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -1064,11 +1047,11 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64
 			if lgaRow.StateID > 0 {
 				stateID = pgtype.Int2{Int16: int16(lgaRow.StateID), Valid: true}
 			}
-			if lgaRow.SenatorialDistrictID > 0 {
-				senatorialDistrictID = pgtype.Int4{Int32: lgaRow.SenatorialDistrictID, Valid: true}
+			if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
+				senatorialDistrictID = lgaRow.SenatorialDistrictID
 			}
-			if lgaRow.FederalConstituencyID > 0 {
-				federalConstituencyID = pgtype.Int4{Int32: lgaRow.FederalConstituencyID, Valid: true}
+			if lgaRow.FederalConstituencyID.Valid && lgaRow.FederalConstituencyID.Int32 > 0 {
+				federalConstituencyID = lgaRow.FederalConstituencyID
 			}
 		}
 
@@ -1172,10 +1155,7 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int6
 			computedGroupName = fmt.Sprintf("%s (%d)", baseGroupName, suffix)
 		}
 		// Create new group
-		metrics, err := txQueries.GetNationalMetrics(ctx)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch national metrics: %w", err)
-		}
+		metrics := getSafeNationalMetrics(ctx, txQueries)
 		newGroup, err := txQueries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 			Name:                       computedGroupName,
 			Rank:                       et.Rank,
@@ -1240,16 +1220,16 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int6
 			if wardRow.LgaID > 0 {
 				lgaID = pgtype.Int4{Int32: wardRow.LgaID, Valid: true}
 				if lgaRow, foundLga := lgaMap[wardRow.LgaID]; foundLga {
-					if lgaRow.SenatorialDistrictID > 0 {
-						senatorialDistrictID = pgtype.Int4{Int32: lgaRow.SenatorialDistrictID, Valid: true}
+					if lgaRow.SenatorialDistrictID.Valid && lgaRow.SenatorialDistrictID.Int32 > 0 {
+						senatorialDistrictID = lgaRow.SenatorialDistrictID
 					}
-					if lgaRow.FederalConstituencyID > 0 {
-						federalConstituencyID = pgtype.Int4{Int32: lgaRow.FederalConstituencyID, Valid: true}
+					if lgaRow.FederalConstituencyID.Valid && lgaRow.FederalConstituencyID.Int32 > 0 {
+						federalConstituencyID = lgaRow.FederalConstituencyID
 					}
 				}
 			}
-			if wardRow.StateAssemblyConstituencyID.Valid {
-				stateConstituencyID = wardRow.StateAssemblyConstituencyID
+			if wardRow.StateConstituencyID.Valid {
+				stateConstituencyID = wardRow.StateConstituencyID
 			}
 		}
 
@@ -1393,11 +1373,38 @@ func (s *ElectionsService) UpdateElection(
 }
 
 func (s *ElectionsService) DeleteElection(ctx context.Context, id int64) error {
-	err := s.queries.DeleteElectionInstance(ctx, id)
-	if err == nil {
-		s.invalidateCache(ctx, &id)
+	defer s.invalidateCache(ctx, &id)
+
+	el, err := s.queries.GetElectionInstanceByID(ctx, id)
+	if err != nil {
+		return err
 	}
-	return err
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	txQueries := s.queries.WithTx(tx)
+
+	if err := txQueries.DeleteElectionInstance(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete election instance: %w", err)
+	}
+
+	// Check remaining elections in the parent group
+	remainingElections, err := txQueries.ListElectionsDetailedByGroupID(ctx, el.ElectionGroupID)
+	if err == nil {
+		if len(remainingElections) == 0 {
+			// If no elections remain in this group, clean up the empty group
+			_ = txQueries.DeleteElectionGroup(ctx, el.ElectionGroupID)
+		} else {
+			// Otherwise re-sync the group name, rank, and count
+			_ = s.syncElectionGroupNameAndRank(ctx, txQueries, el.ElectionGroupID, el.ElectionDate.Time.Year())
+		}
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (s *ElectionsService) GetElectionCandidates(ctx context.Context, electionID int64) ([]queries.ListElectionCandidatesDetailedByElectionIDRow, error) {
@@ -1713,8 +1720,8 @@ func (s *ElectionsService) SubmitElectionVotes(
 	for _, v := range votes {
 		_, err = qtx.CreateElectionVote(ctx, queries.CreateElectionVoteParams{
 			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-			SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
-			FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
+			SenatorialDistrictID:  lga.SenatorialDistrictID,
+			FederalConstituencyID: lga.FederalConstituencyID,
 			LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
 			WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
 			PollingUnitID:         pgtype.Int4{Int32: int32(pollingUnitID), Valid: true},
@@ -1751,9 +1758,9 @@ func (s *ElectionsService) SubmitElectionVotes(
 				PollingUnitID:         int32(pollingUnitID),
 				ElectionGroupID:       electionGroupID,
 				StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-				SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
-				FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
-				StateConstituencyID:   ward.StateAssemblyConstituencyID,
+				SenatorialDistrictID:  lga.SenatorialDistrictID,
+				FederalConstituencyID: lga.FederalConstituencyID,
+				StateConstituencyID:   ward.StateConstituencyID,
 				LgaID:                 pgtype.Int4{Int32: pu.LgaID, Valid: true},
 				WardID:                pgtype.Int4{Int32: pu.WardID, Valid: true},
 			},
@@ -1905,8 +1912,8 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 					if lID == 0 && w.LgaID > 0 {
 						lID = w.LgaID
 					}
-					if scID == 0 && w.StateAssemblyConstituencyID.Valid {
-						scID = w.StateAssemblyConstituencyID.Int32
+					if scID == 0 && w.StateConstituencyID.Valid {
+						scID = w.StateConstituencyID.Int32
 					}
 					break
 				}
@@ -1916,18 +1923,18 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 
 	// 2. If State Constituency ID is supplied, fill missing parent IDs
 	if scID > 0 {
-		constituencies, err := txQueries.GetStateAssemblyConstituencies(ctx, queries.GetStateAssemblyConstituenciesParams{StateID: 0, FederalConstituencyID: 0})
+		constituencies, err := txQueries.GetStateConstituencies(ctx, queries.GetStateConstituenciesParams{StateID: 0, FederalConstituencyID: 0})
 		if err == nil {
 			for _, sc := range constituencies {
 				if sc.ID == scID {
 					if sID == 0 && sc.StateID > 0 {
 						sID = int16(sc.StateID)
 					}
-					if sdID == 0 && sc.SenatorialDistrictID > 0 {
-						sdID = sc.SenatorialDistrictID
+					if sdID == 0 && sc.SenatorialDistrictID.Valid {
+						sdID = sc.SenatorialDistrictID.Int32
 					}
-					if fcID == 0 && sc.FederalConstituencyID > 0 {
-						fcID = sc.FederalConstituencyID
+					if fcID == 0 && sc.FederalConstituencyID.Valid {
+						fcID = sc.FederalConstituencyID.Int32
 					}
 					if lID == 0 && sc.LgaID > 0 {
 						lID = sc.LgaID
@@ -1947,11 +1954,11 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 					if sID == 0 && l.StateID > 0 {
 						sID = int16(l.StateID)
 					}
-					if sdID == 0 && l.SenatorialDistrictID > 0 {
-						sdID = l.SenatorialDistrictID
+					if sdID == 0 && l.SenatorialDistrictID.Valid {
+						sdID = l.SenatorialDistrictID.Int32
 					}
-					if fcID == 0 && l.FederalConstituencyID > 0 {
-						fcID = l.FederalConstituencyID
+					if fcID == 0 && l.FederalConstituencyID.Valid {
+						fcID = l.FederalConstituencyID.Int32
 					}
 					break
 				}
@@ -1968,8 +1975,8 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 					if sID == 0 && fc.StateID > 0 {
 						sID = int16(fc.StateID)
 					}
-					if sdID == 0 && fc.SenatorialDistrictID > 0 {
-						sdID = fc.SenatorialDistrictID
+					if sdID == 0 && fc.SenatorialDistrictID.Valid {
+						sdID = fc.SenatorialDistrictID.Int32
 					}
 					break
 				}
@@ -1998,6 +2005,21 @@ func (s *ElectionsService) resolveGeographicHierarchy(
 		pgtype.Int4{Int32: scID, Valid: scID > 0},
 		pgtype.Int4{Int32: lID, Valid: lID > 0},
 		pgtype.Int4{Int32: wID, Valid: wID > 0}
+}
+
+func getSafeNationalMetrics(ctx context.Context, q *queries.Queries) queries.NationalMetric {
+	metrics, err := q.GetNationalMetrics(ctx)
+	if err == nil {
+		return metrics
+	}
+	return queries.NationalMetric{
+		SenatorialDistrictsCount:   109,
+		FederalConstituenciesCount: 360,
+		LgasCount:                  774,
+		StateConstituenciesCount:   993,
+		WardsCount:                 8809,
+		PollingUnitsCount:          176846,
+	}
 }
 
 

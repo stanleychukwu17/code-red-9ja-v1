@@ -72,3 +72,9 @@ SET
   updated_at = NOW()
 WHERE id = $1
 RETURNING *;
+
+-- name: CheckUnmatchedPollingUnitResultExists :one
+SELECT EXISTS (
+  SELECT 1 FROM unmatched_polling_unit_results
+  WHERE election_id = $1 AND raw_polling_unit_code = $2
+);

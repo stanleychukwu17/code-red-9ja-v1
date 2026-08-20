@@ -7,7 +7,7 @@ export const createWard = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
-      abbreviation: string;
+      code: string;
       lga_id: number;
       state_id: number;
     }) => data,
@@ -33,7 +33,7 @@ export const updateWard = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
-      abbreviation: string;
+      code: string;
       lga_id: number;
       state_id: number;
     }) => data,

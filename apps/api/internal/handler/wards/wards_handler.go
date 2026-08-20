@@ -13,9 +13,9 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 type WardsService interface {
-	CreateWard(ctx context.Context, name string, abbreviation string, lgaID int32, lgaName string, stateID int32, stateName string) (queries.Ward, error)
+	CreateWard(ctx context.Context, name string, code string, lgaID int32, lgaName string, stateID int32, stateName string) (queries.Ward, error)
 	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
-	UpdateWard(ctx context.Context, id int32, name string, abbreviation string, lgaID int32, lgaName string, stateID int32, stateName string) (queries.Ward, error)
+	UpdateWard(ctx context.Context, id int32, name string, code string, lgaID int32, lgaName string, stateID int32, stateName string) (queries.Ward, error)
 	DeleteWard(ctx context.Context, id int32) error
 	GetWards(ctx context.Context, localGovernmentID, stateID int32) ([]queries.Ward, error)
 }
@@ -35,17 +35,17 @@ func NewHandler(wardService WardsService, q *queries.Queries, utils *utils.Utils
 }
 
 type CreateWardRequest struct {
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	LgaID        int32  `json:"lga_id"`
-	StateID      int32  `json:"state_id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+	LgaID   int32  `json:"lga_id"`
+	StateID int32  `json:"state_id"`
 }
 
 type UpdateWardRequest struct {
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	LgaID        int32  `json:"lga_id"`
-	StateID      int32  `json:"state_id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+	LgaID   int32  `json:"lga_id"`
+	StateID int32  `json:"state_id"`
 }
 
 // CreateWard godoc
@@ -68,8 +68,8 @@ func (h *Handler) CreateWard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.Abbreviation == "" || req.StateID == 0 || req.LgaID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, abbreviation, state_id, and lga_id are required")
+	if req.Name == "" || req.Code == "" || req.StateID == 0 || req.LgaID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name, code, state_id, and lga_id are required")
 		return
 	}
 
@@ -93,7 +93,7 @@ func (h *Handler) CreateWard(w http.ResponseWriter, r *http.Request) {
 	ward, err := h.wardService.CreateWard(
 		r.Context(),
 		req.Name,
-		req.Abbreviation,
+		req.Code,
 		req.LgaID,
 		lga.Name,
 		req.StateID,
@@ -169,8 +169,8 @@ func (h *Handler) UpdateWard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" || req.Abbreviation == "" || req.StateID == 0 || req.LgaID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, abbreviation, state_id, and lga_id are required")
+	if req.Name == "" || req.Code == "" || req.StateID == 0 || req.LgaID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name, code, state_id, and lga_id are required")
 		return
 	}
 
@@ -202,7 +202,7 @@ func (h *Handler) UpdateWard(w http.ResponseWriter, r *http.Request) {
 		r.Context(),
 		int32(id),
 		req.Name,
-		req.Abbreviation,
+		req.Code,
 		req.LgaID,
 		lga.Name,
 		req.StateID,
@@ -263,6 +263,7 @@ type PaginationMeta struct {
 type WardResponse struct {
 	ID                  int32  `json:"id"`
 	Name                string `json:"name"`
+	Code                string `json:"code"`
 	LocalGovernmentID   int32  `json:"lga_id"`
 	LocalGovernmentName string `json:"lga_name"`
 	StateID             int32  `json:"state_id"`
@@ -349,6 +350,21 @@ func (h *Handler) GetWards(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch wards: "+err.Error())
 		return
+	}
+
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []queries.Ward
+		for _, w := range wards {
+			if strings.Contains(strings.ToLower(w.Name), searchLower) ||
+				strings.Contains(strings.ToLower(w.Code), searchLower) ||
+				strings.Contains(strings.ToLower(w.LgaName), searchLower) ||
+				strings.Contains(strings.ToLower(w.StateName), searchLower) {
+				filtered = append(filtered, w)
+			}
+		}
+		wards = filtered
 	}
 
 	orderBy, orderDir := parseSortParams(r, "name", "ASC")

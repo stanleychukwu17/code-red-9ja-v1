@@ -202,7 +202,7 @@ WITH agg AS (
         COALESCE(SUM(r.rejected_votes), 0) as rejected_votes,
         COALESCE(SUM(r.wards_counted), 0) as wards_counted
     FROM lga_final_result r
-    JOIN state_assembly_constituencies s ON r.lga_id = s.lga_id
+    JOIN state_constituencies s ON r.lga_id = s.lga_id
     GROUP BY r.election_id, s.id, r.state_id
 ),
 cand_agg AS (
@@ -211,7 +211,7 @@ cand_agg AS (
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count
     FROM lga_final_result p
-    JOIN state_assembly_constituencies s ON p.lga_id = s.lga_id,
+    JOIN state_constituencies s ON p.lga_id = s.lga_id,
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, s.id, c.value->>'party_short_name'
 ),
@@ -228,7 +228,7 @@ cand_live_agg AS (
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count
     FROM lga_final_result p
-    JOIN state_assembly_constituencies s ON p.lga_id = s.lga_id,
+    JOIN state_constituencies s ON p.lga_id = s.lga_id,
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, s.id, c.value->>'party_short_name'
 ),
@@ -250,7 +250,7 @@ SELECT
     a.election_id, a.state_constituency_id, a.state_id,
     a.accredited_voters, a.votes_cast, a.valid_votes, a.rejected_votes,
     a.wards_counted,
-    (SELECT COUNT(w.id) FROM wards w JOIN state_assembly_constituencies s2 ON w.lga_id = s2.lga_id WHERE s2.id = a.state_constituency_id) as total_wards,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
+    (SELECT COUNT(w.id) FROM wards w JOIN state_constituencies s2 ON w.lga_id = s2.lga_id WHERE s2.id = a.state_constituency_id) as total_wards,    COALESCE(clj.candidate_results_live, '[]'::jsonb) as candidate_results_live,
 
     COALESCE(cj.candidate_results, '[]'::jsonb) as candidate_results
 FROM agg a

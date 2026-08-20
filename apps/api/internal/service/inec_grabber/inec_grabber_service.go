@@ -193,19 +193,34 @@ func (s *INECGrabberService) SyncGrabber(ctx context.Context, grabberID int64, o
 
 	grabber, err := s.queries.GetINECResultGrabberByID(ctx, grabberID)
 	if err != nil {
+		slog.Error("INEC grabber not found", "grabber_id", grabberID, "err", err)
 		return nil, fmt.Errorf("grabber not found: %w", err)
 	}
 
+	slog.Info("INEC SyncGrabber service starting run",
+		"grabber_id", grabberID,
+		"election_id", grabber.ElectionID,
+		"election_group_id", grabber.ElectionGroupID,
+		"scope", grabber.Scope,
+		"sync_status", grabber.SyncStatus,
+		"upload_to_r2", opts.UploadToR2,
+		"ai_extract", opts.AIExtract,
+		"force", opts.Force,
+	)
+
 	// Check if paused or completed and force is not requested (do NOT insert log records)
 	if grabber.SyncStatus == "paused" && (opts.Force == nil || !*opts.Force) {
+		slog.Warn("INEC SyncGrabber skipped: grabber is paused", "grabber_id", grabberID)
 		return nil, fmt.Errorf("This INEC result grabber is currently paused. Resume it to allow syncing.")
 	}
 	if grabber.SyncStatus == "completed" && (opts.Force == nil || !*opts.Force) {
+		slog.Warn("INEC SyncGrabber skipped: grabber is already completed", "grabber_id", grabberID)
 		return nil, fmt.Errorf("This INEC result grabber has already completed all polling unit results for this election.")
 	}
 
 	config, err := s.GetINECAPIConfig(ctx)
 	if err != nil {
+		slog.Error("INEC grabber failed to load API config", "err", err)
 		return nil, fmt.Errorf("failed to load inec api config: %w", err)
 	}
 
@@ -305,31 +320,42 @@ func (s *INECGrabberService) executeSync(
 
 	// 1. Fetch Elections list from INEC API
 	electionsURL := fmt.Sprintf("%s/elections?election_type=%s", baseURL, url.QueryEscape(inecTypeID))
+	if grabber.StateID.Valid && grabber.StateID.Int16 > 0 {
+		electionsURL = fmt.Sprintf("%s&state_id=%d", electionsURL, grabber.StateID.Int16)
+	}
+	slog.Info("INEC SyncGrabber: querying INEC elections API", "grabber_id", grabber.ID, "url", electionsURL, "inec_type_id", inecTypeID, "state_id", grabber.StateID.Int16)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, electionsURL, nil)
 	if err != nil {
+		slog.Error("INEC SyncGrabber: failed to create request", "url", electionsURL, "err", err)
 		return 0, fmt.Errorf("failed to create inec elections request: %w", err)
 	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		slog.Error("INEC SyncGrabber: HTTP call failed", "url", electionsURL, "err", err)
 		return 0, fmt.Errorf("failed to call inec elections endpoint: %w", err)
 	}
 	defer resp.Body.Close()
 
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
+		slog.Error("INEC SyncGrabber: failed reading response body", "url", electionsURL, "err", err)
 		return 0, fmt.Errorf("failed to read inec elections response: %w", err)
 	}
 
 	var electionsResp INECElectionsResponse
 	if err := json.Unmarshal(bodyBytes, &electionsResp); err != nil {
+		slog.Error("INEC SyncGrabber: failed parsing JSON response", "url", electionsURL, "err", err)
 		return 0, fmt.Errorf("failed to parse inec elections JSON: %w", err)
 	}
 
 	if !electionsResp.Success || len(electionsResp.Data) == 0 {
-		slog.Info("no inec elections returned", "grabber_id", grabber.ID)
+		slog.Info("INEC SyncGrabber: no elections returned from INEC API", "grabber_id", grabber.ID, "success", electionsResp.Success)
 		return 0, nil
 	}
+
+	slog.Info("INEC SyncGrabber: received elections list from INEC API", "grabber_id", grabber.ID, "count", len(electionsResp.Data))
 
 	// Match INEC election
 	var matchedINECElection *INECElection
@@ -349,14 +375,32 @@ func (s *INECGrabberService) executeSync(
 			matchedINECElection = el
 			break
 		} else {
-			domainName := strings.ToLower(el.Domain.Name)
-			fullName := strings.ToLower(el.FullName)
+			domainName := strings.TrimSpace(strings.ToLower(el.Domain.Name))
+			fullName := strings.TrimSpace(strings.ToLower(el.FullName))
 			stateName := ""
 			if el.State != nil {
-				stateName = strings.ToLower(el.State.Name)
+				stateName = strings.TrimSpace(strings.ToLower(el.State.Name))
 			}
-			grabberName := strings.ToLower(grabber.Name.String)
+			grabberName := strings.TrimSpace(strings.ToLower(grabber.Name.String))
 
+			// Tier 1: Exact Match (Case-Insensitive)
+			if (domainName != "" && domainName == grabberName) ||
+				(stateName != "" && stateName == grabberName) ||
+				(fullName != "" && fullName == grabberName) {
+				matchedINECElection = el
+				break
+			}
+
+			// Tier 2: Ends With / Suffix Match
+			if (domainName != "" && strings.HasSuffix(grabberName, domainName)) ||
+				(domainName != "" && strings.HasSuffix(domainName, grabberName)) ||
+				(stateName != "" && strings.HasSuffix(grabberName, stateName)) ||
+				(fullName != "" && strings.HasSuffix(fullName, grabberName)) {
+				matchedINECElection = el
+				break
+			}
+
+			// Tier 3: Contains / Substring Match
 			if (domainName != "" && (strings.Contains(grabberName, domainName) || strings.Contains(domainName, grabberName))) ||
 				(stateName != "" && strings.Contains(grabberName, stateName)) ||
 				(fullName != "" && strings.Contains(fullName, grabberName)) {
@@ -367,9 +411,21 @@ func (s *INECGrabberService) executeSync(
 	}
 
 	if matchedINECElection == nil {
-		slog.Info("no matching INEC election found for year and scope", "grabber_id", grabber.ID, "year", appYear, "scope", grabber.Scope)
+		slog.Warn("INEC SyncGrabber: no matching INEC election found",
+			"grabber_id", grabber.ID,
+			"target_year", appYear,
+			"scope", grabber.Scope,
+			"grabber_name", grabber.Name.String,
+		)
 		return 0, nil
 	}
+
+	slog.Info("INEC SyncGrabber: matched INEC election successfully",
+		"grabber_id", grabber.ID,
+		"inec_election_id", matchedINECElection.ID,
+		"inec_full_name", matchedINECElection.FullName,
+		"inec_domain", matchedINECElection.Domain.Name,
+	)
 
 	// 2. Traversal and result collection
 	newResultsCount := 0
@@ -451,21 +507,28 @@ func (s *INECGrabberService) processWardPUs(
 	aiExtract bool,
 ) (int, error) {
 	pusURL := fmt.Sprintf("%s/elections/%s/pus?ward=%s", baseURL, cleanStr(inecElectionID), url.QueryEscape(cleanStr(wardID)))
+	slog.Info("INEC SyncGrabber: fetching ward PUs from INEC API", "ward_id", wardID, "ward_name", wardName, "lga_name", lgaName, "url", pusURL)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, pusURL, nil)
 	if err != nil {
+		slog.Error("INEC SyncGrabber: failed to create ward PUs request", "ward_id", wardID, "err", err)
 		return 0, err
 	}
 
 	resp, err := s.client.Do(req)
 	if err != nil {
+		slog.Error("INEC SyncGrabber: failed to call ward PUs endpoint", "ward_id", wardID, "err", err)
 		return 0, err
 	}
 	defer resp.Body.Close()
 
 	var pusResp INECPUsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&pusResp); err != nil {
+		slog.Error("INEC SyncGrabber: failed to parse ward PUs JSON", "ward_id", wardID, "err", err)
 		return 0, err
 	}
+
+	slog.Info("INEC SyncGrabber: received ward PUs from INEC API", "ward_name", wardName, "pu_count", len(pusResp.Data))
 
 	newResults := 0
 
@@ -486,15 +549,23 @@ func (s *INECGrabberService) processWardPUs(
 			continue
 		}
 
-		formattedDelimitation := strings.ReplaceAll(rawPUCode, "/", "-")
+		formattedPUCode := strings.ReplaceAll(rawPUCode, "/", "-")
 
 		puName := item.Name
 		if puName == "" && item.PollingUnit != nil {
 			puName = item.PollingUnit.Name
 		}
 
-		// Check DB polling unit and existing ingestion BEFORE doing expensive R2 upload or Gemini AI calls
-		pu, puErr := s.queries.GetPollingUnitByDelimitation(ctx, pgtype.Text{String: formattedDelimitation, Valid: true})
+		// Check DB polling unit by pu_code (trying raw, formatted '-', and slash '/' variants)
+		pu, puErr := s.queries.GetPollingUnitByPUCode(ctx, pgtype.Text{String: rawPUCode, Valid: true})
+		if puErr != nil {
+			pu, puErr = s.queries.GetPollingUnitByPUCode(ctx, pgtype.Text{String: formattedPUCode, Valid: true})
+		}
+		if puErr != nil {
+			slashPUCode := strings.ReplaceAll(rawPUCode, "-", "/")
+			pu, puErr = s.queries.GetPollingUnitByPUCode(ctx, pgtype.Text{String: slashPUCode, Valid: true})
+		}
+
 		if puErr == nil {
 			existingResults, _ := s.queries.GetAllPollingUnitResultsByPU(ctx, queries.GetAllPollingUnitResultsByPUParams{
 				ElectionID:    grabber.ElectionID,
@@ -508,7 +579,17 @@ func (s *INECGrabberService) processWardPUs(
 				}
 			}
 			if alreadyIngested {
-				// Skip immediately! Saves network, R2 uploads, and Gemini AI quota!
+				slog.Debug("INEC SyncGrabber: PU result already ingested, skipping", "pu_code", rawPUCode)
+				continue
+			}
+		} else {
+			// Check if already queued in unmatched_polling_unit_results
+			alreadyUnmatched, _ := s.queries.CheckUnmatchedPollingUnitResultExists(ctx, queries.CheckUnmatchedPollingUnitResultExistsParams{
+				ElectionID:         grabber.ElectionID,
+				RawPollingUnitCode: pgtype.Text{String: rawPUCode, Valid: rawPUCode != ""},
+			})
+			if alreadyUnmatched {
+				slog.Debug("INEC SyncGrabber: PU result already in unmatched queue, skipping", "raw_pu_code", rawPUCode)
 				continue
 			}
 		}
@@ -516,9 +597,12 @@ func (s *INECGrabberService) processWardPUs(
 		// Final Result Image URL
 		finalImageURL := docURL
 		if uploadToR2 && s.r2Svc != nil {
-			r2URL, uploadErr := s.uploadImageToR2(ctx, docURL, formattedDelimitation)
+			slog.Info("INEC SyncGrabber: uploading result sheet image to Cloudflare R2", "pu_code", rawPUCode)
+			r2URL, uploadErr := s.uploadImageToR2(ctx, docURL, formattedPUCode)
 			if uploadErr == nil && r2URL != "" {
 				finalImageURL = r2URL
+			} else if uploadErr != nil {
+				slog.Warn("INEC SyncGrabber: R2 upload failed, falling back to CDN URL", "pu_code", rawPUCode, "err", uploadErr)
 			}
 		}
 
@@ -536,9 +620,10 @@ func (s *INECGrabberService) processWardPUs(
 		}
 
 		if aiExtract && apiKey != "" {
+			slog.Info("INEC SyncGrabber: extracting result sheet counts via Gemini AI Vision API", "pu_code", rawPUCode)
 			extractedData, rawJSON, aiErr := utils.ExtractPollingUnitResultFromImage(ctx, apiKey, finalImageURL)
 			if aiErr != nil {
-				slog.Warn("AI result extraction failed for INEC PU sheet", "pu_delimitation", formattedDelimitation, "err", aiErr)
+				slog.Warn("AI result extraction failed for INEC PU sheet", "pu_code", rawPUCode, "err", aiErr)
 			} else if extractedData != nil {
 				accreditedVoters = int32(extractedData.AccreditedVoters)
 				votesCast = int32(extractedData.VotesCast)
@@ -557,12 +642,15 @@ func (s *INECGrabberService) processWardPUs(
 				} else {
 					statusStr = "ai_verified"
 				}
+				slog.Info("INEC SyncGrabber: AI extraction successful", "pu_code", rawPUCode, "status", statusStr, "valid_votes", validVotes)
 			}
 		}
 
 		if puErr != nil {
 			// UNMATCHED: Queue in unmatched_polling_unit_results
+			slog.Warn("INEC SyncGrabber: Polling unit code not matched in database, queuing as unmatched result", "raw_pu_code", rawPUCode, "pu_name", puName, "ward_name", wardName)
 			_ = s.createUnmatchedRecord(ctx, grabber, rawPUCode, puName, wardName, lgaName, stateName, docURL, accreditedVoters, votesCast, validVotes, rejectedVotes, candidateResultsBytes)
+			newResults++
 			continue
 		}
 
@@ -595,9 +683,17 @@ func (s *INECGrabberService) processWardPUs(
 		})
 
 		if err != nil {
-			slog.Error("failed to submit INEC polling unit result", "pu_delimitation", formattedDelimitation, "err", err)
+			slog.Error("failed to submit INEC polling unit result", "pu_code", rawPUCode, "err", err)
 			continue
 		}
+
+		slog.Info("INEC SyncGrabber: successfully ingested matched PU result",
+			"pu_code", rawPUCode,
+			"pu_id", pu.ID,
+			"pu_name", pu.Name,
+			"result_id", submittedRes.ID,
+			"status", statusStr,
+		)
 
 		// Increment election & election group results_submitted_count counters
 		_ = s.queries.IncrementElectionResultCount(ctx, grabber.ElectionID)
@@ -671,7 +767,7 @@ func (s *INECGrabberService) createUnmatchedRecord(
 	return err
 }
 
-func (s *INECGrabberService) uploadImageToR2(ctx context.Context, imageURL, delimitation string) (string, error) {
+func (s *INECGrabberService) uploadImageToR2(ctx context.Context, imageURL, puCode string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 	if err != nil {
 		return "", err
@@ -700,14 +796,14 @@ func (s *INECGrabberService) uploadImageToR2(ctx context.Context, imageURL, deli
 			contentType = "image/jpeg"
 			extension = "jpg"
 			slog.Info("Successfully compressed INEC result sheet image",
-				"delimitation", delimitation,
+				"pu_code", puCode,
 				"original_size_kb", len(imgData)/1024,
 				"compressed_size_kb", buf.Len()/1024,
 				"savings_pct", 100-(buf.Len()*100/len(imgData)))
 		}
 	}
 
-	filename := fmt.Sprintf("inec-results/%s-%d.%s", delimitation, time.Now().Unix(), extension)
+	filename := fmt.Sprintf("inec-results/%s-%d.%s", puCode, time.Now().Unix(), extension)
 	r2URL, err := s.r2Svc.UploadFile(ctx, filename, bytes.NewReader(uploadBytes), int64(len(uploadBytes)), contentType)
 	if err != nil {
 		return "", err

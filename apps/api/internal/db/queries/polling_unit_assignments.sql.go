@@ -110,7 +110,7 @@ SELECT
   u.username,
   u.avatar,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_delimitation,
+  pu.pu_code AS polling_unit_pu_code,
   pu.ward_name,
   pu.lga_name,
   pu.state_name,
@@ -146,7 +146,7 @@ type GetAssignmentByIDRow struct {
 	Username                pgtype.Text        `json:"username"`
 	Avatar                  pgtype.Text        `json:"avatar"`
 	PollingUnitName         string             `json:"polling_unit_name"`
-	PollingUnitDelimitation pgtype.Text        `json:"polling_unit_delimitation"`
+	PollingUnitPuCode       pgtype.Text        `json:"polling_unit_pu_code"`
 	WardName                string             `json:"ward_name"`
 	LgaName                 string             `json:"lga_name"`
 	StateName               string             `json:"state_name"`
@@ -180,7 +180,7 @@ func (q *Queries) GetAssignmentByID(ctx context.Context, id int64) (GetAssignmen
 		&i.Username,
 		&i.Avatar,
 		&i.PollingUnitName,
-		&i.PollingUnitDelimitation,
+		&i.PollingUnitPuCode,
 		&i.WardName,
 		&i.LgaName,
 		&i.StateName,
@@ -293,7 +293,7 @@ SELECT
   u.username,
   u.avatar,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_delimitation,
+  pu.pu_code AS polling_unit_pu_code,
   pu.ward_name,
   pu.lga_name,
   pu.state_name,
@@ -345,7 +345,7 @@ type ListAssignmentsRow struct {
 	Username                pgtype.Text        `json:"username"`
 	Avatar                  pgtype.Text        `json:"avatar"`
 	PollingUnitName         string             `json:"polling_unit_name"`
-	PollingUnitDelimitation pgtype.Text        `json:"polling_unit_delimitation"`
+	PollingUnitPuCode       pgtype.Text        `json:"polling_unit_pu_code"`
 	WardName                string             `json:"ward_name"`
 	LgaName                 string             `json:"lga_name"`
 	StateName               string             `json:"state_name"`
@@ -393,7 +393,7 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 			&i.Username,
 			&i.Avatar,
 			&i.PollingUnitName,
-			&i.PollingUnitDelimitation,
+			&i.PollingUnitPuCode,
 			&i.WardName,
 			&i.LgaName,
 			&i.StateName,

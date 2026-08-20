@@ -59,7 +59,7 @@ export const WardDropdown = ({ data, className }: WardDropdownProps) => {
   const wardForDialog = {
     id: data.id,
     name: data.name,
-    abbreviation: data.abbreviation,
+    code: data.code,
     lga_id: data.lga_id,
     lga_name: data.lga_name,
     state_id: data.state_id,

@@ -10,13 +10,13 @@ import {
 import { StatesTable } from "#/components/Tables";
 import type { StateType } from "#/components/Tables";
 import { BODIES_TABS } from "./-data";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getStates } from "#/lib/server/states";
 import { useBodiesDialogs } from "#/components/dialogs/useBodiesDialogs";
-import { useIntersectionObserver } from "usehooks-ts";
+import { useIntersectionObserver, useDebounceValue } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Button } from "@repo/ui/components/button";
 import { BodiesDropdown } from "#/components/dropdowns/BodiesDropdown";
+import { Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/bodies/states")({
   head: () => getPageHeader({ title: "Bodies - States" }),
@@ -29,13 +29,15 @@ function RouteComponent() {
 
 function StatesListComponent() {
   const { dialogProps, renderDialogs } = useBodiesDialogs();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounceValue(searchQuery, 500);
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading, error } =
     useInfiniteQuery({
-      queryKey: ["states"],
+      queryKey: ["states", debouncedSearchQuery],
       queryFn: async ({ pageParam }) => {
         const res = await getStates({
-          data: { countryId: 161, limit: 20, cursor: pageParam },
+          data: { countryId: 161, limit: 20, cursor: pageParam, search: debouncedSearchQuery || undefined },
         });
         if (res && res.success && res.data) {
           return res;
@@ -49,6 +51,7 @@ function StatesListComponent() {
         }
         return undefined;
       },
+      refetchOnWindowFocus: false,
     });
 
   const { ref: sentinelRef, isIntersecting } = useIntersectionObserver({
@@ -86,6 +89,8 @@ function StatesListComponent() {
     <Layout>
       <PageHeader title="Bodies" activeTab="states" tabs={BODIES_TABS} />
       <PageSearchLayer
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
         rightComponent={
           <>
             <FilterButton />
@@ -96,23 +101,34 @@ function StatesListComponent() {
       />
 
       {isLoading && states.length === 0 ? (
-        <div className="py-12 text-center text-c-50 text-[15px]">
-          Loading states...
+        <div className="w-full h-60 flex items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-c-50" />
+        </div>
+      ) : error ? (
+        <div className="w-full p-6 text-center text-red-600 font-medium">
+          {error instanceof Error ? error.message : "Failed to load states"}
+        </div>
+      ) : states.length === 0 ? (
+        <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
+          No states found.
         </div>
       ) : (
-        <StatesTable items={states} />
-      )}
-
-      {/* Sentinel element for infinite scroll */}
-      {hasNextPage && (
-        <div
-          ref={sentinelRef}
-          className="py-6 flex items-center justify-center text-c-50 text-[14px]"
-        >
-          {isFetchingNextPage
-            ? "Loading more states..."
-            : "Scroll down to load more"}
-        </div>
+        <>
+          <StatesTable items={states} />
+          {hasNextPage && (
+            <div
+              ref={sentinelRef}
+              className="py-6 flex items-center justify-center text-c-50 text-[14px]"
+            >
+              {isFetchingNextPage ? (
+                <Loader2 className="size-5 animate-spin mr-2" />
+              ) : null}
+              {isFetchingNextPage
+                ? "Loading more states..."
+                : "Scroll down to load more"}
+            </div>
+          )}
+        </>
       )}
 
       {renderDialogs()}

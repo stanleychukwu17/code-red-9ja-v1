@@ -686,7 +686,7 @@ func (h *Handler) GetSingleStateConstituencyStats(w http.ResponseWriter, r *http
 	var partiesBytes []byte
 
 	if err != nil {
-		sc, errSc := h.service.GetStateAssemblyConstituencyByID(r.Context(), int32(scID))
+		sc, errSc := h.service.GetStateConstituencyByID(r.Context(), int32(scID))
 		if errSc != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch stats: "+err.Error())
 			return

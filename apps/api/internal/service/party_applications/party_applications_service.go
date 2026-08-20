@@ -191,14 +191,16 @@ func (s *Service) SubmitApplication(ctx context.Context, input SubmitApplication
 
 		// Increment applications_count on election_group_polling_units for this PU & party
 		if input.PollingUnitID > 0 {
-			_ = txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
+			if adjErr := txQueries.AdjustElectionGroupPollingUnitApplicationCounts(ctx, queries.AdjustElectionGroupPollingUnitApplicationCountsParams{
 				ElectionGroupID: egID,
 				PollingUnitID:   input.PollingUnitID,
 				PartyID:         int16(input.PartyID),
 				AppDelta:        1,
 				AcceptedDelta:   0,
 				RejectedDelta:   0,
-			})
+			}); adjErr != nil {
+				return nil, fmt.Errorf("failed to adjust polling unit application counts: %w", adjErr)
+			}
 		}
 
 		apps = append(apps, app)
@@ -503,7 +505,7 @@ func fetchPUGeo(ctx context.Context, pool interface {
 	var scID, fcID, sdID interface{}
 	err := pool.QueryRow(ctx, `
 		SELECT pu.ward_id, pu.lga_id, pu.state_id,
-		       w.state_assembly_constituency_id,
+		       w.state_constituency_id,
 		       l.federal_constituency_id,
 		       l.senatorial_district_id
 		FROM polling_units pu
@@ -794,7 +796,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		var wardStateConstID int32
 		var lgaFedConstID, lgaSenateID int32
 		_ = s.pool.QueryRow(ctx, `
-			SELECT w.state_assembly_constituency_id, l.federal_constituency_id, l.senatorial_district_id
+			SELECT w.state_constituency_id, l.federal_constituency_id, l.senatorial_district_id
 			FROM wards w JOIN lgas l ON l.id = w.lga_id
 			WHERE w.id = $1 LIMIT 1`, input.WardID,
 		).Scan(&wardStateConstID, &lgaFedConstID, &lgaSenateID)
@@ -907,7 +909,7 @@ func (s *Service) ApproveApplication(ctx context.Context, input ApproveApplicati
 		var wardStateConstID, puFedConstID, puSenateID int32
 		geoErr := s.pool.QueryRow(ctx, `
 			SELECT pu.ward_id, pu.lga_id, pu.state_id,
-			       COALESCE(w.state_assembly_constituency_id, 0),
+			       COALESCE(w.state_constituency_id, 0),
 			       COALESCE(l.federal_constituency_id, 0),
 			       COALESCE(l.senatorial_district_id, 0)
 			FROM polling_units pu

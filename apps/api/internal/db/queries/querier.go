@@ -23,6 +23,7 @@ type Querier interface {
 	CheckIfPageHasAnyVerification(ctx context.Context, arg CheckIfPageHasAnyVerificationParams) (bool, error)
 	CheckIfUserVotedInElection(ctx context.Context, arg CheckIfUserVotedInElectionParams) (bool, error)
 	CheckReferralCodeExists(ctx context.Context, referralCode pgtype.Text) (bool, error)
+	CheckUnmatchedPollingUnitResultExists(ctx context.Context, arg CheckUnmatchedPollingUnitResultExistsParams) (bool, error)
 	CheckUserHasAnyRole(ctx context.Context, userID int64) (bool, error)
 	ConfirmUpload(ctx context.Context, arg ConfirmUploadParams) (File, error)
 	CountAllUserPhoneNumbers(ctx context.Context, userID int64) (int64, error)
@@ -53,7 +54,7 @@ type Querier interface {
 	CreateReferral(ctx context.Context, arg CreateReferralParams) (Referral, error)
 	CreateSenatorialDistrict(ctx context.Context, arg CreateSenatorialDistrictParams) (SenatorialDistrict, error)
 	CreateState(ctx context.Context, arg CreateStateParams) (CState, error)
-	CreateStateAssemblyConstituency(ctx context.Context, arg CreateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
+	CreateStateConstituency(ctx context.Context, arg CreateStateConstituencyParams) (StateConstituency, error)
 	CreateStateSupervisor(ctx context.Context, arg CreateStateSupervisorParams) (StateElectionSupervisor, error)
 	CreateUnmatchedPollingUnitResult(ctx context.Context, arg CreateUnmatchedPollingUnitResultParams) (UnmatchedPollingUnitResult, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (int64, error)
@@ -68,6 +69,12 @@ type Querier interface {
 	CreateWardSupervisor(ctx context.Context, arg CreateWardSupervisorParams) (WardElectionSupervisor, error)
 	CreditPartyWallet(ctx context.Context, arg CreditPartyWalletParams) (PartyWallet, error)
 	CreditUserWallet(ctx context.Context, arg CreditUserWalletParams) (UserWallet, error)
+	DeactivateMissingFederalConstituencies(ctx context.Context, arg DeactivateMissingFederalConstituenciesParams) error
+	DeactivateMissingLGAs(ctx context.Context, arg DeactivateMissingLGAsParams) error
+	DeactivateMissingPollingUnits(ctx context.Context, arg DeactivateMissingPollingUnitsParams) error
+	DeactivateMissingSenatorialDistricts(ctx context.Context, arg DeactivateMissingSenatorialDistrictsParams) error
+	DeactivateMissingStateConstituencies(ctx context.Context, arg DeactivateMissingStateConstituenciesParams) error
+	DeactivateMissingWards(ctx context.Context, arg DeactivateMissingWardsParams) error
 	DebitPartyWallet(ctx context.Context, arg DebitPartyWalletParams) (PartyWallet, error)
 	DebitUserWallet(ctx context.Context, arg DebitUserWalletParams) (UserWallet, error)
 	DeductPartyAgentPaymentBalance(ctx context.Context, arg DeductPartyAgentPaymentBalanceParams) (Party, error)
@@ -87,7 +94,7 @@ type Querier interface {
 	DeletePollingUnit(ctx context.Context, id int32) error
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	DeleteState(ctx context.Context, id int16) error
-	DeleteStateAssemblyConstituency(ctx context.Context, id int32) error
+	DeleteStateConstituency(ctx context.Context, id int32) error
 	DeleteUser(ctx context.Context, id int64) error
 	DeleteUserDidNotVoteReasonByElectionGroup(ctx context.Context, arg DeleteUserDidNotVoteReasonByElectionGroupParams) error
 	DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhoneNumberParams) error
@@ -157,8 +164,8 @@ type Querier interface {
 	// Pass empty string '' to skip a filter.
 	// $1 = type filter ('' = all types), $2 = is_active filter ('' = all, 'true'/'false' to filter)
 	GetPlans(ctx context.Context, arg GetPlansParams) ([]Plan, error)
-	GetPollingUnitByDelimitation(ctx context.Context, delimitation pgtype.Text) (PollingUnit, error)
 	GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit, error)
+	GetPollingUnitByPUCode(ctx context.Context, puCode pgtype.Text) (PollingUnit, error)
 	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
@@ -173,9 +180,9 @@ type Querier interface {
 	GetRoleByCode(ctx context.Context, code string) (Role, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (SenatorialDistrict, error)
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]SenatorialDistrict, error)
-	GetStateAssemblyConstituencies(ctx context.Context, arg GetStateAssemblyConstituenciesParams) ([]StateAssemblyConstituency, error)
-	GetStateAssemblyConstituencyByID(ctx context.Context, id int32) (StateAssemblyConstituency, error)
 	GetStateByID(ctx context.Context, arg GetStateByIDParams) (GetStateByIDRow, error)
+	GetStateConstituencies(ctx context.Context, arg GetStateConstituenciesParams) ([]StateConstituency, error)
+	GetStateConstituencyByID(ctx context.Context, id int32) (StateConstituency, error)
 	GetStateDetailsByID(ctx context.Context, id int16) (CState, error)
 	GetStateSupervisorByElectionGroup(ctx context.Context, arg GetStateSupervisorByElectionGroupParams) (StateElectionSupervisor, error)
 	GetStatesByCountryID(ctx context.Context, countryID int16) ([]CState, error)
@@ -278,7 +285,7 @@ type Querier interface {
 	RecalculateLGAMetrics(ctx context.Context) error
 	RecalculateNationalMetrics(ctx context.Context) error
 	RecalculateSenatorialDistrictMetrics(ctx context.Context) error
-	RecalculateStateAssemblyConstituencyMetrics(ctx context.Context) error
+	RecalculateStateConstituencyMetrics(ctx context.Context) error
 	RecalculateStateMetrics(ctx context.Context) error
 	RecalculateWardMetrics(ctx context.Context) error
 	RecordPartyMembershipHistory(ctx context.Context, arg RecordPartyMembershipHistoryParams) error
@@ -295,8 +302,8 @@ type Querier interface {
 	RollupWardFinalResults(ctx context.Context) error
 	SeedUser(ctx context.Context, arg SeedUserParams) (int64, error)
 	SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error)
-	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
 	SubmitPracticeTest(ctx context.Context, arg SubmitPracticeTestParams) (UserPracticeTest, error)
+	ToggleINECResultGrabberPause(ctx context.Context, id int64) (InecResultGrabber, error)
 	UpdateApplicationApproval(ctx context.Context, arg UpdateApplicationApprovalParams) (PartyApplication, error)
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
 	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error)
@@ -319,6 +326,7 @@ type Querier interface {
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
 	UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateLgaSupervisorEarnedAmountKoboParams) (LgaElectionSupervisor, error)
 	UpdateMarketingCampaignStatus(ctx context.Context, arg UpdateMarketingCampaignStatusParams) (PartyMarketingCampaign, error)
+	UpdateMissingFederalConstituencySenatorialDistricts(ctx context.Context) error
 	UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMoreInfoAboutThisUserParams) error
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)
 	UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) error
@@ -342,7 +350,7 @@ type Querier interface {
 	UpdateResultStatus(ctx context.Context, arg UpdateResultStatusParams) (PollingUnitResult, error)
 	UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenatorialDistrictParams) (SenatorialDistrict, error)
 	UpdateState(ctx context.Context, arg UpdateStateParams) (CState, error)
-	UpdateStateAssemblyConstituency(ctx context.Context, arg UpdateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error)
+	UpdateStateConstituency(ctx context.Context, arg UpdateStateConstituencyParams) (StateConstituency, error)
 	UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateStateSupervisorEarnedAmountKoboParams) (StateElectionSupervisor, error)
 	UpdateSystemSetting(ctx context.Context, arg UpdateSystemSettingParams) (SystemSetting, error)
 	UpdateUnmatchedPollingUnitResultStatus(ctx context.Context, arg UpdateUnmatchedPollingUnitResultStatusParams) (UnmatchedPollingUnitResult, error)
@@ -366,10 +374,16 @@ type Querier interface {
 	UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error)
 	UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg UpdateWardSupervisorEarnedAmountKoboParams) (WardElectionSupervisor, error)
 	UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarningsParams) (AgentEarning, error)
+	UpsertFederalConstituency(ctx context.Context, arg UpsertFederalConstituencyParams) (FederalConstituency, error)
+	UpsertLGA(ctx context.Context, arg UpsertLGAParams) (Lga, error)
 	UpsertPartyElectionGroupCoverage(ctx context.Context, arg UpsertPartyElectionGroupCoverageParams) (PartyElectionGroup, error)
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)
+	UpsertPollingUnit(ctx context.Context, arg UpsertPollingUnitParams) (PollingUnit, error)
 	UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
+	UpsertSenatorialDistrict(ctx context.Context, arg UpsertSenatorialDistrictParams) (SenatorialDistrict, error)
+	UpsertStateConstituency(ctx context.Context, arg UpsertStateConstituencyParams) (StateConstituency, error)
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
+	UpsertWard(ctx context.Context, arg UpsertWardParams) (Ward, error)
 	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }
 

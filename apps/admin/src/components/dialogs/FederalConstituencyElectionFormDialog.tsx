@@ -171,6 +171,18 @@ export function FederalConstituencyElectionFormDialog({
     }
   }, [open]);
 
+  // Auto-select matching Federal Constituency office when offices data loads
+  React.useEffect(() => {
+    if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
+      const matching = officesData.find(
+        (o: any) => o.scope === "federal-constituency",
+      );
+      if (matching) {
+        form.setFieldValue("officeId", matching.id);
+      }
+    }
+  }, [open, officesData, selectedOfficeId]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
@@ -187,40 +199,11 @@ export function FederalConstituencyElectionFormDialog({
         throw new Error("At least one federal constituency must be selected");
       }
 
-      let finalGroupId = values.electionGroupId;
-
-      if (!finalGroupId) {
-        const year = new Date(values.electionDate).getFullYear();
-        const typeName = selectedType
-          ? selectedType.name
-          : "Federal Constituency";
-        const autoGroupName = `${year} ${typeName} Election`;
-
-        const { createElectionGroup } =
-          await import("#/lib/server/election_groups");
-        const groupRes = await createElectionGroup({
-          data: {
-            name: autoGroupName,
-            rank: selectedType ? selectedType.rank : 1,
-            elections_count: selectedConstituencies.length,
-            states_count: 37,
-            election_date: values.electionDate,
-          },
-        });
-
-        if (!groupRes.success) {
-          throw new Error(
-            groupRes.message || "Failed to auto-create election group",
-          );
-        }
-        finalGroupId = groupRes.data.id;
-      }
-
       const res = await createFederalConstituencyElection({
         data: {
           office_id: values.officeId,
           election_date: values.electionDate,
-          election_group_id: finalGroupId!,
+          election_group_id: values.electionGroupId,
           federal_constituency_ids: selectedConstituencies.map((c) => c.id),
         },
       });
@@ -233,6 +216,7 @@ export function FederalConstituencyElectionFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },

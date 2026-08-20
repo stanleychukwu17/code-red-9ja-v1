@@ -25,19 +25,24 @@ func NewWardsService(q *queries.Queries, rdb *redis.Client) *WardsService {
 func (s *WardsService) CreateWard(
 	ctx context.Context,
 	name string,
-	abbreviation string,
+	code string,
 	lgaID int32,
 	lgaName string,
 	stateID int32,
 	stateName string,
 ) (queries.Ward, error) {
+	lga, _ := s.queries.GetLGAByID(ctx, lgaID)
 	arg := queries.CreateWardParams{
-		Name:         name,
-		Abbreviation: abbreviation,
-		LgaID:        lgaID,
-		LgaName:      lgaName,
-		StateID:      stateID,
-		StateName:    stateName,
+		Name:                    name,
+		Code:                    code,
+		LgaID:                   lgaID,
+		LgaName:                 lgaName,
+		SenatorialDistrictID:    lga.SenatorialDistrictID,
+		SenatorialDistrictName:  lga.SenatorialDistrictName,
+		FederalConstituencyID:   lga.FederalConstituencyID,
+		FederalConstituencyName: lga.FederalConstituencyName,
+		StateID:                 stateID,
+		StateName:               stateName,
 	}
 
 	ward, err := s.queries.CreateWard(ctx, arg)
@@ -45,8 +50,7 @@ func (s *WardsService) CreateWard(
 		return queries.Ward{}, err
 	}
 
-	// Invalidate cache for the LGA
-	s.invalidateCache(ctx, lgaID)
+	s.invalidateCache(ctx, stateID)
 
 	return ward, nil
 }
@@ -59,26 +63,30 @@ func (s *WardsService) UpdateWard(
 	ctx context.Context,
 	id int32,
 	name string,
-	abbreviation string,
+	code string,
 	lgaID int32,
 	lgaName string,
 	stateID int32,
 	stateName string,
 ) (queries.Ward, error) {
-	// Fetch current to invalidate old LGA cache in case lgaID changed
 	current, err := s.queries.GetWardByID(ctx, id)
 	if err == nil {
-		s.invalidateCache(ctx, current.LgaID)
+		s.invalidateCache(ctx, current.StateID)
 	}
 
+	lga, _ := s.queries.GetLGAByID(ctx, lgaID)
 	arg := queries.UpdateWardParams{
-		ID:           id,
-		Name:         name,
-		Abbreviation: abbreviation,
-		LgaID:        lgaID,
-		LgaName:      lgaName,
-		StateID:      stateID,
-		StateName:    stateName,
+		ID:                      id,
+		Name:                    name,
+		Code:                    code,
+		LgaID:                   lgaID,
+		LgaName:                 lgaName,
+		SenatorialDistrictID:    lga.SenatorialDistrictID,
+		SenatorialDistrictName:  lga.SenatorialDistrictName,
+		FederalConstituencyID:   lga.FederalConstituencyID,
+		FederalConstituencyName: lga.FederalConstituencyName,
+		StateID:                 stateID,
+		StateName:               stateName,
 	}
 
 	ward, err := s.queries.UpdateWard(ctx, arg)

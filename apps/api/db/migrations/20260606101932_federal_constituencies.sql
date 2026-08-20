@@ -2,747 +2,389 @@
 CREATE TABLE IF NOT EXISTS federal_constituencies (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
+    code VARCHAR(50),
     state_id INTEGER NOT NULL REFERENCES c_states(id) ON DELETE CASCADE,
     state_name VARCHAR(255) NOT NULL,
-    senatorial_district_id INTEGER NOT NULL REFERENCES senatorial_districts(id) ON DELETE CASCADE,
-    senatorial_district_name VARCHAR(255) NOT NULL,
+    senatorial_district_id INTEGER REFERENCES senatorial_districts(id) ON DELETE CASCADE,
+    senatorial_district_name VARCHAR(255),
     lgas_count INTEGER DEFAULT 0,
     state_constituencies_count INTEGER DEFAULT 0,
     wards_count INTEGER DEFAULT 0,
-    polling_units_count INTEGER DEFAULT 0
+    polling_units_count INTEGER DEFAULT 0,
+    status VARCHAR(50) DEFAULT 'active'
 );
 
 CREATE INDEX idx_federal_constituencies_name ON federal_constituencies (name);
+CREATE INDEX idx_federal_constituencies_code ON federal_constituencies (code);
 CREATE INDEX idx_federal_constituencies_state_id ON federal_constituencies (state_id);
 CREATE INDEX idx_federal_constituencies_senatorial_district_id ON federal_constituencies (senatorial_district_id);
 
-INSERT INTO federal_constituencies (id, name, state_id, state_name, senatorial_district_id, senatorial_district_name) VALUES
--- ============================================================
--- ABIA STATE (state_id: 1) - 8 Federal Constituencies
--- ============================================================
 
--- Abia North Senatorial District (SD ID: 1)
-(1, 'Arochukwu / Ohafia', 1, 'Abia', 1, 'Abia North'),
-(2, 'Bende', 1, 'Abia', 1, 'Abia North'),
-(3, 'Isuikwuato / Umunneochi', 1, 'Abia', 1, 'Abia North'),
 
--- Abia Central Senatorial District (SD ID: 2)
-(4, 'Isiala Ngwa North / Isiala Ngwa South', 1, 'Abia', 2, 'Abia Central'),
-(5, 'Obingwa / Ugwunagbo / Osisioma', 1, 'Abia', 2, 'Abia Central'),
-(6, 'Umuahia North / Umuahia South / Ikwuano', 1, 'Abia', 2, 'Abia Central'),
-
--- Abia South Senatorial District (SD ID: 3)
-(7, 'Aba North / Aba South', 1, 'Abia', 3, 'Abia South'),
-(8, 'Ukwa East / Ukwa West', 1, 'Abia', 3, 'Abia South'),
-
--- ============================================================
--- ADAMAWA STATE (state_id: 2) - 8 Federal Constituencies
--- ============================================================
-
--- Adamawa North Senatorial District (SD ID: 4)
-(9, 'Michika / Madagali', 2, 'Adamawa', 4, 'Adamawa North'),
-(10, 'Mubi North / Mubi South / Maiha', 2, 'Adamawa', 4, 'Adamawa North'),
-
--- Adamawa Central Senatorial District (SD ID: 6)
-(11, 'Fufore / Song', 2, 'Adamawa', 6, 'Adamawa Central'),
-(12, 'Hong / Gombi', 2, 'Adamawa', 6, 'Adamawa Central'),
-(13, 'Yola North / Yola South / Girei', 2, 'Adamawa', 6, 'Adamawa Central'),
-
--- Adamawa South Senatorial District (SD ID: 5)
-(14, 'Demsa / Numan / Lamurde', 2, 'Adamawa', 5, 'Adamawa South'),
-(15, 'Guyuk / Shelleng', 2, 'Adamawa', 5, 'Adamawa South'),
-(16, 'Jada / Ganye / Mayo Belwa / Toungo', 2, 'Adamawa', 5, 'Adamawa South'),
-
--- ============================================================
--- AKWA IBOM STATE (state_id: 3) - 10 Federal Constituencies
--- ============================================================
-
--- Akwa Ibom North-East Senatorial District (SD ID: 7)
-(17, 'Etinan / Nsit Ibom / Nsit Ubium', 3, 'Akwa Ibom', 7, 'Akwa Ibom North-East'),
-(18, 'Itu / Ibiono Ibom', 3, 'Akwa Ibom', 7, 'Akwa Ibom North-East'),
-(19, 'Uyo / Uruan / Nsit Atai', 3, 'Akwa Ibom', 7, 'Akwa Ibom North-East'),
-
--- Akwa Ibom North-West Senatorial District (SD ID: 8)
-(20, 'Abak / Etim Ekpo / Ika', 3, 'Akwa Ibom', 8, 'Akwa Ibom North-West'),
-(21, 'Ikono / Ini', 3, 'Akwa Ibom', 8, 'Akwa Ibom North-West'),
-(22, 'Ikot Ekpene / Essien Udim / Obot Akara', 3, 'Akwa Ibom', 8, 'Akwa Ibom North-West'),
-(26, 'Ukanafun / Oruk Anam', 3, 'Akwa Ibom', 8, 'Akwa Ibom North-West'),
-
--- Akwa Ibom South Senatorial District (SD ID: 9)
-(23, 'Eket / Onna / Esit Eket / Ibeno', 3, 'Akwa Ibom', 9, 'Akwa Ibom South'),
-(24, 'Ikot Abasi / Mkpat Enin / Eastern Obolo', 3, 'Akwa Ibom', 9, 'Akwa Ibom South'),
-(25, 'Oron / Mbo / Okobo / Udung Uko / Urue Offong/Oruko', 3, 'Akwa Ibom', 9, 'Akwa Ibom South'),
-
--- ============================================================
--- ANAMBRA STATE (state_id: 4) - 11 Federal Constituencies
--- ============================================================
-
--- Anambra North Senatorial District (SD ID: 10)
-(27, 'Anambra East / Anambra West', 4, 'Anambra', 10, 'Anambra North'),
-(28, 'Ogbaru', 4, 'Anambra', 10, 'Anambra North'),
-(29, 'Onitsha North / Onitsha South', 4, 'Anambra', 10, 'Anambra North'),
-(30, 'Oyi / Ayamelum', 4, 'Anambra', 10, 'Anambra North'),
-
--- Anambra Central Senatorial District (SD ID: 11)
-(31, 'Awka North / Awka South', 4, 'Anambra', 11, 'Anambra Central'),
-(32, 'Idemili North / Idemili South', 4, 'Anambra', 11, 'Anambra Central'),
-(33, 'Njikoka / Dunukofia / Anaocha', 4, 'Anambra', 11, 'Anambra Central'),
-
--- Anambra South Senatorial District (SD ID: 12)
-(34, 'Aguata', 4, 'Anambra', 12, 'Anambra South'),
-(35, 'Ihiala', 4, 'Anambra', 12, 'Anambra South'),
-(36, 'Nnewi North / Nnewi South / Ekwusigo', 4, 'Anambra', 12, 'Anambra South'),
-(37, 'Orumba North / Orumba South', 4, 'Anambra', 12, 'Anambra South'),
-
--- ============================================================
--- BAUCHI STATE (state_id: 5) - 12 Federal Constituencies
--- ============================================================
-
--- Bauchi South Senatorial District (SD ID: 13)
-(38, 'Alkaleri / Kirfi', 5, 'Bauchi', 13, 'Bauchi South'),
-(39, 'Bauchi', 5, 'Bauchi', 13, 'Bauchi South'),
-(40, 'Bogoro / Dass / Tafawa Balewa', 5, 'Bauchi', 13, 'Bauchi South'),
-(41, 'Toro', 5, 'Bauchi', 13, 'Bauchi South'),
-
--- Bauchi Central Senatorial District (SD ID: 14)
-(42, 'Darazo / Ganjuwa', 5, 'Bauchi', 14, 'Bauchi Central'),
-(43, 'Misau / Dambam', 5, 'Bauchi', 14, 'Bauchi Central'),
-(44, 'Ningi / Warji', 5, 'Bauchi', 14, 'Bauchi Central'),
-
--- Bauchi North Senatorial District (SD ID: 15)
-(45, 'Gamawa', 5, 'Bauchi', 15, 'Bauchi North'),
-(46, 'Jamaare / Itas-Gadau', 5, 'Bauchi', 15, 'Bauchi North'),
-(47, 'Katagum', 5, 'Bauchi', 15, 'Bauchi North'),
-(48, 'Shira / Giade', 5, 'Bauchi', 15, 'Bauchi North'),
-(49, 'Zaki', 5, 'Bauchi', 15, 'Bauchi North'),
-
--- ============================================================
--- BAYELSA STATE (state_id: 6) - 5 Federal Constituencies
--- ============================================================
-
--- Bayelsa East Senatorial District (SD ID: 16)
-(50, 'Brass / Nembe', 6, 'Bayelsa', 16, 'Bayelsa East'),
-(51, 'Ogbia', 6, 'Bayelsa', 16, 'Bayelsa East'),
-
--- Bayelsa Central Senatorial District (SD ID: 17)
-(52, 'Southern Ijaw', 6, 'Bayelsa', 17, 'Bayelsa Central'),
-(53, 'Kolokuma / Opokuma / Yenagoa', 6, 'Bayelsa', 17, 'Bayelsa Central'),
-
--- Bayelsa West Senatorial District (SD ID: 18)
-(54, 'Sagbama / Ekeremor', 6, 'Bayelsa', 18, 'Bayelsa West'),
-
--- ============================================================
--- BENUE STATE (state_id: 7) - 11 Federal Constituencies
--- ============================================================
-
--- Benue North-East Senatorial District (SD ID: 19)
-(55, 'Katsina-Ala / Ukum / Logo', 7, 'Benue', 19, 'Benue North-East'),
-(56, 'Konshisha / Vandeikya', 7, 'Benue', 19, 'Benue North-East'),
-(57, 'Kwande / Ushongo', 7, 'Benue', 19, 'Benue North-East'),
-
--- Benue North-West Senatorial District (SD ID: 20)
-(58, 'Buruku', 7, 'Benue', 20, 'Benue North-West'),
-(59, 'Gboko / Tarka', 7, 'Benue', 20, 'Benue North-West'),
-(60, 'Guma / Makurdi', 7, 'Benue', 20, 'Benue North-West'),
-(61, 'Gwer East / Gwer West', 7, 'Benue', 20, 'Benue North-West'),
-
--- Benue South Senatorial District (SD ID: 21)
-(62, 'Ado / Ogbadibo / Okpokwu', 7, 'Benue', 21, 'Benue South'),
-(63, 'Apa / Agatu', 7, 'Benue', 21, 'Benue South'),
-(64, 'Oju / Obi', 7, 'Benue', 21, 'Benue South'),
-(65, 'Otukpo / Ohimini', 7, 'Benue', 21, 'Benue South'),
-
--- ============================================================
--- BORNO STATE (state_id: 8) - 10 Federal Constituencies
--- ============================================================
-
--- Borno North Senatorial District (SD ID: 22)
-(66, 'Kaga / Gubio / Magumeri', 8, 'Borno', 22, 'Borno North'),
-(67, 'Kukawa / Mobbar / Abadam / Guzamala', 8, 'Borno', 22, 'Borno North'),
-(68, 'Monguno / Nganzai / Marte', 8, 'Borno', 22, 'Borno North'),
-
--- Borno Central Senatorial District (SD ID: 23)
-(69, 'Bama / Ngala / Kala-Balge', 8, 'Borno', 23, 'Borno Central'),
-(70, 'Dikwa / Mafa / Konduga', 8, 'Borno', 23, 'Borno Central'),
-(71, 'Jere', 8, 'Borno', 23, 'Borno Central'),
-(72, 'Maiduguri Metropolitan', 8, 'Borno', 23, 'Borno Central'),
-
--- Borno South Senatorial District (SD ID: 24)
-(73, 'Askira-Uba / Hawul', 8, 'Borno', 24, 'Borno South'),
-(74, 'Biu / Kwaya-Kusar / Shani / Bayo', 8, 'Borno', 24, 'Borno South'),
-(75, 'Damboa / Gwoza / Chibok', 8, 'Borno', 24, 'Borno South'),
-
--- ============================================================
--- CROSS RIVER STATE (state_id: 9) - 8 Federal Constituencies
--- ============================================================
-
--- Cross River North Senatorial District (SD ID: 25)
-(76, 'Obanliku / Obudu / Bekwarra', 9, 'Cross River', 25, 'Cross River North'),
-(77, 'Ogoja / Yala', 9, 'Cross River', 25, 'Cross River North'),
-
--- Cross River Central Senatorial District (SD ID: 26)
-(78, 'Abi / Yakurr', 9, 'Cross River', 26, 'Cross River Central'),
-(79, 'Boki / Ikom', 9, 'Cross River', 26, 'Cross River Central'),
-(80, 'Obubra / Etung', 9, 'Cross River', 26, 'Cross River Central'),
-
--- Cross River South Senatorial District (SD ID: 27)
-(81, 'Akamkpa / Biase', 9, 'Cross River', 27, 'Cross River South'),
-(82, 'Calabar Municipal / Odukpani', 9, 'Cross River', 27, 'Cross River South'),
-(83, 'Calabar South / Akpabuyo / Bakassi', 9, 'Cross River', 27, 'Cross River South'),
-
--- ============================================================
--- DELTA STATE (state_id: 10) - 10 Federal Constituencies
--- ============================================================
-
--- Delta Central Senatorial District (SD ID: 28)
-(84, 'Ethiope East / Ethiope West', 10, 'Delta', 28, 'Delta Central'),
-(85, 'Okpe / Sapele / Uvwie', 10, 'Delta', 28, 'Delta Central'),
-(86, 'Ughelli North / Ughelli South / Udu', 10, 'Delta', 28, 'Delta Central'),
-
--- Delta North Senatorial District (SD ID: 29)
-(87, 'Aniocha North / Aniocha South / Oshimili North / Oshimili South', 10, 'Delta', 29, 'Delta North'),
-(88, 'Ika North East / Ika South', 10, 'Delta', 29, 'Delta North'),
-(89, 'Ndokwa East / Ndokwa West / Ukwuani', 10, 'Delta', 29, 'Delta North'),
-
--- Delta South Senatorial District (SD ID: 30)
-(90, 'Bomadi / Patani', 10, 'Delta', 30, 'Delta South'),
-(91, 'Burutu', 10, 'Delta', 30, 'Delta South'),
-(92, 'Isoko North / Isoko South', 10, 'Delta', 30, 'Delta South'),
-(93, 'Warri North / Warri South / Warri South West', 10, 'Delta', 30, 'Delta South'),
-
--- ============================================================
--- EBONYI STATE (state_id: 11) - 6 Federal Constituencies
--- ============================================================
-
--- Ebonyi North Senatorial District (SD ID: 31)
-(94, 'Abakaliki / Izzi', 11, 'Ebonyi', 31, 'Ebonyi North'),
-(95, 'Ebonyi / Ohaukwu', 11, 'Ebonyi', 31, 'Ebonyi North'),
-
--- Ebonyi Central Senatorial District (SD ID: 32)
-(96, 'Ezza North / Ishielu', 11, 'Ebonyi', 32, 'Ebonyi Central'),
-(97, 'Ezza South / Ikwo', 11, 'Ebonyi', 32, 'Ebonyi Central'),
-
--- Ebonyi South Senatorial District (SD ID: 33)
-(98, 'Afikpo North / Edda', 11, 'Ebonyi', 33, 'Ebonyi South'),
-(99, 'Ivo / Ohaozara / Onicha', 11, 'Ebonyi', 33, 'Ebonyi South'),
-
--- ============================================================
--- EDO STATE (state_id: 12) - 9 Federal Constituencies
--- ============================================================
-
--- Edo South Senatorial District (SD ID: 34)
-(100, 'Egor / Ikpoba-Okha', 12, 'Edo', 34, 'Edo South'),
-(101, 'Oredo', 12, 'Edo', 34, 'Edo South'),
-(102, 'Orhionmwon / Uhunmwonde', 12, 'Edo', 34, 'Edo South'),
-
--- Edo Central Senatorial District (SD ID: 35)
-(103, 'Ovia North-East / Ovia South-West', 12, 'Edo', 34, 'Edo South'),
-(104, 'Esan Central / Esan West / Igueben', 12, 'Edo', 35, 'Edo Central'),
-(105, 'Esan North-East / Esan South-East', 12, 'Edo', 35, 'Edo Central'),
-
--- Edo North Senatorial District (SD ID: 36)
-(106, 'Etsako Central / Etsako East / Etsako West', 12, 'Edo', 36, 'Edo North'),
-(107, 'Owan East / Owan West', 12, 'Edo', 36, 'Edo North'),
-(108, 'Akoko-Edo', 12, 'Edo', 36, 'Edo North'),
-
--- ============================================================
--- EKITI STATE (state_id: 13) - 6 Federal Constituencies
--- ============================================================
-
--- Ekiti Central Senatorial District (SD ID: 37)
-(109, 'Ado Ekiti / Irepodun / Ifelodun', 13, 'Ekiti', 37, 'Ekiti Central'),
-(110, 'Ijero / Ekiti West / Efon', 13, 'Ekiti', 37, 'Ekiti Central'),
-
--- Ekiti North Senatorial District (SD ID: 38)
-(111, 'Ikole / Oye', 13, 'Ekiti', 38, 'Ekiti North'),
-(112, 'Ido-Osi / Moba / Ilejemeje', 13, 'Ekiti', 38, 'Ekiti North'),
-
--- Ekiti South Senatorial District (SD ID: 39)
-(113, 'Ekiti South West / Ikere / Ise-Orun', 13, 'Ekiti', 39, 'Ekiti South'),
-(114, 'Ekiti East / Emure / Gbonyin', 13, 'Ekiti', 39, 'Ekiti South'),
-
--- ============================================================
--- ENUGU STATE (state_id: 14) - 8 Federal Constituencies
--- ============================================================
-
--- Enugu North Senatorial District (SD ID: 40)
-(115, 'Igbo-Eze North / Udenu', 14, 'Enugu', 40, 'Enugu North'),
-(116, 'Igbo-Etiti / Uzo-Uwani', 14, 'Enugu', 40, 'Enugu North'),
-(117, 'Nsukka / Igbo-Eze South', 14, 'Enugu', 40, 'Enugu North'),
-
--- Enugu East Senatorial District (SD ID: 41)
-(118, 'Enugu East / Isi Uzo', 14, 'Enugu', 41, 'Enugu East'),
-(119, 'Enugu North / Enugu South', 14, 'Enugu', 41, 'Enugu East'),
-(120, 'Nkanu East / Nkanu West', 14, 'Enugu', 41, 'Enugu East'),
-
--- Enugu West Senatorial District (SD ID: 42)
-(121, 'Aninri / Awgu / Oji River', 14, 'Enugu', 42, 'Enugu West'),
-(122, 'Ezeagu / Udi', 14, 'Enugu', 42, 'Enugu West'),
-
--- ============================================================
--- ABUJA FCT (state_id: 15) - 2 Federal Constituencies
--- ============================================================
-
--- FCT Senatorial District (SD ID: 43)
-(123, 'Abaji / Gwagwalada / Kuje / Kwali', 15, 'Abuja FCT', 43, 'FCT Senatorial District'),
-(124, 'AMAC / Bwari', 15, 'Abuja FCT', 43, 'FCT Senatorial District'),
-
--- ============================================================
--- GOMBE STATE (state_id: 16) - 6 Federal Constituencies
--- ============================================================
-
--- Gombe Central Senatorial District (SD ID: 44)
-(125, 'Akko', 16, 'Gombe', 44, 'Gombe Central'),
-(126, 'Yamaltu / Deba', 16, 'Gombe', 44, 'Gombe Central'),
-
--- Gombe North Senatorial District (SD ID: 45)
-(127, 'Dukku / Nafada', 16, 'Gombe', 45, 'Gombe North'),
-(128, 'Gombe / Kwami / Funakaye', 16, 'Gombe', 45, 'Gombe North'),
-
--- Gombe South Senatorial District (SD ID: 46)
-(129, 'Balanga / Billiri', 16, 'Gombe', 46, 'Gombe South'),
-(130, 'Kaltungo / Shongom', 16, 'Gombe', 46, 'Gombe South'),
-
--- ============================================================
--- IMO STATE (state_id: 17) - 10 Federal Constituencies
--- ============================================================
-
--- Imo North Senatorial District (SD ID: 47)
-(131, 'Ehime Mbano / Ihitte Uboma / Obowo', 17, 'Imo', 47, 'Imo North'),
-(132, 'Okigwe / Onuimo', 17, 'Imo', 47, 'Imo North'),
-
--- Imo East Senatorial District (SD ID: 48)
-(133, 'Aboh Mbaise / Ngor Okpala', 17, 'Imo', 48, 'Imo East'),
-(134, 'Ahiazu / Ezinihitte Mbaise', 17, 'Imo', 48, 'Imo East'),
-(135, 'Ikeduru / Mbaitoli', 17, 'Imo', 48, 'Imo East'),
-(136, 'Owerri Municipal / Owerri North / Owerri West', 17, 'Imo', 48, 'Imo East'),
-
--- Imo West Senatorial District (SD ID: 49)
-(137, 'Ideato North / Ideato South', 17, 'Imo', 49, 'Imo West'),
-(138, 'Isu / Njaba / Nkwerre / Nwangele', 17, 'Imo', 49, 'Imo West'),
-(139, 'Oguta / Ohaji-Egbema / Oru West', 17, 'Imo', 49, 'Imo West'),
-(140, 'Orlu / Orsu / Oru East', 17, 'Imo', 49, 'Imo West'),
-
--- ============================================================
--- JIGAWA STATE (state_id: 18) - 11 Federal Constituencies
--- ============================================================
-
--- Jigawa North-East Senatorial District (SD ID: 50)
-(141, 'Hadejia / Kafin Hausa / Auyo', 18, 'Jigawa', 50, 'Jigawa North-East'),
-(142, 'Birniwa / Guri / Kiri Kasamma', 18, 'Jigawa', 50, 'Jigawa North-East'),
-(143, 'Kaugama / Malam Madori', 18, 'Jigawa', 50, 'Jigawa North-East'),
-
--- Jigawa North-West Senatorial District (SD ID: 51)
-(144, 'Babura / Garki', 18, 'Jigawa', 51, 'Jigawa North-West'),
-(145, 'Gumel / Maigatari / Sule Tankarkar / Gagarawa', 18, 'Jigawa', 51, 'Jigawa North-West'),
-(146, 'Kazaure / Roni / Gwiwa / Yankwashi', 18, 'Jigawa', 51, 'Jigawa North-West'),
-
--- Jigawa South-West Senatorial District (SD ID: 52)
-(147, 'Birnin Kudu / Buji', 18, 'Jigawa', 52, 'Jigawa South-West'),
-(148, 'Dutse / Kiyawa', 18, 'Jigawa', 52, 'Jigawa South-West'),
-(149, 'Gwaram', 18, 'Jigawa', 52, 'Jigawa South-West'),
-(150, 'Jahun / Miga', 18, 'Jigawa', 52, 'Jigawa South-West'),
-(151, 'Ringim / Taura', 18, 'Jigawa', 52, 'Jigawa South-West'),
-
--- ============================================================
--- KADUNA STATE (state_id: 19) - 16 Federal Constituencies
--- ============================================================
-
--- Kaduna North Senatorial District (SD ID: 53)
-(152, 'Ikara / Kubau', 19, 'Kaduna', 53, 'Kaduna North'),
-(153, 'Makarfi / Kudan', 19, 'Kaduna', 53, 'Kaduna North'),
-(154, 'Sabon Gari', 19, 'Kaduna', 53, 'Kaduna North'),
-(155, 'Zaria', 19, 'Kaduna', 53, 'Kaduna North'),
-(156, 'Lere', 19, 'Kaduna', 53, 'Kaduna North'),
-(157, 'Soba', 19, 'Kaduna', 53, 'Kaduna North'),
-
--- Kaduna Central Senatorial District (SD ID: 54)
-(158, 'Birnin Gwari / Giwa', 19, 'Kaduna', 54, 'Kaduna Central'),
-(159, 'Chikun / Kajuru', 19, 'Kaduna', 54, 'Kaduna Central'),
-(160, 'Igabi', 19, 'Kaduna', 54, 'Kaduna Central'),
-(161, 'Kaduna North', 19, 'Kaduna', 54, 'Kaduna Central'),
-(162, 'Kaduna South', 19, 'Kaduna', 54, 'Kaduna Central'),
-
--- Kaduna South Senatorial District (SD ID: 55)
-(163, 'Jaba / Zangon Kataf', 19, 'Kaduna', 55, 'Kaduna South'),
-(164, 'Jemaa / Sanga', 19, 'Kaduna', 55, 'Kaduna South'),
-(165, 'Kachia / Kagarko', 19, 'Kaduna', 55, 'Kaduna South'),
-(166, 'Kaura', 19, 'Kaduna', 55, 'Kaduna South'),
-(167, 'Kauru', 19, 'Kaduna', 55, 'Kaduna South'),
-
--- ============================================================
--- KANO STATE (state_id: 20) - 24 Federal Constituencies
--- ============================================================
-
--- Kano Central Senatorial District (SD ID: 56)
-(168, 'Dala', 20, 'Kano', 56, 'Kano Central'),
-(169, 'Dawakin Kudu / Warawa', 20, 'Kano', 56, 'Kano Central'),
-(170, 'Fagge', 20, 'Kano', 56, 'Kano Central'),
-(171, 'Gezawa / Gabasawa', 20, 'Kano', 56, 'Kano Central'),
-(172, 'Gwale', 20, 'Kano', 56, 'Kano Central'),
-(173, 'Kano Municipal', 20, 'Kano', 56, 'Kano Central'),
-(174, 'Kumbotso', 20, 'Kano', 56, 'Kano Central'),
-(175, 'Nasarawa', 20, 'Kano', 56, 'Kano Central'),
-(176, 'Tarauni', 20, 'Kano', 56, 'Kano Central'),
-(177, 'Ungogo', 20, 'Kano', 56, 'Kano Central'),
-
--- Kano North Senatorial District (SD ID: 57)
-(178, 'Bagwai / Shanono', 20, 'Kano', 57, 'Kano North'),
-(179, 'Bichi', 20, 'Kano', 57, 'Kano North'),
-(180, 'Dambatta / Makoda', 20, 'Kano', 57, 'Kano North'),
-(181, 'Dawakin Tofa / Tofa / Rimin Gado', 20, 'Kano', 57, 'Kano North'),
-(182, 'Gwarzo / Kabo', 20, 'Kano', 57, 'Kano North'),
-(183, 'Karaye / Rogo', 20, 'Kano', 57, 'Kano North'),
-(184, 'Kunchi / Tsanyawa', 20, 'Kano', 57, 'Kano North'),
-(185, 'Minjibir / Ungogo', 20, 'Kano', 57, 'Kano North'),
-
--- Kano South Senatorial District (SD ID: 58)
-(186, 'Albasu / Ajingi / Gaya', 20, 'Kano', 58, 'Kano South'),
-(187, 'Bebeji / Kiru', 20, 'Kano', 58, 'Kano South'),
-(188, 'Doguwa / Tudun Wada', 20, 'Kano', 58, 'Kano South'),
-(189, 'Kura / Madobi / Garun Mallam', 20, 'Kano', 58, 'Kano South'),
-(190, 'Rano / Bunkure / Kibiya', 20, 'Kano', 58, 'Kano South'),
-(191, 'Takai / Sumaila', 20, 'Kano', 58, 'Kano South'),
-
--- ============================================================
--- KATSINA STATE (state_id: 21) - 15 Federal Constituencies
--- ============================================================
-
--- Katsina Central Senatorial District (SD ID: 59)
-(192, 'Batagarawa / Charanchi / Rimi', 21, 'Katsina', 59, 'Katsina Central'),
-(193, 'Batsari / Safana / Danmusa', 21, 'Katsina', 59, 'Katsina Central'),
-(194, 'Dutsin-Ma / Kurfi', 21, 'Katsina', 59, 'Katsina Central'),
-(195, 'Jibia / Kaita', 21, 'Katsina', 59, 'Katsina Central'),
-(196, 'Katsina Central', 21, 'Katsina', 59, 'Katsina Central'),
-
--- Katsina North Senatorial District (SD ID: 60)
-(197, 'Bindawa / Mani', 21, 'Katsina', 60, 'Katsina North'),
-(198, 'Daura / Sandamu / Maiadua', 21, 'Katsina', 60, 'Katsina North'),
-(199, 'Ingawa / Kankia / Kusada', 21, 'Katsina', 60, 'Katsina North'),
-(200, 'Mashi / Dutsi', 21, 'Katsina', 60, 'Katsina North'),
-(201, 'Zango / Baure', 21, 'Katsina', 60, 'Katsina North'),
-
--- Katsina South Senatorial District (SD ID: 61)
-(202, 'Bakori / Danja', 21, 'Katsina', 61, 'Katsina South'),
-(203, 'Faskari / Kankara / Sabuwa', 21, 'Katsina', 61, 'Katsina South'),
-(204, 'Funtua / Dandume', 21, 'Katsina', 61, 'Katsina South'),
-(205, 'Malumfashi / Kafur', 21, 'Katsina', 61, 'Katsina South'),
-(206, 'Matazu / Musawa', 21, 'Katsina', 61, 'Katsina South'),
-
--- ============================================================
--- KEBBI STATE (state_id: 22) - 8 Federal Constituencies
--- ============================================================
-
--- Kebbi Central Senatorial District (SD ID: 62)
-(207, 'Aleiro / Gwandu / Jega', 22, 'Kebbi', 62, 'Kebbi Central'),
-(208, 'Birnin Kebbi / Kalgo / Bunza', 22, 'Kebbi', 62, 'Kebbi Central'),
-(209, 'Maiyama / Koko/Besse', 22, 'Kebbi', 62, 'Kebbi Central'),
-
--- Kebbi North Senatorial District (SD ID: 63)
-(210, 'Arewa / Dandi', 22, 'Kebbi', 63, 'Kebbi North'),
-(211, 'Argungu / Augie', 22, 'Kebbi', 63, 'Kebbi North'),
-(212, 'Bagudo / Suru', 22, 'Kebbi', 63, 'Kebbi North'),
-
--- Kebbi South Senatorial District (SD ID: 64)
-(213, 'Fakai / Sakaba / Wasagu/Danko / Zuru', 22, 'Kebbi', 64, 'Kebbi South'),
-(214, 'Yauri / Shanga / Ngaski', 22, 'Kebbi', 64, 'Kebbi South'),
-
--- ============================================================
--- KOGI STATE (state_id: 23) - 9 Federal Constituencies
--- ============================================================
-
--- Kogi Central Senatorial District (SD ID: 65)
-(215, 'Adavi / Okehi', 23, 'Kogi', 65, 'Kogi Central'),
-(216, 'Ajaokuta', 23, 'Kogi', 65, 'Kogi Central'),
-(217, 'Okene / Ogori-Magongo', 23, 'Kogi', 65, 'Kogi Central'),
-
--- Kogi East Senatorial District (SD ID: 66)
-(218, 'Ankpa / Omala / Olamaboro', 23, 'Kogi', 66, 'Kogi East'),
-(219, 'Dekina / Bassa', 23, 'Kogi', 66, 'Kogi East'),
-(220, 'Idah / Ibaji / Igalamela-Odolu / Ofu', 23, 'Kogi', 66, 'Kogi East'),
-
--- Kogi West Senatorial District (SD ID: 67)
-(221, 'Kabba/Bunu / Ijumu', 23, 'Kogi', 67, 'Kogi West'),
-(222, 'Lokoja / Kogi (Koton Karfe)', 23, 'Kogi', 67, 'Kogi West'),
-(223, 'Yagba East / Yagba West / Mopa-Muro', 23, 'Kogi', 67, 'Kogi West'),
-
--- ============================================================
--- KWARA STATE (state_id: 24) - 6 Federal Constituencies
--- ============================================================
-
--- Kwara Central Senatorial District (SD ID: 68)
-(224, 'Ilorin East / Ilorin South', 24, 'Kwara', 68, 'Kwara Central'),
-(225, 'Ilorin West / Asa', 24, 'Kwara', 68, 'Kwara Central'),
-
--- Kwara North Senatorial District (SD ID: 69)
-(226, 'Baruten / Kaiama', 24, 'Kwara', 69, 'Kwara North'),
-(227, 'Edu / Moro / Pategi', 24, 'Kwara', 69, 'Kwara North'),
-
--- Kwara South Senatorial District (SD ID: 70)
-(228, 'Ekiti / Isin / Irepodun / Oke-Ero', 24, 'Kwara', 70, 'Kwara South'),
-(229, 'Ifelodun / Offa / Oyun', 24, 'Kwara', 70, 'Kwara South'),
-
--- ============================================================
--- LAGOS STATE (state_id: 25) - 24 Federal Constituencies
--- ============================================================
-
--- Lagos Central Senatorial District (SD ID: 71)
-(230, 'Apapa', 25, 'Lagos', 71, 'Lagos Central'),
-(231, 'Eti-Osa', 25, 'Lagos', 71, 'Lagos Central'),
-(232, 'Lagos Island I', 25, 'Lagos', 71, 'Lagos Central'),
-(233, 'Lagos Island II', 25, 'Lagos', 71, 'Lagos Central'),
-(234, 'Lagos Mainland', 25, 'Lagos', 71, 'Lagos Central'),
-(235, 'Surulere I', 25, 'Lagos', 71, 'Lagos Central'),
-(236, 'Surulere II', 25, 'Lagos', 71, 'Lagos Central'),
-
--- Lagos East Senatorial District (SD ID: 72)
-(237, 'Epe', 25, 'Lagos', 72, 'Lagos East'),
-(238, 'Ibeju-Lekki', 25, 'Lagos', 72, 'Lagos East'),
-(239, 'Ikorodu', 25, 'Lagos', 72, 'Lagos East'),
-(240, 'Kosofe', 25, 'Lagos', 72, 'Lagos East'),
-(241, 'Somolu', 25, 'Lagos', 72, 'Lagos East'),
-
--- Lagos West Senatorial District (SD ID: 73)
-(242, 'Agege', 25, 'Lagos', 73, 'Lagos West'),
-(243, 'Ajeromi-Ifelodun', 25, 'Lagos', 73, 'Lagos West'),
-(244, 'Alimosho', 25, 'Lagos', 73, 'Lagos West'),
-(245, 'Amuwo-Odofin', 25, 'Lagos', 73, 'Lagos West'),
-(246, 'Badagry', 25, 'Lagos', 73, 'Lagos West'),
-(247, 'Ifako-Ijaiye', 25, 'Lagos', 73, 'Lagos West'),
-(248, 'Ikeja', 25, 'Lagos', 73, 'Lagos West'),
-(249, 'Mushin I', 25, 'Lagos', 73, 'Lagos West'),
-(250, 'Mushin II', 25, 'Lagos', 73, 'Lagos West'),
-(251, 'Ojo', 25, 'Lagos', 73, 'Lagos West'),
-(252, 'Oshodi-Isolo I', 25, 'Lagos', 73, 'Lagos West'),
-(253, 'Oshodi-Isolo II', 25, 'Lagos', 73, 'Lagos West'),
-
--- ============================================================
--- NASARAWA STATE (state_id: 26) - 5 Federal Constituencies
--- ============================================================
-
--- Nasarawa North Senatorial District (SD ID: 74)
-(254, 'Akwanga / Nasarawa Eggon / Wamba', 26, 'Nasarawa', 74, 'Nasarawa North'),
-
--- Nasarawa South Senatorial District (SD ID: 75)
-(255, 'Awe / Doma / Keana', 26, 'Nasarawa', 75, 'Nasarawa South'),
-(256, 'Lafia / Obi', 26, 'Nasarawa', 75, 'Nasarawa South'),
-
--- Nasarawa West Senatorial District (SD ID: 76)
-(257, 'Keffi / Karu / Kokona', 26, 'Nasarawa', 76, 'Nasarawa West'),
-(258, 'Nasarawa / Toto', 26, 'Nasarawa', 76, 'Nasarawa West'),
-
--- ============================================================
--- NIGER STATE (state_id: 27) - 10 Federal Constituencies
--- ============================================================
-
--- Niger East Senatorial District (SD ID: 77)
-(259, 'Chanchaga', 27, 'Niger', 77, 'Niger East'),
-(260, 'Bosso / Paikoro', 27, 'Niger', 77, 'Niger East'),
-(261, 'Gurara / Suleja / Tafa', 27, 'Niger', 77, 'Niger East'),
-(262, 'Shiroro / Rafi / Munya', 27, 'Niger', 77, 'Niger East'),
-
--- Niger North Senatorial District (SD ID: 78)
-(263, 'Agwara / Borgu', 27, 'Niger', 78, 'Niger North'),
-(264, 'Bida / Gbako / Katcha', 27, 'Niger', 78, 'Niger North'),
-(265, 'Kontagora / Wushishi / Mariga / Mashegu', 27, 'Niger', 78, 'Niger North'),
-(266, 'Rijau / Magama', 27, 'Niger', 78, 'Niger North'),
-
--- Niger South Senatorial District (SD ID: 79)
-(267, 'Lapai / Agaie', 27, 'Niger', 79, 'Niger South'),
-(268, 'Lavun / Mokwa / Edati', 27, 'Niger', 79, 'Niger South'),
-
--- ============================================================
--- OGUN STATE (state_id: 28) - 9 Federal Constituencies
--- ============================================================
-
--- Ogun Central Senatorial District (SD ID: 80)
-(269, 'Abeokuta North / Obafemi-Owode / Odeda', 28, 'Ogun', 80, 'Ogun Central'),
-(270, 'Abeokuta South', 28, 'Ogun', 80, 'Ogun Central'),
-(271, 'Ifo / Ewekoro', 28, 'Ogun', 80, 'Ogun Central'),
-
--- Ogun East Senatorial District (SD ID: 81)
-(272, 'Ijebu North / Ijebu East / Ogun Waterside', 28, 'Ogun', 81, 'Ogun East'),
-(273, 'Ijebu Ode / Odogbolu / Ijebu North East', 28, 'Ogun', 81, 'Ogun East'),
-(274, 'Ikenne / Shagamu / Remo North', 28, 'Ogun', 81, 'Ogun East'),
-
--- Ogun West Senatorial District (SD ID: 82)
-(275, 'Ado-Odo / Ota', 28, 'Ogun', 82, 'Ogun West'),
-(276, 'Egbado North / Imeko Afon', 28, 'Ogun', 82, 'Ogun West'),
-(277, 'Egbado South / Ipokia', 28, 'Ogun', 82, 'Ogun West'),
-
--- ============================================================
--- ONDO STATE (state_id: 29) - 9 Federal Constituencies
--- ============================================================
-
--- Ondo Central Senatorial District (SD ID: 83)
-(278, 'Akure North / Akure South', 29, 'Ondo', 83, 'Ondo Central'),
-(279, 'Idanre / Ifedore', 29, 'Ondo', 83, 'Ondo Central'),
-(280, 'Ondo East / Ondo West', 29, 'Ondo', 83, 'Ondo Central'),
-
--- Ondo North Senatorial District (SD ID: 84)
-(281, 'Akoko North-East / Akoko North-West', 29, 'Ondo', 84, 'Ondo North'),
-(282, 'Akoko South-East / Akoko South-West', 29, 'Ondo', 84, 'Ondo North'),
-(283, 'Ose / Owo', 29, 'Ondo', 84, 'Ondo North'),
-
--- Ondo South Senatorial District (SD ID: 85)
-(284, 'Ilaje / Ese-Odo', 29, 'Ondo', 85, 'Ondo South'),
-(285, 'Ile-Oluji-Okeigbo / Odigbo', 29, 'Ondo', 85, 'Ondo South'),
-(286, 'Okitipupa / Irele', 29, 'Ondo', 85, 'Ondo South'),
-
--- ============================================================
--- OSUN STATE (state_id: 30) - 9 Federal Constituencies
--- ============================================================
-
--- Osun Central Senatorial District (SD ID: 86)
-(287, 'Boluwaduro / Ifedayo / Ila', 30, 'Osun', 86, 'Osun Central'),
-(288, 'Ifelodun / Boripe / Odo-Otin', 30, 'Osun', 86, 'Osun Central'),
-(289, 'Olorunda / Irepodun / Orolu / Osogbo', 30, 'Osun', 86, 'Osun Central'),
-
--- Osun East Senatorial District (SD ID: 87)
-(290, 'Atakunmosa East / Atakunmosa West / Ilesa East / Ilesa West', 30, 'Osun', 87, 'Osun East'),
-(291, 'Ife Central / Ife East / Ife North / Ife South', 30, 'Osun', 87, 'Osun East'),
-(292, 'Obokun / Oriade', 30, 'Osun', 87, 'Osun East'),
-
--- Osun West Senatorial District (SD ID: 88)
-(293, 'Ayedaade / Irewole / Isokan', 30, 'Osun', 88, 'Osun West'),
-(294, 'Ayedire / Iwo / Ola-Oluwa', 30, 'Osun', 88, 'Osun West'),
-(295, 'Ede North / Ede South / Egbedore / Ejigbo', 30, 'Osun', 88, 'Osun West'),
-
--- ============================================================
--- OYO STATE (state_id: 31) - 14 Federal Constituencies
--- ============================================================
-
--- Oyo Central Senatorial District (SD ID: 89)
-(296, 'Afijio / Atiba / Oyo East / Oyo West', 31, 'Oyo', 89, 'Oyo Central'),
-(297, 'Akinyele / Lagelu', 31, 'Oyo', 89, 'Oyo Central'),
-(298, 'Egbeda / Ona-Ara', 31, 'Oyo', 89, 'Oyo Central'),
-(299, 'Oluyole', 31, 'Oyo', 89, 'Oyo Central'),
-(300, 'Ogo-Oluwa / Surulere', 31, 'Oyo', 89, 'Oyo Central'),
-
--- Oyo North Senatorial District (SD ID: 90)
-(301, 'Atisbo / Saki East / Saki West', 31, 'Oyo', 90, 'Oyo North'),
-(302, 'Irepo / Olorunsogo / Oorelope', 31, 'Oyo', 90, 'Oyo North'),
-(303, 'Iseyin / Itesiwaju / Kajola / Iwajowa', 31, 'Oyo', 90, 'Oyo North'),
-(304, 'Ogbomoso North / Ogbomoso South / Oriire', 31, 'Oyo', 90, 'Oyo North'),
-
--- Oyo South Senatorial District (SD ID: 91)
-(305, 'Ibadan North', 31, 'Oyo', 91, 'Oyo South'),
-(306, 'Ibadan North-East / Ibadan South-East', 31, 'Oyo', 91, 'Oyo South'),
-(307, 'Ibadan North-West / Ibadan South-West', 31, 'Oyo', 91, 'Oyo South'),
-(308, 'Ibarapa Central / Ibarapa North', 31, 'Oyo', 91, 'Oyo South'),
-(309, 'Ido / Ibarapa East', 31, 'Oyo', 91, 'Oyo South'),
-
--- ============================================================
--- PLATEAU STATE (state_id: 32) - 8 Federal Constituencies
--- ============================================================
-
--- Plateau Central Senatorial District (SD ID: 92)
-(310, 'Bokkos / Mangu', 32, 'Plateau', 92, 'Plateau Central'),
-(311, 'Pankshin / Kanke / Kanam', 32, 'Plateau', 92, 'Plateau Central'),
-
--- Plateau North Senatorial District (SD ID: 93)
-(312, 'Barkin Ladi / Riyom', 32, 'Plateau', 93, 'Plateau North'),
-(313, 'Jos North / Bassa', 32, 'Plateau', 93, 'Plateau North'),
-(314, 'Jos South / Jos East', 32, 'Plateau', 93, 'Plateau North'),
-
--- Plateau South Senatorial District (SD ID: 94)
-(315, 'Langtang North / Langtang South', 32, 'Plateau', 94, 'Plateau South'),
-(316, 'Mikang / Quaan Pan / Shendam', 32, 'Plateau', 94, 'Plateau South'),
-(317, 'Wase', 32, 'Plateau', 94, 'Plateau South'),
-
--- ============================================================
--- RIVERS STATE (state_id: 33) - 13 Federal Constituencies
--- ============================================================
-
--- Rivers East Senatorial District (SD ID: 95)
-(318, 'Etche / Omuma', 33, 'Rivers', 95, 'Rivers East'),
-(319, 'Ikwerre / Emohua', 33, 'Rivers', 95, 'Rivers East'),
-(320, 'Obio/Akpor', 33, 'Rivers', 95, 'Rivers East'),
-(321, 'Okrika / Ogu/Bolo', 33, 'Rivers', 95, 'Rivers East'),
-(322, 'Port Harcourt I', 33, 'Rivers', 95, 'Rivers East'),
-(323, 'Port Harcourt II', 33, 'Rivers', 95, 'Rivers East'),
-
--- Rivers South-East Senatorial District (SD ID: 96)
-(324, 'Andoni / Opobo/Nkoro', 33, 'Rivers', 96, 'Rivers South-East'),
-(325, 'Gokana / Khana', 33, 'Rivers', 96, 'Rivers South-East'),
-(326, 'Eleme / Tai / Oyigbo', 33, 'Rivers', 96, 'Rivers South-East'),
-
--- Rivers West Senatorial District (SD ID: 97)
-(327, 'Abua/Odual / Ahoada East', 33, 'Rivers', 97, 'Rivers West'),
-(328, 'Ahoada West / Ogba/Egbema/Ndoni', 33, 'Rivers', 97, 'Rivers West'),
-(329, 'Degema / Bonny', 33, 'Rivers', 97, 'Rivers West'),
-(330, 'Asari-Toru / Akuku-Toru', 33, 'Rivers', 97, 'Rivers West'),
-
--- ============================================================
--- SOKOTO STATE (state_id: 34) - 11 Federal Constituencies
--- ============================================================
-
--- Sokoto East Senatorial District (SD ID: 98)
-(331, 'Gada / Goronyo', 34, 'Sokoto', 98, 'Sokoto East'),
-(332, 'Isa / Sabon Birni', 34, 'Sokoto', 98, 'Sokoto East'),
-(333, 'Illela / Gwadabawa', 34, 'Sokoto', 98, 'Sokoto East'),
-(334, 'Rabah / Wurno', 34, 'Sokoto', 98, 'Sokoto East'),
-
--- Sokoto North Senatorial District (SD ID: 99)
-(335, 'Binji / Silame', 34, 'Sokoto', 99, 'Sokoto North'),
-(336, 'Kware / Wamako', 34, 'Sokoto', 99, 'Sokoto North'),
-(337, 'Sokoto North / Sokoto South', 34, 'Sokoto', 99, 'Sokoto North'),
-(338, 'Tangaza / Gudu', 34, 'Sokoto', 99, 'Sokoto North'),
-
--- Sokoto South Senatorial District (SD ID: 100)
-(339, 'Kebbe / Tambuwal', 34, 'Sokoto', 100, 'Sokoto South'),
-(340, 'Bodinga / Dange-Shuni / Tureta', 34, 'Sokoto', 100, 'Sokoto South'),
-(341, 'Yabo / Shagari', 34, 'Sokoto', 100, 'Sokoto South'),
-
--- ============================================================
--- TARABA STATE (state_id: 35) - 6 Federal Constituencies
--- ============================================================
-
--- Taraba North Senatorial District (SD ID: 101)
-(342, 'Jalingo / Yorro / Zing', 35, 'Taraba', 101, 'Taraba North'),
-(343, 'Karim Lamido / Lau / Ardo-Kola', 35, 'Taraba', 101, 'Taraba North'),
-
--- Taraba Central Senatorial District (SD ID: 102)
-(344, 'Bali / Gassol', 35, 'Taraba', 102, 'Taraba Central'),
-(345, 'Sardauna / Gashaka / Kurmi', 35, 'Taraba', 102, 'Taraba Central'),
-
--- Taraba South Senatorial District (SD ID: 103)
-(346, 'Donga / Ussa / Takum / Yangtu Special Development Area', 35, 'Taraba', 103, 'Taraba South'),
-(347, 'Wukari / Ibi', 35, 'Taraba', 103, 'Taraba South'),
-
--- ============================================================
--- YOBE STATE (state_id: 36) - 6 Federal Constituencies
--- ============================================================
-
--- Yobe North Senatorial District (SD ID: 104)
-(348, 'Bade / Jakusko', 36, 'Yobe', 104, 'Yobe North'),
-(349, 'Machina / Nguru / Karasuwa / Yusufari', 36, 'Yobe', 104, 'Yobe North'),
-
--- Yobe East Senatorial District (SD ID: 105)
-(350, 'Damaturu / Gujba / Gulani / Tarmuwa', 36, 'Yobe', 105, 'Yobe East'),
-(351, 'Geidam / Yunusari / Bursari', 36, 'Yobe', 105, 'Yobe East'),
-
--- Yobe South Senatorial District (SD ID: 106)
-(352, 'Fika / Fune', 36, 'Yobe', 106, 'Yobe South'),
-(353, 'Potiskum / Nangere', 36, 'Yobe', 106, 'Yobe South'),
-
--- ============================================================
--- ZAMFARA STATE (state_id: 37) - 7 Federal Constituencies
--- ============================================================
-
--- Zamfara North Senatorial District (SD ID: 107)
-(354, 'Zurmi / Shinkafi', 37, 'Zamfara', 107, 'Zamfara North'),
-(355, 'Kaura Namoda / Birnin Magaji', 37, 'Zamfara', 107, 'Zamfara North'),
-
--- Zamfara Central Senatorial District (SD ID: 108)
-(356, 'Gusau / Tsafe', 37, 'Zamfara', 108, 'Zamfara Central'),
-(357, 'Bungudu / Maru', 37, 'Zamfara', 108, 'Zamfara Central'),
-
--- Zamfara West Senatorial District (SD ID: 109)
-(358, 'Bakura / Maradun', 37, 'Zamfara', 109, 'Zamfara West'),
-(359, 'Anka / Talata Mafara', 37, 'Zamfara', 109, 'Zamfara West'),
-(360, 'Gummi / Bukkuyum', 37, 'Zamfara', 109, 'Zamfara West');
-
+-- SEED DATA START
+INSERT INTO federal_constituencies (id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, status) VALUES
+(1, 'Buruku', 'FC/057/BN', 7, 'BENUE', 21, 'benue north west', 'active'),
+(2, 'aba north/aba south', 'fc/001/ab', 1, 'ABIA', 111, 'abia south', 'active'),
+(3, 'arochukwu/ohafia', 'fc/002/ab', 1, 'ABIA', 2, 'abia north', 'active'),
+(4, 'bende', 'fc/003/ab', 1, 'ABIA', 2, 'abia north', 'active'),
+(5, 'isiala ngwa north/isiala ngwa south', 'fc/004/ab', 1, 'ABIA', 112, 'abia central', 'active'),
+(6, 'isuikwuato/umu-nneochi', 'fc/005/ab', 1, 'ABIA', 2, 'abia north', 'active'),
+(7, 'obingwa/ugwunagbo/osisioma', 'fc/006/ab', 1, 'ABIA', 111, 'abia south', 'active'),
+(8, 'umuahia north/ umuahia south/ikwuano', 'fc/007/ab', 1, 'ABIA', 112, 'abia central', 'active'),
+(9, 'ukwa east/ukwa west', 'fc/008/ab', 1, 'ABIA', 111, 'abia south', 'active'),
+(10, 'demsa/numan/lamurde', 'fc/009/ad', 2, 'ADAMAWA', 6, 'adamawa south', 'active'),
+(11, 'furore/song', 'fc/010/ad', 2, 'ADAMAWA', 7, 'ademawa central', 'active'),
+(12, 'mayo belwa/ganye/jada /toungo', 'fc/011/ad', 2, 'ADAMAWA', 6, 'adamawa south', 'active'),
+(13, 'gombi/hong', 'fc/012/ad', 2, 'ADAMAWA', 7, 'ademawa central', 'active'),
+(14, 'guyuk/shelleng', 'fc/013/ad', 2, 'ADAMAWA', 6, 'adamawa south', 'active'),
+(15, 'madagali/michika', 'fc/014/ad', 2, 'ADAMAWA', 5, 'adamawa north', 'active'),
+(16, 'maiha/mubi north/mubi south', 'fc/015/ad', 2, 'ADAMAWA', 5, 'adamawa north', 'active'),
+(17, 'yola north/yola south/girei', 'fc/016/ad', 2, 'ADAMAWA', 7, 'ademawa central', 'active'),
+(18, 'anambra east/anambra west', 'fc/027/an', 4, 'ANAMBRA', 8, 'anambra north', 'active'),
+(19, 'onitsha north/onitsha south', 'fc/028/an', 4, 'ANAMBRA', 8, 'anambra north', 'active'),
+(20, 'ogbaru', 'fc/029/an', 4, 'ANAMBRA', 8, 'anambra north', 'active'),
+(21, 'aguata', 'fc/030/an', 4, 'ANAMBRA', 10, 'anambra south', 'active'),
+(22, 'oyi/ayamelum', 'fc/031/an', 4, 'ANAMBRA', 8, 'anambra north', 'active'),
+(23, 'awka north/awka south', 'fc/032/an', 4, 'ANAMBRA', 9, 'anambra central', 'active'),
+(24, 'njikoka/dunukofia/anaocha', 'fc/033/an', 4, 'ANAMBRA', 9, 'anambra central', 'active'),
+(25, 'idemili north/idemili south', 'fc/034/an', 4, 'ANAMBRA', 9, 'anambra central', 'active'),
+(26, 'ihiala', 'fc/035/an', 4, 'ANAMBRA', 10, 'anambra south', 'active'),
+(27, 'nnewi north/nnewi south/ ekwusigo', 'fc/036/an', 4, 'ANAMBRA', 10, 'anambra south', 'active'),
+(28, 'orumba north/orumba south', 'fc/037/an', 4, 'ANAMBRA', 10, 'anambra south', 'active'),
+(29, 'abak/etim ekpo/ika', 'fc/017/ak', 3, 'AKWA IBOM', 117, 'akwa ibom north west', 'active'),
+(30, 'eket/onna/esit eket/ibeno', 'fc/018/ak', 3, 'AKWA IBOM', 13, 'akwa ibom south', 'active'),
+(31, 'etinan/nsit ibom/nsit ubium', 'fc/019/ak', 3, 'AKWA IBOM', 115, 'akwa ibom north east', 'active'),
+(32, 'ikono/ini', 'fc/020/ak', 3, 'AKWA IBOM', 117, 'akwa ibom north west', 'active'),
+(33, 'ikot abasi/mkpat enin/eastern obolo', 'fc/021/ak', 3, 'AKWA IBOM', 13, 'akwa ibom south', 'active'),
+(34, 'ikot ekpene/essien udim/ obot akara f', 'fc/022/ak', 3, 'AKWA IBOM', 117, 'akwa ibom north west', 'active'),
+(35, 'itu/ibiono ibom', 'fc/023/ak', 3, 'AKWA IBOM', 115, 'akwa ibom north east', 'active'),
+(36, 'oron/mbo/okobo/udung uko/urue offong/oruko', 'fc/024/ak', 3, 'AKWA IBOM', 13, 'akwa ibom south', 'active'),
+(37, 'ukanafun/oruk anam', 'fc/025/ak', 3, 'AKWA IBOM', 117, 'akwa ibom north west', 'active'),
+(38, 'uyo/uruan/nsit atai/ ibesikpo asutan', 'fc/026/ak', 3, 'AKWA IBOM', 115, 'akwa ibom north east', 'active'),
+(39, 'alkaleri/kirfi', 'fc/038/ba', 5, 'BAUCHI', 14, 'bauchi south', 'active'),
+(40, 'bauchi', 'fc/039/ba', 5, 'BAUCHI', 14, 'bauchi south', 'active'),
+(41, 'bogoro/dass/tafawa balewa', 'fc/040/ba', 5, 'BAUCHI', 14, 'bauchi south', 'active'),
+(42, 'toro', 'fc/041/ba', 5, 'BAUCHI', 14, 'bauchi south', 'active'),
+(43, 'ningi/warji', 'fc/042/ba', 5, 'BAUCHI', 15, 'bauchi central', 'active'),
+(44, 'darazo/gunjuwa', 'fc/043/ba', 5, 'BAUCHI', 15, 'bauchi central', 'active'),
+(45, 'misau/dambam', 'fc/044/ba', 5, 'BAUCHI', 15, 'bauchi central', 'active'),
+(46, 'zaki', 'fc/045/ba', 5, 'BAUCHI', 16, 'bauchi north', 'active'),
+(47, 'gamawa', 'fc/046/ba', 5, 'BAUCHI', 16, 'bauchi north', 'active'),
+(48, 'jama’are/itas-gadau', 'fc/047/ba', 5, 'BAUCHI', 16, 'bauchi north', 'active'),
+(49, 'shira/giade', 'fc/048/ba', 5, 'BAUCHI', 16, 'bauchi north', 'active'),
+(50, 'katagum', 'fc/049/ba', 5, 'BAUCHI', 16, 'bauchi north', 'active'),
+(51, 'brass/nembe', 'fc/050/by', 6, 'BAYELSA', 17, 'bayelsa east', 'active'),
+(52, 'ogbia', 'fc/051/by', 6, 'BAYELSA', 17, 'bayelsa east', 'active'),
+(53, 'sagbama/ekeremor', 'fc/052/by', 6, 'BAYELSA', 19, 'bayelsa west', 'active'),
+(54, 'southern ijaw', 'fc/053/by', 6, 'BAYELSA', 18, 'bayelsa central', 'active'),
+(55, 'yenagoa/kolokuna/opokuma', 'fc/054/by', 6, 'BAYELSA', 18, 'bayelsa central', 'active'),
+(56, 'ado/obadigbo/okpokwu', 'fc/055/bn', 7, 'BENUE', 22, 'benue south', 'active'),
+(57, 'apa/agatu', 'fc/056/bn', 7, 'BENUE', 22, 'benue south', 'active'),
+(58, 'gboko/tarka', 'fc/058/bn', 7, 'BENUE', 21, 'benue north west', 'active'),
+(59, 'guma/makurdi', 'fc/059/bn', 7, 'BENUE', 21, 'benue north west', 'active'),
+(60, 'gwer east/gwer west', 'fc/060/bn', 7, 'BENUE', 21, 'benue north west', 'active'),
+(61, 'katsina-ala/ukum/logo', 'fc/061/bn', 7, 'BENUE', 20, 'benue north east', 'active'),
+(62, 'konshisha/vandeikya', 'fc/062/bn', 7, 'BENUE', 20, 'benue north east', 'active'),
+(63, 'kwande/ushongo', 'fc/063/bn', 7, 'BENUE', 20, 'benue north east', 'active'),
+(64, 'oju/obi', 'fc/064/bn', 7, 'BENUE', 22, 'benue south', 'active'),
+(65, 'otukpo/ohimini', 'fc/065/bn', 7, 'BENUE', 22, 'benue south', 'active'),
+(66, 'askira-uba/hawul', 'fc/066/bo', 8, 'BORNO', 25, 'borno south', 'active'),
+(69, 'dikwa/mafa/konduga', 'fc/069/bo', 8, 'BORNO', 113, 'borno central', 'active'),
+(70, 'damboa/gwoza/chibok', 'fc/070/bo', 8, 'BORNO', 25, 'borno south', 'active'),
+(71, 'kaga/gubio/magumeri', 'fc/071/bo', 8, 'BORNO', 114, 'borno north', 'active'),
+(72, 'monguno/nganzai/marte', 'fc/072/bo', 8, 'BORNO', 114, 'borno north', 'active'),
+(73, 'kukawa/mobbar/abadam/ guzamali', 'fc/073/bo', 8, 'BORNO', 114, 'borno north', 'active'),
+(74, 'maiduguri (metropolitan)', 'fc/074/bo', 8, 'BORNO', 113, 'borno central', 'active'),
+(75, 'jere', 'fc/075/bo', 8, 'BORNO', 113, 'borno central', 'active'),
+(76, 'yakurr/abi', 'fc/076/cr', 9, 'CROSS RIVER', 27, 'cross river central', 'active'),
+(77, 'akamkpa/biase', 'fc/077/cr', 9, 'CROSS RIVER', 119, 'cross river south', 'active'),
+(78, 'boki/ikom', 'fc/078/cr', 9, 'CROSS RIVER', 27, 'cross river central', 'active'),
+(81, 'obanliku/obudu/bekwarra', 'fc/081/cr', 9, 'CROSS RIVER', 118, 'cross river north', 'active'),
+(82, 'obubra/etung', 'fc/082/cr', 9, 'CROSS RIVER', 27, 'cross river central', 'active'),
+(83, 'ogoja/yala', 'fc/083/cr', 9, 'CROSS RIVER', 118, 'cross river north', 'active'),
+(84, 'aniocha north/aniocha south/oshimili north & south', 'fc/084/dt', 10, 'DELTA', 30, 'deltal north', 'active'),
+(85, 'bomadi/patani', 'fc/085/dt', 10, 'DELTA', 31, 'deltal south', 'active'),
+(86, 'ethiope east/ethiope west', 'fc/086/dt', 10, 'DELTA', 29, 'deltal central', 'active'),
+(87, 'ika north east/ika south', 'fc/087/dt', 10, 'DELTA', 30, 'deltal north', 'active'),
+(88, 'isoko north/isoko south', 'fc/088/dt', 10, 'DELTA', 31, 'deltal south', 'active'),
+(89, 'nkokwa east/ndokwa west/ ukwuani', 'fc/089/dt', 10, 'DELTA', 30, 'deltal north', 'active'),
+(90, 'okpe/sapele/uvwie', 'fc/090/dt', 10, 'DELTA', 29, 'deltal central', 'active'),
+(91, 'burutu', 'fc/091/dt', 10, 'DELTA', 31, 'deltal south', 'active'),
+(92, 'ughelli north, ughelli south/udu', 'fc/092/dt', 10, 'DELTA', 29, 'deltal central', 'active'),
+(93, 'warri north/warri south/ warri south west', 'fc/093/dt', 10, 'DELTA', 31, 'deltal south', 'active'),
+(94, 'ebonyi/ohaukwu', 'fc/094/eb', 11, 'EBONYI', 32, 'ebonyi north', 'active'),
+(95, 'abakaliki/izzi', 'fc/095/eb', 11, 'EBONYI', 32, 'ebonyi north', 'active'),
+(96, 'ezza north/ishielu', 'fc/096/eb', 11, 'EBONYI', 33, 'ebonyi central', 'active'),
+(97, 'ezza south/ikwo', 'fc/097/eb', 11, 'EBONYI', 33, 'ebonyi central', 'active'),
+(98, 'ivo-ohaozara/onicha', 'fc/098/eb', 11, 'EBONYI', 34, 'ebonyi south', 'active'),
+(99, 'fikpo north/afikpo south', 'fc/099/eb', 11, 'EBONYI', 34, 'ebonyi south', 'active'),
+(100, 'akoko-edo', 'fc/100/ed', 12, 'EDO', 36, 'edo north', 'active'),
+(102, 'esan north east/esan south east', 'fc/102/ed', 12, 'EDO', 35, 'edo central', 'active'),
+(103, 'etsako east/etsako west/ etsako central', 'fc/103/ed', 12, 'EDO', 36, 'edo north', 'active'),
+(104, 'egor/ikpoba-okha', 'fc/104/ed', 12, 'EDO', 37, 'edo south', 'active'),
+(105, 'oredo', 'fc/105/ed', 12, 'EDO', 37, 'edo south', 'active'),
+(106, 'orhionmwon/uhunmwonde', 'fc/106/ed', 12, 'EDO', 37, 'edo south', 'active'),
+(108, 'ado ekiti/irepodun/ifelodun', 'fc/109/ek', 13, 'EKITI', 39, 'ekiti central', 'active'),
+(109, 'ekiti south west/ikere/orun/ ise', 'fc/110/ek', 13, 'EKITI', 40, 'ekiti south', 'active'),
+(110, 'emure/gbonyin/ekiti east', 'fc/111/ek', 13, 'EKITI', 40, 'ekiti south', 'active'),
+(111, 'ido/osi, moba/ilejeme', 'fc/112/ek', 13, 'EKITI', 38, 'ekiti north', 'active'),
+(112, 'ijero/ekiti west/efon', 'fc/113/ek', 13, 'EKITI', 39, 'ekiti central', 'active'),
+(113, 'ikole/oye', 'fc/114/ek', 13, 'EKITI', 38, 'ekiti north', 'active'),
+(114, 'aninri/awgu/oji river', 'fc/115/en', 14, 'ENUGU', 42, 'enugu west', 'active'),
+(115, 'enugu east/isi uzo', 'fc/116/en', 14, 'ENUGU', 41, 'enugu east', 'active'),
+(116, 'enugu north/enugu south', 'fc/117/en', 14, 'ENUGU', 41, 'enugu east', 'active'),
+(117, 'ezeagu/udi', 'fc/118/en', 14, 'ENUGU', 42, 'enugu west', 'active'),
+(118, 'igbo-etiti/uzo-uwani', 'fc/119/en', 14, 'ENUGU', 43, 'enugu north', 'active'),
+(120, 'nkanu east/nkanu west', 'fc/121/en', 14, 'ENUGU', 41, 'enugu east', 'active'),
+(122, 'akko', 'fc/123/gm', 16, 'GOMBE', 44, 'gombe central', 'active'),
+(123, 'yamaltu/deba', 'fc/124/gm', 16, 'GOMBE', 44, 'gombe central', 'active'),
+(124, 'balanga/billiri', 'fc/125/gm', 16, 'GOMBE', 45, 'gombe south', 'active'),
+(125, 'kaltungo/shongom', 'fc/126/gm', 16, 'GOMBE', 45, 'gombe south', 'active'),
+(126, 'gombe/kwami/funakaye', 'fc/127/gm', 16, 'GOMBE', 46, 'gombe north', 'active'),
+(127, 'dukku/nafada', 'fc/128/gm', 16, 'GOMBE', 46, 'gombe north', 'active'),
+(128, 'ehime mbano/ihite-uboma/ obowo', 'fc/129/im', 17, 'IMO', 49, 'imo north', 'active'),
+(129, 'isiala mbano/okigwe/onuimo', 'fc/130/im', 17, 'IMO', 49, 'imo north', 'active'),
+(130, 'ideato north/ideato south', 'fc/131/im', 17, 'IMO', 48, 'imo west', 'active'),
+(131, 'isu/njaba/nkwerre/nwangele', 'fc/132/im', 17, 'IMO', 48, 'imo west', 'active'),
+(132, 'oguta/ohaji-egbema/oru west', 'fc/133/im', 17, 'IMO', 48, 'imo west', 'active'),
+(133, 'oru east/orsu/orlu', 'fc/134/im', 17, 'IMO', 48, 'imo west', 'active'),
+(134, 'aboh mbaise/ngor okpala', 'fc/135/im', 17, 'IMO', 47, 'imo east', 'active'),
+(137, 'owerri municipal/owerri north/owerri west', 'fc/138/im', 17, 'IMO', 47, 'imo east', 'active'),
+(138, 'babura/garki', 'fc/139/jg', 18, 'JIGAWA', 52, 'jigawa north-west', 'active'),
+(139, 'birnin kudu/buji', 'fc/140/jg', 18, 'JIGAWA', 50, 'jigawa south-west', 'active'),
+(140, 'birniwa guri/kirikasamma', 'fc/141/jg', 18, 'JIGAWA', 51, 'jigawa north-east', 'active'),
+(141, 'dutse/kiyawa', 'fc/142/jg', 18, 'JIGAWA', 50, 'jigawa south-west', 'active'),
+(142, 'gwaram', 'fc/143/jg', 18, 'JIGAWA', 50, 'jigawa south-west', 'active'),
+(143, 'gumel/maigatari/sule tankarkar/gagarawa', 'fc/144/jg', 18, 'JIGAWA', 52, 'jigawa north-west', 'active'),
+(145, 'mallam madori/kaugama', 'fc/147/jg', 18, 'JIGAWA', 51, 'jigawa north-east', 'active'),
+(146, 'kazaure/roni/gwiwa/yankwashi', 'fc/148/jg', 18, 'JIGAWA', 52, 'jigawa north-west', 'active'),
+(147, 'ringim/taura', 'fc/149/jg', 18, 'JIGAWA', 52, 'jigawa north-west', 'active'),
+(148, 'kaduna north', 'fc/150/kd', 19, 'KADUNA', 54, 'kaduna central', 'active'),
+(149, 'zaria', 'fc/151/kd', 19, 'KADUNA', 53, 'kaduna north', 'active'),
+(150, 'soba', 'fc/152/kd', 19, 'KADUNA', 53, 'kaduna north', 'active'),
+(151, 'igabi', 'fc/153/kd', 19, 'KADUNA', 54, 'kaduna central', 'active'),
+(152, 'ikara/kubau', 'fc/154/kd', 19, 'KADUNA', 53, 'kaduna north', 'active'),
+(153, 'makarfi/kudan', 'fc/155/kd', 19, 'KADUNA', 53, 'kaduna north', 'active'),
+(154, 'lere', 'fc/156/kd', 19, 'KADUNA', 53, 'kaduna north', 'active'),
+(155, 'kachia/kagarko', 'fc/157/kd', 19, 'KADUNA', 55, 'kaduna south', 'active'),
+(156, 'chikun/kajuru', 'fc/158/kd', 19, 'KADUNA', 54, 'kaduna central', 'active'),
+(157, 'jema’a/sanga', 'fc/159/kd', 19, 'KADUNA', 55, 'kaduna south', 'active'),
+(158, 'birnin gwari/giwa', 'fc/160/kd', 19, 'KADUNA', 54, 'kaduna central', 'active'),
+(159, 'sabon gari', 'fc/161/kd', 19, 'KADUNA', 53, 'kaduna north', 'active'),
+(160, 'kaduna south', 'fc/162/kd', 19, 'KADUNA', 54, 'kaduna central', 'active'),
+(161, 'kaura', 'fc/163/kd', 19, 'KADUNA', 55, 'kaduna south', 'active'),
+(162, 'kauru', 'fc/164/kd', 19, 'KADUNA', 55, 'kaduna south', 'active'),
+(163, 'zangon kataf/jaba', 'fc/165/kd', 19, 'KADUNA', 55, 'kaduna south', 'active'),
+(164, 'alabasu/gaya/ajingi', 'fc/166/kn', 20, 'KANO', 121, 'kano south', 'active'),
+(165, 'shanono/bagwai', 'fc/167/kn', 20, 'KANO', 120, 'kano north', 'active'),
+(166, 'bebeji/kiru', 'fc/168/kn', 20, 'KANO', 121, 'kano south', 'active'),
+(167, 'bichi', 'fc/169/kn', 20, 'KANO', 120, 'kano north', 'active'),
+(168, 'rano/bunkure/kibiya', 'fc/170/kn', 20, 'KANO', 121, 'kano south', 'active'),
+(169, 'dala', 'fc/171/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(170, 'gwale', 'fc/172/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(171, 'dambatta/makoda', 'fc/173/kn', 20, 'KANO', 120, 'kano north', 'active'),
+(172, 'dawakin kudu/warawa', 'fc/174/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(173, 'dawakin tofa/tofa/rimin gado', 'fc/175/kn', 20, 'KANO', 120, 'kano north', 'active'),
+(174, 'doguwa/tudun wada', 'fc/176/kn', 20, 'KANO', 121, 'kano south', 'active'),
+(175, 'gezawa/gabasawa', 'fc/177/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(176, 'gwarzo/ikabo', 'fc/178/kn', 20, 'KANO', 120, 'kano north', 'active'),
+(177, 'municipal', 'fc/179/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(178, 'tarauni', 'fc/180/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(179, 'karaye/rogo', 'fc/181/kn', 20, 'KANO', 121, 'kano south', 'active'),
+(180, 'kumbotso', 'fc/182/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(181, 'kura/madobi/garun mallam', 'fc/183/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(182, 'nassarawa', 'fc/184/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(183, 'fagge', 'fc/185/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(184, 'sumaila/takai', 'fc/186/kn', 20, 'KANO', 121, 'kano south', 'active'),
+(185, 'minjibir/ungogo', 'fc/187/kn', 20, 'KANO', 56, 'kano central', 'active'),
+(186, 'tsanyawa/kunchi', 'fc/188/kn', 20, 'KANO', 120, 'kano north', 'active'),
+(187, 'wudil/garko', 'fc/189/kn', 20, 'KANO', 121, 'kano south', 'active'),
+(188, 'bakori/danja', 'fc/190/kt', 21, 'KATSINA', 60, 'katsina south', 'active'),
+(189, 'batagarawa/charanchi/rimi', 'fc/191/kt', 21, 'KATSINA', 61, 'katsina central', 'active'),
+(190, 'batsari/safana/danmusa', 'fc/192/kt', 21, 'KATSINA', 61, 'katsina central', 'active'),
+(191, 'bindawa/mani', 'fc/193/kt', 21, 'KATSINA', 59, 'katsina north', 'active'),
+(192, 'daura/sandamu/mai’adua', 'fc/194/kt', 21, 'KATSINA', 59, 'katsina north', 'active'),
+(193, 'dutsin-ma/kurfi', 'fc/195/kt', 21, 'KATSINA', 61, 'katsina central', 'active'),
+(194, 'faskari/kankara/sabuwa', 'fc/196/kt', 21, 'KATSINA', 60, 'katsina south', 'active'),
+(195, 'funtua/dandume', 'fc/197/kt', 21, 'KATSINA', 60, 'katsina south', 'active'),
+(196, 'ingawa/kankia/kusada', 'fc/198/kt', 21, 'KATSINA', 59, 'katsina north', 'active'),
+(197, 'jibia/kaita', 'fc/199/kt', 21, 'KATSINA', 61, 'katsina central', 'active'),
+(198, 'malumfashi/kafur', 'fc/200/kt', 21, 'KATSINA', 60, 'katsina south', 'active'),
+(199, 'katsina', 'fc/201/kt', 21, 'KATSINA', 61, 'katsina central', 'active'),
+(200, 'mashi/dutsi', 'fc/202/kt', 21, 'KATSINA', 59, 'katsina north', 'active'),
+(201, 'matazu/musawa', 'fc/203/kt', 21, 'KATSINA', 60, 'katsina south', 'active'),
+(202, 'zango/baure', 'fc/204/kt', 21, 'KATSINA', 59, 'katsina north', 'active'),
+(203, 'arewa/dandi', 'fc/205/kb', 22, 'KEBBI', 122, 'kebbi north', 'active'),
+(204, 'argungu/augie', 'fc/206/kb', 22, 'KEBBI', 122, 'kebbi north', 'active'),
+(205, 'bagudo/suru', 'fc/207/kb', 22, 'KEBBI', 122, 'kebbi north', 'active'),
+(206, 'bunza/birnin kebbi/kalgo', 'fc/208/kb', 22, 'KEBBI', 123, 'kebbi central', 'active'),
+(207, 'aleiro/gwandu/jega', 'fc/209/kb', 22, 'KEBBI', 123, 'kebbi central', 'active'),
+(208, 'koko-besse/maiyama', 'fc/210/kb', 22, 'KEBBI', 123, 'kebbi central', 'active'),
+(209, 'fakai/sakaba/wasagu/danko/ zuru', 'fc/211/kb', 22, 'KEBBI', 64, 'kebbi south', 'active'),
+(210, 'ngaski/shanga/yauri', 'fc/212/kb', 22, 'KEBBI', 64, 'kebbi south', 'active'),
+(211, 'adavi/okehi', 'fc/213/kg', 23, 'KOGI', 65, 'kogi central', 'active'),
+(213, 'bassa/dekina', 'fc/215/kg', 23, 'KOGI', 66, 'kogi east', 'active'),
+(214, 'idah/igalamela odolu/ibaji/ ofu', 'fc/216/kg', 23, 'KOGI', 66, 'kogi east', 'active'),
+(215, 'ijumu/kabba-bunu', 'fc/217/kg', 23, 'KOGI', 67, 'kogi west', 'active'),
+(216, 'ajaokuta', 'fc/218/kg', 23, 'KOGI', 65, 'kogi central', 'active'),
+(217, 'kogi (lokoja)/kogi (k.k.)', 'fc/219/kg', 23, 'KOGI', 67, 'kogi west', 'active'),
+(218, 'okene/ogori-magogo', 'fc/220/kg', 23, 'KOGI', 65, 'kogi central', 'active'),
+(219, 'yagba east/yagba west/ mopamuro', 'fc/221/kg', 23, 'KOGI', 67, 'kogi west', 'active'),
+(220, 'baruten/kaiama', 'fc/222/kw', 24, 'KWARA', 105, 'Kwara North', 'active'),
+(221, 'edu/moro/pategi', 'fc/223/kw', 24, 'KWARA', 105, 'Kwara North', 'active'),
+(222, 'ekiti/isin/irepodun/oke-ero', 'fc/224/kw', 24, 'KWARA', 106, 'Kwara South', 'active'),
+(223, 'ilorin east/ilorin south', 'fc/225/kw', 24, 'KWARA', 104, 'Kwara Central', 'active'),
+(224, 'ilorin west/asa', 'fc/226/kw', 24, 'KWARA', 104, 'Kwara Central', 'active'),
+(225, 'ifelodun/offa/oyun', 'fc/227/kw', 24, 'KWARA', 106, 'Kwara South', 'active'),
+(226, 'agege', 'fc/228/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(227, 'ifako/ijaiye', 'fc/229/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(228, 'alimosho', 'fc/230/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(229, 'badagry', 'fc/231/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(230, 'epe', 'fc/232/la', 25, 'LAGOS', 69, 'lagos east', 'active'),
+(231, 'ibeju lekki', 'fc/233/la', 25, 'LAGOS', 69, 'lagos east', 'active'),
+(232, 'eti-osa', 'fc/234/la', 25, 'LAGOS', 68, 'lagos central', 'active'),
+(233, 'apapa', 'fc/235/la', 25, 'LAGOS', 68, 'lagos central', 'active'),
+(234, 'ikeja', 'fc/236/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(235, 'ikorodu', 'fc/237/la', 25, 'LAGOS', 69, 'lagos east', 'active'),
+(236, 'lagos island i', 'fc/238/la', 25, 'LAGOS', 68, 'lagos central', 'active'),
+(237, 'lagos island ii', 'fc/239/la', 25, 'LAGOS', NULL, NULL, 'active'),
+(238, 'lagos mainland', 'fc/240/la', 25, 'LAGOS', 68, 'lagos central', 'active'),
+(239, 'mushin i', 'fc/241/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(240, 'mushin ii', 'fc/242/la', 25, 'LAGOS', NULL, NULL, 'active'),
+(241, 'ojo', 'fc/243/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(242, 'amuwo-odofin', 'fc/244/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(243, 'ajeromi/ifelodun', 'fc/245/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(244, 'oshodi/isolo i', 'fc/246/la', 25, 'LAGOS', 70, 'lagos west', 'active'),
+(245, 'oshodi/isolo ii', 'fc/247/la', 25, 'LAGOS', NULL, NULL, 'active'),
+(246, 'shomolu', 'fc/248/la', 25, 'LAGOS', 69, 'lagos east', 'active'),
+(247, 'kosofe', 'fc/249/la', 25, 'LAGOS', 69, 'lagos east', 'active'),
+(248, 'surulere i', 'fc/250/la', 25, 'LAGOS', NULL, NULL, 'active'),
+(249, 'surulere ii', 'fc/251/la', 25, 'LAGOS', 68, 'lagos central', 'active'),
+(250, 'agaie/lapai', 'fc/257/ng', 27, 'NIGER', 72, 'niger south', 'active'),
+(251, 'agwara/borgu', 'fc/258/ng', 27, 'NIGER', 71, 'niger north', 'active'),
+(252, 'bida/gbako/katcha', 'fc/259/ng', 27, 'NIGER', 72, 'niger south', 'active'),
+(253, 'booso/paikoro', 'fc/260/ng', 27, 'NIGER', 1, 'NIGER EAST', 'active'),
+(254, 'chanchaga', 'fc/261/ng', 27, 'NIGER', 1, 'NIGER EAST', 'active'),
+(255, 'gurara/suleja/tapa', 'fc/262/ng', 27, 'NIGER', 1, 'NIGER EAST', 'active'),
+(256, 'lavun/mokwa/edati', 'fc/263/ng', 27, 'NIGER', 72, 'niger south', 'active'),
+(257, 'magama/rijau', 'fc/264/ng', 27, 'NIGER', 71, 'niger north', 'active'),
+(258, 'kontagora/wushishi/mariga/ mashegu', 'fc/265/ng', 27, 'NIGER', 71, 'niger north', 'active'),
+(259, 'shiroro/rafi/munya', 'fc/266/ng', 27, 'NIGER', 1, 'NIGER EAST', 'active'),
+(260, 'abeokuta north/ obafemi- owode/odeda', 'fc/267/og', 28, 'OGUN', 73, 'ogun central', 'active'),
+(261, 'abeokuta south', 'fc/268/og', 28, 'OGUN', 73, 'ogun central', 'active'),
+(262, 'ado-odo/ota', 'fc/269/og', 28, 'OGUN', 75, 'ogun west', 'active'),
+(263, 'egbado north/imeko-afon', 'fc/270/og', 28, 'OGUN', 75, 'ogun west', 'active'),
+(264, 'egbado south/ipokia', 'fc/271/og', 28, 'OGUN', 75, 'ogun west', 'active'),
+(265, 'ifo/ewekoro', 'fc/272/og', 28, 'OGUN', 73, 'ogun central', 'active'),
+(266, 'ijebu north/ijebu east/ogun waterside', 'fc/273/og', 28, 'OGUN', 74, 'ogun east', 'active'),
+(267, 'ijebu ode /odogbolu /ijebu north east', 'fc/274/og', 28, 'OGUN', 74, 'ogun east', 'active'),
+(268, 'ikenne/shagamu/remo north', 'fc/275/og', 28, 'OGUN', 74, 'ogun east', 'active'),
+(269, 'akoko north east/akoko north west', 'fc/276/od', 29, 'ONDO', 76, 'ondo north', 'active'),
+(270, 'akoko south east/akoko south west', 'fc/277/od', 29, 'ONDO', 76, 'ondo north', 'active'),
+(271, 'akure north/akure south', 'fc/278/od', 29, 'ONDO', 77, 'ondo central', 'active'),
+(272, 'idanre/ifedore', 'fc/279/od', 29, 'ONDO', 77, 'ondo central', 'active'),
+(273, 'ileoluji/okeigbo/odigbo', 'fc/280/od', 29, 'ONDO', 78, 'ondo south', 'active'),
+(274, 'okitipupa/irele', 'fc/281/od', 29, 'ONDO', 78, 'ondo south', 'active'),
+(275, 'eseodo/ilaje', 'fc/282/od', 29, 'ONDO', 78, 'ondo south', 'active'),
+(276, 'ondo east/ondo west', 'fc/283/od', 29, 'ONDO', 77, 'ondo central', 'active'),
+(277, 'owo/ose', 'fc/284/od', 29, 'ONDO', 76, 'ondo north', 'active'),
+(278, 'irepodun/olorunda/osogbo/orolu', 'fc/285/os', 30, 'OSUN', 79, 'osun central', 'active'),
+(279, 'odo-otin/ifelodun/boripe', 'fc/286/os', 30, 'OSUN', 79, 'osun central', 'active'),
+(280, 'boluwaduro/ifedayo/ila', 'fc/287/os', 30, 'OSUN', 79, 'osun central', 'active'),
+(281, 'atakunmosa east/ atakunmosa west/ilesha east/ilesha west', 'fc/288/os', 30, 'OSUN', 80, 'osun east', 'active'),
+(282, 'obokun/oriade', 'fc/289/os', 30, 'OSUN', 80, 'osun east', 'active'),
+(283, 'ife central/ife north/ife south/ife east', 'fc/290/os', 30, 'OSUN', 80, 'osun east', 'active'),
+(284, 'ayedire/iwo/ola-oluwa', 'fc/291/os', 30, 'OSUN', 81, 'osun west', 'active'),
+(285, 'ayedaade/irewole/isokan', 'fc/292/os', 30, 'OSUN', 81, 'osun west', 'active'),
+(286, 'ede north/ede south/ egbedore/ejigbo', 'fc/293/os', 30, 'OSUN', 81, 'osun west', 'active'),
+(287, 'afijio/oyo east/oyo west/ atiba', 'fc/294/oy', 31, 'OYO', 82, 'oyo central', 'active'),
+(288, 'akinyele/lagelu', 'fc/295/oy', 31, 'OYO', 82, 'oyo central', 'active'),
+(289, 'egbeda/ona-ara', 'fc/296/oy', 31, 'OYO', 82, 'oyo central', 'active'),
+(290, 'ibarapa central/ibarapa north', 'fc/297/oy', 31, 'OYO', 84, 'oyo south', 'active'),
+(291, 'ibarapa east/ido', 'fc/298/oy', 31, 'OYO', 84, 'oyo south', 'active'),
+(292, 'saki east/saki west/atisbo', 'fc/299/oy', 31, 'OYO', 83, 'oyo north', 'active'),
+(293, 'irepo/orelope/olorunsogo', 'fc/300/oy', 31, 'OYO', 83, 'oyo north', 'active'),
+(294, 'iseyin/itesiwaju/kajola/ iwajowa', 'fc/301/oy', 31, 'OYO', 83, 'oyo north', 'active'),
+(295, 'ogbomoso north/ ogbomoso south/orire', 'fc/302/oy', 31, 'OYO', 83, 'oyo north', 'active'),
+(296, 'ogo-oluwa/surulere', 'fc/303/oy', 31, 'OYO', 82, 'oyo central', 'active'),
+(297, 'oluyole', 'fc/304/oy', 31, 'OYO', 82, 'oyo central', 'active'),
+(298, 'ibadan north east/ibadan south east', 'fc/305/oy', 31, 'OYO', 84, 'oyo south', 'active'),
+(299, 'ibadan south west/ibadan north west', 'fc/306/oy', 31, 'OYO', 84, 'oyo south', 'active'),
+(300, 'ibadan north', 'fc/307/oy', 31, 'OYO', 84, 'oyo south', 'active'),
+(301, 'abua-odual/ahaoda east', 'fc/316/rv', 33, 'RIVERS', 90, 'rivers west', 'active'),
+(302, 'ahoada west/ogba egbema', 'fc/317/rv', 33, 'RIVERS', 90, 'rivers west', 'active'),
+(303, 'degema/bonny', 'fc/318/rv', 33, 'RIVERS', 90, 'rivers west', 'active'),
+(304, 'akuku-toru/asari-toru', 'fc/319/rv', 33, 'RIVERS', 90, 'rivers west', 'active'),
+(305, 'okrika/ogu-bolo', 'fc/320/rv', 33, 'RIVERS', 88, 'rivers east', 'active'),
+(306, 'opobo/nkoro/andoni', 'fc/321/rv', 33, 'RIVERS', 89, 'rivers south east', 'active'),
+(307, 'eleme/tai/oyigbo', 'fc/322/rv', 33, 'RIVERS', 89, 'rivers south east', 'active'),
+(308, 'khana/gokana', 'fc/323/rv', 33, 'RIVERS', 89, 'rivers south east', 'active'),
+(309, 'ikwerre/umohua', 'fc/324/rv', 33, 'RIVERS', 88, 'rivers east', 'active'),
+(310, 'etche/omuma', 'fc/325/rv', 33, 'RIVERS', 88, 'rivers east', 'active'),
+(311, 'obio akpor', 'fc/326/rv', 33, 'RIVERS', 88, 'rivers east', 'active'),
+(312, 'port harcourt i', 'fc/327/rv', 33, 'RIVERS', 88, 'rivers east', 'active'),
+(313, 'port harcourt ii', 'fc/328/rv', 33, 'RIVERS', NULL, NULL, 'active'),
+(314, 'isa/sabon birni', 'fc/329/so', 34, 'SOKOTO', 91, 'sokoto east', 'active'),
+(315, 'goronyo/gada', 'fc/330/so', 34, 'SOKOTO', 91, 'sokoto east', 'active'),
+(316, 'wurno/rabah', 'fc/331/so', 34, 'SOKOTO', 91, 'sokoto east', 'active'),
+(317, 'illela/gwadabawa', 'fc/332/so', 34, 'SOKOTO', 91, 'sokoto east', 'active'),
+(318, 'tangaza/gudu', 'fc/333/so', 34, 'SOKOTO', 92, 'sokoto north', 'active'),
+(319, 'binji/silame', 'fc/334/so', 34, 'SOKOTO', 92, 'sokoto north', 'active'),
+(320, 'kware/wamakko', 'fc/335/so', 34, 'SOKOTO', 92, 'sokoto north', 'active'),
+(321, 'sokoto north/sokoto south', 'fc/336/so', 34, 'SOKOTO', 92, 'sokoto north', 'active'),
+(322, 'dange-shuni/bodinga/tureta', 'fc/337/so', 34, 'SOKOTO', 93, 'sokoto south', 'active'),
+(323, 'yabo/shagari', 'fc/338/so', 34, 'SOKOTO', 93, 'sokoto south', 'active'),
+(324, 'kebbe/tambuwal', 'fc/339/so', 34, 'SOKOTO', 93, 'sokoto south', 'active'),
+(325, 'bali/gassol', 'fc/340/tr', 35, 'TARABA', 95, 'taraba central', 'active'),
+(326, 'takum/donga/ussa', 'fc/341/tr', 35, 'TARABA', 94, 'taraba south', 'active'),
+(327, 'sardauna/kurmi/gashaka', 'fc/342/tr', 35, 'TARABA', 95, 'taraba central', 'active'),
+(328, 'ibi/wukari', 'fc/343/tr', 35, 'TARABA', 94, 'taraba south', 'active'),
+(329, 'jalingo/yorro/zing', 'fc/344/tr', 35, 'TARABA', 96, 'taraba north', 'active'),
+(330, 'karim lamido/lau/ardo-kola', 'fc/345/tr', 35, 'TARABA', 96, 'taraba north', 'active'),
+(331, 'bade/jakusko', 'fc/346/yb', 36, 'YOBE', 98, 'yobe north', 'active'),
+(332, 'bursari/geidam/yunusari', 'fc/347/yb', 36, 'YOBE', 127, 'yobe east', 'active'),
+(333, 'damaturu/gujba/gulani/ tarmuwa', 'fc/348/yb', 36, 'YOBE', 127, 'yobe east', 'active'),
+(334, 'fika/fune', 'fc/349/yb', 36, 'YOBE', 126, 'yobe south', 'active'),
+(335, 'machina/nguru/yusufari/ karasuwa', 'fc/350/yb', 36, 'YOBE', 98, 'yobe north', 'active'),
+(336, 'nangere/potiskm', 'fc/351/yb', 36, 'YOBE', 126, 'yobe south', 'active'),
+(337, 'kaura-namoda/birnin magaji', 'fc/352/zf', 37, 'ZAMFARA', 128, 'zamfara north', 'active'),
+(338, 'shinkafi/zurmi', 'fc/353/zf', 37, 'ZAMFARA', 128, 'zamfara north', 'active'),
+(339, 'gusau/tsafe', 'fc/354/zf', 37, 'ZAMFARA', 101, 'zamfara central', 'active'),
+(340, 'bungudu/maru', 'fc/355/zf', 37, 'ZAMFARA', 101, 'zamfara central', 'active'),
+(341, 'anka/talata mafara', 'fc/356/zf', 37, 'ZAMFARA', 129, 'zamfara west', 'active'),
+(342, 'bakura/maradun', 'fc/357/zf', 37, 'ZAMFARA', 129, 'zamfara west', 'active'),
+(343, 'gummi/bukkuyum', 'fc/358/zf', 37, 'ZAMFARA', 129, 'zamfara west', 'active'),
+(344, 'abaji/gwagwalada/kwali/kuje', 'fc/359/fct', 15, 'FCT', 103, 'fct', 'active'),
+(345, 'municipal/bwari', 'fc/360/fct', 15, 'FCT', 103, 'fct', 'active'),
+(346, 'Akwanga/Nassarawa-Eggon/Wamba', 'FC/252/NW', 26, 'NASARAWA', 108, 'Nassarawa North', 'active'),
+(347, 'Awe/Doma/Keana', 'FC/253/NW', 26, 'NASARAWA', 110, 'Nassarawa South', 'active'),
+(348, 'Keffi/Karu/Kokona', 'FC/254/NW', 26, 'NASARAWA', 109, 'Nassarawa West', 'active'),
+(349, 'Lafia/Obi', 'FC/255/NW', 26, 'NASARAWA', 110, 'Nassarawa South', 'active'),
+(350, 'Nassarawa/Toto', 'FC/256/NW', 26, 'NASARAWA', 109, 'Nassarawa West', 'active'),
+(351, 'Jos North/Bassa', 'FC/308/PL', 32, 'PLATEAU', 124, 'plateau north', 'active'),
+(352, 'Jos south/Jos east', 'FC/309/PL', 32, 'PLATEAU', 124, 'plateau north', 'active'),
+(355, 'Barkin Ladi/Riyom', 'FC/310/PL', 32, 'PLATEAU', 124, 'plateau north', 'active'),
+(356, 'Bokkos/Mangu', 'FC/311/PL', 32, 'PLATEAU', 86, 'plateau central', 'active'),
+(357, 'Kanke/Pankshin/Kanam', 'FC/312/PL', 32, 'PLATEAU', 86, 'plateau central', 'active'),
+(358, 'Wase', 'FC/313/PL', 32, 'PLATEAU', 125, 'plateau south', 'active'),
+(359, 'Langtang north/Langtang south', 'Fc/314/PL', 32, 'PLATEAU', 125, 'plateau south', 'active'),
+(360, 'Mikang/Qua Anpan/Shedam', 'FC/315/PL', 32, 'PLATEAU', 125, 'plateau south', 'active'),
+(362, 'Hadejia/Kafin hausa/Auyo', 'fc/145/jg', 18, 'JIGAWA', 51, 'jigawa north-east', 'active'),
+(363, 'jahun/miga', 'fc/146/jg', 18, 'JIGAWA', 50, 'jigawa south-west', 'active'),
+(365, 'esan central/esan south /igueben', 'fc/101/ed', 12, 'EDO', 35, 'edo central', 'active'),
+(366, 'ovia north east/ovia south west', 'fc/107/ed', 12, 'EDO', 37, 'edo south', 'active'),
+(367, 'owan east/owan west', 'fc/108/ed', 12, 'EDO', 36, 'edo north', 'active'),
+(369, 'bama/ngala/kala-balge', 'fc/067/bo', 8, 'BORNO', 113, 'borno central', 'active'),
+(370, 'biu/kwaya-kusar/shani/bayo', 'fc/068/bo', 8, 'BORNO', 25, 'borno south', 'active'),
+(371, 'calabar south/akpabuyo/bakassi', 'fc/079/cr', 9, 'CROSS RIVER', 119, 'cross river south', 'active'),
+(372, 'calabar municipality/odukpani', 'fc/080/cr', 9, 'CROSS RIVER', 119, 'cross river south', 'active'),
+(373, 'igbo-eze north/udenu', 'fc/120/en', 14, 'ENUGU', 43, 'enugu north', 'active'),
+(374, 'nsukka/igbo-eze south', 'fc/122/en', 14, 'ENUGU', 43, 'enugu north', 'active'),
+(375, 'ankpa/omala/olamaboro', 'fc/214/kg', 23, 'KOGI', 66, 'kogi east', 'active'),
+(376, 'ahiazu mbaise/ezinhitte', 'fc/136/im', 17, 'IMO', 47, 'imo east', 'active'),
+(377, 'ikeduru/mbaitoli', 'fc/137/im', 17, 'IMO', 47, 'imo east', 'active')
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, code = EXCLUDED.code, state_id = EXCLUDED.state_id, state_name = EXCLUDED.state_name, senatorial_district_id = EXCLUDED.senatorial_district_id, senatorial_district_name = EXCLUDED.senatorial_district_name, status = EXCLUDED.status;
+-- SEED DATA END
 
 -- +goose Down
 DROP INDEX IF EXISTS idx_federal_constituencies_name;

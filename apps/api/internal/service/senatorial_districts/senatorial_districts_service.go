@@ -26,6 +26,7 @@ func NewSenatorialDistrictsService(q *queries.Queries, rdb *redis.Client) *Senat
 func (s *SenatorialDistrictsService) CreateSenatorialDistrict(
 	ctx context.Context,
 	name string,
+	code string,
 	description string,
 	coalitionCenter string,
 	stateID int32,
@@ -33,6 +34,10 @@ func (s *SenatorialDistrictsService) CreateSenatorialDistrict(
 ) (queries.SenatorialDistrict, error) {
 	arg := queries.CreateSenatorialDistrictParams{
 		Name: name,
+		Code: pgtype.Text{
+			String: code,
+			Valid:  code != "",
+		},
 		Description: pgtype.Text{
 			String: description,
 			Valid:  true,
@@ -64,6 +69,7 @@ func (s *SenatorialDistrictsService) UpdateSenatorialDistrict(
 	ctx context.Context,
 	id int32,
 	name string,
+	code string,
 	description string,
 	coalitionCenter string,
 	stateID int32,
@@ -78,6 +84,10 @@ func (s *SenatorialDistrictsService) UpdateSenatorialDistrict(
 	arg := queries.UpdateSenatorialDistrictParams{
 		ID:   id,
 		Name: name,
+		Code: pgtype.Text{
+			String: code,
+			Valid:  code != "",
+		},
 		Description: pgtype.Text{
 			String: description,
 			Valid:  true,

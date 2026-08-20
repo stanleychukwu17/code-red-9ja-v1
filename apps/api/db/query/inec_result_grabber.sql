@@ -1,19 +1,19 @@
 -- name: GetINECResultGrabberByID :one
-SELECT g.*, e.scope, e.election_date, e.office_id, o.inec_election_type_id, o.name AS office_name
+SELECT g.*, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
 JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id
 WHERE g.id = $1;
 
 -- name: GetINECResultGrabberByElectionID :one
-SELECT g.*, e.scope, e.election_date, e.office_id, o.inec_election_type_id, o.name AS office_name
+SELECT g.*, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
 JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id
 WHERE g.election_id = $1;
 
 -- name: ListActiveINECResultGrabbers :many
-SELECT g.*, e.scope, e.election_date, e.office_id, o.inec_election_type_id, o.name AS office_name
+SELECT g.*, e.scope, e.election_date, e.state_id, e.office_id, o.inec_election_type_id, o.name AS office_name
 FROM inec_result_grabber g
 JOIN elections e ON g.election_id = e.id
 JOIN offices o ON e.office_id = o.id

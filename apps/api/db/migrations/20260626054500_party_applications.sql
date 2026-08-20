@@ -24,6 +24,5 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_active_user_app_per_group
 ON party_applications (user_id, election_group_id) 
 WHERE status NOT IN ('rejected', 'cancelled');
 
-
 -- +goose Down
 DROP TABLE IF EXISTS party_applications;

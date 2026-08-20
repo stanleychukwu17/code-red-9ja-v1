@@ -787,16 +787,18 @@ type ElectionWardFinalResult struct {
 }
 
 type FederalConstituency struct {
-	ID                       int32  `json:"id"`
-	Name                     string `json:"name"`
-	StateID                  int32  `json:"state_id"`
-	StateName                string `json:"state_name"`
-	SenatorialDistrictID     int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName   string `json:"senatorial_district_name"`
-	LgasCount                int32  `json:"lgas_count"`
-	StateConstituenciesCount int32  `json:"state_constituencies_count"`
-	WardsCount               int32  `json:"wards_count"`
-	PollingUnitsCount        int32  `json:"polling_units_count"`
+	ID                       int32       `json:"id"`
+	Name                     string      `json:"name"`
+	Code                     pgtype.Text `json:"code"`
+	StateID                  int32       `json:"state_id"`
+	StateName                string      `json:"state_name"`
+	SenatorialDistrictID     pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName   pgtype.Text `json:"senatorial_district_name"`
+	LgasCount                int32       `json:"lgas_count"`
+	StateConstituenciesCount int32       `json:"state_constituencies_count"`
+	WardsCount               int32       `json:"wards_count"`
+	PollingUnitsCount        int32       `json:"polling_units_count"`
+	Status                   pgtype.Text `json:"status"`
 }
 
 type File struct {
@@ -847,18 +849,19 @@ type InecResultGrabberLog struct {
 }
 
 type Lga struct {
-	ID                       int32  `json:"id"`
-	Name                     string `json:"name"`
-	Abbreviation             string `json:"abbreviation"`
-	StateID                  int32  `json:"state_id"`
-	StateName                string `json:"state_name"`
-	SenatorialDistrictID     int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName   string `json:"senatorial_district_name"`
-	FederalConstituencyID    int32  `json:"federal_constituency_id"`
-	FederalConstituencyName  string `json:"federal_constituency_name"`
-	StateConstituenciesCount int32  `json:"state_constituencies_count"`
-	WardsCount               int32  `json:"wards_count"`
-	PollingUnitsCount        int32  `json:"polling_units_count"`
+	ID                       int32       `json:"id"`
+	Name                     string      `json:"name"`
+	Code                     string      `json:"code"`
+	StateID                  int32       `json:"state_id"`
+	StateName                string      `json:"state_name"`
+	SenatorialDistrictID     pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName   pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID    pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName  pgtype.Text `json:"federal_constituency_name"`
+	StateConstituenciesCount int32       `json:"state_constituencies_count"`
+	WardsCount               int32       `json:"wards_count"`
+	PollingUnitsCount        int32       `json:"polling_units_count"`
+	Status                   pgtype.Text `json:"status"`
 }
 
 type LgaElectionSupervisor struct {
@@ -1105,25 +1108,29 @@ type Plan struct {
 }
 
 type PollingUnit struct {
-	ID                 int32         `json:"id"`
-	Name               string        `json:"name"`
-	Abbreviation       pgtype.Text   `json:"abbreviation"`
-	Units              pgtype.Text   `json:"units"`
-	Delimitation       pgtype.Text   `json:"delimitation"`
-	Remark             pgtype.Text   `json:"remark"`
-	RegistrationAreaID pgtype.Int4   `json:"registration_area_id"`
-	WardID             int32         `json:"ward_id"`
-	WardName           string        `json:"ward_name"`
-	LgaID              int32         `json:"lga_id"`
-	LgaName            string        `json:"lga_name"`
-	StateID            int32         `json:"state_id"`
-	StateName          string        `json:"state_name"`
-	Latitude           pgtype.Float8 `json:"latitude"`
-	Longitude          pgtype.Float8 `json:"longitude"`
-	PreciseLocation    pgtype.Text   `json:"precise_location"`
-	FormattedAddress   pgtype.Text   `json:"formatted_address"`
-	GooglePlaceID      pgtype.Text   `json:"google_place_id"`
-	Status             pgtype.Text   `json:"status"`
+	ID                      int32         `json:"id"`
+	Name                    string        `json:"name"`
+	Code                    pgtype.Text   `json:"code"`
+	PuCode                  pgtype.Text   `json:"pu_code"`
+	RegistrationAreaID      pgtype.Int4   `json:"registration_area_id"`
+	StateID                 int32         `json:"state_id"`
+	StateName               string        `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4   `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text   `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4   `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text   `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4   `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text   `json:"state_constituency_name"`
+	LgaID                   int32         `json:"lga_id"`
+	LgaName                 string        `json:"lga_name"`
+	WardID                  int32         `json:"ward_id"`
+	WardName                string        `json:"ward_name"`
+	Latitude                pgtype.Float8 `json:"latitude"`
+	Longitude               pgtype.Float8 `json:"longitude"`
+	PreciseLocation         pgtype.Text   `json:"precise_location"`
+	FormattedAddress        pgtype.Text   `json:"formatted_address"`
+	GooglePlaceID           pgtype.Text   `json:"google_place_id"`
+	Status                  pgtype.Text   `json:"status"`
 }
 
 type PollingUnitAssignment struct {
@@ -1246,6 +1253,7 @@ type RolePermission struct {
 type SenatorialDistrict struct {
 	ID                         int32       `json:"id"`
 	Name                       string      `json:"name"`
+	Code                       pgtype.Text `json:"code"`
 	Description                pgtype.Text `json:"description"`
 	CoalitionCenter            pgtype.Text `json:"coalition_center"`
 	StateID                    int32       `json:"state_id"`
@@ -1255,21 +1263,24 @@ type SenatorialDistrict struct {
 	StateConstituenciesCount   int32       `json:"state_constituencies_count"`
 	WardsCount                 int32       `json:"wards_count"`
 	PollingUnitsCount          int32       `json:"polling_units_count"`
+	Status                     pgtype.Text `json:"status"`
 }
 
-type StateAssemblyConstituency struct {
-	ID                      int32  `json:"id"`
-	Name                    string `json:"name"`
-	LgaID                   int32  `json:"lga_id"`
-	LgaName                 string `json:"lga_name"`
-	StateID                 int32  `json:"state_id"`
-	StateName               string `json:"state_name"`
-	SenatorialDistrictID    int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName  string `json:"senatorial_district_name"`
-	FederalConstituencyID   int32  `json:"federal_constituency_id"`
-	FederalConstituencyName string `json:"federal_constituency_name"`
-	WardsCount              int32  `json:"wards_count"`
-	PollingUnitsCount       int32  `json:"polling_units_count"`
+type StateConstituency struct {
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    pgtype.Text `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
+	WardsCount              int32       `json:"wards_count"`
+	PollingUnitsCount       int32       `json:"polling_units_count"`
+	Status                  pgtype.Text `json:"status"`
 }
 
 type StateElectionSupervisor struct {
@@ -1495,17 +1506,22 @@ type UsersPhoneNumber struct {
 }
 
 type Ward struct {
-	ID                            int32       `json:"id"`
-	Name                          string      `json:"name"`
-	Abbreviation                  string      `json:"abbreviation"`
-	LgaID                         int32       `json:"lga_id"`
-	LgaName                       string      `json:"lga_name"`
-	StateID                       int32       `json:"state_id"`
-	StateName                     string      `json:"state_name"`
-	StateAssemblyConstituencyID   pgtype.Int4 `json:"state_assembly_constituency_id"`
-	StateAssemblyConstituencyName pgtype.Text `json:"state_assembly_constituency_name"`
-	Status                        pgtype.Text `json:"status"`
-	PollingUnitsCount             int32       `json:"polling_units_count"`
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    string      `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4 `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text `json:"state_constituency_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	MongoID                 pgtype.Text `json:"mongo_id"`
+	Status                  pgtype.Text `json:"status"`
+	PollingUnitsCount       int32       `json:"polling_units_count"`
 }
 
 type WardElectionSupervisor struct {

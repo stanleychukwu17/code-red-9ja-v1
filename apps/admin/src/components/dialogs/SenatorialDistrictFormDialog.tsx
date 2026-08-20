@@ -22,6 +22,7 @@ import { TinyError } from "@repo/ui/components/custom/TinyError";
 export interface SenatorialDistrict {
   id: number;
   name: string;
+  code?: string;
   description: string;
   coalition_center: string;
   state_id: number;
@@ -47,6 +48,7 @@ export function SenatorialDistrictFormDialog({
   const form = useForm({
     defaultValues: {
       name: "",
+      code: "",
       description: "",
       coalitionCenter: "",
       stateId: undefined as number | undefined,
@@ -60,6 +62,7 @@ export function SenatorialDistrictFormDialog({
     if (open) {
       if (mode === "update" && senatorialDistrict) {
         form.setFieldValue("name", senatorialDistrict.name || "");
+        form.setFieldValue("code", senatorialDistrict.code || "");
         form.setFieldValue("description", senatorialDistrict.description || "");
         form.setFieldValue(
           "coalitionCenter",
@@ -68,6 +71,7 @@ export function SenatorialDistrictFormDialog({
         form.setFieldValue("stateId", senatorialDistrict.state_id);
       } else {
         form.setFieldValue("name", "");
+        form.setFieldValue("code", "");
         form.setFieldValue("description", "");
         form.setFieldValue("coalitionCenter", "");
         form.setFieldValue("stateId", undefined);
@@ -79,6 +83,7 @@ export function SenatorialDistrictFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
+      code: string;
       description: string;
       coalitionCenter: string;
       stateId: number | undefined;
@@ -89,6 +94,7 @@ export function SenatorialDistrictFormDialog({
 
       const payload = {
         name: values.name.trim(),
+        code: values.code.trim() || undefined,
         description: values.description.trim(),
         coalition_center: values.coalitionCenter.trim(),
         state_id: values.stateId,
@@ -160,6 +166,24 @@ export function SenatorialDistrictFormDialog({
                     <FancyInput
                       type="text"
                       placeholder="Senatorial district name"
+                      errorMsg={field.state.meta.errors?.join(", ")}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                  </div>
+                )}
+              />
+            </div>
+
+            {/* Code */}
+            <div className="w-full">
+              <form.Field
+                name="code"
+                children={(field) => (
+                  <div className="w-full">
+                    <FancyInput
+                      type="text"
+                      placeholder="Code (e.g. sd/095/rv)"
                       errorMsg={field.state.meta.errors?.join(", ")}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}

@@ -6,7 +6,7 @@ export const createLga = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
-      abbreviation: string;
+      code: string;
       state_id: number;
       senatorial_district_id: number;
       federal_constituency_id: number;
@@ -31,7 +31,7 @@ export const updateLga = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
-      abbreviation: string;
+      code: string;
       state_id: number;
       senatorial_district_id: number;
       federal_constituency_id: number;
@@ -75,10 +75,10 @@ export const getLgaById = createServerFn({ method: "GET" })
 
 
 export const getLGAs = createServerFn()
-  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { stateId, limit, cursor } }) => {
+  .inputValidator((data: { stateId?: number; limit?: number; cursor?: string | number; search?: string }) => data)
+  .handler(async ({ data: { stateId, limit, cursor, search } }) => {
     try {
-      return await apiFetchJson(API_URL.getLGAs(stateId, limit, cursor));
+      return await apiFetchJson(API_URL.getLGAs(stateId, limit, cursor, search));
     } catch (error: any) {
       return { status: 'failed', error: error?.message || 'Failed to fetch LGAs from API, Maybe the backend server is currently down' };
     }

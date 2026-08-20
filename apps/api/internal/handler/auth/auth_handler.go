@@ -406,10 +406,10 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("CompleteOnboarding: Parsed DateOfBirth", "dob", dob)
 
-	// Generate unique referral code (e.g. DANIEL-88)
+	// Generate unique referral code (e.g. DANIEL-884920)
 	firstNameUpper := strings.ToUpper(strings.TrimSpace(req.FirstName))
-	n, _ := rand.Int(rand.Reader, big.NewInt(900))
-	suffix := n.Int64() + 100 // 100-999
+	n, _ := rand.Int(rand.Reader, big.NewInt(9000000))
+	suffix := n.Int64() + 1000000 // 1000000-9999999
 	myReferralCode := fmt.Sprintf("%s-%d", firstNameUpper, suffix)
 	slog.Info("CompleteOnboarding: Generated referral code", "my_referral_code", myReferralCode)
 
@@ -436,38 +436,44 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("CompleteOnboarding: authService.CompleteOnboarding succeeded")
 
-	// Re-fetch the updated user to get the new Name and NIN for wallet creation
-	if updatedUser, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID); err == nil {
-		slog.Info("CompleteOnboarding: Re-fetched updated user for wallet creation", "user_id", updatedUser.ID)
-		_, walletErr := h.usersService.CreateUserWallet(ctx, queries.User{
-			ID:              updatedUser.ID,
-			FakeID:          updatedUser.FakeID,
-			Email:           updatedUser.Email,
-			Phone:           updatedUser.Phone,
-			Username:        updatedUser.Username,
-			PasswordHash:    updatedUser.PasswordHash,
-			LastName:        updatedUser.LastName,
-			FirstName:       updatedUser.FirstName,
-			MiddleName:      updatedUser.MiddleName,
-			Gender:          updatedUser.Gender,
-			DateOfBirth:     updatedUser.DateOfBirth,
-			CurrentCountry:  updatedUser.CurrentCountry,
-			CurrentState:    updatedUser.CurrentState,
-			CurrentCity:     updatedUser.CurrentCity,
-			StateOfOrigin:   updatedUser.StateOfOrigin,
-			CountryOfOrigin: updatedUser.CountryOfOrigin,
-			AccountStatus:   updatedUser.AccountStatus,
-			CreatedAt:       updatedUser.CreatedAt,
-			UpdatedAt:       updatedUser.UpdatedAt,
-		})
-		if walletErr != nil {
-			slog.Warn("CompleteOnboarding: Immediate wallet creation returned error", "error", walletErr)
+	// Async wallet creation so HTTP onboarding response returns immediately without blocking on Monnify external API calls
+	fakeID := claims.FakeID
+	go func() {
+		bgCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		if updatedUser, err := h.authService.GetUserDetailsByFakeID(bgCtx, fakeID); err == nil {
+			slog.Info("CompleteOnboarding: Re-fetched updated user for wallet creation", "user_id", updatedUser.ID)
+			_, walletErr := h.usersService.CreateUserWallet(bgCtx, queries.User{
+				ID:              updatedUser.ID,
+				FakeID:          updatedUser.FakeID,
+				Email:           updatedUser.Email,
+				Phone:           updatedUser.Phone,
+				Username:        updatedUser.Username,
+				PasswordHash:    updatedUser.PasswordHash,
+				LastName:        updatedUser.LastName,
+				FirstName:       updatedUser.FirstName,
+				MiddleName:      updatedUser.MiddleName,
+				Gender:          updatedUser.Gender,
+				DateOfBirth:     updatedUser.DateOfBirth,
+				CurrentCountry:  updatedUser.CurrentCountry,
+				CurrentState:    updatedUser.CurrentState,
+				CurrentCity:     updatedUser.CurrentCity,
+				StateOfOrigin:   updatedUser.StateOfOrigin,
+				CountryOfOrigin: updatedUser.CountryOfOrigin,
+				AccountStatus:   updatedUser.AccountStatus,
+				CreatedAt:       updatedUser.CreatedAt,
+				UpdatedAt:       updatedUser.UpdatedAt,
+			})
+			if walletErr != nil {
+				slog.Warn("CompleteOnboarding: Immediate wallet creation returned error", "error", walletErr)
+			} else {
+				slog.Info("CompleteOnboarding: Immediate wallet creation succeeded")
+			}
 		} else {
-			slog.Info("CompleteOnboarding: Immediate wallet creation succeeded")
+			slog.Warn("CompleteOnboarding: Failed to re-fetch updated user for wallet creation", "error", err)
 		}
-	} else {
-		slog.Warn("CompleteOnboarding: Failed to re-fetch updated user for wallet creation", "error", err)
-	}
+	}()
 
 	slog.Info("CompleteOnboarding: Responding with success")
 	h.utils.RespondSuccess(w, http.StatusOK, "Onboarding completed successfully", nil)

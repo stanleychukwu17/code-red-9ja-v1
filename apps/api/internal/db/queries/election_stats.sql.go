@@ -493,7 +493,7 @@ SELECT
   $1::bigint,
   $2::int,
   pu.state_id, pu.lga_id, pu.ward_id,
-  w.state_assembly_constituency_id, l.federal_constituency_id, l.senatorial_district_id,
+  w.state_constituency_id, l.federal_constituency_id, l.senatorial_district_id,
   GREATEST(0, $3::int),
   GREATEST(0, $4::int),
   GREATEST(0, $5::int),
@@ -4861,7 +4861,7 @@ INSERT INTO election_group_state_constituencies (
 )
 SELECT DISTINCT $1::bigint, sc.id, sc.state_id,
   sc.wards_count, sc.polling_units_count
-FROM state_assembly_constituencies sc
+FROM state_constituencies sc
 JOIN elections e ON e.election_group_id = $1
   AND (
     e.scope = 'nationwide'
