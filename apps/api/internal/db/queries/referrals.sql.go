@@ -271,15 +271,15 @@ func (q *Queries) GetUserReferralByUserAndElectionGroup(ctx context.Context, arg
 }
 
 const getUserReferredByID = `-- name: GetUserReferredByID :one
-SELECT referred_by_id FROM users WHERE id = $1 LIMIT 1
+SELECT referrer_user_id FROM referrals WHERE referred_user_id = $1 LIMIT 1
 `
 
-// Returns the referred_by_id for a user given their internal user ID.
-func (q *Queries) GetUserReferredByID(ctx context.Context, id int64) (pgtype.Int8, error) {
-	row := q.db.QueryRow(ctx, getUserReferredByID, id)
-	var referred_by_id pgtype.Int8
-	err := row.Scan(&referred_by_id)
-	return referred_by_id, err
+// Returns the referrer_user_id for a user given their internal user ID.
+func (q *Queries) GetUserReferredByID(ctx context.Context, referredUserID int64) (int64, error) {
+	row := q.db.QueryRow(ctx, getUserReferredByID, referredUserID)
+	var referrer_user_id int64
+	err := row.Scan(&referrer_user_id)
+	return referrer_user_id, err
 }
 
 const incrementUserReferralAgentCount = `-- name: IncrementUserReferralAgentCount :exec

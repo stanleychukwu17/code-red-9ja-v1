@@ -19,6 +19,11 @@ import (
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
+	"free9ja/api/internal/logger"
+	"free9ja/api/internal/service/audit"
+	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
+
 	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
 	authhandler "free9ja/api/internal/handler/auth"
 	bodieshandler "free9ja/api/internal/handler/bodies"
@@ -47,9 +52,7 @@ import (
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
-	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
-	"free9ja/api/internal/service/audit"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	earningsservice "free9ja/api/internal/service/earnings"
@@ -78,8 +81,6 @@ import (
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	usersservice "free9ja/api/internal/service/users"
 	wardsservice "free9ja/api/internal/service/wards"
-	"free9ja/api/internal/utils"
-	"free9ja/api/internal/worker"
 )
 
 // New creates and returns a configured Chi router.

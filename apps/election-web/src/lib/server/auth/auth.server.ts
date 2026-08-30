@@ -285,9 +285,7 @@ export const changePasswordByEmailImpl = createServerOnlyFn(
     } catch (error) {
       return {
         success: false,
-        message:
-          "Connection error. Please try again later. " +
-          (error as Error)?.message,
+        message: `Connection error. Please try again later ${error}`,
       };
     }
   },

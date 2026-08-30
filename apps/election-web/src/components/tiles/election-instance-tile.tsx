@@ -39,12 +39,12 @@ export function ElectionInstanceTableHeader() {
         <span className="text-c-90">Election</span>
       </TileLeft>
       <TileRight>
-        <div className="w-[110px] hidden md:block" />{" "}
+        <div className="w-27.5 hidden md:block" />{" "}
         {/* Empty header spacer for status badge */}
-        <span className="text-c-50 text-[14px] w-[110px] hidden lg:block">
+        <span className="text-c-50 text-[14px] w-27.5 hidden lg:block">
           Candidates
         </span>
-        <span className="text-c-50 text-[14px] w-[110px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
           Election date
         </span>
         <div className="ml-2 w-8 shrink-0" />
@@ -77,10 +77,10 @@ export function ElectionInstanceTableTile({
         <p className="truncate w-full text-[16px] text-c-80">{data.name}</p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[110px] hidden lg:block">
+        <span className="text-[15px] text-c-70 w-27.5 hidden lg:block">
           {data.candidates_count ?? 0}
         </span>
-        <span className="text-[15px] text-c-70 w-[110px] hidden sm:block">
+        <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
           {dateLabel}
         </span>
         <ElectionInstanceDropdown

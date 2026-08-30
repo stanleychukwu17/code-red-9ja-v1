@@ -662,7 +662,6 @@ func (h *Handler) GenerateReferralCode(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 type AdminUpdateUserRequest struct {
 	Avatar         string `json:"avatar" validate:"omitempty"`
 	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`
@@ -750,7 +749,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		
+
 		// If the party is changing (or being set for the first time), update it
 		if !targetUserDetails.PartyID.Valid || req.PartyID != int64(targetUserDetails.PartyID.Int16) {
 			pID := int16(req.PartyID)

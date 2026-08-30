@@ -3,9 +3,10 @@ package db
 import "time"
 
 const (
-	RedisFiveYearsTTL = 5 * 365 * 24 * time.Hour
-	RedisTwoYearsTTL  = 2 * 365 * 24 * time.Hour
-	RedisOneYearTTL   = 365 * 24 * time.Hour
+	RedisFiveYearsTTL      = 5 * 365 * 24 * time.Hour
+	RedisTwoYearsTTL       = 2 * 365 * 24 * time.Hour
+	RedisOneYearTTL        = 365 * 24 * time.Hour
+	RedisFifteenMinutesTTL = 15 * time.Minute
 	// RedisSixMonthsTTL = 6 * 30 * 24 * time.Hour
 	// RedisOneMonthTTL  = 30 * 24 * time.Hour
 
@@ -17,7 +18,7 @@ const (
 	RedisUsernameFakeID           = "register:username_user_fake_id:"
 	RedisEmailFakeID              = "register:email_user_fake_id:"
 	RedisPhoneFakeID              = "register:phone_user_fake_id:"
-	RedisNINFakeID                = "register:nin_user_fake_id:"
+	RedisUserNINQuickSearch       = "register:user_nin_quick_search:"
 	RedisChangePassword           = "register:user_change_password:"
 	RedisRegisterEmailOtp         = "register:email_otp:"
 	RedisRegisterEmailOtpVerified = "register:email_otp_verified:"
@@ -43,6 +44,7 @@ const (
 	RedisUserMoreInfo     = "user:more_info:"     // STRING: user:more_info:<userID> used to store and retrieve user more_info.
 	RedisUserRoles        = "user:roles:"         // STRING: user:roles:<userFakeID> used to store and retrieve user roles.
 	RedisUserPhoneNumbers = "user:phone_numbers:" // STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
+	RedisReferralCode     = "user:referral_code:" // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
 	//--END--
 
 	//--START-- for countries and states

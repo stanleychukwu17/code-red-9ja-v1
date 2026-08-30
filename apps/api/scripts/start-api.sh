@@ -18,14 +18,14 @@ source ./scripts/docker-up-postgres-redis.sh
 
 # swag: generate swagger documentation
 echo "Generating Swagger documentation..."
-if ! swag init \
-  -g main.go \
-  -d ./cmd/api,./internal/handler,./internal/router \
-  --parseInternal --parseDependency \
-  -o docs; then
-    echo "Swagger generation failed. Check log.txt"
-    exit 1
-fi
+# if ! swag init \
+#   -g main.go \
+#   -d ./cmd/api,./internal/handler,./internal/router \
+#   --parseInternal --parseDependency \
+#   -o docs; then
+#     echo "Swagger generation failed. Check log.txt"
+#     exit 1
+# fi
 
 # goose: runs the script that sets environment variables for goose
 echo "Setting environment variables for goose..."

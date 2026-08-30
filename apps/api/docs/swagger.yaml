@@ -62,7 +62,7 @@ definitions:
   authhandler.CheckReferralCodeRequest:
     properties:
       code:
-        minLength: 3
+        minLength: 5
         type: string
     required:
     - code
@@ -75,23 +75,6 @@ definitions:
         type: string
     required:
     - username
-    type: object
-  authhandler.ForgotPasswordRequest:
-    properties:
-      change_password_id:
-        type: string
-      confirmPassword:
-        type: string
-      password:
-        minLength: 5
-        type: string
-      user_fid:
-        type: integer
-    required:
-    - change_password_id
-    - confirmPassword
-    - password
-    - user_fid
     type: object
   authhandler.LoginRequest:
     properties:
@@ -206,111 +189,6 @@ definitions:
     - last_name
     - password
     type: object
-  authhandler.RegisterPhaseSignUpRequest:
-    properties:
-      confirmPassword:
-        type: string
-      country:
-        type: string
-      countryId:
-        type: integer
-      email:
-        type: string
-      emailVerificationToken:
-        type: string
-      password:
-        maxLength: 72
-        minLength: 5
-        type: string
-      phoneNumber:
-        type: string
-    required:
-    - confirmPassword
-    - country
-    - countryId
-    - email
-    - emailVerificationToken
-    - password
-    - phoneNumber
-    type: object
-  authhandler.RegisterRequest:
-    properties:
-      answer1:
-        maxLength: 30
-        minLength: 2
-        type: string
-      answer2:
-        maxLength: 30
-        minLength: 2
-        type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_state:
-        type: integer
-      date_of_birth:
-        description: Expects YYYY-MM-DD
-        type: string
-      email:
-        type: string
-      first_name:
-        maxLength: 30
-        minLength: 2
-        type: string
-      gender:
-        enum:
-        - male
-        - female
-        type: string
-      last_name:
-        maxLength: 30
-        minLength: 2
-        type: string
-      middle_name:
-        maxLength: 30
-        minLength: 2
-        type: string
-      nin:
-        type: string
-      onboarding_id:
-        type: string
-      password:
-        maxLength: 72
-        minLength: 5
-        type: string
-      phone:
-        maxLength: 15
-        minLength: 5
-        type: string
-      question1:
-        type: integer
-      question2:
-        type: integer
-      referred_by_code:
-        maxLength: 15
-        type: string
-      username:
-        maxLength: 30
-        minLength: 2
-        type: string
-    required:
-    - answer1
-    - answer2
-    - current_country
-    - current_state
-    - date_of_birth
-    - first_name
-    - gender
-    - last_name
-    - nin
-    - onboarding_id
-    - password
-    - phone
-    - question1
-    - question2
-    - username
-    type: object
   authhandler.SignupRequest:
     properties:
       countryId:
@@ -328,25 +206,6 @@ definitions:
     - email
     - password
     - phoneNumber
-    type: object
-  authhandler.VerifySecurityQuestionsRequest:
-    properties:
-      answer1:
-        type: string
-      answer2:
-        type: string
-      nin:
-        type: string
-      question1:
-        type: integer
-      question2:
-        type: integer
-    required:
-    - answer1
-    - answer2
-    - nin
-    - question1
-    - question2
     type: object
   authservice.LoginUser:
     properties:
@@ -1517,8 +1376,6 @@ definitions:
     properties:
       account_status:
         $ref: '#/definitions/pgtype.Text'
-      address:
-        $ref: '#/definitions/pgtype.Text'
       avatar:
         $ref: '#/definitions/pgtype.Text'
       avatar_file_id:
@@ -1575,8 +1432,6 @@ definitions:
         $ref: '#/definitions/pgtype.Int4'
       referral_code:
         $ref: '#/definitions/pgtype.Text'
-      referred_by_id:
-        $ref: '#/definitions/pgtype.Int8'
       roles:
         $ref: '#/definitions/queries.CachedUserRoles'
       state_name:
@@ -2955,39 +2810,6 @@ paths:
       summary: Check Username
       tags:
       - Auth
-  /auth/forgot_password:
-    post:
-      consumes:
-      - application/json
-      description: Handles resetting the user's password
-      parameters:
-      - description: New password details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/authhandler.ForgotPasswordRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Forgot password
-      tags:
-      - Auth
   /auth/login:
     post:
       consumes:
@@ -3114,39 +2936,6 @@ paths:
       summary: Refresh Token
       tags:
       - Auth
-  /auth/register:
-    post:
-      consumes:
-      - application/json
-      description: Creates a new user account with full details
-      parameters:
-      - description: Registration details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/authhandler.RegisterRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Register a new user
-      tags:
-      - Auth
   /auth/register_candidate:
     post:
       consumes:
@@ -3252,35 +3041,6 @@ paths:
       summary: Basic sign-up
       tags:
       - Auth
-  /auth/signup/web:
-    post:
-      consumes:
-      - application/json
-      description: Handles the first phase of user registration (country, phone, email,
-        password)
-      parameters:
-      - description: Initial sign-up details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/authhandler.RegisterPhaseSignUpRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Initial sign-up phase
-      tags:
-      - Auth
   /auth/superadmin:
     post:
       consumes:
@@ -3313,40 +3073,6 @@ paths:
             additionalProperties: true
             type: object
       summary: Make a user superadmin
-      tags:
-      - Auth
-  /auth/verify_security_questions:
-    post:
-      consumes:
-      - application/json
-      description: Checks the answers to security questions and returns a unique ID
-        if successful
-      parameters:
-      - description: Security questions and answers
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/authhandler.VerifySecurityQuestionsRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Verify security questions
       tags:
       - Auth
   /banks:

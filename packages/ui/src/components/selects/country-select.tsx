@@ -32,9 +32,7 @@ export const SelectCountry = ({
   const [open, setOpen] = useState(false);
   const [desktopSearch, setDesktopSearch] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<Country | undefined>(
-    undefined,
-  );
+  const [selectedItem, setSelectedItem] = useState<Country | undefined>(undefined);
 
   const { data, isLoading } = useQuery<CountriesResponse>({
     queryKey: ["GetAllCountries"],

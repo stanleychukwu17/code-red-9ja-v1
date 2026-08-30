@@ -25,13 +25,13 @@ export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
       </TileLeft>
 
       <TileRight>
-        <p className="text-c-50 text-[14px] w-[140px] hidden md:block">
+        <p className="text-c-50 text-[14px] w-35 hidden md:block">
           {roleCol}
         </p>
         <p className="text-c-50 text-[14px] w-[180px] hidden lg:block">
           {officeCol}
         </p>
-        <p className="text-c-50 text-[14px] w-[140px] hidden sm:block">
+        <p className="text-c-50 text-[14px] w-35 hidden sm:block">
           {dateCol}
         </p>
         <div className="ml-2 shrink-0 size-7" />
@@ -53,13 +53,13 @@ export function PartyAdminTableTile({ data }: { data: PartyAdminType }) {
       </TileLeft>
 
       <TileRight>
-        <p className="w-[140px] truncate hidden md:block text-[#ff9a3c] font-medium">
+        <p className="w-35 truncate hidden md:block text-[#ff9a3c] font-medium">
           {data.role || "-"}
         </p>
         <p className="w-[180px] truncate hidden lg:block text-[#313131]">
           {data.partyOffice}
         </p>
-        <p className="w-[140px] hidden sm:block text-[#313131]">
+        <p className="w-35 hidden sm:block text-[#313131]">
           {data.dateLabel}
         </p>
 

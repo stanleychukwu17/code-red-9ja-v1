@@ -1454,34 +1454,6 @@ func (_m *Querier) CreateUserReferralRecord(ctx context.Context, arg queries.Cre
 	return r0
 }
 
-// CreateUserSecurityQuestions provides a mock function with given fields: ctx, arg
-func (_m *Querier) CreateUserSecurityQuestions(ctx context.Context, arg queries.CreateUserSecurityQuestionsParams) (int64, error) {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for CreateUserSecurityQuestions")
-	}
-
-	var r0 int64
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserSecurityQuestionsParams) (int64, error)); ok {
-		return rf(ctx, arg)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateUserSecurityQuestionsParams) int64); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Get(0).(int64)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateUserSecurityQuestionsParams) error); ok {
-		r1 = rf(ctx, arg)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // CreateUserVerification provides a mock function with given fields: ctx, arg
 func (_m *Querier) CreateUserVerification(ctx context.Context, arg queries.CreateUserVerificationParams) (int64, error) {
 	ret := _m.Called(ctx, arg)
@@ -4884,27 +4856,27 @@ func (_m *Querier) GetUserPrimaryBankAccount(ctx context.Context, userID int64) 
 	return r0, r1
 }
 
-// GetUserReferredByID provides a mock function with given fields: ctx, id
-func (_m *Querier) GetUserReferredByID(ctx context.Context, id int64) (pgtype.Int8, error) {
-	ret := _m.Called(ctx, id)
+// GetUserReferredByID provides a mock function with given fields: ctx, referredUserID
+func (_m *Querier) GetUserReferredByID(ctx context.Context, referredUserID int64) (int64, error) {
+	ret := _m.Called(ctx, referredUserID)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetUserReferredByID")
 	}
 
-	var r0 pgtype.Int8
+	var r0 int64
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (pgtype.Int8, error)); ok {
-		return rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int64, error)); ok {
+		return rf(ctx, referredUserID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) pgtype.Int8); ok {
-		r0 = rf(ctx, id)
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int64); ok {
+		r0 = rf(ctx, referredUserID)
 	} else {
-		r0 = ret.Get(0).(pgtype.Int8)
+		r0 = ret.Get(0).(int64)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
-		r1 = rf(ctx, id)
+		r1 = rf(ctx, referredUserID)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -4935,34 +4907,6 @@ func (_m *Querier) GetUserRoles(ctx context.Context, userID int64) ([]queries.Ge
 
 	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
 		r1 = rf(ctx, userID)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// GetUserSecurityQuestionsByNIN provides a mock function with given fields: ctx, nin
-func (_m *Querier) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (queries.UserSecurityQuestion, error) {
-	ret := _m.Called(ctx, nin)
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetUserSecurityQuestionsByNIN")
-	}
-
-	var r0 queries.UserSecurityQuestion
-	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (queries.UserSecurityQuestion, error)); ok {
-		return rf(ctx, nin)
-	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) queries.UserSecurityQuestion); ok {
-		r0 = rf(ctx, nin)
-	} else {
-		r0 = ret.Get(0).(queries.UserSecurityQuestion)
-	}
-
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, nin)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -7875,21 +7819,31 @@ func (_m *Querier) UpdateOffice(ctx context.Context, arg queries.UpdateOfficePar
 }
 
 // UpdateOnboardingProfile provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateOnboardingProfile(ctx context.Context, arg queries.UpdateOnboardingProfileParams) error {
+func (_m *Querier) UpdateOnboardingProfile(ctx context.Context, arg queries.UpdateOnboardingProfileParams) (queries.User, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UpdateOnboardingProfile")
 	}
 
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateOnboardingProfileParams) error); ok {
+	var r0 queries.User
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateOnboardingProfileParams) (queries.User, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateOnboardingProfileParams) queries.User); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Error(0)
+		r0 = ret.Get(0).(queries.User)
 	}
 
-	return r0
+	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdateOnboardingProfileParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // UpdateParty provides a mock function with given fields: ctx, arg
@@ -8556,24 +8510,6 @@ func (_m *Querier) UpdateUserReferralCode(ctx context.Context, arg queries.Updat
 
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateUserReferralCodeParams) error); ok {
-		r0 = rf(ctx, arg)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// UpdateUserReferredBy provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateUserReferredBy(ctx context.Context, arg queries.UpdateUserReferredByParams) error {
-	ret := _m.Called(ctx, arg)
-
-	if len(ret) == 0 {
-		panic("no return value specified for UpdateUserReferredBy")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateUserReferredByParams) error); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Error(0)

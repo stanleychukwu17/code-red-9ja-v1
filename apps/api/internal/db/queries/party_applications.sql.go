@@ -575,7 +575,7 @@ SET
   address = COALESCE(NULLIF($12::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
-RETURNING id, fake_id, email, avatar, avatar_file_id, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, country_of_origin, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, account_status, referral_code, referred_by_id, created_at, updated_at
+RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
 `
 
 type UpdateUserAgentDetailsParams struct {
@@ -613,33 +613,31 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		&i.ID,
 		&i.FakeID,
 		&i.Email,
-		&i.Avatar,
-		&i.AvatarFileID,
 		&i.Phone,
 		&i.Username,
 		&i.PasswordHash,
-		&i.LastName,
 		&i.FirstName,
+		&i.LastName,
 		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
+		&i.Avatar,
+		&i.AvatarFileID,
 		&i.VotersCardImage,
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentCity,
 		&i.CurrentLga,
 		&i.CurrentWard,
-		&i.Address,
+		&i.PollingUnitID,
 		&i.CountryOfOrigin,
 		&i.StateOfOrigin,
-		&i.IsPolitician,
-		&i.IsVerified,
 		&i.HasRole,
+		&i.IsVerified,
+		&i.IsPolitician,
 		&i.PartyID,
-		&i.PollingUnitID,
 		&i.AccountStatus,
 		&i.ReferralCode,
-		&i.ReferredByID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -653,7 +651,7 @@ WITH inserted AS (
   ON CONFLICT (user_id, role_id) DO NOTHING
 )
 UPDATE users SET updated_at = NOW() WHERE users.id = $1
-RETURNING id, fake_id, email, avatar, avatar_file_id, phone, username, password_hash, last_name, first_name, middle_name, gender, date_of_birth, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, address, country_of_origin, state_of_origin, is_politician, is_verified, has_role, party_id, polling_unit_id, account_status, referral_code, referred_by_id, created_at, updated_at
+RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
 `
 
 func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error) {
@@ -663,33 +661,31 @@ func (q *Queries) UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User
 		&i.ID,
 		&i.FakeID,
 		&i.Email,
-		&i.Avatar,
-		&i.AvatarFileID,
 		&i.Phone,
 		&i.Username,
 		&i.PasswordHash,
-		&i.LastName,
 		&i.FirstName,
+		&i.LastName,
 		&i.MiddleName,
 		&i.Gender,
 		&i.DateOfBirth,
+		&i.Avatar,
+		&i.AvatarFileID,
 		&i.VotersCardImage,
 		&i.CurrentCountry,
 		&i.CurrentState,
 		&i.CurrentCity,
 		&i.CurrentLga,
 		&i.CurrentWard,
-		&i.Address,
+		&i.PollingUnitID,
 		&i.CountryOfOrigin,
 		&i.StateOfOrigin,
-		&i.IsPolitician,
-		&i.IsVerified,
 		&i.HasRole,
+		&i.IsVerified,
+		&i.IsPolitician,
 		&i.PartyID,
-		&i.PollingUnitID,
 		&i.AccountStatus,
 		&i.ReferralCode,
-		&i.ReferredByID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

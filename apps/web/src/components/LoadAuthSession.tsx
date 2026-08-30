@@ -14,6 +14,7 @@ export default function LoadAuthSession() {
     queryKey: ["authSession"],
     queryFn: refreshUserToken,
     refetchInterval: 14 * 60 * 1000, // 14minutes interval since the jwt token expire in 15mins
+    refetchOnWindowFocus: false,
   });
 
   useEffect(() => {

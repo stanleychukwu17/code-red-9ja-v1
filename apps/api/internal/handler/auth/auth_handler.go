@@ -2,15 +2,11 @@ package authhandler
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
-	"fmt"
 	"free9ja/api/internal/db/queries"
 	apimiddleware "free9ja/api/internal/middleware"
 	auth "free9ja/api/internal/service/auth"
 	"free9ja/api/internal/utils"
-	"log/slog"
-	"math/big"
 	"net/http"
 
 	"strings"
@@ -25,7 +21,7 @@ type AuthService interface {
 	SendSignupEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
 	VerifySignupEmailOTP(ctx context.Context, email, otp string) (auth.EmailOTPResult, error)
 	SendForgotPasswordEmailOTP(ctx context.Context, email string) (auth.EmailOTPResult, error)
-	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, myReferralCode string, referrerUserID *int64) error
+	CompleteOnboarding(ctx context.Context, userID int64, fakeID int64, params queries.UpdateOnboardingProfileParams, referrerUserID *int64, nin string) error
 	CheckNIN(ctx context.Context, nin string) bool
 	CheckUsername(ctx context.Context, username string) bool
 	CheckReferralCode(ctx context.Context, code string) (bool, string, int64)
@@ -43,6 +39,7 @@ type UsersService interface {
 	CheckUsername(ctx context.Context, username string) bool
 	CheckEmail(ctx context.Context, email string) bool
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
+	GenerateUniqueReferralCode(ctx context.Context, firstName string) (string, error)
 }
 
 // FilesService interface defines the methods from FilesService that the auth handler needs
@@ -221,84 +218,93 @@ func (h *Handler) SendForgotPasswordEmailOTP(w http.ResponseWriter, r *http.Requ
 
 type CompleteOnboardingRequest struct {
 	// details step
-	FirstName      string `json:"first_name" validate:"required,min=2,max=30"`
-	LastName       string `json:"last_name" validate:"required,min=2,max=30"`
-	MiddleName     string `json:"middle_name" validate:"omitempty,max=30"`
-	Gender         string `json:"gender" validate:"required,oneof=male female"`
-	DateOfBirth    string `json:"date_of_birth" validate:"required"`
-	ReferrerUserId *int64 `json:"referrer_user_id" validate:"omitempty"`
-	// username step
-	Username string `json:"username" validate:"required,min=2,max=30"`
-	// origin step
-	CountryOfOrigin int16 `json:"country_of_origin" validate:"omitempty"`
-	StateOfOrigin   int16 `json:"state_of_origin" validate:"omitempty"`
-	// location step
-	CurrentCountry int16 `json:"current_country" validate:"required"`
-	CurrentState   int16 `json:"current_state" validate:"required"`
-	CurrentCity    int32 `json:"current_city" validate:"omitempty"`
+	FirstName       string `json:"first_name" validate:"required,min=2,max=30"`
+	LastName        string `json:"last_name" validate:"required,min=2,max=30"`
+	MiddleName      string `json:"middle_name" validate:"omitempty,max=30"`
+	Gender          string `json:"gender" validate:"required,oneof=male female"`
+	DateOfBirth     string `json:"date_of_birth" validate:"required"`
+	ReferrerUserId  *int64 `json:"referrer_user_id" validate:"omitempty"`
+	ReferralCode    string `json:"referral_code" validate:"omitempty"`
+	Nin             string `json:"nin" validate:"required,len=11"`
+	Username        string `json:"username" validate:"required,min=2,max=30"`
+	CountryOfOrigin int16  `json:"country_of_origin" validate:"omitempty"`
+	StateOfOrigin   int16  `json:"state_of_origin" validate:"omitempty"`
+	CurrentCountry  int16  `json:"current_country" validate:"required"`
+	CurrentState    int16  `json:"current_state" validate:"required"`
+	CurrentCity     int32  `json:"current_city" validate:"omitempty"`
 }
 
 // CompleteOnboarding handles PATCH /api/v1/auth/onboarding
 func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
-	slog.Info("CompleteOnboarding handler called")
+	ctx := r.Context()
 
-	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	// Extract JWT claims from the context
+	claims, ok := ctx.Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
 	if !ok || claims == nil {
-		slog.Error("CompleteOnboarding: Unauthorized - no claims in context")
 		h.utils.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
-	slog.Info("CompleteOnboarding: Claims extracted", "fake_id", claims.FakeID, "roles", claims.Roles)
 
+	// Decode the incoming request body
 	var req CompleteOnboardingRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		slog.Error("CompleteOnboarding: Invalid request body", "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 		return
 	}
-	slog.Info("CompleteOnboarding: Request payload decoded", "username", req.Username, "first_name", req.FirstName, "last_name", req.LastName, "referrer_user_id", req.ReferrerUserId)
 
+	// Validate the request payload
 	if err := h.validate.Struct(req); err != nil {
-		slog.Error("CompleteOnboarding: Validation failed", "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Validation failed: "+err.Error())
 		return
 	}
-	slog.Info("CompleteOnboarding: Struct validation passed")
 
-	ctx := r.Context()
+	// Check NIN if provided
+	if h.usersService.CheckNIN(ctx, req.Nin) {
+		h.utils.RespondError(w, http.StatusBadRequest, "NIN is already taken")
+		return
+	}
+
+	// Validate referral code and referrer user id if both are provided
+	if len(req.ReferralCode) > 0 && req.ReferrerUserId != nil && *req.ReferrerUserId > 0 {
+		valid, _, refId := h.authService.CheckReferralCode(ctx, req.ReferralCode)
+		if !valid || refId != *req.ReferrerUserId {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid referral code or referrer")
+			return
+		}
+	}
 
 	// Check username availability
 	if h.usersService.CheckUsername(ctx, req.Username) {
-		slog.Warn("CompleteOnboarding: Username already taken", "username", req.Username)
 		h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 		return
 	}
-	slog.Info("CompleteOnboarding: Username is available", "username", req.Username)
 
 	// Fetch the DB user
 	user, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID)
 	if err != nil {
-		slog.Error("CompleteOnboarding: User not found", "fake_id", claims.FakeID, "error", err)
 		h.utils.RespondError(w, http.StatusNotFound, "User not found")
 		return
 	}
-	slog.Info("CompleteOnboarding: DB User found", "user_id", user.ID, "fake_id", user.FakeID)
+
+	// if account_status != "just_registered", return error
+	if user.AccountStatus.String != "just_registered" {
+		h.utils.RespondError(w, http.StatusBadRequest, "User is already onboarded")
+		return
+	}
 
 	// Parse date of birth
 	dob, err := time.Parse("2006-01-02", req.DateOfBirth)
 	if err != nil {
-		slog.Error("CompleteOnboarding: Invalid date_of_birth format", "date_of_birth", req.DateOfBirth, "error", err)
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid date_of_birth format, expected YYYY-MM-DD")
 		return
 	}
-	slog.Info("CompleteOnboarding: Parsed DateOfBirth", "dob", dob)
 
-	// Generate unique referral code (e.g. DANIEL-88)
-	firstNameUpper := strings.ToUpper(strings.TrimSpace(req.FirstName))
-	n, _ := rand.Int(rand.Reader, big.NewInt(900))
-	suffix := n.Int64() + 100 // 100-999
-	myReferralCode := fmt.Sprintf("%s-%d", firstNameUpper, suffix)
-	slog.Info("CompleteOnboarding: Generated referral code", "my_referral_code", myReferralCode)
+	// Generate unique referral code (e.g. DANIEL402)
+	myReferralCode, err := h.usersService.GenerateUniqueReferralCode(ctx, req.FirstName)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to generate referral code")
+		return
+	}
 
 	params := queries.UpdateOnboardingProfileParams{
 		ID:              user.ID,
@@ -313,50 +319,14 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 		CurrentCity:     pgtype.Int4{Int32: req.CurrentCity, Valid: req.CurrentCity != 0},
 		StateOfOrigin:   pgtype.Int2{Int16: req.StateOfOrigin, Valid: req.StateOfOrigin != 0},
 		CountryOfOrigin: pgtype.Int2{Int16: req.CountryOfOrigin, Valid: req.CountryOfOrigin != 0},
+		ReferralCode:    pgtype.Text{String: myReferralCode, Valid: myReferralCode != ""},
 	}
 
-	slog.Info("CompleteOnboarding: Calling authService.CompleteOnboarding", "user_id", user.ID, "referrer_user_id", req.ReferrerUserId)
-	if err = h.authService.CompleteOnboarding(r.Context(), user.ID, user.FakeID.Int64, params, myReferralCode, req.ReferrerUserId); err != nil {
-		slog.Error("CompleteOnboarding: authService.CompleteOnboarding failed", "error", err)
+	if err = h.authService.CompleteOnboarding(r.Context(), user.ID, user.FakeID.Int64, params, req.ReferrerUserId, req.Nin); err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to complete onboarding: "+err.Error())
 		return
 	}
-	slog.Info("CompleteOnboarding: authService.CompleteOnboarding succeeded")
 
-	// Re-fetch the updated user to get the new Name and NIN for wallet creation
-	if updatedUser, err := h.authService.GetUserDetailsByFakeID(ctx, claims.FakeID); err == nil {
-		slog.Info("CompleteOnboarding: Re-fetched updated user for wallet creation", "user_id", updatedUser.ID)
-		_, walletErr := h.usersService.CreateUserWallet(ctx, queries.User{
-			ID:              updatedUser.ID,
-			FakeID:          updatedUser.FakeID,
-			Email:           updatedUser.Email,
-			Phone:           updatedUser.Phone,
-			Username:        updatedUser.Username,
-			PasswordHash:    updatedUser.PasswordHash,
-			LastName:        updatedUser.LastName,
-			FirstName:       updatedUser.FirstName,
-			MiddleName:      updatedUser.MiddleName,
-			Gender:          updatedUser.Gender,
-			DateOfBirth:     updatedUser.DateOfBirth,
-			CurrentCountry:  updatedUser.CurrentCountry,
-			CurrentState:    updatedUser.CurrentState,
-			CurrentCity:     updatedUser.CurrentCity,
-			StateOfOrigin:   updatedUser.StateOfOrigin,
-			CountryOfOrigin: updatedUser.CountryOfOrigin,
-			AccountStatus:   updatedUser.AccountStatus,
-			CreatedAt:       updatedUser.CreatedAt,
-			UpdatedAt:       updatedUser.UpdatedAt,
-		})
-		if walletErr != nil {
-			slog.Warn("CompleteOnboarding: Immediate wallet creation returned error", "error", walletErr)
-		} else {
-			slog.Info("CompleteOnboarding: Immediate wallet creation succeeded")
-		}
-	} else {
-		slog.Warn("CompleteOnboarding: Failed to re-fetch updated user for wallet creation", "error", err)
-	}
-
-	slog.Info("CompleteOnboarding: Responding with success")
 	h.utils.RespondSuccess(w, http.StatusOK, "Onboarding completed successfully", nil)
 }
 
@@ -440,7 +410,7 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 
 // CheckReferralCodeRequest represents the structure for checking if a referral code exists
 type CheckReferralCodeRequest struct {
-	Code string `json:"code" validate:"required,min=3"`
+	Code string `json:"code" validate:"required,min=5"`
 }
 
 // CheckReferralCode godoc

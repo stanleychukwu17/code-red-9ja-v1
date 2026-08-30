@@ -46,7 +46,7 @@ export function ElectionInstanceTableHeader() {
         <span className="text-c-50 text-[14px] w-[200px] hidden lg:block">
           Candidates
         </span>
-        <span className="text-c-50 text-[14px] w-[110px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
           Date
         </span>
         <div className="ml-2 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer" />
@@ -94,7 +94,7 @@ export function ElectionInstanceTableTile({
             <p className="text-c-40 text-[15px] font-medium">Add candidate</p>
           </div>
         )}
-        <span className="text-[15px] text-c-70 w-[110px] hidden sm:block">
+        <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
           {dateLabel}
         </span>
         <PartyElectionInstanceDropdown data={data} className="ml-2" />

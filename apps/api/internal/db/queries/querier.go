@@ -159,7 +159,6 @@ type Querier interface {
 	GetEligibleElectionsForPollingUnit(ctx context.Context, arg GetEligibleElectionsForPollingUnitParams) ([]Election, error)
 	GetFakeIDByAdditionalPhone(ctx context.Context, phone string) (pgtype.Int8, error)
 	GetFakeIDByEmail(ctx context.Context, email pgtype.Text) (pgtype.Int8, error)
-	GetFakeIDByNIN(ctx context.Context, nin string) (pgtype.Int8, error)
 	GetFakeIDByPhone(ctx context.Context, phone pgtype.Text) (pgtype.Int8, error)
 	GetFakeIDByUserID(ctx context.Context, id int64) (pgtype.Int8, error)
 	GetFakeIDByUsername(ctx context.Context, username pgtype.Text) (pgtype.Int8, error)
@@ -229,6 +228,7 @@ type Querier interface {
 	GetSystemSetting(ctx context.Context, key string) (SystemSetting, error)
 	GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error)
 	GetUserDidNotVoteReason(ctx context.Context, arg GetUserDidNotVoteReasonParams) (GetUserDidNotVoteReasonRow, error)
+	GetUserIDByNIN(ctx context.Context, nin string) (int64, error)
 	GetUserIdByReferralCode(ctx context.Context, referralCode pgtype.Text) (int64, error)
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
 	GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype.Int8) (string, error)
@@ -236,8 +236,8 @@ type Querier interface {
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (UserBankAccount, error)
 	GetUserReferralByID(ctx context.Context, id int64) (UserReferral, error)
 	GetUserReferralByUserAndElectionGroup(ctx context.Context, arg GetUserReferralByUserAndElectionGroupParams) (UserReferral, error)
-	// Returns the referred_by_id for a user given their internal user ID.
-	GetUserReferredByID(ctx context.Context, id int64) (pgtype.Int8, error)
+	// Returns the referrer_user_id for a user given their internal user ID.
+	GetUserReferredByID(ctx context.Context, referredUserID int64) (int64, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]GetUserRolesRow, error)
 	GetUserVerification(ctx context.Context, userID int64) (UserVerification, error)
 	GetUserVotesByElectionGroup(ctx context.Context, arg GetUserVotesByElectionGroupParams) ([]GetUserVotesByElectionGroupRow, error)
@@ -442,7 +442,7 @@ type Querier interface {
 	UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error)
 	UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMoreInfoAboutThisUserParams) error
 	UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error)
-	UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) error
+	UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) (User, error)
 	UpdateParty(ctx context.Context, arg UpdatePartyParams) (Party, error)
 	UpdatePartyAgentAcquisitionTargets(ctx context.Context, arg UpdatePartyAgentAcquisitionTargetsParams) (Party, error)
 	UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg UpdatePartyAgentPaymentAllocationKoboParams) (Party, error)
@@ -477,7 +477,6 @@ type Querier interface {
 	UpdateUserPhoneNumberIsVerified(ctx context.Context, arg UpdateUserPhoneNumberIsVerifiedParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpdateUserReferralCode(ctx context.Context, arg UpdateUserReferralCodeParams) error
-	UpdateUserReferredBy(ctx context.Context, arg UpdateUserReferredByParams) error
 	UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error)
 	UpdateUserStatus(ctx context.Context, arg UpdateUserStatusParams) error
 	UpdateUserVotersCard(ctx context.Context, arg UpdateUserVotersCardParams) error

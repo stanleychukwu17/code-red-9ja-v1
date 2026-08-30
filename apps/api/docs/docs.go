@@ -1335,55 +1335,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/forgot_password": {
-            "post": {
-                "description": "Handles resetting the user's password",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Forgot password",
-                "parameters": [
-                    {
-                        "description": "New password details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.ForgotPasswordRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/login": {
             "post": {
                 "description": "Authenticates a user and returns access and refresh tokens",
@@ -1572,55 +1523,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/register": {
-            "post": {
-                "description": "Creates a new user account with full details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Register a new user",
-                "parameters": [
-                    {
-                        "description": "Registration details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/register_candidate": {
             "post": {
                 "description": "Creates a new candidate placeholder user account",
@@ -1775,48 +1677,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/auth/signup/web": {
-            "post": {
-                "description": "Handles the first phase of user registration (country, phone, email, password)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Initial sign-up phase",
-                "parameters": [
-                    {
-                        "description": "Initial sign-up details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterPhaseSignUpRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/superadmin": {
             "post": {
                 "description": "Promotes a user to superadmin if their username is in the pre-approved list",
@@ -1858,55 +1718,6 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/verify_security_questions": {
-            "post": {
-                "description": "Checks the answers to security questions and returns a unique ID if successful",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Verify security questions",
-                "parameters": [
-                    {
-                        "description": "Security questions and answers",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.VerifySecurityQuestionsRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -10570,7 +10381,7 @@ const docTemplate = `{
             "properties": {
                 "code": {
                     "type": "string",
-                    "minLength": 3
+                    "minLength": 5
                 }
             }
         },
@@ -10584,30 +10395,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 30,
                     "minLength": 2
-                }
-            }
-        },
-        "authhandler.ForgotPasswordRequest": {
-            "type": "object",
-            "required": [
-                "change_password_id",
-                "confirmPassword",
-                "password",
-                "user_fid"
-            ],
-            "properties": {
-                "change_password_id": {
-                    "type": "string"
-                },
-                "confirmPassword": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 5
-                },
-                "user_fid": {
-                    "type": "integer"
                 }
             }
         },
@@ -10766,144 +10553,6 @@ const docTemplate = `{
                 }
             }
         },
-        "authhandler.RegisterPhaseSignUpRequest": {
-            "type": "object",
-            "required": [
-                "confirmPassword",
-                "country",
-                "countryId",
-                "email",
-                "emailVerificationToken",
-                "password",
-                "phoneNumber"
-            ],
-            "properties": {
-                "confirmPassword": {
-                    "type": "string"
-                },
-                "country": {
-                    "type": "string"
-                },
-                "countryId": {
-                    "type": "integer"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "emailVerificationToken": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                },
-                "phoneNumber": {
-                    "type": "string"
-                }
-            }
-        },
-        "authhandler.RegisterRequest": {
-            "type": "object",
-            "required": [
-                "answer1",
-                "answer2",
-                "current_country",
-                "current_state",
-                "date_of_birth",
-                "first_name",
-                "gender",
-                "last_name",
-                "nin",
-                "onboarding_id",
-                "password",
-                "phone",
-                "question1",
-                "question2",
-                "username"
-            ],
-            "properties": {
-                "answer1": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "answer2": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "date_of_birth": {
-                    "description": "Expects YYYY-MM-DD",
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "gender": {
-                    "type": "string",
-                    "enum": [
-                        "male",
-                        "female"
-                    ]
-                },
-                "last_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "middle_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "nin": {
-                    "type": "string"
-                },
-                "onboarding_id": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                },
-                "phone": {
-                    "type": "string",
-                    "maxLength": 15,
-                    "minLength": 5
-                },
-                "question1": {
-                    "type": "integer"
-                },
-                "question2": {
-                    "type": "integer"
-                },
-                "referred_by_code": {
-                    "type": "string",
-                    "maxLength": 15
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                }
-            }
-        },
         "authhandler.SignupRequest": {
             "type": "object",
             "required": [
@@ -10926,33 +10575,6 @@ const docTemplate = `{
                 },
                 "phoneNumber": {
                     "type": "string"
-                }
-            }
-        },
-        "authhandler.VerifySecurityQuestionsRequest": {
-            "type": "object",
-            "required": [
-                "answer1",
-                "answer2",
-                "nin",
-                "question1",
-                "question2"
-            ],
-            "properties": {
-                "answer1": {
-                    "type": "string"
-                },
-                "answer2": {
-                    "type": "string"
-                },
-                "nin": {
-                    "type": "string"
-                },
-                "question1": {
-                    "type": "integer"
-                },
-                "question2": {
-                    "type": "integer"
                 }
             }
         },
@@ -12743,9 +12365,6 @@ const docTemplate = `{
                 "account_status": {
                     "$ref": "#/definitions/pgtype.Text"
                 },
-                "address": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
                 "avatar": {
                     "$ref": "#/definitions/pgtype.Text"
                 },
@@ -12829,9 +12448,6 @@ const docTemplate = `{
                 },
                 "referral_code": {
                     "$ref": "#/definitions/pgtype.Text"
-                },
-                "referred_by_id": {
-                    "$ref": "#/definitions/pgtype.Int8"
                 },
                 "roles": {
                     "$ref": "#/definitions/queries.CachedUserRoles"

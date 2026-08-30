@@ -44,6 +44,8 @@ type UsersService interface {
 	CheckPhone(ctx context.Context, phone string) bool
 	CheckNIN(ctx context.Context, nin string) bool
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
+	GenerateUniqueReferralCode(ctx context.Context, firstName string) (string, error)
+	GetReferralCodeInfo(ctx context.Context, code string) (*usersservice.CachedReferralCodeInfo, error)
 }
 
 type PartyService interface {
@@ -121,6 +123,11 @@ type LoginUser struct {
 	VotersCardImage string                                   `json:"voters_card_image"`
 	Party           *queries.PartyBasicInfoWithVerifications `json:"party,omitempty"`
 }
+type AuthTokens struct {
+	AccessToken  string
+	RefreshToken string
+}
+
 type LoginResult struct {
 	AccessToken  string
 	RefreshToken string
@@ -250,17 +257,6 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		`)
 	}
 
-	// create session details
-	sessionID := uuid.NewString()
-	timezone, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
-	now := time.Now().In(timezone)
-	sessionData := map[string]any{
-		"SessionID": sessionID,
-		"FakeID":    fakeID,
-		"TimeAdded": now.Format(time.RFC3339),
-	}
-	jsonSessionData, _ := json.Marshal(sessionData)
-
 	// if user has a valid partyID, we fetch the party details
 	var partyObj *queries.PartyBasicInfoWithVerifications
 	partyID := user.PartyID.Int16
@@ -268,47 +264,18 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 		partyObj = s.partyService.GetPartyBasicInfo(ctx, partyID)
 	}
 
-	// Generate Access Token and Refresh Token
-	accessToken, err := utils.GenerateToken(user.ID, fakeID, user.Username.String, userRoleCodes, s.jwtSecret, s.jwtAccessExp, partyID)
-	if err != nil {
-		return LoginResult{}, fmt.Errorf("failed to generate access token: %w", err)
-	}
-
-	// generate refresh token (opaque)
-	randStr, err := utils.GenerateRandomString()
-	if err != nil {
-		return LoginResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
-	}
-
-	// Redis: create redis pipeline
-	pipe := s.rdb.TxPipeline()
-
-	// Redis: Store the session data in redis using the hashed refresh token as the key
-	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, randStr.HashedToken)
-	pipe.Set(ctx, redisRefreshKey, jsonSessionData, s.jwtRefreshExp)
-
-	// Redis: add the session ID to the set of login sessions
-	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
-	pipe.SAdd(ctx, redisLoginSessionKey, randStr.HashedToken)
-	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp) // sets an expiration on the entire set using the jwtRefreshExpiration time
-
-	// Redis: add the session ID to the set of the user's login sessions
-	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
-	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
-	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp) // sets an expiration on the entire set using the jwtRefreshExpiration time
-
-	// execute the pipeline
-	_, err = pipe.Exec(ctx)
+	// create session and generate tokens
+	tokens, err := s.createSession(ctx, user.ID, fakeID, user.Username.String, userRoleCodes, partyID)
 	if err != nil {
 		log.Error(logger.EventRedisPipelineFailed, "error", err, "operation", "login_session_storage")
-		return LoginResult{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
+		return LoginResult{}, err
 	}
 
 	bankAccount, _ := s.usersService.GetUserPrimaryBankAccount(ctx, user.ID)
 
 	loginResult := LoginResult{
-		AccessToken:  accessToken,
-		RefreshToken: randStr.RandomString,
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
 		User: LoginUser{
 			ID:                user.ID,
 			FakeID:            user.FakeID.Int64,
@@ -338,6 +305,59 @@ func (s *AuthService) Login(ctx context.Context, identifierType, identifier, pas
 	}
 
 	return loginResult, nil
+}
+
+// createSession creates a new login session, generates access/refresh tokens, and persists session data in Redis
+func (s *AuthService) createSession(
+	ctx context.Context,
+	userID int64,
+	fakeID int64,
+	username string,
+	roles []string,
+	partyID int16,
+) (AuthTokens, error) {
+	sessionID := uuid.NewString()
+	now := time.Now().UTC()
+	sessionData := TokenSessionData{
+		SessionID: sessionID,
+		FakeID:    fakeID,
+		TimeAdded: now.Format(time.RFC3339),
+	}
+	jsonSessionData, err := json.Marshal(sessionData)
+	if err != nil {
+		return AuthTokens{}, fmt.Errorf("failed to marshal session data: %w", err)
+	}
+
+	accessToken, err := utils.GenerateToken(userID, fakeID, username, roles, s.jwtSecret, s.jwtAccessExp, partyID)
+	if err != nil {
+		return AuthTokens{}, fmt.Errorf("failed to generate access token: %w", err)
+	}
+
+	randStr, err := utils.GenerateRandomString()
+	if err != nil {
+		return AuthTokens{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	pipe := s.rdb.TxPipeline()
+	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, randStr.HashedToken)
+	pipe.Set(ctx, redisRefreshKey, jsonSessionData, s.jwtRefreshExp)
+
+	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+	pipe.SAdd(ctx, redisLoginSessionKey, randStr.HashedToken)
+	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp)
+
+	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
+	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
+	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp)
+
+	if _, err = pipe.Exec(ctx); err != nil {
+		return AuthTokens{}, fmt.Errorf("failed to execute redis pipeline: %w", err)
+	}
+
+	return AuthTokens{
+		AccessToken:  accessToken,
+		RefreshToken: randStr.RandomString,
+	}, nil
 }
 
 type RefreshResult struct {
@@ -453,13 +473,6 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		Party:           user.PartyBasicInfo,
 	}
 
-	// if time is still within the grace period, return the user details
-	if isGracePeriod {
-		return RefreshResult{
-			User: userDetails,
-		}, nil
-	}
-
 	// Verify account status
 	accountStatus := user.AccountStatus.String
 	if accountStatus == "suspended" || accountStatus == "banned" || accountStatus == "deleted" || accountStatus == "inactive" {
@@ -467,6 +480,13 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	}
 	if accountStatus == "placeholder" {
 		return RefreshResult{}, errors.New("Placeholder account cannot be logged in")
+	}
+
+	// if time is still within the grace period, return the user details
+	if isGracePeriod {
+		return RefreshResult{
+			User: userDetails,
+		}, nil
 	}
 
 	// update the time of this new accessToken generated
@@ -710,21 +730,16 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, errors.New("you must be at least 18 years old")
 	}
 
-	// Auto-generate unique referral code format: {F}-{random}-{L}
-	fName := strings.ToUpper(strings.TrimSpace(params.FirstName.String))
-	if len(fName) > 3 {
-		fName = fName[:3]
-	}
-	lName := strings.ToUpper(strings.TrimSpace(params.LastName.String))
-	if len(lName) > 3 {
-		lName = lName[:3]
+	// Auto-generate unique referral code format: {FIRST_NAME}{3-digit suffix}
+	refCode, err := s.usersService.GenerateUniqueReferralCode(ctx, params.FirstName.String)
+	if err != nil {
+		fName := strings.ToUpper(strings.TrimSpace(params.FirstName.String))
+		if len(fName) > 3 {
+			fName = fName[:3]
+		}
+		refCode = fmt.Sprintf("%s-%d", fName, time.Now().UnixMilli()%100000)
 	}
 
-	timeMsStr := fmt.Sprintf("%d", time.Now().UnixMilli())
-	if len(timeMsStr) > 6 {
-		timeMsStr = timeMsStr[len(timeMsStr)-6:]
-	}
-	refCode := fmt.Sprintf("%s-%s-%s", fName, timeMsStr, lName)
 	//--CREATE USER--
 	// creates the user's new account in our database
 	user_id, err := s.queries.CreateUser(ctx, params)
@@ -732,11 +747,11 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		return RegisterResult{}, err
 	}
 
-	var referredByID pgtype.Int8
+	var referrerUserID int64
 	if referredByCode != "" {
 		uID, err := s.queries.GetUserIdByReferralCode(ctx, pgtype.Text{String: referredByCode, Valid: true})
-		if err == nil {
-			referredByID = pgtype.Int8{Int64: uID, Valid: true}
+		if err == nil && uID > 0 {
+			referrerUserID = uID
 		}
 	}
 
@@ -744,18 +759,12 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		ID:           user_id,
 		ReferralCode: pgtype.Text{String: refCode, Valid: true},
 	})
-	if err == nil && referredByID.Valid {
-		err = s.queries.UpdateUserReferredBy(ctx, queries.UpdateUserReferredByParams{
-			ID:           user_id,
-			ReferredByID: referredByID,
-		})
-	}
 	if err != nil {
 		slog.Error("failed to create user referral profile during registration", "user_id", user_id, "err", err)
-	} else if referredByID.Valid {
+	} else if referrerUserID > 0 {
 		_, err = s.queries.CreateReferral(ctx, queries.CreateReferralParams{
 			PartyID:        pgtype.Int2{Valid: false},
-			ReferrerUserID: referredByID.Int64,
+			ReferrerUserID: referrerUserID,
 			ReferredUserID: user_id,
 			Milestone:      "SIGNED_UP",
 			Status:         pgtype.Text{String: "pending", Valid: true},
@@ -763,7 +772,6 @@ func (s *AuthService) Register(ctx context.Context, params queries.CreateUserPar
 		if err != nil {
 			slog.Error("failed to create referral record during registration", "user_id", user_id, "err", err)
 		}
-
 	}
 
 	// generate a fake_id using the user_id and update the user fake_id
@@ -878,21 +886,11 @@ func (s *AuthService) CheckUsername(ctx context.Context, username string) bool {
 }
 
 func (s *AuthService) CheckReferralCode(ctx context.Context, code string) (bool, string, int64) {
-	user, err := s.queries.GetReferrerNameByCode(ctx, pgtype.Text{String: code, Valid: true})
-	if err != nil {
+	info, err := s.usersService.GetReferralCodeInfo(ctx, code)
+	if err != nil || info == nil || info.ID == 0 {
 		return false, "", 0
 	}
-	name := ""
-	if user.FirstName.Valid {
-		name += user.FirstName.String
-	}
-	if user.LastName.Valid {
-		if name != "" {
-			name += " "
-		}
-		name += user.LastName.String
-	}
-	return true, name, user.ID
+	return true, info.Name, info.ID
 }
 
 // function: checks if the Email address already exists in redis and in the postgres db
@@ -909,7 +907,7 @@ func (s *AuthService) CheckPhone(ctx context.Context, phone string) bool {
 
 // CheckNIN function checks if the nin already exists in the database
 func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
-	exists, _ := s.rdb.Exists(ctx, db.RedisNINFakeID+nin).Result()
+	exists, _ := s.rdb.Exists(ctx, db.RedisUserNINQuickSearch+nin).Result()
 	return exists > 0
 }
 
@@ -925,16 +923,12 @@ type SignupResult struct {
 // generated access and refresh tokens.
 func (s *AuthService) Signup(ctx context.Context, email, phone, password string, countryID int16) (SignupResult, error) {
 	// Check if email exists
+	email = normalizeEmail(email)
 	if email != "" && s.usersService.CheckEmail(ctx, email) {
 		return SignupResult{}, errors.New("Email address already exists")
 	}
 
-	// Check if phone exists
-	if s.usersService.CheckPhone(ctx, phone) {
-		return SignupResult{}, errors.New("phone already exists")
-	}
-
-	// Validate phone
+	// Validate country and normalize phone to E.164 format
 	country_dts, err := s.bodiesService.CheckCountry(ctx, countryID)
 	if err != nil {
 		return SignupResult{}, err
@@ -945,22 +939,28 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		return SignupResult{}, err
 	}
 
+	// Check if phone exists in E.164 format
+	if s.usersService.CheckPhone(ctx, e164Phone) {
+		return SignupResult{}, errors.New("phone already exists")
+	}
+
 	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return SignupResult{}, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	// insert into database
+	// prepares and validates user record before inserting into database
 	params := queries.CreateUserParams{
 		Email:          pgtype.Text{String: email, Valid: email != ""},
 		Phone:          pgtype.Text{String: e164Phone, Valid: true},
 		PasswordHash:   string(hashedPassword),
 		CurrentCountry: countryID,
-		CurrentState:   37, // Default state
+		CurrentState:   37, // temp default state to avoid error of null entry
 	}
 
-	user_id, err := s.queries.CreateUser(ctx, params)
+	// creates user and inserts into database
+	userID, err := s.queries.CreateUser(ctx, params)
 	if err != nil {
 		if pgErr, ok := err.(*pgconn.PgError); ok && pgErr.Code == "23505" {
 			switch pgErr.ConstraintName {
@@ -974,96 +974,45 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 	}
 
 	// fake id generator
-	fakeID := utils.GenerateFakeID(user_id)
-
+	fakeID := utils.GenerateFakeID(userID)
 	err = s.queries.UpdateUserFakeID(ctx, queries.UpdateUserFakeIDParams{
 		// Update user fake ID
-		ID:     user_id,
+		ID:     userID,
 		FakeID: pgtype.Int8{Int64: fakeID, Valid: true},
 	})
 	if err != nil {
 		return SignupResult{}, fmt.Errorf("failed to update user fake ID: %w", err)
 	}
 
-	go func() {
-		// Initialize basic wallet
-		bgCtx := context.Background()
-		registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
-		if userErr == nil {
-			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, queries.User{
-				ID:              registeredUser.ID,
-				FakeID:          registeredUser.FakeID,
-				Email:           registeredUser.Email,
-				Phone:           registeredUser.Phone,
-				Username:        registeredUser.Username,
-				PasswordHash:    registeredUser.PasswordHash,
-				LastName:        registeredUser.LastName,
-				FirstName:       registeredUser.FirstName,
-				MiddleName:      registeredUser.MiddleName,
-				Gender:          registeredUser.Gender,
-				DateOfBirth:     registeredUser.DateOfBirth,
-				CurrentCountry:  registeredUser.CurrentCountry,
-				CurrentState:    registeredUser.CurrentState,
-				CurrentCity:     registeredUser.CurrentCity,
-				StateOfOrigin:   registeredUser.StateOfOrigin,
-				CountryOfOrigin: registeredUser.CountryOfOrigin,
-				AccountStatus:   registeredUser.AccountStatus,
-				CreatedAt:       registeredUser.CreatedAt,
-				UpdatedAt:       registeredUser.UpdatedAt,
-			}); walletErr != nil {
-				slog.Error("failed to create user wallet during signup", "user_id", user_id, "err", walletErr)
-			}
-		}
-	}()
+	// save user phonenumbers
+	err = s.usersService.UpdateUserPhoneNumbers(ctx, userID, fakeID, []usersservice.PhonePayload{
+		{
+			Phone:     e164Phone,
+			RawInput:  phone,
+			Phonecode: country_dts.Phonecode,
+			IsDefault: true,
+		},
+	})
+	if err != nil {
+		return SignupResult{}, fmt.Errorf("failed to save user phone number: %w", err)
+	}
+
+	// save he user email to redis
+	err = s.SaveSomeUserRegistrationDetails(ctx, "", email, "", userID, fakeID)
+	if err != nil {
+		return SignupResult{}, err
+	}
 
 	// Generate session and tokens (same pattern as Login)
-	sessionID := uuid.NewString()
-	timezone, _ := time.LoadLocation(config.GetEnv("TIMEZONE", "Africa/Lagos"))
-	now := time.Now().In(timezone)
-	sessionData := map[string]any{
-		"SessionID": sessionID,
-		"FakeID":    fakeID,
-		"TimeAdded": now.Format(time.RFC3339),
-	}
-	jsonSessionData, _ := json.Marshal(sessionData)
-
-	// No roles assigned yet for new users
-	var roleCodes []string
-
-	accessToken, err := utils.GenerateToken(user_id, fakeID, "", roleCodes, s.jwtSecret, s.jwtAccessExp, 0)
+	tokens, err := s.createSession(ctx, userID, fakeID, "", nil, 0)
 	if err != nil {
-		return SignupResult{}, fmt.Errorf("failed to generate access token: %w", err)
-	}
-
-	randStr, err := utils.GenerateRandomString()
-	if err != nil {
-		return SignupResult{}, fmt.Errorf("failed to generate refresh token: %w", err)
-	}
-
-	pipe := s.rdb.TxPipeline()
-	redisRefreshKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, randStr.HashedToken)
-	pipe.Set(ctx, redisRefreshKey, jsonSessionData, s.jwtRefreshExp)
-	redisLoginSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
-	pipe.SAdd(ctx, redisLoginSessionKey, randStr.HashedToken)
-	pipe.Expire(ctx, redisLoginSessionKey, s.jwtRefreshExp)
-	redisUserSessionKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
-	pipe.SAdd(ctx, redisUserSessionKey, sessionID)
-	pipe.Expire(ctx, redisUserSessionKey, s.jwtRefreshExp)
-	if email != "" {
-		// Store email and phone â†’ fakeID mappings so login-by-email/phone works immediately
-		pipe.Set(ctx, db.RedisEmailFakeID+strings.ToLower(strings.TrimSpace(email)), fakeID, 0)
-	}
-	if e164Phone != "" {
-		pipe.Set(ctx, db.RedisPhoneFakeID+e164Phone, fakeID, 0)
-	}
-	if _, err = pipe.Exec(ctx); err != nil {
-		return SignupResult{}, fmt.Errorf("failed to store session: %w", err)
+		return SignupResult{}, fmt.Errorf("failed to create session: %w", err)
 	}
 
 	return SignupResult{
-		ID:           strconv.FormatInt(user_id, 10),
-		AccessToken:  accessToken,
-		RefreshToken: randStr.RandomString,
+		ID:           strconv.FormatInt(userID, 10),
+		AccessToken:  tokens.AccessToken,
+		RefreshToken: tokens.RefreshToken,
 	}, nil
 }
 
@@ -1074,37 +1023,20 @@ func (s *AuthService) CompleteOnboarding(
 	userID int64,
 	fakeID int64,
 	params queries.UpdateOnboardingProfileParams,
-	myReferralCode string,
 	referrerUserID *int64,
+	nin string,
 ) error {
-	// 1. Update the users row with all onboarding fields
-	if err := s.queries.UpdateOnboardingProfile(ctx, params); err != nil {
+	// 1. Update the users row with all onboarding fields including referral code
+	updatedUser, err := s.queries.UpdateOnboardingProfile(ctx, params)
+	if err != nil {
 		return fmt.Errorf("update profile: %w", err)
 	}
 
-	var referredByID pgtype.Int8
+	// record referrer user
 	if referrerUserID != nil && *referrerUserID > 0 && *referrerUserID != userID {
-		referredByID = pgtype.Int8{Int64: *referrerUserID, Valid: true}
-	}
-
-	if err := s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
-		ID:           userID,
-		ReferralCode: pgtype.Text{String: myReferralCode, Valid: myReferralCode != ""},
-	}); err != nil {
-		return fmt.Errorf("update referral code: %w", err)
-	}
-
-	if referredByID.Valid {
-		if err := s.queries.UpdateUserReferredBy(ctx, queries.UpdateUserReferredByParams{
-			ID:           userID,
-			ReferredByID: referredByID,
-		}); err != nil {
-			return fmt.Errorf("update referred by: %w", err)
-		}
-
 		if _, err := s.queries.CreateReferral(ctx, queries.CreateReferralParams{
 			PartyID:        pgtype.Int2{Valid: false}, // No party at signup
-			ReferrerUserID: referredByID.Int64,
+			ReferrerUserID: *referrerUserID,
 			ReferredUserID: userID,
 			Milestone:      "SIGNED_UP",
 			Status:         pgtype.Text{String: "pending", Valid: true},
@@ -1113,45 +1045,20 @@ func (s *AuthService) CompleteOnboarding(
 		}
 	}
 
-	// 2. Persist username, email to Redis for fast lookups
-	if err := s.SaveSomeUserRegistrationDetails(ctx, params.Username.String, "", "", userID, fakeID); err != nil {
+	// 2. Persist username, email, nin to Redis for fast lookups
+	if err := s.SaveSomeUserRegistrationDetails(ctx, params.Username.String, "", nin, userID, fakeID); err != nil {
 		return fmt.Errorf("save registration details: %w", err)
 	}
 
 	// 3. Invalidate the Redis user-info cache so the next read is fresh
 	_ = s.usersService.InvalidateCachedUserInfo(ctx, fakeID)
 
-	// 4. Attempt to create user wallet if it wasn't successfully created during Signup
+	// 4. Create user wallet in background using the updated user data
 	if s.usersService != nil {
 		go func() {
 			bgCtx := context.Background()
-			registeredUser, userErr := s.GetUserDetailsByFakeID(bgCtx, fakeID)
-			if userErr == nil {
-				if _, walletErr := s.usersService.CreateUserWallet(bgCtx, queries.User{
-					ID:              registeredUser.ID,
-					FakeID:          registeredUser.FakeID,
-					Email:           registeredUser.Email,
-					Phone:           registeredUser.Phone,
-					Username:        registeredUser.Username,
-					PasswordHash:    registeredUser.PasswordHash,
-					LastName:        registeredUser.LastName,
-					FirstName:       registeredUser.FirstName,
-					MiddleName:      registeredUser.MiddleName,
-					Gender:          registeredUser.Gender,
-					DateOfBirth:     registeredUser.DateOfBirth,
-					CurrentCountry:  registeredUser.CurrentCountry,
-					CurrentState:    registeredUser.CurrentState,
-					CurrentCity:     registeredUser.CurrentCity,
-					StateOfOrigin:   registeredUser.StateOfOrigin,
-					CountryOfOrigin: registeredUser.CountryOfOrigin,
-					AccountStatus:   registeredUser.AccountStatus,
-					CreatedAt:       registeredUser.CreatedAt,
-					UpdatedAt:       registeredUser.UpdatedAt,
-				}); walletErr != nil {
-					slog.Warn("[AuthService.CompleteOnboarding] Background wallet creation returned error", "user_id", userID, "err", walletErr)
-				}
-			} else {
-				slog.Error("[AuthService.CompleteOnboarding] Background wallet creation failed to fetch user", "err", userErr)
+			if _, walletErr := s.usersService.CreateUserWallet(bgCtx, updatedUser); walletErr != nil {
+				slog.Warn("[AuthService.CompleteOnboarding] Background wallet creation returned error", "user_id", userID, "err", walletErr)
 			}
 		}()
 	}
@@ -1197,9 +1104,6 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 	if email != "" {
 		pipe.Set(ctx, db.RedisEmailFakeID+email, fakeID, db.RedisFiveYearsTTL)
 	}
-	if nin != "" {
-		pipe.Set(ctx, db.RedisNINFakeID+nin, fakeID, db.RedisFiveYearsTTL)
-	}
 
 	_, err := pipe.Exec(ctx)
 	if err != nil {
@@ -1208,10 +1112,12 @@ func (s *AuthService) SaveSomeUserRegistrationDetails(ctx context.Context, usern
 
 	// save to db
 	if nin != "" {
-		s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
+		if _, err := s.queries.CreateUserNIN(ctx, queries.CreateUserNINParams{
 			Nin:    nin,
 			UserID: userID,
-		})
+		}); err != nil {
+			slog.Error("SaveSomeUserRegistrationDetails: failed to create user NIN", "error", err, "user_id", userID)
+		}
 	}
 
 	return nil
@@ -1283,10 +1189,48 @@ func (s *AuthService) sendEmailOTP(ctx context.Context, to, otp string) error {
 	return nil
 }
 
+// Maximum allowed failed verification attempts before an OTP is invalidated
+const maxOTPAttempts = 5
+
+// StoredEmailOTP represents the OTP payload cached in Redis
+type StoredEmailOTP struct {
+	Hash     string `json:"hash"`     // bcrypt hash of the OTP code
+	Attempts int    `json:"attempts"` // count of failed verification attempts
+}
+
 type EmailOTPResult struct {
 	Message                string `json:"message"`
 	EmailVerificationToken string `json:"emailVerificationToken,omitempty"`
 	ExpiresInSeconds       int    `json:"expiresInSeconds,omitempty"`
+}
+
+// generateAndSendEmailOTP generates a new OTP, emails it, and caches the hash in Redis
+func (s *AuthService) generateAndSendEmailOTP(ctx context.Context, email string) (EmailOTPResult, error) {
+	// 1. Generate plain 6-digit OTP and its bcrypt hash
+	otp, hashedOTP, err := utils.GenerateOTP()
+	if err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	// 2. Dispatch the plain OTP to the user's email
+	if err := s.sendEmailOTP(ctx, email, otp); err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	// 3. Store the hashed OTP in Redis with initial 0 attempts and a TTL
+	otpData, _ := json.Marshal(StoredEmailOTP{
+		Hash:     hashedOTP,
+		Attempts: 0,
+	})
+	if err := s.rdb.Set(ctx, s.emailOtpKey(email), otpData, emailOtpTTL).Err(); err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	// 4. Return success result with remaining expiration time
+	return EmailOTPResult{
+		Message:          "OTP sent successfully",
+		ExpiresInSeconds: int(emailOtpTTL.Seconds()),
+	}, nil
 }
 
 // SendSignupEmailOTP generates and sends an OTP to a new user's email address during the signup process
@@ -1302,28 +1246,8 @@ func (s *AuthService) SendSignupEmailOTP(ctx context.Context, email string) (Ema
 		return EmailOTPResult{}, errors.New("Email address already exists")
 	}
 
-	// Generate a secure 6-digit OTP and its hash
-	otp, hashedOTP, err := utils.GenerateOTP()
-	if err != nil {
-		return EmailOTPResult{}, err
-	}
-
-	// Send the plain text OTP to the user's email
-	if err := s.sendEmailOTP(ctx, email, otp); err != nil {
-		return EmailOTPResult{}, err
-	}
-
-	// Temporarily store the hashed OTP in Redis with a TTL for subsequent verification
-	otpData, _ := json.Marshal(map[string]string{"hash": hashedOTP})
-	if err := s.rdb.Set(ctx, s.emailOtpKey(email), otpData, emailOtpTTL).Err(); err != nil {
-		return EmailOTPResult{}, err
-	}
-
-	// returns success message and email verification token expiry time
-	return EmailOTPResult{
-		Message:          "OTP sent successfully",
-		ExpiresInSeconds: int(emailOtpTTL.Seconds()),
-	}, nil
+	// Generate, send, and cache OTP
+	return s.generateAndSendEmailOTP(ctx, email)
 }
 
 // SendForgotPasswordEmailOTP sends a one-time code for password reset.
@@ -1337,60 +1261,83 @@ func (s *AuthService) SendForgotPasswordEmailOTP(ctx context.Context, email stri
 		return EmailOTPResult{}, errors.New("no account found with that email address")
 	}
 
-	otp, hashedOTP, err := utils.GenerateOTP()
+	// Generate, send, and cache OTP
+	return s.generateAndSendEmailOTP(ctx, email)
+}
+
+// verifyAndConsumeEmailOTP checks the OTP against the stored hash in Redis with brute-force attempt tracking.
+// If valid, the OTP is deleted from Redis immediately.
+func (s *AuthService) verifyAndConsumeEmailOTP(ctx context.Context, email, otp string) error {
+	// 1. Validate and clean input parameters
+	email = normalizeEmail(email)
+	if email == "" {
+		return errors.New("email is required")
+	}
+	otp = strings.TrimSpace(otp)
+	if otp == "" {
+		return errors.New("otp code is required")
+	}
+
+	// 2. Fetch the cached OTP record from Redis
+	key := s.emailOtpKey(email)
+	raw, err := s.rdb.Get(ctx, key).Result()
 	if err != nil {
-		return EmailOTPResult{}, err
-	}
-	if err := s.sendEmailOTP(ctx, email, otp); err != nil {
-		return EmailOTPResult{}, err
+		return errors.New("otp expired or not found")
 	}
 
-	otpData, _ := json.Marshal(map[string]string{"hash": hashedOTP})
-	if err := s.rdb.Set(ctx, s.emailOtpKey(email), otpData, emailOtpTTL).Err(); err != nil {
-		return EmailOTPResult{}, err
+	// 3. Deserialize the stored hash and attempt count
+	var stored StoredEmailOTP
+	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
+		return errors.New("invalid otp state")
 	}
 
-	return EmailOTPResult{
-		Message:          "OTP sent successfully",
-		ExpiresInSeconds: int(emailOtpTTL.Seconds()),
-	}, nil
+	// 4. Check if max brute-force attempts have already been reached
+	if stored.Attempts >= maxOTPAttempts {
+		_ = s.rdb.Del(ctx, key).Err()
+		return errors.New("too many failed attempts, please request a new code")
+	}
+
+	// 5. Compare the submitted OTP with the stored bcrypt hash
+	if err := bcrypt.CompareHashAndPassword([]byte(stored.Hash), []byte(otp)); err != nil {
+		stored.Attempts++
+		// Invalidate OTP immediately on reaching the limit
+		if stored.Attempts >= maxOTPAttempts {
+			_ = s.rdb.Del(ctx, key).Err()
+			return errors.New("too many failed attempts, please request a new code")
+		}
+
+		// Persist the incremented attempt count while preserving remaining key TTL
+		ttl := s.rdb.TTL(ctx, key).Val()
+		if ttl > 0 {
+			updatedData, _ := json.Marshal(stored)
+			_ = s.rdb.Set(ctx, key, updatedData, ttl).Err()
+		}
+
+		// 6. Calculate remaining attempts and return error
+		remaining := maxOTPAttempts - stored.Attempts
+		return fmt.Errorf("invalid otp (%d attempt(s) remaining)", remaining)
+	}
+
+	// 7. Consume and remove the OTP from Redis on successful verification
+	_ = s.rdb.Del(ctx, key).Err()
+	return nil
 }
 
 // VerifySignupEmailOTP validates the submitted OTP against the stored hash and generates a verification token upon success
 func (s *AuthService) VerifySignupEmailOTP(ctx context.Context, email, otp string) (EmailOTPResult, error) {
+	// 1. Verify and consume OTP with brute-force protection
+	if err := s.verifyAndConsumeEmailOTP(ctx, email, otp); err != nil {
+		return EmailOTPResult{}, err
+	}
+
+	// 2. Generate and store temporary email verification token in Redis
 	email = normalizeEmail(email)
-	if email == "" {
-		return EmailOTPResult{}, errors.New("email is required")
-	}
-
-	// Fetch the temporarily stored OTP hash from Redis
-	raw, err := s.rdb.Get(ctx, s.emailOtpKey(email)).Result()
-	if err != nil {
-		return EmailOTPResult{}, errors.New("otp expired or not found")
-	}
-
-	// Unmarshal the stored JSON to extract the hash
-	var stored struct {
-		Hash string `json:"hash"`
-	}
-	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
-		return EmailOTPResult{}, errors.New("invalid otp state")
-	}
-
-	// Compare the submitted plain-text OTP with the stored bcrypt hash
-	if err := bcrypt.CompareHashAndPassword([]byte(stored.Hash), []byte(strings.TrimSpace(otp))); err != nil {
-		return EmailOTPResult{}, errors.New("invalid otp")
-	}
-
-	// OTP is valid; generate a temporary token for the next registration step
 	verificationToken := uuid.NewString()
 	if err := s.rdb.Set(ctx, s.emailOtpVerifiedKey(email), verificationToken, emailOtpVerifiedTTL).Err(); err != nil {
 		return EmailOTPResult{}, err
 	}
 
-	// Clean up the used OTP key to prevent replay attacks
-	_ = s.rdb.Del(ctx, s.emailOtpKey(email)).Err()
-
+	// 3. Return success response with the verification token and its expiration
 	return EmailOTPResult{
 		Message:                "Email verified successfully",
 		EmailVerificationToken: verificationToken,
@@ -1523,20 +1470,44 @@ func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, newPassw
 		return fmt.Errorf("failed to update password: %w", err)
 	}
 
-	// 4. Invalidate all active sessions
-	userRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
-	sessions, err := s.rdb.SMembers(ctx, userRedisKey).Result()
+	// 4. Invalidate all active sessions across all devices
+	// Security requirement: Changing/resetting a password must immediately revoke all existing
+	// authentication tokens and sessions across all devices (desktops, mobile apps, browsers).
+	//
+	// Redis Key Hierarchy:
+	//   1. User-to-Sessions Set   (`db.RedisUserLoginSessions` + fakeID):
+	//      Stores the set of all active session IDs belonging to this user.
+	//   2. Session-to-Tokens Set  (`db.RedisSessionTokens` + sessionID):
+	//      Stores the set of active refresh token identifiers associated with each session.
+	//   3. Refresh Token Payload  (`db.RedisJwtRefreshToken` + token):
+	//      Stores the actual refresh token record used during token renewals.
+	// first gets all the session ids, then loop through it to get all the refresh tokens
+	// then delete the tokens and the session id
+	userSessionsRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
+	sessions, err := s.rdb.SMembers(ctx, userSessionsRedisKey).Result()
 	if err == nil && len(sessions) > 0 {
+		// Use a transactional pipeline to execute all deletion commands in a single round-trip
 		pipe := s.rdb.TxPipeline()
+
+		// loop through all the session ids and delete the tokens
 		for _, sessionID := range sessions {
-			redisSessionKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
-			tokens, _ := s.rdb.SMembers(ctx, redisSessionKey).Result()
+			sessionTokensRedisKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+			tokens, _ := s.rdb.SMembers(ctx, sessionTokensRedisKey).Result()
+
+			// a) Revoke every refresh token under this session
 			for _, token := range tokens {
-				pipe.Del(ctx, fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, token))
+				refreshTokenRedisKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, token)
+				pipe.Del(ctx, refreshTokenRedisKey)
 			}
-			pipe.Del(ctx, redisSessionKey)
+
+			// b) Delete the session's token set
+			pipe.Del(ctx, sessionTokensRedisKey)
 		}
-		pipe.Del(ctx, userRedisKey)
+
+		// c) Delete the user's overall active session tracking set
+		pipe.Del(ctx, userSessionsRedisKey)
+
+		// Execute all queued Redis deletion commands atomically
 		_, _ = pipe.Exec(ctx)
 	}
 

@@ -1262,33 +1262,31 @@ type User struct {
 	ID              int64              `json:"id"`
 	FakeID          pgtype.Int8        `json:"fake_id"`
 	Email           pgtype.Text        `json:"email"`
-	Avatar          pgtype.Text        `json:"avatar"`
-	AvatarFileID    pgtype.Int8        `json:"avatar_file_id"`
 	Phone           pgtype.Text        `json:"phone"`
 	Username        pgtype.Text        `json:"username"`
 	PasswordHash    string             `json:"password_hash"`
-	LastName        pgtype.Text        `json:"last_name"`
 	FirstName       pgtype.Text        `json:"first_name"`
+	LastName        pgtype.Text        `json:"last_name"`
 	MiddleName      pgtype.Text        `json:"middle_name"`
 	Gender          pgtype.Text        `json:"gender"`
 	DateOfBirth     pgtype.Date        `json:"date_of_birth"`
+	Avatar          pgtype.Text        `json:"avatar"`
+	AvatarFileID    pgtype.Int8        `json:"avatar_file_id"`
 	VotersCardImage pgtype.Text        `json:"voters_card_image"`
 	CurrentCountry  int16              `json:"current_country"`
 	CurrentState    int16              `json:"current_state"`
 	CurrentCity     pgtype.Int4        `json:"current_city"`
 	CurrentLga      pgtype.Int4        `json:"current_lga"`
 	CurrentWard     pgtype.Int4        `json:"current_ward"`
-	Address         pgtype.Text        `json:"address"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
 	CountryOfOrigin pgtype.Int2        `json:"country_of_origin"`
 	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
-	IsPolitician    pgtype.Bool        `json:"is_politician"`
-	IsVerified      pgtype.Bool        `json:"is_verified"`
 	HasRole         pgtype.Bool        `json:"has_role"`
+	IsVerified      pgtype.Bool        `json:"is_verified"`
+	IsPolitician    pgtype.Bool        `json:"is_politician"`
 	PartyID         pgtype.Int2        `json:"party_id"`
-	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
 	AccountStatus   pgtype.Text        `json:"account_status"`
 	ReferralCode    pgtype.Text        `json:"referral_code"`
-	ReferredByID    pgtype.Int8        `json:"referred_by_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }

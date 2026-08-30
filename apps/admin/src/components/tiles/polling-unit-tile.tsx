@@ -31,19 +31,19 @@ export function PollingUnitTableHeader() {
   return (
     <TileHeader>
       <TileLeft>
-        <span className="font-semibold text-c-80 w-[140px] shrink-0">
+        <span className="font-semibold text-c-80 w-35 shrink-0">
           PU Code
         </span>
         <span className="font-semibold text-c-80">Polling units</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[130px] text-center hidden md:block">
+        <span className="text-c-50 text-[14px] w-32.5 text-center hidden md:block">
           Ward
         </span>
-        <span className="text-c-50 text-[14px] w-[100px] text-center hidden sm:block">
+        <span className="text-c-50 text-[14px] w-25 text-center hidden sm:block">
           LGA
         </span>
-        <span className="text-c-50 text-[14px] w-[110px] text-center">
+        <span className="text-c-50 text-[14px] w-27.5 text-center">
           State
         </span>
         <div className="ml-2 w-8 shrink-0" />
@@ -57,7 +57,7 @@ export function PollingUnitTableTile({ data }: { data: PollingUnitType }) {
   return (
     <TileRow>
       <TileLeft>
-        <span className="text-[16px] text-c-80 font-semibold w-[140px] shrink-0">
+        <span className="text-[16px] text-c-80 font-semibold w-35 shrink-0">
           {puCode}
         </span>
         <p className="truncate w-full text-[16px] text-c-80 font-medium">
@@ -65,13 +65,13 @@ export function PollingUnitTableTile({ data }: { data: PollingUnitType }) {
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[130px] text-center hidden md:block">
+        <span className="text-[15px] text-c-70 w-32.5 text-center hidden md:block">
           {data.ward_name}
         </span>
-        <span className="text-[15px] text-c-70 w-[100px] text-center hidden sm:block">
+        <span className="text-[15px] text-c-70 w-25 text-center hidden sm:block">
           {data.lga_name}
         </span>
-        <span className="text-[15px] text-c-70 w-[110px] text-center">
+        <span className="text-[15px] text-c-70 w-27.5 text-center">
           {data.state_name}
         </span>
         <PollingUnitDropdown data={data} className="ml-2" />
