@@ -452,6 +452,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// users routes
 		r.Get(utils.ApiUrls.Users.GetMe, usersHandler.GetMe)
 		r.Put(utils.ApiUrls.Users.UpdateProfile, usersHandler.UpdateProfile)
+		r.Get("/api/v1/user_preferences", usersHandler.GetUserPreferences)
+		r.Put("/api/v1/user_preferences", usersHandler.UpdateUserPreferences)
 		r.Patch("/api/v1/auth/onboarding", authHandler.CompleteOnboarding) // Complete onboarding step
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)

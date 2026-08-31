@@ -118,6 +118,7 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
 		"user":         result.User,
+		"preferences":  result.Preferences,
 	})
 }
 
@@ -494,6 +495,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
 		"user":         result.User,
+		"preferences":  result.Preferences,
 	})
 }
 
@@ -540,6 +542,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
 		"user":         result.User,
+		"preferences":  result.Preferences,
 	})
 }
 
@@ -665,6 +668,7 @@ func (h *Handler) AdminLogin(w http.ResponseWriter, r *http.Request) {
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
 		"user":         result.User,
+		"preferences":  result.Preferences,
 	})
 }
 
@@ -709,6 +713,7 @@ func (h *Handler) PartyLogin(w http.ResponseWriter, r *http.Request) {
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
 		"user":         result.User,
+		"preferences":  result.Preferences,
 	})
 }
 

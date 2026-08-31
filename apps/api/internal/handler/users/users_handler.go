@@ -59,6 +59,8 @@ type UsersService interface {
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 	GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error)
+	GetUserPreferences(ctx context.Context, userID int64) (usersservice.UserPreferencesResponse, error)
+	UpdateUserPreferences(ctx context.Context, userID int64, params usersservice.UpdateUserPreferencesParams) (usersservice.UserPreferencesResponse, error)
 }
 
 // BodiesService interface defines the methods needed from the bodies service

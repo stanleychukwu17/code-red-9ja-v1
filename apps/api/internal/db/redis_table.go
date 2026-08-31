@@ -41,6 +41,7 @@ const (
 	RedisUserMoreInfo     = "user:more_info:"     // STRING: user:more_info:<userID> used to store and retrieve user more_info.
 	RedisUserRoles        = "user:roles:"         // STRING: user:roles:<userFakeID> used to store and retrieve user roles.
 	RedisUserPhoneNumbers = "user:phone_numbers:" // STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
+	RedisUserPreferences  = "user:preferences:"   // STRING: user:preferences:<userID> used to store and retrieve user preferences.
 	RedisReferralCode     = "user:referral_code:" // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
 	//--END--
 
@@ -99,6 +100,7 @@ var AllRedisPrefixes = []string{
 	RedisUserMoreInfo,
 	RedisUserRoles,
 	RedisUserPhoneNumbers,
+	RedisUserPreferences,
 	RedisReferralCode,
 	RedisEachCountry,
 	RedisEachState,

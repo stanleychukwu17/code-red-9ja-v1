@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { updateSiteState } from "@/redux/slice/siteSlice";
+import { hydrateSiteState } from "@/redux/slice/siteSlice";
 import type { SiteState } from "@/redux/slice/siteSlice";
+import { applyThemeMode } from "@repo/ui/hooks/use-theme";
 
 export default function LoadSitePreference({ sitePreference }: { sitePreference?: Partial<SiteState> }) {
   const dispatch = useDispatch();
@@ -9,8 +10,14 @@ export default function LoadSitePreference({ sitePreference }: { sitePreference?
   useEffect(() => {
     if (!sitePreference || Object.keys(sitePreference).length === 0) return;
 
-    // Dispatch the actions to update the Redux store with the values from the props
-    dispatch(updateSiteState(sitePreference));
+    // Apply and sync theme if present in server/cookie preference
+    if (sitePreference.theme) {
+      applyThemeMode(sitePreference.theme);
+      window.localStorage.setItem("theme", sitePreference.theme);
+    }
+
+    // Hydrate the Redux store with initial values from props (without triggering save)
+    dispatch(hydrateSiteState(sitePreference));
   }, [sitePreference, dispatch]);
 
   return null;

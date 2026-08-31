@@ -53,4 +53,3 @@ wait $SQLC_PID
 # air: start the server
 echo "Starting Go server..."
 air
-

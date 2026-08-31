@@ -337,4 +337,12 @@ export const API_URL = {
       return `${api}/referrals${qs ? `?${qs}` : ""}`;
     },
   },
+  userPreferences: `${api}/user_preferences`,
+};
+
+export const QUERY_KEYS = {
+  auth: {
+    session: ["authSession"],
+  },
+  countries: ["countries"],
 };

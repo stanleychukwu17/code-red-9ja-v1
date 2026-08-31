@@ -1328,6 +1328,17 @@ type UserPracticeTest struct {
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
 
+type UserPreference struct {
+	ID                int64              `json:"id"`
+	UserID            int64              `json:"user_id"`
+	SidebarState      pgtype.Text        `json:"sidebar_state"`
+	PinnedLinks       []byte             `json:"pinned_links"`
+	Theme             pgtype.Text        `json:"theme"`
+	PreferenceVersion int64              `json:"preference_version"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type UserReferral struct {
 	ID                                int64              `json:"id"`
 	UserID                            int64              `json:"user_id"`

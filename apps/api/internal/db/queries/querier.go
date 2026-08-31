@@ -233,6 +233,7 @@ type Querier interface {
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
 	GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype.Int8) (string, error)
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error)
+	GetUserPreferencesByUserID(ctx context.Context, userID int64) (UserPreference, error)
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (UserBankAccount, error)
 	GetUserReferralByID(ctx context.Context, id int64) (UserReferral, error)
 	GetUserReferralByUserAndElectionGroup(ctx context.Context, arg GetUserReferralByUserAndElectionGroupParams) (UserReferral, error)
@@ -277,6 +278,7 @@ type Querier interface {
 	IncrementUserReferralUnpaidCountByID(ctx context.Context, id int64) error
 	InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error)
 	InsertUserBankAccount(ctx context.Context, arg InsertUserBankAccountParams) (UserBankAccount, error)
+	InsertUserPreferences(ctx context.Context, arg InsertUserPreferencesParams) (UserPreference, error)
 	ListAcceptingParties(ctx context.Context) ([]ListAcceptingPartiesRow, error)
 	ListAgentEarnings(ctx context.Context, arg ListAgentEarningsParams) ([]ListAgentEarningsRow, error)
 	ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error)
@@ -475,6 +477,7 @@ type Querier interface {
 	UpdateUserParty(ctx context.Context, arg UpdateUserPartyParams) error
 	UpdateUserPasswordByFid(ctx context.Context, arg UpdateUserPasswordByFidParams) error
 	UpdateUserPhoneNumberIsVerified(ctx context.Context, arg UpdateUserPhoneNumberIsVerifiedParams) error
+	UpdateUserPreferencesByUserID(ctx context.Context, arg UpdateUserPreferencesByUserIDParams) (UserPreference, error)
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) error
 	UpdateUserReferralCode(ctx context.Context, arg UpdateUserReferralCodeParams) error
 	UpdateUserRoleForPartyApp(ctx context.Context, id int64) (User, error)
@@ -521,6 +524,7 @@ type Querier interface {
 	UpsertPartyElectionGroupStats(ctx context.Context, arg UpsertPartyElectionGroupStatsParams) (PartyElectionGroup, error)
 	UpsertPollingUnitFinalResult(ctx context.Context, arg UpsertPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	UpsertUserPhoneNumber(ctx context.Context, arg UpsertUserPhoneNumberParams) (int64, error)
+	UpsertUserPreferences(ctx context.Context, arg UpsertUserPreferencesParams) (UserPreference, error)
 	VoteOnResult(ctx context.Context, arg VoteOnResultParams) (PollingUnitResult, error)
 }
 

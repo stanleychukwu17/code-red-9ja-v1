@@ -137,7 +137,7 @@ export const deleteUserPhoneNumber = createServerFn({ method: "POST" })
   .inputValidator((data: { id: string | number; user_fid: string | number }) => data)
   .handler(async ({ data: { id, user_fid } }) => {
     try {
-      return await apiFetchJson(API_URL.manageUserPhoneNumber(), {
+      return await apiFetchJson(API_URL.manageUserPhoneNumber(id), {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone_id: Number(id), user_fid: Number(user_fid) }),

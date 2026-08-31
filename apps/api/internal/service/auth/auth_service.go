@@ -46,6 +46,7 @@ type UsersService interface {
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (queries.UserBankAccount, error)
 	GenerateUniqueReferralCode(ctx context.Context, firstName string) (string, error)
 	GetReferralCodeInfo(ctx context.Context, code string) (*usersservice.CachedReferralCodeInfo, error)
+	GetUserPreferences(ctx context.Context, userID int64) (usersservice.UserPreferencesResponse, error)
 }
 
 type PartyService interface {
@@ -96,9 +97,10 @@ func NewAuthService(
 }
 
 type LoginResult struct {
-	AccessToken  string    `json:"accessToken"`
-	RefreshToken string    `json:"refreshToken"`
-	User         LoginUser `json:"user"`
+	AccessToken  string                               `json:"accessToken"`
+	RefreshToken string                               `json:"refreshToken"`
+	User         LoginUser                            `json:"user"`
+	Preferences  usersservice.UserPreferencesResponse `json:"preferences"`
 }
 
 type AuthTokens struct {
@@ -107,8 +109,9 @@ type AuthTokens struct {
 }
 
 type LoginUser struct {
-	ID                int64                                  `json:"id"`
-	FakeID            int64                                  `json:"fake_id"`
+	ID                int64                                    `json:"id"`
+	FakeID            int64                                    `json:"fake_id"`
+	PreferenceVersion int64                                    `json:"preference_version"`
 	Email             string                                 `json:"email"`
 	Username          string                                 `json:"username"`
 	ReferralCode      string                                 `json:"referral_code"`
@@ -258,13 +261,16 @@ func (s *AuthService) Login(
 	}
 
 	bankAccount, _ := s.usersService.GetUserPrimaryBankAccount(ctx, user.ID)
+	pref, _ := s.usersService.GetUserPreferences(ctx, user.ID)
 
 	loginResult := LoginResult{
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
+		Preferences:  pref,
 		User: LoginUser{
 			ID:                user.ID,
 			FakeID:            user.FakeID.Int64,
+			PreferenceVersion: pref.PreferenceVersion,
 			Email:             user.Email.String,
 			Username:          user.Username.String,
 			ReferralCode:      user.ReferralCode.String,
@@ -347,9 +353,10 @@ func (s *AuthService) createSession(
 }
 
 type RefreshResult struct {
-	AccessToken  string    `json:"accessToken"`
-	RefreshToken string    `json:"refreshToken"`
-	User         LoginUser `json:"user"`
+	AccessToken  string                               `json:"accessToken"`
+	RefreshToken string                               `json:"refreshToken"`
+	User         LoginUser                            `json:"user"`
+	Preferences  usersservice.UserPreferencesResponse `json:"preferences"`
 }
 
 type TokenSessionData struct {
@@ -433,11 +440,14 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		userPartyID = user.PartyID.Int16
 	}
 
+	pref, _ := s.usersService.GetUserPreferences(ctx, user.ID)
+
 	// user details
 	userDetails := LoginUser{
-		ID:              user.ID,
-		FakeID:          user.FakeID.Int64,
-		Email:           user.Email.String,
+		ID:                user.ID,
+		FakeID:            user.FakeID.Int64,
+		PreferenceVersion: pref.PreferenceVersion,
+		Email:             user.Email.String,
 		Username:        user.Username.String,
 		ReferralCode:    user.ReferralCode.String,
 		FirstName:       user.FirstName.String,
@@ -471,7 +481,8 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 	// if time is still within the grace period, return the user details
 	if isGracePeriod {
 		return RefreshResult{
-			User: userDetails,
+			User:        userDetails,
+			Preferences: pref,
 		}, nil
 	}
 
@@ -525,6 +536,7 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		AccessToken:  newAccessToken,
 		RefreshToken: refresh.RandomString,
 		User:         userDetails,
+		Preferences:  pref,
 	}, nil
 }
 
@@ -676,10 +688,11 @@ func (s *AuthService) CheckNIN(ctx context.Context, nin string) bool {
 }
 
 type SignupResult struct {
-	ID           string    `json:"id"`
-	AccessToken  string    `json:"accessToken"`
-	RefreshToken string    `json:"refreshToken"`
-	User         LoginUser `json:"user"`
+	ID           string                               `json:"id"`
+	AccessToken  string                               `json:"accessToken"`
+	RefreshToken string                               `json:"refreshToken"`
+	User         LoginUser                            `json:"user"`
+	Preferences  usersservice.UserPreferencesResponse `json:"preferences"`
 }
 
 // Signup performs the primary backend registration logic.
@@ -776,18 +789,22 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		return SignupResult{}, fmt.Errorf("failed to create session: %w", err)
 	}
 
+	pref, _ := s.usersService.GetUserPreferences(ctx, userID)
+
 	return SignupResult{
 		ID:           strconv.FormatInt(userID, 10),
 		AccessToken:  tokens.AccessToken,
 		RefreshToken: tokens.RefreshToken,
+		Preferences:  pref,
 		User: LoginUser{
-			ID:             userID,
-			FakeID:         fakeID,
-			Email:          email,
-			Phone:          e164Phone,
-			AccountStatus:  "just_registered",
-			CurrentCountry: countryID,
-			CurrentState:   37,
+			ID:                userID,
+			FakeID:            fakeID,
+			PreferenceVersion: pref.PreferenceVersion,
+			Email:             email,
+			Phone:             e164Phone,
+			AccountStatus:     "just_registered",
+			CurrentCountry:    countryID,
+			CurrentState:      37,
 		},
 	}, nil
 

@@ -196,4 +196,12 @@ export const API_URL = {
     get: (key: string) => `${api}/admin/settings/${key}`,
     update: (key: string) => `${api}/admin/settings/${key}`,
   },
+  userPreferences: `${api}/user_preferences`,
+};
+
+export const QUERY_KEYS = {
+  auth: {
+    session: ["authSession"],
+  },
+  countries: ["countries"],
 };

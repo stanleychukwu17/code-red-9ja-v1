@@ -164,4 +164,12 @@ export const API_URL = {
   },
   partyMarketingCampaigns: (id: string | number) =>
     `${api}/parties/${id}/agent-marketing-campaigns`,
+  userPreferences: `${api}/user_preferences`,
+};
+
+export const QUERY_KEYS = {
+  auth: {
+    session: ["authSession"],
+  },
+  countries: ["countries"],
 };

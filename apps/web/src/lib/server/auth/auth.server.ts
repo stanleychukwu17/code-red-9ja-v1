@@ -2,6 +2,7 @@ import { createServerOnlyFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { API_URL } from "../../config";
 import { apiFetch } from "../fetch";
+import { setSitePreferenceCookie } from "../sitePreference.server";
 
 // Helper function to set user details cookie
 export const setUserDetailsCookie = (userDetails: any) => {
@@ -71,6 +72,9 @@ export const signupUserImpl = createServerOnlyFn(async ({ data }) => {
       if (result.data.user) {
         setUserDetailsCookie(result.data.user);
       }
+      if (result.data.preferences) {
+        setSitePreferenceCookie(result.data.preferences);
+      }
       delete result.data.refreshToken;
       delete result.data.accessToken;
     }
@@ -100,6 +104,9 @@ export const loginUserImpl = createServerOnlyFn(async ({ data }) => {
       });
       if (result.data.user) {
         setUserDetailsCookie(result.data.user);
+      }
+      if (result.data.preferences) {
+        setSitePreferenceCookie(result.data.preferences);
       }
       delete result.data.refreshToken;
       delete result.data.accessToken;
@@ -137,7 +144,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
     // If the refresh is successful, set the new access and refresh tokens in the cookies
     if (result.success && result.data) {
-      const { accessToken, refreshToken: newRefreshToken, user } = result.data;
+      const { accessToken, refreshToken: newRefreshToken, user, preferences: sitePreference } = result.data;
       if (newRefreshToken && accessToken) {
         setAuthCookies({ refreshToken: newRefreshToken, accessToken });
       }
@@ -146,7 +153,10 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       if (user) {
         setUserDetailsCookie(user);
       }
-      return { success: true, user };
+      if (sitePreference) {
+        setSitePreferenceCookie(sitePreference);
+      }
+      return { success: true, user, sitePreference };
     } else {
       // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
       const logOutConditions = [
