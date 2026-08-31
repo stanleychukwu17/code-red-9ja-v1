@@ -16,7 +16,7 @@ export const FormError = ({ message }: FormErrorProps) => {
           transition={{ duration: 0.3, ease: "easeOut" }}
           className="overflow-hidden"
         >
-          <div className="flex items-center gap-3 p-4 mb-4 bg-destructive/10 border border-destructive/20 rounded-xl backdrop-blur-sm">
+          <div className="flex items-center gap-3 p-4 mb-4 bg-destructive/10 rounded-xl backdrop-blur-sm">
             <div className="shrink-0">
               <PiWarningCircleDuotone className="size-5 text-destructive" />
             </div>

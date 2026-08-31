@@ -7,13 +7,13 @@ import { FormInput, PasswordInput } from "@repo/ui/components/input";
 
 import { AuthWrapper } from "./_components/-auth-wrapper";
 import { FormError } from "./_components/-form-error";
-import { getPageHeader } from "@/lib/shared/meta";
+import { getPageHeader } from "#/lib/shared/meta";
 import {
   checkIfRefreshTokenInCookie,
   sendForgotPasswordEmailOtp,
   changePasswordByEmail,
-} from "@/lib/server/auth/auth";
-import { APP_URL } from "@/lib/config";
+} from "#/lib/server/auth/auth";
+import { APP_URL } from "#/lib/config";
 
 type Step = "email" | "otp" | "password";
 
@@ -179,7 +179,6 @@ function RouteComponent() {
           >
             Continue
           </Button>
-
 
           <div className="flex items-center justify-between text-sm">
             <button

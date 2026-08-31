@@ -20,9 +20,9 @@ export default function LoadAuthSession() {
   useEffect(() => {
     dispatch(updateAuthState({ userHydrated: true }));
 
-    if (response?.status === "success" && response.user) {
+    if (response?.success && response.user) {
       dispatch(updateAuthState({ user: response.user }));
-    } else if (error || response?.status === "error") {
+    } else if (error || (response && !response.success)) {
       dispatch(updateAuthState({ user: null }));
     }
   }, [response, error, dispatch]);

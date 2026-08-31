@@ -50,7 +50,7 @@ type payloadType = {
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie();
-    if (isAuthed.status === "success") {
+    if (isAuthed.success) {
       throw redirect({ to: APP_URL.home });
     }
   },

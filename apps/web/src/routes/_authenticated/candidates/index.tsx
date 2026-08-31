@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { CANDIDATES } from "../../../data/dashboard";
+import { AppPageHeader } from "#/components/AppPageHeader";
 
 export const Route = createFileRoute("/_authenticated/candidates/")({
   component: RouteComponent,

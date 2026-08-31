@@ -5,13 +5,21 @@ cd "$(dirname "$0")" || exit 1
 
 BASE_URL="http://localhost:4000"
 
+# seed stanley
+echo "Seeding main user (stanley) to ${BASE_URL}/api/v1/seed/users..."
+curl -X POST ${BASE_URL}/api/v1/seed/users \
+  -H "Content-Type: application/json" \
+  -d @"1-stanley.json"
+
+sleep 1 # wait for 1 second
+
 # seed users
 echo "Seeding users to ${BASE_URL}/api/v1/seed/users..."
 curl -X POST ${BASE_URL}/api/v1/seed/users \
   -H "Content-Type: application/json" \
   -d @"1-users.json"
 
-sleep 5 # wait for 5seconds
+sleep 2 # wait for 5seconds
 
 # seed politicians
 echo "Seeding politicians to ${BASE_URL}/api/v1/seed/users..."

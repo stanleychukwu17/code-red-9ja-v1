@@ -50,7 +50,7 @@ export async function apiFetch(
       if (isExpiredToken) {
         // Attempt silent refresh using refreshUserToken
         const refreshResult = await refreshUserToken();
-        if (refreshResult?.status === "success") {
+        if (refreshResult?.success) {
           // Retry the original request with updated access_token cookie
           return apiFetch(input, init, true);
         }

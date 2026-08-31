@@ -100,7 +100,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
     // If no refresh token is found, return an error
     if (!refreshToken) {
-      return { status: "error", message: "No refresh token found" };
+      return { success: false, message: "No refresh token found" };
     }
 
     // Calls the API to refresh the user token
@@ -123,7 +123,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       if (user) {
         setUserDetailsCookie(user);
       }
-      return { status: "success", user };
+      return { success: true, user };
     } else {
       // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
       const logOutConditions = [
@@ -139,13 +139,13 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       }
 
       return {
-        status: "error",
+        success: false,
         message: result?.message || "Failed to refresh token",
       };
     }
   } catch (error) {
     return {
-      status: "error",
+      success: false,
       message:
         "Connection error. Please try again later. " +
         (error as Error)?.message,
@@ -156,8 +156,11 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 // Checks if a refresh token exists in the cookies
 export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {
   const refreshToken = getCookie("refresh_token");
-  return { status: refreshToken ? "success" : "error" };
+  return {
+    success: !!refreshToken,
+  };
 });
+
 
 export const getUserDetailsCookieImpl = createServerOnlyFn(async () => {
   const userDetailsCookie = getCookie("user_details");
@@ -175,7 +178,7 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
   try {
     const refreshToken = getCookie("refresh_token");
     if (!refreshToken) {
-      return { status: "error", message: "No refresh token found" };
+      return { success: false, message: "No refresh token found" };
     }
 
     const response = await fetch(API_URL.auth.logout, {
@@ -186,8 +189,12 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
     const result = await response.json();
     return result;
   } catch (error) {
-    return { status: "error", message: error };
+    return {
+      success: false,
+      message: (error as Error)?.message || "Failed to log out",
+    };
   } finally {
     clearAuthCookies();
   }
 });
+

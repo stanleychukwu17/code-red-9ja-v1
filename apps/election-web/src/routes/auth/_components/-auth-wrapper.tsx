@@ -78,7 +78,7 @@ export const AuthWrapper = ({ children, type }: {
             )}
 
             <p className="h-10 flex items-center text-c-70 hover:text-c-90 cursor-pointer transition-colors duration-200">
-              <Link to={APP_URL.auth.forgotPassword} search={{ flow }}> Forgot password </Link>
+              <Link to={APP_URL.auth.forgotPassword}> Forgot password </Link>
             </p>
           </div>
         )}

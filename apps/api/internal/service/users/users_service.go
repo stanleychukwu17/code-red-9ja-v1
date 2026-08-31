@@ -568,12 +568,13 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 			defaultPhonesCount++
 		}
 		if p.ID == 0 {
-			// checks if the phone-number already exist
-			if s.CheckPhone(ctx, p.Phone) {
+			// checks if the phone-number already exists for another user
+			if exists, _ := s.CheckPhone(ctx, p.Phone, fakeID); exists {
 				return fmt.Errorf("phone number already exists")
 			}
 			newPhonesCount++
 		}
+
 	}
 
 	if defaultPhonesCount <= 0 {
@@ -818,23 +819,23 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 }
 
 // function: check if the username already exist in redis and in the postgres db
-func (s *UsersService) CheckUsername(ctx context.Context, username string) bool {
+func (s *UsersService) CheckUsername(ctx context.Context, username string) (bool, int64) {
 	cacheKey := db.RedisUsernameFakeID + username
 
 	// checks the cache first
-	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
-	if exists > 0 {
-		return true
+	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
+	if err == nil && cachedVal > 0 {
+		return true, cachedVal
 	}
 
 	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		return true, fakeID.Int64
 	}
 
-	return false
+	return false, 0
 }
 
 // InvalidateUsernameCache deletes a specific username from Redis
@@ -844,51 +845,60 @@ func (s *UsersService) InvalidateUsernameCache(ctx context.Context, username str
 }
 
 // function: checks if the email already exists in redis and in the postgres db
-func (s *UsersService) CheckEmail(ctx context.Context, email string) bool {
+func (s *UsersService) CheckEmail(ctx context.Context, email string) (bool, int64) {
 	cacheKey := db.RedisEmailFakeID + email
 
 	// checks the cache first
-	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
-	if exists > 0 {
-		return true
+	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
+	if err == nil && cachedVal > 0 {
+		return true, cachedVal
 	}
 
 	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		return true, fakeID.Int64
 	}
 
-	return false
+	return false, 0
 }
 
 // function: checks if the phone exists in redis and in the postgres db
-func (s *UsersService) CheckPhone(ctx context.Context, phone string) bool {
+func (s *UsersService) CheckPhone(ctx context.Context, phone string, userFakeID int64) (bool, int64) {
 	cacheKey := db.RedisPhoneFakeID + phone
 
 	// checks the cache first
-	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
-	if exists > 0 {
-		return true
+	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
+	if err == nil && cachedVal > 0 {
+		if userFakeID > 0 && cachedVal == userFakeID {
+			// cached phone belongs to the current user, not a collision
+		} else {
+			return true, cachedVal
+		}
 	}
 
 	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		if userFakeID == 0 || fakeID.Int64 != userFakeID {
+			return true, fakeID.Int64
+		}
 	}
 
 	// fallback: check the users_phone_numbers table
 	fakeID, err = s.queries.GetFakeIDByAdditionalPhone(ctx, phone)
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		if userFakeID == 0 || fakeID.Int64 != userFakeID {
+			return true, fakeID.Int64
+		}
 	}
 
-	return false
+	return false, 0
 }
+
 
 // CheckNIN function checks if the nin already exists in the database
 func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {

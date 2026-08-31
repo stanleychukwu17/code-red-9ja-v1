@@ -1,11 +1,11 @@
 import {
   createFileRoute,
   useNavigate,
-  useParams,
 } from "@tanstack/react-router";
 import { Flag } from "lucide-react";
 import { useState } from "react";
 import { CANDIDATES, STATE_POLLING_UNITS } from "../../../../data/dashboard";
+import { AppPageHeader } from "#/components/AppPageHeader";
 
 type StateTab = "Candidates" | "Polling units";
 
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/_authenticated/states/$stateId/")({
 
 function RouteComponent() {
   const [tab, setTab] = useState<StateTab>("Candidates");
-  const { stateId } = useParams({ from: "/(authenticated)/states/$stateId/" });
+  const { stateId } = Route.useParams();
   const navigate = useNavigate();
   const leader = CANDIDATES[0];
 

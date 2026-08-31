@@ -56,7 +56,7 @@ type payloadType = {
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie();
-    if (isAuthed.status === "success") {
+    if (isAuthed.success) {
       const userDetails = await getUserDetailsCookie();
       const partyShortName = userDetails?.party?.short_name || "party";
       throw redirect({

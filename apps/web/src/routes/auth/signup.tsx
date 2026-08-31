@@ -1,4 +1,4 @@
-import { useAppSelector } from "@/redux/hooks";
+import { useAppSelector } from "#/redux/hooks";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -7,15 +7,15 @@ import { AuthWrapper } from "./_components/-auth-wrapper";
 import { FormError } from "./_components/-form-error";
 import { SignupError } from "./_components/-signup-error";
 
-import { APP_NAME, APP_URL } from "@/lib/config";
+import { APP_NAME, APP_URL } from "#/lib/config";
 import {
   checkIfRefreshTokenInCookie,
   sendSignupEmailOtp,
   signupUser,
   verifySignupEmailOtp,
-} from "@/lib/server/auth/auth";
-import { getAllCountries } from "@/lib/server/countries";
-import { getPageHeader } from "@/lib/shared/meta";
+} from "#/lib/server/auth/auth";
+import { getAllCountries } from "#/lib/server/countries";
+import { getPageHeader } from "#/lib/shared/meta";
 import { Button } from "@repo/ui/components/button";
 import {
   FormInput,
@@ -37,7 +37,7 @@ export const Route = createFileRoute("/auth/signup")({
   // Page metadata
   head: () =>
     getPageHeader({
-      title: "Sign up ",
+      title: "Sign up",
       description: `Create your account to start enjoying premium content on ${APP_NAME}`,
     }),
 
@@ -177,11 +177,11 @@ function RouteComponent() {
 
       if (!otpSent) {
         setPendingSignup(payload);
-        sendOtpMutation.mutate({ data: { email: value.email } } as any);
+        sendOtpMutation.mutate({ data: { email: value.email } });
         return;
       }
 
-      verifyOtpMutation.mutate({ data: { email: value.email, otp } } as any);
+      verifyOtpMutation.mutate({ data: { email: value.email, otp } });
     },
   });
 
@@ -394,7 +394,7 @@ function RouteComponent() {
                   return;
                 }
 
-                verifyOtpMutation.mutate({ data: { email, otp } } as any);
+                verifyOtpMutation.mutate({ data: { email, otp } });
               }}
             >
               Complete Sign up
@@ -412,7 +412,7 @@ function RouteComponent() {
                     setServerError("Email is required");
                     return;
                   }
-                  sendOtpMutation.mutate({ data: { email } } as any);
+                  sendOtpMutation.mutate({ data: { email } });
                 }}
               >
                 {resendSeconds > 0 ? (

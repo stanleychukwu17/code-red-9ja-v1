@@ -238,8 +238,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
 
 	// for seeds
-	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)   // Seed users endpoint
-	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins) // Seed admins endpoint
+	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)             // Seed users endpoint
+	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)           // Seed admins endpoint
+	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)     // Flush Redis cache endpoint
 
 	// Banks
 	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)

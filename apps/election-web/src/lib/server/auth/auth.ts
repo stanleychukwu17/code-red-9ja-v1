@@ -123,7 +123,7 @@ export const checkNin = createServerFn({ method: "POST" })
       return result;
     } catch (error) {
       return {
-        status: "error",
+        success: false,
         message: "An unexpected error occurred during NIN check",
       };
     }
@@ -144,7 +144,7 @@ export const checkUsername = createServerFn({ method: "POST" })
       return result;
     } catch (error) {
       return {
-        status: "error",
+        success: false,
         message: "An unexpected error occurred during username check",
       };
     }
@@ -164,7 +164,7 @@ export const checkReferralCode = createServerFn({ method: "POST" })
       return result;
     } catch (error) {
       return {
-        status: "error",
+        success: false,
         message: "An unexpected error occurred during referral code check",
       };
     }
@@ -237,7 +237,7 @@ export const resetPassword = createServerFn({ method: "POST" })
 
 // Changes user password by email (used in forgot-password flow)
 export const changePasswordByEmail = createServerFn({ method: "POST" })
-  .inputValidator((data: { email: string; password: string }) => data)
+  .inputValidator((data: { email: string; otp: string; password: string }) => data)
   .handler(async ({ data }) => {
     const result = await changePasswordByEmailImpl({ data });
     return result;

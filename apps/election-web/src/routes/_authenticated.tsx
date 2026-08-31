@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import {
-  AppSidebarShell,
-  type AppSidebarItem,
-} from "@repo/ui/components/custom/AppSidebar";
+import { AppSidebarShell, type AppSidebarItem, } from "@repo/ui/components/custom/AppSidebar";
 import HomeIcon from "@repo/ui/icons/navbar/home-icon";
 import HomeSolidIcon from "@repo/ui/icons/navbar/home-solid-icon";
 import NotificationIcon from "@repo/ui/icons/navbar/notification-icon";
@@ -15,17 +12,14 @@ import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
 import { updateAuthState } from "@/redux/slice/authSlice";
-import {
-  logoutUser,
-  checkIfRefreshTokenInCookie,
-} from "#/lib/server/auth/auth";
+import { logoutUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { APP_URL } from "#/lib/config";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async ({ context }) => {
     const res = await checkIfRefreshTokenInCookie();
 
-    if (res.status != "success") {
+    if (!res.success) {
       throw redirect({ to: APP_URL.auth.login });
     }
 

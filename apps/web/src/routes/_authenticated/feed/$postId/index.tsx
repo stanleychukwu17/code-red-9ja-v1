@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Heart, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import { FEED_POSTS, POST_COMMENTS } from "../../../../data/dashboard";
+import { AppPageHeader } from "#/components/AppPageHeader";
 
 export const Route = createFileRoute("/_authenticated/feed/$postId/")({
   validateSearch: (search) => ({

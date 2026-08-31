@@ -12,7 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as PartiesRouteImport } from './routes/parties'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthSignupRouteImport } from './routes/auth/signup'
+import { Route as AuthOnboardingRouteImport } from './routes/auth/onboarding'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedStatesIndexRouteImport } from './routes/_authenticated/states/index'
 import { Route as AuthenticatedSearchIndexRouteImport } from './routes/_authenticated/search/index'
@@ -41,9 +44,24 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/auth/signup',
+  path: '/auth/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthOnboardingRoute = AuthOnboardingRouteImport.update({
+  id: '/auth/onboarding',
+  path: '/auth/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/auth/login',
   path: '/auth/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/auth/forgot-password',
+  path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
@@ -242,6 +260,9 @@ export interface RootRouteChildren {
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PartiesRoute: typeof PartiesRoute
   AuthLoginRoute: typeof AuthLoginRoute
+  AuthSignupRoute: typeof AuthSignupRoute
+  AuthOnboardingRoute: typeof AuthOnboardingRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -272,6 +293,27 @@ declare module '@tanstack/react-router' {
       path: '/auth/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/signup': {
+      id: '/auth/signup'
+      path: '/auth/signup'
+      fullPath: '/auth/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/onboarding': {
+      id: '/auth/onboarding'
+      path: '/auth/onboarding'
+      fullPath: '/auth/onboarding'
+      preLoaderRoute: typeof AuthOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/auth/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/home': {
@@ -411,6 +453,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PartiesRoute: PartiesRoute,
   AuthLoginRoute: AuthLoginRoute,
+  AuthSignupRoute: AuthSignupRoute,
+  AuthOnboardingRoute: AuthOnboardingRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

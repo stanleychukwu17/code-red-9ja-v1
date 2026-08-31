@@ -11,9 +11,6 @@ const (
 	// RedisOneMonthTTL  = 30 * 24 * time.Hour
 
 	//--START-- for registration
-	// STRING: RedisRegisterOnboarding is the Redis key prefix used to store onboarding data.
-	RedisRegisterOnboarding = "register:onboarding:"
-
 	// STRING: Keys used to map registration details to user fake ID
 	RedisUsernameFakeID           = "register:username_user_fake_id:"
 	RedisEmailFakeID              = "register:email_user_fake_id:"
@@ -84,3 +81,44 @@ const (
 	RedisPollingUnitsByWard                 = "bodies:polling_units:ward:"
 	//--END--
 )
+
+// AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
+var AllRedisPrefixes = []string{
+	RedisUsernameFakeID,
+	RedisEmailFakeID,
+	RedisPhoneFakeID,
+	RedisUserNINQuickSearch,
+	RedisChangePassword,
+	RedisRegisterEmailOtp,
+	RedisRegisterEmailOtpVerified,
+	RedisJwtRefreshToken,
+	RedisSessionTokens,
+	RedisUserLoginSessions,
+	RedisJwtUserLoginLocked,
+	RedisUserInfo,
+	RedisUserMoreInfo,
+	RedisUserRoles,
+	RedisUserPhoneNumbers,
+	RedisReferralCode,
+	RedisEachCountry,
+	RedisEachState,
+	RedisEachCity,
+	RedisCountriesAll,
+	RedisStatesByCountry,
+	RedisCitiesByState,
+	RedisPartiesList,
+	RedisPartyInfo,
+	RedisPartyBasicInfo,
+	RedisChapterMemberCount,
+	RedisNationalChapter,
+	RedisChapterSettings,
+	RedisPageVerificationTypesList,
+	RedisPageVerificationTypeInfo,
+	RedisPageVerifications,
+	RedisSenatorialDistrictsByState,
+	RedisFederalConstituenciesByState,
+	RedisStateAssemblyConstituenciesByState,
+	RedisLGAsByState,
+	RedisWardsByLGA,
+	RedisPollingUnitsByWard,
+}

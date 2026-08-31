@@ -37,6 +37,7 @@ function RouteComponent() {
               onClick={() =>
                 navigate({
                   to: "/feed/$postId",
+                  params: { postId: post.id },
                   search: { id: post.id },
                 })
               }

@@ -53,7 +53,7 @@ type UsersService interface {
 	DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error
 	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
-	CheckUsername(ctx context.Context, username string) bool
+	CheckUsername(ctx context.Context, username string) (bool, int64)
 	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
@@ -724,7 +724,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
+		if exists, _ := h.usersService.CheckUsername(r.Context(), cleanUsername); exists {
 			h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 			return
 		}

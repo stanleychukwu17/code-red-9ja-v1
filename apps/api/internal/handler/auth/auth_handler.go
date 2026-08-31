@@ -28,7 +28,7 @@ type AuthService interface {
 	Login(ctx context.Context, identifierType, identifier, password, iso2 string, allowedRoles ...string) (auth.LoginResult, error)
 	Refresh(ctx context.Context, refreshToken string) (auth.RefreshResult, error)
 	Logout(ctx context.Context, refreshToken string) error
-	ChangePasswordByEmail(ctx context.Context, email, newPassword string) error
+	ChangePasswordByEmail(ctx context.Context, email, otp, newPassword string) error
 	RegisterCandidatePlaceholder(ctx context.Context, email, password, firstName, lastName, middleName, username, gender, avatar string, avatarFileId *int64, dob time.Time, countryID, stateID int16, currentCity int32, stateOfOrigin int16, partyID int64) (auth.RegisterResult, error)
 	GetUserDetailsByFakeID(ctx context.Context, fakeID int64) (queries.UserWithPlaces, error)
 }
@@ -36,8 +36,8 @@ type AuthService interface {
 // UsersService interface defines the methods from UsersService that the auth handler needs
 type UsersService interface {
 	CheckNIN(ctx context.Context, nin string) bool
-	CheckUsername(ctx context.Context, username string) bool
-	CheckEmail(ctx context.Context, email string) bool
+	CheckUsername(ctx context.Context, username string) (bool, int64)
+	CheckEmail(ctx context.Context, email string) (bool, int64)
 	CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error)
 	GenerateUniqueReferralCode(ctx context.Context, firstName string) (string, error)
 }
@@ -112,11 +112,12 @@ func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Respond with success, including the user's ID and authentication tokens
+	// Respond with success, including the user's ID, user object, and authentication tokens
 	h.utils.RespondSuccess(w, http.StatusOK, "Sign-up successful", map[string]interface{}{
 		"id":           result.ID,
 		"accessToken":  result.AccessToken,
 		"refreshToken": result.RefreshToken,
+		"user":         result.User,
 	})
 }
 
@@ -274,7 +275,7 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check username availability
-	if h.usersService.CheckUsername(ctx, req.Username) {
+	if exists, _ := h.usersService.CheckUsername(ctx, req.Username); exists {
 		h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 		return
 	}
@@ -401,7 +402,7 @@ func (h *Handler) CheckUsername(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// checks if the username exist
-	exists := h.usersService.CheckUsername(r.Context(), req.Username)
+	exists, _ := h.usersService.CheckUsername(r.Context(), req.Username)
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Username checked successfully", map[string]interface{}{
 		"exists": exists,
@@ -585,16 +586,17 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 // ChangePasswordByEmailRequest represents the structure for resetting password using email
 type ChangePasswordByEmailRequest struct {
 	Email    string `json:"email" validate:"required,email"`
+	OTP      string `json:"otp" validate:"required,len=6"`
 	Password string `json:"password" validate:"required,min=5,max=72"`
 }
 
 // ChangePasswordByEmail godoc
 // @Summary Change password by email
-// @Description Resets a user's password using their email address and a new password, invalidating active sessions
+// @Description Resets a user's password using their email address and OTP, invalidating active sessions
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body ChangePasswordByEmailRequest true "Email and new password details"
+// @Param request body ChangePasswordByEmailRequest true "Email, OTP and new password details"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
@@ -613,7 +615,7 @@ func (h *Handler) ChangePasswordByEmail(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err := h.authService.ChangePasswordByEmail(r.Context(), req.Email, req.Password)
+	err := h.authService.ChangePasswordByEmail(r.Context(), req.Email, req.OTP, req.Password)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 		return
@@ -796,7 +798,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 	// Validate email
 	if req.Email != "" {
 		req.Email = strings.ToLower(strings.TrimSpace(req.Email))
-		if h.usersService.CheckEmail(r.Context(), req.Email) {
+		if exists, _ := h.usersService.CheckEmail(r.Context(), req.Email); exists {
 			h.utils.RespondError(w, http.StatusConflict, "Email already exists")
 			return
 		}
@@ -809,7 +811,7 @@ func (h *Handler) RegisterCandidatePlaceholder(w http.ResponseWriter, r *http.Re
 			h.utils.RespondError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
+		if exists, _ := h.usersService.CheckUsername(r.Context(), cleanUsername); exists {
 			h.utils.RespondError(w, http.StatusConflict, "Username already exists")
 			return
 		}
