@@ -3,7 +3,7 @@
 # Navigate to the directory where seed_users.json is located
 cd "$(dirname "$0")" || exit 1
 
-BASE_URL="http://localhost:4000"
+BASE_URL="http://localhost:4100"
 
 # seed stanley
 echo "Seeding main user (stanley) to ${BASE_URL}/api/v1/seed/users..."
@@ -45,19 +45,27 @@ curl -X POST ${BASE_URL}/api/v1/seed/users \
 
 sleep 1 # wait for 1 second
 
-# seed 10k users
-echo "Seeding 10k users to ${BASE_URL}/api/v1/seed/users..."
-curl -X POST ${BASE_URL}/api/v1/seed/users \
-  -H "Content-Type: application/json" \
-  -d @"1.4-10kusers.json"
+# # seed 10k users
+# echo "Seeding 10k users to ${BASE_URL}/api/v1/seed/users..."
+# curl -X POST ${BASE_URL}/api/v1/seed/users \
+#   -H "Content-Type: application/json" \
+#   -d @"1.4-10kusers.json"
 
-sleep 5 # wait for 5 second
+# sleep 5 # wait for 5 second
 
 # seed admins
 echo "Seeding admins and party roles to ${BASE_URL}/api/v1/seed/admins..."
 curl -X POST ${BASE_URL}/api/v1/seed/admins \
   -H "Content-Type: application/json" \
   -d @"1.5-admins.json"
+
+sleep 1 # wait for 1 second
+
+# seed dnc
+echo "Seeding dnc to ${BASE_URL}/api/v1/seed/users..."
+curl -X POST ${BASE_URL}/api/v1/seed/users \
+  -H "Content-Type: application/json" \
+  -d @"1.6-dnc.json"
 
 echo ""
 echo "Done."

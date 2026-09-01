@@ -11,12 +11,12 @@ CREATE TABLE parties (
   is_verified BOOLEAN DEFAULT false,
   discount_percentage NUMERIC(5, 2) NOT NULL DEFAULT 0.00 CHECK (discount_percentage >= 0.00 AND discount_percentage <= 100.00),
   agent_payment_balance_kobo BIGINT NOT NULL DEFAULT 0 CHECK (agent_payment_balance_kobo >= 0),
-  -- {"pollingAgent":{default: 2000000, states: {lagos: 2500000, ...all state's custom pay}},"lgaElectionSupervisor":{},"wardElectionSupervisor":{},"stateElectionSupervisor":{}}
-  agent_payment_allocation_kobo JSONB NOT NULL DEFAULT '{"pollingAgent":{"default":0,"states":{}},"wardElectionSupervisor":{"default":0,"states":{}},"lgaElectionSupervisor":{"default":0,"states":{}},"stateElectionSupervisor":{"default":0,"states":{}}}'::jsonb,
-  -- {"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}
-  agent_acquisition_targets JSONB NOT NULL DEFAULT '{"pollingUnitAgent": 1, "wardElectionSupervisor": 1, "lgaElectionSupervisor": 1, "stateElectionSupervisor": 1}'::jsonb,
-  -- {"pollingAgent": true, "wardElectionSupervisor": true, "lgaElectionSupervisor": true, "stateElectionSupervisor": true}
-  auto_accept_applications JSONB NOT NULL DEFAULT '{"pollingAgent": true, "wardElectionSupervisor": true, "lgaElectionSupervisor": true, "stateElectionSupervisor": true}'::jsonb,
+  -- {"polling_agent":{default: 2000000, states: {lagos: 2500000, ...all state's custom pay}},"lga_election_supervisor":{},"ward_election_supervisor":{},"state_election_supervisor":{}}
+  agent_payment_allocation_kobo JSONB NOT NULL DEFAULT '{"polling_agent":{"default":0,"states":{}},"ward_election_supervisor":{"default":0,"states":{}},"lga_election_supervisor":{"default":0,"states":{}},"state_election_supervisor":{"default":0,"states":{}}}'::jsonb,
+  -- {"polling_agent": 1, "ward_election_supervisor": 1, "lga_election_supervisor": 1, "state_election_supervisor": 1}
+  agent_acquisition_targets JSONB NOT NULL DEFAULT '{"polling_agent": 1, "ward_election_supervisor": 1, "lga_election_supervisor": 1, "state_election_supervisor": 1}'::jsonb,
+  -- {"polling_agent": true, "ward_election_supervisor": true, "lga_election_supervisor": true, "state_election_supervisor": true}
+  auto_accept_applications JSONB NOT NULL DEFAULT '{"polling_agent": true, "ward_election_supervisor": true, "lga_election_supervisor": true, "state_election_supervisor": true}'::jsonb,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()

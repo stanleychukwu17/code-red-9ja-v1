@@ -18,19 +18,21 @@ INSERT INTO polling_unit_assignments (
   election_group_id,
   party_id,
   role_type,
-  assigned_by
+  assigned_by,
+  potential_payment_kobo
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
-) RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, created_at, updated_at
+  $1, $2, $3, $4, $5, $6, $7
+) RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateAssignmentParams struct {
-	UserID          int64       `json:"user_id"`
-	PollingUnitID   int32       `json:"polling_unit_id"`
-	ElectionGroupID int64       `json:"election_group_id"`
-	PartyID         int16       `json:"party_id"`
-	RoleType        pgtype.Text `json:"role_type"`
-	AssignedBy      pgtype.Int8 `json:"assigned_by"`
+	UserID               int64       `json:"user_id"`
+	PollingUnitID        int32       `json:"polling_unit_id"`
+	ElectionGroupID      int64       `json:"election_group_id"`
+	PartyID              int16       `json:"party_id"`
+	RoleType             pgtype.Text `json:"role_type"`
+	AssignedBy           pgtype.Int8 `json:"assigned_by"`
+	PotentialPaymentKobo int64       `json:"potential_payment_kobo"`
 }
 
 func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentParams) (PollingUnitAssignment, error) {
@@ -41,6 +43,7 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		arg.PartyID,
 		arg.RoleType,
 		arg.AssignedBy,
+		arg.PotentialPaymentKobo,
 	)
 	var i PollingUnitAssignment
 	err := row.Scan(
@@ -65,6 +68,8 @@ func (q *Queries) CreateAssignment(ctx context.Context, arg CreateAssignmentPara
 		&i.LiveVotersReferredCount,
 		&i.IntervalUpdates,
 		&i.ElectionPracticeTestReadinessPercentage,
+		&i.PotentialPaymentKobo,
+		&i.EarnedAmountKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -105,7 +110,7 @@ SELECT
   u.username,
   u.avatar,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_delimitation,
+  pu.pu_code AS polling_unit_pu_code,
   pu.ward_name,
   pu.lga_name,
   pu.state_name,
@@ -141,7 +146,7 @@ type GetAssignmentByIDRow struct {
 	Username                pgtype.Text        `json:"username"`
 	Avatar                  pgtype.Text        `json:"avatar"`
 	PollingUnitName         string             `json:"polling_unit_name"`
-	PollingUnitDelimitation pgtype.Text        `json:"polling_unit_delimitation"`
+	PollingUnitPuCode       pgtype.Text        `json:"polling_unit_pu_code"`
 	WardName                string             `json:"ward_name"`
 	LgaName                 string             `json:"lga_name"`
 	StateName               string             `json:"state_name"`
@@ -175,7 +180,7 @@ func (q *Queries) GetAssignmentByID(ctx context.Context, id int64) (GetAssignmen
 		&i.Username,
 		&i.Avatar,
 		&i.PollingUnitName,
-		&i.PollingUnitDelimitation,
+		&i.PollingUnitPuCode,
 		&i.WardName,
 		&i.LgaName,
 		&i.StateName,
@@ -229,6 +234,47 @@ func (q *Queries) GetPartyElectionGroupCoverageDistribution(ctx context.Context,
 	return items, nil
 }
 
+const incrementAssignmentLiveVotersReferredCount = `-- name: IncrementAssignmentLiveVotersReferredCount :one
+UPDATE polling_unit_assignments
+SET live_voters_referred_count = live_voters_referred_count + 1,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+`
+
+func (q *Queries) IncrementAssignmentLiveVotersReferredCount(ctx context.Context, id int64) (PollingUnitAssignment, error) {
+	row := q.db.QueryRow(ctx, incrementAssignmentLiveVotersReferredCount, id)
+	var i PollingUnitAssignment
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PollingUnitID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.ElectionStartedAt,
+		&i.ElectionStartedVideoUrl,
+		&i.ElectionEndedAt,
+		&i.ElectionEndedVideoUrl,
+		&i.LastUpdateAt,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
+		&i.ResultsExpectedToSubmitCount,
+		&i.LiveVotersReferredCount,
+		&i.IntervalUpdates,
+		&i.ElectionPracticeTestReadinessPercentage,
+		&i.PotentialPaymentKobo,
+		&i.EarnedAmountKobo,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listAssignments = `-- name: ListAssignments :many
 SELECT 
   a.id,
@@ -247,7 +293,7 @@ SELECT
   u.username,
   u.avatar,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_delimitation,
+  pu.pu_code AS polling_unit_pu_code,
   pu.ward_name,
   pu.lga_name,
   pu.state_name,
@@ -258,7 +304,8 @@ SELECT
   a.election_started_at,
   a.election_started_video_url,
   a.election_ended_at,
-  a.election_ended_video_url
+  a.election_ended_video_url,
+  a.live_voters_referred_count
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -298,7 +345,7 @@ type ListAssignmentsRow struct {
 	Username                pgtype.Text        `json:"username"`
 	Avatar                  pgtype.Text        `json:"avatar"`
 	PollingUnitName         string             `json:"polling_unit_name"`
-	PollingUnitDelimitation pgtype.Text        `json:"polling_unit_delimitation"`
+	PollingUnitPuCode       pgtype.Text        `json:"polling_unit_pu_code"`
 	WardName                string             `json:"ward_name"`
 	LgaName                 string             `json:"lga_name"`
 	StateName               string             `json:"state_name"`
@@ -310,6 +357,7 @@ type ListAssignmentsRow struct {
 	ElectionStartedVideoUrl pgtype.Text        `json:"election_started_video_url"`
 	ElectionEndedAt         pgtype.Timestamptz `json:"election_ended_at"`
 	ElectionEndedVideoUrl   pgtype.Text        `json:"election_ended_video_url"`
+	LiveVotersReferredCount int32              `json:"live_voters_referred_count"`
 }
 
 func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams) ([]ListAssignmentsRow, error) {
@@ -345,7 +393,7 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 			&i.Username,
 			&i.Avatar,
 			&i.PollingUnitName,
-			&i.PollingUnitDelimitation,
+			&i.PollingUnitPuCode,
 			&i.WardName,
 			&i.LgaName,
 			&i.StateName,
@@ -357,6 +405,7 @@ func (q *Queries) ListAssignments(ctx context.Context, arg ListAssignmentsParams
 			&i.ElectionStartedVideoUrl,
 			&i.ElectionEndedAt,
 			&i.ElectionEndedVideoUrl,
+			&i.LiveVotersReferredCount,
 		); err != nil {
 			return nil, err
 		}
@@ -382,9 +431,35 @@ type UpdateAssignmentReadinessPercentageParams struct {
 	ElectionPracticeTestReadinessPercentage pgtype.Numeric `json:"election_practice_test_readiness_percentage"`
 }
 
-func (q *Queries) UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (PollingUnitAssignment, error) {
+type UpdateAssignmentReadinessPercentageRow struct {
+	ID                                      int64              `json:"id"`
+	UserID                                  int64              `json:"user_id"`
+	PollingUnitID                           int32              `json:"polling_unit_id"`
+	ElectionGroupID                         int64              `json:"election_group_id"`
+	PartyID                                 int16              `json:"party_id"`
+	RoleType                                pgtype.Text        `json:"role_type"`
+	AssignedBy                              pgtype.Int8        `json:"assigned_by"`
+	ArrivedAt                               pgtype.Timestamptz `json:"arrived_at"`
+	ArrivalVideoUrl                         pgtype.Text        `json:"arrival_video_url"`
+	ElectionStartedAt                       pgtype.Timestamptz `json:"election_started_at"`
+	ElectionStartedVideoUrl                 pgtype.Text        `json:"election_started_video_url"`
+	ElectionEndedAt                         pgtype.Timestamptz `json:"election_ended_at"`
+	ElectionEndedVideoUrl                   pgtype.Text        `json:"election_ended_video_url"`
+	LastUpdateAt                            pgtype.Timestamptz `json:"last_update_at"`
+	ReportsCount                            int32              `json:"reports_count"`
+	UpdatesCount                            int32              `json:"updates_count"`
+	ResultsSubmittedCount                   int32              `json:"results_submitted_count"`
+	ResultsExpectedToSubmitCount            int32              `json:"results_expected_to_submit_count"`
+	LiveVotersReferredCount                 int32              `json:"live_voters_referred_count"`
+	IntervalUpdates                         []byte             `json:"interval_updates"`
+	ElectionPracticeTestReadinessPercentage pgtype.Numeric     `json:"election_practice_test_readiness_percentage"`
+	CreatedAt                               pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt                               pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error) {
 	row := q.db.QueryRow(ctx, updateAssignmentReadinessPercentage, arg.ID, arg.ElectionPracticeTestReadinessPercentage)
-	var i PollingUnitAssignment
+	var i UpdateAssignmentReadinessPercentageRow
 	err := row.Scan(
 		&i.ID,
 		&i.UserID,
@@ -480,6 +555,53 @@ func (q *Queries) UpdateAssignmentTracking(ctx context.Context, arg UpdateAssign
 		&i.ElectionStartedVideoUrl,
 		&i.ElectionEndedAt,
 		&i.ElectionEndedVideoUrl,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePollingUnitAssignmentEarnedAmountKobo = `-- name: UpdatePollingUnitAssignmentEarnedAmountKobo :one
+UPDATE polling_unit_assignments
+SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
+    updated_at = NOW()
+WHERE user_id = $2 AND election_group_id = $3
+RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+`
+
+type UpdatePollingUnitAssignmentEarnedAmountKoboParams struct {
+	EarnedDeltaKobo int64 `json:"earned_delta_kobo"`
+	UserID          int64 `json:"user_id"`
+	ElectionGroupID int64 `json:"election_group_id"`
+}
+
+func (q *Queries) UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Context, arg UpdatePollingUnitAssignmentEarnedAmountKoboParams) (PollingUnitAssignment, error) {
+	row := q.db.QueryRow(ctx, updatePollingUnitAssignmentEarnedAmountKobo, arg.EarnedDeltaKobo, arg.UserID, arg.ElectionGroupID)
+	var i PollingUnitAssignment
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PollingUnitID,
+		&i.ElectionGroupID,
+		&i.PartyID,
+		&i.RoleType,
+		&i.AssignedBy,
+		&i.ArrivedAt,
+		&i.ArrivalVideoUrl,
+		&i.ElectionStartedAt,
+		&i.ElectionStartedVideoUrl,
+		&i.ElectionEndedAt,
+		&i.ElectionEndedVideoUrl,
+		&i.LastUpdateAt,
+		&i.ReportsCount,
+		&i.UpdatesCount,
+		&i.ResultsSubmittedCount,
+		&i.ResultsExpectedToSubmitCount,
+		&i.LiveVotersReferredCount,
+		&i.IntervalUpdates,
+		&i.ElectionPracticeTestReadinessPercentage,
+		&i.PotentialPaymentKobo,
+		&i.EarnedAmountKobo,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

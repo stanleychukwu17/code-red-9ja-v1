@@ -122,6 +122,78 @@ func (q *Queries) GetPollingUnitResult(ctx context.Context, id int64) (PollingUn
 	return i, err
 }
 
+const getPollingUnitResultByUserAndElection = `-- name: GetPollingUnitResultByUserAndElection :one
+SELECT id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+FROM polling_unit_results
+WHERE election_id = $1 AND polling_unit_id = $2 AND submitted_by = $3
+LIMIT 1
+`
+
+type GetPollingUnitResultByUserAndElectionParams struct {
+	ElectionID    int64       `json:"election_id"`
+	PollingUnitID int32       `json:"polling_unit_id"`
+	SubmittedBy   pgtype.Int8 `json:"submitted_by"`
+}
+
+func (q *Queries) GetPollingUnitResultByUserAndElection(ctx context.Context, arg GetPollingUnitResultByUserAndElectionParams) (PollingUnitResult, error) {
+	row := q.db.QueryRow(ctx, getPollingUnitResultByUserAndElection, arg.ElectionID, arg.PollingUnitID, arg.SubmittedBy)
+	var i PollingUnitResult
+	err := row.Scan(
+		&i.ID,
+		&i.AssignmentID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.PollingUnitID,
+		&i.SubmittedBy,
+		&i.PartyID,
+		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
+		&i.LgaID,
+		&i.WardID,
+		&i.AccreditedVoters,
+		&i.VotesCast,
+		&i.ValidVotes,
+		&i.RejectedVotes,
+		&i.CandidateResults,
+		&i.ResultSheetImageUrl,
+		&i.ResultSheetVideoUrl,
+		&i.Status,
+		&i.AiExtractedData,
+		&i.ResultIsAiGenerated,
+		&i.AiConfidenceScore,
+		&i.DisputedReason,
+		&i.ConfirmedAt,
+		&i.ConfirmedBy,
+		&i.UpVotes,
+		&i.DownVotes,
+		&i.UploadedByInec,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getUserPollingUnitResultInElectionGroup = `-- name: GetUserPollingUnitResultInElectionGroup :one
+SELECT polling_unit_id
+FROM polling_unit_results
+WHERE submitted_by = $1 AND election_group_id = $2
+LIMIT 1
+`
+
+type GetUserPollingUnitResultInElectionGroupParams struct {
+	SubmittedBy     pgtype.Int8 `json:"submitted_by"`
+	ElectionGroupID int64       `json:"election_group_id"`
+}
+
+func (q *Queries) GetUserPollingUnitResultInElectionGroup(ctx context.Context, arg GetUserPollingUnitResultInElectionGroupParams) (int32, error) {
+	row := q.db.QueryRow(ctx, getUserPollingUnitResultInElectionGroup, arg.SubmittedBy, arg.ElectionGroupID)
+	var polling_unit_id int32
+	err := row.Scan(&polling_unit_id)
+	return polling_unit_id, err
+}
+
 const incrementAssignmentResultCount = `-- name: IncrementAssignmentResultCount :exec
 UPDATE polling_unit_assignments
 SET
@@ -300,33 +372,64 @@ INSERT INTO polling_unit_results (
   candidate_results,
   result_sheet_image_url,
   result_sheet_video_url,
-  uploaded_by_inec
+  uploaded_by_inec,
+  status,
+  ai_extracted_data,
+  result_is_ai_generated,
+  ai_confidence_score
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11,
+  $12,
+  $13,
+  $14,
+  $15,
+  $16,
+  $17,
+  $18,
+  $19,
+  $20,
+  COALESCE($21::varchar(30), 'submitted'),
+  $22,
+  $23,
+  $24
 ) RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
 `
 
 type SubmitPollingUnitResultParams struct {
-	AssignmentID          pgtype.Int8 `json:"assignment_id"`
-	ElectionID            int64       `json:"election_id"`
-	ElectionGroupID       int64       `json:"election_group_id"`
-	PollingUnitID         int32       `json:"polling_unit_id"`
-	SubmittedBy           int64       `json:"submitted_by"`
-	PartyID               pgtype.Int2 `json:"party_id"`
-	StateID               pgtype.Int2 `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
-	LgaID                 pgtype.Int4 `json:"lga_id"`
-	WardID                pgtype.Int4 `json:"ward_id"`
-	AccreditedVoters      int32       `json:"accredited_voters"`
-	VotesCast             int32       `json:"votes_cast"`
-	ValidVotes            int32       `json:"valid_votes"`
-	RejectedVotes         int32       `json:"rejected_votes"`
-	CandidateResults      []byte      `json:"candidate_results"`
-	ResultSheetImageUrl   pgtype.Text `json:"result_sheet_image_url"`
-	ResultSheetVideoUrl   pgtype.Text `json:"result_sheet_video_url"`
-	UploadedByInec        bool        `json:"uploaded_by_inec"`
+	AssignmentID          pgtype.Int8    `json:"assignment_id"`
+	ElectionID            int64          `json:"election_id"`
+	ElectionGroupID       int64          `json:"election_group_id"`
+	PollingUnitID         int32          `json:"polling_unit_id"`
+	SubmittedBy           pgtype.Int8    `json:"submitted_by"`
+	PartyID               pgtype.Int2    `json:"party_id"`
+	StateID               pgtype.Int2    `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4    `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4    `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4    `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4    `json:"lga_id"`
+	WardID                pgtype.Int4    `json:"ward_id"`
+	AccreditedVoters      int32          `json:"accredited_voters"`
+	VotesCast             int32          `json:"votes_cast"`
+	ValidVotes            int32          `json:"valid_votes"`
+	RejectedVotes         int32          `json:"rejected_votes"`
+	CandidateResults      []byte         `json:"candidate_results"`
+	ResultSheetImageUrl   pgtype.Text    `json:"result_sheet_image_url"`
+	ResultSheetVideoUrl   pgtype.Text    `json:"result_sheet_video_url"`
+	UploadedByInec        bool           `json:"uploaded_by_inec"`
+	Status                pgtype.Text    `json:"status"`
+	AiExtractedData       []byte         `json:"ai_extracted_data"`
+	ResultIsAiGenerated   pgtype.Bool    `json:"result_is_ai_generated"`
+	AiConfidenceScore     pgtype.Numeric `json:"ai_confidence_score"`
 }
 
 func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPollingUnitResultParams) (PollingUnitResult, error) {
@@ -351,6 +454,10 @@ func (q *Queries) SubmitPollingUnitResult(ctx context.Context, arg SubmitPolling
 		arg.ResultSheetImageUrl,
 		arg.ResultSheetVideoUrl,
 		arg.UploadedByInec,
+		arg.Status,
+		arg.AiExtractedData,
+		arg.ResultIsAiGenerated,
+		arg.AiConfidenceScore,
 	)
 	var i PollingUnitResult
 	err := row.Scan(
@@ -427,6 +534,90 @@ func (q *Queries) UpdatePollingUnitResult(ctx context.Context, arg UpdatePolling
 		arg.CandidateResults,
 		arg.ResultSheetImageUrl,
 		arg.ResultSheetVideoUrl,
+	)
+	var i PollingUnitResult
+	err := row.Scan(
+		&i.ID,
+		&i.AssignmentID,
+		&i.ElectionID,
+		&i.ElectionGroupID,
+		&i.PollingUnitID,
+		&i.SubmittedBy,
+		&i.PartyID,
+		&i.StateID,
+		&i.SenatorialDistrictID,
+		&i.FederalConstituencyID,
+		&i.StateConstituencyID,
+		&i.LgaID,
+		&i.WardID,
+		&i.AccreditedVoters,
+		&i.VotesCast,
+		&i.ValidVotes,
+		&i.RejectedVotes,
+		&i.CandidateResults,
+		&i.ResultSheetImageUrl,
+		&i.ResultSheetVideoUrl,
+		&i.Status,
+		&i.AiExtractedData,
+		&i.ResultIsAiGenerated,
+		&i.AiConfidenceScore,
+		&i.DisputedReason,
+		&i.ConfirmedAt,
+		&i.ConfirmedBy,
+		&i.UpVotes,
+		&i.DownVotes,
+		&i.UploadedByInec,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePollingUnitResultAIExtraction = `-- name: UpdatePollingUnitResultAIExtraction :one
+UPDATE polling_unit_results
+SET
+  accredited_voters      = $2,
+  votes_cast             = $3,
+  valid_votes            = $4,
+  rejected_votes         = $5,
+  candidate_results      = $6,
+  status                 = $7,
+  ai_extracted_data      = $8,
+  result_is_ai_generated = $9,
+  ai_confidence_score    = $10,
+  disputed_reason        = $11,
+  updated_at             = NOW()
+WHERE id = $1
+RETURNING id, assignment_id, election_id, election_group_id, polling_unit_id, submitted_by, party_id, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, result_sheet_image_url, result_sheet_video_url, status, ai_extracted_data, result_is_ai_generated, ai_confidence_score, disputed_reason, confirmed_at, confirmed_by, up_votes, down_votes, uploaded_by_inec, created_at, updated_at
+`
+
+type UpdatePollingUnitResultAIExtractionParams struct {
+	ID                  int64          `json:"id"`
+	AccreditedVoters    int32          `json:"accredited_voters"`
+	VotesCast           int32          `json:"votes_cast"`
+	ValidVotes          int32          `json:"valid_votes"`
+	RejectedVotes       int32          `json:"rejected_votes"`
+	CandidateResults    []byte         `json:"candidate_results"`
+	Status              string         `json:"status"`
+	AiExtractedData     []byte         `json:"ai_extracted_data"`
+	ResultIsAiGenerated pgtype.Bool    `json:"result_is_ai_generated"`
+	AiConfidenceScore   pgtype.Numeric `json:"ai_confidence_score"`
+	DisputedReason      pgtype.Text    `json:"disputed_reason"`
+}
+
+func (q *Queries) UpdatePollingUnitResultAIExtraction(ctx context.Context, arg UpdatePollingUnitResultAIExtractionParams) (PollingUnitResult, error) {
+	row := q.db.QueryRow(ctx, updatePollingUnitResultAIExtraction,
+		arg.ID,
+		arg.AccreditedVoters,
+		arg.VotesCast,
+		arg.ValidVotes,
+		arg.RejectedVotes,
+		arg.CandidateResults,
+		arg.Status,
+		arg.AiExtractedData,
+		arg.ResultIsAiGenerated,
+		arg.AiConfidenceScore,
+		arg.DisputedReason,
 	)
 	var i PollingUnitResult
 	err := row.Scan(

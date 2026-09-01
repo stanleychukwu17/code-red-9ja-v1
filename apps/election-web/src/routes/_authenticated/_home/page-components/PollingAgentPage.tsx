@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { Button } from "@repo/ui/components/button";
 import {
   LeaderboardCardWrapper,
@@ -47,7 +47,7 @@ export function PollingAgentPage() {
     selectedElectionGroup,
     selectedElection,
     selectedAssignment: currentPollingUnitAssignment,
-  } = useAuth();
+  } = useAppContext();
 
   const resultsUploaded = !!(
     currentPollingUnitAssignment?.results_submitted_count &&

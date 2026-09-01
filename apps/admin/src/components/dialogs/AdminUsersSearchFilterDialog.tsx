@@ -55,19 +55,29 @@ const VERIFICATION_TYPES = [
   { label: "Verified Politician", value: "politician_verified" },
   { label: "Verified Organization", value: "organization_verified" },
   { label: "Verified Business", value: "business_verified" },
-  { label: "Verified Party National Official", value: "national_official_verified" },
+  {
+    label: "Verified Party National Official",
+    value: "national_official_verified",
+  },
   { label: "Verified Party Zonal Official", value: "zonal_official_verified" },
   { label: "Verified Party State Official", value: "state_official_verified" },
   { label: "Verified Party LGA Official", value: "lga_official_verified" },
   { label: "Verified Party Ward Official", value: "ward_official_verified" },
 ];
 
-export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUsersSearchFilterDialogProps) {
+export function AdminUsersSearchFilterDialog({
+  open,
+  onClose,
+  onApply,
+}: AdminUsersSearchFilterDialogProps) {
   const [selectedParties, setSelectedParties] = React.useState<number[]>([]);
   const [selectedRoles, setSelectedRoles] = React.useState<string[]>([]);
   const [selectedStatuses, setSelectedStatuses] = React.useState<string[]>([]);
-  const [selectedVerificationTypes, setSelectedVerificationTypes] = React.useState<string[]>([]);
-  const [selectedCountryId, setSelectedCountryId] = React.useState<string | undefined>(undefined);
+  const [selectedVerificationTypes, setSelectedVerificationTypes] =
+    React.useState<string[]>([]);
+  const [selectedCountryId, setSelectedCountryId] = React.useState<
+    string | undefined
+  >(undefined);
   const [selectedStateIds, setSelectedStateIds] = React.useState<string[]>([]);
 
   const { data: partiesData, isLoading: isLoadingParties } = useQuery({
@@ -86,26 +96,26 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
   const partiesArray = partiesData?.data?.parties || [];
 
   const toggleParty = (id: number) => {
-    setSelectedParties(prev =>
-      prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+    setSelectedParties((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
     );
   };
 
   const toggleRole = (val: string) => {
-    setSelectedRoles(prev =>
-      prev.includes(val) ? prev.filter(r => r !== val) : [...prev, val]
+    setSelectedRoles((prev) =>
+      prev.includes(val) ? prev.filter((r) => r !== val) : [...prev, val],
     );
   };
 
   const toggleStatus = (val: string) => {
-    setSelectedStatuses(prev =>
-      prev.includes(val) ? prev.filter(s => s !== val) : [...prev, val]
+    setSelectedStatuses((prev) =>
+      prev.includes(val) ? prev.filter((s) => s !== val) : [...prev, val],
     );
   };
 
   const toggleVerificationType = (val: string) => {
-    setSelectedVerificationTypes(prev =>
-      prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]
+    setSelectedVerificationTypes((prev) =>
+      prev.includes(val) ? prev.filter((v) => v !== val) : [...prev, val],
     );
   };
 
@@ -115,8 +125,8 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
   };
 
   const toggleState = (val: string) => {
-    setSelectedStateIds(prev =>
-      prev.includes(val) ? prev.filter(s => s !== val) : [...prev, val]
+    setSelectedStateIds((prev) =>
+      prev.includes(val) ? prev.filter((s) => s !== val) : [...prev, val],
     );
   };
 
@@ -143,11 +153,10 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-110 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden flex flex-col max-h-[85vh]">
+      <DialogContent className="max-w-110 p-0 rounded-2xl border-none shadow-2xl   overflow-hidden flex flex-col max-h-[85vh]">
         <DialogHeader title="Filter Users" />
 
         <DialogPadding className="flex-1 overflow-y-auto space-y-7 pb-6 pt-5 min-h-0">
-
           {/* Parties Filter */}
           <div className="space-y-4">
             <h4 className="font-semibold text-c-90 text-[15px]">Parties</h4>
@@ -159,7 +168,10 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
             ) : (
               <div className="grid grid-cols-1 gap-3 max-h-50 overflow-y-auto pr-2 custom-scrollbar">
                 {partiesArray.map((party: any) => (
-                  <label key={party.id} className="flex items-center gap-3 cursor-pointer group">
+                  <label
+                    key={party.id}
+                    className="flex items-center gap-3 cursor-pointer group"
+                  >
                     <div className="shrink-0 flex items-center">
                       <input
                         type="checkbox"
@@ -193,14 +205,19 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
             <h4 className="font-semibold text-c-90 text-[15px]">Roles</h4>
             <div className="grid grid-cols-2 gap-3">
               {ROLES.map((role) => (
-                <label key={role.value} className="flex items-center gap-3 cursor-pointer group">
+                <label
+                  key={role.value}
+                  className="flex items-center gap-3 cursor-pointer group"
+                >
                   <input
                     type="checkbox"
                     className="size-4.5 rounded border-[#dfdfdf] text-[#00cf79] focus:ring-[#00cf79] cursor-pointer shrink-0"
                     checked={selectedRoles.includes(role.value)}
                     onChange={() => toggleRole(role.value)}
                   />
-                  <span className="text-[14px] text-c-80 group-hover:text-black transition">{role.label}</span>
+                  <span className="text-[14px] text-c-80 group-hover:text-black transition">
+                    {role.label}
+                  </span>
                 </label>
               ))}
             </div>
@@ -210,17 +227,24 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
 
           {/* Verification Type Filter */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-c-90 text-[15px]">Verification Type</h4>
+            <h4 className="font-semibold text-c-90 text-[15px]">
+              Verification Type
+            </h4>
             <div className="flex flex-col gap-3 max-h-50 overflow-y-auto pr-2 custom-scrollbar">
               {VERIFICATION_TYPES.map((vt) => (
-                <label key={vt.value} className="flex items-center gap-3 cursor-pointer group">
+                <label
+                  key={vt.value}
+                  className="flex items-center gap-3 cursor-pointer group"
+                >
                   <input
                     type="checkbox"
                     className="size-4.5 rounded border-[#dfdfdf] text-[#00cf79] focus:ring-[#00cf79] cursor-pointer shrink-0"
                     checked={selectedVerificationTypes.includes(vt.value)}
                     onChange={() => toggleVerificationType(vt.value)}
                   />
-                  <span className="text-[14px] text-c-80 group-hover:text-black transition">{vt.label}</span>
+                  <span className="text-[14px] text-c-80 group-hover:text-black transition">
+                    {vt.label}
+                  </span>
                 </label>
               ))}
             </div>
@@ -229,7 +253,9 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
 
           {/* Country Filter */}
           <div className="flex items-center justify-between gap-4">
-            <h4 className="font-semibold text-c-90 text-[15px] shrink-0">Residence Country</h4>
+            <h4 className="font-semibold text-c-90 text-[15px] shrink-0">
+              Residence Country
+            </h4>
             <div className="flex-1 max-w-50">
               <SelectCountry
                 selectedId={selectedCountryId}
@@ -244,12 +270,18 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
 
           {/* State Filter */}
           <div className="flex items-center justify-between gap-4">
-            <h4 className="font-semibold text-c-90 text-[15px] shrink-0">Residence State</h4>
+            <h4 className="font-semibold text-c-90 text-[15px] shrink-0">
+              Residence State
+            </h4>
             <div className="flex-1 max-w-50">
               <SelectState
-                selectedId={selectedStateIds.length > 0 ? selectedStateIds[0] : undefined}
+                selectedId={
+                  selectedStateIds.length > 0 ? selectedStateIds[0] : undefined
+                }
                 update={(item) => toggleState(String(item.id))}
-                countryOriginalId={selectedCountryId ? Number(selectedCountryId) : undefined}
+                countryOriginalId={
+                  selectedCountryId ? Number(selectedCountryId) : undefined
+                }
                 fetchStates={getStates}
                 disabled={!selectedCountryId}
                 errorMsg={undefined}
@@ -257,30 +289,35 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
             </div>
           </div>
 
-
           <div className="h-px bg-[#f0f0f0] w-full" />
 
           {/* Account Status Filter */}
           <div className="space-y-4">
-            <h4 className="font-semibold text-c-90 text-[15px]">Account Status</h4>
+            <h4 className="font-semibold text-c-90 text-[15px]">
+              Account Status
+            </h4>
             <div className="grid grid-cols-2 gap-3">
               {STATUSES.map((status) => (
-                <label key={status.value} className="flex items-center gap-3 cursor-pointer group">
+                <label
+                  key={status.value}
+                  className="flex items-center gap-3 cursor-pointer group"
+                >
                   <input
                     type="checkbox"
                     className="size-4.5 rounded border-[#dfdfdf] text-[#00cf79] focus:ring-[#00cf79] cursor-pointer shrink-0"
                     checked={selectedStatuses.includes(status.value)}
                     onChange={() => toggleStatus(status.value)}
                   />
-                  <span className="text-[14px] text-c-80 group-hover:text-black transition">{status.label}</span>
+                  <span className="text-[14px] text-c-80 group-hover:text-black transition">
+                    {status.label}
+                  </span>
                 </label>
               ))}
             </div>
           </div>
-
         </DialogPadding>
 
-        <DialogFooter className="flex-row items-center justify-between gap-3 px-6 py-4 bg-white border-t border-[#f0f0f0] mt-auto">
+        <DialogFooter className="flex-row items-center justify-between gap-3 px-6 py-4 bg-background border-t border-border mt-auto">
           <Button
             type="button"
             variant="ghost"
@@ -290,7 +327,11 @@ export function AdminUsersSearchFilterDialog({ open, onClose, onApply }: AdminUs
           >
             Clear All
           </Button>
-          <Button type="button" variant="black" size="2xl" className="flex-1"
+          <Button
+            type="button"
+            variant="black"
+            size="2xl"
+            className="flex-1"
             onClick={handleApply}
           >
             Apply Filters

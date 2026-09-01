@@ -5,9 +5,10 @@ INSERT INTO polling_unit_assignments (
   election_group_id,
   party_id,
   role_type,
-  assigned_by
+  assigned_by,
+  potential_payment_kobo
 ) VALUES (
-  $1, $2, $3, $4, $5, $6
+  $1, $2, $3, $4, $5, $6, $7
 ) RETURNING *;
 
 -- name: GetAssignmentByID :one
@@ -34,7 +35,7 @@ SELECT
   u.username,
   u.avatar,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_delimitation,
+  pu.pu_code AS polling_unit_pu_code,
   pu.ward_name,
   pu.lga_name,
   pu.state_name,
@@ -64,7 +65,7 @@ SELECT
   u.username,
   u.avatar,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_delimitation,
+  pu.pu_code AS polling_unit_pu_code,
   pu.ward_name,
   pu.lga_name,
   pu.state_name,
@@ -75,7 +76,8 @@ SELECT
   a.election_started_at,
   a.election_started_video_url,
   a.election_ended_at,
-  a.election_ended_video_url
+  a.election_ended_video_url,
+  a.live_voters_referred_count
 FROM polling_unit_assignments a
 JOIN users u ON a.user_id = u.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
@@ -125,3 +127,17 @@ SET
   updated_at = NOW()
 WHERE id = $1
 RETURNING id, user_id, polling_unit_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, election_started_at, election_started_video_url, election_ended_at, election_ended_video_url, last_update_at, reports_count, updates_count, results_submitted_count, results_expected_to_submit_count, live_voters_referred_count, interval_updates, election_practice_test_readiness_percentage, created_at, updated_at;
+
+-- name: UpdatePollingUnitAssignmentEarnedAmountKobo :one
+UPDATE polling_unit_assignments
+SET earned_amount_kobo = earned_amount_kobo + sqlc.arg(earned_delta_kobo)::bigint,
+    updated_at = NOW()
+WHERE user_id = sqlc.arg(user_id) AND election_group_id = sqlc.arg(election_group_id)
+RETURNING *;
+
+-- name: IncrementAssignmentLiveVotersReferredCount :one
+UPDATE polling_unit_assignments
+SET live_voters_referred_count = live_voters_referred_count + 1,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;

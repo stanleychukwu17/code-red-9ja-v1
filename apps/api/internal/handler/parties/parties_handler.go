@@ -58,6 +58,9 @@ type PartiesService interface {
 	GetMarketingPlansByType(ctx context.Context, campaignType string) ([]queries.Plan, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error)
+	ListAllPartyMarketingCampaigns(ctx context.Context, arg queries.ListAllPartyMarketingCampaignsParams) ([]queries.ListAllPartyMarketingCampaignsRow, error)
+	UpdateMarketingCampaignStatus(ctx context.Context, id int32, status queries.MarketingCampaignStatus) (queries.PartyMarketingCampaign, error)
+	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	// Plan admin methods
 	GetPlans(ctx context.Context, typeFilter string, isActiveFilter string) ([]queries.Plan, error)
 	UpdatePlanDisplayOrder(ctx context.Context, arg queries.UpdatePlanDisplayOrderParams) (queries.Plan, error)
@@ -329,11 +332,22 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 					Default *int64 `json:"default"`
 				}
 				if err := json.Unmarshal(p.AgentPaymentAllocationKobo, &alloc); err == nil {
-					roles := []string{"pollingAgent", "wardElectionSupervisor", "lgaElectionSupervisor", "stateElectionSupervisor"}
+					roles := []struct {
+						camel string
+						snake string
+					}{
+						{camel: "pollingAgent", snake: "polling_agent"},
+						{camel: "wardElectionSupervisor", snake: "ward_election_supervisor"},
+						{camel: "lgaElectionSupervisor", snake: "lga_election_supervisor"},
+						{camel: "stateElectionSupervisor", snake: "state_election_supervisor"},
+					}
 					var maxDefault int64 = -1
 					hasAllDefaults := true
-					for _, role := range roles {
-						cfg, exists := alloc[role]
+					for _, rolePair := range roles {
+						cfg, exists := alloc[rolePair.camel]
+						if !exists {
+							cfg, exists = alloc[rolePair.snake]
+						}
 						if !exists || cfg.Default == nil {
 							hasAllDefaults = false
 							break
@@ -408,7 +422,7 @@ func (h *Handler) GetParty(w http.ResponseWriter, r *http.Request) {
 // @Produce      json
 // @Param        party_id path int true "Party ID"
 // @Param        short_name path string true "Party Short Name"
-// @Success      200  {object}  utils.SuccessResponse{data=queries.PartyWithVerifications}
+// @Success      200  {object}  utils.SuccessResponse
 // @Router       /parties/{party_id}/{short_name}/profile [get]
 func (h *Handler) GetPartyProfile(w http.ResponseWriter, r *http.Request) {
 	partyIDStr := chi.URLParam(r, "party_id")
@@ -1226,10 +1240,10 @@ type agentPaymentConfig struct {
 
 // agentPaymentAllocation mirrors the documented shape of the agent_payment_allocation_kobo column.
 type agentPaymentAllocation struct {
-	PollingAgent              agentPaymentConfig `json:"pollingAgent"`
-	WardElectionSupervisor    agentPaymentConfig `json:"wardElectionSupervisor"`
-	LgaElectionSupervisor     agentPaymentConfig `json:"lgaElectionSupervisor"`
-	StateElectionSupervisor   agentPaymentConfig `json:"stateElectionSupervisor"`
+	PollingAgent            agentPaymentConfig `json:"polling_agent"`
+	WardElectionSupervisor  agentPaymentConfig `json:"ward_election_supervisor"`
+	LgaElectionSupervisor   agentPaymentConfig `json:"lga_election_supervisor"`
+	StateElectionSupervisor agentPaymentConfig `json:"state_election_supervisor"`
 }
 
 // UpdateAgentPaymentAllocationKobo godoc
@@ -1366,13 +1380,17 @@ func (h *Handler) DepositTest(w http.ResponseWriter, r *http.Request) {
 
 // CreateMarketingCampaignRequest is the request payload for creating a marketing campaign
 type CreateMarketingCampaignRequest struct {
-	ElectionGroupID int32           `json:"election_group_id"`
-	ElectionID      int32           `json:"election_id"`
-	PlanID          int32           `json:"plan_id"`
-	Type            string          `json:"type"`
-	States          json.RawMessage `json:"states" swaggertype:"array,string"`
-	DurationInDays  int32           `json:"duration_in_days"`
-	Budget          float64         `json:"budget"`
+	ElectionGroupID  int32           `json:"election_group_id"`
+	ElectionID       int32           `json:"election_id"`
+	PlanID           int32           `json:"plan_id"`
+	Type             string          `json:"type"`
+	States           json.RawMessage `json:"states" swaggertype:"array,string"`
+	DurationInDays   int32           `json:"duration_in_days"`
+	BudgetPerDayKobo int64           `json:"budget_per_day_kobo"`
+	BudgetKobo       int64           `json:"budget_kobo"`
+	// Support legacy naira fields as fallback if passed
+	BudgetPerDay float64 `json:"budget_per_day"`
+	Budget       float64 `json:"budget"`
 }
 
 // GetMarketingPlansByType godoc
@@ -1427,25 +1445,31 @@ func (h *Handler) CreatePartyMarketingCampaign(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	var budgetNumeric pgtype.Numeric
-	if err := budgetNumeric.Scan(fmt.Sprintf("%.2f", req.Budget)); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid budget format: "+err.Error())
-		return
+	budgetKobo := req.BudgetKobo
+	if budgetKobo <= 0 && req.Budget > 0 {
+		budgetKobo = int64(req.Budget * 100)
 	}
 
-	var zeroNumeric pgtype.Numeric
-	_ = zeroNumeric.Scan("0.00")
+	budgetPerDayKobo := req.BudgetPerDayKobo
+	if budgetPerDayKobo <= 0 && req.BudgetPerDay > 0 {
+		budgetPerDayKobo = int64(req.BudgetPerDay * 100)
+	}
+	if budgetPerDayKobo <= 0 && req.DurationInDays > 0 {
+		budgetPerDayKobo = budgetKobo / int64(req.DurationInDays)
+	}
 
 	arg := queries.CreatePartyMarketingCampaignParams{
-		PartyID:         int32(partyID),
-		ElectionGroupID: req.ElectionGroupID,
-		ElectionID:      req.ElectionID,
-		PlanID:          req.PlanID,
+		PartyID:            int32(partyID),
+		ElectionGroupID:    req.ElectionGroupID,
+		ElectionID:         req.ElectionID,
+		PlanID:             req.PlanID,
 		Type:            req.Type,
-		States:          req.States,
-		DurationInDays:  req.DurationInDays,
-		Budget:          budgetNumeric,
-		AmountSpent:     zeroNumeric,
+		States:             req.States,
+		DurationInDays:     req.DurationInDays,
+		BudgetPerDayKobo:   budgetPerDayKobo,
+		BudgetKobo:         budgetKobo,
+		ReferralAmountKobo: 0,
+		AmountSpentKobo:    0,
 		Status:          "pending",
 	}
 
@@ -1483,14 +1507,264 @@ func (h *Handler) GetPartyMarketingCampaigns(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	var formatted []map[string]interface{}
+	for _, c := range campaigns {
+		var statesJSON interface{}
+		if len(c.States) > 0 {
+			if err := json.Unmarshal(c.States, &statesJSON); err == nil {
+				if str, ok := statesJSON.(string); ok {
+					var inner interface{}
+					if err := json.Unmarshal([]byte(str), &inner); err == nil {
+						statesJSON = inner
+					}
+				}
+			}
+		}
+
+		item := map[string]interface{}{
+			"id":                   c.ID,
+			"party_id":             c.PartyID,
+			"election_group_id":    c.ElectionGroupID,
+			"election_id":          c.ElectionID,
+			"plan_id":              c.PlanID,
+			"type":                 c.Type,
+			"states":               statesJSON,
+			"duration_in_days":     c.DurationInDays,
+			"start_date":           c.StartDate,
+			"end_date":             c.EndDate,
+			"status":               c.Status,
+			"budget_per_day_kobo":  c.BudgetPerDayKobo,
+			"budget_kobo":          c.BudgetKobo,
+			"referral_amount_kobo": c.ReferralAmountKobo,
+			"amount_spent_kobo":    c.AmountSpentKobo,
+			"budget_per_day":       float64(c.BudgetPerDayKobo) / 100.0,
+			"budget":               float64(c.BudgetKobo) / 100.0,
+			"referral_amount":      float64(c.ReferralAmountKobo) / 100.0,
+			"amount_spent":         float64(c.AmountSpentKobo) / 100.0,
+			"created_at":           c.CreatedAt,
+			"updated_at":           c.UpdatedAt,
+			"plan_name":            c.PlanName,
+			"plan_price_kobo":      c.PlanPriceKobo,
+			"plan_price":           float64(c.PlanPriceKobo) / 100.0,
+			"plan_color":           c.PlanColor.String,
+			"election_group_name":  c.ElectionGroupName,
+			"election_name":        c.ElectionName,
+		}
+		formatted = append(formatted, item)
+	}
+
 	h.utils.RespondSuccess(w, http.StatusOK, "Marketing campaigns retrieved successfully", map[string]interface{}{
-		"campaigns": campaigns,
+		"campaigns": formatted,
 	})
+}
+
+// ListAllPartyMarketingCampaigns godoc
+// @Summary      List all party marketing campaigns (Admin)
+// @Description  Returns a paginated list of all party marketing campaigns with party, plan, election_group, and election details
+// @Tags         Marketing
+// @Produce      json
+// @Param        party_id query int false "Party ID filter"
+// @Param        election_group_id query int false "Election Group ID filter"
+// @Param        status query string false "Status filter"
+// @Param        limit query int false "Limit" default(20)
+// @Param        cursor query int false "Cursor (ID)"
+// @Success      200  {object} map[string]interface{} "Marketing campaigns retrieved successfully"
+// @Security     BearerAuth
+// @Router       /admin/agent-marketing-campaigns [get]
+func (h *Handler) ListAllPartyMarketingCampaigns(w http.ResponseWriter, r *http.Request) {
+	var partyID int32
+	var electionGroupID int32
+	status := r.URL.Query().Get("status")
+
+	if val := r.URL.Query().Get("party_id"); val != "" {
+		if pID, err := strconv.ParseInt(val, 10, 32); err == nil {
+			partyID = int32(pID)
+		}
+	}
+	if val := r.URL.Query().Get("election_group_id"); val != "" {
+		if egID, err := strconv.ParseInt(val, 10, 32); err == nil {
+			electionGroupID = int32(egID)
+		}
+	}
+
+	limit := int32(20)
+	if val := r.URL.Query().Get("limit"); val != "" {
+		if l, err := strconv.Atoi(val); err == nil && l > 0 {
+			limit = int32(l)
+		}
+	}
+	var cursor int32
+	if val := r.URL.Query().Get("cursor"); val != "" {
+		if c, err := strconv.ParseInt(val, 10, 32); err == nil && c > 0 {
+			cursor = int32(c)
+		}
+	}
+
+	arg := queries.ListAllPartyMarketingCampaignsParams{
+		PartyID:         partyID,
+		ElectionGroupID: electionGroupID,
+		StatusFilter:    status,
+		Cursor:          cursor,
+		LimitVal:        limit,
+	}
+
+	rows, err := h.partiesService.ListAllPartyMarketingCampaigns(r.Context(), arg)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch marketing campaigns: "+err.Error())
+		return
+	}
+
+	var formatted []map[string]interface{}
+	for _, row := range rows {
+		var statesJSON interface{}
+		if len(row.States) > 0 {
+			if err := json.Unmarshal(row.States, &statesJSON); err == nil {
+				if str, ok := statesJSON.(string); ok {
+					var inner interface{}
+					if err := json.Unmarshal([]byte(str), &inner); err == nil {
+						statesJSON = inner
+					}
+				}
+			}
+		}
+
+		item := map[string]interface{}{
+			"id":                   row.ID,
+			"party_id":             row.PartyID,
+			"election_group_id":    row.ElectionGroupID,
+			"election_id":          row.ElectionID,
+			"plan_id":              row.PlanID,
+			"type":                 row.Type,
+			"states":               statesJSON,
+			"duration_in_days":     row.DurationInDays,
+			"start_date":           row.StartDate,
+			"end_date":             row.EndDate,
+			"status":               row.Status,
+			"budget_per_day_kobo":  row.BudgetPerDayKobo,
+			"budget_kobo":          row.BudgetKobo,
+			"referral_amount_kobo": row.ReferralAmountKobo,
+			"amount_spent_kobo":    row.AmountSpentKobo,
+			"budget_per_day":       float64(row.BudgetPerDayKobo) / 100.0,
+			"budget":               float64(row.BudgetKobo) / 100.0,
+			"referral_amount":      float64(row.ReferralAmountKobo) / 100.0,
+			"amount_spent":         float64(row.AmountSpentKobo) / 100.0,
+			"created_at":           row.CreatedAt,
+			"updated_at":           row.UpdatedAt,
+			"party": map[string]interface{}{
+				"id":         row.PartyID,
+				"name":       row.PartyName,
+				"short_name": row.PartyShortName,
+				"logo":       row.PartyLogo,
+			},
+			"plan": map[string]interface{}{
+				"id":               row.PlanID,
+				"name":             row.PlanName,
+				"description":      row.PlanDescription,
+				"price_kobo":       row.PlanPriceKobo,
+				"price":            float64(row.PlanPriceKobo) / 100.0,
+				"color_hex":        row.PlanColorHex.String,
+			},
+			"election_group": map[string]interface{}{
+				"id":   row.ElectionGroupID,
+				"name": row.ElectionGroupName,
+			},
+			"election": map[string]interface{}{
+				"id":   row.ElectionID,
+				"name": row.ElectionName,
+			},
+		}
+		formatted = append(formatted, item)
+	}
+
+	var nextCursor int32
+	hasMore := false
+	if int32(len(rows)) == limit && len(rows) > 0 {
+		nextCursor = rows[len(rows)-1].ID
+		hasMore = true
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Marketing campaigns retrieved successfully", map[string]interface{}{
+		"campaigns": formatted,
+		"meta": map[string]interface{}{
+			"limit":       limit,
+			"next_cursor": nextCursor,
+			"has_more":    hasMore,
+		},
+	})
+}
+
+// UpdatePartyMarketingCampaignStatus godoc
+// @Summary      Update marketing campaign status (Admin)
+// @Description  Updates a marketing campaign status (e.g. active, inactive, completed). When set to active, sets start_date to today, end_date to start_date + duration, and deducts budget_per_day to amount_spent.
+// @Tags         Marketing
+// @Accept       json
+// @Produce      json
+// @Param        id path int true "Campaign ID"
+// @Param        request body map[string]string true "Status payload e.g. {\"status\": \"active\"}"
+// @Success      200  {object} map[string]interface{} "Marketing campaign status updated successfully"
+// @Security     BearerAuth
+// @Router       /admin/agent-marketing-campaigns/{id}/status [patch]
+func (h *Handler) UpdatePartyMarketingCampaignStatus(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid campaign ID: "+err.Error())
+		return
+	}
+
+	var req struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
+		return
+	}
+
+	if req.Status == "" {
+		h.utils.RespondError(w, http.StatusBadRequest, "Status is required")
+		return
+	}
+
+	updated, err := h.partiesService.UpdateMarketingCampaignStatus(r.Context(), int32(campaignID), queries.MarketingCampaignStatus(req.Status))
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update campaign status: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Marketing campaign status updated successfully", map[string]interface{}{
+		"campaign": updated,
+	})
+}
+
+// DeletePartyMarketingCampaign godoc
+// @Summary      Delete marketing campaign (Admin)
+// @Description  Deletes a marketing campaign by ID
+// @Tags         Marketing
+// @Produce      json
+// @Param        id path int true "Campaign ID"
+// @Success      200  {object} map[string]interface{} "Marketing campaign deleted successfully"
+// @Security     BearerAuth
+// @Router       /admin/agent-marketing-campaigns/{id} [delete]
+func (h *Handler) DeletePartyMarketingCampaign(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	campaignID, err := strconv.ParseInt(idStr, 10, 32)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, "Invalid campaign ID: "+err.Error())
+		return
+	}
+
+	if err := h.partiesService.DeletePartyMarketingCampaign(r.Context(), int32(campaignID)); err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to delete marketing campaign: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Marketing campaign deleted successfully", nil)
 }
 
 type CreatePlanRequest struct {
 	Name                 string   `json:"name"`
 	Description          string   `json:"description"`
+	PriceKobo            int64    `json:"price_kobo"`
 	Price                float64  `json:"price"`
 	Type                 string   `json:"type"`
 	Features             []string `json:"features"`
@@ -1516,10 +1790,9 @@ func (h *Handler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var priceNumeric pgtype.Numeric
-	if err := priceNumeric.Scan(fmt.Sprintf("%.2f", req.Price)); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid price format: "+err.Error())
-		return
+	priceKobo := req.PriceKobo
+	if priceKobo <= 0 && req.Price > 0 {
+		priceKobo = int64(req.Price * 100)
 	}
 
 	featuresJSON, err := json.Marshal(req.Features)
@@ -1541,7 +1814,7 @@ func (h *Handler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 	plan, err := h.partiesService.CreatePlan(r.Context(), queries.CreatePlanParams{
 		Name:                 req.Name,
 		Description:          req.Description,
-		Price:                priceNumeric,
+		PriceKobo:            priceKobo,
 		Type:                 req.Type,
 		Features:             featuresJSON,
 		ScopesRecommendation: scopesJSON,
@@ -1553,13 +1826,14 @@ func (h *Handler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusCreated, "Plan created successfully", map[string]interface{}{
-		"plan": plan,
+		"plan": mapPlanToResponse(plan),
 	})
 }
 
 type UpdatePlanRequest struct {
 	Name                 string   `json:"name"`
 	Description          string   `json:"description"`
+	PriceKobo            int64    `json:"price_kobo"`
 	Price                float64  `json:"price"`
 	Type                 string   `json:"type"`
 	Features             []string `json:"features"`
@@ -1593,10 +1867,9 @@ func (h *Handler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var priceNumeric pgtype.Numeric
-	if err := priceNumeric.Scan(fmt.Sprintf("%.2f", req.Price)); err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid price format: "+err.Error())
-		return
+	priceKobo := req.PriceKobo
+	if priceKobo <= 0 && req.Price > 0 {
+		priceKobo = int64(req.Price * 100)
 	}
 
 	featuresJSON, err := json.Marshal(req.Features)
@@ -1619,7 +1892,7 @@ func (h *Handler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 		ID:                   int32(id),
 		Name:                 req.Name,
 		Description:          req.Description,
-		Price:                priceNumeric,
+		PriceKobo:            priceKobo,
 		Type:                 req.Type,
 		Features:             featuresJSON,
 		ScopesRecommendation: scopesJSON,
@@ -1632,7 +1905,7 @@ func (h *Handler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Plan updated successfully", map[string]interface{}{
-		"plan": plan,
+		"plan": mapPlanToResponse(plan),
 	})
 }
 
@@ -1664,18 +1937,21 @@ func (h *Handler) DeletePlan(w http.ResponseWriter, r *http.Request) {
 
 // PlanResponse is the JSON-friendly representation of a Plan with JSONB fields decoded.
 type PlanResponse struct {
-	ID                   int32                   `json:"id"`
-	Name                 string                  `json:"name"`
-	Description          string                  `json:"description"`
-	Price                pgtype.Numeric          `json:"price"`
+	ID                   int32                         `json:"id"`
+	Name                 string                        `json:"name"`
+	Description          string                        `json:"description"`
+	PriceKobo            int64                         `json:"price_kobo"`
+	Price                float64                       `json:"price"`
+	ReferralAmountKobo   int64                         `json:"referral_amount_kobo"`
+	ReferralAmount       float64                       `json:"referral_amount"`
 	Type                 string                  `json:"type"`
-	Features             json.RawMessage         `json:"features"`
-	ScopesRecommendation json.RawMessage         `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text             `json:"color_hex"`
-	IsActive             bool                    `json:"is_active"`
-	DisplayOrder         int32                   `json:"display_order"`
-	CreatedAt            pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz      `json:"updated_at"`
+	Features             json.RawMessage               `json:"features"`
+	ScopesRecommendation json.RawMessage               `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text                   `json:"color_hex"`
+	IsActive             bool                          `json:"is_active"`
+	DisplayOrder         int32                         `json:"display_order"`
+	CreatedAt            pgtype.Timestamptz            `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz            `json:"updated_at"`
 }
 
 // mapPlanToResponse converts a queries.Plan to PlanResponse, decoding the JSONB []byte fields.
@@ -1692,7 +1968,10 @@ func mapPlanToResponse(p queries.Plan) PlanResponse {
 		ID:                   p.ID,
 		Name:                 p.Name,
 		Description:          p.Description,
-		Price:                p.Price,
+		PriceKobo:            p.PriceKobo,
+		Price:                float64(p.PriceKobo) / 100.0,
+		ReferralAmountKobo:   p.ReferralAmountKobo,
+		ReferralAmount:       float64(p.ReferralAmountKobo) / 100.0,
 		Type:                 p.Type,
 		Features:             features,
 		ScopesRecommendation: scopes,
@@ -1779,10 +2058,10 @@ func (h *Handler) UpdatePlanDisplayOrder(w http.ResponseWriter, r *http.Request)
 
 // UpdateAgentTargetsRequest is the request payload for updating agent acquisition targets
 type UpdateAgentTargetsRequest struct {
-	PollingUnitAgent        int32 `json:"pollingUnitAgent"`
-	WardElectionSupervisor  int32 `json:"wardElectionSupervisor"`
-	LgaElectionSupervisor   int32 `json:"lgaElectionSupervisor"`
-	StateElectionSupervisor int32 `json:"stateElectionSupervisor"`
+	PollingAgent            int32 `json:"polling_agent"`
+	WardElectionSupervisor  int32 `json:"ward_election_supervisor"`
+	LgaElectionSupervisor   int32 `json:"lga_election_supervisor"`
+	StateElectionSupervisor int32 `json:"state_election_supervisor"`
 }
 
 // UpdateAgentAcquisitionTargets godoc
@@ -1804,10 +2083,26 @@ func (h *Handler) UpdateAgentAcquisitionTargets(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	var req UpdateAgentTargetsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	var rawMap map[string]int32
+	if err := json.NewDecoder(r.Body).Decode(&rawMap); err != nil {
 		h.utils.RespondError(w, http.StatusBadRequest, "Invalid request payload: "+err.Error())
 		return
+	}
+
+	getVal := func(keys ...string) int32 {
+		for _, k := range keys {
+			if v, ok := rawMap[k]; ok {
+				return v
+			}
+		}
+		return 1
+	}
+
+	req := UpdateAgentTargetsRequest{
+		PollingAgent:            getVal("polling_agent", "pollingAgent", "pollingUnitAgent"),
+		WardElectionSupervisor:  getVal("ward_election_supervisor", "wardElectionSupervisor", "ward-election-supervisor"),
+		LgaElectionSupervisor:   getVal("lga_election_supervisor", "lgaElectionSupervisor", "lga-election-supervisor"),
+		StateElectionSupervisor: getVal("state_election_supervisor", "stateElectionSupervisor", "state-election-supervisor"),
 	}
 
 	targetsJSON, err := json.Marshal(req)
@@ -1853,15 +2148,29 @@ func (h *Handler) GetAgentAcquisitionTargets(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	
-	// Unmarshal to struct to match expected shape
-	var targets UpdateAgentTargetsRequest
-	if err := json.Unmarshal(targetsJSON, &targets); err != nil {
-        h.utils.RespondError(w, http.StatusInternalServerError, "Failed to parse targets")
-        return
+	var rawMap map[string]int32
+	if len(targetsJSON) > 0 {
+		_ = json.Unmarshal(targetsJSON, &rawMap)
+	}
+
+	getVal := func(keys ...string) int32 {
+		for _, k := range keys {
+			if v, ok := rawMap[k]; ok {
+				return v
+			}
+		}
+		return 1
+	}
+
+	resp := map[string]int32{
+		"polling_agent":            getVal("polling_agent", "pollingAgent", "pollingUnitAgent"),
+		"ward_election_supervisor": getVal("ward_election_supervisor", "wardElectionSupervisor", "ward-election-supervisor"),
+		"lga_election_supervisor":  getVal("lga_election_supervisor", "lgaElectionSupervisor", "lga-election-supervisor"),
+		"state_election_supervisor": getVal("state_election_supervisor", "stateElectionSupervisor", "state-election-supervisor"),
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Agent targets retrieved successfully", map[string]interface{}{
-		"targets": targets,
+		"targets": resp,
 	})
 }
 

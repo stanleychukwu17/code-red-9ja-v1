@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { Button } from "@repo/ui/components/button";
 import MapPinIcon from "@repo/ui/icons/map-pin-icon";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
@@ -10,7 +10,7 @@ interface SupervisorReadyCardProps {
 export function SupervisorStartDutyCard({
   onReadyClick,
 }: SupervisorReadyCardProps) {
-  const { selectedSupervisorAssignment } = useAuth();
+  const { selectedSupervisorAssignment } = useAppContext();
 
   const data = selectedSupervisorAssignment?.data;
   const type = selectedSupervisorAssignment?.type;

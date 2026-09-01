@@ -724,6 +724,23 @@ func (h *Handler) PartyLogin(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// LoginUser represents user details returned on login
+type LoginUser struct {
+	ID           int64    `json:"id"`
+	FakeID       int64    `json:"fake_id"`
+	Email        string   `json:"email"`
+	Username     string   `json:"username"`
+	ReferralCode string   `json:"referral_code"`
+	FirstName    string   `json:"first_name"`
+	LastName     string   `json:"last_name"`
+	MiddleName   string   `json:"middle_name"`
+	Gender       string   `json:"gender"`
+	DateOfBirth  string   `json:"date_of_birth"`
+	Avatar       string   `json:"avatar"`
+	Phone        string   `json:"phone"`
+	Roles        []string `json:"roles"`
+}
+
 // AdminLoginResponse represents the Swagger response structure for admin login
 type AdminLoginResponse struct {
 	Success bool           `json:"success"`
@@ -733,9 +750,9 @@ type AdminLoginResponse struct {
 
 // AdminLoginData represents the inner response payload for admin login
 type AdminLoginData struct {
-	AccessToken  string         `json:"accessToken"`
-	RefreshToken string         `json:"refreshToken"`
-	User         auth.LoginUser `json:"user"`
+	AccessToken  string    `json:"accessToken"`
+	RefreshToken string    `json:"refreshToken"`
+	User         LoginUser `json:"user"`
 }
 
 // RegisterCandidatePlaceholderRequest represents the structure of candidate registration payload

@@ -62,6 +62,7 @@ export const SenatorialDistrictDropdown = ({
   const entityForDialog = {
     id: data.id,
     name: data.name,
+    code: data.code,
     description: data.description,
     coalition_center: data.coalition_center,
     state_id: data.state_id,

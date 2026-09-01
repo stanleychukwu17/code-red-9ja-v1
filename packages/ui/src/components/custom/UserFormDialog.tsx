@@ -522,7 +522,7 @@ export function UserFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl max-h-[90vh] flex flex-col">
         <DialogHeader title={mode === "update" ? "Edit user" : "Add user"} />
 
         {(mode === "update" || createdUser) && (

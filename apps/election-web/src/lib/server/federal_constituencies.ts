@@ -7,6 +7,7 @@ export const createFederalConstituency = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
+      code?: string;
       state_id: number;
       senatorial_district_id: number;
     }) => data,
@@ -32,6 +33,7 @@ export const updateFederalConstituency = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
+      code?: string;
       state_id: number;
       senatorial_district_id: number;
     }) => data,

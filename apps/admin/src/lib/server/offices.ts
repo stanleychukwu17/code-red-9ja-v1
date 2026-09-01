@@ -39,8 +39,13 @@ export const getOfficeById = createServerFn({ method: "GET" })
 
 export const createOffice = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { name: string; election: string; scope: string; rank: number }) =>
-      data,
+    (data: {
+      name: string;
+      election: string;
+      scope: string;
+      rank: number;
+      inec_election_type_id?: string;
+    }) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -67,6 +72,7 @@ export const updateOffice = createServerFn({ method: "POST" })
       election: string;
       scope: string;
       rank: number;
+      inec_election_type_id?: string;
     }) => data,
   )
   .handler(async ({ data: { id, ...body } }) => {
@@ -100,4 +106,3 @@ export const deleteOffice = createServerFn({ method: "POST" })
       };
     }
   });
-

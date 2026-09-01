@@ -1324,26 +1324,26 @@ func (_m *Querier) CreateState(ctx context.Context, arg queries.CreateStateParam
 	return r0, r1
 }
 
-// CreateStateAssemblyConstituency provides a mock function with given fields: ctx, arg
-func (_m *Querier) CreateStateAssemblyConstituency(ctx context.Context, arg queries.CreateStateAssemblyConstituencyParams) (queries.StateAssemblyConstituency, error) {
+// CreateStateConstituency provides a mock function with given fields: ctx, arg
+func (_m *Querier) CreateStateConstituency(ctx context.Context, arg queries.CreateStateConstituencyParams) (queries.StateConstituency, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for CreateStateAssemblyConstituency")
+		panic("no return value specified for CreateStateConstituency")
 	}
 
-	var r0 queries.StateAssemblyConstituency
+	var r0 queries.StateConstituency
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateStateAssemblyConstituencyParams) (queries.StateAssemblyConstituency, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateStateConstituencyParams) (queries.StateConstituency, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateStateAssemblyConstituencyParams) queries.StateAssemblyConstituency); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CreateStateConstituencyParams) queries.StateConstituency); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.StateAssemblyConstituency)
+		r0 = ret.Get(0).(queries.StateConstituency)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateStateAssemblyConstituencyParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, queries.CreateStateConstituencyParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
@@ -2054,12 +2054,12 @@ func (_m *Querier) DeleteState(ctx context.Context, id int16) error {
 	return r0
 }
 
-// DeleteStateAssemblyConstituency provides a mock function with given fields: ctx, id
-func (_m *Querier) DeleteStateAssemblyConstituency(ctx context.Context, id int32) error {
+// DeleteStateConstituency provides a mock function with given fields: ctx, id
+func (_m *Querier) DeleteStateConstituency(ctx context.Context, id int32) error {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteStateAssemblyConstituency")
+		panic("no return value specified for DeleteStateConstituency")
 	}
 
 	var r0 error
@@ -4430,28 +4430,28 @@ func (_m *Querier) GetSenatorialDistricts(ctx context.Context, stateID int32) ([
 	return r0, r1
 }
 
-// GetStateAssemblyConstituencies provides a mock function with given fields: ctx, arg
-func (_m *Querier) GetStateAssemblyConstituencies(ctx context.Context, arg queries.GetStateAssemblyConstituenciesParams) ([]queries.StateAssemblyConstituency, error) {
+// GetStateConstituencies provides a mock function with given fields: ctx, arg
+func (_m *Querier) GetStateConstituencies(ctx context.Context, arg queries.GetStateConstituenciesParams) ([]queries.StateConstituency, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetStateAssemblyConstituencies")
+		panic("no return value specified for GetStateConstituencies")
 	}
 
-	var r0 []queries.StateAssemblyConstituency
+	var r0 []queries.StateConstituency
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateAssemblyConstituenciesParams) ([]queries.StateAssemblyConstituency, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateConstituenciesParams) ([]queries.StateConstituency, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateAssemblyConstituenciesParams) []queries.StateAssemblyConstituency); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.GetStateConstituenciesParams) []queries.StateConstituency); ok {
 		r0 = rf(ctx, arg)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]queries.StateAssemblyConstituency)
+			r0 = ret.Get(0).([]queries.StateConstituency)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.GetStateAssemblyConstituenciesParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, queries.GetStateConstituenciesParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)
@@ -4460,23 +4460,23 @@ func (_m *Querier) GetStateAssemblyConstituencies(ctx context.Context, arg queri
 	return r0, r1
 }
 
-// GetStateAssemblyConstituencyByID provides a mock function with given fields: ctx, id
-func (_m *Querier) GetStateAssemblyConstituencyByID(ctx context.Context, id int32) (queries.StateAssemblyConstituency, error) {
+// GetStateConstituencyByID provides a mock function with given fields: ctx, id
+func (_m *Querier) GetStateConstituencyByID(ctx context.Context, id int32) (queries.StateConstituency, error) {
 	ret := _m.Called(ctx, id)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetStateAssemblyConstituencyByID")
+		panic("no return value specified for GetStateConstituencyByID")
 	}
 
-	var r0 queries.StateAssemblyConstituency
+	var r0 queries.StateConstituency
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int32) (queries.StateAssemblyConstituency, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int32) (queries.StateConstituency, error)); ok {
 		return rf(ctx, id)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int32) queries.StateAssemblyConstituency); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int32) queries.StateConstituency); ok {
 		r0 = rf(ctx, id)
 	} else {
-		r0 = ret.Get(0).(queries.StateAssemblyConstituency)
+		r0 = ret.Get(0).(queries.StateConstituency)
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, int32) error); ok {
@@ -5255,6 +5255,24 @@ func (_m *Querier) IncrementAssignmentResultCount(ctx context.Context, id int64)
 	var r0 error
 	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
 		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// IncrementAssignmentIntervalUpdates provides a mock function with given fields: ctx, arg
+func (_m *Querier) IncrementAssignmentIntervalUpdates(ctx context.Context, arg queries.IncrementAssignmentIntervalUpdatesParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for IncrementAssignmentIntervalUpdates")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.IncrementAssignmentIntervalUpdatesParams) error); ok {
+		r0 = rf(ctx, arg)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -6644,12 +6662,12 @@ func (_m *Querier) RecalculateSenatorialDistrictMetrics(ctx context.Context) err
 	return r0
 }
 
-// RecalculateStateAssemblyConstituencyMetrics provides a mock function with given fields: ctx
-func (_m *Querier) RecalculateStateAssemblyConstituencyMetrics(ctx context.Context) error {
+// RecalculateStateConstituencyMetrics provides a mock function with given fields: ctx
+func (_m *Querier) RecalculateStateConstituencyMetrics(ctx context.Context) error {
 	ret := _m.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for RecalculateStateAssemblyConstituencyMetrics")
+		panic("no return value specified for RecalculateStateConstituencyMetrics")
 	}
 
 	var r0 error
@@ -8236,26 +8254,26 @@ func (_m *Querier) UpdateState(ctx context.Context, arg queries.UpdateStateParam
 	return r0, r1
 }
 
-// UpdateStateAssemblyConstituency provides a mock function with given fields: ctx, arg
-func (_m *Querier) UpdateStateAssemblyConstituency(ctx context.Context, arg queries.UpdateStateAssemblyConstituencyParams) (queries.StateAssemblyConstituency, error) {
+// UpdateStateConstituency provides a mock function with given fields: ctx, arg
+func (_m *Querier) UpdateStateConstituency(ctx context.Context, arg queries.UpdateStateConstituencyParams) (queries.StateConstituency, error) {
 	ret := _m.Called(ctx, arg)
 
 	if len(ret) == 0 {
-		panic("no return value specified for UpdateStateAssemblyConstituency")
+		panic("no return value specified for UpdateStateConstituency")
 	}
 
-	var r0 queries.StateAssemblyConstituency
+	var r0 queries.StateConstituency
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateStateAssemblyConstituencyParams) (queries.StateAssemblyConstituency, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateStateConstituencyParams) (queries.StateConstituency, error)); ok {
 		return rf(ctx, arg)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateStateAssemblyConstituencyParams) queries.StateAssemblyConstituency); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, queries.UpdateStateConstituencyParams) queries.StateConstituency); ok {
 		r0 = rf(ctx, arg)
 	} else {
-		r0 = ret.Get(0).(queries.StateAssemblyConstituency)
+		r0 = ret.Get(0).(queries.StateConstituency)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdateStateAssemblyConstituencyParams) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, queries.UpdateStateConstituencyParams) error); ok {
 		r1 = rf(ctx, arg)
 	} else {
 		r1 = ret.Error(1)

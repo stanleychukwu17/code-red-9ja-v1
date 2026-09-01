@@ -5,6 +5,8 @@ import {
   updatePartyStateAllowances,
   getPartyAgentPaymentAllocation,
   togglePartyVerification,
+  getPartyAgentTargets,
+  updatePartyAgentTargets,
 } from "#/lib/server/parties";
 import { TileOptions } from "@repo/ui/components/tiles";
 import TrashcanIcon from "@repo/ui/icons/trashcan-icon";
@@ -143,9 +145,18 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
         open={openTargetDialog}
         onClose={() => setOpenTargetDialog(false)}
         partyId={data.id}
-        fetchTargets={async () => null}
+        fetchTargets={async (partyId) => {
+          const res = await getPartyAgentTargets({ data: partyId });
+          return res?.data?.targets ?? null;
+        }}
         updateTargets={async (partyId, values) => {
-          return { success: true };
+          const res = await updatePartyAgentTargets({
+            data: { partyID: partyId, targets: values },
+          });
+          if (!res.success) throw new Error(res.message || "Failed to update targets");
+          queryClient.invalidateQueries({ queryKey: ["parties"] });
+          toast.success("Agent targets saved!");
+          return res.data;
         }}
         onSuccess={() => {
           setOpenTargetDialog(false);
@@ -158,7 +169,7 @@ export const PartyDropdown = ({ data, className }: PartyDropdownProps) => {
         partyId={data.id}
         fetchAllocation={async (partyId) => {
           const res = await getPartyAgentPaymentAllocation({ data: partyId });
-          return res?.data?.agent_payment_allocation ?? null;
+          return res?.data?.agent_payment_allocation_kobo ?? res?.data?.agent_payment_allocation ?? null;
         }}
         updateAllocation={async (partyId, values) => {
           const res = await updatePartyStateAllowances({

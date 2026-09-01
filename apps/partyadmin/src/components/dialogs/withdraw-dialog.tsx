@@ -48,14 +48,18 @@ export function WithdrawDialog({
   };
 }) {
   const [amount, setAmount] = React.useState(100000);
-  const [selectedBank, setSelectedBank] = React.useState<{ code: string; name: string } | null>(null);
+  const [selectedBank, setSelectedBank] = React.useState<{
+    code: string;
+    name: string;
+  } | null>(null);
   const [bankOpen, setBankOpen] = React.useState(false);
   const [accountNumber, setAccountNumber] = React.useState("");
   const [narration, setNarration] = React.useState("");
   const [errorMsg, setErrorMsg] = React.useState("");
 
   const withdrawMutation = useMutation({
-    mutationFn: (variables: any) => withdrawFromPartyWallet({ data: variables }),
+    mutationFn: (variables: any) =>
+      withdrawFromPartyWallet({ data: variables }),
     onSuccess: (res: any) => {
       if (res && res.success) {
         alert("Withdrawal requested successfully!");
@@ -66,7 +70,7 @@ export function WithdrawDialog({
     },
     onError: (err: any) => {
       setErrorMsg(err.message || "Something went wrong");
-    }
+    },
   });
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,7 +116,7 @@ export function WithdrawDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
         <DialogHeader title="Withdraw" />
 
         <DialogPadding className="space-y-6 pb-6 max-h-[75vh] overflow-y-auto">
@@ -195,7 +199,9 @@ export function WithdrawDialog({
               maxLength={10}
               placeholder="Enter 10-digit account number"
               value={accountNumber}
-              onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ""))}
+              onChange={(e) =>
+                setAccountNumber(e.target.value.replace(/\D/g, ""))
+              }
               className="w-full h-14 px-4 rounded-xl border border-gray-200 bg-white text-c-80 font-medium text-[15px] focus:outline-none focus:border-c-60 focus:ring-0 transition"
             />
           </div>
@@ -215,7 +221,9 @@ export function WithdrawDialog({
           </div>
 
           {errorMsg && (
-            <p className="text-sm font-semibold text-red-500 mt-2">{errorMsg}</p>
+            <p className="text-sm font-semibold text-red-500 mt-2">
+              {errorMsg}
+            </p>
           )}
         </DialogPadding>
 

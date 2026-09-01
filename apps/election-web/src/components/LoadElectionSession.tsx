@@ -10,7 +10,7 @@ import {
   setSelectedElection,
   setSelectedElectionGroup,
 } from "#/redux/slice/electionSlice";
-import { getAutoSelectedSession } from "#/hooks/useAuth";
+import { getAutoSelectedSession } from "#/hooks/useAppContext";
 
 export default function LoadElectionSession() {
   const dispatch = useAppDispatch();

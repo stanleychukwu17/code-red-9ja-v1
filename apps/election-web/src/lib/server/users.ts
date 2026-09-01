@@ -14,6 +14,29 @@ export const getMyWallet = createServerFn({ method: "GET" }).handler(
   },
 );
 
+export const getMyWalletTransactions = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: { limit?: number; offset?: number } | undefined) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const params = new URLSearchParams();
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.offset) params.append("offset", String(data.offset));
+      const qs = params.toString();
+
+      const response = await apiFetch(
+        `${API_URL.getMyWalletTransactions}${qs ? `?${qs}` : ""}`,
+      );
+      return await response.json();
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch wallet transactions from API",
+      };
+    }
+  });
+
 export const generateReferralCode = createServerFn({ method: "POST" }).handler(
   async () => {
     try {

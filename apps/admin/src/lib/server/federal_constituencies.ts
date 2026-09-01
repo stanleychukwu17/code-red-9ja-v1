@@ -6,6 +6,7 @@ export const createFederalConstituency = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
+      code?: string;
       state_id: number;
       senatorial_district_id: number;
     }) => data,
@@ -29,6 +30,7 @@ export const updateFederalConstituency = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
+      code?: string;
       state_id: number;
       senatorial_district_id: number;
     }) => data,
@@ -70,10 +72,10 @@ export const getFederalConstituencyById = createServerFn({ method: "GET" })
   });
 
 export const getFederalConstituencies = createServerFn()
-  .inputValidator((data: { stateId?: number; senatorialDistrictId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { stateId, senatorialDistrictId, limit, cursor } }) => {
+  .inputValidator((data: { stateId?: number; senatorialDistrictId?: number; limit?: number; cursor?: string | number; search?: string }) => data)
+  .handler(async ({ data: { stateId, senatorialDistrictId, limit, cursor, search } }) => {
     try {
-      return await apiFetchJson(API_URL.getFederalConstituencies(stateId, senatorialDistrictId, limit, cursor));
+      return await apiFetchJson(API_URL.getFederalConstituencies(stateId, senatorialDistrictId, limit, cursor, search));
     } catch (error: any) {
       return { status: "failed", error: error?.message || "Failed to fetch federal constituencies from API" };
     }

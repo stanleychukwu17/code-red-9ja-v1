@@ -19,6 +19,8 @@ import PaperIcon from "@repo/ui/icons/navbar/paper-icon";
 import PaperSolidIcon from "@repo/ui/icons/navbar/paper-solid-icon";
 import BrickIcon from "@repo/ui/icons/navbar/brick-icon";
 import BrickSolidIcon from "@repo/ui/icons/navbar/brick-solid-icon";
+import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
+import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -69,16 +71,16 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
   {
     id: "elections",
     label: "Elections",
-    icon: <CubeIcon className={ICON_CLASS} />,
-    selectedIcon: <CubeSolidIcon className={SELECTED_ICON_CLASS} />,
+    icon: <CalendarIcon className={ICON_CLASS} />,
+    selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.elections,
   },
   {
     id: "bodies",
     label: "Bodies",
-    icon: <CalendarIcon className={ICON_CLASS} />,
-    selectedIcon: <CalendarSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.bodies,
+    icon: <CubeIcon className={ICON_CLASS} />,
+    selectedIcon: <CubeSolidIcon className={SELECTED_ICON_CLASS} />,
   },
   {
     id: "users",
@@ -102,18 +104,32 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     href: APP_URL.applications,
   },
   {
-    id: "notifications",
-    label: "Notifications",
-    icon: <NotificationIcon className={ICON_CLASS} />,
-    selectedIcon: <NotificationSolidIcon className={SELECTED_ICON_CLASS} />,
-    href: APP_URL.notifications,
+    id: "marketing",
+    label: "Marketing",
+    icon: <BalonIcon className={ICON_CLASS} />,
+    selectedIcon: <BalonSolidIcon className={SELECTED_ICON_CLASS} />,
+    href: APP_URL.marketing,
   },
+  // {
+  //   id: "notifications",
+  //   label: "Notifications",
+  //   icon: <NotificationIcon className={ICON_CLASS} />,
+  //   selectedIcon: <NotificationSolidIcon className={SELECTED_ICON_CLASS} />,
+  //   href: APP_URL.notifications,
+  // },
   {
     id: "logs",
     label: "Logs",
     icon: <BrickIcon className={ICON_CLASS} />,
     selectedIcon: <BrickSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.logs,
+  },
+  {
+    id: "inec-result-grabber",
+    label: "INEC Results",
+    icon: <PaperIcon className={ICON_CLASS} />,
+    selectedIcon: <PaperSolidIcon className={SELECTED_ICON_CLASS} />,
+    href: APP_URL.inecResultGrabber.main,
   },
 ];
 

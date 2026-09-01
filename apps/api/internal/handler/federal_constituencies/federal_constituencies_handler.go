@@ -7,13 +7,14 @@ import (
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
 type FederalConstituenciesService interface {
-	CreateFederalConstituency(ctx context.Context, name string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string) (queries.FederalConstituency, error)
+	CreateFederalConstituency(ctx context.Context, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string) (queries.FederalConstituency, error)
 	GetFederalConstituencyByID(ctx context.Context, id int32) (queries.FederalConstituency, error)
-	UpdateFederalConstituency(ctx context.Context, id int32, name string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string) (queries.FederalConstituency, error)
+	UpdateFederalConstituency(ctx context.Context, id int32, name string, code string, stateID int32, stateName string, senatorialDistrictID int32, senatorialDistrictName string) (queries.FederalConstituency, error)
 	DeleteFederalConstituency(ctx context.Context, id int32) error
 	GetFederalConstituencies(ctx context.Context, stateID, senatorialDistrictID int32) ([]queries.FederalConstituency, error)
 }
@@ -33,15 +34,17 @@ func NewHandler(fcService FederalConstituenciesService, q *queries.Queries, util
 }
 
 type CreateFederalConstituencyRequest struct {
-	Name                 string `json:"name"`
-	StateID              int32  `json:"state_id"`
-	SenatorialDistrictID int32  `json:"senatorial_district_id"`
+	Name                 string  `json:"name"`
+	Code                 *string `json:"code"`
+	StateID              int32   `json:"state_id"`
+	SenatorialDistrictID int32   `json:"senatorial_district_id"`
 }
 
 type UpdateFederalConstituencyRequest struct {
-	Name                 string `json:"name"`
-	StateID              int32  `json:"state_id"`
-	SenatorialDistrictID int32  `json:"senatorial_district_id"`
+	Name                 string  `json:"name"`
+	Code                 *string `json:"code"`
+	StateID              int32   `json:"state_id"`
+	SenatorialDistrictID int32   `json:"senatorial_district_id"`
 }
 
 // CreateFederalConstituency godoc
@@ -64,8 +67,8 @@ func (h *Handler) CreateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if req.Name == "" || req.StateID == 0 || req.SenatorialDistrictID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, state_id, and senatorial_district_id are required")
+	if req.Name == "" || req.StateID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name and state_id are required")
 		return
 	}
 
@@ -79,14 +82,22 @@ func (h *Handler) CreateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Resolve senatorial district name
-	district, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
-		return
+	districtName := ""
+	if req.SenatorialDistrictID > 0 {
+		district, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
+			return
+		}
+		districtName = district.Name
 	}
 
-	fc, err := h.fcService.CreateFederalConstituency(r.Context(), req.Name, req.StateID, state.Name, req.SenatorialDistrictID, district.Name)
+	codeStr := ""
+	if req.Code != nil {
+		codeStr = *req.Code
+	}
+
+	fc, err := h.fcService.CreateFederalConstituency(r.Context(), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create federal constituency: "+err.Error())
 		return
@@ -157,8 +168,8 @@ func (h *Handler) UpdateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if req.Name == "" || req.StateID == 0 || req.SenatorialDistrictID == 0 {
-		h.utils.RespondError(w, http.StatusBadRequest, "name, state_id, and senatorial_district_id are required")
+	if req.Name == "" || req.StateID == 0 {
+		h.utils.RespondError(w, http.StatusBadRequest, "name and state_id are required")
 		return
 	}
 
@@ -179,14 +190,22 @@ func (h *Handler) UpdateFederalConstituency(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Resolve senatorial district name
-	district, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
-	if err != nil {
-		h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
-		return
+	districtName := ""
+	if req.SenatorialDistrictID > 0 {
+		district, err := h.queries.GetSenatorialDistrictByID(r.Context(), req.SenatorialDistrictID)
+		if err != nil {
+			h.utils.RespondError(w, http.StatusBadRequest, "Invalid senatorial district ID: "+err.Error())
+			return
+		}
+		districtName = district.Name
 	}
 
-	updatedFC, err := h.fcService.UpdateFederalConstituency(r.Context(), int32(id), req.Name, req.StateID, state.Name, req.SenatorialDistrictID, district.Name)
+	codeStr := ""
+	if req.Code != nil {
+		codeStr = *req.Code
+	}
+
+	updatedFC, err := h.fcService.UpdateFederalConstituency(r.Context(), int32(id), req.Name, codeStr, req.StateID, state.Name, req.SenatorialDistrictID, districtName)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update federal constituency: "+err.Error())
 		return
@@ -314,6 +333,25 @@ func (h *Handler) GetFederalConstituencies(w http.ResponseWriter, r *http.Reques
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch federal constituencies: "+err.Error())
 		return
+	}
+
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []queries.FederalConstituency
+		for _, c := range constituencies {
+			codeVal := ""
+			if c.Code.Valid {
+				codeVal = c.Code.String
+			}
+			if strings.Contains(strings.ToLower(c.Name), searchLower) ||
+				strings.Contains(strings.ToLower(codeVal), searchLower) ||
+				strings.Contains(strings.ToLower(c.StateName), searchLower) ||
+				strings.Contains(strings.ToLower(c.SenatorialDistrictName.String), searchLower) {
+				filtered = append(filtered, c)
+			}
+		}
+		constituencies = filtered
 	}
 
 	startIndex := 0

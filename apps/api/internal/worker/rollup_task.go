@@ -75,10 +75,83 @@ func (processor *RedisTaskProcessor) ProcessRollupElection() {
 	}
 }
 
+// ProcessFullElectionRollup executes the entire bottom-up election rollup hierarchy
+// sequentially in strict order, guaranteeing that child scopes are fully aggregated
+// before parent scopes run, avoiding race conditions and reducing DB spikes.
+func (processor *RedisTaskProcessor) ProcessFullElectionRollup() {
+	ctx := context.Background()
+	slog.Info("starting sequential full election rollup reconciliation")
+
+	// 1. Ward Rollup (from Polling Units)
+	if err := processor.q.RollupWardFinalResults(ctx); err != nil {
+		slog.Error("failed to rollup ward final results", "error", err)
+	}
+
+	// 2. State Constituency & LGA Rollup (from Wards)
+	if err := processor.q.RollupStateConstituencyFinalResults(ctx); err != nil {
+		slog.Error("failed to rollup state constituency final results", "error", err)
+	}
+	if err := processor.q.RollupLGAFinalResults(ctx); err != nil {
+		slog.Error("failed to rollup lga final results", "error", err)
+	}
+
+	// 3. Federal Constituency & Senatorial District Rollup (from LGAs)
+	if err := processor.q.RollupFederalConstituencyFinalResults(ctx); err != nil {
+		slog.Error("failed to rollup federal constituency final results", "error", err)
+	}
+	if err := processor.q.RollupSenatorialDistrictFinalResults(ctx); err != nil {
+		slog.Error("failed to rollup senatorial district final results", "error", err)
+	}
+
+	// 4. State Rollup (from Senatorial Districts)
+	if err := processor.q.RollupStateFinalResults(ctx); err != nil {
+		slog.Error("failed to rollup state final results", "error", err)
+	}
+
+	// 5. Nationwide / Presidential Rollup (from States)
+	if err := processor.q.RollupElectionFinalResults(ctx); err != nil {
+		slog.Error("failed to rollup election final results", "error", err)
+	}
+
+	// 6. Update candidate total vote counts across all election scopes
+	if err := processor.q.UpdateCandidatesFromWardElections(ctx); err != nil {
+		slog.Error("failed to update election_candidates from ward final results", "error", err)
+	}
+	if err := processor.q.UpdateCandidatesFromStateConstituencyElections(ctx); err != nil {
+		slog.Error("failed to update election_candidates from state constituency final results", "error", err)
+	}
+	if err := processor.q.UpdateCandidatesFromLGAElections(ctx); err != nil {
+		slog.Error("failed to update election_candidates from lga final results", "error", err)
+	}
+	if err := processor.q.UpdateCandidatesFromFederalConstituencyElections(ctx); err != nil {
+		slog.Error("failed to update election_candidates from federal constituency final results", "error", err)
+	}
+	if err := processor.q.UpdateCandidatesFromSenatorialDistrictElections(ctx); err != nil {
+		slog.Error("failed to update election_candidates from senatorial district final results", "error", err)
+	}
+	if err := processor.q.UpdateCandidatesFromStateElections(ctx); err != nil {
+		slog.Error("failed to update election_candidates from state final results", "error", err)
+	}
+	if err := processor.q.UpdateCandidatesFromNationwideElections(ctx); err != nil {
+		slog.Error("failed to update election_candidates from nationwide final results", "error", err)
+	}
+
+	slog.Info("sequential full election rollup reconciliation completed")
+}
+
 // cacheElectionResult fetches the freshly-computed election_final_result row and writes
 // it as JSON to Redis with a 15-minute TTL.
 func (processor *RedisTaskProcessor) cacheElectionResult(ctx context.Context, electionID int64) error {
 	slog.Info("cacheElectionResult is temporarily disabled due to schema migration")
 	return nil
+}
+
+func (processor *RedisTaskProcessor) ProcessDailyMarketingCampaignDeductions() {
+	updated, err := processor.q.ProcessDailyMarketingCampaignDeductions(context.Background())
+	if err != nil {
+		slog.Error("failed to process daily marketing campaign deductions", "error", err)
+	} else {
+		slog.Info("processed daily marketing campaign deductions", "count", len(updated))
+	}
 }
 

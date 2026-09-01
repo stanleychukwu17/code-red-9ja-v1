@@ -94,7 +94,7 @@ CREATE TABLE elections (
   state_id SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
-  state_constituency_id INT REFERENCES state_assembly_constituencies(id) ON DELETE SET NULL,
+  state_constituency_id INT REFERENCES state_constituencies(id) ON DELETE SET NULL,
   lga_id INT REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
   office_id BIGINT REFERENCES offices(id) ON DELETE RESTRICT NOT NULL,
@@ -113,16 +113,7 @@ CREATE TABLE elections (
   results_submitted_count INT NOT NULL DEFAULT 0,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW(),
-  CONSTRAINT chk_election_scope_location CHECK (
-    (scope = 'nationwide' AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'state' AND state_id IS NOT NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'senatorial-district' AND senatorial_district_id IS NOT NULL AND state_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'federal-constituency' AND federal_constituency_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'state-constituency' AND state_constituency_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND lga_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'lga' AND lga_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND ward_id IS NULL) OR
-    (scope = 'ward' AND ward_id IS NOT NULL AND state_id IS NULL AND senatorial_district_id IS NULL AND federal_constituency_id IS NULL AND state_constituency_id IS NULL AND lga_id IS NULL)
-  )
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE INDEX idx_elections_election_group_id ON elections(election_group_id);
@@ -152,21 +143,21 @@ CREATE INDEX idx_election_candidates_election_id ON election_candidates(election
 CREATE INDEX idx_election_candidates_candidate_id ON election_candidates(candidate_id);
 CREATE INDEX idx_election_candidates_party_id ON election_candidates(party_id);
 
-INSERT INTO election_groups (
-  id, name, rank, elections_count, states_count, election_date, created_at, updated_at
-) OVERRIDING SYSTEM VALUE VALUES
-(1, '2027 Presidential Election', 1, 1, 37, '2027-01-16', '2026-06-26 08:54:12.15353+00', '2026-06-26 11:05:26.181615+00'),
-(2, '2026 Governorship Election (Osun)', 2, 1, 1, '2026-08-15', '2026-06-26 11:05:05.893034+00', '2026-06-26 11:05:05.893034+00');
+-- INSERT INTO election_groups (
+--   id, name, rank, elections_count, states_count, election_date, created_at, updated_at
+-- ) OVERRIDING SYSTEM VALUE VALUES
+-- (1, '2027 Presidential Election', 1, 1, 37, '2027-01-16', '2026-06-26 08:54:12.15353+00', '2026-06-26 11:05:26.181615+00'),
+-- (2, '2026 Governorship Election (Osun)', 2, 1, 1, '2026-08-15', '2026-06-26 11:05:05.893034+00', '2026-06-26 11:05:05.893034+00');
 
-ALTER TABLE election_groups ALTER COLUMN id RESTART WITH 3;
+-- ALTER TABLE election_groups ALTER COLUMN id RESTART WITH 3;
 
-INSERT INTO elections (
-  id, name, rank, candidates_count, election_date, election_group_id, election_group_name, office_id, office_name, scope, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, created_at, updated_at
-) OVERRIDING SYSTEM VALUE VALUES
-(1, 'Presidential Election', 1, 0, '2027-01-16', 1, '2027 President Election', 1, 'President', 'nationwide', NULL, NULL, NULL, NULL, NULL, NULL, '2026-06-26 08:54:12.15353+00', '2026-06-26 08:54:12.15353+00'),
-(2, 'Governorship Election (Osun)', 2, 0, '2026-08-15', 2, '2026 Governorship Election (Osun)', 2, 'Governor', 'state', 29, NULL, NULL, NULL, NULL, NULL, '2026-06-26 11:05:05.893034+00', '2026-06-26 11:05:05.893034+00');
+-- INSERT INTO elections (
+--   id, name, rank, candidates_count, election_date, election_group_id, election_group_name, office_id, office_name, scope, state_id, senatorial_district_id, federal_constituency_id, state_constituency_id, lga_id, ward_id, created_at, updated_at
+-- ) OVERRIDING SYSTEM VALUE VALUES
+-- (1, 'Presidential Election', 1, 0, '2027-01-16', 1, '2027 President Election', 1, 'President', 'nationwide', NULL, NULL, NULL, NULL, NULL, NULL, '2026-06-26 08:54:12.15353+00', '2026-06-26 08:54:12.15353+00'),
+-- (2, 'Governorship Election (Osun)', 2, 0, '2026-08-15', 2, '2026 Governorship Election (Osun)', 2, 'Governor', 'state', 29, NULL, NULL, NULL, NULL, NULL, '2026-06-26 11:05:05.893034+00', '2026-06-26 11:05:05.893034+00');
 
-ALTER TABLE elections ALTER COLUMN id RESTART WITH 3;
+-- ALTER TABLE elections ALTER COLUMN id RESTART WITH 3;
 
 -- +goose Down
 DROP TABLE IF EXISTS election_candidates;

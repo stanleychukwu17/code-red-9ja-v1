@@ -24,7 +24,7 @@ export interface EarningsAllocation {
   attendance: number;
   election_start: number;
   election_end: number;
-  live_voters_referred: number;
+  target_live_voters_referred_count: number;
 }
 
 const ALLOCATION_FIELDS: { name: keyof EarningsAllocation; label: string }[] = [
@@ -34,7 +34,7 @@ const ALLOCATION_FIELDS: { name: keyof EarningsAllocation; label: string }[] = [
   { name: "attendance", label: "Attendance" },
   { name: "election_start", label: "Start Election" },
   { name: "election_end", label: "End Election" },
-  { name: "live_voters_referred", label: "Live Voters Referred" },
+  { name: "target_live_voters_referred_count", label: "Live Voters Referred" },
 ];
 
 function AllocationField({
@@ -111,7 +111,7 @@ export function EarningsAllocationDialog({
       attendance: 0,
       election_start: 0,
       election_end: 0,
-      live_voters_referred: 0,
+      target_live_voters_referred_count: 0,
     },
     onSubmit: async ({ value }) => {
       saveMutation.mutate(value);
@@ -121,7 +121,12 @@ export function EarningsAllocationDialog({
   React.useEffect(() => {
     if (open && settingData) {
       ALLOCATION_FIELDS.forEach(({ name }) => {
-        form.setFieldValue(name, parsePercent(settingData[name]));
+        const val =
+          settingData[name] ??
+          (name === "target_live_voters_referred_count"
+            ? (settingData as any).live_voters_referred
+            : undefined);
+        form.setFieldValue(name, parsePercent(val));
       });
       setError(null);
     }
@@ -161,7 +166,7 @@ export function EarningsAllocationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[480px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[480px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader title={`Earnings Allocation (${roleName})`} />
 
         {isLoading ? (

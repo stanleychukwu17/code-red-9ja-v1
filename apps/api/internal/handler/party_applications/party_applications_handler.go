@@ -21,7 +21,7 @@ type PartyApplicationsService interface {
 	SubmitApplication(ctx context.Context, input partyapplications.SubmitApplicationInput) ([]queries.PartyApplication, error)
 	SubmitSupervisorApplication(ctx context.Context, input partyapplications.SubmitSupervisorApplicationInput) (queries.PartyApplication, error)
 	GetApplicationByID(ctx context.Context, id int64) (queries.PartyApplication, error)
-	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
+	ListApplications(ctx context.Context, userID int64, partyID int16, electionGroupID int64, status string, stateID int16, lgaID, wardID int32, limit int32, cursor int64) ([]queries.ListApplicationsRow, error)
 	RejectApplication(ctx context.Context, id int64, reason string) (queries.PartyApplication, error)
 	CancelApplication(ctx context.Context, id int64) (queries.PartyApplication, error)
 	ApproveApplication(ctx context.Context, input partyapplications.ApproveApplicationInput) (queries.PartyApplication, error)
@@ -83,7 +83,7 @@ type SubmitApplicationRequest struct {
 // @Failure      409  {object} map[string]interface{} "Already applied for this election group"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Security     BearerAuth
-// @Router       /polling-agent-applications [post]
+// @Router       /party-applications [post]
 func (h *Handler) SubmitApplication(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
@@ -246,7 +246,7 @@ func (h *Handler) SubmitSupervisorApplication(w http.ResponseWriter, r *http.Req
 // @Failure      403  {object} map[string]interface{} "Permission denied"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Security     BearerAuth
-// @Router       /polling-agent-applications [get]
+// @Router       /party-applications [get]
 func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
@@ -290,10 +290,10 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := false
 	isPartyAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 		}
-		if rCode == "party_admin" {
+		if rCode == "party_admin" || rCode == "super_party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -312,18 +312,40 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	var stateID int16
+	var lgaID, wardID int32
+
+	if val := r.URL.Query().Get("state_id"); val != "" {
+		if v, _ := strconv.ParseInt(val, 10, 16); v > 0 {
+			stateID = int16(v)
+		}
+	}
+	if val := r.URL.Query().Get("lga_id"); val != "" {
+		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
+			lgaID = int32(v)
+		}
+	}
+	if val := r.URL.Query().Get("ward_id"); val != "" {
+		if v, _ := strconv.ParseInt(val, 10, 32); v > 0 {
+			wardID = int32(v)
+		}
+	}
+
 	slog.Info("ListApplications query params",
 		"filterUserID", filterUserID,
 		"partyID", partyID,
 		"electionGroupID", electionGroupID,
 		"status", status,
+		"stateID", stateID,
+		"lgaID", lgaID,
+		"wardID", wardID,
 		"limit", limit,
 		"cursor", cursor,
 		"requester.PartyID", requester.PartyID,
 		"isPlatformAdmin", isPlatformAdmin,
 		"isPartyAdmin", isPartyAdmin,
 	)
-	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, limit, cursor)
+	apps, err := h.service.ListApplications(r.Context(), filterUserID, partyID, electionGroupID, status, stateID, lgaID, wardID, limit, cursor)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to list applications: "+err.Error())
 		return
@@ -356,7 +378,7 @@ func (h *Handler) ListApplications(w http.ResponseWriter, r *http.Request) {
 // @Param        polling_unit_id   query int true "The polling unit the applicant originally applied for"
 // @Success      200  {object} map[string]interface{}
 // @Security     BearerAuth
-// @Router       /polling-agent-applications/recommendations [get]
+// @Router       /party-applications/recommendations [get]
 func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.Request) {
 	partyID, _ := strconv.ParseInt(r.URL.Query().Get("party_id"), 10, 64)
 	electionGroupID, _ := strconv.ParseInt(r.URL.Query().Get("election_group_id"), 10, 64)
@@ -391,7 +413,7 @@ func (h *Handler) GetPollingUnitRecommendations(w http.ResponseWriter, r *http.R
 // @Failure      403  {object} map[string]interface{} "Permission denied"
 // @Failure      404  {object} map[string]interface{} "Application not found"
 // @Security     BearerAuth
-// @Router       /polling-agent-applications/{id} [get]
+// @Router       /party-applications/{id} [get]
 func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
@@ -463,7 +485,7 @@ type ApproveApplicationRequest struct {
 // @Failure      409  {object} map[string]interface{} "Constraint conflict (already assigned/processed)"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Security     BearerAuth
-// @Router       /polling-agent-applications/{id}/approve [post]
+// @Router       /party-applications/{id}/approve [post]
 func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
@@ -582,7 +604,7 @@ type RejectApplicationRequest struct {
 // @Failure      409  {object} map[string]interface{} "Application already processed"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Security     BearerAuth
-// @Router       /polling-agent-applications/{id}/reject [post]
+// @Router       /party-applications/{id}/reject [post]
 func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {
@@ -668,7 +690,7 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 // @Failure      409  {object} map[string]interface{} "Application already processed"
 // @Failure      500  {object} map[string]interface{} "Internal server error"
 // @Security     BearerAuth
-// @Router       /polling-agent-applications/{id}/cancel [post]
+// @Router       /party-applications/{id}/cancel [post]
 func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 	claims, ok := h.utils.CheckRoles(r, w, apimiddleware.ClaimsKey)
 	if !ok {

@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { useQuery } from "@tanstack/react-query";
 import { getSingleStateStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
@@ -39,7 +39,7 @@ export function StateElectionSupervisorPage() {
     selectedElectionGroup,
     selectedElection,
     selectedSupervisorAssignment,
-  } = useAuth();
+  } = useAppContext();
 
   const currentAssignment = selectedSupervisorAssignment?.data;
 

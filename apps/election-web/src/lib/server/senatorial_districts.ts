@@ -7,6 +7,7 @@ export const createSenatorialDistrict = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
+      code?: string;
       description: string;
       coalition_center: string;
       state_id: number;
@@ -33,6 +34,7 @@ export const updateSenatorialDistrict = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
+      code?: string;
       description: string;
       coalition_center: string;
       state_id: number;

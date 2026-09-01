@@ -46,6 +46,12 @@ UPDATE users
 SET password_hash = $2
 WHERE fake_id = $1;
 
+-- name: GetUserByID :one
+SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
+       u.referral_code, u.referred_by_id
+FROM users u
+WHERE u.id = $1 LIMIT 1;
+
 -- name: GetUserByFakeID :one
 SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
        u.referral_code

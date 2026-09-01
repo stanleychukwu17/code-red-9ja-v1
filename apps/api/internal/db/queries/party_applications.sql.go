@@ -150,6 +150,7 @@ const getPendingApplicationForAutoAccept = `-- name: GetPendingApplicationForAut
 SELECT 
   pa.id,
   pa.party_id,
+  pa.election_group_id,
   pa.polling_unit_id,
   pa.role,
   pa.state_id,
@@ -172,6 +173,7 @@ type GetPendingApplicationForAutoAcceptParams struct {
 type GetPendingApplicationForAutoAcceptRow struct {
 	ID                     int64       `json:"id"`
 	PartyID                int16       `json:"party_id"`
+	ElectionGroupID        int64       `json:"election_group_id"`
 	PollingUnitID          pgtype.Int4 `json:"polling_unit_id"`
 	Role                   string      `json:"role"`
 	StateID                pgtype.Int2 `json:"state_id"`
@@ -186,6 +188,7 @@ func (q *Queries) GetPendingApplicationForAutoAccept(ctx context.Context, arg Ge
 	err := row.Scan(
 		&i.ID,
 		&i.PartyID,
+		&i.ElectionGroupID,
 		&i.PollingUnitID,
 		&i.Role,
 		&i.StateID,
@@ -194,6 +197,65 @@ func (q *Queries) GetPendingApplicationForAutoAccept(ctx context.Context, arg Ge
 		&i.AutoAcceptApplications,
 	)
 	return i, err
+}
+
+const getPendingApplicationsForUserAutoAccept = `-- name: GetPendingApplicationsForUserAutoAccept :many
+SELECT 
+  pa.id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.role,
+  pa.state_id,
+  pa.lga_id,
+  pa.ward_id,
+  p.auto_accept_applications
+FROM party_applications pa
+JOIN parties p ON pa.party_id = p.id
+WHERE pa.user_id = $1 
+  AND pa.status = 'pending'
+`
+
+type GetPendingApplicationsForUserAutoAcceptRow struct {
+	ID                     int64       `json:"id"`
+	PartyID                int16       `json:"party_id"`
+	ElectionGroupID        int64       `json:"election_group_id"`
+	PollingUnitID          pgtype.Int4 `json:"polling_unit_id"`
+	Role                   string      `json:"role"`
+	StateID                pgtype.Int2 `json:"state_id"`
+	LgaID                  pgtype.Int4 `json:"lga_id"`
+	WardID                 pgtype.Int4 `json:"ward_id"`
+	AutoAcceptApplications []byte      `json:"auto_accept_applications"`
+}
+
+func (q *Queries) GetPendingApplicationsForUserAutoAccept(ctx context.Context, userID int64) ([]GetPendingApplicationsForUserAutoAcceptRow, error) {
+	rows, err := q.db.Query(ctx, getPendingApplicationsForUserAutoAccept, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetPendingApplicationsForUserAutoAcceptRow
+	for rows.Next() {
+		var i GetPendingApplicationsForUserAutoAcceptRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.PartyID,
+			&i.ElectionGroupID,
+			&i.PollingUnitID,
+			&i.Role,
+			&i.StateID,
+			&i.LgaID,
+			&i.WardID,
+			&i.AutoAcceptApplications,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const getPollingUnitsWithAgentCounts = `-- name: GetPollingUnitsWithAgentCounts :many
@@ -320,7 +382,7 @@ SELECT
   lg.name AS lga_name,
   ct.name AS city_name,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_code,
+  pu.pu_code AS polling_unit_code,
   COALESCE(
     (
       SELECT COUNT(*)::integer 
@@ -346,9 +408,12 @@ WHERE
   ($2::smallint = 0 OR pa.party_id = $2) AND
   ($3::bigint = 0 OR pa.election_group_id = $3) AND
   ($4::varchar = '' OR pa.status = $4) AND
-  ($5::bigint = 0 OR pa.id < $5)
+  ($5::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = $5) AND
+  ($6::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = $6) AND
+  ($7::integer = 0 OR COALESCE(pa.ward_id, u.current_ward, pu.ward_id) = $7) AND
+  ($8::bigint = 0 OR pa.id < $8)
 ORDER BY pa.id DESC
-LIMIT $6
+LIMIT $9
 `
 
 type ListApplicationsParams struct {
@@ -356,6 +421,9 @@ type ListApplicationsParams struct {
 	PartyID         int16  `json:"party_id"`
 	ElectionGroupID int64  `json:"election_group_id"`
 	Status          string `json:"status"`
+	StateID         int16  `json:"state_id"`
+	LgaID           int32  `json:"lga_id"`
+	WardID          int32  `json:"ward_id"`
 	Cursor          int64  `json:"cursor"`
 	LimitVal        int32  `json:"limit_val"`
 }
@@ -409,6 +477,9 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 		arg.PartyID,
 		arg.ElectionGroupID,
 		arg.Status,
+		arg.StateID,
+		arg.LgaID,
+		arg.WardID,
 		arg.Cursor,
 		arg.LimitVal,
 	)

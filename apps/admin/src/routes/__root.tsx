@@ -1,4 +1,10 @@
-import { ClientOnly, HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import {
+  ClientOnly,
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router";
 import { Provider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
@@ -43,7 +49,6 @@ function RootLayout() {
   );
 }
 
-
 const queryClient = new QueryClient();
 
 function RootDocument({ children }: { children: React.ReactNode }) {
@@ -55,12 +60,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body
-        className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
-      >
+      <body className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]">
         <Provider store={store}>
           <QueryClientProvider client={queryClient}>
-            <Toaster />
+            <Toaster position="top-center" />
             <ClientOnly>
               <LoadSitePreference sitePreference={sitePreference} />
               <LoadAuthSession />

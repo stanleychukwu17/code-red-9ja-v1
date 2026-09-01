@@ -138,3 +138,48 @@ export function SelectedItemsContainer<T extends Item>({
     </div>
   );
 }
+
+interface SelectableChipProps {
+  label: string;
+  isSelected: boolean;
+  onClick: () => void;
+  className?: string;
+}
+
+export function SelectableChip({
+  label,
+  isSelected,
+  onClick,
+  className,
+}: SelectableChipProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "px-4 py-2 rounded-lg text-sm transition cursor-pointer",
+        isSelected
+          ? "bg-secondary/20 font-medium text-c-80"
+          : "bg-c-5 text-c-80 hover:bg-black/5",
+        className
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
+export function GroupSectionTitle({
+  title,
+  className,
+}: {
+  title: string;
+  className?: string;
+}) {
+  return (
+    <h4 className={cn("text-[14px] font-bold text-c-75 pb-1", className)}>
+      {title}
+    </h4>
+  );
+}
+

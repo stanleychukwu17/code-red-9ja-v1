@@ -19,9 +19,36 @@ INSERT INTO polling_unit_results (
   candidate_results,
   result_sheet_image_url,
   result_sheet_video_url,
-  uploaded_by_inec
+  uploaded_by_inec,
+  status,
+  ai_extracted_data,
+  result_is_ai_generated,
+  ai_confidence_score
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20
+  sqlc.narg('assignment_id'),
+  sqlc.arg('election_id'),
+  sqlc.arg('election_group_id'),
+  sqlc.arg('polling_unit_id'),
+  sqlc.narg('submitted_by'),
+  sqlc.narg('party_id'),
+  sqlc.narg('state_id'),
+  sqlc.narg('senatorial_district_id'),
+  sqlc.narg('federal_constituency_id'),
+  sqlc.narg('state_constituency_id'),
+  sqlc.narg('lga_id'),
+  sqlc.narg('ward_id'),
+  sqlc.arg('accredited_voters'),
+  sqlc.arg('votes_cast'),
+  sqlc.arg('valid_votes'),
+  sqlc.arg('rejected_votes'),
+  sqlc.arg('candidate_results'),
+  sqlc.narg('result_sheet_image_url'),
+  sqlc.narg('result_sheet_video_url'),
+  sqlc.arg('uploaded_by_inec'),
+  COALESCE(sqlc.narg('status')::varchar(30), 'submitted'),
+  sqlc.narg('ai_extracted_data'),
+  sqlc.narg('result_is_ai_generated'),
+  sqlc.narg('ai_confidence_score')
 ) RETURNING *;
 
 -- name: UpdatePollingUnitResult :one
@@ -126,3 +153,32 @@ SET
   results_submitted_count = results_submitted_count + 1,
   updated_at              = NOW()
 WHERE party_id = $1 AND election_group_id = $2;
+
+-- name: UpdatePollingUnitResultAIExtraction :one
+UPDATE polling_unit_results
+SET
+  accredited_voters      = $2,
+  votes_cast             = $3,
+  valid_votes            = $4,
+  rejected_votes         = $5,
+  candidate_results      = $6,
+  status                 = $7,
+  ai_extracted_data      = $8,
+  result_is_ai_generated = $9,
+  ai_confidence_score    = $10,
+  disputed_reason        = $11,
+  updated_at             = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: GetUserPollingUnitResultInElectionGroup :one
+SELECT polling_unit_id
+FROM polling_unit_results
+WHERE submitted_by = $1 AND election_group_id = $2
+LIMIT 1;
+
+-- name: GetPollingUnitResultByUserAndElection :one
+SELECT *
+FROM polling_unit_results
+WHERE election_id = $1 AND polling_unit_id = $2 AND submitted_by = $3
+LIMIT 1;

@@ -15,33 +15,41 @@ import { MoneyInput } from "../input";
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 export type AgentRoles =
-  | "pollingAgent"
-  | "wardElectionSupervisor"
-  | "lgaElectionSupervisor"
-  | "stateElectionSupervisor";
+  | "polling_agent"
+  | "ward_election_supervisor"
+  | "lga_election_supervisor"
+  | "state_election_supervisor";
 
 export type PaymentConfig = { default: number; states: Record<string, number> };
 export type AgentPaymentAllocation = Record<AgentRoles, PaymentConfig>;
 
 const ROLE_ORDER: AgentRoles[] = [
-  "pollingAgent",
-  "wardElectionSupervisor",
-  "lgaElectionSupervisor",
-  "stateElectionSupervisor",
+  "polling_agent",
+  "ward_election_supervisor",
+  "lga_election_supervisor",
+  "state_election_supervisor",
 ];
 
 const ROLE_LABELS: Record<AgentRoles, string> = {
-  pollingAgent: "Polling Agent",
-  wardElectionSupervisor: "Ward Election Supervisor",
-  lgaElectionSupervisor: "LGA Election Supervisor",
-  stateElectionSupervisor: "State Election Supervisor",
+  polling_agent: "Polling Agent",
+  ward_election_supervisor: "Ward Election Supervisor",
+  lga_election_supervisor: "LGA Election Supervisor",
+  state_election_supervisor: "State Election Supervisor",
 };
 
 const DEFAULT_ALLOCATION: AgentPaymentAllocation = {
-  pollingAgent: { default: 0, states: {} },
-  wardElectionSupervisor: { default: 0, states: {} },
-  lgaElectionSupervisor: { default: 0, states: {} },
-  stateElectionSupervisor: { default: 0, states: {} },
+  polling_agent: { default: 0, states: {} },
+  ward_election_supervisor: { default: 0, states: {} },
+  lga_election_supervisor: { default: 0, states: {} },
+  state_election_supervisor: { default: 0, states: {} },
+};
+
+// Map legacy camelCase keys to snake_case if present
+const LEGACY_ROLE_MAP: Record<string, AgentRoles> = {
+  pollingAgent: "polling_agent",
+  wardElectionSupervisor: "ward_election_supervisor",
+  lgaElectionSupervisor: "lga_election_supervisor",
+  stateElectionSupervisor: "state_election_supervisor",
 };
 
 // ─── Props ───────────────────────────────────────────────────────────────────
@@ -88,14 +96,15 @@ export function AgentPaymentAllocationFormDialog({
   React.useEffect(() => {
     if (!open) return;
     if (fetchedAllocation) {
-      const koboToNaira = (alloc: AgentPaymentAllocation): AgentPaymentAllocation => {
+      const koboToNaira = (alloc: any): AgentPaymentAllocation => {
         const converted = { ...DEFAULT_ALLOCATION };
-        (Object.keys(alloc) as AgentRoles[]).forEach((role) => {
-          if (alloc[role]) {
+        Object.keys(alloc || {}).forEach((key) => {
+          const role = (LEGACY_ROLE_MAP[key] || key) as AgentRoles;
+          if (converted[role] !== undefined && alloc[key]) {
             converted[role] = {
-              default: (alloc[role].default || 0) / 100,
+              default: (alloc[key].default || 0) / 100,
               states: Object.fromEntries(
-                Object.entries(alloc[role].states || {}).map(([state, kobo]) => [state, (kobo || 0) / 100])
+                Object.entries(alloc[key].states || {}).map(([state, kobo]) => [state, (Number(kobo) || 0) / 100])
               )
             };
           }

@@ -75,7 +75,7 @@ const (
 	//--START-- for political and administrative bodies
 	RedisSenatorialDistrictsByState         = "bodies:senatorial_districts:state:"
 	RedisFederalConstituenciesByState       = "bodies:federal_constituencies:state:"
-	RedisStateAssemblyConstituenciesByState = "bodies:state_assembly_constituencies:state:"
+	RedisStateConstituenciesByState = "bodies:state_constituencies:state:"
 	RedisLGAsByState                        = "bodies:lgas:state:"
 	RedisWardsByLGA                         = "bodies:wards:lga:"
 	RedisPollingUnitsByWard                 = "bodies:polling_units:ward:"

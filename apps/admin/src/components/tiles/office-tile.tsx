@@ -16,6 +16,7 @@ export type OfficeType = {
   scope: string;
   rank: number;
   instances_count: number;
+  inec_election_type_id?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -28,11 +29,14 @@ export function OfficeTableHeader() {
         <span className="text-c-90">Office</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[200px] hidden md:block">
+        <span className="text-c-50 text-[14px] w-[180px] hidden md:block">
           Election
         </span>
-        <span className="text-c-50 text-[14px] w-[160px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-[140px] hidden sm:block">
           Scope
+        </span>
+        <span className="text-c-50 text-[14px] w-[160px] hidden lg:block">
+          INEC Type ID
         </span>
         <div className="ml-2 w-8 shrink-0" />
       </TileRight>
@@ -57,11 +61,14 @@ export function OfficeTableTile({ data }: { data: OfficeType }) {
         <p className="truncate w-full text-[16px] text-c-90">{data.name}</p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[200px] hidden md:block">
+        <span className="text-[15px] text-c-70 w-[180px] hidden md:block truncate">
           {election}
         </span>
-        <span className="text-[15px] text-c-70 w-[160px] hidden sm:block">
+        <span className="text-[15px] text-c-70 w-[140px] hidden sm:block truncate">
           {target}
+        </span>
+        <span className="text-[14px] text-c-50 font-mono w-[160px] hidden lg:block truncate">
+          {data.inec_election_type_id || "-"}
         </span>
         <OfficeDropdown data={data} className="ml-2 hidden md:block" />
       </TileRight>

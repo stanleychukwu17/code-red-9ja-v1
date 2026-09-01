@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS party_applications (
   state_id SMALLINT REFERENCES c_states(id) ON DELETE CASCADE,
   lga_id INTEGER REFERENCES lgas(id) ON DELETE CASCADE,
   ward_id INTEGER REFERENCES wards(id) ON DELETE CASCADE,
-  role VARCHAR(50) DEFAULT 'pollingagent' CHECK (role IN ('pollingagent', 'state-election-supervisor', 'lga-election-supervisor', 'ward-election-supervisor')) NOT NULL,
+  role VARCHAR(50) DEFAULT 'polling_agent' CHECK (role IN ('polling_agent', 'state_election_supervisor', 'lga_election_supervisor', 'ward_election_supervisor')) NOT NULL,
   status VARCHAR(30) DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected', 'cancelled')) NOT NULL,
   rejected_reason TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -23,7 +23,6 @@ CREATE INDEX IF NOT EXISTS idx_party_applications_election_group ON party_applic
 CREATE UNIQUE INDEX IF NOT EXISTS uq_active_user_app_per_group 
 ON party_applications (user_id, election_group_id) 
 WHERE status NOT IN ('rejected', 'cancelled');
-
 
 -- +goose Down
 DROP TABLE IF EXISTS party_applications;

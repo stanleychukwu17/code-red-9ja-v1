@@ -5,7 +5,7 @@ import { EarningsAllocationDialog } from "#/components/dialogs/EarningsAllocatio
 import { SlotCostDialog } from "#/components/dialogs/SlotCostDialog";
 import { TestRequirementsDialog } from "#/components/dialogs/TestRequirementsDialog";
 import { LiveVotersReferredDialog } from "#/components/dialogs/LiveVotersReferredDialog";
-import { TargetUpdatesCountDialog } from "#/components/dialogs/TargetUpdatesCountDialog";
+import { UpdateScheduleConfigDialog } from "#/components/dialogs/UpdateScheduleConfigDialog";
 
 export const Route = createFileRoute("/settings/partyadmin/")({
   component: RouteComponent,
@@ -84,7 +84,7 @@ function RouteComponent() {
   const [selectedTestRole, setSelectedTestRole] = useState<SelectedRole>(null);
   const [isSlotCostOpen, setIsSlotCostOpen] = useState(false);
   const [isLiveVotersReferredOpen, setIsLiveVotersReferredOpen] = useState(false);
-  const [isTargetUpdatesCountOpen, setIsTargetUpdatesCountOpen] = useState(false);
+  const [isUpdateScheduleConfigOpen, setIsUpdateScheduleConfigOpen] = useState(false);
 
   const handleEdit = (key: string, name: string) => {
     setSelectedRole({ key, name });
@@ -116,10 +116,10 @@ function RouteComponent() {
             onClick={() => setIsLiveVotersReferredOpen(true)}
           />
           <SettingsTile
-            title="Target Updates Count"
-            description="Target number of updates required from agents."
+            title="Update Schedule Settings"
+            description="Configure target update count, start time, and intervals."
             buttonText="Edit"
-            onClick={() => setIsTargetUpdatesCountOpen(true)}
+            onClick={() => setIsUpdateScheduleConfigOpen(true)}
           />
         </SettingsSection>
         <SettingsSection title="Earnings Allocation">
@@ -238,9 +238,9 @@ function RouteComponent() {
         onClose={() => setIsLiveVotersReferredOpen(false)}
       />
 
-      <TargetUpdatesCountDialog
-        open={isTargetUpdatesCountOpen}
-        onClose={() => setIsTargetUpdatesCountOpen(false)}
+      <UpdateScheduleConfigDialog
+        open={isUpdateScheduleConfigOpen}
+        onClose={() => setIsUpdateScheduleConfigOpen(false)}
       />
     </div>
   );

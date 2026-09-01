@@ -8,6 +8,7 @@ import (
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -158,7 +159,7 @@ func (s *BodiesService) GetLGAs(ctx context.Context, stateID int32) ([]queries.L
 func (s *BodiesService) CreateLGA(
 	ctx context.Context,
 	name string,
-	abbreviation string,
+	code string,
 	stateID int32,
 	stateName string,
 	senatorialDistrictID int32,
@@ -168,13 +169,13 @@ func (s *BodiesService) CreateLGA(
 ) (queries.Lga, error) {
 	arg := queries.CreateLGAParams{
 		Name:                    name,
-		Abbreviation:            abbreviation,
+		Code:                    code,
 		StateID:                 stateID,
 		StateName:               stateName,
-		SenatorialDistrictID:    senatorialDistrictID,
-		SenatorialDistrictName:  senatorialDistrictName,
-		FederalConstituencyID:   federalConstituencyID,
-		FederalConstituencyName: federalConstituencyName,
+		SenatorialDistrictID:    pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
+		SenatorialDistrictName:  pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
+		FederalConstituencyID:   pgtype.Int4{Int32: federalConstituencyID, Valid: federalConstituencyID != 0},
+		FederalConstituencyName: pgtype.Text{String: federalConstituencyName, Valid: federalConstituencyName != ""},
 	}
 
 	lga, err := s.queries.CreateLGA(ctx, arg)
@@ -197,7 +198,7 @@ func (s *BodiesService) UpdateLGA(
 	ctx context.Context,
 	id int32,
 	name string,
-	abbreviation string,
+	code string,
 	stateID int32,
 	stateName string,
 	senatorialDistrictID int32,
@@ -213,13 +214,13 @@ func (s *BodiesService) UpdateLGA(
 	arg := queries.UpdateLGAParams{
 		ID:                      id,
 		Name:                    name,
-		Abbreviation:            abbreviation,
+		Code:                    code,
 		StateID:                 stateID,
 		StateName:               stateName,
-		SenatorialDistrictID:    senatorialDistrictID,
-		SenatorialDistrictName:  senatorialDistrictName,
-		FederalConstituencyID:   federalConstituencyID,
-		FederalConstituencyName: federalConstituencyName,
+		SenatorialDistrictID:    pgtype.Int4{Int32: senatorialDistrictID, Valid: senatorialDistrictID != 0},
+		SenatorialDistrictName:  pgtype.Text{String: senatorialDistrictName, Valid: senatorialDistrictName != ""},
+		FederalConstituencyID:   pgtype.Int4{Int32: federalConstituencyID, Valid: federalConstituencyID != 0},
+		FederalConstituencyName: pgtype.Text{String: federalConstituencyName, Valid: federalConstituencyName != ""},
 	}
 
 	lga, err := s.queries.UpdateLGA(ctx, arg)

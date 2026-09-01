@@ -23,7 +23,7 @@ export const submitPracticeTest = createServerFn({ method: "POST" })
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           election_group_id: data.electionGroupId ?? 0,
-          role: data.role ?? "pollingagent",
+          role: data.role ?? "polling_agent",
           final_score: data.finalScore,
           task_stats: data.taskStats,
         }),
@@ -40,13 +40,17 @@ export const submitPracticeTest = createServerFn({ method: "POST" })
 
 export const listPracticeTests = createServerFn({ method: "GET" })
   .inputValidator(
-    (data: {
-      userId?: number;
-      electionGroupId?: number;
-      status?: string;
-      limit?: number;
-      cursor?: number;
-    } | undefined) => data,
+    (
+      data:
+        | {
+            userId?: number;
+            electionGroupId?: number;
+            status?: string;
+            limit?: number;
+            cursor?: number;
+          }
+        | undefined,
+    ) => data,
   )
   .handler(async ({ data }) => {
     try {
@@ -68,6 +72,98 @@ export const listPracticeTests = createServerFn({ method: "GET" })
     }
   });
 
+export interface PotentialPayoutData {
+  payout?: {
+    assignment_id: number;
+    task_type: string;
+    potential_payout_kobo: number;
+    is_eligible: boolean;
+    reason: string;
+  };
+}
+
+export interface PotentialPayoutResponse {
+  success: boolean;
+  message?: string;
+  data?: PotentialPayoutData;
+}
+
+export const getPotentialPayout = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      assignmentId: number;
+      taskType: string;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const url = API_URL.agentEarnings.potentialPayout(
+        data.assignmentId,
+        data.taskType,
+      );
+      const response = await apiFetch(url);
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to fetch potential payout: " + (error as Error).message,
+      };
+    }
+  });
+
+export const getEstimatePayout = createServerFn({ method: "GET" })
+  .inputValidator(
+    (data: {
+      taskType: string;
+      role?: string;
+      electionGroupId?: number;
+      partyId?: number;
+    }) => data,
+  )
+  .handler(async ({ data }) => {
+    try {
+      const url = API_URL.agentEarnings.estimatePayout(
+        data.taskType,
+        data.role,
+        data.electionGroupId,
+        data.partyId,
+      );
+      const response = await apiFetch(url);
+      const resData = await response.json();
+      return resData;
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to estimate potential payout: " + (error as Error).message,
+      };
+    }
+  });
+
+/**
+ * @deprecated Use getPotentialPayout from agent earnings instead.
+ */
+export interface PayoutPreviewData {
+  potential_window_payout_kobo: number;
+  potential_test_payout_kobo: number;
+  quota_remaining: number;
+  tests_taken_in_window: number;
+  readiness_budget_kobo: number;
+  active_window_days_before_election: number;
+}
+
+/**
+ * @deprecated Use PotentialPayoutResponse instead.
+ */
+export interface PayoutPreviewResponse {
+  success: boolean;
+  message?: string;
+  data?: PayoutPreviewData;
+}
+
+/**
+ * @deprecated Use getPotentialPayout from agent earnings instead.
+ */
 export const getPracticeTestPayoutPreview = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {

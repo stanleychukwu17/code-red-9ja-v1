@@ -1,6 +1,6 @@
 import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext, getAutoSelectedSession } from "#/hooks/useAppContext";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -58,15 +58,28 @@ import { showFeedbackToast } from "./utils";
 import {
   submitPracticeTest,
   listPracticeTests,
-  getPracticeTestPayoutPreview,
+  getPotentialPayout,
+  getEstimatePayout,
+  type PotentialPayoutResponse,
 } from "#/lib/server/practice_tests";
-import { getElectionGroups } from "#/lib/server/election_groups";
+import {
+  getElectionGroups,
+  getElectionGroupById,
+} from "#/lib/server/election_groups";
+import { getElectionsByGroup } from "#/lib/server/elections";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { party, user } = useAuth();
+  const {
+    party,
+    user,
+    selectedElectionGroup,
+    selectedElection,
+    setSelectedElectionGroup,
+    setSelectedElection,
+  } = useAppContext();
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
@@ -117,6 +130,46 @@ export function PollingAgentPracticePage() {
     string | null
   >("practice-selected-election-date", null);
 
+  // Sync selected election group and election to useAppContext if restored from localStorage
+  const { data: syncGroupData } = useQuery({
+    queryKey: ["electionGroupById", selectedElectionGroupId],
+    enabled:
+      !!selectedElectionGroupId &&
+      selectedElectionGroup?.id !== selectedElectionGroupId,
+    queryFn: async () => {
+      const res = await getElectionGroupById({
+        data: selectedElectionGroupId as number,
+      });
+      if (res?.success && res.data?.election_group) {
+        return res.data.election_group;
+      }
+      return null;
+    },
+  });
+
+  useEffect(() => {
+    if (syncGroupData && selectedElectionGroup?.id !== syncGroupData.id) {
+      setSelectedElectionGroup(syncGroupData);
+      getElectionsByGroup({ data: syncGroupData.id })
+        .then((res) => {
+          const elections = res?.data?.elections || res?.elections || [];
+          if (elections.length > 0) {
+            const { selectedElection: autoElection } = getAutoSelectedSession(
+              [syncGroupData],
+              elections,
+            );
+            setSelectedElection(autoElection || elections[0] || null);
+          }
+        })
+        .catch((e) => console.error("Failed to sync elections:", e));
+    }
+  }, [
+    syncGroupData,
+    selectedElectionGroup?.id,
+    setSelectedElectionGroup,
+    setSelectedElection,
+  ]);
+
   const [testStats, setTestStats] = useLocalStorage<
     {
       taskId: number;
@@ -132,7 +185,8 @@ export function PollingAgentPracticePage() {
 
   const { mutate: submitTest } = useMutation({
     mutationFn: submitPracticeTest,
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log("SUBMITTED FORM RESPONSE:", data);
       queryClient.invalidateQueries({ queryKey: ["practiceTests"] });
       setCurrentPage("final");
     },
@@ -154,10 +208,10 @@ export function PollingAgentPracticePage() {
           ? testStats.reduce((acc, s) => acc + s.score, 0) / testStats.length
           : 0;
 
-      submitTest({
+      const submissionPayload = {
         data: {
           electionGroupId: selectedElectionGroupId ?? undefined,
-          role: "pollingagent",
+          role: "polling_agent" as const,
           finalScore: Number(finalScoreVal.toFixed(2)),
           taskStats: testStats.map((s) => ({
             task_id: s.taskId,
@@ -166,7 +220,10 @@ export function PollingAgentPracticePage() {
             completed: s.completed,
           })),
         },
-      });
+      };
+
+      console.log("SUBMITTED:", submissionPayload);
+      submitTest(submissionPayload);
     }
   };
 
@@ -212,26 +269,64 @@ export function PollingAgentPracticePage() {
     setCurrentFailedAttempts((prev) => prev + 1);
   };
 
-  // Fetch payout preview once an election group is selected
-  const { data: payoutPreviewRes } = useQuery({
-    queryKey: ["payoutPreview", selectedElectionGroupId],
+  // Fetch assignment to get assignment ID for potential payout calculation
+  const { data: assignments = [] } = useQuery({
+    queryKey: ["pollingAgentAssignments", user?.id, selectedElectionGroupId],
+    enabled: !!user?.id && !!selectedElectionGroupId,
     queryFn: async () => {
-      if (!selectedElectionGroupId) return null;
-      return getPracticeTestPayoutPreview({
+      const response = await getPollingUnitAssignments({
         data: {
-          electionGroupId: selectedElectionGroupId,
-          electionDate: selectedElectionDate ?? undefined,
-          partyId: party?.id ?? undefined,
+          user_id: user?.id,
+          election_group_id: selectedElectionGroupId ?? undefined,
         },
       });
+      if (!response?.success || !response.data?.assignments) return [];
+      return response.data.assignments;
     },
-    enabled: !!selectedElectionGroupId,
   });
 
-  const potentialTestPayout: number =
-    payoutPreviewRes?.success && payoutPreviewRes?.data
-      ? ((payoutPreviewRes.data.potential_test_payout as number) ?? 0)
-      : 0;
+  const assignmentId = assignments.length > 0 ? assignments[0].id : null;
+
+  // Fetch potential payout using /api/v1/agent-earnings/potential-payout if assignment exists,
+  // otherwise fallback to /api/v1/agent-earnings/estimate-payout
+  const { data: potentialPayoutRes } = useQuery<PotentialPayoutResponse | null>(
+    {
+      queryKey: [
+        "potentialPayout",
+        assignmentId ?? "no-assignment",
+        selectedElectionGroupId,
+        party?.id,
+        "readiness",
+      ],
+      queryFn: async () => {
+        if (assignmentId) {
+          return getPotentialPayout({
+            data: {
+              assignmentId,
+              taskType: "readiness",
+            },
+          });
+        }
+        return getEstimatePayout({
+          data: {
+            taskType: "readiness",
+            role: "polling_agent",
+            electionGroupId: selectedElectionGroupId ?? undefined,
+            partyId: party?.id ?? undefined,
+          },
+        });
+      },
+    },
+  );
+
+  const payoutData = potentialPayoutRes?.success
+    ? potentialPayoutRes?.data?.payout
+    : undefined;
+
+  // Convert kobo fields from backend to naira for frontend display
+  const potentialTestPayout: number = payoutData
+    ? (payoutData.potential_payout_kobo ?? 0) / 100
+    : 0;
 
   const currentScore = testStats.reduce((acc, stat) => acc + stat.score, 0);
   const finalScore = testStats.length > 0 ? currentScore / testStats.length : 0;
@@ -251,9 +346,13 @@ export function PollingAgentPracticePage() {
       {currentPage === "select-election" && (
         <SelectElectionPage
           selectedElectionGroupId={selectedElectionGroupId}
-          onSelect={(id, electionDate) => {
-            setSelectedElectionGroupId(id);
-            setSelectedElectionDate(electionDate ?? null);
+          onSelect={(group: any, election?: any) => {
+            setSelectedElectionGroupId(group.id);
+            setSelectedElectionDate(group.election_date ?? null);
+            setSelectedElectionGroup(group);
+            if (election) {
+              setSelectedElection(election);
+            }
           }}
           onNextClick={() => {
             // Test submission is batched at the very end
@@ -382,7 +481,7 @@ export function PollingAgentPracticePage() {
             setSelectedElectionDate(null);
             setTestStats([]);
             setTaskId(1);
-            setCurrentPage("select-election");
+            setCurrentPage("welcome");
           }}
           onGoToHome={() => {
             setCurrentFailedAttempts(0);
@@ -407,7 +506,7 @@ export function WelcomePage({
   practiceTestNumber: number;
   onNextClick: () => void;
 }) {
-  const { party } = useAuth();
+  const { party } = useAppContext();
   const navigate = useNavigate();
 
   return (
@@ -430,7 +529,7 @@ export function WelcomePage({
           <InfoCard
             icon={<FancyMoneyBagIcon className="size-6" />}
             label="Potential Payout"
-            value={`₦0 to ₦${potentialPayout}`}
+            value={`₦${potentialPayout}`}
             variant="yellow"
             className="w-full"
           />
@@ -464,10 +563,10 @@ export function SelectElectionPage({
   onNextClick,
 }: {
   selectedElectionGroupId: number | null;
-  onSelect: (id: number, electionDate?: string) => void;
+  onSelect: (group: any, election?: any) => void;
   onNextClick: () => void;
 }) {
-  const { data: elections = [], isLoading } = useQuery({
+  const { data: electionGroups = [], isLoading } = useQuery({
     queryKey: ["electionGroups", { upcoming: true }],
     queryFn: async () => {
       const res = await getElectionGroups({ data: { upcoming: true } });
@@ -476,23 +575,37 @@ export function SelectElectionPage({
         res.data?.election_groups &&
         res.data.election_groups.length > 0
       ) {
-        return res.data.election_groups.map((group: any) => ({
-          id: group.id,
-          name: group.name,
-          rawDate: group.election_date as string | undefined,
-          date: group.election_date
-            ? new Date(group.election_date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
-            : "TBD",
-        }));
+        return res.data.election_groups;
       }
       return [];
     },
     initialData: [],
   });
+
+  const handleSelectGroup = async (group: any) => {
+    try {
+      const res = await getElectionsByGroup({ data: group.id });
+      const elections = res?.data?.elections || res?.elections || [];
+      const { selectedElection: autoElection } = getAutoSelectedSession(
+        [group],
+        elections,
+      );
+      onSelect(group, autoElection || elections[0] || null);
+    } catch (err) {
+      console.error("Failed to fetch elections for group:", err);
+      onSelect(group, null);
+    }
+  };
+
+  const handleContinue = async () => {
+    const currentSelectedGroup = electionGroups.find(
+      (g: any) => g.id === selectedElectionGroupId,
+    );
+    if (currentSelectedGroup) {
+      await handleSelectGroup(currentSelectedGroup);
+    }
+    onNextClick();
+  };
 
   return (
     <div className="w-full h-full">
@@ -517,20 +630,30 @@ export function SelectElectionPage({
               Loading elections...
             </p>
           )}
-          {!isLoading && elections.length === 0 && (
+          {!isLoading && electionGroups.length === 0 && (
             <p className="text-c-50 text-sm text-center py-4">
               No upcoming elections found.
             </p>
           )}
-          {elections.map((election: any) => (
-            <SelectableCard
-              key={election.id}
-              title={election.name}
-              subtitle={election.date}
-              isSelected={election.id === selectedElectionGroupId}
-              onClick={() => onSelect(election.id, election.rawDate)}
-            />
-          ))}
+          {electionGroups.map((group: any) => {
+            const formattedDate = group.election_date
+              ? new Date(group.election_date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "TBD";
+
+            return (
+              <SelectableCard
+                key={group.id}
+                title={group.name}
+                subtitle={formattedDate}
+                isSelected={group.id === selectedElectionGroupId}
+                onClick={() => handleSelectGroup(group)}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -541,7 +664,7 @@ export function SelectElectionPage({
           size="4xl"
           className="w-full rounded-full"
           disabled={selectedElectionGroupId === null}
-          onClick={onNextClick}
+          onClick={handleContinue}
         >
           Continue
         </Button>
@@ -559,7 +682,7 @@ export function ApplicationAcceptedPage({
   onGoToHome: () => void;
   electionGroupId: number | null;
 }) {
-  const { party, user } = useAuth();
+  const { party, user } = useAppContext();
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["pollingAgentAssignments", user?.id, electionGroupId],
@@ -655,7 +778,7 @@ export function ApplicationAcceptedPage({
           </span>
           <div className="space-y-2">
             <Todo
-              text={`Ensure you are at the above Polling unit before 7AM on Election day (${electionDateFormatted})`}
+              text={`Ensure you are at your polling unit before 7AM on Election day (${electionDateFormatted})`}
             />
             <Todo text="Complete all your election task and upload election results" />
             <Todo text="End election and request payment" />
@@ -773,7 +896,7 @@ export function TaskCompletedPage({
           <div className="absolute top-5 right-5 size-10 bg-[#3A556A] rounded-full blur-[32px] opacity-50 -z-10" />
         </div>
 
-        <p className="text-center text-lg text-c-50">TASK 1 SCORE</p>
+        <p className="text-center text-lg text-c-50">TASK SCORE</p>
         <TaskScore score={score} maxScore={maxScore} />
         {score !== maxScore && (
           <p
@@ -793,7 +916,9 @@ export function TaskCompletedPage({
 
         <div className="px-5 py-3.5 rounded-xl bg-c-5 flex items-center">
           <p className="font-medium text-c-50 w-full">Cummulative Score:</p>
-          <p className="font-bold text-c-80">2.5/10</p>
+          <p className="font-bold text-c-80">
+            {score}/{maxScore}
+          </p>
         </div>
 
         <div className="space-y-2 mt-5">
@@ -850,7 +975,11 @@ export function FinalScorePage({
   if (testsRes?.success && testsRes.data?.practice_tests?.length > 0) {
     try {
       const record = testsRes.data.practice_tests[0];
-      const attempts = JSON.parse(record.test_attempts || "[]");
+      const rawAttempts = record.test_attempts;
+      const attempts =
+        typeof rawAttempts === "string"
+          ? JSON.parse(rawAttempts)
+          : (rawAttempts ?? []);
       practiceHistory = Array.isArray(attempts) ? attempts : [];
     } catch (e) {
       console.error("Failed to parse test attempts", e);
@@ -1155,7 +1284,7 @@ export function DashboardPage({
   failedAttemptCount: number;
 }) {
   const navigate = useNavigate();
-  const { selectedElectionGroup } = useAuth();
+  const { selectedElectionGroup } = useAppContext();
 
   const [activeTab, setActiveTab] = useState<
     "Earnings" | "Contact" | "Uploads"

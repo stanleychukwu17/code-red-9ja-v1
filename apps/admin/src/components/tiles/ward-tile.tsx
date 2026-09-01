@@ -9,7 +9,7 @@ import { WardDropdown } from "../dropdowns/WardDropdown";
 export type WardType = {
   id: number;
   name: string;
-  abbreviation: string;
+  code: string;
   lga_id: number;
   lga_name: string;
   state_id: number;

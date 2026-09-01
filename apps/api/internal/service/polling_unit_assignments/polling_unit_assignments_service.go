@@ -2,6 +2,7 @@ package puassignments
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/worker"
@@ -15,6 +16,11 @@ type Service struct {
 	queries         *queries.Queries
 	rdb             *redis.Client
 	taskDistributor worker.TaskDistributor
+	earningsSvc     earningsService
+}
+
+type earningsService interface {
+	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
 func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.TaskDistributor) *Service {
@@ -25,19 +31,43 @@ func NewService(q *queries.Queries, rdb *redis.Client, taskDistributor worker.Ta
 	}
 }
 
+func (s *Service) SetEarningsService(es earningsService) {
+	s.earningsSvc = es
+}
+
 func (s *Service) AssignAgent(ctx context.Context, userID, electionGroupID int64, partyID int16, assignedBy int64, pollingUnitID int32, roleType string) (queries.PollingUnitAssignment, error) {
 	var assignedByVal pgtype.Int8
 	if assignedBy > 0 {
 		assignedByVal = pgtype.Int8{Int64: assignedBy, Valid: true}
 	}
 
+	var potentialPaymentKobo int64 = 0
+	party, err := s.queries.GetPartyByID(ctx, partyID)
+	if err == nil && party.AgentPaymentAllocationKobo != nil {
+		roleKey := roleType
+		if roleKey == "" {
+			roleKey = "polling_agent"
+		}
+		var allocs map[string]struct {
+			Default int64 `json:"default"`
+		}
+		if err := json.Unmarshal(party.AgentPaymentAllocationKobo, &allocs); err == nil {
+			if alloc, ok := allocs[roleKey]; ok {
+				potentialPaymentKobo = alloc.Default
+			} else if alloc, ok := allocs["polling_agent"]; ok {
+				potentialPaymentKobo = alloc.Default
+			}
+		}
+	}
+
 	return s.queries.CreateAssignment(ctx, queries.CreateAssignmentParams{
-		UserID:          userID,
-		PollingUnitID:   pollingUnitID,
-		ElectionGroupID: electionGroupID,
-		PartyID:         partyID,
-		RoleType:        pgtype.Text{String: roleType, Valid: roleType != ""},
-		AssignedBy:      assignedByVal,
+		UserID:               userID,
+		PollingUnitID:        pollingUnitID,
+		ElectionGroupID:      electionGroupID,
+		PartyID:              partyID,
+		RoleType:             pgtype.Text{String: roleType, Valid: roleType != ""},
+		AssignedBy:           assignedByVal,
+		PotentialPaymentKobo: potentialPaymentKobo,
 	})
 }
 
@@ -107,6 +137,19 @@ func (s *Service) UpdateAssignmentTracking(ctx context.Context, id int64, arrive
 	})
 	if err != nil {
 		return updated, err
+	}
+
+	// Trigger earnings calculation & wallet credit based on updated fields
+	if s.earningsSvc != nil {
+		if arrivedAt != nil && *arrivedAt != "" {
+			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "attendance")
+		}
+		if electionStartedAt != nil && *electionStartedAt != "" {
+			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "election_start")
+		}
+		if electionEndedAt != nil && *electionEndedAt != "" {
+			go s.earningsSvc.ProcessTaskEarnings(context.Background(), id, "election_end")
+		}
 	}
 
 	// Enqueue a background task to recalculate the PU stats (which will cascade to Ward, LGA, etc.)

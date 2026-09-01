@@ -27,7 +27,7 @@ export const DeleteAlertDialog = ({
 }: DeleteAlertDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="max-w-105 p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
+      <DialogContent className="max-w-105 p-0 rounded-2xl border-none shadow-2xl   overflow-hidden">
         <DialogHeader title="Confirm Delete" />
 
         <DialogPadding className="space-y-3 pb-4">
@@ -45,11 +45,7 @@ export const DeleteAlertDialog = ({
           >
             Cancel
           </Button>
-          <Button
-            variant="red"
-            onClick={handleDelete}
-            disabled={isPending}
-          >
+          <Button variant="red" onClick={handleDelete} disabled={isPending}>
             {isPending && <Loader2 className="size-4 animate-spin" />}
             Delete
           </Button>

@@ -59,7 +59,7 @@ export const LgaDropdown = ({ data, className }: LgaDropdownProps) => {
   const lgaForDialog = {
     id: data.id,
     name: data.name,
-    abbreviation: data.abbreviation,
+    code: data.code,
     state_id: data.state_id,
     state_name: data.state_name,
     senatorial_district_id: data.senatorial_district_id,

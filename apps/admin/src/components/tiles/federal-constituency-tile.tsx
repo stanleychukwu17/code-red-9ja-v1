@@ -9,6 +9,7 @@ import { FederalConstituencyDropdown } from "../dropdowns/FederalConstituencyDro
 export type FederalConstituencyType = {
   id: number;
   name: string;
+  code?: string;
   state_id: number;
   state_name: string;
   senatorial_district_id: number;

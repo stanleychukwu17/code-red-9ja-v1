@@ -5,6 +5,7 @@ import {
 } from "#/lib/server/elections";
 import { getElectionScopedFinalResult } from "#/lib/server/final-results";
 import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
+import { formatVotes } from "@repo/ui/lib/number";
 import { FinalResultReel } from "./components/-final-result-reel";
 import { UpdateReel } from "./components/-update-reel";
 import { getPageHeader } from "#/lib/shared/meta";
@@ -27,6 +28,7 @@ import { HomePageHeader } from "./-header";
 import { InfoCard } from "@repo/ui/components/cards/Rewards";
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import { cn } from "@repo/ui/lib/utils";
+import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/election-day",
@@ -64,6 +66,21 @@ function ElectionDayComponent() {
     isLive,
   } = useAppContext();
 
+  // Connect real-time WebSocket updates for election day
+  useElectionRealtime({
+    electionId: selectedElection?.id,
+    stateId: selectedStateId,
+    lgaId: selectedLGAId,
+    wardId: selectedWardId,
+    senatorialDistrictId: selectedDistrictId,
+    federalConstituencyId: selectedFederalConstituencyId,
+    stateConstituencyId: selectedStateConstituencyId,
+    clientConfig: {
+      key: import.meta.env.VITE_PUSHER_KEY,
+      cluster: import.meta.env.VITE_PUSHER_CLUSTER || "eu",
+    },
+  });
+
   const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
   const fetchElectionStatsFn = useServerFn(getElectionStats);
   const fetchScopedFinalResultFn = useServerFn(getElectionScopedFinalResult);
@@ -84,7 +101,7 @@ function ElectionDayComponent() {
       fetchElectionStatsFn({
         data: {
           electionGroupId: selectedElectionGroup?.id as number,
-          partyId: party?.id,
+          partyId: party?.id!,
           stateId: selectedStateId,
           senatorialDistrictId: selectedDistrictId,
           federalConstituencyId: selectedFederalConstituencyId,
@@ -212,7 +229,7 @@ function ElectionDayComponent() {
                             ? `${item.lgas_winning_count || 0} LGAs`
                             : `${item.states_winning_count || 0} states`
                     }
-                    votesCount={`${votes.toLocaleString()} votes`}
+                    votesCount={formatVotes(votes, { compact: false })}
                   />
                 );
               })

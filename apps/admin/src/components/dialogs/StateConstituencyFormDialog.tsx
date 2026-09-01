@@ -20,14 +20,15 @@ import { getStates } from "#/lib/server/states";
 import { getSenatorialDistricts } from "#/lib/server/senatorial_districts";
 import { getFederalConstituencies } from "#/lib/server/federal_constituencies";
 import {
-  createStateAssemblyConstituency,
-  updateStateAssemblyConstituency,
-} from "#/lib/server/state_assembly_constituencies";
+  createStateConstituency,
+  updateStateConstituency,
+} from "#/lib/server/state_constituencies";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
-export interface StateAssemblyConstituency {
+export interface StateConstituency {
   id: number;
   name: string;
+  code?: string | null;
   lga_id: number;
   lga_name: string;
   state_id: number;
@@ -45,7 +46,7 @@ export function StateConstituencyFormDialog({
   mode = "create",
   onSuccess,
 }: {
-  stateConstituency?: StateAssemblyConstituency;
+  stateConstituency?: StateConstituency;
   open: boolean;
   onClose: () => void;
   mode?: "create" | "update";
@@ -57,6 +58,7 @@ export function StateConstituencyFormDialog({
   const form = useForm({
     defaultValues: {
       name: "",
+      code: "",
       stateId: undefined as number | undefined,
       senatorialDistrictId: undefined as number | undefined,
       federalConstituencyId: undefined as number | undefined,
@@ -69,18 +71,29 @@ export function StateConstituencyFormDialog({
 
   // Watch stateId and other values for clearing/filtering dependent select dropdowns
   const selectedStateId = useStore(form.store, (state) => state.values.stateId);
-  const selectedDistrictId = useStore(form.store, (state) => state.values.senatorialDistrictId);
+  const selectedDistrictId = useStore(
+    form.store,
+    (state) => state.values.senatorialDistrictId,
+  );
 
   React.useEffect(() => {
     if (open) {
       if (mode === "update" && stateConstituency) {
         form.setFieldValue("name", stateConstituency.name || "");
+        form.setFieldValue("code", stateConstituency.code || "");
         form.setFieldValue("stateId", stateConstituency.state_id);
-        form.setFieldValue("senatorialDistrictId", stateConstituency.senatorial_district_id);
-        form.setFieldValue("federalConstituencyId", stateConstituency.federal_constituency_id);
+        form.setFieldValue(
+          "senatorialDistrictId",
+          stateConstituency.senatorial_district_id,
+        );
+        form.setFieldValue(
+          "federalConstituencyId",
+          stateConstituency.federal_constituency_id,
+        );
         form.setFieldValue("lgaId", stateConstituency.lga_id);
       } else {
         form.setFieldValue("name", "");
+        form.setFieldValue("code", "");
         form.setFieldValue("stateId", undefined);
         form.setFieldValue("senatorialDistrictId", undefined);
         form.setFieldValue("federalConstituencyId", undefined);
@@ -93,6 +106,7 @@ export function StateConstituencyFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
+      code: string;
       stateId: number | undefined;
       senatorialDistrictId: number | undefined;
       federalConstituencyId: number | undefined;
@@ -113,6 +127,7 @@ export function StateConstituencyFormDialog({
 
       const payload = {
         name: values.name.trim(),
+        code: values.code.trim() || null,
         state_id: values.stateId,
         senatorial_district_id: values.senatorialDistrictId,
         federal_constituency_id: values.federalConstituencyId,
@@ -124,14 +139,14 @@ export function StateConstituencyFormDialog({
         if (!stateConstituency?.id) {
           throw new Error("Missing ID for update");
         }
-        res = await updateStateAssemblyConstituency({
+        res = await updateStateConstituency({
           data: {
             id: stateConstituency.id,
             ...payload,
           },
         });
       } else {
-        res = await createStateAssemblyConstituency({
+        res = await createStateConstituency({
           data: payload,
         });
       }
@@ -153,7 +168,7 @@ export function StateConstituencyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
           title={
             mode === "update"
@@ -178,15 +193,31 @@ export function StateConstituencyFormDialog({
                 name="name"
                 validators={{
                   onChange: ({ value }) =>
-                    !value
-                      ? "State constituency name is required"
-                      : undefined,
+                    !value ? "State constituency name is required" : undefined,
                 }}
                 children={(field) => (
                   <div className="w-full">
                     <FancyInput
                       type="text"
                       placeholder="State constituency name"
+                      errorMsg={field.state.meta.errors?.join(", ")}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                  </div>
+                )}
+              />
+            </div>
+
+            {/* Code */}
+            <div className="w-full">
+              <form.Field
+                name="code"
+                children={(field) => (
+                  <div className="w-full">
+                    <FancyInput
+                      type="text"
+                      placeholder="Code (e.g., SC/582/KB)"
                       errorMsg={field.state.meta.errors?.join(", ")}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -305,7 +336,6 @@ export function StateConstituencyFormDialog({
                 )}
               />
             </div>
-
           </DialogPadding>
           <DialogFooter>
             <Button

@@ -22,8 +22,13 @@ export const APP_URL = {
   },
   parties: "/parties",
   applications: "/applications",
+  marketing: "/marketing",
   notifications: "/notifications",
   logs: "/logs",
+  inecResultGrabber: {
+    main: "/inec-result-grabber",
+    logs: "/inec-result-grabber/logs",
+  },
   settings: {
     general: "/settings",
     partyadmin: "/settings/partyadmin",
@@ -33,12 +38,13 @@ export const APP_URL = {
 const web = `${WEB_DNS}`;
 export const WEB_URL = {
   users: {
-    profile: (username: string) => `${web}/users/profile/${username}`
+    profile: (username: string) => `${web}/users/profile/${username}`,
   },
   parties: {
-    profile: (shortName: string, id: number) => `${web}/party/${shortName}/${id}/home`
-  }
-}
+    profile: (shortName: string, id: number) =>
+      `${web}/party/${shortName}/${id}/home`,
+  },
+};
 
 const api = `${API_BASE}/api/v1`;
 export const API_URL = {
@@ -53,10 +59,16 @@ export const API_URL = {
     updateRoles: `${api}/auth/roles/update`,
   },
   getAllCountries: `${api}/countries`,
-  getStates: (countryId: number, limit?: number, cursor?: string | number) => {
+  getStates: (
+    countryId: number,
+    limit?: number,
+    cursor?: string | number,
+    search?: string,
+  ) => {
     const params = new URLSearchParams();
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/countries/${countryId}/states${qs ? `?${qs}` : ""}`;
   },
@@ -65,11 +77,13 @@ export const API_URL = {
     stateId?: number,
     limit?: number,
     cursor?: string | number,
+    search?: string,
   ) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/senatorial-districts${qs ? `?${qs}` : ""}`;
   },
@@ -78,6 +92,7 @@ export const API_URL = {
     senatorialDistrictId?: number,
     limit?: number,
     cursor?: string | number,
+    search?: string,
   ) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
@@ -85,14 +100,16 @@ export const API_URL = {
       params.append("senatorial_district_id", String(senatorialDistrictId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/federal-constituencies${qs ? `?${qs}` : ""}`;
   },
-  getStateAssemblyConstituencies: (
+  getStateConstituencies: (
     stateId?: number,
     federalConstituencyId?: number,
     limit?: number,
     cursor?: string | number,
+    search?: string,
   ) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
@@ -100,14 +117,21 @@ export const API_URL = {
       params.append("federal_constituency_id", String(federalConstituencyId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/state-constituencies${qs ? `?${qs}` : ""}`;
   },
-  getLGAs: (stateId?: number, limit?: number, cursor?: string | number) => {
+  getLGAs: (
+    stateId?: number,
+    limit?: number,
+    cursor?: string | number,
+    search?: string,
+  ) => {
     const params = new URLSearchParams();
     if (stateId) params.append("state_id", String(stateId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/lgas${qs ? `?${qs}` : ""}`;
   },
@@ -116,12 +140,14 @@ export const API_URL = {
     stateId?: number,
     limit?: number,
     cursor?: string | number,
+    search?: string,
   ) => {
     const params = new URLSearchParams();
     if (localGovernmentId) params.append("lga_id", String(localGovernmentId));
     if (stateId) params.append("state_id", String(stateId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/wards${qs ? `?${qs}` : ""}`;
   },
@@ -131,6 +157,7 @@ export const API_URL = {
     stateId?: number,
     limit?: number,
     cursor?: string | number,
+    search?: string,
   ) => {
     const params = new URLSearchParams();
     if (wardId) params.append("ward_id", String(wardId));
@@ -138,6 +165,7 @@ export const API_URL = {
     if (stateId) params.append("state_id", String(stateId));
     if (limit) params.append("limit", String(limit));
     if (cursor) params.append("cursor", String(cursor));
+    if (search) params.append("search", search);
     const qs = params.toString();
     return `${api}/polling-units${qs ? `?${qs}` : ""}`;
   },
@@ -145,8 +173,35 @@ export const API_URL = {
   lgaById: (id: string | number) => `${api}/lgas/${id}`,
   parties: `${api}/parties`,
   partyById: (id: string | number) => `${api}/parties/${id}`,
-  partyAgentPaymentAllocations: (id: string | number) => `${api}/parties/${id}/agent-payment-allocations`,
-  managePartyVerify: (id: string | number) => `${api}/admin/parties/${id}/verify`,
+  partyAgentPaymentAllocations: (id: string | number) =>
+    `${api}/parties/${id}/agent-payment-allocations`,
+  partyAgentTargets: (id: string | number) =>
+    `${api}/parties/${id}/agent-targets`,
+  partyMarketingCampaigns: (id: string | number) =>
+    `${api}/parties/${id}/agent-marketing-campaigns`,
+  adminPartyMarketingCampaigns: (args?: {
+    partyId?: number;
+    electionGroupId?: number;
+    status?: string;
+    limit?: number;
+    cursor?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (args?.partyId) params.append("party_id", String(args.partyId));
+    if (args?.electionGroupId)
+      params.append("election_group_id", String(args.electionGroupId));
+    if (args?.status) params.append("status", args.status);
+    if (args?.limit) params.append("limit", String(args.limit));
+    if (args?.cursor) params.append("cursor", String(args.cursor));
+    const qs = params.toString();
+    return `${api}/admin/agent-marketing-campaigns${qs ? `?${qs}` : ""}`;
+  },
+  adminPartyMarketingCampaignStatus: (id: number | string) =>
+    `${api}/admin/agent-marketing-campaigns/${id}/status`,
+  adminPartyMarketingCampaignDelete: (id: number | string) =>
+    `${api}/admin/agent-marketing-campaigns/${id}`,
+  managePartyVerify: (id: string | number) =>
+    `${api}/admin/parties/${id}/verify`,
   uploadUrl: `${api}/files/upload-url`,
   confirmUpload: (id: string | number) => `${api}/files/${id}/confirm`,
   deleteFile: (id: string | number) => `${api}/files/${id}`,
@@ -182,21 +237,65 @@ export const API_URL = {
   electionsWard: `${api}/elections/ward`,
 
   manageUserById: (id: string | number) => `${api}/admin/users/${id}`,
-  manageUserMoreInfo: (id: string | number) => `${api}/admin/users/${id}/more-info`,
+  manageUserMoreInfo: (id: string | number) =>
+    `${api}/admin/users/${id}/more-info`,
   userRoles: (id: string | number) => `${api}/admin/users/${id}/roles`,
   userPhoneNumbers: (id: string | number) => `${api}/admin/users/${id}/phones`,
   manageUserPhoneNumber: (id: string | number) =>
     `${api}/admin/users/phones/${id}`,
   users: `${api}/users`,
   recalculateBodies: `${api}/bodies/recalculate`,
+  syncElectoralUnits: `${api}/bodies/sync-electoral-units`,
+  syncElectoralUnitsStateFlow: `${api}/bodies/sync-electoral-units-state-flow`,
   verificationTypes: `${api}/verifications/types`,
   adminVerifications: `${api}/admin/verifications`,
   occupations: `${api}/getOccupations`,
+  plans: (type?: string, isActive?: boolean) => {
+    const params = new URLSearchParams();
+    if (type) params.set("type", type);
+    if (isActive !== undefined) params.set("is_active", String(isActive));
+    const qs = params.toString();
+    return `${api}/plans${qs ? `?${qs}` : ""}`;
+  },
   systemSettings: {
     get: (key: string) => `${api}/admin/settings/${key}`,
     update: (key: string) => `${api}/admin/settings/${key}`,
   },
   userPreferences: `${api}/user_preferences`,
+  inecResultGrabbers: (args?: { limit?: number; cursor?: string | number }) => {
+    const params = new URLSearchParams();
+    if (args?.limit) params.append("limit", String(args.limit));
+    if (args?.cursor) params.append("cursor", String(args.cursor));
+    const qs = params.toString();
+    return `${api}/admin/inec-result-grabbers${qs ? `?${qs}` : ""}`;
+  },
+  inecResultGrabberLogs: (args?: {
+    grabberId?: number | string;
+    limit?: number;
+    cursor?: string | number;
+  }) => {
+    const params = new URLSearchParams();
+    if (args?.grabberId) params.append("grabber_id", String(args.grabberId));
+    if (args?.limit) params.append("limit", String(args.limit));
+    if (args?.cursor) params.append("cursor", String(args.cursor));
+    const qs = params.toString();
+    return `${api}/admin/inec-result-grabber-logs${qs ? `?${qs}` : ""}`;
+  },
+  syncINECResultGrabber: (
+    id: number | string,
+    uploadToR2?: boolean,
+    aiExtract?: boolean,
+  ) => {
+    const params = new URLSearchParams();
+    if (uploadToR2 !== undefined)
+      params.append("upload_to_r2", String(uploadToR2));
+    if (aiExtract !== undefined) params.append("ai_extract", String(aiExtract));
+    const qs = params.toString();
+    return `${api}/admin/inec-result-grabbers/${id}/sync${qs ? `?${qs}` : ""}`;
+  },
+  toggleINECResultGrabberPause: (id: number | string) => {
+    return `${api}/admin/inec-result-grabbers/${id}/toggle-pause`;
+  },
 };
 
 export const QUERY_KEYS = {

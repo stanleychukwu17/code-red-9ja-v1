@@ -7,6 +7,7 @@ export const getElections = createServerFn({ method: "GET" })
     (
       data:
         | {
+            election_group_id?: number;
             limit?: number;
             cursor?: string | number;
             orderBy?: string;
@@ -17,10 +18,15 @@ export const getElections = createServerFn({ method: "GET" })
   )
   .handler(async ({ data }) => {
     try {
-      const limit = data?.limit || 20;
-      const cursor = data?.cursor || "";
+      const params = new URLSearchParams();
+      if (data?.election_group_id) params.append("election_group_id", String(data.election_group_id));
+      if (data?.limit) params.append("limit", String(data.limit));
+      if (data?.cursor) params.append("cursor", String(data.cursor));
+      if (data?.orderBy) params.append("orderBy", data.orderBy);
+      if (data?.order) params.append("order", data.order);
+      const qs = params.toString();
       return await apiFetchJson(
-        `${API_URL.elections}?limit=${limit}&cursor=${cursor}`,
+        `${API_URL.elections}${qs ? `?${qs}` : ""}`,
       );
     } catch (error: any) {
       return { success: false, message: error?.message || "Failed to fetch elections from API" };

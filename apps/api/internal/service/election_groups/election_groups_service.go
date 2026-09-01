@@ -29,16 +29,29 @@ func NewElectionGroupsService(q *queries.Queries, rdb *redis.Client, distributor
 
 func (s *ElectionGroupsService) invalidateCache(ctx context.Context, id *int64) {
 	s.rdb.Del(ctx, "election_groups:all")
+	s.rdb.Del(ctx, "elections:all")
 	if id != nil {
 		s.rdb.Del(ctx, fmt.Sprintf("election_group:%d", *id))
 	}
 }
 
-func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error) {
-	metrics, err := s.queries.GetNationalMetrics(ctx)
-	if err != nil {
-		return queries.ElectionGroup{}, err
+func getSafeNationalMetrics(ctx context.Context, q *queries.Queries) queries.NationalMetric {
+	metrics, err := q.GetNationalMetrics(ctx)
+	if err == nil {
+		return metrics
 	}
+	return queries.NationalMetric{
+		SenatorialDistrictsCount:   109,
+		FederalConstituenciesCount: 360,
+		LgasCount:                  774,
+		StateConstituenciesCount:   993,
+		WardsCount:                 8809,
+		PollingUnitsCount:          176846,
+	}
+}
+
+func (s *ElectionGroupsService) CreateElectionGroup(ctx context.Context, name string, rank int32, electionsCount, statesCount int32, electionDate time.Time) (queries.ElectionGroup, error) {
+	metrics := getSafeNationalMetrics(ctx, s.queries)
 
 	eg, err := s.queries.CreateElectionGroup(ctx, queries.CreateElectionGroupParams{
 		Name:                       name,

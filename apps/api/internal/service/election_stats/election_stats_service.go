@@ -20,6 +20,12 @@ type ElectionStatsService interface {
 	GetElectionGroupStateConstituencyStats(ctx context.Context, arg queries.GetElectionGroupStateConstituencyStatsParams) (queries.ElectionGroupStateConstituency, error)
 	GetElectionGroupSenatorialDistrictStats(ctx context.Context, arg queries.GetElectionGroupSenatorialDistrictStatsParams) (queries.ElectionGroupSenatorialDistrict, error)
 	GetElectionGroupByID(ctx context.Context, id int64) (queries.ElectionGroup, error)
+	GetStateByID(ctx context.Context, id int16) (queries.CState, error)
+	GetLGAByID(ctx context.Context, id int32) (queries.Lga, error)
+	GetWardByID(ctx context.Context, id int32) (queries.Ward, error)
+	GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error)
+	GetFederalConstituencyByID(ctx context.Context, id int32) (queries.FederalConstituency, error)
+	GetStateConstituencyByID(ctx context.Context, id int32) (queries.StateConstituency, error)
 }
 
 type Service struct {
@@ -86,4 +92,28 @@ func (s *Service) GetElectionGroupSenatorialDistrictStats(ctx context.Context, a
 
 func (s *Service) GetElectionGroupByID(ctx context.Context, id int64) (queries.ElectionGroup, error) {
 	return s.queries.GetElectionGroupByID(ctx, id)
+}
+
+func (s *Service) GetStateByID(ctx context.Context, id int16) (queries.CState, error) {
+	return s.queries.GetStateDetailsByID(ctx, id)
+}
+
+func (s *Service) GetLGAByID(ctx context.Context, id int32) (queries.Lga, error) {
+	return s.queries.GetLGAByID(ctx, id)
+}
+
+func (s *Service) GetWardByID(ctx context.Context, id int32) (queries.Ward, error) {
+	return s.queries.GetWardByID(ctx, id)
+}
+
+func (s *Service) GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error) {
+	return s.queries.GetSenatorialDistrictByID(ctx, id)
+}
+
+func (s *Service) GetFederalConstituencyByID(ctx context.Context, id int32) (queries.FederalConstituency, error) {
+	return s.queries.GetFederalConstituencyByID(ctx, id)
+}
+
+func (s *Service) GetStateConstituencyByID(ctx context.Context, id int32) (queries.StateConstituency, error) {
+	return s.queries.GetStateConstituencyByID(ctx, id)
 }

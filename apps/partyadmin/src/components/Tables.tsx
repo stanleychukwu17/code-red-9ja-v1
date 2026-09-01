@@ -23,6 +23,11 @@ import {
   UserTableTile,
   type UserType,
 } from "./tiles/user-tile";
+import {
+  MarketingTableHeader,
+  MarketingTableTile,
+  type MarketingCampaignType,
+} from "./tiles/marketing-tile";
 
 export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
   return (
@@ -80,7 +85,7 @@ export function ApplicationsTable({
   );
 }
 
-export { type UserType };
+export { type UserType, type MarketingCampaignType };
 
 export function PartyAdminsTable({
   columns,
@@ -119,6 +124,20 @@ export function UsersTable({
             data={data}
             refetch={refetch}
           />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
+  const campaignsList = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto">
+      <MarketingTableHeader />
+      <div>
+        {campaignsList.map((data, index) => (
+          <MarketingTableTile key={data.id || index} data={data} />
         ))}
       </div>
     </div>

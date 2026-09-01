@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS polling_unit_updates (
   ward_id INT REFERENCES wards(id) ON DELETE SET NULL,
   senatorial_district_id INT REFERENCES senatorial_districts(id) ON DELETE SET NULL,
   federal_constituency_id INT REFERENCES federal_constituencies(id) ON DELETE SET NULL,
-  state_assembly_constituency_id INT REFERENCES state_assembly_constituencies(id) ON DELETE SET NULL,
+  state_assembly_constituency_id INT REFERENCES state_constituencies(id) ON DELETE SET NULL,
   
   -- Update details
   message TEXT NOT NULL,
@@ -37,42 +37,5 @@ CREATE INDEX idx_pu_updates_senatorial ON polling_unit_updates(senatorial_distri
 CREATE INDEX idx_pu_updates_federal ON polling_unit_updates(federal_constituency_id);
 CREATE INDEX idx_pu_updates_state_assembly ON polling_unit_updates(state_assembly_constituency_id);
 
--- Trigger to track interval updates for assignments
--- +goose StatementBegin
-CREATE OR REPLACE FUNCTION update_assignment_interval()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_minutes INT;
-  v_interval_key TEXT;
-BEGIN
-  IF NEW.assignment_id IS NOT NULL THEN
-    v_minutes := EXTRACT(MINUTE FROM NEW.created_at);
-    IF v_minutes < 30 THEN
-      v_interval_key := TO_CHAR(NEW.created_at, 'HH24:00');
-    ELSE
-      v_interval_key := TO_CHAR(NEW.created_at, 'HH24:30');
-    END IF;
-
-    UPDATE polling_unit_assignments
-    SET interval_updates = jsonb_set(
-      interval_updates,
-      ARRAY[v_interval_key],
-      (COALESCE((interval_updates->>v_interval_key)::int, 0) + 1)::text::jsonb,
-      true
-    )
-    WHERE id = NEW.assignment_id;
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
--- +goose StatementEnd
-
-CREATE TRIGGER trg_update_assignment_interval
-AFTER INSERT ON polling_unit_updates
-FOR EACH ROW
-EXECUTE FUNCTION update_assignment_interval();
-
 -- +goose Down
-DROP TRIGGER IF EXISTS trg_update_assignment_interval ON polling_unit_updates;
-DROP FUNCTION IF EXISTS update_assignment_interval();
 DROP TABLE IF EXISTS polling_unit_updates;

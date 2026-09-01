@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { getUserVoteStatus } from "#/lib/server/elections";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -12,15 +12,53 @@ import { useState } from "react";
 import { NotVotingDrawer } from "./NotVotingDrawer";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
+import {
+  getPotentialPayout,
+  getEstimatePayout,
+} from "#/lib/server/practice_tests";
+
 interface DidYouVoteCardProps {
   onYesClick?: () => void;
   onNoClick?: () => void;
 }
 
 export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
-  const { selectedAssignment, selectedElectionGroup } = useAuth();
+  const { selectedAssignment, selectedElectionGroup, party } = useAppContext();
   const navigate = useNavigate();
   const [isNotVotingDrawerOpen, setIsNotVotingDrawerOpen] = useState(false);
+  const assignmentId = selectedAssignment?.id;
+
+  const { data: potentialPayout } = useQuery({
+    queryKey: [
+      "taskPayout",
+      "live_voters_referred",
+      assignmentId ?? "no-assignment",
+      selectedElectionGroup?.id,
+      party?.id,
+    ],
+    queryFn: async () => {
+      if (assignmentId) {
+        const res = await getPotentialPayout({
+          data: { assignmentId, taskType: "live_voters_referred" },
+        });
+        if (res?.success && res.data?.payout) {
+          return (res.data.payout.potential_payout_kobo ?? 0) / 100;
+        }
+      }
+      const estRes = await getEstimatePayout({
+        data: {
+          taskType: "live_voters_referred",
+          role: "polling_agent",
+          electionGroupId: selectedElectionGroup?.id ?? undefined,
+          partyId: party?.id ?? undefined,
+        },
+      });
+      if (estRes?.success && estRes.data?.payout) {
+        return (estRes.data.payout.potential_payout_kobo ?? 0) / 100;
+      }
+      return undefined;
+    },
+  });
 
   const { data: voteStatusData, isLoading } = useQuery({
     queryKey: ["user-vote-status", selectedElectionGroup?.id],
@@ -45,13 +83,18 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
     return <UserDidNotVoteCard statusInfo={statusInfo} onNoClick={onNoClick} />;
   }
 
+  const formattedPayout =
+    potentialPayout !== undefined
+      ? `₦${potentialPayout.toLocaleString()}`
+      : "₦1,200";
+
   return (
     <>
       <GreyCardWrapper>
         {selectedAssignment && (
           <GreyCardTopRow
             title={"Potential payout"}
-            subtitle={"₦1,200"}
+            subtitle={formattedPayout}
             icon={<FancyMoneyBagIcon className="size-5" />}
           />
         )}

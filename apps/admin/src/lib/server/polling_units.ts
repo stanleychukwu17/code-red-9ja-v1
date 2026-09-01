@@ -4,10 +4,8 @@ import { apiFetchJson } from "./fetch";
 
 interface PollingUnitInput {
   name: string;
-  abbreviation?: string | null;
-  units?: string | null;
-  delimitation?: string | null;
-  remark?: string | null;
+  code?: string | null;
+  pu_code?: string | null;
   registration_area_id?: number | null;
   ward_id: number;
   state_id: number;
@@ -76,10 +74,10 @@ export const getPollingUnitById = createServerFn({ method: "GET" })
   });
 
 export const getPollingUnits = createServerFn()
-  .inputValidator((data: { wardId?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { wardId, localGovernmentId, stateId, limit, cursor } }) => {
+  .inputValidator((data: { wardId?: number; localGovernmentId?: number; stateId?: number; limit?: number; cursor?: string | number; search?: string }) => data)
+  .handler(async ({ data: { wardId, localGovernmentId, stateId, limit, cursor, search } }) => {
     try {
-      return await apiFetchJson(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor));
+      return await apiFetchJson(API_URL.getPollingUnits(wardId, localGovernmentId, stateId, limit, cursor, search));
     } catch (error: any) {
       return { status: "failed", error: error?.message || "Failed to fetch polling units from API" };
     }

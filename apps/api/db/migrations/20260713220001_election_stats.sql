@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS election_group_polling_units (
   state_id                  SMALLINT  REFERENCES c_states(id) ON DELETE SET NULL,
   lga_id                    INT       REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id                   INT       REFERENCES wards(id) ON DELETE SET NULL,
-  state_constituency_id     INT       REFERENCES state_assembly_constituencies(id) ON DELETE SET NULL,
+  state_constituency_id     INT       REFERENCES state_constituencies(id) ON DELETE SET NULL,
   federal_constituency_id   INT       REFERENCES federal_constituencies(id) ON DELETE SET NULL,
   senatorial_district_id    INT       REFERENCES senatorial_districts(id) ON DELETE SET NULL,
 
@@ -193,7 +193,7 @@ CREATE TABLE IF NOT EXISTS election_group_state_constituencies (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
 
   election_group_id         BIGINT   NOT NULL REFERENCES election_groups(id) ON DELETE CASCADE,
-  state_constituency_id     INT      NOT NULL REFERENCES state_assembly_constituencies(id) ON DELETE CASCADE,
+  state_constituency_id     INT      NOT NULL REFERENCES state_constituencies(id) ON DELETE CASCADE,
   state_id                  SMALLINT REFERENCES c_states(id) ON DELETE SET NULL,
 
   -- Application Stats

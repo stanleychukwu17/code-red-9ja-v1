@@ -1,6 +1,7 @@
 package router
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -33,6 +34,7 @@ import (
 	electionshandler "free9ja/api/internal/handler/elections"
 	federalconstituencieshandler "free9ja/api/internal/handler/federal_constituencies"
 	fileshandler "free9ja/api/internal/handler/files"
+	inecgrabberhandler "free9ja/api/internal/handler/inec_grabber"
 	officeshandler "free9ja/api/internal/handler/offices"
 	pageverificationshandler "free9ja/api/internal/handler/page_verifications"
 	partieshandler "free9ja/api/internal/handler/parties"
@@ -45,7 +47,7 @@ import (
 	referralshandler "free9ja/api/internal/handler/referrals"
 	seedhandler "free9ja/api/internal/handler/seed"
 	senatorialdistrictshandler "free9ja/api/internal/handler/senatorial_districts"
-	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_assembly_constituencies"
+	stateassemblyconstituencieshandler "free9ja/api/internal/handler/state_constituencies"
 	stateshandler "free9ja/api/internal/handler/states"
 	supervisorassignmentshandler "free9ja/api/internal/handler/supervisor_assignments"
 	systemsettingshandler "free9ja/api/internal/handler/system_settings"
@@ -61,6 +63,7 @@ import (
 	electionsservice "free9ja/api/internal/service/elections"
 	federalconstituenciesservice "free9ja/api/internal/service/federal_constituencies"
 	filesservice "free9ja/api/internal/service/files"
+	inecgrabberservice "free9ja/api/internal/service/inec_grabber"
 	messagingservice "free9ja/api/internal/service/messaging"
 	monnifyservice "free9ja/api/internal/service/monnify"
 	officesservice "free9ja/api/internal/service/offices"
@@ -76,7 +79,7 @@ import (
 	referralsservice "free9ja/api/internal/service/referrals"
 	seedservice "free9ja/api/internal/service/seed"
 	senatorialdistrictsservice "free9ja/api/internal/service/senatorial_districts"
-	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_assembly_constituencies"
+	stateassemblyconstituenciesservice "free9ja/api/internal/service/state_constituencies"
 	statesservice "free9ja/api/internal/service/states"
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	usersservice "free9ja/api/internal/service/users"
@@ -133,12 +136,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	electionGroupsService := electiongroupsservice.NewElectionGroupsService(q, rdb, distributor)
 	senatorialDistrictsService := senatorialdistrictsservice.NewSenatorialDistrictsService(q, rdb)
 	federalConstituenciesService := federalconstituenciesservice.NewFederalConstituenciesService(q, rdb)
-	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateAssemblyConstituenciesService(q, rdb)
+	stateAssemblyConstituenciesService := stateassemblyconstituenciesservice.NewStateConstituenciesService(q, rdb)
 	referralsService := referralsservice.NewReferralsService(q)
 
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
-	seedService := seedservice.NewSeedService(q, rdb, authService, bodiesService, usersService, partiesService)
+	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	filesService := filesservice.NewFilesService(q)
 
@@ -146,6 +149,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	usersService.SetPartyService(partiesService)
 	partiesService.SetPageVerificationsService(pageVerificationsService)
 	partiesService.SetUsersService(usersService)
+
+	earningsService := earningsservice.NewService(q, pool)
+	pollingUnitAssignmentsService.SetEarningsService(earningsService)
+	pollingUnitUpdatesService.SetEarningsService(earningsService)
+	pollingUnitResultsService.SetEarningsService(earningsService)
+	electionsService.SetEarningsService(earningsService)
 
 	// Initialize the R2 service
 	var r2Svc *r2service.R2Service
@@ -201,6 +210,22 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		filesHandler = fileshandler.NewHandler(q, r2Svc, rdb, utilsInstance, usersService, partiesService, auditService)
 	}
 
+	geminiKey := ""
+	if cfg != nil {
+		geminiKey = cfg.GeminiAPIKey
+	}
+	var notifier inecgrabberservice.ResultNotifierFunc
+	if distributor != nil {
+		notifier = func(ctx context.Context, electionID int64, puID int32) {
+			_ = distributor.DistributeTaskCalculateFinalResult(ctx, &worker.CalculateFinalResultPayload{
+				ElectionID:    electionID,
+				PollingUnitID: puID,
+			})
+		}
+	}
+	inecGrabberService := inecgrabberservice.NewINECGrabberService(q, pool, rdb, r2Svc, geminiKey, notifier)
+	inecGrabberHandler := inecgrabberhandler.NewINECGrabberHandler(inecGrabberService, utilsInstance)
+
 	// Core middleware
 	mainRouter.Use(corsMiddleware)                     // Handles Cross-Origin Resource Sharing
 	mainRouter.Use(middleware.RequestID)               // Injects a unique request ID into the context
@@ -238,9 +263,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
 
 	// for seeds
-	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)             // Seed users endpoint
-	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)           // Seed admins endpoint
+	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)                                       // Seed users endpoint
+	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                     // Seed admins endpoint
+	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
 	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)     // Flush Redis cache endpoint
+
 
 	// Banks
 	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)
@@ -253,7 +280,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get(utils.ApiUrls.Bodies.GetCities, bodiesHandler.GetCities)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetSenatorialDistricts, senatorialDistrictsHandler.GetSenatorialDistricts)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetFederalConstituencies, federalConstituenciesHandler.GetFederalConstituencies)
-	mainRouter.Get(utils.ApiUrls.Bodies.GetStateAssemblyConstituencies, stateAssemblyConstituenciesHandler.GetStateAssemblyConstituencies)
+	mainRouter.Get(utils.ApiUrls.Bodies.GetStateConstituencies, stateAssemblyConstituenciesHandler.GetStateConstituencies)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetLGAs, bodiesHandler.GetLGAs)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetWards, wardsHandler.GetWards)
 	mainRouter.Get(utils.ApiUrls.Bodies.GetPollingUnits, pollingUnitsHandler.GetPollingUnits)
@@ -290,6 +317,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	// bodies national metrics (public)
 	mainRouter.Get("/api/v1/bodies/metrics", bodiesHandler.GetNationalMetrics)
+	mainRouter.Post("/api/v1/bodies/sync-electoral-units", bodiesHandler.SyncElectoralUnits)
+	mainRouter.Post("/api/v1/bodies/sync-electoral-units-state-flow", bodiesHandler.SyncElectoralUnitsStateFlow)
 
 	// states public routes
 	mainRouter.Get("/api/v1/states/{id}", statesHandler.GetState)
@@ -298,7 +327,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/senatorial-districts/{id}", senatorialDistrictsHandler.GetSenatorialDistrict)
 
 	// state assembly constituencies public routes
-	mainRouter.Get("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.GetStateAssemblyConstituency)
+	mainRouter.Get("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.GetStateConstituency)
 
 	// federal constituencies public routes
 	mainRouter.Get("/api/v1/federal-constituencies/{id}", federalConstituenciesHandler.GetFederalConstituency)
@@ -360,6 +389,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Put("/api/v1/admin/settings/{key}", systemSettingsHandler.UpdateSystemSetting)
 
 		// marketing plan admin mutations (plan data management is admin-only)
+		r.Get("/api/v1/admin/agent-marketing-campaigns", partiesHandler.ListAllPartyMarketingCampaigns)
+		r.Patch("/api/v1/admin/agent-marketing-campaigns/{id}/status", partiesHandler.UpdatePartyMarketingCampaignStatus)
+		r.Delete("/api/v1/admin/agent-marketing-campaigns/{id}", partiesHandler.DeletePartyMarketingCampaign)
 		r.Post("/api/v1/plans", partiesHandler.CreatePlan)
 		r.Put("/api/v1/plans/{id}", partiesHandler.UpdatePlan)
 		r.Delete("/api/v1/plans/{id}", partiesHandler.DeletePlan)
@@ -385,9 +417,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Delete("/api/v1/senatorial-districts/{id}", senatorialDistrictsHandler.DeleteSenatorialDistrict)
 
 		// state assembly constituencies admin mutations
-		r.Post("/api/v1/state-assembly-constituencies", stateAssemblyConstituenciesHandler.CreateStateAssemblyConstituency)
-		r.Put("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.UpdateStateAssemblyConstituency)
-		r.Delete("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.DeleteStateAssemblyConstituency)
+		r.Post("/api/v1/state-assembly-constituencies", stateAssemblyConstituenciesHandler.CreateStateConstituency)
+		r.Put("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.UpdateStateConstituency)
+		r.Delete("/api/v1/state-assembly-constituencies/{id}", stateAssemblyConstituenciesHandler.DeleteStateConstituency)
 
 		// federal constituencies admin mutations
 		r.Post("/api/v1/federal-constituencies", federalConstituenciesHandler.CreateFederalConstituency)
@@ -432,6 +464,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/admin/referrals", referralsHandler.ListReferrals)
 		r.Get("/api/v1/admin/referrals/{id}", referralsHandler.GetReferral)
 		r.Put("/api/v1/admin/referrals/{id}", referralsHandler.UpdateReferral)
+
+		// INEC result grabber admin endpoints
+		r.Get("/api/v1/admin/inec-result-grabbers", inecGrabberHandler.ListGrabbers)
+		r.Post("/api/v1/admin/inec-result-grabbers/{id}/sync", inecGrabberHandler.SyncGrabber)
+		r.Post("/api/v1/admin/inec-result-grabbers/{id}/toggle-pause", inecGrabberHandler.TogglePause)
+		r.Get("/api/v1/admin/inec-result-grabber-logs", inecGrabberHandler.ListAllLogs)
+		r.Get("/api/v1/admin/inec-result-grabbers/{id}/logs", inecGrabberHandler.ListLogs)
+		r.Get("/api/v1/admin/unmatched-polling-unit-results", inecGrabberHandler.ListUnmatchedResults)
+		r.Post("/api/v1/admin/unmatched-polling-unit-results/{id}/resolve", inecGrabberHandler.ResolveUnmatchedResult)
 
 		// only admins can permanently delete files
 		r.Delete("/api/v1/files/{id}", fileRoute(utilsInstance, filesHandler, func(h *fileshandler.Handler) http.HandlerFunc { return h.DeleteFile }))
@@ -488,14 +529,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
 
-		// Single unit dedicated endpoints
-		r.Get("/api/v1/election-groups/{id}/stats", electionStatsHandler.GetSingleElectionGroupStats)
-		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}", electionStatsHandler.GetSingleStateStats)
-		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts/{sd_id}", electionStatsHandler.GetSingleSenatorialDistrictStats)
-		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies/{fc_id}", electionStatsHandler.GetSingleFederalConstituencyStats)
-		r.Get("/api/v1/election-groups/{id}/stats/state-constituencies/{sc_id}", electionStatsHandler.GetSingleStateConstituencyStats)
-		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}", electionStatsHandler.GetSingleLGAStats)
-		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}", electionStatsHandler.GetSingleWardStats)
+		// Single unit dedicated party stats endpoints
+		r.Get("/api/v1/election-groups/{id}/stats/parties/{party_id}", electionStatsHandler.GetSingleElectionGroupStats)
+		r.Get("/api/v1/election-groups/{id}/stats/states/{state_id}/parties/{party_id}", electionStatsHandler.GetSingleStateStats)
+		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts/{sd_id}/parties/{party_id}", electionStatsHandler.GetSingleSenatorialDistrictStats)
+		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies/{fc_id}/parties/{party_id}", electionStatsHandler.GetSingleFederalConstituencyStats)
+		r.Get("/api/v1/election-groups/{id}/stats/state-constituencies/{sc_id}/parties/{party_id}", electionStatsHandler.GetSingleStateConstituencyStats)
+		r.Get("/api/v1/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}", electionStatsHandler.GetSingleLGAStats)
+		r.Get("/api/v1/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}", electionStatsHandler.GetSingleWardStats)
 
 		r.Post("/api/v1/elections/{id}/field-candidate", electionsHandler.FieldPartyCandidate)
 		r.Post("/api/v1/parties/{id}/wallet/withdraw", partiesHandler.WithdrawFromPartyWallet)
@@ -543,6 +584,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// polling unit results routes
 		r.Post("/api/v1/polling-unit-results", pollingUnitResultsHandler.SubmitResult)
+		r.Post("/api/v1/polling-unit-results/batch", pollingUnitResultsHandler.SubmitBatchResults)
 		r.Get("/api/v1/polling-unit-results", pollingUnitResultsHandler.ListResults)
 		r.Get("/api/v1/polling-unit-final-results", pollingUnitResultsHandler.ListFinalResults)
 		r.Get("/api/v1/polling-unit-results/final", pollingUnitResultsHandler.GetFinalResult)
@@ -553,7 +595,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// practice tests routes
 		r.Post("/api/v1/practice-tests", practiceTestsHandler.SubmitPracticeTest)
 		r.Get("/api/v1/practice-tests", practiceTestsHandler.ListPracticeTests)
-		r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
+		// DEPRECATED: r.Get("/api/v1/practice-tests/payout-preview", practiceTestsHandler.GetPayoutPreview)
 	})
 
 	// Party-admin routes: authenticated users with role=party_admin AND roleLevel=admin
@@ -579,6 +621,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// Admins/party_admins: trigger calculation, list, approve, mark paid
 		r.Post("/api/v1/agent-earnings/calculate/{assignment_id}", agentEarningsHandler.CalculateEarnings)
+		r.Get("/api/v1/agent-earnings/potential-payout", agentEarningsHandler.GetPotentialPayout)
+		r.Get("/api/v1/agent-earnings/estimate-payout", agentEarningsHandler.EstimatePotentialPayout)
+		r.Get("/api/v1/agent-earnings/allocations", agentEarningsHandler.GetAllocations)
 		r.Get("/api/v1/agent-earnings", agentEarningsHandler.ListEarnings)
 		r.Get("/api/v1/agent-earnings/{id}", agentEarningsHandler.GetEarnings)
 		r.Get("/api/v1/agent-earnings/assignment/{assignment_id}", agentEarningsHandler.GetEarningsByAssignment)

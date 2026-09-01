@@ -27,6 +27,16 @@ SET
   last_update_at = NOW()
 WHERE id = $1;
 
+-- name: IncrementAssignmentIntervalUpdates :exec
+UPDATE polling_unit_assignments
+SET interval_updates = jsonb_set(
+  COALESCE(interval_updates, '{}'::jsonb),
+  ARRAY[sqlc.arg(interval_key)::text],
+  (COALESCE((COALESCE(interval_updates, '{}'::jsonb)->>sqlc.arg(interval_key)::text)::int, 0) + 1)::text::jsonb,
+  true
+)
+WHERE id = sqlc.arg(id)::bigint;
+
 -- name: IncrementPartyElectionGroupMetrics :exec
 UPDATE party_election_groups
 SET 

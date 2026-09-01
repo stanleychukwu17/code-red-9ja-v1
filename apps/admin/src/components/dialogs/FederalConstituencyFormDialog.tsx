@@ -21,10 +21,10 @@ import {
 } from "#/lib/server/federal_constituencies";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
-
 export interface FederalConstituency {
   id: number;
   name: string;
+  code?: string;
   state_id: number;
   state_name: string;
   senatorial_district_id: number;
@@ -50,6 +50,7 @@ export function FederalConstituencyFormDialog({
   const form = useForm({
     defaultValues: {
       name: "",
+      code: "",
       stateId: undefined as number | undefined,
       senatorialDistrictId: undefined as number | undefined,
     },
@@ -65,6 +66,7 @@ export function FederalConstituencyFormDialog({
     if (open) {
       if (mode === "update" && federalConstituency) {
         form.setFieldValue("name", federalConstituency.name || "");
+        form.setFieldValue("code", federalConstituency.code || "");
         form.setFieldValue("stateId", federalConstituency.state_id);
         form.setFieldValue(
           "senatorialDistrictId",
@@ -72,6 +74,7 @@ export function FederalConstituencyFormDialog({
         );
       } else {
         form.setFieldValue("name", "");
+        form.setFieldValue("code", "");
         form.setFieldValue("stateId", undefined);
         form.setFieldValue("senatorialDistrictId", undefined);
       }
@@ -82,20 +85,19 @@ export function FederalConstituencyFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
+      code: string;
       stateId: number | undefined;
       senatorialDistrictId: number | undefined;
     }) => {
       if (!values.stateId) {
         throw new Error("State is required");
       }
-      if (!values.senatorialDistrictId) {
-        throw new Error("Senatorial district is required");
-      }
 
       const payload = {
         name: values.name.trim(),
+        code: values.code.trim() || undefined,
         state_id: values.stateId,
-        senatorial_district_id: values.senatorialDistrictId,
+        senatorial_district_id: values.senatorialDistrictId ?? 0,
       };
 
       let res;
@@ -132,7 +134,7 @@ export function FederalConstituencyFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
           title={
             mode === "update"
@@ -175,6 +177,24 @@ export function FederalConstituencyFormDialog({
               />
             </div>
 
+            {/* Code */}
+            <div className="w-full">
+              <form.Field
+                name="code"
+                children={(field) => (
+                  <div className="w-full">
+                    <FancyInput
+                      type="text"
+                      placeholder="Code (e.g. fc/174/kn)"
+                      errorMsg={field.state.meta.errors?.join(", ")}
+                      value={field.state.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                    />
+                  </div>
+                )}
+              />
+            </div>
+
             {/* State Select */}
             <div className="flex flex-col gap-1.5">
               <Label title="State" />
@@ -205,13 +225,9 @@ export function FederalConstituencyFormDialog({
 
             {/* Senatorial District Select */}
             <div className="flex flex-col gap-1.5">
-              <Label title="Senatorial District" />
+              <Label title="Senatorial District (Optional)" />
               <form.Field
                 name="senatorialDistrictId"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value ? "Senatorial district is required" : undefined,
-                }}
                 children={(field) => (
                   <SelectSenatorialDistrict
                     selectedId={field.state.value}

@@ -74,7 +74,7 @@ SELECT
   lg.name AS lga_name,
   ct.name AS city_name,
   pu.name AS polling_unit_name,
-  pu.delimitation AS polling_unit_code,
+  pu.pu_code AS polling_unit_code,
   COALESCE(
     (
       SELECT COUNT(*)::integer 
@@ -100,6 +100,9 @@ WHERE
   (sqlc.arg(party_id)::smallint = 0 OR pa.party_id = sqlc.arg(party_id)) AND
   (sqlc.arg(election_group_id)::bigint = 0 OR pa.election_group_id = sqlc.arg(election_group_id)) AND
   (sqlc.arg(status)::varchar = '' OR pa.status = sqlc.arg(status)) AND
+  (sqlc.arg(state_id)::smallint = 0 OR COALESCE(pa.state_id, u.current_state, pu.state_id) = sqlc.arg(state_id)) AND
+  (sqlc.arg(lga_id)::integer = 0 OR COALESCE(pa.lga_id, u.current_lga, pu.lga_id) = sqlc.arg(lga_id)) AND
+  (sqlc.arg(ward_id)::integer = 0 OR COALESCE(pa.ward_id, u.current_ward, pu.ward_id) = sqlc.arg(ward_id)) AND
   (sqlc.arg(cursor)::bigint = 0 OR pa.id < sqlc.arg(cursor))
 ORDER BY pa.id DESC
 LIMIT sqlc.arg(limit_val);
@@ -166,6 +169,7 @@ LIMIT sqlc.arg(limit_val)::integer;
 SELECT 
   pa.id,
   pa.party_id,
+  pa.election_group_id,
   pa.polling_unit_id,
   pa.role,
   pa.state_id,
@@ -178,6 +182,23 @@ WHERE pa.user_id = $1
   AND pa.election_group_id = $2 
   AND pa.status = 'pending'
 LIMIT 1;
+
+-- name: GetPendingApplicationsForUserAutoAccept :many
+SELECT 
+  pa.id,
+  pa.party_id,
+  pa.election_group_id,
+  pa.polling_unit_id,
+  pa.role,
+  pa.state_id,
+  pa.lga_id,
+  pa.ward_id,
+  p.auto_accept_applications
+FROM party_applications pa
+JOIN parties p ON pa.party_id = p.id
+WHERE pa.user_id = $1 
+  AND pa.status = 'pending';
+
 
 -- name: GetAcceptedApplicationForUser :one
 SELECT 

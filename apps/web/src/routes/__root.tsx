@@ -63,12 +63,10 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <HeadContent />
       </head>
-      <body
-        className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]"
-      >
+      <body className="font-sans antialiased block relative overflow-x-hidden overflow-y-auto selection:bg-[rgba(79,184,178,0.24)]">
         <Provider store={store}>
           <QueryClientProvider client={queryClient}>
-            <Toaster />
+            <Toaster position="top-center" />
             <ClientOnly>
               <LoadSitePreference sitePreference={sitePreference} />
               <LoadAuthSession />
@@ -76,12 +74,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
             </ClientOnly>
 
             <div className="flex min-h-dvh">
-              <Header userDetails={userDetails} sitePreference={sitePreference} />
+              <Header
+                userDetails={userDetails}
+                sitePreference={sitePreference}
+              />
 
               <div className="flex flex-col flex-1 w-full min-w-0">
-                <main className="flex-1">
-                  {children}
-                </main>
+                <main className="flex-1">{children}</main>
                 <Footer />
               </div>
             </div>

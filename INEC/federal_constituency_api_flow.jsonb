@@ -1,0 +1,385 @@
+FEDERAL CONSTITUENCY ELECTION
+
+INEC API BASE URL: https://dolphin-app-sleqh.ondigitalocean.app/api/v1
+
+1. Grab List of Election Types: "GET /elections?election_type=5f129a04df41d910dcdc1d53&state_id=2"
+
+{
+    "success": true,
+    "request_time": 1786993975486,
+    "data": [
+        {
+            "status": "ACTIVE",
+            "version": 33,
+            "election_lgas": [],
+            "parties": [],
+            "is_mapped": false,
+            "_id": "6a35c3e587b1768452f7b027",
+            "full_name": "House of Representatives election - 2026-06-20 - dawakin kudu/warawa",
+            "election_id": 5002,
+            "domain_id": 172,
+            "domain_type": "App\\Models\\FederalConstituency",
+            "election_type_id": 4,
+            "state_id": 20,
+            "state": {
+                "status": "ACTIVE",
+                "_id": "5f0eb6e16dda22674979bf35",
+                "presidential_id": 1,
+                "presidential": "5f0eb67db39f166717b8411f",
+                "name": "KANO",
+                "code": "19",
+                "state_id": 20,
+                "created_at": "2020-07-15T07:57:21.584Z",
+                "updated_at": "2020-07-15T07:57:21.584Z",
+                "__v": 0
+            },
+            "election_date": "2026-06-19T23:00:00.000Z",
+            "domain": {
+                "status": "ACTIVE",
+                "_id": "5f0f37fd2d77c83a06f0f3b1",
+                "state_id": 20,
+                "state": "5f0eb6e16dda22674979bf35",
+                "name": "dawakin kudu/warawa",
+                "code": "fc/174/kn",
+                "federal_constituency_id": 172,
+                "created_at": "2020-07-15T17:08:13.455Z",
+                "updated_at": "2020-07-15T17:08:13.455Z",
+                "__v": 0
+            },
+            "election_type": {
+                "status": "ACTIVE",
+                "_id": "5f129a04df41d910dcdc1d53",
+                "name": "House of Representatives election",
+                "code": "REPS",
+                "election_type_id": 4,
+                "created_at": "2020-07-18T06:43:16.847Z",
+                "updated_at": "2020-07-18T06:43:16.847Z",
+                "__v": 0
+            },
+            "onModel": "FederalConstituency",
+            "created_at": "2026-06-19T22:34:13.316Z",
+            "updated_at": "2026-06-19T22:34:13.316Z",
+            "__v": 0
+        },
+        ...
+    ]
+}
+
+
+2. LGAs: "GET /elections/6a35c3e587b1768452f7b027/lga"
+
+{
+    "success": true,
+    "request_time": 1786994033204,
+    "data": [
+        {
+            "wards": [
+                {
+                    "status": "ACTIVE",
+                    "_id": "5f0f3cf28f77bb3acad0a010",
+                    "state_id": 20,
+                    "state": "5f0eb6e16dda22674979bf35",
+                    "lga_id": 3514,
+                    "lga": "5f0f39974d89fc3a883de25b",
+                    "state_constituency_id": 525,
+                    "state_constituency": "5f0f373e93d20b39ceee21c0",
+                    "federal_constituency_id": 172,
+                    "federal_constituency": "5f0f37fd2d77c83a06f0f3b1",
+                    "senatorial_district_id": 56,
+                    "senatorial_district": "5f0f3954970bd83a6f4539ec",
+                    "name": "WARAWA",
+                    "code": "13",
+                    "old_name": "",
+                    "ward_id": 22253,
+                    "created_at": "2020-07-15T17:29:22.973Z",
+                    "updated_at": "2020-07-15T17:29:22.973Z",
+                    "__v": 0
+                },
+                ...
+            ],
+            "election_wards": [],
+            "status": "ACTIVE",
+            "is_mapped": false,
+            "_id": "6a35c3f687b1768452f7b3e5",
+            "valid_votes": 0,
+            "invalid_votes": 0,
+            "total_votes": 0,
+            "total_accredited": 0,
+            "total_registered": 0,
+            "ballots_issued": 0,
+            "ballots_used": 0,
+            "lga": {
+                "status": "ACTIVE",
+                "_id": "5f0f39974d89fc3a883de25b",
+                "state_id": 20,
+                "state": "5f0eb6e16dda22674979bf35",
+                "name": "WARAWA",
+                "code": "43",
+                "lga_id": 3514,
+                "created_at": "2020-07-15T17:15:03.606Z",
+                "updated_at": "2020-07-15T17:15:03.606Z",
+                "__v": 0
+            },
+            "election": {
+                "status": "ACTIVE",
+                "version": 33,
+                "election_lgas": [],
+                "parties": [],
+                "is_mapped": false,
+                "_id": "6a35c3e587b1768452f7b027",
+                "full_name": "House of Representatives election - 2026-06-20 - dawakin kudu/warawa",
+                "election_id": 5002,
+                "domain_id": 172,
+                "domain_type": "App\\Models\\FederalConstituency",
+                "election_type_id": 4,
+                "state_id": 20,
+                "state": "5f0eb6e16dda22674979bf35",
+                "election_date": "2026-06-19T23:00:00.000Z",
+                "domain": "5f0f37fd2d77c83a06f0f3b1",
+                "election_type": "5f129a04df41d910dcdc1d53",
+                "onModel": "FederalConstituency",
+                "created_at": "2026-06-19T22:34:13.316Z",
+                "updated_at": "2026-06-19T22:34:13.316Z",
+                "__v": 0
+            },
+            "election_id": 5002,
+            "state": {
+                "status": "ACTIVE",
+                "_id": "5f0eb6e16dda22674979bf35",
+                "presidential_id": 1,
+                "presidential": "5f0eb67db39f166717b8411f",
+                "name": "KANO",
+                "code": "19",
+                "state_id": 20,
+                "created_at": "2020-07-15T07:57:21.584Z",
+                "updated_at": "2020-07-15T07:57:21.584Z",
+                "__v": 0
+            },
+            "created_at": "2026-06-19T22:34:30.446Z",
+            "updated_at": "2026-06-19T22:34:30.446Z",
+            "__v": 0
+        },
+        ...
+    ],
+    "results": [
+        {
+            "_id": "5f0f39974d89fc3a883de25b",
+            "count": 142
+        },
+        {
+            "_id": "5f0f39934d89fc3a883de239",
+            "count": 303
+        }
+    ],
+    "pus": [
+        {
+            "_id": "5f0f39974d89fc3a883de25b",
+            "count": 143
+        },
+        {
+            "_id": "5f0f39934d89fc3a883de239",
+            "count": 303
+        }
+    ]
+}
+
+
+3. Polling Units: "GET /elections/6a35c3e587b1768452f7b027/pus?ward=5f0f3cf28f77bb3acad0a010"
+
+{
+    "success": true,
+    "request_time": 1786994097903,
+    "data": [
+        {
+            "status": "ACTIVE",
+            "is_zero_pu": false,
+            "_id": "6a35c3f487b1768452f7b099",
+            "polling_unit_id": 64757,
+            "election_id": 5002,
+            "election": {
+                "status": "ACTIVE",
+                "version": 33,
+                "election_lgas": [],
+                "parties": [],
+                "is_mapped": false,
+                "_id": "6a35c3e587b1768452f7b027",
+                "full_name": "House of Representatives election - 2026-06-20 - dawakin kudu/warawa",
+                "election_id": 5002,
+                "domain_id": 172,
+                "domain_type": "App\\Models\\FederalConstituency",
+                "election_type_id": 4,
+                "state_id": 20,
+                "state": "5f0eb6e16dda22674979bf35",
+                "election_date": "2026-06-19T23:00:00.000Z",
+                "domain": "5f0f37fd2d77c83a06f0f3b1",
+                "election_type": "5f129a04df41d910dcdc1d53",
+                "onModel": "FederalConstituency",
+                "created_at": "2026-06-19T22:34:13.316Z",
+                "updated_at": "2026-06-19T22:34:13.316Z",
+                "__v": 0
+            },
+            "polling_unit": {
+                "status": "ACTIVE",
+                "generation": 1,
+                "db_generation": 1,
+                "is_accredited": 1,
+                "is_zero_pu": false,
+                "_id": "5f0f57c5c440353badb1d48a",
+                "state_id": 20,
+                "state": "5f0eb6e16dda22674979bf35",
+                "lga_id": 3514,
+                "lga": {
+                    "status": "ACTIVE",
+                    "_id": "5f0f39974d89fc3a883de25b",
+                    "state_id": 20,
+                    "state": "5f0eb6e16dda22674979bf35",
+                    "name": "WARAWA",
+                    "code": "43",
+                    "lga_id": 3514,
+                    "created_at": "2020-07-15T17:15:03.606Z",
+                    "updated_at": "2020-07-15T17:15:03.606Z",
+                    "__v": 0
+                },
+                "ward_id": 22253,
+                "ward": {
+                    "status": "ACTIVE",
+                    "_id": "5f0f3cf28f77bb3acad0a010",
+                    "state_id": 20,
+                    "state": "5f0eb6e16dda22674979bf35",
+                    "lga_id": 3514,
+                    "lga": "5f0f39974d89fc3a883de25b",
+                    "state_constituency_id": 525,
+                    "state_constituency": "5f0f373e93d20b39ceee21c0",
+                    "federal_constituency_id": 172,
+                    "federal_constituency": "5f0f37fd2d77c83a06f0f3b1",
+                    "senatorial_district_id": 56,
+                    "senatorial_district": "5f0f3954970bd83a6f4539ec",
+                    "name": "WARAWA",
+                    "code": "13",
+                    "old_name": "",
+                    "ward_id": 22253,
+                    "created_at": "2020-07-15T17:29:22.973Z",
+                    "updated_at": "2020-07-15T17:29:22.973Z",
+                    "__v": 0
+                },
+                "state_constituency_id": 525,
+                "state_constituency": "5f0f373e93d20b39ceee21c0",
+                "federal_constituency_id": 172,
+                "federal_constituency": "5f0f37fd2d77c83a06f0f3b1",
+                "senatorial_district_id": 56,
+                "senatorial_district": "5f0f3954970bd83a6f4539ec",
+                "name": "WARAWA I",
+                "code": "005",
+                "pu_code": "19/43/13/005",
+                "old_name": "",
+                "polling_unit_id": 64757,
+                "created_at": "2020-07-15T19:23:49.343Z",
+                "updated_at": "2023-02-23T21:02:53.653Z",
+                "__v": 0,
+                "pu_code_string": "194313005"
+            },
+            "name": "WARAWA I",
+            "code": "005",
+            "pu_code": "19/43/13/005",
+            "ward_id": 22253,
+            "ward": {
+                "status": "ACTIVE",
+                "_id": "5f0f3cf28f77bb3acad0a010",
+                "state_id": 20,
+                "state": "5f0eb6e16dda22674979bf35",
+                "lga_id": 3514,
+                "lga": "5f0f39974d89fc3a883de25b",
+                "state_constituency_id": 525,
+                "state_constituency": "5f0f373e93d20b39ceee21c0",
+                "federal_constituency_id": 172,
+                "federal_constituency": "5f0f37fd2d77c83a06f0f3b1",
+                "senatorial_district_id": 56,
+                "senatorial_district": "5f0f3954970bd83a6f4539ec",
+                "name": "WARAWA",
+                "code": "13",
+                "old_name": "",
+                "ward_id": 22253,
+                "created_at": "2020-07-15T17:29:22.973Z",
+                "updated_at": "2020-07-15T17:29:22.973Z",
+                "__v": 0
+            },
+            "lga_id": 3514,
+            "lga": "5f0f39974d89fc3a883de25b",
+            "state": "5f0eb6e16dda22674979bf35",
+            "old_documents": [],
+            "created_at": "2026-06-19T22:34:29.137Z",
+            "updated_at": "2026-06-20T17:38:33.974Z",
+            "__v": 0,
+            "document": {
+                "external": true,
+                "status": 1,
+                "is_supplement": false,
+                "_id": "6a36d01924ae14113457b0e8",
+                "url": "https://inc-s3-cache.incportals.com/cached/express/results/2992/20/412/4728/64667/391c01c3-9a86-4aa5-aeca-c9d35761c9e8.jpg",
+                "size": 1000,
+                "updated_at": "2026-06-20T17:38:33.974Z"
+            },
+            "session": "1781977113973"
+        },
+        ...
+    ],
+    "lgas": [
+        {
+            "status": "ACTIVE",
+            "_id": "5f0f39974d89fc3a883de25b",
+            "state_id": 20,
+            "state": "5f0eb6e16dda22674979bf35",
+            "name": "WARAWA",
+            "code": "43",
+            "lga_id": 3514,
+            "created_at": "2020-07-15T17:15:03.606Z",
+            "updated_at": "2020-07-15T17:15:03.606Z",
+            "__v": 0
+        }
+    ],
+    "wards": [
+        {
+            "status": "ACTIVE",
+            "_id": "5f0f3cf28f77bb3acad0a010",
+            "state_id": 20,
+            "state": "5f0eb6e16dda22674979bf35",
+            "lga_id": 3514,
+            "lga": "5f0f39974d89fc3a883de25b",
+            "state_constituency_id": 525,
+            "state_constituency": "5f0f373e93d20b39ceee21c0",
+            "federal_constituency_id": 172,
+            "federal_constituency": "5f0f37fd2d77c83a06f0f3b1",
+            "senatorial_district_id": 56,
+            "senatorial_district": "5f0f3954970bd83a6f4539ec",
+            "name": "WARAWA",
+            "code": "13",
+            "old_name": "",
+            "ward_id": 22253,
+            "created_at": "2020-07-15T17:29:22.973Z",
+            "updated_at": "2020-07-15T17:29:22.973Z",
+            "__v": 0
+        }
+    ],
+    "election": {
+        "status": "ACTIVE",
+        "version": 33,
+        "election_lgas": [],
+        "parties": [],
+        "is_mapped": false,
+        "_id": "6a35c3e587b1768452f7b027",
+        "full_name": "House of Representatives election - 2026-06-20 - dawakin kudu/warawa",
+        "election_id": 5002,
+        "domain_id": 172,
+        "domain_type": "App\\Models\\FederalConstituency",
+        "election_type_id": 4,
+        "state_id": 20,
+        "state": "5f0eb6e16dda22674979bf35",
+        "election_date": "2026-06-19T23:00:00.000Z",
+        "domain": "5f0f37fd2d77c83a06f0f3b1",
+        "election_type": "5f129a04df41d910dcdc1d53",
+        "onModel": "FederalConstituency",
+        "created_at": "2026-06-19T22:34:13.316Z",
+        "updated_at": "2026-06-19T22:34:13.316Z",
+        "__v": 0
+    }
+}

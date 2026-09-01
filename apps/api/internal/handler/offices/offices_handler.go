@@ -14,11 +14,11 @@ import (
 )
 
 type OfficesService interface {
-	CreateOffice(ctx context.Context, name, election, scope string, rank int32) (queries.Office, error)
+	CreateOffice(ctx context.Context, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
 	GetOfficeByID(ctx context.Context, id int64) (queries.Office, error)
 	GetOfficeByName(ctx context.Context, name string) (queries.Office, error)
 	ListOffices(ctx context.Context) ([]queries.Office, error)
-	UpdateOffice(ctx context.Context, id int64, name, election, scope string, rank int32) (queries.Office, error)
+	UpdateOffice(ctx context.Context, id int64, name, election, scope string, rank int32, inecElectionTypeID *string) (queries.Office, error)
 	DeleteOffice(ctx context.Context, id int64) error
 }
 
@@ -56,22 +56,24 @@ func parsePaginationParams(r *http.Request) (int, int64) {
 }
 
 type CreateOfficeRequest struct {
-	Name     string `json:"name"`
-	Election string `json:"election"`
-	Scope    string `json:"scope"`
-	Rank     int32  `json:"rank"`
+	Name               string  `json:"name"`
+	Election           string  `json:"election"`
+	Scope              string  `json:"scope"`
+	Rank               int32   `json:"rank"`
+	InecElectionTypeID *string `json:"inec_election_type_id"`
 }
 
 type UpdateOfficeRequest struct {
-	Name     string `json:"name"`
-	Election string `json:"election"`
-	Scope    string `json:"scope"`
-	Rank     int32  `json:"rank"`
+	Name               string  `json:"name"`
+	Election           string  `json:"election"`
+	Scope              string  `json:"scope"`
+	Rank               int32   `json:"rank"`
+	InecElectionTypeID *string `json:"inec_election_type_id"`
 }
 
 // CreateOffice godoc
 // @Summary      Create a new office
-// @Description  Creates a new office with name, office, scope, and rank
+// @Description  Creates a new office with name, office, scope, rank, and optional inec_election_type_id
 // @Tags         Offices
 // @Accept       json
 // @Produce      json
@@ -92,7 +94,7 @@ func (h *Handler) CreateOffice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	o, err := h.service.CreateOffice(r.Context(), req.Name, req.Election, req.Scope, req.Rank)
+	o, err := h.service.CreateOffice(r.Context(), req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create office: "+err.Error())
 		return
@@ -218,7 +220,7 @@ func (h *Handler) GetOffice(w http.ResponseWriter, r *http.Request) {
 
 // UpdateOffice godoc
 // @Summary      Update an office
-// @Description  Modifies name, election, scope, or rank of an existing office
+// @Description  Modifies name, election, scope, rank, or inec_election_type_id of an existing office
 // @Tags         Offices
 // @Accept       json
 // @Produce      json
@@ -255,7 +257,7 @@ func (h *Handler) UpdateOffice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	updated, err := h.service.UpdateOffice(r.Context(), id, req.Name, req.Election, req.Scope, req.Rank)
+	updated, err := h.service.UpdateOffice(r.Context(), id, req.Name, req.Election, req.Scope, req.Rank, req.InecElectionTypeID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update office: "+err.Error())
 		return

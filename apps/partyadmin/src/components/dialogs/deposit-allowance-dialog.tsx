@@ -35,10 +35,13 @@ export function DepositAllowanceDialog({
   const [depositAmount, setDepositAmount] = React.useState(10000);
 
   const depositMutation = useMutation({
-    mutationFn: (variables: { partyID: number; amountKobo: number }) => depositPartyAllowance({ data: variables }),
+    mutationFn: (variables: { partyID: number; amountKobo: number }) =>
+      depositPartyAllowance({ data: variables }),
     onSuccess: (res) => {
       if (res && res.success) {
-        toast.success(`Successfully deposited ${formatNairaWithDecimals(depositAmount)} to polling agent allowance budget!`);
+        toast.success(
+          `Successfully deposited ${formatNairaWithDecimals(depositAmount)} to polling agent allowance budget!`,
+        );
         onSuccess?.();
         onClose();
       } else {
@@ -47,7 +50,7 @@ export function DepositAllowanceDialog({
     },
     onError: (error: any) => {
       toast.error(error.message || "An unexpected error occurred");
-    }
+    },
   });
 
   const walletBalanceNaira = walletBalanceKobo / 100;
@@ -69,7 +72,7 @@ export function DepositAllowanceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-hidden">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
         <DialogHeader title="Deposit Polling Agent Allowance" />
 
         <DialogPadding className="space-y-4 pb-6">
@@ -151,7 +154,9 @@ export function DepositAllowanceDialog({
         <DialogFooter>
           <Button
             className="bg-[#00e575] hover:bg-[#00c866] text-white rounded-xl px-7 h-11 text-[15px] font-bold border-none shadow-none transition-colors duration-150"
-            disabled={depositAmount <= 0 || isInsufficient || depositMutation.isPending}
+            disabled={
+              depositAmount <= 0 || isInsufficient || depositMutation.isPending
+            }
             onClick={handleDeposit}
           >
             {depositMutation.isPending ? (

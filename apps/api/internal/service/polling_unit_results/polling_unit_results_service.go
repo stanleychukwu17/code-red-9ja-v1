@@ -6,12 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"math"
-	"strings"
 
-	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
-	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -22,10 +18,19 @@ type Service struct {
 	queries     *queries.Queries
 	pool        *pgxpool.Pool
 	distributor worker.TaskDistributor
+	earningsSvc earningsService
+}
+
+type earningsService interface {
+	ProcessTaskEarnings(ctx context.Context, assignmentID int64, taskType string, customNarration ...string) (int64, error)
 }
 
 func NewService(q *queries.Queries, pool *pgxpool.Pool, distributor worker.TaskDistributor) *Service {
 	return &Service{queries: q, pool: pool, distributor: distributor}
+}
+
+func (s *Service) SetEarningsService(es earningsService) {
+	s.earningsSvc = es
 }
 
 // CandidateResult is the per-candidate entry stored in the JSONB column.
@@ -49,6 +54,24 @@ type SubmitResultInput struct {
 	UploadedByINEC      bool
 }
 
+// SingleElectionSubmission is an item in a batch upload
+type SingleElectionSubmission struct {
+	ElectionID          int64  `json:"election_id"`
+	ResultSheetImageURL string `json:"result_sheet_image_url"`
+	ResultSheetVideoURL string `json:"result_sheet_video_url,omitempty"`
+}
+
+// SubmitBatchResultsInput carries submissions for multiple elections at a polling unit.
+type SubmitBatchResultsInput struct {
+	UserFakeID      int64                      `json:"user_fake_id"`
+	AssignmentID    *int64                     `json:"assignment_id,omitempty"`
+	ElectionGroupID int64                      `json:"election_group_id"`
+	PollingUnitID   int32                      `json:"polling_unit_id"`
+	PartyID         *int16                     `json:"party_id,omitempty"`
+	UploadedByINEC  bool                       `json:"uploaded_by_inec"`
+	Submissions     []SingleElectionSubmission `json:"submissions"`
+}
+
 // ReviewResultInput is used by platform admins to manually override a result's status.
 type ReviewResultInput struct {
 	ResultID       int64
@@ -56,7 +79,7 @@ type ReviewResultInput struct {
 	DisputedReason string
 }
 
-// AIVerificationInput is used internally (and by a future async job) to apply Gemini findings.
+// AIVerificationInput is used internally to apply Gemini findings.
 type AIVerificationInput struct {
 	ResultID        int64
 	Status          string // "ai_verified" or "disputed"
@@ -66,9 +89,75 @@ type AIVerificationInput struct {
 	IsAIGenerated   bool
 }
 
-// SubmitResult inserts a new polling unit result inside a transaction,
-// then increments relevant counters on the assignment (if any) and election group.
+// validateUserEligibility verifies user identity, polling agent assignment or registered voter status,
+// and ensures the user is not submitting results for a different polling unit in this election group.
+func (s *Service) validateUserEligibility(
+	ctx context.Context,
+	qtx *queries.Queries,
+	userFakeID int64,
+	assignmentID *int64,
+	electionGroupID int64,
+	pollingUnitID int32,
+) (queries.GetUserByFakeIDRow, queries.PollingUnit, queries.Lga, queries.Ward, error) {
+	// 1. Resolve real user from fake ID
+	user, err := qtx.GetUserByFakeID(ctx, pgtype.Int8{Int64: userFakeID, Valid: true})
+	if err != nil {
+		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("user not found")
+	}
+
+	// 2. Fetch Polling Unit, LGA, and Ward
+	pu, err := qtx.GetPollingUnitByID(ctx, pollingUnitID)
+	if err != nil {
+		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid polling_unit_id")
+	}
+
+	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
+	if err != nil {
+		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid lga for polling unit")
+	}
+
+	ward, err := qtx.GetWardByID(ctx, pu.WardID)
+	if err != nil {
+		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid ward for polling unit")
+	}
+
+	// 3. Verify Polling Agent assignment OR Registered Voter polling unit
+	if assignmentID != nil {
+		assignment, err := qtx.GetAssignmentByID(ctx, *assignmentID)
+		if err != nil || assignment.UserID != user.ID {
+			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("invalid or unauthorized polling unit assignment")
+		}
+		if assignment.PollingUnitID != pollingUnitID {
+			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you can only upload results for your assigned polling unit")
+		}
+	} else {
+		// Registered Voter validation
+		if !user.PollingUnitID.Valid || user.PollingUnitID.Int32 == 0 {
+			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you do not have a registered polling unit. Please update your profile with your polling unit to submit results")
+		}
+		if user.PollingUnitID.Int32 != pollingUnitID {
+			return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, errors.New("you can only upload election results for your registered polling unit")
+		}
+	}
+
+	// 4. Cross-polling unit lock: Check if user already submitted results for a different polling unit in this election group
+	existingPUID, err := qtx.GetUserPollingUnitResultInElectionGroup(ctx, queries.GetUserPollingUnitResultInElectionGroupParams{
+		SubmittedBy:     pgtype.Int8{Int64: user.ID, Valid: true},
+		ElectionGroupID: electionGroupID,
+	})
+	if err == nil && existingPUID > 0 && existingPUID != pollingUnitID {
+		return queries.GetUserByFakeIDRow{}, queries.PollingUnit{}, queries.Lga{}, queries.Ward{}, fmt.Errorf("you have already submitted election results for polling unit #%d and cannot submit for other polling units", existingPUID)
+	}
+
+	return user, pu, lga, ward, nil
+}
+
+// SubmitResult inserts a new polling unit result record rapidly (<20ms) and queues an asynchronous AI extraction task.
 func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (queries.PollingUnitResult, error) {
+	if input.ResultSheetImageURL == "" {
+		return queries.PollingUnitResult{}, errors.New("result_sheet_image_url is required")
+	}
+
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		return queries.PollingUnitResult{}, err
@@ -77,68 +166,28 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	qtx := s.queries.WithTx(tx)
 
-	// Resolve real user ID from fake ID
-	user, err := qtx.GetUserByFakeID(ctx, pgtype.Int8{Int64: input.UserFakeID, Valid: true})
+	user, pu, lga, ward, err := s.validateUserEligibility(
+		ctx,
+		qtx,
+		input.UserFakeID,
+		input.AssignmentID,
+		input.ElectionGroupID,
+		input.PollingUnitID,
+	)
 	if err != nil {
-		return queries.PollingUnitResult{}, errors.New("user not found")
+		return queries.PollingUnitResult{}, err
 	}
 
-	// Fetch polling unit for denormalised state/lga/ward
-	pu, err := qtx.GetPollingUnitByID(ctx, input.PollingUnitID)
-	if err != nil {
-		return queries.PollingUnitResult{}, errors.New("invalid polling_unit_id")
+	// Check if this user already submitted results for this specific election at this PU
+	existingResult, err := qtx.GetPollingUnitResultByUserAndElection(ctx, queries.GetPollingUnitResultByUserAndElectionParams{
+		ElectionID:    input.ElectionID,
+		PollingUnitID: input.PollingUnitID,
+		SubmittedBy:   pgtype.Int8{Int64: user.ID, Valid: true},
+	})
+	if err == nil && existingResult.ID > 0 {
+		return queries.PollingUnitResult{}, errors.New("you have already submitted results for this election at your polling unit")
 	}
 
-	lga, err := qtx.GetLGAByID(ctx, pu.LgaID)
-	if err != nil {
-		return queries.PollingUnitResult{}, errors.New("invalid lga for polling unit")
-	}
-
-	ward, err := qtx.GetWardByID(ctx, pu.WardID)
-	if err != nil {
-		return queries.PollingUnitResult{}, errors.New("invalid ward for polling unit")
-	}
-
-	// Make sure we have an image URL
-	if input.ResultSheetImageURL == "" {
-		return queries.PollingUnitResult{}, errors.New("result_sheet_image_url is required for AI extraction")
-	}
-
-	// Call Gemini (we extract API key from config)
-	cfg := config.Load()
-	extracted, rawJSON, err := utils.ExtractPollingUnitResultFromImage(ctx, cfg.GeminiAPIKey, input.ResultSheetImageURL)
-	if err != nil {
-		// Log the error but maybe we shouldn't fail the entire submission if Gemini fails?
-		// For now, let's fail it so it doesn't leave bad state, or we could insert it as "submitted" and let a worker retry.
-		// As per the plan, we are doing it synchronously.
-		return queries.PollingUnitResult{}, fmt.Errorf("failed to process image with Gemini AI: %w", err)
-	}
-
-	// Validate vote arithmetic from AI
-	if extracted.ValidVotes+extracted.RejectedVotes != extracted.VotesCast {
-		// Log this discrepancy but still insert it. We can mark the status as "disputed" automatically
-		slog.Warn("AI extracted vote counts do not add up", "valid", extracted.ValidVotes, "rejected", extracted.RejectedVotes, "cast", extracted.VotesCast)
-	}
-
-	// Extract party short names and vote counts
-	var finalCandidates []CandidateResult
-	for _, c := range extracted.Candidates {
-		shortName := strings.ToUpper(strings.TrimSpace(c.PartyShortName))
-		finalCandidates = append(finalCandidates, CandidateResult{
-			PartyShortName: shortName,
-			VoteCount:      int32(c.VoteCount),
-			AgentName:      strings.TrimSpace(c.AgentName),
-			HasSignature:   c.HasSignature,
-		})
-	}
-
-	// Marshal candidate results to JSON
-	candidateJSON, err := json.Marshal(finalCandidates)
-	if err != nil {
-		return queries.PollingUnitResult{}, errors.New("failed to encode candidate_results")
-	}
-
-	// Build optional nullable fields
 	var assignmentID pgtype.Int8
 	if input.AssignmentID != nil {
 		assignmentID = pgtype.Int8{Int64: *input.AssignmentID, Valid: true}
@@ -146,7 +195,7 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 
 	var partyID pgtype.Int2
 	if input.PartyID != nil {
-		partyID = pgtype.Int2{Int16: int16(int16(*input.PartyID)), Valid: true}
+		partyID = pgtype.Int2{Int16: int16(*input.PartyID), Valid: true}
 	}
 
 	var imageURL pgtype.Text
@@ -159,144 +208,205 @@ func (s *Service) SubmitResult(ctx context.Context, input SubmitResultInput) (qu
 		videoURL = pgtype.Text{String: input.ResultSheetVideoURL, Valid: true}
 	}
 
-	// Insert or update the result
-	var result queries.PollingUnitResult
-
-	// Check if the user already submitted a result for this election
-	existingResults, err := qtx.ListPollingUnitResults(ctx, queries.ListPollingUnitResultsParams{
-		ElectionID:  pgtype.Int8{Int64: input.ElectionID, Valid: true},
-		SubmittedBy: pgtype.Int8{Int64: user.ID, Valid: true},
-		Limit:       1,
-		Cursor:      math.MaxInt32,
+	// Insert raw submission record with initial status 'submitted'
+	result, err := qtx.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
+		AssignmentID:          assignmentID,
+		ElectionID:            input.ElectionID,
+		ElectionGroupID:       input.ElectionGroupID,
+		PollingUnitID:         input.PollingUnitID,
+		SubmittedBy:           pgtype.Int8{Int64: user.ID, Valid: true},
+		PartyID:               partyID,
+		StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+		SenatorialDistrictID:  lga.SenatorialDistrictID,
+		FederalConstituencyID: lga.FederalConstituencyID,
+		StateConstituencyID:   ward.StateConstituencyID,
+		LgaID:                 pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
+		WardID:                pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
+		AccreditedVoters:      0,
+		VotesCast:             0,
+		ValidVotes:            0,
+		RejectedVotes:         0,
+		CandidateResults:      []byte("[]"),
+		ResultSheetImageUrl:   imageURL,
+		ResultSheetVideoUrl:   videoURL,
+		UploadedByInec:        input.UploadedByINEC,
+		Status:                pgtype.Text{String: "submitted", Valid: true},
 	})
 	if err != nil {
 		return queries.PollingUnitResult{}, err
 	}
 
-	if len(existingResults) > 0 {
-		existing := existingResults[0]
-		if existing.PollingUnitID != input.PollingUnitID {
-			return queries.PollingUnitResult{}, errors.New("you have already submitted a result for a different polling unit in this election")
-		}
-
-		// Update existing submission
-		result, err = qtx.UpdatePollingUnitResult(ctx, queries.UpdatePollingUnitResultParams{
-			ID:                  existing.ID,
-			AccreditedVoters:    int32(extracted.AccreditedVoters),
-			VotesCast:           int32(extracted.VotesCast),
-			ValidVotes:          int32(extracted.ValidVotes),
-			RejectedVotes:       int32(extracted.RejectedVotes),
-			CandidateResults:    candidateJSON,
-			ResultSheetImageUrl: imageURL,
-			ResultSheetVideoUrl: videoURL,
-		})
-		if err != nil {
-			return queries.PollingUnitResult{}, err
-		}
-	} else {
-		// The default status in the DB is 'submitted'. Since we verified via AI, we could set status here if we wanted.
-		// But our schema says default is 'submitted'. Let's update it to 'ai_verified' immediately since we did it sync.
-		result, err = qtx.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
-			AssignmentID:          assignmentID,
-			ElectionID:            input.ElectionID,
-			ElectionGroupID:       input.ElectionGroupID,
-			PollingUnitID:         input.PollingUnitID,
-			SubmittedBy:           user.ID,
-			PartyID:               partyID,
-			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-			SenatorialDistrictID:  pgtype.Int4{Int32: lga.SenatorialDistrictID, Valid: true},
-			FederalConstituencyID: pgtype.Int4{Int32: lga.FederalConstituencyID, Valid: true},
-			StateConstituencyID:   ward.StateAssemblyConstituencyID,
-			LgaID:                 pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
-			WardID:                pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
-			AccreditedVoters:      int32(extracted.AccreditedVoters),
-			VotesCast:             int32(extracted.VotesCast),
-			ValidVotes:            int32(extracted.ValidVotes),
-			RejectedVotes:         int32(extracted.RejectedVotes),
-			CandidateResults:      candidateJSON,
-			ResultSheetImageUrl:   imageURL,
-			ResultSheetVideoUrl:   videoURL,
-			UploadedByInec:        input.UploadedByINEC,
-		})
-		if err != nil {
-			return queries.PollingUnitResult{}, err
-		}
-	}
-
-	// Update status immediately since we did sync verification
-	// We'll set a default confidence score of 0.95 for now since the SDK doesn't expose it yet
-	score := pgtype.Numeric{}
-	score.Scan(0.95)
-
-	status := "ai_verified"
-	if extracted.ValidVotes+extracted.RejectedVotes != extracted.VotesCast {
-		status = "disputed"
-	}
-
-	var isAIGenerated pgtype.Bool
-	isAIGenerated = pgtype.Bool{Bool: extracted.IsAIGenerated, Valid: true}
-
-	result, err = qtx.UpdateResultStatus(ctx, queries.UpdateResultStatusParams{
-		ID:                  result.ID,
-		Status:              status,
-		AiExtractedData:     rawJSON,
-		AiConfidenceScore:   score,
-		ResultIsAiGenerated: isAIGenerated,
-	})
-	if err != nil {
+	// Increment relevant counters
+	if err := qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID); err != nil {
 		return queries.PollingUnitResult{}, err
 	}
-
-	// Only increment counters if this was a new insertion
-	if len(existingResults) == 0 {
-		// Increment election_groups.results_submitted_count
-		if err := qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID); err != nil {
-			return queries.PollingUnitResult{}, err
-		}
-
-		// Increment elections.results_submitted_count for the specific election
-		if err := qtx.IncrementElectionResultCount(ctx, input.ElectionID); err != nil {
-			return queries.PollingUnitResult{}, err
-		}
-
-		// Increment party_election_groups.results_submitted_count when submitted by a party agent
-		if input.PartyID != nil {
-			if err := qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
-				PartyID:         int16(*input.PartyID),
-				ElectionGroupID: input.ElectionGroupID,
-			}); err != nil {
-				return queries.PollingUnitResult{}, err
-			}
-		}
-
-		// Increment polling_unit_assignments.results_submitted_count if this is an agent submission
-		if input.AssignmentID != nil {
-			if err := qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID); err != nil {
-				return queries.PollingUnitResult{}, err
-			}
-		}
+	if err := qtx.IncrementElectionResultCount(ctx, input.ElectionID); err != nil {
+		return queries.PollingUnitResult{}, err
+	}
+	if input.PartyID != nil {
+		_ = qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
+			PartyID:         int16(*input.PartyID),
+			ElectionGroupID: input.ElectionGroupID,
+		})
+	}
+	if input.AssignmentID != nil {
+		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return queries.PollingUnitResult{}, err
 	}
 
-	// Enqueue the final result calculation task after the DB transaction commits.
-	// asynq writes to Redis which is fast; no goroutine needed.
-	// The debounce (ProcessIn + Unique) options ensure that even if called 100 times
-	// in quick succession, only one task executes per polling unit per 2-minute window.
-	if s.distributor != nil {
-		err := s.distributor.DistributeTaskCalculateFinalResult(context.Background(), &worker.CalculateFinalResultPayload{
-			ElectionID:    input.ElectionID,
-			PollingUnitID: input.PollingUnitID,
+	// Agent earnings processing
+	if input.AssignmentID != nil && s.earningsSvc != nil {
+		go s.earningsSvc.ProcessTaskEarnings(context.Background(), *input.AssignmentID, "results")
+	}
+
+	// Dispatch asynchronous AI extraction task
+	if s.distributor != nil && input.ResultSheetImageURL != "" {
+		err := s.distributor.DistributeTaskExtractPUResultAI(context.Background(), &worker.ExtractPUResultAIPayload{
+			ResultID:            result.ID,
+			ElectionID:          result.ElectionID,
+			PollingUnitID:       result.PollingUnitID,
+			ResultSheetImageURL: input.ResultSheetImageURL,
 		})
 		if err != nil {
-			slog.Error("failed to distribute final result task", "err", err,
-				"election_id", input.ElectionID, "polling_unit_id", input.PollingUnitID)
+			slog.Error("failed to enqueue AI extraction task", "result_id", result.ID, "err", err)
 		}
 	}
 
 	return result, nil
+}
+
+// SubmitBatchResults allows uploading multiple election results for a polling unit in a single fast transaction.
+func (s *Service) SubmitBatchResults(ctx context.Context, input SubmitBatchResultsInput) ([]queries.PollingUnitResult, error) {
+	if len(input.Submissions) == 0 {
+		return nil, errors.New("submissions array cannot be empty")
+	}
+
+	tx, err := s.pool.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback(ctx)
+
+	qtx := s.queries.WithTx(tx)
+
+	user, pu, lga, ward, err := s.validateUserEligibility(
+		ctx,
+		qtx,
+		input.UserFakeID,
+		input.AssignmentID,
+		input.ElectionGroupID,
+		input.PollingUnitID,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var assignmentID pgtype.Int8
+	if input.AssignmentID != nil {
+		assignmentID = pgtype.Int8{Int64: *input.AssignmentID, Valid: true}
+	}
+
+	var partyID pgtype.Int2
+	if input.PartyID != nil {
+		partyID = pgtype.Int2{Int16: int16(*input.PartyID), Valid: true}
+	}
+
+	var createdResults []queries.PollingUnitResult
+
+	for _, sub := range input.Submissions {
+		if sub.ResultSheetImageURL == "" {
+			return nil, fmt.Errorf("result_sheet_image_url is required for election #%d", sub.ElectionID)
+		}
+
+		// Check if already submitted for this election
+		existingResult, err := qtx.GetPollingUnitResultByUserAndElection(ctx, queries.GetPollingUnitResultByUserAndElectionParams{
+			ElectionID:    sub.ElectionID,
+			PollingUnitID: input.PollingUnitID,
+			SubmittedBy:   pgtype.Int8{Int64: user.ID, Valid: true},
+		})
+		if err == nil && existingResult.ID > 0 {
+			return nil, fmt.Errorf("you have already submitted results for election #%d at your polling unit", sub.ElectionID)
+		}
+
+		var imageURL pgtype.Text
+		if sub.ResultSheetImageURL != "" {
+			imageURL = pgtype.Text{String: sub.ResultSheetImageURL, Valid: true}
+		}
+
+		var videoURL pgtype.Text
+		if sub.ResultSheetVideoURL != "" {
+			videoURL = pgtype.Text{String: sub.ResultSheetVideoURL, Valid: true}
+		}
+
+		result, err := qtx.SubmitPollingUnitResult(ctx, queries.SubmitPollingUnitResultParams{
+			AssignmentID:          assignmentID,
+			ElectionID:            sub.ElectionID,
+			ElectionGroupID:       input.ElectionGroupID,
+			PollingUnitID:         input.PollingUnitID,
+			SubmittedBy:           pgtype.Int8{Int64: user.ID, Valid: true},
+			PartyID:               partyID,
+			StateID:               pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:  lga.SenatorialDistrictID,
+			FederalConstituencyID: lga.FederalConstituencyID,
+			StateConstituencyID:   ward.StateConstituencyID,
+			LgaID:                 pgtype.Int4{Int32: int32(pu.LgaID), Valid: true},
+			WardID:                pgtype.Int4{Int32: int32(pu.WardID), Valid: true},
+			AccreditedVoters:      0,
+			VotesCast:             0,
+			ValidVotes:            0,
+			RejectedVotes:         0,
+			CandidateResults:      []byte("[]"),
+			ResultSheetImageUrl:   imageURL,
+			ResultSheetVideoUrl:   videoURL,
+			UploadedByInec:        input.UploadedByINEC,
+			Status:                pgtype.Text{String: "submitted", Valid: true},
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to insert result for election #%d: %w", sub.ElectionID, err)
+		}
+
+		_ = qtx.IncrementElectionResultCount(ctx, sub.ElectionID)
+		createdResults = append(createdResults, result)
+	}
+
+	_ = qtx.IncrementElectionGroupResultCount(ctx, input.ElectionGroupID)
+	if input.PartyID != nil {
+		_ = qtx.IncrementPartyElectionGroupResultCount(ctx, queries.IncrementPartyElectionGroupResultCountParams{
+			PartyID:         int16(*input.PartyID),
+			ElectionGroupID: input.ElectionGroupID,
+		})
+	}
+	if input.AssignmentID != nil {
+		_ = qtx.IncrementAssignmentResultCount(ctx, *input.AssignmentID)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+
+	if input.AssignmentID != nil && s.earningsSvc != nil {
+		go s.earningsSvc.ProcessTaskEarnings(context.Background(), *input.AssignmentID, "results")
+	}
+
+	// Dispatch asynchronous AI extraction tasks for all submitted results
+	if s.distributor != nil {
+		for i, res := range createdResults {
+			imgURL := input.Submissions[i].ResultSheetImageURL
+			if imgURL != "" {
+				_ = s.distributor.DistributeTaskExtractPUResultAI(context.Background(), &worker.ExtractPUResultAIPayload{
+					ResultID:            res.ID,
+					ElectionID:          res.ElectionID,
+					PollingUnitID:       res.PollingUnitID,
+					ResultSheetImageURL: imgURL,
+				})
+			}
+		}
+	}
+
+	return createdResults, nil
 }
 
 // GetResult fetches a single polling unit result by ID.
@@ -373,9 +483,7 @@ func (s *Service) ReviewResult(ctx context.Context, adminUserID int64, input Rev
 
 	if input.Status == "confirmed" {
 		confirmedAt = pgtype.Timestamptz{Valid: true}
-		if err := confirmedAt.Scan("now"); err != nil {
-			// fallback — zero time is acceptable since DB default handles it
-		}
+		_ = confirmedAt.Scan("now")
 		confirmedBy = pgtype.Int8{Int64: adminUserID, Valid: true}
 	}
 
@@ -394,6 +502,5 @@ func (s *Service) ReviewResult(ctx context.Context, adminUserID int64, input Rev
 
 // GetFinalResult fetches the final result for a given polling unit and election.
 func (s *Service) GetFinalResult(ctx context.Context, electionID int64, pollingUnitID int32) (interface{}, error) {
-	// TODO: Re-implement final result fetching based on the new election_results schema
 	return nil, fmt.Errorf("GetFinalResult is temporarily disabled due to schema migration")
 }

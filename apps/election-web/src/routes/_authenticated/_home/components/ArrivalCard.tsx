@@ -2,24 +2,67 @@ import { Button } from "@repo/ui/components/button";
 import FancyMoneyBagIcon from "@repo/ui/icons/fancy-money-bag-icon";
 import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
+import { useQuery } from "@tanstack/react-query";
+import {
+  getPotentialPayout,
+  getEstimatePayout,
+} from "#/lib/server/practice_tests";
 
 interface ArrivalCardProps {
   onArrivedClick: () => void;
 }
 
 export function ArrivalCard({ onArrivedClick }: ArrivalCardProps) {
-  const { selectedAssignment } = useAuth();
+  const { selectedAssignment, selectedElectionGroup, party } = useAppContext();
+  const assignmentId = selectedAssignment?.id;
+
+  const { data: potentialPayout } = useQuery({
+    queryKey: [
+      "taskPayout",
+      "attendance",
+      assignmentId ?? "no-assignment",
+      selectedElectionGroup?.id,
+      party?.id,
+    ],
+    queryFn: async () => {
+      if (assignmentId) {
+        const res = await getPotentialPayout({
+          data: { assignmentId, taskType: "attendance" },
+        });
+        if (res?.success && res.data?.payout) {
+          return (res.data.payout.potential_payout_kobo ?? 0) / 100;
+        }
+      }
+      const estRes = await getEstimatePayout({
+        data: {
+          taskType: "attendance",
+          role: "polling_agent",
+          electionGroupId: selectedElectionGroup?.id ?? undefined,
+          partyId: party?.id ?? undefined,
+        },
+      });
+      if (estRes?.success && estRes.data?.payout) {
+        return (estRes.data.payout.potential_payout_kobo ?? 0) / 100;
+      }
+      return undefined;
+    },
+  });
 
   const pollingUnit = selectedAssignment?.polling_unit_name || "Polling Unit";
   const state = selectedAssignment?.state_name || "State";
   const lga = selectedAssignment?.lga_name || "LGA";
   const ward = selectedAssignment?.ward_name || "Ward";
+  const formattedPayout =
+    potentialPayout !== undefined
+      ? `₦${potentialPayout.toLocaleString()}`
+      : "₦1,200";
+
   return (
     <GreyCardWrapper>
       <GreyCardTopRow
         title={"Potential payout"}
-        subtitle={"₦1,200"}
+        subtitle={formattedPayout}
         icon={<FancyMoneyBagIcon className="size-5" />}
       />
       <GreyCardTitle label="Have you arrived at your polling unit?" />

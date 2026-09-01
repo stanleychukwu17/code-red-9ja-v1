@@ -19,10 +19,10 @@ import * as React from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 
 export type TargetData = {
-  pollingUnitAgent: number;
-  wardElectionSupervisor: number;
-  lgaElectionSupervisor: number;
-  stateElectionSupervisor: number;
+  polling_agent: number;
+  ward_election_supervisor: number;
+  lga_election_supervisor: number;
+  state_election_supervisor: number;
 };
 
 export function TargetFormDialog({
@@ -45,6 +45,7 @@ export function TargetFormDialog({
     queryFn: () => fetchTargets(partyId),
     enabled: open,
   });
+  console.log({ targets });
 
   const mutation = useMutation({
     mutationFn: (values: TargetData) => updateTargets(partyId, values),
@@ -55,10 +56,10 @@ export function TargetFormDialog({
 
   const form = useForm({
     defaultValues: {
-      pollingUnitAgent: 1,
-      wardElectionSupervisor: 1,
-      lgaElectionSupervisor: 1,
-      stateElectionSupervisor: 1,
+      polling_agent: 1,
+      ward_election_supervisor: 1,
+      lga_election_supervisor: 1,
+      state_election_supervisor: 1,
     },
     onSubmit: async ({ value }) => {
       mutation.mutate(value);
@@ -67,25 +68,29 @@ export function TargetFormDialog({
 
   React.useEffect(() => {
     if (open && targets) {
-      form.setFieldValue("pollingUnitAgent", targets.pollingUnitAgent ?? 1);
+      const t = targets as any;
       form.setFieldValue(
-        "wardElectionSupervisor",
-        targets.wardElectionSupervisor ?? 1,
+        "polling_agent",
+        t.polling_agent ?? t.pollingUnitAgent ?? 1,
       );
       form.setFieldValue(
-        "lgaElectionSupervisor",
-        targets.lgaElectionSupervisor ?? 1,
+        "ward_election_supervisor",
+        t.ward_election_supervisor ?? t.wardElectionSupervisor ?? 1,
       );
       form.setFieldValue(
-        "stateElectionSupervisor",
-        targets.stateElectionSupervisor ?? 1,
+        "lga_election_supervisor",
+        t.lga_election_supervisor ?? t.lgaElectionSupervisor ?? 1,
+      );
+      form.setFieldValue(
+        "state_election_supervisor",
+        t.state_election_supervisor ?? t.stateElectionSupervisor ?? 1,
       );
     }
   }, [open, targets]);
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[520px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[520px] p-0 rounded-2xl border-none shadow-2xl overflow-visible">
         <DialogHeader title="Party Agent Acquisition Target" />
 
         <form
@@ -129,19 +134,19 @@ export function TargetFormDialog({
             <div className="space-y-4">
               {[
                 {
-                  name: "pollingUnitAgent",
+                  name: "polling_agent",
                   label: "Polling Agent per polling unit",
                 },
                 {
-                  name: "wardElectionSupervisor",
+                  name: "ward_election_supervisor",
                   label: "Ward Supervisor per ward",
                 },
                 {
-                  name: "lgaElectionSupervisor",
+                  name: "lga_election_supervisor",
                   label: "LGA Supervisor per lga",
                 },
                 {
-                  name: "stateElectionSupervisor",
+                  name: "state_election_supervisor",
                   label: "State Supervisor per state",
                 },
               ].map((item) => (

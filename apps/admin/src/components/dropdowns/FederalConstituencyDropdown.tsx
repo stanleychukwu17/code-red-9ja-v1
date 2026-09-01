@@ -62,6 +62,7 @@ export const FederalConstituencyDropdown = ({
   const entityForDialog = {
     id: data.id,
     name: data.name,
+    code: data.code,
     state_id: data.state_id,
     state_name: data.state_name,
     senatorial_district_id: data.senatorial_district_id,

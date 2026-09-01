@@ -7,19 +7,22 @@ package queries
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createOffice = `-- name: CreateOffice :one
-INSERT INTO offices (name, election, scope, rank)
-VALUES ($1, $2, $3, $4)
-RETURNING id, name, election, scope, rank, instances_count, created_at, updated_at
+INSERT INTO offices (name, election, scope, rank, inec_election_type_id)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at
 `
 
 type CreateOfficeParams struct {
-	Name     string `json:"name"`
-	Election string `json:"election"`
-	Scope    string `json:"scope"`
-	Rank     int32  `json:"rank"`
+	Name               string      `json:"name"`
+	Election           string      `json:"election"`
+	Scope              string      `json:"scope"`
+	Rank               int32       `json:"rank"`
+	InecElectionTypeID pgtype.Text `json:"inec_election_type_id"`
 }
 
 func (q *Queries) CreateOffice(ctx context.Context, arg CreateOfficeParams) (Office, error) {
@@ -28,6 +31,7 @@ func (q *Queries) CreateOffice(ctx context.Context, arg CreateOfficeParams) (Off
 		arg.Election,
 		arg.Scope,
 		arg.Rank,
+		arg.InecElectionTypeID,
 	)
 	var i Office
 	err := row.Scan(
@@ -37,6 +41,7 @@ func (q *Queries) CreateOffice(ctx context.Context, arg CreateOfficeParams) (Off
 		&i.Scope,
 		&i.Rank,
 		&i.InstancesCount,
+		&i.InecElectionTypeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -53,7 +58,7 @@ func (q *Queries) DeleteOffice(ctx context.Context, id int64) error {
 }
 
 const getOfficeByID = `-- name: GetOfficeByID :one
-SELECT id, name, election, scope, rank, instances_count, created_at, updated_at FROM offices WHERE id = $1
+SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at FROM offices WHERE id = $1
 `
 
 func (q *Queries) GetOfficeByID(ctx context.Context, id int64) (Office, error) {
@@ -66,6 +71,7 @@ func (q *Queries) GetOfficeByID(ctx context.Context, id int64) (Office, error) {
 		&i.Scope,
 		&i.Rank,
 		&i.InstancesCount,
+		&i.InecElectionTypeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -73,7 +79,7 @@ func (q *Queries) GetOfficeByID(ctx context.Context, id int64) (Office, error) {
 }
 
 const getOfficeByName = `-- name: GetOfficeByName :one
-SELECT id, name, election, scope, rank, instances_count, created_at, updated_at FROM offices WHERE name = $1
+SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at FROM offices WHERE name = $1
 `
 
 func (q *Queries) GetOfficeByName(ctx context.Context, name string) (Office, error) {
@@ -86,6 +92,7 @@ func (q *Queries) GetOfficeByName(ctx context.Context, name string) (Office, err
 		&i.Scope,
 		&i.Rank,
 		&i.InstancesCount,
+		&i.InecElectionTypeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -93,7 +100,7 @@ func (q *Queries) GetOfficeByName(ctx context.Context, name string) (Office, err
 }
 
 const listOffices = `-- name: ListOffices :many
-SELECT id, name, election, scope, rank, instances_count, created_at, updated_at FROM offices
+SELECT id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at FROM offices
 ORDER BY id ASC
 `
 
@@ -113,6 +120,7 @@ func (q *Queries) ListOffices(ctx context.Context) ([]Office, error) {
 			&i.Scope,
 			&i.Rank,
 			&i.InstancesCount,
+			&i.InecElectionTypeID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -128,17 +136,18 @@ func (q *Queries) ListOffices(ctx context.Context) ([]Office, error) {
 
 const updateOffice = `-- name: UpdateOffice :one
 UPDATE offices
-SET name = $1, election = $2, scope = $3, rank = $4, updated_at = NOW()
-WHERE id = $5
-RETURNING id, name, election, scope, rank, instances_count, created_at, updated_at
+SET name = $1, election = $2, scope = $3, rank = $4, inec_election_type_id = $5, updated_at = NOW()
+WHERE id = $6
+RETURNING id, name, election, scope, rank, instances_count, inec_election_type_id, created_at, updated_at
 `
 
 type UpdateOfficeParams struct {
-	Name     string `json:"name"`
-	Election string `json:"election"`
-	Scope    string `json:"scope"`
-	Rank     int32  `json:"rank"`
-	ID       int64  `json:"id"`
+	Name               string      `json:"name"`
+	Election           string      `json:"election"`
+	Scope              string      `json:"scope"`
+	Rank               int32       `json:"rank"`
+	InecElectionTypeID pgtype.Text `json:"inec_election_type_id"`
+	ID                 int64       `json:"id"`
 }
 
 func (q *Queries) UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Office, error) {
@@ -147,6 +156,7 @@ func (q *Queries) UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Off
 		arg.Election,
 		arg.Scope,
 		arg.Rank,
+		arg.InecElectionTypeID,
 		arg.ID,
 	)
 	var i Office
@@ -157,6 +167,7 @@ func (q *Queries) UpdateOffice(ctx context.Context, arg UpdateOfficeParams) (Off
 		&i.Scope,
 		&i.Rank,
 		&i.InstancesCount,
+		&i.InecElectionTypeID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -9,6 +9,7 @@ import {
 export type StateConstituencyType = {
   id: number;
   name: string;
+  code?: string | null;
   lga_id: number;
   lga_name: string;
   state_id: number;

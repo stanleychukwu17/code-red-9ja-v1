@@ -39,10 +39,8 @@ func NewHandler(puService PollingUnitsService, q *queries.Queries, utils *utils.
 
 type CreatePollingUnitRequest struct {
 	Name               string   `json:"name"`
-	Abbreviation       *string  `json:"abbreviation"`
-	Units              *string  `json:"units"`
-	Delimitation       *string  `json:"delimitation"`
-	Remark             *string  `json:"remark"`
+	Code               *string  `json:"code"`
+	PUCode             *string  `json:"pu_code"`
 	RegistrationAreaID *int32   `json:"registration_area_id"`
 	WardID             int32    `json:"ward_id"`
 	StateID            int32    `json:"state_id"`
@@ -56,10 +54,8 @@ type CreatePollingUnitRequest struct {
 
 type UpdatePollingUnitRequest struct {
 	Name               string   `json:"name"`
-	Abbreviation       *string  `json:"abbreviation"`
-	Units              *string  `json:"units"`
-	Delimitation       *string  `json:"delimitation"`
-	Remark             *string  `json:"remark"`
+	Code               *string  `json:"code"`
+	PUCode             *string  `json:"pu_code"`
 	RegistrationAreaID *int32   `json:"registration_area_id"`
 	WardID             int32    `json:"ward_id"`
 	StateID            int32    `json:"state_id"`
@@ -142,23 +138,27 @@ func (h *Handler) CreatePollingUnit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg := queries.CreatePollingUnitParams{
-		Name:               req.Name,
-		Abbreviation:       toText(req.Abbreviation),
-		Units:              toText(req.Units),
-		Delimitation:       toText(req.Delimitation),
-		Remark:             toText(req.Remark),
-		RegistrationAreaID: toInt4(req.RegistrationAreaID),
-		WardID:             req.WardID,
-		WardName:           ward.Name,
-		LgaID:              req.LgaID,
-		LgaName:            lga.Name,
-		StateID:            req.StateID,
-		StateName:          state.Name,
-		Latitude:           toFloat8(req.Latitude),
-		Longitude:          toFloat8(req.Longitude),
-		PreciseLocation:    toText(req.PreciseLocation),
-		FormattedAddress:   toText(req.FormattedAddress),
-		GooglePlaceID:      toText(req.GooglePlaceID),
+		Name:                    req.Name,
+		Code:                    toText(req.Code),
+		PuCode:                  toText(req.PUCode),
+		RegistrationAreaID:      toInt4(req.RegistrationAreaID),
+		WardID:                  req.WardID,
+		WardName:                ward.Name,
+		LgaID:                   req.LgaID,
+		LgaName:                 lga.Name,
+		SenatorialDistrictID:    lga.SenatorialDistrictID,
+		SenatorialDistrictName:  lga.SenatorialDistrictName,
+		FederalConstituencyID:   lga.FederalConstituencyID,
+		FederalConstituencyName: lga.FederalConstituencyName,
+		StateConstituencyID:     ward.StateConstituencyID,
+		StateConstituencyName:   ward.StateConstituencyName,
+		StateID:                 req.StateID,
+		StateName:               state.Name,
+		Latitude:                toFloat8(req.Latitude),
+		Longitude:               toFloat8(req.Longitude),
+		PreciseLocation:         toText(req.PreciseLocation),
+		FormattedAddress:        toText(req.FormattedAddress),
+		GooglePlaceID:           toText(req.GooglePlaceID),
 	}
 
 	pu, err := h.puService.CreatePollingUnit(r.Context(), arg)
@@ -269,24 +269,28 @@ func (h *Handler) UpdatePollingUnit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	arg := queries.UpdatePollingUnitParams{
-		ID:                 int32(id),
-		Name:               req.Name,
-		Abbreviation:       toText(req.Abbreviation),
-		Units:              toText(req.Units),
-		Delimitation:       toText(req.Delimitation),
-		Remark:             toText(req.Remark),
-		RegistrationAreaID: toInt4(req.RegistrationAreaID),
-		WardID:             req.WardID,
-		WardName:           ward.Name,
-		LgaID:              req.LgaID,
-		LgaName:            lga.Name,
-		StateID:            req.StateID,
-		StateName:          state.Name,
-		Latitude:           toFloat8(req.Latitude),
-		Longitude:          toFloat8(req.Longitude),
-		PreciseLocation:    toText(req.PreciseLocation),
-		FormattedAddress:   toText(req.FormattedAddress),
-		GooglePlaceID:      toText(req.GooglePlaceID),
+		ID:                      int32(id),
+		Name:                    req.Name,
+		Code:                    toText(req.Code),
+		PuCode:                  toText(req.PUCode),
+		RegistrationAreaID:      toInt4(req.RegistrationAreaID),
+		WardID:                  req.WardID,
+		WardName:                ward.Name,
+		LgaID:                   req.LgaID,
+		LgaName:                 lga.Name,
+		SenatorialDistrictID:    lga.SenatorialDistrictID,
+		SenatorialDistrictName:  lga.SenatorialDistrictName,
+		FederalConstituencyID:   lga.FederalConstituencyID,
+		FederalConstituencyName: lga.FederalConstituencyName,
+		StateConstituencyID:     ward.StateConstituencyID,
+		StateConstituencyName:   ward.StateConstituencyName,
+		StateID:                 req.StateID,
+		StateName:               state.Name,
+		Latitude:                toFloat8(req.Latitude),
+		Longitude:               toFloat8(req.Longitude),
+		PreciseLocation:         toText(req.PreciseLocation),
+		FormattedAddress:        toText(req.FormattedAddress),
+		GooglePlaceID:           toText(req.GooglePlaceID),
 	}
 
 	updatedPU, err := h.puService.UpdatePollingUnit(r.Context(), arg)
@@ -345,10 +349,8 @@ type PaginationMeta struct {
 type PollingUnitResponse struct {
 	ID                  int32    `json:"id"`
 	Name                string   `json:"name"`
-	Abbreviation        string   `json:"abbreviation"`
-	Units               string   `json:"units"`
-	Delimitation        string   `json:"delimitation"`
-	Remark              string   `json:"remark"`
+	Code                string   `json:"code"`
+	PUCode              string   `json:"pu_code"`
 	RegistrationAreaID  int32    `json:"registration_area_id"`
 	WardID              int32    `json:"ward_id"`
 	WardName            string   `json:"ward_name"`
@@ -513,6 +515,26 @@ func (h *Handler) GetPollingUnits(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch polling units: "+err.Error())
 		return
+	}
+
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []queries.PollingUnit
+		for _, pu := range units {
+			puCodeStr := ""
+			if pu.PuCode.Valid {
+				puCodeStr = pu.PuCode.String
+			}
+			if strings.Contains(strings.ToLower(pu.Name), searchLower) ||
+				strings.Contains(strings.ToLower(puCodeStr), searchLower) ||
+				strings.Contains(strings.ToLower(pu.WardName), searchLower) ||
+				strings.Contains(strings.ToLower(pu.LgaName), searchLower) ||
+				strings.Contains(strings.ToLower(pu.StateName), searchLower) {
+				filtered = append(filtered, pu)
+			}
+		}
+		units = filtered
 	}
 
 	orderBy, orderDir := parseSortParams(r, "name", "ASC")

@@ -284,6 +284,147 @@ func (h *Handler) MarkPaid(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// ─── GET /api/v1/agent-earnings/potential-payout ─────────────────────────────
+
+// GetPotentialPayout godoc
+// @Summary      Get potential payout in Kobo for a given task type
+// @Tags         AgentEarnings
+// @Produce      json
+// @Param        assignment_id query int    true  "Assignment ID"
+// @Param        task_type     query string true  "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)"
+// @Success      200 {object} utils.SuccessResponse
+// @Failure      400 {object} utils.ErrorResponse
+// @Failure      401 {object} utils.ErrorResponse
+// @Failure      500 {object} utils.ErrorResponse
+// @Security     BearerAuth
+// @Router       /agent-earnings/potential-payout [get]
+func (h *Handler) GetPotentialPayout(w http.ResponseWriter, r *http.Request) {
+	_, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.u.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	q := r.URL.Query()
+	assignmentID, err := strconv.ParseInt(q.Get("assignment_id"), 10, 64)
+	if err != nil || assignmentID <= 0 {
+		h.u.RespondError(w, http.StatusBadRequest, "assignment_id query param is required")
+		return
+	}
+
+	taskType := q.Get("task_type")
+	if taskType == "" {
+		h.u.RespondError(w, http.StatusBadRequest, "task_type query param is required")
+		return
+	}
+
+	result, err := h.service.CalculatePotentialPayout(r.Context(), assignmentID, taskType)
+	if err != nil {
+		h.u.RespondError(w, http.StatusInternalServerError, "Failed to calculate potential payout: "+err.Error())
+		return
+	}
+
+	h.u.RespondSuccess(w, http.StatusOK, "Potential payout calculated", map[string]interface{}{
+		"payout": result,
+	})
+}
+
+// ─── GET /api/v1/agent-earnings/estimate-payout ───────────────────────────────
+
+// EstimatePotentialPayout godoc
+// @Summary      Estimate potential payout in Kobo for a given task type without requiring an assignment ID
+// @Tags         AgentEarnings
+// @Produce      json
+// @Param        task_type         query string true  "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)"
+// @Param        role              query string false "Role (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)"
+// @Param        election_group_id query int    false "Election Group ID"
+// @Param        party_id          query int    false "Party ID"
+// @Success      200 {object} utils.SuccessResponse
+// @Failure      400 {object} utils.ErrorResponse
+// @Failure      401 {object} utils.ErrorResponse
+// @Failure      500 {object} utils.ErrorResponse
+// @Security     BearerAuth
+// @Router       /agent-earnings/estimate-payout [get]
+func (h *Handler) EstimatePotentialPayout(w http.ResponseWriter, r *http.Request) {
+	_, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.u.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	q := r.URL.Query()
+	taskType := q.Get("task_type")
+	if taskType == "" {
+		h.u.RespondError(w, http.StatusBadRequest, "task_type query param is required")
+		return
+	}
+
+	role := q.Get("role")
+	var electionGroupID int64
+	var partyID int16
+
+	if v := q.Get("election_group_id"); v != "" {
+		electionGroupID, _ = strconv.ParseInt(v, 10, 64)
+	}
+	if v := q.Get("party_id"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
+			partyID = int16(p)
+		}
+	}
+
+	result, err := h.service.EstimatePotentialPayout(r.Context(), taskType, role, electionGroupID, partyID)
+	if err != nil {
+		h.u.RespondError(w, http.StatusInternalServerError, "Failed to estimate potential payout: "+err.Error())
+		return
+	}
+
+	h.u.RespondSuccess(w, http.StatusOK, "Potential payout estimated", map[string]interface{}{
+		"payout": result,
+	})
+}
+
+// ─── GET /api/v1/agent-earnings/allocations ───────────────────────────────────
+
+// GetAllocations godoc
+// @Summary      Get agent task percentage allocations and potential payouts in Kobo
+// @Tags         AgentEarnings
+// @Produce      json
+// @Param        election_group_id query int    false "Election Group ID"
+// @Param        role_type         query string false "Role Type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)"
+// @Param        assignment_id     query int    false "Assignment ID"
+// @Success      200 {object} utils.SuccessResponse
+// @Failure      401 {object} utils.ErrorResponse
+// @Failure      500 {object} utils.ErrorResponse
+// @Security     BearerAuth
+// @Router       /agent-earnings/allocations [get]
+func (h *Handler) GetAllocations(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.u.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	q := r.URL.Query()
+	var electionGroupID, assignmentID int64
+	if v := q.Get("election_group_id"); v != "" {
+		electionGroupID, _ = strconv.ParseInt(v, 10, 64)
+	}
+	if v := q.Get("assignment_id"); v != "" {
+		assignmentID, _ = strconv.ParseInt(v, 10, 64)
+	}
+	roleType := q.Get("role_type")
+
+	result, err := h.service.GetAgentAllocations(r.Context(), claims.UserID, electionGroupID, roleType, assignmentID)
+	if err != nil {
+		h.u.RespondError(w, http.StatusInternalServerError, "Failed to get agent allocations: "+err.Error())
+		return
+	}
+
+	h.u.RespondSuccess(w, http.StatusOK, "Agent allocations retrieved", map[string]interface{}{
+		"allocations": result,
+	})
+}
+
 // ─── Internal trigger ─────────────────────────────────────────────────────────
 
 // TriggerCalculation is called by other handlers (practice tests, assignment tracking)

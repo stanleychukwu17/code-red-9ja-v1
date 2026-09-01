@@ -334,7 +334,7 @@ type GetUsersData struct {
 // @Param        roles   query     string  false  "Roles (admin, party_admin, user, etc. comma-separated)"
 // @Param        limit   query     int     false  "Limit (default 20, max 100)"
 // @Param        cursor  query     string  false  "Cursor (ID of last record)"
-// @Success      200     {object}  GetUsersResponse
+// @Success      200     {object}  map[string]interface{}
 // @Failure      500     {object}  map[string]interface{}
 // @Security     BearerAuth
 // @Router       /users [get]

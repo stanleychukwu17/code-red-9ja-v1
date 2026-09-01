@@ -7,7 +7,7 @@ export const createLga = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       name: string;
-      abbreviation: string;
+      code: string;
       state_id: number;
       senatorial_district_id: number;
       federal_constituency_id: number;
@@ -34,7 +34,7 @@ export const updateLga = createServerFn({ method: "POST" })
     (data: {
       id: string | number;
       name: string;
-      abbreviation: string;
+      code: string;
       state_id: number;
       senatorial_district_id: number;
       federal_constituency_id: number;

@@ -37,15 +37,15 @@ func NewHandler(q *queries.Queries, u *utils.Utils, earningsSvc *earningsservice
 // ─── response mapper ──────────────────────────────────────────────────────────
 
 type PracticeTestResponse struct {
-	ID              int64              `json:"id"`
-	UserID          int64              `json:"user_id"`
-	ElectionGroupID pgtype.Int8        `json:"election_group_id"`
-	Role            string             `json:"role"`
-	TestAttempts    json.RawMessage    `json:"test_attempts"`
-	OverallScore    pgtype.Numeric     `json:"overall_score"`
-	Status          string             `json:"status"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	ID               int64       `json:"id"`
+	UserID           int64       `json:"user_id"`
+	ElectionGroupID  *int64      `json:"election_group_id,omitempty"`
+	Role             string      `json:"role"`
+	TestAttempts     interface{} `json:"test_attempts"`
+	OverallScore     float64     `json:"overall_score"`
+	EarnedAmountKobo int64       `json:"earned_amount_kobo"`
+	CreatedAt        string      `json:"created_at"`
+	UpdatedAt        string      `json:"updated_at"`
 }
 
 type PracticeTestWithUserResponse struct {
@@ -60,16 +60,30 @@ func mapPracticeTest(t queries.UserPracticeTest) PracticeTestResponse {
 	if len(attempts) == 0 {
 		attempts = json.RawMessage("[]")
 	}
+	var egID *int64
+	if t.ElectionGroupID.Valid {
+		egID = &t.ElectionGroupID.Int64
+	}
+	scoreFloat, _ := t.OverallScore.Float64Value()
+
+	var createdAtStr, updatedAtStr string
+	if t.CreatedAt.Valid {
+		createdAtStr = t.CreatedAt.Time.Format(time.RFC3339)
+	}
+	if t.UpdatedAt.Valid {
+		updatedAtStr = t.UpdatedAt.Time.Format(time.RFC3339)
+	}
+
 	return PracticeTestResponse{
-		ID:              t.ID,
-		UserID:          t.UserID,
-		ElectionGroupID: t.ElectionGroupID,
-		Role:            t.Role,
-		TestAttempts:    attempts,
-		OverallScore:    t.OverallScore,
-		Status:          t.Status,
-		CreatedAt:       t.CreatedAt,
-		UpdatedAt:       t.UpdatedAt,
+		ID:               t.ID,
+		UserID:           t.UserID,
+		ElectionGroupID:  egID,
+		Role:             t.Role,
+		TestAttempts:     attempts,
+		OverallScore:     scoreFloat.Float64,
+		EarnedAmountKobo: t.EarnedAmountKobo,
+		CreatedAt:        createdAtStr,
+		UpdatedAt:        updatedAtStr,
 	}
 }
 
@@ -78,17 +92,31 @@ func mapPracticeTestRow(t queries.ListUserPracticeTestsRow) PracticeTestWithUser
 	if len(attempts) == 0 {
 		attempts = json.RawMessage("[]")
 	}
+	var egID *int64
+	if t.ElectionGroupID.Valid {
+		egID = &t.ElectionGroupID.Int64
+	}
+	scoreFloat, _ := t.OverallScore.Float64Value()
+
+	var createdAtStr, updatedAtStr string
+	if t.CreatedAt.Valid {
+		createdAtStr = t.CreatedAt.Time.Format(time.RFC3339)
+	}
+	if t.UpdatedAt.Valid {
+		updatedAtStr = t.UpdatedAt.Time.Format(time.RFC3339)
+	}
+
 	resp := PracticeTestWithUserResponse{
 		PracticeTestResponse: PracticeTestResponse{
-			ID:              t.ID,
-			UserID:          t.UserID,
-			ElectionGroupID: t.ElectionGroupID,
-			Role:            t.Role,
-			TestAttempts:    attempts,
-			OverallScore:    t.OverallScore,
-			Status:          t.Status,
-			CreatedAt:       t.CreatedAt,
-			UpdatedAt:       t.UpdatedAt,
+			ID:               t.ID,
+			UserID:           t.UserID,
+			ElectionGroupID:  egID,
+			Role:             t.Role,
+			TestAttempts:     attempts,
+			OverallScore:     scoreFloat.Float64,
+			EarnedAmountKobo: t.EarnedAmountKobo,
+			CreatedAt:        createdAtStr,
+			UpdatedAt:        updatedAtStr,
 		},
 	}
 	if t.FirstName.Valid {
@@ -147,28 +175,55 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 
 	var req SubmitPracticeTestRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		slog.Warn("⚠️ [SubmitPracticeTest] Invalid request payload", "error", err)
 		h.u.RespondError(w, http.StatusBadRequest, "Invalid request payload")
 		return
 	}
 
 	role := req.Role
 	if role == "" {
-		role = "pollingagent"
+		role = "polling_agent"
 	}
+
+	slog.Info("📥 [SubmitPracticeTest] Request received",
+		"userID", userID,
+		"electionGroupID", req.ElectionGroupID,
+		"role", role,
+		"finalScore", req.FinalScore,
+		"tasksCount", len(req.TaskStats),
+	)
 
 	var electionGroupID pgtype.Int8
 	if req.ElectionGroupID != 0 {
 		electionGroupID = pgtype.Int8{Int64: req.ElectionGroupID, Valid: true}
 	}
 
+	// 1. Process auto-accept for any pending party applications first so assignment exists
+	h.processAutoAccept(r.Context(), userID)
+
+	// 2. Evaluate eligibility and calculate payout
+	var payoutEarnedKobo int64 = 0
+	var beenPaid bool = false
+	if req.ElectionGroupID != 0 && h.earnings != nil {
+		payoutRes, evalErr := h.earnings.EvaluatePracticeTestPayout(r.Context(), userID, req.ElectionGroupID, role, req.FinalScore)
+		if evalErr != nil {
+			slog.Warn("⚠️ [SubmitPracticeTest] Error evaluating practice test payout", "error", evalErr)
+		} else if payoutRes.Eligible && payoutRes.EarnedAmountKobo > 0 {
+			beenPaid = true
+			payoutEarnedKobo = payoutRes.EarnedAmountKobo
+		}
+	}
+
 	attemptMap := map[string]interface{}{
-		"final_score":  req.FinalScore,
-		"tasks":        req.TaskStats,
-		"been_paid":    false,
-		"completed_at": time.Now().Format(time.RFC3339),
+		"final_score":        req.FinalScore,
+		"tasks":              req.TaskStats,
+		"been_paid":          beenPaid,
+		"earned_amount_kobo": payoutEarnedKobo,
+		"completed_at":       time.Now().Format(time.RFC3339),
 	}
 	attemptBytes, err := json.Marshal(attemptMap)
 	if err != nil {
+		slog.Error("❌ [SubmitPracticeTest] Failed to serialize attempt", "error", err)
 		h.u.RespondError(w, http.StatusInternalServerError, "Failed to serialize attempt")
 		return
 	}
@@ -176,132 +231,41 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 	scoreStr := fmt.Sprintf("%.2f", req.FinalScore)
 	var numericScore pgtype.Numeric
 	if scanErr := numericScore.Scan(scoreStr); scanErr != nil {
+		slog.Error("❌ [SubmitPracticeTest] Invalid final_score numeric scan", "scoreStr", scoreStr, "error", scanErr)
 		h.u.RespondError(w, http.StatusBadRequest, "Invalid final_score value")
 		return
 	}
 
 	test, err := h.q.SubmitPracticeTest(r.Context(), queries.SubmitPracticeTestParams{
-		UserID:          userID,
-		ElectionGroupID: electionGroupID,
-		Role:            role,
-		Attempt:         attemptBytes,
-		OverallScore:    numericScore,
+		UserID:           userID,
+		ElectionGroupID:  electionGroupID,
+		Role:             role,
+		Attempt:          attemptBytes,
+		OverallScore:     numericScore,
+		EarnedAmountKobo: payoutEarnedKobo,
 	})
 	if err != nil {
+		slog.Error("❌ [SubmitPracticeTest] Database query failed", "userID", userID, "error", err)
 		h.u.RespondError(w, http.StatusInternalServerError, "Failed to submit practice test")
 		return
 	}
 
-	// Process earnings in background: update readiness, upsert agent_earnings,
-	// credit wallet delta, and mark all been_paid:false attempts as paid.
-	if test.ElectionGroupID.Valid && test.ElectionGroupID.Int64 > 0 && h.earnings != nil {
-		egID := test.ElectionGroupID.Int64
+	slog.Info("✅ [SubmitPracticeTest] Practice test saved to database", "userID", userID, "testID", test.ID, "earnedKobo", payoutEarnedKobo)
+
+	// Process wallet payout & update assignment earned_amount_kobo in background
+	if payoutEarnedKobo > 0 && h.earnings != nil {
 		uID := userID
-		testRecordID := test.ID
+		egID := req.ElectionGroupID
+		rType := role
+		deltaKobo := payoutEarnedKobo
+		testID := test.ID
 		earningsSvc := h.earnings
-		finalScore := req.FinalScore // 0–100 scale
 		go func() {
 			bgCtx := context.Background()
-			assignmentID, err := h.q.GetAssignmentIDByUserAndElectionGroup(bgCtx, queries.GetAssignmentIDByUserAndElectionGroupParams{
-				UserID:          uID,
-				ElectionGroupID: egID,
-			})
-			if err != nil {
-				// Agent may not have an assignment yet — this is fine, just skip
-				return
+			if err := earningsSvc.ProcessPracticeTestPayout(bgCtx, uID, egID, rType, deltaKobo, testID); err != nil {
+				slog.Error("❌ [SubmitPracticeTest] Failed to process practice test payout", "error", err)
 			}
-			earningsSvc.ProcessPracticeTestEarnings(bgCtx, assignmentID, testRecordID, finalScore)
 		}()
-	}
-
-	// Background task for auto-accepting party applications
-	if req.ElectionGroupID != 0 {
-		go func(uid int64, groupID int64, testID int64, finalScore float64) {
-			ctx := context.Background()
-
-			// 1. Check if user has a pending application for this election group
-			app, err := h.q.GetPendingApplicationForAutoAccept(ctx, queries.GetPendingApplicationForAutoAcceptParams{
-				UserID:          uid,
-				ElectionGroupID: groupID,
-			})
-			if err != nil {
-				// No pending application found or error (e.g. pgx.ErrNoRows)
-				return
-			}
-
-			// 2. Parse the auto_accept_applications JSONB
-			var autoAcceptConfig map[string]bool
-			if len(app.AutoAcceptApplications) > 0 {
-				if err := json.Unmarshal(app.AutoAcceptApplications, &autoAcceptConfig); err != nil {
-					slog.Error("Failed to parse auto_accept_applications config", "error", err, "partyID", app.PartyID)
-					return
-				}
-			}
-
-			// 3. Check if auto-accept is enabled for this role
-			roleKey := ""
-			switch app.Role {
-			case "pollingagent":
-				roleKey = "pollingAgent"
-			case "ward-election-supervisor":
-				roleKey = "wardElectionSupervisor"
-			case "lga-election-supervisor":
-				roleKey = "lgaElectionSupervisor"
-			case "state-election-supervisor":
-				roleKey = "stateElectionSupervisor"
-			}
-
-			if roleKey != "" && autoAcceptConfig[roleKey] {
-				// Auto-accept the application
-				slog.Info("Auto-accepting party application", "applicationID", app.ID, "userID", uid)
-
-				_, err = h.partyApps.ApproveApplication(ctx, partyapplications.ApproveApplicationInput{
-					ApplicationID: app.ID,
-					PollingUnitID: app.PollingUnitID.Int32,
-					RoleType:      app.Role,
-					StateID:       app.StateID.Int16,
-					LgaID:         app.LgaID.Int32,
-					WardID:        app.WardID.Int32,
-					AssignedBy:    uid,
-				})
-				if err != nil {
-					slog.Error("Failed to auto-accept party application", "error", err, "applicationID", app.ID)
-					return
-				}
-
-				// After the assignment is created by ApproveApplication, immediately process
-				// practice test earnings so that:
-				//   1. assignment.election_practice_test_readiness_percentage is set
-				//   2. agent_earnings row is upserted with the readiness score
-				//   3. user wallet is credited for readiness earnings delta
-				if h.earnings != nil {
-					newAssignmentID, assignErr := h.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
-						UserID:          uid,
-						ElectionGroupID: groupID,
-					})
-					if assignErr != nil {
-						slog.Warn("Auto-accept: could not find new assignment for earnings processing",
-							"userID", uid, "electionGroupID", groupID, "error", assignErr)
-					} else {
-						h.earnings.ProcessPracticeTestEarnings(ctx, newAssignmentID, testID, finalScore)
-						slog.Info("Auto-accept: readiness earnings processed for new assignment",
-							"assignmentID", newAssignmentID, "readinessPct", finalScore)
-
-						// Immediately refresh the election_group_polling_units stats for this PU
-						// so the readiness percentage is visible without waiting for the next cron run.
-						if app.PollingUnitID.Valid && app.PollingUnitID.Int32 > 0 {
-							if refreshErr := h.q.RefreshSingleElectionGroupPollingUnitStats(ctx, queries.RefreshSingleElectionGroupPollingUnitStatsParams{
-								ElectionGroupID: groupID,
-								PollingUnitID:   app.PollingUnitID.Int32,
-							}); refreshErr != nil {
-								slog.Warn("Auto-accept: failed to refresh EGPU stats",
-									"electionGroupID", groupID, "pollingUnitID", app.PollingUnitID.Int32, "error", refreshErr)
-							}
-						}
-					}
-				}
-			}
-		}(userID, req.ElectionGroupID, test.ID, req.FinalScore)
 	}
 
 	h.u.RespondSuccess(w, http.StatusCreated, "Practice test submitted", map[string]interface{}{
@@ -309,15 +273,76 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// processAutoAccept checks and auto-approves any pending applications for the user
+func (h *Handler) processAutoAccept(ctx context.Context, uid int64) {
+	apps, err := h.q.GetPendingApplicationsForUserAutoAccept(ctx, uid)
+	if err != nil {
+		slog.Warn("⚠️ [AutoAccept] Could not fetch pending applications for user", "userID", uid, "error", err)
+		return
+	}
+
+	slog.Info("🔍 [AutoAccept] Checking pending applications for user", "userID", uid, "pendingAppsCount", len(apps))
+
+	for _, app := range apps {
+		var autoAcceptConfig map[string]bool
+		if len(app.AutoAcceptApplications) > 0 {
+			if err := json.Unmarshal(app.AutoAcceptApplications, &autoAcceptConfig); err != nil {
+				slog.Error("Failed to parse auto_accept_applications config", "error", err, "partyID", app.PartyID)
+				continue
+			}
+		}
+
+		role := strings.ReplaceAll(app.Role, "-", "_")
+		switch role {
+		case "pollingagent":
+			role = "polling_agent"
+		case "ward_supervisor":
+			role = "ward_election_supervisor"
+		case "lga_supervisor":
+			role = "lga_election_supervisor"
+		case "state_supervisor":
+			role = "state_election_supervisor"
+		}
+
+		isAutoAcceptEnabled := autoAcceptConfig[role] || autoAcceptConfig[app.Role]
+		if isAutoAcceptEnabled {
+			slog.Info("🚀 [AutoAccept] Auto-accepting party application", "applicationID", app.ID, "userID", uid, "role", app.Role, "electionGroupID", app.ElectionGroupID)
+
+			_, err = h.partyApps.ApproveApplication(ctx, partyapplications.ApproveApplicationInput{
+				ApplicationID: app.ID,
+				PollingUnitID: app.PollingUnitID.Int32,
+				RoleType:      app.Role,
+				StateID:       app.StateID.Int16,
+				LgaID:         app.LgaID.Int32,
+				WardID:        app.WardID.Int32,
+				AssignedBy:    uid,
+			})
+			if err != nil {
+				slog.Error("❌ [AutoAccept] Failed to auto-accept party application", "error", err, "applicationID", app.ID)
+				continue
+			}
+
+			slog.Info("🎉 [AutoAccept] Party application approved successfully", "applicationID", app.ID)
+
+			if app.PollingUnitID.Valid && app.PollingUnitID.Int32 > 0 {
+				_ = h.q.RefreshSingleElectionGroupPollingUnitStats(ctx, queries.RefreshSingleElectionGroupPollingUnitStatsParams{
+					ElectionGroupID: app.ElectionGroupID,
+					PollingUnitID:   app.PollingUnitID.Int32,
+				})
+			}
+		}
+	}
+}
+
 // ─── GET /api/v1/practice-tests/payout-preview ───────────────────────────────
 
 // GetPayoutPreview godoc
 // @Summary      Get practice test payout preview
-// @Description  Returns the potential payout for the next practice test the user takes, based on their role, party payment allocation, and how many tests they have already taken in the active time window.
+// @Description  Returns the potential payout for the next practice test the user takes, based on their role, party payment allocation, and how many tests they have already taken in the active time window. All monetary values (potential_window_payout_kobo, potential_test_payout_kobo, readiness_budget_kobo) are returned in kobo.
 // @Tags         Practice Tests
 // @Produce      json
 // @Param        election_group_id query int    true  "The election group to preview payout for"
-// @Param        role              query string false "Role override (default: pollingagent)"
+// @Param        role              query string false "Role override (default: polling_agent)"
 // @Success      200 {object} utils.SuccessResponse
 // @Failure      400 {object} utils.ErrorResponse
 // @Failure      401 {object} utils.ErrorResponse
@@ -326,6 +351,7 @@ func (h *Handler) SubmitPracticeTest(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	userID, ok := getCallerID(r)
 	if !ok {
+		slog.Warn("🔐 [PayoutPreview] Unauthorized request")
 		h.u.RespondError(w, http.StatusUnauthorized, "Unauthorized")
 		return
 	}
@@ -340,12 +366,10 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 
 	role := q.Get("role")
 	if role == "" {
-		role = "pollingagent"
+		role = "polling_agent"
 	}
 
-	// Optional: election_date in RFC3339 or YYYY-MM-DD format from the frontend
 	electionDateStr := q.Get("election_date")
-	// Optional: party_id override (used as applicant fallback when no assignment exists)
 	partyIDParam, _ := strconv.ParseInt(q.Get("party_id"), 10, 16)
 
 	ctx := r.Context()
@@ -372,15 +396,14 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	if partyID == 0 && partyIDParam > 0 {
 		partyID = int16(partyIDParam)
 	}
-	slog.Info("resolved party and role for practice test preview", "userID", userID, "electionGroupID", electionGroupID, "partyID", partyID, "roleType", roleType, "assignmentID", assignmentID)
 
 	if partyID == 0 {
 		h.u.RespondSuccess(w, http.StatusOK, "Payout preview", map[string]interface{}{
-			"potential_window_payout":            0,
-			"potential_test_payout":              0,
+			"potential_window_payout_kobo":       0,
+			"potential_test_payout_kobo":         0,
 			"quota_remaining":                    0,
 			"tests_taken_in_window":              0,
-			"readiness_budget":                   0,
+			"readiness_budget_kobo":              0,
 			"active_window_days_before_election": 0,
 		})
 		return
@@ -389,14 +412,12 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	// ── 2. Fetch party base payment ───────────────────────────────────────────
 	party, err := h.q.GetPartyByID(ctx, partyID)
 	if err != nil {
-		h.u.RespondError(w, http.StatusInternalServerError, "Failed to fetch party")
+		h.u.RespondError(w, http.StatusInternalServerError, "Failed to fetch party details")
 		return
 	}
 
-	// resolveBasePayment uses the same logic as the earnings service
 	basePaymentKobo := resolveBasePaymentKobo(party.AgentPaymentAllocationKobo, roleType)
 	basePayment := basePaymentKobo / 100 // convert back to Naira for internal preview logic
-	slog.Info("resolved base payment for practice test preview", "roleType", roleType, "basePaymentNaira", basePayment, "partyID", partyID)
 
 	// ── 3. Fetch earnings allocation for readiness % ──────────────────────────
 	allocationKey := "earnings_allocation_" + strings.ReplaceAll(roleType, " ", "_")
@@ -411,8 +432,7 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	if jErr := json.Unmarshal(allocSetting.Value, &alloc); jErr != nil {
 		alloc.Readiness = 20 // safe default
 	}
-	readinessBudget := int64(float64(basePayment) * (alloc.Readiness / 100.0))
-	slog.Info("resolved readiness budget for practice test preview", "readinessPercentage", alloc.Readiness, "readinessBudgetNaira", readinessBudget)
+	readinessBudgetKobo := int64(float64(basePayment) * (alloc.Readiness / 100.0))
 
 	// ── 4. Fetch test requirements (windows + total_required) ─────────────────
 	reqKey := "test_requirements_" + strings.ReplaceAll(roleType, " ", "_")
@@ -432,11 +452,10 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 		testReq.TotalRequired = 10
 	}
 
-	perTestValue := int64(0)
+	perTestValueKobo := int64(0)
 	if testReq.TotalRequired > 0 {
-		perTestValue = readinessBudget / int64(testReq.TotalRequired)
+		perTestValueKobo = readinessBudgetKobo / int64(testReq.TotalRequired)
 	}
-	slog.Info("resolved test requirements for practice test preview", "totalRequired", testReq.TotalRequired, "perTestValueNaira", perTestValue, "windowsCount", len(testReq.Windows))
 
 	// ── 5. Determine active window from election_date query param ─────────────
 	var electionDate time.Time
@@ -472,7 +491,6 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 		activeWindowDays = testReq.Windows[0].DaysBeforeElection
 		accumulatedQuota = testReq.Windows[0].Quota
 	}
-	slog.Info("resolved active window for practice test preview", "daysUntilElection", daysUntilElection, "activeWindowDays", activeWindowDays, "accumulatedQuota", accumulatedQuota, "hasElectionDate", hasElectionDate)
 
 	// ── 6. Count tests already taken in the active window ────────────────────
 	testsTakenInWindow := 0
@@ -509,7 +527,6 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	slog.Info("resolved tests taken for practice test preview", "testsTakenInWindow", testsTakenInWindow, "hasExistingRecord", ptErr == nil)
 
 	// ── 7. Compute remaining quota and final payout ───────────────────────────
 	quotaRemaining := accumulatedQuota - testsTakenInWindow
@@ -517,15 +534,14 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 		quotaRemaining = 0
 	}
 
-	potentialWindowPayout := perTestValue * int64(quotaRemaining)
-	slog.Info("resolved final payout for practice test preview", "quotaRemaining", quotaRemaining, "potentialWindowPayoutNaira", potentialWindowPayout)
+	potentialWindowPayoutKobo := perTestValueKobo * int64(quotaRemaining)
 
 	h.u.RespondSuccess(w, http.StatusOK, "Payout preview", map[string]interface{}{
-		"potential_window_payout":            potentialWindowPayout,
-		"potential_test_payout":              perTestValue,
+		"potential_window_payout_kobo":       potentialWindowPayoutKobo,
+		"potential_test_payout_kobo":         perTestValueKobo,
 		"quota_remaining":                    quotaRemaining,
 		"tests_taken_in_window":              testsTakenInWindow,
-		"readiness_budget":                   readinessBudget,
+		"readiness_budget_kobo":              readinessBudgetKobo,
 		"active_window_days_before_election": activeWindowDays,
 	})
 }
@@ -540,23 +556,25 @@ func resolveBasePaymentKobo(rawJSON []byte, roleType string) int64 {
 	if err := json.Unmarshal(rawJSON, &alloc); err != nil {
 		return 0
 	}
-	camel := roleToCamelCase(roleType)
-	cfg, ok := alloc[camel]
+
+	role := strings.ReplaceAll(roleType, "-", "_")
+	switch role {
+	case "ward_supervisor":
+		role = "ward_election_supervisor"
+	case "lga_supervisor":
+		role = "lga_election_supervisor"
+	case "state_supervisor":
+		role = "state_election_supervisor"
+	}
+
+	cfg, ok := alloc[role]
+	if !ok {
+		cfg, ok = alloc[roleType]
+	}
 	if !ok {
 		return 0
 	}
 	return cfg.Default
-}
-
-// roleToCamelCase converts "polling_agent" → "pollingAgent"
-func roleToCamelCase(role string) string {
-	parts := strings.Split(role, "_")
-	for i := 1; i < len(parts); i++ {
-		if len(parts[i]) > 0 {
-			parts[i] = strings.ToUpper(parts[i][:1]) + parts[i][1:]
-		}
-	}
-	return strings.Join(parts, "")
 }
 
 // ─── GET /api/v1/practice-tests ──────────────────────────────────────────────
@@ -598,7 +616,6 @@ func (h *Handler) ListPracticeTests(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	status := q.Get("status")
 	limit := int32(50)
 	if v := q.Get("limit"); v != "" {
 		if parsed, err := strconv.ParseInt(v, 10, 32); err == nil && parsed > 0 {
@@ -615,7 +632,6 @@ func (h *Handler) ListPracticeTests(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.q.ListUserPracticeTests(r.Context(), queries.ListUserPracticeTestsParams{
 		UserID:          userID,
 		ElectionGroupID: electionGroupID,
-		Status:          status,
 		Cursor:          cursor,
 		LimitVal:        limit,
 	})

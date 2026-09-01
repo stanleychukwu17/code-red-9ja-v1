@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import {
   Layout,
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/users/admin")({
 
 function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const {
     data,
@@ -69,7 +70,12 @@ function RouteComponent() {
 
   return (
     <Layout>
-      <PageHeader title="Users" activeTab="admin" tabs={USERS_TABS} />
+      <PageHeader
+        title="Users"
+        activeTab="admin"
+        tabs={USERS_TABS}
+        onBackClick={() => navigate({ to: "/" })}
+      />
       <PageSearchLayer
         rightComponent={
           <>
@@ -85,7 +91,9 @@ function RouteComponent() {
         </div>
       ) : error ? (
         <div className="w-full p-6 text-center text-red-600 font-medium">
-          {error instanceof Error ? error.message : "Failed to load admin users"}
+          {error instanceof Error
+            ? error.message
+            : "Failed to load admin users"}
         </div>
       ) : admins.length === 0 ? (
         <div className="w-full p-12 text-center text-c-40 font-medium bg-white rounded-2xl border border-[#dfdfdf]">
@@ -104,12 +112,13 @@ function RouteComponent() {
               {isFetchingNextPage ? (
                 <Loader2 className="size-5 animate-spin mr-2" />
               ) : null}
-              {isFetchingNextPage ? "Loading more..." : "Scroll down to load more"}
+              {isFetchingNextPage
+                ? "Loading more..."
+                : "Scroll down to load more"}
             </div>
           )}
         </>
       )}
-
     </Layout>
   );
 }

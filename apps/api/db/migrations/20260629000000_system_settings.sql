@@ -16,12 +16,21 @@ ON CONFLICT (key) DO NOTHING;
 
 -- Seed target for live voters referred
 INSERT INTO system_settings (key, value, description)
-VALUES ('live_voters_referred', '20'::jsonb, 'The target number of live voters an agent is expected to refer')
+VALUES ('target_live_voters_referred_count', '20'::jsonb, 'The target number of live voters an agent is expected to refer')
 ON CONFLICT (key) DO NOTHING;
 
--- Seed target for updates count
+-- Seed update schedule config
 INSERT INTO system_settings (key, value, description)
-VALUES ('target_updates_count', '20'::jsonb, 'The target number of updates an agent is expected to give')
+VALUES (
+  'update_schedule_config',
+  '{
+    "target_updates_count": 20,
+    "start_time": "07:00",
+    "end_time": "17:00",
+    "interval_minutes": 30
+  }'::jsonb,
+  'Configuration for election update schedule including target updates count, start time (HH:MM), end time (HH:MM), and interval in minutes'
+)
 ON CONFLICT (key) DO NOTHING;
 
 -- Seed initial earnings allocations
@@ -86,6 +95,32 @@ VALUES
     }'::jsonb,
     'Test requirements for state supervisors: total tests expected and how many are allocated per pre-election window'
   )
+ON CONFLICT (key) DO NOTHING;
+
+-- Seed post-election activity window limit (in days)
+INSERT INTO system_settings (key, value, description)
+VALUES ('post_election_activity_days_limit', '7'::jsonb, 'Number of days after election date during which election activities (updates, result uploads, start/end timestamps) remain allowed')
+ON CONFLICT (key) DO NOTHING;
+
+-- Seed INEC API configuration
+INSERT INTO system_settings (key, value, description)
+VALUES (
+  'inec_api_config',
+  '{
+    "base_url": "https://dolphin-app-sleqh.ondigitalocean.app/api/v1",
+    "sync_interval_minutes": 15,
+    "active_sync_days_limit": 14,
+    "upload_to_r2_default": true,
+    "ai_extract_default": true,
+    "endpoints": {
+      "elections": "/elections?election_type={inec_election_type_id}&state_id={state_id}",
+      "lgas": "/elections/{election_id}/lga",
+      "state_lgas": "/elections/{election_id}/lga/state/{state_id}",
+      "polling_units": "/elections/{election_id}/pus?ward={ward_id}"
+    }
+  }'::jsonb,
+  'Configuration for INEC election result API endpoints, base URL, sync interval (minutes), active sync duration limit (days), and sync default flags'
+)
 ON CONFLICT (key) DO NOTHING;
 
 -- +goose Down

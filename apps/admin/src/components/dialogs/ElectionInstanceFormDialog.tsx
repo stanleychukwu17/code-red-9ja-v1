@@ -58,18 +58,24 @@ export function ElectionInstanceFormDialog({
 
   React.useEffect(() => {
     if (open && electionInstance) {
+      const cleanDate: string = electionInstance.election_date
+        ? (electionInstance.election_date.split("T")[0] ?? "")
+        : "";
       form.setFieldValue("name", electionInstance.name || "");
       form.setFieldValue(
         "candidatesCount",
         electionInstance.candidates_count || 0,
       );
-      form.setFieldValue("electionDate", electionInstance.election_date || "");
+      form.setFieldValue("electionDate", cleanDate);
       form.setFieldValue(
         "electionGroupId",
-        electionInstance.election_group_id || undefined,
+        (electionInstance.election_group_id || undefined) as number | undefined,
       );
-      form.setFieldValue("officeId", electionInstance.office_id || undefined);
-      setSelectedGroupDate(electionInstance.election_date || null);
+      form.setFieldValue(
+        "officeId",
+        (electionInstance.office_id || undefined) as number | undefined,
+      );
+      setSelectedGroupDate(cleanDate || null);
       setError(null);
     }
   }, [open, electionInstance]);
@@ -91,6 +97,9 @@ export function ElectionInstanceFormDialog({
       if (!values.electionDate) {
         throw new Error("Election date is required");
       }
+      if (!values.electionGroupId) {
+        throw new Error("Election group is required");
+      }
 
       const res = await updateElection({
         data: {
@@ -98,7 +107,7 @@ export function ElectionInstanceFormDialog({
           name: values.name.trim(),
           candidates_count: Number(values.candidatesCount) || 0,
           election_date: values.electionDate,
-          election_group_id: values.electionGroupId || 0,
+          election_group_id: values.electionGroupId,
           office_id: values.officeId,
           state_id: electionInstance.state_id,
           senatorial_district_id: electionInstance.senatorial_district_id,
@@ -127,7 +136,7 @@ export function ElectionInstanceFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader title="Update Election Instance" />
 
         <form
@@ -211,9 +220,19 @@ export function ElectionInstanceFormDialog({
                     <SelectDate
                       selectedId={field.state.value}
                       update={(value) => {
-                        field.handleChange(value);
-                        if (value !== selectedGroupDate) {
-                          form.setFieldValue("electionGroupId", undefined);
+                        const cleanVal = value ? (value.split("T")[0] ?? "") : "";
+                        const cleanSelectedGroupDate = selectedGroupDate
+                          ? (selectedGroupDate.split("T")[0] ?? "")
+                          : "";
+                        field.handleChange(cleanVal);
+                        if (
+                          cleanSelectedGroupDate &&
+                          cleanVal !== cleanSelectedGroupDate
+                        ) {
+                          form.setFieldValue(
+                            "electionGroupId",
+                            undefined as number | undefined,
+                          );
                           setSelectedGroupDate(null);
                         }
                       }}
@@ -229,15 +248,23 @@ export function ElectionInstanceFormDialog({
           <DialogToolbelt>
             <form.Field
               name="electionGroupId"
+              validators={{
+                onChange: ({ value }) =>
+                  !value ? "Election group is required" : undefined,
+              }}
               children={(field) => (
                 <ElectionGroupBullet
                   selectedId={field.state.value}
                   variant="bullet"
+                  errorMsg={field.state.meta.errors?.join(", ")}
                   update={(item) => {
+                    const cleanDate = item.election_date
+                      ? (item.election_date.split("T")[0] ?? null)
+                      : null;
                     field.handleChange(item.id);
-                    setSelectedGroupDate(item.election_date || null);
-                    if (item.election_date) {
-                      form.setFieldValue("electionDate", item.election_date);
+                    setSelectedGroupDate(cleanDate);
+                    if (cleanDate) {
+                      form.setFieldValue("electionDate", cleanDate);
                     }
                   }}
                   fetchElectionGroups={getElectionGroups}

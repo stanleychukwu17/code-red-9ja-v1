@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -19,7 +20,8 @@ export type ApiPlan = {
   id: number;
   name: string;
   description: string;
-  price: number;
+  price_kobo?: number;
+  price?: number;
   type: string;
   features: string[];
   scopes_recommendation: string[];
@@ -35,27 +37,53 @@ export type ElectionOption = {
   label: string;
 };
 
+export type StateObject = {
+  id: number;
+  name: string;
+};
+
 export type AgentMarketingSetupValue = {
   electionGroupId: string;
   electionId: string;
   planId: string;
   targetMode: "custom" | "all";
-  states: string[];
+  states: StateObject[];
   durationUnit: "days" | "months";
   durationValue: number;
+  budgetPerDayKobo?: number;
+  budgetKobo?: number;
+  budgetPerDay?: number;
   budget?: number;
+};
+
+export type AgentMarketingSetupSubmitPayload = {
+  electionGroupId: number;
+  electionId: number;
+  planId: number;
+  partyId?: number;
+  type: string;
+  states: StateObject[];
+  durationInDays: number;
+  budgetPerDayKobo: number;
+  budgetKobo: number;
+  budgetPerDay: number;
+  budget: number;
+  rawFormValue: AgentMarketingSetupValue;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onSubmit: (value: AgentMarketingSetupValue) => void;
+  onSubmit: (payload: AgentMarketingSetupSubmitPayload) => Promise<any> | void;
   isPending?: boolean;
   partyId?: number;
   fetchElectionGroups: (args: any) => Promise<any>;
   fetchElection: (args: any) => Promise<any>;
   fetchPlans: (args: any) => Promise<any>;
-  states: string[];
+  fetchStates?: (args: {
+    data: { countryId: number; limit?: number };
+  }) => Promise<any>;
+  states?: (string | StateObject)[];
   defaultValue?: Partial<AgentMarketingSetupValue>;
   initialStep?: 1 | 2 | 3;
 };
@@ -117,7 +145,7 @@ function SegmentedToggle({
               "min-w-[126px] rounded-full px-5 py-3 text-[17px] font-medium transition-colors",
               active
                 ? "bg-c-90 text-white shadow-[0_4px_12px_rgba(0,0,0,0.16)]"
-                : "text-c-80 hover:bg-white",
+                : "text-c-80 hover: ",
             )}
           >
             {option.label}
@@ -163,10 +191,12 @@ function PlanCard({
   electionScope?: string;
 }) {
   const accent = plan.color_hex ?? "#744B3E";
-  const price =
-    typeof plan.price === "string"
-      ? parseFloat(plan.price)
-      : Number(plan.price);
+  const priceInNaira =
+    plan.price_kobo !== undefined
+      ? Number(plan.price_kobo) / 100
+      : typeof plan.price === "string"
+        ? parseFloat(plan.price)
+        : Number(plan.price ?? 0);
   const features = Array.isArray(plan.features) ? plan.features : [];
   const isRecommended =
     !!electionScope &&
@@ -202,7 +232,7 @@ function PlanCard({
 
       <div className="mt-3 flex items-end gap-1.5 font-medium">
         <span className="text-[2rem] tracking-[-0.04em] text-c-90">
-          {formatMoney(price)}
+          {formatMoney(priceInNaira)}
         </span>
         <span className="text-c-50 mb-1.5">/ day / state</span>
       </div>
@@ -300,13 +330,15 @@ export function AgentMarketingSetupDialog({
   fetchElectionGroups,
   fetchElection,
   fetchPlans,
-  states,
+  fetchStates,
+  states: inputStates,
   defaultValue,
   initialStep = 1,
 }: Props) {
   const planScrollRef = React.useRef<HTMLDivElement>(null);
   const [plans, setPlans] = React.useState<ApiPlan[]>([]);
   const [plansLoading, setPlansLoading] = React.useState(false);
+  const [fetchedStates, setFetchedStates] = React.useState<StateObject[]>([]);
   const [electionScope, setElectionScope] = React.useState<string | undefined>(
     undefined,
   );
@@ -322,6 +354,46 @@ export function AgentMarketingSetupDialog({
     ...defaultValue,
     states: defaultValue?.states ?? [],
   });
+
+  const submitMutation = useMutation({
+    mutationFn: (payload: AgentMarketingSetupSubmitPayload) =>
+      Promise.resolve(onSubmit(payload)),
+  });
+
+  const isSubmitting = submitMutation.isPending || !!isPending;
+
+  // Automatically fetch Nigeria (countryId 161) states if fetchStates prop is provided
+  React.useEffect(() => {
+    if (!open || !fetchStates) return;
+    fetchStates({ data: { countryId: 161, limit: 100 } })
+      .then((res: any) => {
+        const rawStates = res?.data?.states ?? res?.data ?? [];
+        if (Array.isArray(rawStates) && rawStates.length > 0) {
+          const formatted: StateObject[] = rawStates.map(
+            (s: any, idx: number) => {
+              if (typeof s === "string") {
+                return { id: idx + 1, name: s };
+              }
+              return { id: s.id ?? idx + 1, name: s.name ?? String(s) };
+            },
+          );
+          setFetchedStates(formatted);
+        }
+      })
+      .catch(() => {});
+  }, [open, fetchStates]);
+
+  // Compute final normalized states list
+  const availableStates: StateObject[] = React.useMemo(() => {
+    if (fetchedStates.length > 0) return fetchedStates;
+    if (inputStates && inputStates.length > 0) {
+      return inputStates.map((s, idx) => {
+        if (typeof s === "string") return { id: idx + 1, name: s };
+        return s;
+      });
+    }
+    return [];
+  }, [fetchedStates, inputStates]);
 
   // Fetch plans once when dialog opens
   React.useEffect(() => {
@@ -360,11 +432,14 @@ export function AgentMarketingSetupDialog({
 
   const selectedPlan =
     plans.find((p) => String(p.id) === value.planId) ?? plans[0];
-  const selectedPlanPrice = selectedPlan
-    ? typeof selectedPlan.price === "string"
-      ? parseFloat(selectedPlan.price)
-      : Number(selectedPlan.price)
+  const selectedPlanPriceKobo = selectedPlan
+    ? selectedPlan.price_kobo !== undefined
+      ? Number(selectedPlan.price_kobo)
+      : typeof selectedPlan.price === "string"
+        ? Math.round(parseFloat(selectedPlan.price) * 100)
+        : Math.round(Number(selectedPlan.price ?? 0) * 100)
     : 0;
+  const selectedPlanPrice = selectedPlanPriceKobo / 100;
 
   const durationInDays =
     value.durationUnit === "months"
@@ -372,10 +447,12 @@ export function AgentMarketingSetupDialog({
       : value.durationValue;
   const statesCount =
     value.targetMode === "all"
-      ? Math.max(1, states.length)
+      ? Math.max(1, availableStates.length)
       : Math.max(1, value.states.length);
   const currentTotal =
     selectedPlanPrice * Math.max(1, durationInDays) * statesCount;
+  const currentTotalKobo =
+    selectedPlanPriceKobo * Math.max(1, durationInDays) * statesCount;
 
   const canContinueStep1 =
     value.electionGroupId.length > 0 &&
@@ -513,27 +590,36 @@ export function AgentMarketingSetupDialog({
               </div>
 
               <div className="flex flex-wrap gap-2.5">
-                {states.map((state) => {
-                  const active =
-                    value.targetMode === "all" || value.states.includes(state);
+                {availableStates.map((stateObj) => {
+                  const isSelected = value.states.some(
+                    (s) => s.id === stateObj.id || s.name === stateObj.name,
+                  );
+                  const active = value.targetMode === "all" || isSelected;
                   return (
                     <Chip
-                      key={state}
+                      key={stateObj.id || stateObj.name}
                       active={active}
                       onClick={() =>
                         setValue((prev) => {
                           if (prev.targetMode === "all") return prev;
-                          const exists = prev.states.includes(state);
+                          const exists = prev.states.some(
+                            (s) =>
+                              s.id === stateObj.id || s.name === stateObj.name,
+                          );
                           return {
                             ...prev,
                             states: exists
-                              ? prev.states.filter((s) => s !== state)
-                              : [...prev.states, state],
+                              ? prev.states.filter(
+                                  (s) =>
+                                    s.id !== stateObj.id &&
+                                    s.name !== stateObj.name,
+                                )
+                              : [...prev.states, stateObj],
                           };
                         })
                       }
                     >
-                      {state}
+                      {stateObj.name}
                     </Chip>
                   );
                 })}
@@ -678,10 +764,37 @@ export function AgentMarketingSetupDialog({
                   <Button
                     variant="secondary"
                     className="h-[60px] rounded-[18px] text-[18px] font-semibold"
-                    onClick={() => onSubmit({ ...value, budget: currentTotal })}
-                    disabled={!!isPending}
+                    onClick={() => {
+                      const computedStates: StateObject[] =
+                        value.targetMode === "all"
+                          ? availableStates
+                          : value.states;
+                      const perDay = selectedPlanPrice * statesCount;
+                      const perDayKobo = selectedPlanPriceKobo * statesCount;
+
+                      console.log({
+                        states: computedStates,
+                        value_states: value.states,
+                      });
+
+                      submitMutation.mutate({
+                        electionGroupId: Number(value.electionGroupId),
+                        electionId: Number(value.electionId),
+                        planId: Number(value.planId),
+                        partyId,
+                        type: "agent-campaign",
+                        states: computedStates,
+                        durationInDays,
+                        budgetPerDayKobo: perDayKobo,
+                        budgetKobo: currentTotalKobo,
+                        budgetPerDay: perDay,
+                        budget: currentTotal,
+                        rawFormValue: value,
+                      });
+                    }}
+                    disabled={isSubmitting}
                   >
-                    {isPending ? "Saving..." : "Save & Deposit Total"}
+                    {isSubmitting ? "Saving..." : "Save & Deposit Total"}
                   </Button>
                   <Button
                     variant="outline"

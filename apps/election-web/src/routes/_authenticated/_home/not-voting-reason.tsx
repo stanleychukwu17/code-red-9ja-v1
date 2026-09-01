@@ -1,5 +1,5 @@
 import { StickyFooter } from "#/components/Footers";
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { submitDidNotVote } from "#/lib/server/elections";
 import { Button } from "@repo/ui/components/button";
 import { FancyTextarea } from "@repo/ui/components/input";
@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/_home/not-voting-reason")(
 function NotVotingReasonPage() {
   const navigate = useNavigate();
   const { reasonId } = Route.useSearch();
-  const { selectedElectionGroup } = useAuth();
+  const { selectedElectionGroup } = useAppContext();
   const [explanation, setExplanation] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 

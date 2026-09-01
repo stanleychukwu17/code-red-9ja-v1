@@ -20,6 +20,7 @@ import {
   getPartyAgentTargets,
   updatePartyAgentTargets,
   depositPartyAllowance,
+  getPartyWalletTransactions,
 } from "#/lib/server/parties";
 import { AccountDetailsDialog } from "#/components/dialogs/account-details-dialog";
 import { BuyAgentSlotsDialog } from "#/components/dialogs/buy-agent-slots-dialog";
@@ -36,6 +37,7 @@ import {
   type AgentMarketingSetupValue,
 } from "@repo/ui/components/dialogs/AgentMarketingSetupDialog";
 import { DepositAgentPaymentDialog } from "@repo/ui/components/dialogs/DepositAgentStipendDialog";
+import { getApplications } from "#/lib/server/applications";
 import {
   LeaderboardCardWrapper,
   ObjectiveTile,
@@ -44,6 +46,7 @@ import { toast } from "sonner";
 import FancyAgentIcon from "@repo/ui/icons/fancy-agent-icon";
 import { SelectDateRange } from "@repo/ui/components/selects/date-range-select";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
+import { TransactionCard, type WalletTransaction } from "../wallet/index";
 
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
   head: () => getPageHeader({ title: "Readiness Dashboard" }),
@@ -63,7 +66,6 @@ function ReadinessComponent() {
     selectedWardId,
     activeMarketingCampaigns,
   } = useAppContext();
-  console.log({ party, activeMarketingCampaigns });
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -188,7 +190,7 @@ function ReadinessComponent() {
       fetchElectionStatsFn({
         data: {
           electionGroupId: selectedElectionGroup?.id as number,
-          partyId: party?.id,
+          partyId: party?.id!,
           stateId: selectedStateId,
           senatorialDistrictId: selectedDistrictId,
           federalConstituencyId: selectedFederalConstituencyId,
@@ -199,6 +201,7 @@ function ReadinessComponent() {
       }),
     enabled: !!selectedElectionGroup?.id,
   });
+  console.log({ electionStatsData });
 
   const resolvedStats =
     electionStatsData?.data?.party_stats ||
@@ -243,7 +246,13 @@ function ReadinessComponent() {
             onDepositMarketing={() => setIsMarketingDialogOpen(true)}
             onPaymentAllocation={() => setIsBudgetDialogOpen(true)}
           />
-          <SubTabsSection />
+          <SubTabsSection
+            partyStats={resolvedStats}
+            electionGroupId={selectedElectionGroup?.id}
+            stateId={selectedStateId}
+            lgaId={selectedLGAId}
+            wardId={selectedWardId}
+          />
         </div>
 
         {/* Right Hand Column */}
@@ -288,7 +297,11 @@ function ReadinessComponent() {
         partyId={partyId!}
         fetchAllocation={async (id) => {
           const res = await getPartyAgentPaymentAllocation({ data: id });
-          return res?.data?.agent_payment_allocation_kobo ?? null;
+          return (
+            res?.data?.agent_payment_allocation_kobo ??
+            res?.data?.agent_payment_allocation ??
+            null
+          );
         }}
         updateAllocation={async (id, values) => {
           const res = await updatePartyStateAllowances({
@@ -374,30 +387,12 @@ function ReadinessComponent() {
             durationValue: 5,
           } satisfies Partial<AgentMarketingSetupValue>
         }
-        onSubmit={async (values) => {
+        onSubmit={async (payload) => {
           if (!partyId) return;
-          const durationInDays =
-            values.durationUnit === "months"
-              ? values.durationValue * 30
-              : values.durationValue;
-          // budget = plan.price (NGN) × duration_in_days × number_of_states
-          // The API expects budget as a plain number (NGN, not kobo)
-          // We compute it client-side from the selected plan already stored in the dialog
-          // The dialog exposes planId so we fetch price from the plans cache if needed;
-          // for now we pass the total as 0 and let the backend compute from plan_id × duration × states.length
-          // (backend service already calculates wallet debit from plan price)
-          const statesForApi =
-            values.targetMode === "all" ? statesList : values.states;
           const res = await submitCampaign({
             data: {
-              budget: values.budget ?? 0,
-              durationInDays: durationInDays,
-              electionGroupId: Number(values.electionGroupId),
-              electionId: Number(values.electionId),
-              planId: Number(values.planId),
+              ...payload,
               partyId: partyId,
-              states: statesForApi,
-              type: "agent-campaign",
             },
           });
           if (res?.success) {
@@ -439,10 +434,10 @@ function ReadinessProgressCard({
     value: string;
   }) => {
     return (
-      <p className="text-white font-medium">
+      <span className="text-white font-medium">
         {label}
         <span className="text-white/50"> {value}</span>
-      </p>
+      </span>
     );
   };
 
@@ -552,63 +547,6 @@ function ReadinessProgressCard({
   );
 }
 
-function RoleProgressRow({
-  role,
-  count,
-  max,
-  percent,
-  isComplete,
-}: {
-  role: string;
-  count: string;
-  max: string;
-  percent: number;
-  isComplete?: boolean;
-}) {
-  return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div className="flex items-center gap-4 flex-1">
-        <div
-          className={cn(
-            "size-5 rounded-full flex items-center justify-center shrink-0",
-            isComplete ? "bg-[#06c270]" : "bg-white/20",
-          )}
-        >
-          {isComplete && (
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 12 12"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M10 3L4.5 8.5L2 6"
-                stroke="white"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          )}
-        </div>
-        <span className="text-white/90 font-medium text-[15px]">{role}</span>
-      </div>
-
-      <div className="flex items-center gap-8 justify-between sm:justify-end text-[14px]">
-        <div>
-          <span className="font-semibold">{count}</span>
-          <span className="text-white/40"> / {max}</span>
-        </div>
-        <div className="w-27.5 text-right font-medium">
-          {percent}%{" "}
-          <span className="text-white/40 font-normal">test ready</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function RequiredActionsSection({
   hasSlots,
   hasAgentPaymentBalance,
@@ -715,7 +653,19 @@ function ActionBanner({
   );
 }
 
-function SubTabsSection() {
+function SubTabsSection({
+  partyStats,
+  electionGroupId,
+  stateId,
+  lgaId,
+  wardId,
+}: {
+  partyStats?: any;
+  electionGroupId?: number;
+  stateId?: number;
+  lgaId?: number;
+  wardId?: number;
+}) {
   const [activeTab, setActiveTab] = React.useState<
     "main" | "activities" | "transactions"
   >("main");
@@ -733,11 +683,6 @@ function SubTabsSection() {
               onClick: () => setActiveTab("main"),
             },
             {
-              id: "activities",
-              label: "Activities",
-              onClick: () => setActiveTab("activities"),
-            },
-            {
               id: "transactions",
               label: "Transactions",
               onClick: () => setActiveTab("transactions"),
@@ -746,17 +691,18 @@ function SubTabsSection() {
           activeTabClassName="bg-[#222] text-white shadow-sm"
           containerClassName="h-10"
         />
-
-        <SelectDateRange
-          selectedId={dateRange}
-          update={(val) => setDateRange(val)}
-          className="h-[42px] rounded-xl max-w-[180px]"
-        />
       </div>
 
       <div className="pt-2">
-        {activeTab === "main" && <MainSubTabContent />}
-        {activeTab === "activities" && <ActivitiesSubTabContent />}
+        {activeTab === "main" && (
+          <MainSubTabContent
+            partyStats={partyStats}
+            electionGroupId={electionGroupId}
+            stateId={stateId}
+            lgaId={lgaId}
+            wardId={wardId}
+          />
+        )}
         {activeTab === "transactions" && <TransactionsSubTabContent />}
       </div>
     </div>
@@ -787,31 +733,168 @@ function SubTab({
   );
 }
 
-function MainSubTabContent() {
-  return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {/* Top Row */}
-      <RoleStatCard
-        role="Total Applications"
-        count="34,890"
-        className="bg-[#f7f7f7] border-0"
-      />
-      <RoleStatCard
-        role="Accepted Agents"
-        count="31,420"
-        className="bg-green/10 border-0 [&_p]:text-green"
-      />
-      <RoleStatCard
-        role="Rejected Agents"
-        count="0"
-        className="bg-red/10 border-0 [&_p]:text-red"
-      />
+function MainSubTabContent({
+  partyStats,
+  electionGroupId,
+  stateId,
+  lgaId,
+  wardId,
+}: {
+  partyStats?: any;
+  electionGroupId?: number;
+  stateId?: number;
+  lgaId?: number;
+  wardId?: number;
+}) {
+  const getApplicationsFn = useServerFn(getApplications);
+  const { data: appsData, isLoading } = useQuery({
+    queryKey: [
+      "recent-party-applications",
+      electionGroupId,
+      stateId,
+      lgaId,
+      wardId,
+    ],
+    queryFn: () =>
+      getApplicationsFn({
+        data: {
+          electionGroupId,
+          stateId,
+          lgaId,
+          wardId,
+          limit: 5,
+        },
+      }),
+    enabled: !!electionGroupId,
+  });
 
-      {/* Bottom Row */}
-      <RoleStatCard role="Polling Agents" count="31,420" />
-      <RoleStatCard role="Ward Supervisors" count="581" />
-      <RoleStatCard role="LGA Supervisors" count="121" />
-      <RoleStatCard role="State Supervisors" count="5" />
+  const applications: any[] = appsData?.data?.applications || [];
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "polling_agent":
+        return "Polling Agent";
+      case "ward_supervisor":
+        return "Ward Supervisor";
+      case "lga_supervisor":
+        return "LGA Supervisor";
+      case "state_supervisor":
+        return "State Supervisor";
+      default:
+        return role || "Agent";
+    }
+  };
+
+  const getRoleColor = (role: string) => {
+    switch (role) {
+      case "state_supervisor":
+        return "text-[#00a859]";
+      case "lga_supervisor":
+        return "text-[#8b5cf6]";
+      case "ward_supervisor":
+        return "text-blue-600";
+      default:
+        return "text-c-50";
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case "accepted":
+        return "text-green";
+      case "rejected":
+        return "text-red-500";
+      default:
+        return "text-amber-500";
+    }
+  };
+
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {/* Top Row */}
+        <RoleStatCard
+          role="Total Applications"
+          count={(partyStats?.applications_count || 0).toLocaleString()}
+          className="bg-[#f7f7f7] border-0"
+        />
+        <RoleStatCard
+          role="Accepted Agents"
+          count={(
+            partyStats?.accepted_applications_count || 0
+          ).toLocaleString()}
+          className="bg-green/10 border-0 [&_p]:text-green"
+        />
+        <RoleStatCard
+          role="Rejected Agents"
+          count={(
+            partyStats?.rejected_applications_count || 0
+          ).toLocaleString()}
+          className="bg-red/10 border-0 [&_p]:text-red"
+        />
+      </div>
+      <div>
+        {isLoading ? (
+          <div className="p-4 text-center text-c-50 text-sm">
+            Loading recent applications...
+          </div>
+        ) : applications.length === 0 ? (
+          <div className="p-4 text-center text-c-50 text-sm">
+            No recent applications found.
+          </div>
+        ) : (
+          applications.map((app: any) => {
+            const name =
+              `${app.first_name || ""} ${app.last_name || ""}`.trim() ||
+              app.username ||
+              "Applicant";
+            const role = getRoleLabel(app.role);
+            const roleColor = getRoleColor(app.role);
+            const statusColor = getStatusColor(app.status);
+            const time = formatTime(app.created_at);
+            const location =
+              app.polling_unit_name || app.lga_name || app.state_name || "";
+
+            return (
+              <div
+                key={app.id}
+                className="h-16 flex items-center px-0 md:px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer"
+              >
+                <img
+                  src={app.avatar || `https://i.pravatar.cc/150?u=${app.id}`}
+                  alt=""
+                  className="size-11 rounded-full object-cover shrink-0"
+                />
+                <div className="space-y-1 w-full">
+                  <div className="flex items-center gap-5">
+                    <p className="font-semibold text-c-90 w-full">{name}</p>
+                    <span className={roleColor}>{role}</span>
+                  </div>
+                  <div className="flex items-center gap-5">
+                    <p className="text-sm text-c-50 w-full line-clamp-1">
+                      {location && <span>{location} ·</span>} {time}
+                    </p>
+                    <p className={cn("capitalize", statusColor)}>
+                      {app.status}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 }
@@ -840,146 +923,37 @@ function RoleStatCard({
   );
 }
 
-function ActivitiesSubTabContent() {
-  const activities = [
-    {
-      name: "Kamsi Uzorchukwu",
-      role: "Polling Agent",
-      time: "2m ago",
-      amount: "-₦50,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=1",
-      roleColor: "text-c-50",
-    },
-    {
-      name: "Maxwel Nnodi",
-      role: "Polling Agent",
-      time: "4m ago",
-      amount: "-₦50,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=2",
-      roleColor: "text-c-50",
-    },
-    {
-      name: "Favour Udezue",
-      role: "Ward Supervisor",
-      time: "3h ago",
-      amount: "-₦70,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=3",
-      roleColor: "text-[#8b5cf6]",
-    },
-    {
-      name: "Tobi Obafemi",
-      role: "State Supervisor",
-      time: "May 29, 14:56",
-      amount: "-₦500,000",
-      status: "Accepted",
-      avatar: "https://i.pravatar.cc/150?u=4",
-      roleColor: "text-[#00a859]",
-    },
-  ];
-
-  return (
-    <div>
-      {activities.map((a, i) => (
-        <div
-          key={i}
-          className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3 cursor-pointer"
-        >
-          <img
-            src={a.avatar}
-            alt=""
-            className="size-11 rounded-full object-cover shrink-0"
-          />
-          <div className="space-y-1 w-full">
-            <div className="flex items-center gap-2">
-              <p className="font-semibold text-c-90 w-full">{a.name}</p>
-              <p className="shrink-0 font-medium text-c-90">{a.amount}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <p className="text-sm text-c-50 w-full">
-                <span className={a.roleColor}>{a.role}</span> · {a.time}
-              </p>
-              <p className="text-green">{a.status}</p>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function TransactionsSubTabContent() {
-  const transactions = [
-    {
-      type: "Agent Payment: Deposited",
-      time: "2m ago",
-      amount: "-₦50,000,000",
-      status: "Successful",
-      isDeposit: false,
-    },
-    {
-      type: "Slots: Purchased",
-      time: "2m ago",
-      amount: "-₦8,000,000",
-      status: "Successful",
-      isDeposit: false,
-    },
-    {
-      type: "Marketing Funds: Deposited",
-      time: "2m ago",
-      amount: "-₦8,000,000",
-      status: "Successful",
-      isDeposit: false,
-    },
-    {
-      type: "Wallet Balance: Funded",
-      time: "2m ago",
-      amount: "+₦50,000,000",
-      status: "Successful",
-      isDeposit: true,
-    },
-  ];
+  const { party } = useAppContext();
+  const partyId = party?.id;
+  const getPartyWalletTransactionsFn = useServerFn(getPartyWalletTransactions);
+
+  const { data: txRes, isLoading } = useQuery({
+    queryKey: ["partyWalletTransactions", partyId],
+    queryFn: () =>
+      getPartyWalletTransactionsFn({
+        data: { partyID: partyId!, limit: 5, offset: 0 },
+      }),
+    enabled: !!partyId,
+  });
+
+  const transactions: WalletTransaction[] = txRes?.data?.transactions ?? [];
 
   return (
     <div>
-      {transactions.map((t, i) => (
-        <div
-          key={i}
-          className="h-16 flex items-center px-3 hover:bg-c-5 rounded-2xl transition-colors gap-3"
-        >
-          <div
-            className={cn(
-              "size-11 rounded-full flex items-center justify-center shrink-0",
-              t.isDeposit ? "bg-green/20 text-green" : "bg-c-10 text-c-80",
-            )}
-          >
-            {t.isDeposit ? (
-              <ArrowHandleIcon className="size-4 rotate-90" />
-            ) : (
-              <ArrowHandleIcon className="size-4 -rotate-90" />
-            )}
-          </div>
-          <div className="space-y-1 w-full">
-            <div className="flex items-center gap-2 w-full">
-              <p className="font-medium w-full text-c-90">{t.type}</p>
-              <p
-                className={cn(
-                  "shrink-0 font-semibold",
-                  t.isDeposit ? "text-green" : "text-c-90",
-                )}
-              >
-                {t.amount}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 w-full">
-              <p className="text-sm text-c-50 w-full">{t.time}</p>
-              <p className="shrink-0 text-green">{t.status}</p>
-            </div>
-          </div>
+      {isLoading ? (
+        <div className="p-4 text-center text-c-50 text-sm">
+          Loading transactions...
         </div>
-      ))}
+      ) : transactions.length === 0 ? (
+        <div className="p-4 text-center text-c-50 text-sm">
+          No transactions found.
+        </div>
+      ) : (
+        transactions.map((tx) => (
+          <TransactionCard key={tx.id} transaction={tx} />
+        ))
+      )}
     </div>
   );
 }
@@ -1094,22 +1068,32 @@ function TargetCard() {
     enabled: !!partyId,
   });
 
+  const st = serverTargets as any;
   const targets = [
     {
       role: "Polling Agent per unit",
-      count: serverTargets?.pollingUnitAgent?.toString() ?? "2",
+      count: (st?.polling_agent ?? st?.pollingUnitAgent)?.toString() ?? "2",
     },
     {
       role: "Ward Supervisor per ward",
-      count: serverTargets?.wardElectionSupervisor?.toString() ?? "2",
+      count:
+        (
+          st?.ward_election_supervisor ?? st?.wardElectionSupervisor
+        )?.toString() ?? "2",
     },
     {
       role: "LGA Supervisor per lga",
-      count: serverTargets?.lgaElectionSupervisor?.toString() ?? "2",
+      count:
+        (
+          st?.lga_election_supervisor ?? st?.lgaElectionSupervisor
+        )?.toString() ?? "2",
     },
     {
       role: "State Supervisor per state",
-      count: serverTargets?.stateElectionSupervisor?.toString() ?? "1",
+      count:
+        (
+          st?.state_election_supervisor ?? st?.stateElectionSupervisor
+        )?.toString() ?? "1",
     },
   ];
 
@@ -1181,13 +1165,13 @@ function AgentPaymentCard({
   party: any;
 }) {
   const allocations = party?.agentPaymentAllocation || {};
-  const pollingAgentPaymentKobo = allocations.pollingAgent?.default || 0;
+  const pollingAgentPaymentKobo = allocations.polling_agent?.default || 0;
   const wardSupervisorPaymentKobo =
-    allocations.wardElectionSupervisor?.default || 0;
+    allocations.ward_election_supervisor?.default || 0;
   const lgaSupervisorPaymentKobo =
-    allocations.lgaElectionSupervisor?.default || 0;
+    allocations.lga_election_supervisor?.default || 0;
   const stateSupervisorPaymentKobo =
-    allocations.stateElectionSupervisor?.default || 0;
+    allocations.state_election_supervisor?.default || 0;
 
   const payments = [
     {

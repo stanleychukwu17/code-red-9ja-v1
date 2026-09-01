@@ -100,7 +100,7 @@ type GetFederalConstituenciesData struct {
 }
 
 // State Assembly Constituencies swagger structures
-type StateAssemblyConstituencyResponse struct {
+type StateConstituencyResponse struct {
 	ID                      int32  `json:"id"`
 	Name                    string `json:"name"`
 	StateID                 int32  `json:"state_id"`
@@ -111,15 +111,15 @@ type StateAssemblyConstituencyResponse struct {
 	FederalConstituencyName string `json:"federal_constituency_name"`
 }
 
-type GetStateAssemblyConstituenciesResponse struct {
+type GetStateConstituenciesResponse struct {
 	Success bool                               `json:"success"`
 	Message string                             `json:"message"`
-	Data    GetStateAssemblyConstituenciesData `json:"data"`
+	Data    GetStateConstituenciesData `json:"data"`
 	Meta    *PaginationMeta                    `json:"meta,omitempty"`
 }
 
-type GetStateAssemblyConstituenciesData struct {
-	Constituencies []StateAssemblyConstituencyResponse `json:"constituencies"`
+type GetStateConstituenciesData struct {
+	Constituencies []StateConstituencyResponse `json:"constituencies"`
 }
 
 // LGAs swagger structures
@@ -167,10 +167,8 @@ type GetWardsData struct {
 type PollingUnitResponse struct {
 	ID                  int32    `json:"id"`
 	Name                string   `json:"name"`
-	Abbreviation        string   `json:"abbreviation"`
-	Units               string   `json:"units"`
-	Delimitation        string   `json:"delimitation"`
-	Remark              string   `json:"remark"`
+	Code                string   `json:"code"`
+	PUCode              string   `json:"pu_code"`
 	RegistrationAreaID  int32    `json:"registration_area_id"`
 	WardID              int32    `json:"ward_id"`
 	WardName            string   `json:"ward_name"`

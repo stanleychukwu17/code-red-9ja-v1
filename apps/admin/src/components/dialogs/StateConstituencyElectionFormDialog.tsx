@@ -15,7 +15,7 @@ import { ElectionGroupBullet } from "@repo/ui/components/bullets/election-group-
 import { getOffices } from "#/lib/server/offices";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getStates } from "#/lib/server/states";
-import { getStateAssemblyConstituencies } from "#/lib/server/state_assembly_constituencies";
+import { getStateConstituencies } from "#/lib/server/state_constituencies";
 import { SelectDate } from "@repo/ui/components/selects/date-select";
 import { SelectOffice } from "@repo/ui/components/selects/office-select";
 
@@ -25,8 +25,10 @@ import {
   SelectionHeader,
   SelectionTabs,
   SelectedItemsContainer,
+  GroupSectionTitle,
+  SelectableChip,
 } from "./SelectionCommon";
-import { Label } from "@repo/ui/components/input";
+import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface StateItem {
@@ -81,7 +83,7 @@ export function StateConstituencyElectionFormDialog({
   const { data: constituenciesData } = useQuery({
     queryKey: ["state-constituencies-all"],
     queryFn: async () => {
-      const res = await getStateAssemblyConstituencies({
+      const res = await getStateConstituencies({
         data: { limit: 1000 },
       });
       if (res && res.success && res.data?.constituencies) {
@@ -171,6 +173,18 @@ export function StateConstituencyElectionFormDialog({
     }
   }, [open]);
 
+  // Auto-select matching State Constituency office when offices data loads
+  React.useEffect(() => {
+    if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
+      const matching = officesData.find(
+        (o: any) => o.scope === "state-constituency",
+      );
+      if (matching) {
+        form.setFieldValue("officeId", matching.id);
+      }
+    }
+  }, [open, officesData, selectedOfficeId]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
@@ -187,40 +201,11 @@ export function StateConstituencyElectionFormDialog({
         throw new Error("At least one state constituency must be selected");
       }
 
-      let finalGroupId = values.electionGroupId;
-
-      if (!finalGroupId) {
-        const year = new Date(values.electionDate).getFullYear();
-        const typeName = selectedType
-          ? selectedType.name
-          : "State Constituency";
-        const autoGroupName = `${year} ${typeName} Election`;
-
-        const { createElectionGroup } =
-          await import("#/lib/server/election_groups");
-        const groupRes = await createElectionGroup({
-          data: {
-            name: autoGroupName,
-            rank: selectedType ? selectedType.rank : 1,
-            elections_count: selectedConstituencies.length,
-            states_count: 37,
-            election_date: values.electionDate,
-          },
-        });
-
-        if (!groupRes.success) {
-          throw new Error(
-            groupRes.message || "Failed to auto-create election group",
-          );
-        }
-        finalGroupId = groupRes.data.id;
-      }
-
       const res = await createStateConstituencyElection({
         data: {
           office_id: values.officeId,
           election_date: values.electionDate,
-          election_group_id: finalGroupId!,
+          election_group_id: values.electionGroupId,
           state_constituency_ids: selectedConstituencies.map((c) => c.id),
         },
       });
@@ -233,6 +218,7 @@ export function StateConstituencyElectionFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },
@@ -286,7 +272,7 @@ export function StateConstituencyElectionFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
           <DialogHeader title="State Constituency Election" />
 
           <form
@@ -473,48 +459,84 @@ function StateConstituencySelectorDialog({
   selectedConstituencies,
   onToggleConstituencySelection,
 }: StateConstituencySelectorDialogProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+  const filteredGroupedConstituencies = React.useMemo(() => {
+    if (!searchQuery.trim()) return groupedAllConstituencies;
+    const q = searchQuery.toLowerCase();
+    const result: Record<string, StateConstituencyItem[]> = {};
+
+    for (const [stateName, constituencies] of Object.entries(
+      groupedAllConstituencies,
+    )) {
+      const stateMatches = stateName.toLowerCase().includes(q);
+      if (stateMatches) {
+        result[stateName] = constituencies;
+      } else {
+        const filtered = constituencies.filter((c) =>
+          c.name.toLowerCase().includes(q),
+        );
+        if (filtered.length > 0) {
+          result[stateName] = filtered;
+        }
+      }
+    }
+    return result;
+  }, [groupedAllConstituencies, searchQuery]);
+
+  const hasResults = Object.keys(filteredGroupedConstituencies).length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl bg-white">
+      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
         <DialogHeader title="Select State Constituencies" />
         <DialogPadding className="space-y-4 pb-6">
           <p className="text-sm text-c-60">
             Select the state constituencies to add to this election.
           </p>
 
+          <IconInput
+            placeholder="Search constituencies or states..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-1 pt-2">
-            {Object.entries(groupedAllConstituencies).map(
-              ([stateName, stateConstituencies]) => (
-                <div key={stateName} className="space-y-2">
-                  <h4 className="text-[14px] font-bold text-c-75 border-b pb-1">
-                    {stateName}
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {stateConstituencies.map((constituency) => {
-                      const isSelected = selectedConstituencies.some(
-                        (c) => c.id === constituency.id,
-                      );
-                      return (
-                        <button
-                          key={constituency.id}
-                          type="button"
-                          onClick={() =>
-                            onToggleConstituencySelection(constituency)
-                          }
-                          className={cn(
-                            "px-3.5 py-2 rounded-lg text-sm font-semibold transition cursor-pointer border",
-                            isSelected
-                              ? "bg-[#e8fbf3] text-[#00cf79] border-[#00cf79]"
-                              : "bg-c-5/40 text-c-70 border-[#dfdfdf] hover:bg-black/5",
-                          )}
-                        >
-                          {constituency.name}
-                        </button>
-                      );
-                    })}
+            {!hasResults ? (
+              <p className="text-sm text-c-50 py-4 text-center">
+                No state constituencies found matching your search.
+              </p>
+            ) : (
+              Object.entries(filteredGroupedConstituencies).map(
+                ([stateName, stateConstituencies]) => (
+                  <div key={stateName} className="space-y-2">
+                    <GroupSectionTitle title={stateName} />
+                    <div className="flex flex-wrap gap-2">
+                      {stateConstituencies.map((constituency) => {
+                        const isSelected = selectedConstituencies.some(
+                          (c) => c.id === constituency.id,
+                        );
+                        return (
+                          <SelectableChip
+                            key={constituency.id}
+                            label={constituency.name}
+                            isSelected={isSelected}
+                            onClick={() =>
+                              onToggleConstituencySelection(constituency)
+                            }
+                          />
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
-              ),
+                ),
+              )
             )}
           </div>
         </DialogPadding>

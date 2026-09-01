@@ -25,8 +25,10 @@ import {
   SelectionHeader,
   SelectionTabs,
   SelectedItemsContainer,
+  GroupSectionTitle,
+  SelectableChip,
 } from "./SelectionCommon";
-import { Label } from "@repo/ui/components/input";
+import { Label, IconInput } from "@repo/ui/components/input";
 import { TinyError } from "@repo/ui/components/custom/TinyError";
 
 interface StateItem {
@@ -191,6 +193,16 @@ export function WardElectionFormDialog({
     }
   }, [open]);
 
+  // Auto-select matching Ward office when offices data loads
+  React.useEffect(() => {
+    if (open && officesData && officesData.length > 0 && !selectedOfficeId) {
+      const matching = officesData.find((o: any) => o.scope === "ward");
+      if (matching) {
+        form.setFieldValue("officeId", matching.id);
+      }
+    }
+  }, [open, officesData, selectedOfficeId]);
+
   const saveMutation = useMutation({
     mutationFn: async (values: {
       electionGroupId: number | undefined;
@@ -207,38 +219,11 @@ export function WardElectionFormDialog({
         throw new Error("At least one Ward must be selected");
       }
 
-      let finalGroupId = values.electionGroupId;
-
-      if (!finalGroupId) {
-        const year = new Date(values.electionDate).getFullYear();
-        const typeName = selectedType ? selectedType.name : "Ward";
-        const autoGroupName = `${year} ${typeName} Election`;
-
-        const { createElectionGroup } =
-          await import("#/lib/server/election_groups");
-        const groupRes = await createElectionGroup({
-          data: {
-            name: autoGroupName,
-            rank: selectedType ? selectedType.rank : 1,
-            elections_count: selectedWards.length,
-            states_count: 37,
-            election_date: values.electionDate,
-          },
-        });
-
-        if (!groupRes.success) {
-          throw new Error(
-            groupRes.message || "Failed to auto-create election group",
-          );
-        }
-        finalGroupId = groupRes.data.id;
-      }
-
       const res = await createWardElection({
         data: {
           office_id: values.officeId,
           election_date: values.electionDate,
-          election_group_id: finalGroupId!,
+          election_group_id: values.electionGroupId,
           ward_ids: selectedWards.map((w) => w.id),
         },
       });
@@ -249,6 +234,7 @@ export function WardElectionFormDialog({
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["elections"] });
+      queryClient.invalidateQueries({ queryKey: ["election-groups"] });
       onSuccess?.();
       onClose();
     },
@@ -303,7 +289,7 @@ export function WardElectionFormDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+        <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
           <DialogHeader title="Ward Election" />
 
           <form
@@ -483,52 +469,97 @@ function WardSelectorDialog({
   selectedWards,
   onToggleWardSelection,
 }: WardSelectorDialogProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setSearchQuery("");
+    }
+  }, [open]);
+
+  const filteredGroupedWards = React.useMemo(() => {
+    if (!searchQuery.trim()) return groupedAllWards;
+    const q = searchQuery.toLowerCase();
+    const result: Record<string, Record<string, WardItem[]>> = {};
+
+    for (const [stateName, lgasMap] of Object.entries(groupedAllWards)) {
+      const stateMatches = stateName.toLowerCase().includes(q);
+      const filteredLgas: Record<string, WardItem[]> = {};
+
+      for (const [lgaName, wards] of Object.entries(lgasMap)) {
+        const lgaMatches = lgaName.toLowerCase().includes(q);
+        if (stateMatches || lgaMatches) {
+          filteredLgas[lgaName] = wards;
+        } else {
+          const filteredWards = wards.filter((w) =>
+            w.name.toLowerCase().includes(q),
+          );
+          if (filteredWards.length > 0) {
+            filteredLgas[lgaName] = filteredWards;
+          }
+        }
+      }
+
+      if (Object.keys(filteredLgas).length > 0) {
+        result[stateName] = filteredLgas;
+      }
+    }
+    return result;
+  }, [groupedAllWards, searchQuery]);
+
+  const hasResults = Object.keys(filteredGroupedWards).length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl bg-white">
+      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl  ">
         <DialogHeader title="Select Wards" />
         <DialogPadding className="space-y-4 pb-6">
           <p className="text-sm text-c-60">
             Select the Wards to add to this election.
           </p>
 
+          <IconInput
+            placeholder="Search wards, LGAs, or states..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+
           <div className="space-y-6 max-h-[50vh] overflow-y-auto pr-1 pt-2 text-left">
-            {Object.entries(groupedAllWards).map(([stateName, stateLgas]) => (
-              <div key={stateName} className="space-y-4">
-                <h3 className="text-base font-bold text-c-80 border-b pb-1">
-                  {stateName}
-                </h3>
-                {Object.entries(stateLgas).map(([lgaName, lgaWards]) => (
-                  <div key={lgaName} className="pl-3 space-y-2">
-                    <h4 className="text-[13px] font-bold text-c-50 uppercase tracking-wider">
-                      {lgaName} LGA
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {lgaWards.map((ward) => {
-                        const isSelected = selectedWards.some(
-                          (w) => w.id === ward.id,
-                        );
-                        return (
-                          <button
-                            key={ward.id}
-                            type="button"
-                            onClick={() => onToggleWardSelection(ward)}
-                            className={cn(
-                              "px-3 py-1.5 rounded-lg text-sm font-semibold transition cursor-pointer border",
-                              isSelected
-                                ? "bg-[#e8fbf3] text-[#00cf79] border-[#00cf79]"
-                                : "bg-c-5/40 text-c-70 border-[#dfdfdf] hover:bg-black/5",
-                            )}
-                          >
-                            {ward.name}
-                          </button>
-                        );
-                      })}
-                    </div>
+            {!hasResults ? (
+              <p className="text-sm text-c-50 py-4 text-center">
+                No wards found matching your search.
+              </p>
+            ) : (
+              Object.entries(filteredGroupedWards).map(
+                ([stateName, stateLgas]) => (
+                  <div key={stateName} className="space-y-4">
+                    <h3 className="text-base font-medium text-c-50 pb-1">
+                      {stateName}
+                    </h3>
+                    {Object.entries(stateLgas).map(([lgaName, lgaWards]) => (
+                      <div key={lgaName} className="space-y-2">
+                        <GroupSectionTitle title={`${lgaName} LGA`} />
+                        <div className="flex flex-wrap gap-2">
+                          {lgaWards.map((ward) => {
+                            const isSelected = selectedWards.some(
+                              (w) => w.id === ward.id,
+                            );
+                            return (
+                              <SelectableChip
+                                key={ward.id}
+                                label={ward.name}
+                                isSelected={isSelected}
+                                onClick={() => onToggleWardSelection(ward)}
+                              />
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            ))}
+                ),
+              )
+            )}
           </div>
         </DialogPadding>
         <DialogFooter>

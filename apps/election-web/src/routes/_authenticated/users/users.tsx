@@ -1,5 +1,5 @@
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
 import {
   Layout,
@@ -22,6 +22,7 @@ export const Route = createFileRoute("/_authenticated/users/users")({
 
 function RouteComponent() {
   const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const navigate = useNavigate();
 
   const {
     data,
@@ -69,7 +70,12 @@ function RouteComponent() {
 
   return (
     <Layout>
-      <PageHeader title="Users" activeTab="users" tabs={USERS_TABS} />
+      <PageHeader
+        title="Users"
+        activeTab="users"
+        tabs={USERS_TABS}
+        onBackClick={() => navigate({ to: "/" })}
+      />
       <PageSearchLayer
         rightComponent={
           <>
@@ -104,12 +110,13 @@ function RouteComponent() {
               {isFetchingNextPage ? (
                 <Loader2 className="size-5 animate-spin mr-2" />
               ) : null}
-              {isFetchingNextPage ? "Loading more..." : "Scroll down to load more"}
+              {isFetchingNextPage
+                ? "Loading more..."
+                : "Scroll down to load more"}
             </div>
           )}
         </>
       )}
-
     </Layout>
   );
 }

@@ -12,22 +12,24 @@ import (
 )
 
 const createFederalConstituency = `-- name: CreateFederalConstituency :one
-INSERT INTO federal_constituencies (name, state_id, state_name, senatorial_district_id, senatorial_district_name)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count
+INSERT INTO federal_constituencies (name, code, state_id, state_name, senatorial_district_id, senatorial_district_name)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count, status
 `
 
 type CreateFederalConstituencyParams struct {
-	Name                   string `json:"name"`
-	StateID                int32  `json:"state_id"`
-	StateName              string `json:"state_name"`
-	SenatorialDistrictID   int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName string `json:"senatorial_district_name"`
+	Name                   string      `json:"name"`
+	Code                   pgtype.Text `json:"code"`
+	StateID                int32       `json:"state_id"`
+	StateName              string      `json:"state_name"`
+	SenatorialDistrictID   pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName pgtype.Text `json:"senatorial_district_name"`
 }
 
 func (q *Queries) CreateFederalConstituency(ctx context.Context, arg CreateFederalConstituencyParams) (FederalConstituency, error) {
 	row := q.db.QueryRow(ctx, createFederalConstituency,
 		arg.Name,
+		arg.Code,
 		arg.StateID,
 		arg.StateName,
 		arg.SenatorialDistrictID,
@@ -37,6 +39,7 @@ func (q *Queries) CreateFederalConstituency(ctx context.Context, arg CreateFeder
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.StateID,
 		&i.StateName,
 		&i.SenatorialDistrictID,
@@ -45,31 +48,32 @@ func (q *Queries) CreateFederalConstituency(ctx context.Context, arg CreateFeder
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const createLGA = `-- name: CreateLGA :one
-INSERT INTO lgas (name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name)
+INSERT INTO lgas (name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status
 `
 
 type CreateLGAParams struct {
-	Name                    string `json:"name"`
-	Abbreviation            string `json:"abbreviation"`
-	StateID                 int32  `json:"state_id"`
-	StateName               string `json:"state_name"`
-	SenatorialDistrictID    int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName  string `json:"senatorial_district_name"`
-	FederalConstituencyID   int32  `json:"federal_constituency_id"`
-	FederalConstituencyName string `json:"federal_constituency_name"`
+	Name                    string      `json:"name"`
+	Code                    string      `json:"code"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
 }
 
 func (q *Queries) CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, error) {
 	row := q.db.QueryRow(ctx, createLGA,
 		arg.Name,
-		arg.Abbreviation,
+		arg.Code,
 		arg.StateID,
 		arg.StateName,
 		arg.SenatorialDistrictID,
@@ -81,7 +85,7 @@ func (q *Queries) CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, erro
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
+		&i.Code,
 		&i.StateID,
 		&i.StateName,
 		&i.SenatorialDistrictID,
@@ -91,48 +95,66 @@ func (q *Queries) CreateLGA(ctx context.Context, arg CreateLGAParams) (Lga, erro
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const createPollingUnit = `-- name: CreatePollingUnit :one
-INSERT INTO polling_units (name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
-RETURNING id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status
+INSERT INTO polling_units (
+    name, code, pu_code, registration_area_id, 
+    ward_id, ward_name, lga_id, lga_name, 
+    senatorial_district_id, senatorial_district_name,
+    federal_constituency_id, federal_constituency_name,
+    state_constituency_id, state_constituency_name,
+    state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id
+)
+VALUES (
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21
+)
+RETURNING id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status
 `
 
 type CreatePollingUnitParams struct {
-	Name               string        `json:"name"`
-	Abbreviation       pgtype.Text   `json:"abbreviation"`
-	Units              pgtype.Text   `json:"units"`
-	Delimitation       pgtype.Text   `json:"delimitation"`
-	Remark             pgtype.Text   `json:"remark"`
-	RegistrationAreaID pgtype.Int4   `json:"registration_area_id"`
-	WardID             int32         `json:"ward_id"`
-	WardName           string        `json:"ward_name"`
-	LgaID              int32         `json:"lga_id"`
-	LgaName            string        `json:"lga_name"`
-	StateID            int32         `json:"state_id"`
-	StateName          string        `json:"state_name"`
-	Latitude           pgtype.Float8 `json:"latitude"`
-	Longitude          pgtype.Float8 `json:"longitude"`
-	PreciseLocation    pgtype.Text   `json:"precise_location"`
-	FormattedAddress   pgtype.Text   `json:"formatted_address"`
-	GooglePlaceID      pgtype.Text   `json:"google_place_id"`
+	Name                    string        `json:"name"`
+	Code                    pgtype.Text   `json:"code"`
+	PuCode                  pgtype.Text   `json:"pu_code"`
+	RegistrationAreaID      pgtype.Int4   `json:"registration_area_id"`
+	WardID                  int32         `json:"ward_id"`
+	WardName                string        `json:"ward_name"`
+	LgaID                   int32         `json:"lga_id"`
+	LgaName                 string        `json:"lga_name"`
+	SenatorialDistrictID    pgtype.Int4   `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text   `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4   `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text   `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4   `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text   `json:"state_constituency_name"`
+	StateID                 int32         `json:"state_id"`
+	StateName               string        `json:"state_name"`
+	Latitude                pgtype.Float8 `json:"latitude"`
+	Longitude               pgtype.Float8 `json:"longitude"`
+	PreciseLocation         pgtype.Text   `json:"precise_location"`
+	FormattedAddress        pgtype.Text   `json:"formatted_address"`
+	GooglePlaceID           pgtype.Text   `json:"google_place_id"`
 }
 
 func (q *Queries) CreatePollingUnit(ctx context.Context, arg CreatePollingUnitParams) (PollingUnit, error) {
 	row := q.db.QueryRow(ctx, createPollingUnit,
 		arg.Name,
-		arg.Abbreviation,
-		arg.Units,
-		arg.Delimitation,
-		arg.Remark,
+		arg.Code,
+		arg.PuCode,
 		arg.RegistrationAreaID,
 		arg.WardID,
 		arg.WardName,
 		arg.LgaID,
 		arg.LgaName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.StateConstituencyID,
+		arg.StateConstituencyName,
 		arg.StateID,
 		arg.StateName,
 		arg.Latitude,
@@ -145,17 +167,21 @@ func (q *Queries) CreatePollingUnit(ctx context.Context, arg CreatePollingUnitPa
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
-		&i.Units,
-		&i.Delimitation,
-		&i.Remark,
+		&i.Code,
+		&i.PuCode,
 		&i.RegistrationAreaID,
-		&i.WardID,
-		&i.WardName,
-		&i.LgaID,
-		&i.LgaName,
 		&i.StateID,
 		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.WardID,
+		&i.WardName,
 		&i.Latitude,
 		&i.Longitude,
 		&i.PreciseLocation,
@@ -167,13 +193,14 @@ func (q *Queries) CreatePollingUnit(ctx context.Context, arg CreatePollingUnitPa
 }
 
 const createSenatorialDistrict = `-- name: CreateSenatorialDistrict :one
-INSERT INTO senatorial_districts (name, description, coalition_center, state_id, state_name)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
+INSERT INTO senatorial_districts (name, code, description, coalition_center, state_id, state_name)
+VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, name, code, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, status
 `
 
 type CreateSenatorialDistrictParams struct {
 	Name            string      `json:"name"`
+	Code            pgtype.Text `json:"code"`
 	Description     pgtype.Text `json:"description"`
 	CoalitionCenter pgtype.Text `json:"coalition_center"`
 	StateID         int32       `json:"state_id"`
@@ -183,6 +210,7 @@ type CreateSenatorialDistrictParams struct {
 func (q *Queries) CreateSenatorialDistrict(ctx context.Context, arg CreateSenatorialDistrictParams) (SenatorialDistrict, error) {
 	row := q.db.QueryRow(ctx, createSenatorialDistrict,
 		arg.Name,
+		arg.Code,
 		arg.Description,
 		arg.CoalitionCenter,
 		arg.StateID,
@@ -192,6 +220,7 @@ func (q *Queries) CreateSenatorialDistrict(ctx context.Context, arg CreateSenato
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.Description,
 		&i.CoalitionCenter,
 		&i.StateID,
@@ -201,6 +230,7 @@ func (q *Queries) CreateSenatorialDistrict(ctx context.Context, arg CreateSenato
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
@@ -245,27 +275,29 @@ func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) (CStat
 	return i, err
 }
 
-const createStateAssemblyConstituency = `-- name: CreateStateAssemblyConstituency :one
-INSERT INTO state_assembly_constituencies (name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-RETURNING id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count
+const createStateConstituency = `-- name: CreateStateConstituency :one
+INSERT INTO state_constituencies (name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+RETURNING id, name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count, status
 `
 
-type CreateStateAssemblyConstituencyParams struct {
-	Name                    string `json:"name"`
-	LgaID                   int32  `json:"lga_id"`
-	LgaName                 string `json:"lga_name"`
-	StateID                 int32  `json:"state_id"`
-	StateName               string `json:"state_name"`
-	SenatorialDistrictID    int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName  string `json:"senatorial_district_name"`
-	FederalConstituencyID   int32  `json:"federal_constituency_id"`
-	FederalConstituencyName string `json:"federal_constituency_name"`
+type CreateStateConstituencyParams struct {
+	Name                    string      `json:"name"`
+	Code                    pgtype.Text `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
 }
 
-func (q *Queries) CreateStateAssemblyConstituency(ctx context.Context, arg CreateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error) {
-	row := q.db.QueryRow(ctx, createStateAssemblyConstituency,
+func (q *Queries) CreateStateConstituency(ctx context.Context, arg CreateStateConstituencyParams) (StateConstituency, error) {
+	row := q.db.QueryRow(ctx, createStateConstituency,
 		arg.Name,
+		arg.Code,
 		arg.LgaID,
 		arg.LgaName,
 		arg.StateID,
@@ -275,10 +307,11 @@ func (q *Queries) CreateStateAssemblyConstituency(ctx context.Context, arg Creat
 		arg.FederalConstituencyID,
 		arg.FederalConstituencyName,
 	)
-	var i StateAssemblyConstituency
+	var i StateConstituency
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.LgaID,
 		&i.LgaName,
 		&i.StateID,
@@ -289,31 +322,50 @@ func (q *Queries) CreateStateAssemblyConstituency(ctx context.Context, arg Creat
 		&i.FederalConstituencyName,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const createWard = `-- name: CreateWard :one
-INSERT INTO wards (name, abbreviation, lga_id, lga_name, state_id, state_name)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count
+INSERT INTO wards (
+    name, code, lga_id, lga_name, 
+    senatorial_district_id, senatorial_district_name,
+    federal_constituency_id, federal_constituency_name,
+    state_constituency_id, state_constituency_name,
+    state_id, state_name
+)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count
 `
 
 type CreateWardParams struct {
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	LgaID        int32  `json:"lga_id"`
-	LgaName      string `json:"lga_name"`
-	StateID      int32  `json:"state_id"`
-	StateName    string `json:"state_name"`
+	Name                    string      `json:"name"`
+	Code                    string      `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4 `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text `json:"state_constituency_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
 }
 
 func (q *Queries) CreateWard(ctx context.Context, arg CreateWardParams) (Ward, error) {
 	row := q.db.QueryRow(ctx, createWard,
 		arg.Name,
-		arg.Abbreviation,
+		arg.Code,
 		arg.LgaID,
 		arg.LgaName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.StateConstituencyID,
+		arg.StateConstituencyName,
 		arg.StateID,
 		arg.StateName,
 	)
@@ -321,17 +373,118 @@ func (q *Queries) CreateWard(ctx context.Context, arg CreateWardParams) (Ward, e
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
+		&i.Code,
 		&i.LgaID,
 		&i.LgaName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
 		&i.StateID,
 		&i.StateName,
-		&i.StateAssemblyConstituencyID,
-		&i.StateAssemblyConstituencyName,
+		&i.MongoID,
 		&i.Status,
 		&i.PollingUnitsCount,
 	)
 	return i, err
+}
+
+const deactivateMissingFederalConstituencies = `-- name: DeactivateMissingFederalConstituencies :exec
+UPDATE federal_constituencies
+SET status = 'inactive'
+WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
+`
+
+type DeactivateMissingFederalConstituenciesParams struct {
+	StateID int32   `json:"state_id"`
+	Column2 []int32 `json:"column_2"`
+}
+
+func (q *Queries) DeactivateMissingFederalConstituencies(ctx context.Context, arg DeactivateMissingFederalConstituenciesParams) error {
+	_, err := q.db.Exec(ctx, deactivateMissingFederalConstituencies, arg.StateID, arg.Column2)
+	return err
+}
+
+const deactivateMissingLGAs = `-- name: DeactivateMissingLGAs :exec
+UPDATE lgas
+SET status = 'inactive'
+WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
+`
+
+type DeactivateMissingLGAsParams struct {
+	StateID int32   `json:"state_id"`
+	Column2 []int32 `json:"column_2"`
+}
+
+func (q *Queries) DeactivateMissingLGAs(ctx context.Context, arg DeactivateMissingLGAsParams) error {
+	_, err := q.db.Exec(ctx, deactivateMissingLGAs, arg.StateID, arg.Column2)
+	return err
+}
+
+const deactivateMissingPollingUnits = `-- name: DeactivateMissingPollingUnits :exec
+UPDATE polling_units
+SET status = 'inactive'
+WHERE ward_id = $1 AND NOT (id = ANY($2::int[]))
+`
+
+type DeactivateMissingPollingUnitsParams struct {
+	WardID  int32   `json:"ward_id"`
+	Column2 []int32 `json:"column_2"`
+}
+
+func (q *Queries) DeactivateMissingPollingUnits(ctx context.Context, arg DeactivateMissingPollingUnitsParams) error {
+	_, err := q.db.Exec(ctx, deactivateMissingPollingUnits, arg.WardID, arg.Column2)
+	return err
+}
+
+const deactivateMissingSenatorialDistricts = `-- name: DeactivateMissingSenatorialDistricts :exec
+UPDATE senatorial_districts
+SET status = 'inactive'
+WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
+`
+
+type DeactivateMissingSenatorialDistrictsParams struct {
+	StateID int32   `json:"state_id"`
+	Column2 []int32 `json:"column_2"`
+}
+
+func (q *Queries) DeactivateMissingSenatorialDistricts(ctx context.Context, arg DeactivateMissingSenatorialDistrictsParams) error {
+	_, err := q.db.Exec(ctx, deactivateMissingSenatorialDistricts, arg.StateID, arg.Column2)
+	return err
+}
+
+const deactivateMissingStateConstituencies = `-- name: DeactivateMissingStateConstituencies :exec
+UPDATE state_constituencies
+SET status = 'inactive'
+WHERE state_id = $1 AND NOT (id = ANY($2::int[]))
+`
+
+type DeactivateMissingStateConstituenciesParams struct {
+	StateID int32   `json:"state_id"`
+	Column2 []int32 `json:"column_2"`
+}
+
+func (q *Queries) DeactivateMissingStateConstituencies(ctx context.Context, arg DeactivateMissingStateConstituenciesParams) error {
+	_, err := q.db.Exec(ctx, deactivateMissingStateConstituencies, arg.StateID, arg.Column2)
+	return err
+}
+
+const deactivateMissingWards = `-- name: DeactivateMissingWards :exec
+UPDATE wards
+SET status = 'inactive'
+WHERE lga_id = $1 AND NOT (id = ANY($2::int[]))
+`
+
+type DeactivateMissingWardsParams struct {
+	LgaID   int32   `json:"lga_id"`
+	Column2 []int32 `json:"column_2"`
+}
+
+func (q *Queries) DeactivateMissingWards(ctx context.Context, arg DeactivateMissingWardsParams) error {
+	_, err := q.db.Exec(ctx, deactivateMissingWards, arg.LgaID, arg.Column2)
+	return err
 }
 
 const deleteFederalConstituency = `-- name: DeleteFederalConstituency :exec
@@ -384,13 +537,13 @@ func (q *Queries) DeleteState(ctx context.Context, id int16) error {
 	return err
 }
 
-const deleteStateAssemblyConstituency = `-- name: DeleteStateAssemblyConstituency :exec
-DELETE FROM state_assembly_constituencies
+const deleteStateConstituency = `-- name: DeleteStateConstituency :exec
+DELETE FROM state_constituencies
 WHERE id = $1
 `
 
-func (q *Queries) DeleteStateAssemblyConstituency(ctx context.Context, id int32) error {
-	_, err := q.db.Exec(ctx, deleteStateAssemblyConstituency, id)
+func (q *Queries) DeleteStateConstituency(ctx context.Context, id int32) error {
+	_, err := q.db.Exec(ctx, deleteStateConstituency, id)
 	return err
 }
 
@@ -482,7 +635,7 @@ func (q *Queries) GetCountryByID(ctx context.Context, id int16) (GetCountryByIDR
 }
 
 const getFederalConstituencies = `-- name: GetFederalConstituencies :many
-SELECT id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM federal_constituencies
+SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count, status FROM federal_constituencies
 WHERE ($1::int = 0 OR state_id = $1) AND ($2::int = 0 OR senatorial_district_id = $2)
 ORDER BY name ASC
 `
@@ -504,6 +657,7 @@ func (q *Queries) GetFederalConstituencies(ctx context.Context, arg GetFederalCo
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Code,
 			&i.StateID,
 			&i.StateName,
 			&i.SenatorialDistrictID,
@@ -512,6 +666,7 @@ func (q *Queries) GetFederalConstituencies(ctx context.Context, arg GetFederalCo
 			&i.StateConstituenciesCount,
 			&i.WardsCount,
 			&i.PollingUnitsCount,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -524,7 +679,7 @@ func (q *Queries) GetFederalConstituencies(ctx context.Context, arg GetFederalCo
 }
 
 const getFederalConstituencyByID = `-- name: GetFederalConstituencyByID :one
-SELECT id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM federal_constituencies
+SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count, status FROM federal_constituencies
 WHERE id = $1 LIMIT 1
 `
 
@@ -534,6 +689,7 @@ func (q *Queries) GetFederalConstituencyByID(ctx context.Context, id int32) (Fed
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.StateID,
 		&i.StateName,
 		&i.SenatorialDistrictID,
@@ -542,12 +698,13 @@ func (q *Queries) GetFederalConstituencyByID(ctx context.Context, id int32) (Fed
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const getLGAByID = `-- name: GetLGAByID :one
-SELECT id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count FROM lgas
+SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status FROM lgas
 WHERE id = $1 LIMIT 1
 `
 
@@ -557,7 +714,7 @@ func (q *Queries) GetLGAByID(ctx context.Context, id int32) (Lga, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
+		&i.Code,
 		&i.StateID,
 		&i.StateName,
 		&i.SenatorialDistrictID,
@@ -567,12 +724,13 @@ func (q *Queries) GetLGAByID(ctx context.Context, id int32) (Lga, error) {
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const getLGAs = `-- name: GetLGAs :many
-SELECT id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count FROM lgas
+SELECT id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status FROM lgas
 WHERE ($1::int = 0 OR state_id = $1)
 ORDER BY name ASC
 `
@@ -589,7 +747,7 @@ func (q *Queries) GetLGAs(ctx context.Context, stateID int32) ([]Lga, error) {
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Abbreviation,
+			&i.Code,
 			&i.StateID,
 			&i.StateName,
 			&i.SenatorialDistrictID,
@@ -599,6 +757,7 @@ func (q *Queries) GetLGAs(ctx context.Context, stateID int32) ([]Lga, error) {
 			&i.StateConstituenciesCount,
 			&i.WardsCount,
 			&i.PollingUnitsCount,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -657,7 +816,7 @@ func (q *Queries) GetOccupations(ctx context.Context) ([]Occupation, error) {
 }
 
 const getPollingUnitByID = `-- name: GetPollingUnitByID :one
-SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
+SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
 WHERE id = $1 LIMIT 1
 `
 
@@ -667,17 +826,57 @@ func (q *Queries) GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
-		&i.Units,
-		&i.Delimitation,
-		&i.Remark,
+		&i.Code,
+		&i.PuCode,
 		&i.RegistrationAreaID,
-		&i.WardID,
-		&i.WardName,
-		&i.LgaID,
-		&i.LgaName,
 		&i.StateID,
 		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.WardID,
+		&i.WardName,
+		&i.Latitude,
+		&i.Longitude,
+		&i.PreciseLocation,
+		&i.FormattedAddress,
+		&i.GooglePlaceID,
+		&i.Status,
+	)
+	return i, err
+}
+
+const getPollingUnitByPUCode = `-- name: GetPollingUnitByPUCode :one
+SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
+WHERE pu_code = $1 LIMIT 1
+`
+
+func (q *Queries) GetPollingUnitByPUCode(ctx context.Context, puCode pgtype.Text) (PollingUnit, error) {
+	row := q.db.QueryRow(ctx, getPollingUnitByPUCode, puCode)
+	var i PollingUnit
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.PuCode,
+		&i.RegistrationAreaID,
+		&i.StateID,
+		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.WardID,
+		&i.WardName,
 		&i.Latitude,
 		&i.Longitude,
 		&i.PreciseLocation,
@@ -689,19 +888,34 @@ func (q *Queries) GetPollingUnitByID(ctx context.Context, id int32) (PollingUnit
 }
 
 const getPollingUnits = `-- name: GetPollingUnits :many
-SELECT id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
-WHERE ($1::int = 0 OR ward_id = $1) AND ($2::int = 0 OR lga_id = $2) AND ($3::int = 0 OR state_id = $3)
+SELECT id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status FROM polling_units
+WHERE ($1::int = 0 OR ward_id = $1) 
+  AND ($2::int = 0 OR lga_id = $2) 
+  AND ($3::int = 0 OR state_id = $3)
+  AND ($4::int IS NULL OR senatorial_district_id = $4)
+  AND ($5::int IS NULL OR federal_constituency_id = $5)
+  AND ($6::int IS NULL OR state_constituency_id = $6)
 ORDER BY name ASC
 `
 
 type GetPollingUnitsParams struct {
-	WardID  int32 `json:"ward_id"`
-	LgaID   int32 `json:"lga_id"`
-	StateID int32 `json:"state_id"`
+	WardID                int32       `json:"ward_id"`
+	LgaID                 int32       `json:"lga_id"`
+	StateID               int32       `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
 }
 
 func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error) {
-	rows, err := q.db.Query(ctx, getPollingUnits, arg.WardID, arg.LgaID, arg.StateID)
+	rows, err := q.db.Query(ctx, getPollingUnits,
+		arg.WardID,
+		arg.LgaID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -712,17 +926,21 @@ func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Abbreviation,
-			&i.Units,
-			&i.Delimitation,
-			&i.Remark,
+			&i.Code,
+			&i.PuCode,
 			&i.RegistrationAreaID,
-			&i.WardID,
-			&i.WardName,
-			&i.LgaID,
-			&i.LgaName,
 			&i.StateID,
 			&i.StateName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.StateConstituencyID,
+			&i.StateConstituencyName,
+			&i.LgaID,
+			&i.LgaName,
+			&i.WardID,
+			&i.WardName,
 			&i.Latitude,
 			&i.Longitude,
 			&i.PreciseLocation,
@@ -742,7 +960,7 @@ func (q *Queries) GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams
 
 const getPollingUnitsWithPartyCount = `-- name: GetPollingUnitsWithPartyCount :many
 SELECT
-  pu.id, pu.name, pu.abbreviation, pu.units, pu.delimitation, pu.remark, pu.registration_area_id, pu.ward_id, pu.ward_name, pu.lga_id, pu.lga_name, pu.state_id, pu.state_name, pu.latitude, pu.longitude, pu.precise_location, pu.formatted_address, pu.google_place_id, pu.status,
+  pu.id, pu.name, pu.code, pu.pu_code, pu.registration_area_id, pu.state_id, pu.state_name, pu.senatorial_district_id, pu.senatorial_district_name, pu.federal_constituency_id, pu.federal_constituency_name, pu.state_constituency_id, pu.state_constituency_name, pu.lga_id, pu.lga_name, pu.ward_id, pu.ward_name, pu.latitude, pu.longitude, pu.precise_location, pu.formatted_address, pu.google_place_id, pu.status,
   COALESCE(
     (
       SELECT COUNT(*)::integer
@@ -770,26 +988,30 @@ type GetPollingUnitsWithPartyCountParams struct {
 }
 
 type GetPollingUnitsWithPartyCountRow struct {
-	ID                 int32         `json:"id"`
-	Name               string        `json:"name"`
-	Abbreviation       pgtype.Text   `json:"abbreviation"`
-	Units              pgtype.Text   `json:"units"`
-	Delimitation       pgtype.Text   `json:"delimitation"`
-	Remark             pgtype.Text   `json:"remark"`
-	RegistrationAreaID pgtype.Int4   `json:"registration_area_id"`
-	WardID             int32         `json:"ward_id"`
-	WardName           string        `json:"ward_name"`
-	LgaID              int32         `json:"lga_id"`
-	LgaName            string        `json:"lga_name"`
-	StateID            int32         `json:"state_id"`
-	StateName          string        `json:"state_name"`
-	Latitude           pgtype.Float8 `json:"latitude"`
-	Longitude          pgtype.Float8 `json:"longitude"`
-	PreciseLocation    pgtype.Text   `json:"precise_location"`
-	FormattedAddress   pgtype.Text   `json:"formatted_address"`
-	GooglePlaceID      pgtype.Text   `json:"google_place_id"`
-	Status             pgtype.Text   `json:"status"`
-	AgentsCount        int32         `json:"agents_count"`
+	ID                      int32         `json:"id"`
+	Name                    string        `json:"name"`
+	Code                    pgtype.Text   `json:"code"`
+	PuCode                  pgtype.Text   `json:"pu_code"`
+	RegistrationAreaID      pgtype.Int4   `json:"registration_area_id"`
+	StateID                 int32         `json:"state_id"`
+	StateName               string        `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4   `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text   `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4   `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text   `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4   `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text   `json:"state_constituency_name"`
+	LgaID                   int32         `json:"lga_id"`
+	LgaName                 string        `json:"lga_name"`
+	WardID                  int32         `json:"ward_id"`
+	WardName                string        `json:"ward_name"`
+	Latitude                pgtype.Float8 `json:"latitude"`
+	Longitude               pgtype.Float8 `json:"longitude"`
+	PreciseLocation         pgtype.Text   `json:"precise_location"`
+	FormattedAddress        pgtype.Text   `json:"formatted_address"`
+	GooglePlaceID           pgtype.Text   `json:"google_place_id"`
+	Status                  pgtype.Text   `json:"status"`
+	AgentsCount             int32         `json:"agents_count"`
 }
 
 func (q *Queries) GetPollingUnitsWithPartyCount(ctx context.Context, arg GetPollingUnitsWithPartyCountParams) ([]GetPollingUnitsWithPartyCountRow, error) {
@@ -810,17 +1032,21 @@ func (q *Queries) GetPollingUnitsWithPartyCount(ctx context.Context, arg GetPoll
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Abbreviation,
-			&i.Units,
-			&i.Delimitation,
-			&i.Remark,
+			&i.Code,
+			&i.PuCode,
 			&i.RegistrationAreaID,
-			&i.WardID,
-			&i.WardName,
-			&i.LgaID,
-			&i.LgaName,
 			&i.StateID,
 			&i.StateName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.StateConstituencyID,
+			&i.StateConstituencyName,
+			&i.LgaID,
+			&i.LgaName,
+			&i.WardID,
+			&i.WardName,
 			&i.Latitude,
 			&i.Longitude,
 			&i.PreciseLocation,
@@ -840,7 +1066,7 @@ func (q *Queries) GetPollingUnitsWithPartyCount(ctx context.Context, arg GetPoll
 }
 
 const getSenatorialDistrictByID = `-- name: GetSenatorialDistrictByID :one
-SELECT id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM senatorial_districts
+SELECT id, name, code, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, status FROM senatorial_districts
 WHERE id = $1 LIMIT 1
 `
 
@@ -850,6 +1076,7 @@ func (q *Queries) GetSenatorialDistrictByID(ctx context.Context, id int32) (Sena
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.Description,
 		&i.CoalitionCenter,
 		&i.StateID,
@@ -859,12 +1086,13 @@ func (q *Queries) GetSenatorialDistrictByID(ctx context.Context, id int32) (Sena
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const getSenatorialDistricts = `-- name: GetSenatorialDistricts :many
-SELECT id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM senatorial_districts
+SELECT id, name, code, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, status FROM senatorial_districts
 WHERE ($1::int = 0 OR state_id = $1)
 ORDER BY name ASC
 `
@@ -881,6 +1109,7 @@ func (q *Queries) GetSenatorialDistricts(ctx context.Context, stateID int32) ([]
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Code,
 			&i.Description,
 			&i.CoalitionCenter,
 			&i.StateID,
@@ -890,6 +1119,7 @@ func (q *Queries) GetSenatorialDistricts(ctx context.Context, stateID int32) ([]
 			&i.StateConstituenciesCount,
 			&i.WardsCount,
 			&i.PollingUnitsCount,
+			&i.Status,
 		); err != nil {
 			return nil, err
 		}
@@ -899,75 +1129,6 @@ func (q *Queries) GetSenatorialDistricts(ctx context.Context, stateID int32) ([]
 		return nil, err
 	}
 	return items, nil
-}
-
-const getStateAssemblyConstituencies = `-- name: GetStateAssemblyConstituencies :many
-SELECT id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count FROM state_assembly_constituencies
-WHERE ($1::int = 0 OR state_id = $1) AND ($2::int = 0 OR federal_constituency_id = $2)
-ORDER BY name ASC
-`
-
-type GetStateAssemblyConstituenciesParams struct {
-	StateID               int32 `json:"state_id"`
-	FederalConstituencyID int32 `json:"federal_constituency_id"`
-}
-
-func (q *Queries) GetStateAssemblyConstituencies(ctx context.Context, arg GetStateAssemblyConstituenciesParams) ([]StateAssemblyConstituency, error) {
-	rows, err := q.db.Query(ctx, getStateAssemblyConstituencies, arg.StateID, arg.FederalConstituencyID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []StateAssemblyConstituency
-	for rows.Next() {
-		var i StateAssemblyConstituency
-		if err := rows.Scan(
-			&i.ID,
-			&i.Name,
-			&i.LgaID,
-			&i.LgaName,
-			&i.StateID,
-			&i.StateName,
-			&i.SenatorialDistrictID,
-			&i.SenatorialDistrictName,
-			&i.FederalConstituencyID,
-			&i.FederalConstituencyName,
-			&i.WardsCount,
-			&i.PollingUnitsCount,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getStateAssemblyConstituencyByID = `-- name: GetStateAssemblyConstituencyByID :one
-SELECT id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count FROM state_assembly_constituencies
-WHERE id = $1 LIMIT 1
-`
-
-func (q *Queries) GetStateAssemblyConstituencyByID(ctx context.Context, id int32) (StateAssemblyConstituency, error) {
-	row := q.db.QueryRow(ctx, getStateAssemblyConstituencyByID, id)
-	var i StateAssemblyConstituency
-	err := row.Scan(
-		&i.ID,
-		&i.Name,
-		&i.LgaID,
-		&i.LgaName,
-		&i.StateID,
-		&i.StateName,
-		&i.SenatorialDistrictID,
-		&i.SenatorialDistrictName,
-		&i.FederalConstituencyID,
-		&i.FederalConstituencyName,
-		&i.WardsCount,
-		&i.PollingUnitsCount,
-	)
-	return i, err
 }
 
 const getStateByID = `-- name: GetStateByID :one
@@ -989,6 +1150,79 @@ func (q *Queries) GetStateByID(ctx context.Context, arg GetStateByIDParams) (Get
 	row := q.db.QueryRow(ctx, getStateByID, arg.ID, arg.CountryID)
 	var i GetStateByIDRow
 	err := row.Scan(&i.ID, &i.Name)
+	return i, err
+}
+
+const getStateConstituencies = `-- name: GetStateConstituencies :many
+SELECT id, name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count, status FROM state_constituencies
+WHERE ($1::int = 0 OR state_id = $1) AND ($2::int = 0 OR federal_constituency_id = $2)
+ORDER BY name ASC
+`
+
+type GetStateConstituenciesParams struct {
+	StateID               int32 `json:"state_id"`
+	FederalConstituencyID int32 `json:"federal_constituency_id"`
+}
+
+func (q *Queries) GetStateConstituencies(ctx context.Context, arg GetStateConstituenciesParams) ([]StateConstituency, error) {
+	rows, err := q.db.Query(ctx, getStateConstituencies, arg.StateID, arg.FederalConstituencyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []StateConstituency
+	for rows.Next() {
+		var i StateConstituency
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Code,
+			&i.LgaID,
+			&i.LgaName,
+			&i.StateID,
+			&i.StateName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.WardsCount,
+			&i.PollingUnitsCount,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getStateConstituencyByID = `-- name: GetStateConstituencyByID :one
+SELECT id, name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count, status FROM state_constituencies
+WHERE id = $1 LIMIT 1
+`
+
+func (q *Queries) GetStateConstituencyByID(ctx context.Context, id int32) (StateConstituency, error) {
+	row := q.db.QueryRow(ctx, getStateConstituencyByID, id)
+	var i StateConstituency
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.LgaID,
+		&i.LgaName,
+		&i.StateID,
+		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
+		&i.Status,
+	)
 	return i, err
 }
 
@@ -1057,7 +1291,7 @@ func (q *Queries) GetStatesByCountryID(ctx context.Context, countryID int16) ([]
 }
 
 const getWardByID = `-- name: GetWardByID :one
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count FROM wards
+SELECT id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count FROM wards
 WHERE id = $1 LIMIT 1
 `
 
@@ -1067,13 +1301,18 @@ func (q *Queries) GetWardByID(ctx context.Context, id int32) (Ward, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
+		&i.Code,
 		&i.LgaID,
 		&i.LgaName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
 		&i.StateID,
 		&i.StateName,
-		&i.StateAssemblyConstituencyID,
-		&i.StateAssemblyConstituencyName,
+		&i.MongoID,
 		&i.Status,
 		&i.PollingUnitsCount,
 	)
@@ -1081,18 +1320,31 @@ func (q *Queries) GetWardByID(ctx context.Context, id int32) (Ward, error) {
 }
 
 const getWards = `-- name: GetWards :many
-SELECT id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count FROM wards
-WHERE ($1::int = 0 OR lga_id = $1) AND ($2::int = 0 OR state_id = $2)
+SELECT id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count FROM wards
+WHERE ($1::int = 0 OR lga_id = $1) 
+  AND ($2::int = 0 OR state_id = $2)
+  AND ($3::int IS NULL OR senatorial_district_id = $3)
+  AND ($4::int IS NULL OR federal_constituency_id = $4)
+  AND ($5::int IS NULL OR state_constituency_id = $5)
 ORDER BY name ASC
 `
 
 type GetWardsParams struct {
-	LgaID   int32 `json:"lga_id"`
-	StateID int32 `json:"state_id"`
+	LgaID                 int32       `json:"lga_id"`
+	StateID               int32       `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
 }
 
 func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, error) {
-	rows, err := q.db.Query(ctx, getWards, arg.LgaID, arg.StateID)
+	rows, err := q.db.Query(ctx, getWards,
+		arg.LgaID,
+		arg.StateID,
+		arg.SenatorialDistrictID,
+		arg.FederalConstituencyID,
+		arg.StateConstituencyID,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1103,14 +1355,57 @@ func (q *Queries) GetWards(ctx context.Context, arg GetWardsParams) ([]Ward, err
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
-			&i.Abbreviation,
+			&i.Code,
 			&i.LgaID,
 			&i.LgaName,
+			&i.SenatorialDistrictID,
+			&i.SenatorialDistrictName,
+			&i.FederalConstituencyID,
+			&i.FederalConstituencyName,
+			&i.StateConstituencyID,
+			&i.StateConstituencyName,
 			&i.StateID,
 			&i.StateName,
-			&i.StateAssemblyConstituencyID,
-			&i.StateAssemblyConstituencyName,
+			&i.MongoID,
 			&i.Status,
+			&i.PollingUnitsCount,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAllStates = `-- name: ListAllStates :many
+SELECT id, name, country_id, country_code, latitude, longitude, senatorial_districts_count, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count FROM c_states
+ORDER BY name ASC
+`
+
+func (q *Queries) ListAllStates(ctx context.Context) ([]CState, error) {
+	rows, err := q.db.Query(ctx, listAllStates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CState
+	for rows.Next() {
+		var i CState
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.CountryID,
+			&i.CountryCode,
+			&i.Latitude,
+			&i.Longitude,
+			&i.SenatorialDistrictsCount,
+			&i.FederalConstituenciesCount,
+			&i.LgasCount,
+			&i.StateConstituenciesCount,
+			&i.WardsCount,
 			&i.PollingUnitsCount,
 		); err != nil {
 			return nil, err
@@ -1163,9 +1458,9 @@ func (q *Queries) ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 const recalculateFederalConstituencyMetrics = `-- name: RecalculateFederalConstituencyMetrics :exec
 UPDATE federal_constituencies fc
 SET lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
-    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
-    wards_count = COALESCE((SELECT SUM(wards_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0)
+    state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.federal_constituency_id = fc.id), 0),
+    wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.federal_constituency_id = fc.id), 0),
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.federal_constituency_id = fc.id), 0)
 `
 
 func (q *Queries) RecalculateFederalConstituencyMetrics(ctx context.Context) error {
@@ -1175,9 +1470,9 @@ func (q *Queries) RecalculateFederalConstituencyMetrics(ctx context.Context) err
 
 const recalculateLGAMetrics = `-- name: RecalculateLGAMetrics :exec
 UPDATE lgas l
-SET state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_assembly_constituencies sac WHERE sac.lga_id = l.id), 0),
+SET state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.lga_id = l.id), 0),
     wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.lga_id = l.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM wards w WHERE w.lga_id = l.id), 0)
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.lga_id = l.id), 0)
 `
 
 func (q *Queries) RecalculateLGAMetrics(ctx context.Context) error {
@@ -1190,7 +1485,7 @@ UPDATE national_metrics
 SET states_count = (SELECT COUNT(*) FROM c_states),
     senatorial_districts_count = (SELECT COUNT(*) FROM senatorial_districts),
     federal_constituencies_count = (SELECT COUNT(*) FROM federal_constituencies),
-    state_constituencies_count = (SELECT COUNT(*) FROM state_assembly_constituencies),
+    state_constituencies_count = (SELECT COUNT(*) FROM state_constituencies),
     lgas_count = (SELECT COUNT(*) FROM lgas),
     wards_count = (SELECT COUNT(*) FROM wards),
     polling_units_count = (SELECT COUNT(*) FROM polling_units),
@@ -1206,10 +1501,10 @@ func (q *Queries) RecalculateNationalMetrics(ctx context.Context) error {
 const recalculateSenatorialDistrictMetrics = `-- name: RecalculateSenatorialDistrictMetrics :exec
 UPDATE senatorial_districts sd
 SET federal_constituencies_count = COALESCE((SELECT COUNT(*) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    lgas_count = COALESCE((SELECT SUM(lgas_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    wards_count = COALESCE((SELECT SUM(wards_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0)
+    lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.senatorial_district_id = sd.id), 0),
+    state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.senatorial_district_id = sd.id), 0),
+    wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.senatorial_district_id = sd.id), 0),
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.senatorial_district_id = sd.id), 0)
 `
 
 func (q *Queries) RecalculateSenatorialDistrictMetrics(ctx context.Context) error {
@@ -1217,25 +1512,25 @@ func (q *Queries) RecalculateSenatorialDistrictMetrics(ctx context.Context) erro
 	return err
 }
 
-const recalculateStateAssemblyConstituencyMetrics = `-- name: RecalculateStateAssemblyConstituencyMetrics :exec
-UPDATE state_assembly_constituencies sac
-SET wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.state_assembly_constituency_id = sac.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM wards w WHERE w.state_assembly_constituency_id = sac.id), 0)
+const recalculateStateConstituencyMetrics = `-- name: RecalculateStateConstituencyMetrics :exec
+UPDATE state_constituencies sac
+SET wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.state_constituency_id = sac.id), 0),
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.state_constituency_id = sac.id), 0)
 `
 
-func (q *Queries) RecalculateStateAssemblyConstituencyMetrics(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, recalculateStateAssemblyConstituencyMetrics)
+func (q *Queries) RecalculateStateConstituencyMetrics(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, recalculateStateConstituencyMetrics)
 	return err
 }
 
 const recalculateStateMetrics = `-- name: RecalculateStateMetrics :exec
 UPDATE c_states s
 SET senatorial_districts_count = COALESCE((SELECT COUNT(*) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    federal_constituencies_count = COALESCE((SELECT SUM(federal_constituencies_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    lgas_count = COALESCE((SELECT SUM(lgas_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    wards_count = COALESCE((SELECT SUM(wards_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0)
+    federal_constituencies_count = COALESCE((SELECT COUNT(*) FROM federal_constituencies fc WHERE fc.state_id = s.id), 0),
+    lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.state_id = s.id), 0),
+    state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.state_id = s.id), 0),
+    wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.state_id = s.id), 0),
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.state_id = s.id), 0)
 `
 
 func (q *Queries) RecalculateStateMetrics(ctx context.Context) error {
@@ -1255,24 +1550,26 @@ func (q *Queries) RecalculateWardMetrics(ctx context.Context) error {
 
 const updateFederalConstituency = `-- name: UpdateFederalConstituency :one
 UPDATE federal_constituencies
-SET name = $2, state_id = $3, state_name = $4, senatorial_district_id = $5, senatorial_district_name = $6
+SET name = $2, code = $3, state_id = $4, state_name = $5, senatorial_district_id = $6, senatorial_district_name = $7
 WHERE id = $1
-RETURNING id, name, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count, status
 `
 
 type UpdateFederalConstituencyParams struct {
-	ID                     int32  `json:"id"`
-	Name                   string `json:"name"`
-	StateID                int32  `json:"state_id"`
-	StateName              string `json:"state_name"`
-	SenatorialDistrictID   int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName string `json:"senatorial_district_name"`
+	ID                     int32       `json:"id"`
+	Name                   string      `json:"name"`
+	Code                   pgtype.Text `json:"code"`
+	StateID                int32       `json:"state_id"`
+	StateName              string      `json:"state_name"`
+	SenatorialDistrictID   pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName pgtype.Text `json:"senatorial_district_name"`
 }
 
 func (q *Queries) UpdateFederalConstituency(ctx context.Context, arg UpdateFederalConstituencyParams) (FederalConstituency, error) {
 	row := q.db.QueryRow(ctx, updateFederalConstituency,
 		arg.ID,
 		arg.Name,
+		arg.Code,
 		arg.StateID,
 		arg.StateName,
 		arg.SenatorialDistrictID,
@@ -1282,6 +1579,7 @@ func (q *Queries) UpdateFederalConstituency(ctx context.Context, arg UpdateFeder
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.StateID,
 		&i.StateName,
 		&i.SenatorialDistrictID,
@@ -1290,34 +1588,35 @@ func (q *Queries) UpdateFederalConstituency(ctx context.Context, arg UpdateFeder
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const updateLGA = `-- name: UpdateLGA :one
 UPDATE lgas
-SET name = $2, abbreviation = $3, state_id = $4, state_name = $5, senatorial_district_id = $6, senatorial_district_name = $7, federal_constituency_id = $8, federal_constituency_name = $9
+SET name = $2, code = $3, state_id = $4, state_name = $5, senatorial_district_id = $6, senatorial_district_name = $7, federal_constituency_id = $8, federal_constituency_name = $9
 WHERE id = $1
-RETURNING id, name, abbreviation, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status
 `
 
 type UpdateLGAParams struct {
-	ID                      int32  `json:"id"`
-	Name                    string `json:"name"`
-	Abbreviation            string `json:"abbreviation"`
-	StateID                 int32  `json:"state_id"`
-	StateName               string `json:"state_name"`
-	SenatorialDistrictID    int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName  string `json:"senatorial_district_name"`
-	FederalConstituencyID   int32  `json:"federal_constituency_id"`
-	FederalConstituencyName string `json:"federal_constituency_name"`
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    string      `json:"code"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
 }
 
 func (q *Queries) UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, error) {
 	row := q.db.QueryRow(ctx, updateLGA,
 		arg.ID,
 		arg.Name,
-		arg.Abbreviation,
+		arg.Code,
 		arg.StateID,
 		arg.StateName,
 		arg.SenatorialDistrictID,
@@ -1329,7 +1628,7 @@ func (q *Queries) UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, erro
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
+		&i.Code,
 		&i.StateID,
 		&i.StateName,
 		&i.SenatorialDistrictID,
@@ -1339,51 +1638,88 @@ func (q *Queries) UpdateLGA(ctx context.Context, arg UpdateLGAParams) (Lga, erro
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
+const updateMissingFederalConstituencySenatorialDistricts = `-- name: UpdateMissingFederalConstituencySenatorialDistricts :exec
+UPDATE federal_constituencies fc
+SET senatorial_district_id = sub.senatorial_district_id,
+    senatorial_district_name = sub.senatorial_district_name
+FROM (
+    SELECT DISTINCT 
+        l.federal_constituency_id, 
+        l.senatorial_district_id, 
+        l.senatorial_district_name
+    FROM lgas l
+    WHERE l.federal_constituency_id IS NOT NULL 
+      AND l.senatorial_district_id IS NOT NULL
+      AND l.senatorial_district_name IS NOT NULL
+) sub
+WHERE fc.id = sub.federal_constituency_id
+  AND (fc.senatorial_district_id IS NULL OR fc.senatorial_district_id = 0)
+`
+
+func (q *Queries) UpdateMissingFederalConstituencySenatorialDistricts(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, updateMissingFederalConstituencySenatorialDistricts)
+	return err
+}
+
 const updatePollingUnit = `-- name: UpdatePollingUnit :one
 UPDATE polling_units
-SET name = $2, abbreviation = $3, units = $4, delimitation = $5, remark = $6, registration_area_id = $7, ward_id = $8, ward_name = $9, lga_id = $10, lga_name = $11, state_id = $12, state_name = $13, latitude = $14, longitude = $15, precise_location = $16, formatted_address = $17, google_place_id = $18
+SET name = $2, code = $3, pu_code = $4, registration_area_id = $5, 
+    ward_id = $6, ward_name = $7, lga_id = $8, lga_name = $9, 
+    senatorial_district_id = $10, senatorial_district_name = $11,
+    federal_constituency_id = $12, federal_constituency_name = $13,
+    state_constituency_id = $14, state_constituency_name = $15,
+    state_id = $16, state_name = $17, latitude = $18, longitude = $19, precise_location = $20, formatted_address = $21, google_place_id = $22
 WHERE id = $1
-RETURNING id, name, abbreviation, units, delimitation, remark, registration_area_id, ward_id, ward_name, lga_id, lga_name, state_id, state_name, latitude, longitude, precise_location, formatted_address, google_place_id, status
+RETURNING id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status
 `
 
 type UpdatePollingUnitParams struct {
-	ID                 int32         `json:"id"`
-	Name               string        `json:"name"`
-	Abbreviation       pgtype.Text   `json:"abbreviation"`
-	Units              pgtype.Text   `json:"units"`
-	Delimitation       pgtype.Text   `json:"delimitation"`
-	Remark             pgtype.Text   `json:"remark"`
-	RegistrationAreaID pgtype.Int4   `json:"registration_area_id"`
-	WardID             int32         `json:"ward_id"`
-	WardName           string        `json:"ward_name"`
-	LgaID              int32         `json:"lga_id"`
-	LgaName            string        `json:"lga_name"`
-	StateID            int32         `json:"state_id"`
-	StateName          string        `json:"state_name"`
-	Latitude           pgtype.Float8 `json:"latitude"`
-	Longitude          pgtype.Float8 `json:"longitude"`
-	PreciseLocation    pgtype.Text   `json:"precise_location"`
-	FormattedAddress   pgtype.Text   `json:"formatted_address"`
-	GooglePlaceID      pgtype.Text   `json:"google_place_id"`
+	ID                      int32         `json:"id"`
+	Name                    string        `json:"name"`
+	Code                    pgtype.Text   `json:"code"`
+	PuCode                  pgtype.Text   `json:"pu_code"`
+	RegistrationAreaID      pgtype.Int4   `json:"registration_area_id"`
+	WardID                  int32         `json:"ward_id"`
+	WardName                string        `json:"ward_name"`
+	LgaID                   int32         `json:"lga_id"`
+	LgaName                 string        `json:"lga_name"`
+	SenatorialDistrictID    pgtype.Int4   `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text   `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4   `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text   `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4   `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text   `json:"state_constituency_name"`
+	StateID                 int32         `json:"state_id"`
+	StateName               string        `json:"state_name"`
+	Latitude                pgtype.Float8 `json:"latitude"`
+	Longitude               pgtype.Float8 `json:"longitude"`
+	PreciseLocation         pgtype.Text   `json:"precise_location"`
+	FormattedAddress        pgtype.Text   `json:"formatted_address"`
+	GooglePlaceID           pgtype.Text   `json:"google_place_id"`
 }
 
 func (q *Queries) UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error) {
 	row := q.db.QueryRow(ctx, updatePollingUnit,
 		arg.ID,
 		arg.Name,
-		arg.Abbreviation,
-		arg.Units,
-		arg.Delimitation,
-		arg.Remark,
+		arg.Code,
+		arg.PuCode,
 		arg.RegistrationAreaID,
 		arg.WardID,
 		arg.WardName,
 		arg.LgaID,
 		arg.LgaName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.StateConstituencyID,
+		arg.StateConstituencyName,
 		arg.StateID,
 		arg.StateName,
 		arg.Latitude,
@@ -1396,17 +1732,21 @@ func (q *Queries) UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitPa
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
-		&i.Units,
-		&i.Delimitation,
-		&i.Remark,
+		&i.Code,
+		&i.PuCode,
 		&i.RegistrationAreaID,
-		&i.WardID,
-		&i.WardName,
-		&i.LgaID,
-		&i.LgaName,
 		&i.StateID,
 		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.WardID,
+		&i.WardName,
 		&i.Latitude,
 		&i.Longitude,
 		&i.PreciseLocation,
@@ -1419,14 +1759,15 @@ func (q *Queries) UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitPa
 
 const updateSenatorialDistrict = `-- name: UpdateSenatorialDistrict :one
 UPDATE senatorial_districts
-SET name = $2, description = $3, coalition_center = $4, state_id = $5, state_name = $6
+SET name = $2, code = $3, description = $4, coalition_center = $5, state_id = $6, state_name = $7
 WHERE id = $1
-RETURNING id, name, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count
+RETURNING id, name, code, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, status
 `
 
 type UpdateSenatorialDistrictParams struct {
 	ID              int32       `json:"id"`
 	Name            string      `json:"name"`
+	Code            pgtype.Text `json:"code"`
 	Description     pgtype.Text `json:"description"`
 	CoalitionCenter pgtype.Text `json:"coalition_center"`
 	StateID         int32       `json:"state_id"`
@@ -1437,6 +1778,7 @@ func (q *Queries) UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenato
 	row := q.db.QueryRow(ctx, updateSenatorialDistrict,
 		arg.ID,
 		arg.Name,
+		arg.Code,
 		arg.Description,
 		arg.CoalitionCenter,
 		arg.StateID,
@@ -1446,6 +1788,7 @@ func (q *Queries) UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenato
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.Description,
 		&i.CoalitionCenter,
 		&i.StateID,
@@ -1455,6 +1798,7 @@ func (q *Queries) UpdateSenatorialDistrict(ctx context.Context, arg UpdateSenato
 		&i.StateConstituenciesCount,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
@@ -1502,30 +1846,32 @@ func (q *Queries) UpdateState(ctx context.Context, arg UpdateStateParams) (CStat
 	return i, err
 }
 
-const updateStateAssemblyConstituency = `-- name: UpdateStateAssemblyConstituency :one
-UPDATE state_assembly_constituencies
-SET name = $2, lga_id = $3, lga_name = $4, state_id = $5, state_name = $6, senatorial_district_id = $7, senatorial_district_name = $8, federal_constituency_id = $9, federal_constituency_name = $10
+const updateStateConstituency = `-- name: UpdateStateConstituency :one
+UPDATE state_constituencies
+SET name = $2, code = $3, lga_id = $4, lga_name = $5, state_id = $6, state_name = $7, senatorial_district_id = $8, senatorial_district_name = $9, federal_constituency_id = $10, federal_constituency_name = $11
 WHERE id = $1
-RETURNING id, name, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count
+RETURNING id, name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count, status
 `
 
-type UpdateStateAssemblyConstituencyParams struct {
-	ID                      int32  `json:"id"`
-	Name                    string `json:"name"`
-	LgaID                   int32  `json:"lga_id"`
-	LgaName                 string `json:"lga_name"`
-	StateID                 int32  `json:"state_id"`
-	StateName               string `json:"state_name"`
-	SenatorialDistrictID    int32  `json:"senatorial_district_id"`
-	SenatorialDistrictName  string `json:"senatorial_district_name"`
-	FederalConstituencyID   int32  `json:"federal_constituency_id"`
-	FederalConstituencyName string `json:"federal_constituency_name"`
+type UpdateStateConstituencyParams struct {
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    pgtype.Text `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
 }
 
-func (q *Queries) UpdateStateAssemblyConstituency(ctx context.Context, arg UpdateStateAssemblyConstituencyParams) (StateAssemblyConstituency, error) {
-	row := q.db.QueryRow(ctx, updateStateAssemblyConstituency,
+func (q *Queries) UpdateStateConstituency(ctx context.Context, arg UpdateStateConstituencyParams) (StateConstituency, error) {
+	row := q.db.QueryRow(ctx, updateStateConstituency,
 		arg.ID,
 		arg.Name,
+		arg.Code,
 		arg.LgaID,
 		arg.LgaName,
 		arg.StateID,
@@ -1535,10 +1881,11 @@ func (q *Queries) UpdateStateAssemblyConstituency(ctx context.Context, arg Updat
 		arg.FederalConstituencyID,
 		arg.FederalConstituencyName,
 	)
-	var i StateAssemblyConstituency
+	var i StateConstituency
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Code,
 		&i.LgaID,
 		&i.LgaName,
 		&i.StateID,
@@ -1549,34 +1896,51 @@ func (q *Queries) UpdateStateAssemblyConstituency(ctx context.Context, arg Updat
 		&i.FederalConstituencyName,
 		&i.WardsCount,
 		&i.PollingUnitsCount,
+		&i.Status,
 	)
 	return i, err
 }
 
 const updateWard = `-- name: UpdateWard :one
 UPDATE wards
-SET name = $2, abbreviation = $3, lga_id = $4, lga_name = $5, state_id = $6, state_name = $7
+SET name = $2, code = $3, lga_id = $4, lga_name = $5, 
+    senatorial_district_id = $6, senatorial_district_name = $7,
+    federal_constituency_id = $8, federal_constituency_name = $9,
+    state_constituency_id = $10, state_constituency_name = $11,
+    state_id = $12, state_name = $13
 WHERE id = $1
-RETURNING id, name, abbreviation, lga_id, lga_name, state_id, state_name, state_assembly_constituency_id, state_assembly_constituency_name, status, polling_units_count
+RETURNING id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count
 `
 
 type UpdateWardParams struct {
-	ID           int32  `json:"id"`
-	Name         string `json:"name"`
-	Abbreviation string `json:"abbreviation"`
-	LgaID        int32  `json:"lga_id"`
-	LgaName      string `json:"lga_name"`
-	StateID      int32  `json:"state_id"`
-	StateName    string `json:"state_name"`
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    string      `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4 `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text `json:"state_constituency_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
 }
 
 func (q *Queries) UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, error) {
 	row := q.db.QueryRow(ctx, updateWard,
 		arg.ID,
 		arg.Name,
-		arg.Abbreviation,
+		arg.Code,
 		arg.LgaID,
 		arg.LgaName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.StateConstituencyID,
+		arg.StateConstituencyName,
 		arg.StateID,
 		arg.StateName,
 	)
@@ -1584,13 +1948,431 @@ func (q *Queries) UpdateWard(ctx context.Context, arg UpdateWardParams) (Ward, e
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
-		&i.Abbreviation,
+		&i.Code,
+		&i.LgaID,
+		&i.LgaName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
+		&i.StateID,
+		&i.StateName,
+		&i.MongoID,
+		&i.Status,
+		&i.PollingUnitsCount,
+	)
+	return i, err
+}
+
+const upsertFederalConstituency = `-- name: UpsertFederalConstituency :one
+INSERT INTO federal_constituencies (id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  code = EXCLUDED.code,
+  state_id = EXCLUDED.state_id,
+  state_name = EXCLUDED.state_name,
+  senatorial_district_id = EXCLUDED.senatorial_district_id,
+  senatorial_district_name = EXCLUDED.senatorial_district_name,
+  status = EXCLUDED.status
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, lgas_count, state_constituencies_count, wards_count, polling_units_count, status
+`
+
+type UpsertFederalConstituencyParams struct {
+	ID                     int32       `json:"id"`
+	Name                   string      `json:"name"`
+	Code                   pgtype.Text `json:"code"`
+	StateID                int32       `json:"state_id"`
+	StateName              string      `json:"state_name"`
+	SenatorialDistrictID   pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName pgtype.Text `json:"senatorial_district_name"`
+	Status                 pgtype.Text `json:"status"`
+}
+
+func (q *Queries) UpsertFederalConstituency(ctx context.Context, arg UpsertFederalConstituencyParams) (FederalConstituency, error) {
+	row := q.db.QueryRow(ctx, upsertFederalConstituency,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.StateID,
+		arg.StateName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.Status,
+	)
+	var i FederalConstituency
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.StateID,
+		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
+		&i.Status,
+	)
+	return i, err
+}
+
+const upsertLGA = `-- name: UpsertLGA :one
+INSERT INTO lgas (id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  code = EXCLUDED.code,
+  state_id = EXCLUDED.state_id,
+  state_name = EXCLUDED.state_name,
+  senatorial_district_id = EXCLUDED.senatorial_district_id,
+  senatorial_district_name = EXCLUDED.senatorial_district_name,
+  federal_constituency_id = EXCLUDED.federal_constituency_id,
+  federal_constituency_name = EXCLUDED.federal_constituency_name,
+  status = EXCLUDED.status
+RETURNING id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituencies_count, wards_count, polling_units_count, status
+`
+
+type UpsertLGAParams struct {
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    string      `json:"code"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
+	Status                  pgtype.Text `json:"status"`
+}
+
+func (q *Queries) UpsertLGA(ctx context.Context, arg UpsertLGAParams) (Lga, error) {
+	row := q.db.QueryRow(ctx, upsertLGA,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.StateID,
+		arg.StateName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.Status,
+	)
+	var i Lga
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.StateID,
+		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
+		&i.Status,
+	)
+	return i, err
+}
+
+const upsertPollingUnit = `-- name: UpsertPollingUnit :one
+INSERT INTO polling_units (id, name, code, pu_code, ward_id, ward_name, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, latitude, longitude, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  code = EXCLUDED.code,
+  pu_code = EXCLUDED.pu_code,
+  ward_id = EXCLUDED.ward_id,
+  ward_name = EXCLUDED.ward_name,
+  lga_id = EXCLUDED.lga_id,
+  lga_name = EXCLUDED.lga_name,
+  senatorial_district_id = EXCLUDED.senatorial_district_id,
+  senatorial_district_name = EXCLUDED.senatorial_district_name,
+  federal_constituency_id = EXCLUDED.federal_constituency_id,
+  federal_constituency_name = EXCLUDED.federal_constituency_name,
+  state_constituency_id = EXCLUDED.state_constituency_id,
+  state_constituency_name = EXCLUDED.state_constituency_name,
+  state_id = EXCLUDED.state_id,
+  state_name = EXCLUDED.state_name,
+  latitude = EXCLUDED.latitude,
+  longitude = EXCLUDED.longitude,
+  status = EXCLUDED.status
+RETURNING id, name, code, pu_code, registration_area_id, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, lga_id, lga_name, ward_id, ward_name, latitude, longitude, precise_location, formatted_address, google_place_id, status
+`
+
+type UpsertPollingUnitParams struct {
+	ID                      int32         `json:"id"`
+	Name                    string        `json:"name"`
+	Code                    pgtype.Text   `json:"code"`
+	PuCode                  pgtype.Text   `json:"pu_code"`
+	WardID                  int32         `json:"ward_id"`
+	WardName                string        `json:"ward_name"`
+	LgaID                   int32         `json:"lga_id"`
+	LgaName                 string        `json:"lga_name"`
+	SenatorialDistrictID    pgtype.Int4   `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text   `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4   `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text   `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4   `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text   `json:"state_constituency_name"`
+	StateID                 int32         `json:"state_id"`
+	StateName               string        `json:"state_name"`
+	Latitude                pgtype.Float8 `json:"latitude"`
+	Longitude               pgtype.Float8 `json:"longitude"`
+	Status                  pgtype.Text   `json:"status"`
+}
+
+func (q *Queries) UpsertPollingUnit(ctx context.Context, arg UpsertPollingUnitParams) (PollingUnit, error) {
+	row := q.db.QueryRow(ctx, upsertPollingUnit,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.PuCode,
+		arg.WardID,
+		arg.WardName,
+		arg.LgaID,
+		arg.LgaName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.StateConstituencyID,
+		arg.StateConstituencyName,
+		arg.StateID,
+		arg.StateName,
+		arg.Latitude,
+		arg.Longitude,
+		arg.Status,
+	)
+	var i PollingUnit
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.PuCode,
+		&i.RegistrationAreaID,
+		&i.StateID,
+		&i.StateName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
+		&i.LgaID,
+		&i.LgaName,
+		&i.WardID,
+		&i.WardName,
+		&i.Latitude,
+		&i.Longitude,
+		&i.PreciseLocation,
+		&i.FormattedAddress,
+		&i.GooglePlaceID,
+		&i.Status,
+	)
+	return i, err
+}
+
+const upsertSenatorialDistrict = `-- name: UpsertSenatorialDistrict :one
+INSERT INTO senatorial_districts (id, name, code, description, coalition_center, state_id, state_name, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  code = EXCLUDED.code,
+  state_id = EXCLUDED.state_id,
+  state_name = EXCLUDED.state_name,
+  status = EXCLUDED.status
+RETURNING id, name, code, description, coalition_center, state_id, state_name, federal_constituencies_count, lgas_count, state_constituencies_count, wards_count, polling_units_count, status
+`
+
+type UpsertSenatorialDistrictParams struct {
+	ID              int32       `json:"id"`
+	Name            string      `json:"name"`
+	Code            pgtype.Text `json:"code"`
+	Description     pgtype.Text `json:"description"`
+	CoalitionCenter pgtype.Text `json:"coalition_center"`
+	StateID         int32       `json:"state_id"`
+	StateName       string      `json:"state_name"`
+	Status          pgtype.Text `json:"status"`
+}
+
+func (q *Queries) UpsertSenatorialDistrict(ctx context.Context, arg UpsertSenatorialDistrictParams) (SenatorialDistrict, error) {
+	row := q.db.QueryRow(ctx, upsertSenatorialDistrict,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.Description,
+		arg.CoalitionCenter,
+		arg.StateID,
+		arg.StateName,
+		arg.Status,
+	)
+	var i SenatorialDistrict
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Description,
+		&i.CoalitionCenter,
+		&i.StateID,
+		&i.StateName,
+		&i.FederalConstituenciesCount,
+		&i.LgasCount,
+		&i.StateConstituenciesCount,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
+		&i.Status,
+	)
+	return i, err
+}
+
+const upsertStateConstituency = `-- name: UpsertStateConstituency :one
+INSERT INTO state_constituencies (id, name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  code = EXCLUDED.code,
+  lga_id = EXCLUDED.lga_id,
+  lga_name = EXCLUDED.lga_name,
+  state_id = EXCLUDED.state_id,
+  state_name = EXCLUDED.state_name,
+  senatorial_district_id = EXCLUDED.senatorial_district_id,
+  senatorial_district_name = EXCLUDED.senatorial_district_name,
+  federal_constituency_id = EXCLUDED.federal_constituency_id,
+  federal_constituency_name = EXCLUDED.federal_constituency_name,
+  status = EXCLUDED.status
+RETURNING id, name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, wards_count, polling_units_count, status
+`
+
+type UpsertStateConstituencyParams struct {
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    pgtype.Text `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
+	Status                  pgtype.Text `json:"status"`
+}
+
+func (q *Queries) UpsertStateConstituency(ctx context.Context, arg UpsertStateConstituencyParams) (StateConstituency, error) {
+	row := q.db.QueryRow(ctx, upsertStateConstituency,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.LgaID,
+		arg.LgaName,
+		arg.StateID,
+		arg.StateName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.Status,
+	)
+	var i StateConstituency
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
 		&i.LgaID,
 		&i.LgaName,
 		&i.StateID,
 		&i.StateName,
-		&i.StateAssemblyConstituencyID,
-		&i.StateAssemblyConstituencyName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.WardsCount,
+		&i.PollingUnitsCount,
+		&i.Status,
+	)
+	return i, err
+}
+
+const upsertWard = `-- name: UpsertWard :one
+INSERT INTO wards (id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, status, mongo_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  code = EXCLUDED.code,
+  lga_id = EXCLUDED.lga_id,
+  lga_name = EXCLUDED.lga_name,
+  senatorial_district_id = EXCLUDED.senatorial_district_id,
+  senatorial_district_name = EXCLUDED.senatorial_district_name,
+  federal_constituency_id = EXCLUDED.federal_constituency_id,
+  federal_constituency_name = EXCLUDED.federal_constituency_name,
+  state_constituency_id = EXCLUDED.state_constituency_id,
+  state_constituency_name = EXCLUDED.state_constituency_name,
+  state_id = EXCLUDED.state_id,
+  state_name = EXCLUDED.state_name,
+  status = EXCLUDED.status,
+  mongo_id = COALESCE(EXCLUDED.mongo_id, wards.mongo_id)
+RETURNING id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, mongo_id, status, polling_units_count
+`
+
+type UpsertWardParams struct {
+	ID                      int32       `json:"id"`
+	Name                    string      `json:"name"`
+	Code                    string      `json:"code"`
+	LgaID                   int32       `json:"lga_id"`
+	LgaName                 string      `json:"lga_name"`
+	SenatorialDistrictID    pgtype.Int4 `json:"senatorial_district_id"`
+	SenatorialDistrictName  pgtype.Text `json:"senatorial_district_name"`
+	FederalConstituencyID   pgtype.Int4 `json:"federal_constituency_id"`
+	FederalConstituencyName pgtype.Text `json:"federal_constituency_name"`
+	StateConstituencyID     pgtype.Int4 `json:"state_constituency_id"`
+	StateConstituencyName   pgtype.Text `json:"state_constituency_name"`
+	StateID                 int32       `json:"state_id"`
+	StateName               string      `json:"state_name"`
+	Status                  pgtype.Text `json:"status"`
+	MongoID                 pgtype.Text `json:"mongo_id"`
+}
+
+func (q *Queries) UpsertWard(ctx context.Context, arg UpsertWardParams) (Ward, error) {
+	row := q.db.QueryRow(ctx, upsertWard,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.LgaID,
+		arg.LgaName,
+		arg.SenatorialDistrictID,
+		arg.SenatorialDistrictName,
+		arg.FederalConstituencyID,
+		arg.FederalConstituencyName,
+		arg.StateConstituencyID,
+		arg.StateConstituencyName,
+		arg.StateID,
+		arg.StateName,
+		arg.Status,
+		arg.MongoID,
+	)
+	var i Ward
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.LgaID,
+		&i.LgaName,
+		&i.SenatorialDistrictID,
+		&i.SenatorialDistrictName,
+		&i.FederalConstituencyID,
+		&i.FederalConstituencyName,
+		&i.StateConstituencyID,
+		&i.StateConstituencyName,
+		&i.StateID,
+		&i.StateName,
+		&i.MongoID,
 		&i.Status,
 		&i.PollingUnitsCount,
 	)

@@ -74,10 +74,10 @@ export const getStateById = createServerFn({ method: "GET" })
   });
 
 export const getStates = createServerFn()
-  .inputValidator((data: { countryId: number; limit?: number; cursor?: string | number }) => data)
-  .handler(async ({ data: { countryId, limit, cursor } }) => {
+  .inputValidator((data: { countryId: number; limit?: number; cursor?: string | number; search?: string }) => data)
+  .handler(async ({ data: { countryId, limit, cursor, search } }) => {
     try {
-      return await apiFetchJson(API_URL.getStates(countryId, limit, cursor));
+      return await apiFetchJson(API_URL.getStates(countryId, limit, cursor, search));
     } catch (error: any) {
       return { status: "failed", error: error?.message || "Failed to fetch states from API, Maybe the backend server is currently down" };
     }
@@ -93,4 +93,28 @@ export const recalculateBodies = createServerFn({ method: "POST" })
       return { success: false, message: error?.message || "Failed to recalculate bodies" };
     }
   });
+
+export const syncElectoralUnits = createServerFn({ method: "POST" })
+  .handler(async () => {
+    try {
+      return await apiFetchJson(API_URL.syncElectoralUnits, {
+        method: "POST",
+      });
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to sync electoral units" };
+    }
+  });
+
+export const syncElectoralUnitsStateFlow = createServerFn({ method: "POST" })
+  .handler(async () => {
+    try {
+      return await apiFetchJson(API_URL.syncElectoralUnitsStateFlow, {
+        method: "POST",
+      });
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to sync electoral units (State Flow)" };
+    }
+  });
+
+
 

@@ -7,13 +7,14 @@ import (
 	"free9ja/api/internal/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 )
 type SenatorialDistrictsService interface {
-	CreateSenatorialDistrict(ctx context.Context, name string, description string, coalitionCenter string, stateID int32, stateName string) (queries.SenatorialDistrict, error)
+	CreateSenatorialDistrict(ctx context.Context, name string, code string, description string, coalitionCenter string, stateID int32, stateName string) (queries.SenatorialDistrict, error)
 	GetSenatorialDistrictByID(ctx context.Context, id int32) (queries.SenatorialDistrict, error)
-	UpdateSenatorialDistrict(ctx context.Context, id int32, name string, description string, coalitionCenter string, stateID int32, stateName string) (queries.SenatorialDistrict, error)
+	UpdateSenatorialDistrict(ctx context.Context, id int32, name string, code string, description string, coalitionCenter string, stateID int32, stateName string) (queries.SenatorialDistrict, error)
 	DeleteSenatorialDistrict(ctx context.Context, id int32) error
 	GetSenatorialDistricts(ctx context.Context, stateID int32) ([]queries.SenatorialDistrict, error)
 }
@@ -33,17 +34,19 @@ func NewHandler(sdService SenatorialDistrictsService, q *queries.Queries, utils 
 }
 
 type CreateSenatorialDistrictRequest struct {
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	CoalitionCenter string `json:"coalition_center"`
-	StateID         int32  `json:"state_id"`
+	Name            string  `json:"name"`
+	Code            *string `json:"code"`
+	Description     string  `json:"description"`
+	CoalitionCenter string  `json:"coalition_center"`
+	StateID         int32   `json:"state_id"`
 }
 
 type UpdateSenatorialDistrictRequest struct {
-	Name            string `json:"name"`
-	Description     string `json:"description"`
-	CoalitionCenter string `json:"coalition_center"`
-	StateID         int32  `json:"state_id"`
+	Name            string  `json:"name"`
+	Code            *string `json:"code"`
+	Description     string  `json:"description"`
+	CoalitionCenter string  `json:"coalition_center"`
+	StateID         int32   `json:"state_id"`
 }
 
 // CreateSenatorialDistrict godoc
@@ -81,7 +84,12 @@ func (h *Handler) CreateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	sd, err := h.sdService.CreateSenatorialDistrict(r.Context(), req.Name, req.Description, req.CoalitionCenter, req.StateID, state.Name)
+	codeStr := ""
+	if req.Code != nil {
+		codeStr = *req.Code
+	}
+
+	sd, err := h.sdService.CreateSenatorialDistrict(r.Context(), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create senatorial district: "+err.Error())
 		return
@@ -174,7 +182,12 @@ func (h *Handler) UpdateSenatorialDistrict(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	updatedSD, err := h.sdService.UpdateSenatorialDistrict(r.Context(), int32(id), req.Name, req.Description, req.CoalitionCenter, req.StateID, state.Name)
+	codeStr := ""
+	if req.Code != nil {
+		codeStr = *req.Code
+	}
+
+	updatedSD, err := h.sdService.UpdateSenatorialDistrict(r.Context(), int32(id), req.Name, codeStr, req.Description, req.CoalitionCenter, req.StateID, state.Name)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update senatorial district: "+err.Error())
 		return
@@ -300,6 +313,26 @@ func (h *Handler) GetSenatorialDistricts(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch senatorial districts: "+err.Error())
 		return
+	}
+
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	if search != "" {
+		searchLower := strings.ToLower(search)
+		var filtered []queries.SenatorialDistrict
+		for _, d := range districts {
+			codeVal := ""
+			if d.Code.Valid {
+				codeVal = d.Code.String
+			}
+			if strings.Contains(strings.ToLower(d.Name), searchLower) ||
+				strings.Contains(strings.ToLower(codeVal), searchLower) ||
+				strings.Contains(strings.ToLower(d.Description.String), searchLower) ||
+				strings.Contains(strings.ToLower(d.CoalitionCenter.String), searchLower) ||
+				strings.Contains(strings.ToLower(d.StateName), searchLower) {
+				filtered = append(filtered, d)
+			}
+		}
+		districts = filtered
 	}
 
 	startIndex := 0

@@ -114,7 +114,7 @@ WHERE e.election_group_id = $1
     (e.scope = 'senatorial-district' AND e.senatorial_district_id = l.senatorial_district_id) OR
     (e.scope = 'federal-constituency' AND e.federal_constituency_id = l.federal_constituency_id) OR
     (e.scope = 'lga' AND e.lga_id = pu.lga_id) OR
-    (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_assembly_constituency_id) OR
+    (e.scope = 'state-constituency' AND e.state_constituency_id = w.state_constituency_id) OR
     (e.scope = 'ward' AND e.ward_id = pu.ward_id)
   )
 ORDER BY e.rank ASC, e.id ASC

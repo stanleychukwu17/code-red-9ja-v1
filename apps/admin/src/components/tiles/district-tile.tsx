@@ -9,6 +9,7 @@ import { SenatorialDistrictDropdown } from "../dropdowns/SenatorialDistrictDropd
 export type DistrictType = {
   id: number;
   name: string;
+  code?: string;
   description: string;
   coalition_center: string;
   state_id: number;

@@ -14,7 +14,12 @@ export const getElections = createServerFn({ method: "GET" })
   .inputValidator(
     (
       data:
-        | { limit?: number; cursor?: string | number; partyShortName?: string }
+        | {
+            limit?: number;
+            cursor?: string | number;
+            partyShortName?: string;
+            election_group_id?: number;
+          }
         | undefined,
     ) => data,
   )
@@ -33,7 +38,7 @@ export const getElections = createServerFn({ method: "GET" })
         try {
           const user = JSON.parse(userDetailsCookie);
           resolvedPartyShortName = user?.party?.short_name || "";
-        } catch (e) { }
+        } catch (e) {}
       }
 
       const headers: Record<string, string> = {
@@ -45,8 +50,14 @@ export const getElections = createServerFn({ method: "GET" })
           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
+      const params = new URLSearchParams();
+      if (limit) params.append("limit", String(limit));
+      if (cursor) params.append("cursor", String(cursor));
+      if (data?.election_group_id)
+        params.append("election_group_id", String(data.election_group_id));
+
       const response = await apiFetch(
-        `${API_URL.elections}?limit=${limit}&cursor=${cursor}`,
+        `${API_URL.elections}?${params.toString()}`,
       );
       const resData = await response.json();
 
@@ -103,9 +114,7 @@ export const getElections = createServerFn({ method: "GET" })
   });
 
 export const fieldPartyCandidate = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: { electionId: number; candidateId: number }) => data,
-  )
+  .inputValidator((data: { electionId: number; candidateId: number }) => data)
   .handler(async ({ data: { electionId, candidateId } }) => {
     try {
       const { getCookie } = await import("@tanstack/react-start/server");
@@ -132,7 +141,10 @@ export const fieldPartyCandidate = createServerFn({ method: "POST" })
       const resData = await response.json();
       return resData;
     } catch (error) {
-      return { success: false, message: "Failed to field candidate: " + (error as Error).message };
+      return {
+        success: false,
+        message: "Failed to field candidate: " + (error as Error).message,
+      };
     }
   });
 
@@ -231,7 +243,8 @@ export const getPollingUnitUpdates = createServerFn({ method: "GET" })
       if (data.hasMedia !== undefined)
         params.append("has_media", data.hasMedia.toString());
       if (data.limit) params.append("limit", data.limit.toString());
-      if (data.cursor !== undefined) params.append("cursor", data.cursor.toString());
+      if (data.cursor !== undefined)
+        params.append("cursor", data.cursor.toString());
 
       const response = await apiFetch(
         `${API_URL.pollingUnitUpdates}?${params.toString()}`,
@@ -305,7 +318,8 @@ export const getPollingUnitFinalResults = createServerFn({ method: "GET" })
       if (data.hasMedia !== undefined)
         params.append("has_media", data.hasMedia.toString());
       if (data.limit) params.append("limit", data.limit.toString());
-      if (data.cursor !== undefined) params.append("cursor", data.cursor.toString());
+      if (data.cursor !== undefined)
+        params.append("cursor", data.cursor.toString());
 
       const response = await apiFetch(
         `${API_URL.pollingUnitFinalResults}?${params.toString()}`,
@@ -363,7 +377,7 @@ export const getElectionStats = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
       electionGroupId: number;
-      partyId?: number;
+      partyId: number;
       stateId?: number;
       senatorialDistrictId?: number;
       federalConstituencyId?: number;
@@ -389,19 +403,46 @@ export const getElectionStats = createServerFn({ method: "GET" })
 
       let url = "";
       if (data.wardId) {
-        url = API_URL.electionStats.singleWardStats(data.electionGroupId, data.wardId, data.partyId);
+        url = API_URL.electionStats.singleWardStats(
+          data.electionGroupId,
+          data.wardId,
+          data.partyId,
+        );
       } else if (data.stateAssemblyConstituencyId) {
-        url = API_URL.electionStats.singleStateConstituencyStats(data.electionGroupId, data.stateAssemblyConstituencyId, data.partyId);
+        url = API_URL.electionStats.singleStateConstituencyStats(
+          data.electionGroupId,
+          data.stateAssemblyConstituencyId,
+          data.partyId,
+        );
       } else if (data.lgaId) {
-        url = API_URL.electionStats.singleLGAStats(data.electionGroupId, data.lgaId, data.partyId);
+        url = API_URL.electionStats.singleLGAStats(
+          data.electionGroupId,
+          data.lgaId,
+          data.partyId,
+        );
       } else if (data.federalConstituencyId) {
-        url = API_URL.electionStats.singleFederalConstituencyStats(data.electionGroupId, data.federalConstituencyId, data.partyId);
+        url = API_URL.electionStats.singleFederalConstituencyStats(
+          data.electionGroupId,
+          data.federalConstituencyId,
+          data.partyId,
+        );
       } else if (data.senatorialDistrictId) {
-        url = API_URL.electionStats.singleSenatorialDistrictStats(data.electionGroupId, data.senatorialDistrictId, data.partyId);
+        url = API_URL.electionStats.singleSenatorialDistrictStats(
+          data.electionGroupId,
+          data.senatorialDistrictId,
+          data.partyId,
+        );
       } else if (data.stateId) {
-        url = API_URL.electionStats.singleStateStats(data.electionGroupId, data.stateId, data.partyId);
+        url = API_URL.electionStats.singleStateStats(
+          data.electionGroupId,
+          data.stateId,
+          data.partyId,
+        );
       } else {
-        url = API_URL.electionStats.singleGlobalStats(data.electionGroupId, data.partyId);
+        url = API_URL.electionStats.singleGlobalStats(
+          data.electionGroupId,
+          data.partyId,
+        );
       }
 
       const response = await apiFetch(url, { headers });

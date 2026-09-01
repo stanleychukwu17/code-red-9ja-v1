@@ -1,4 +1,4 @@
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { useQuery } from "@tanstack/react-query";
 import { getSingleWardStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
@@ -40,7 +40,7 @@ export function WardElectionSupervisorPage() {
     selectedElectionGroup,
     selectedElection,
     selectedSupervisorAssignment,
-  } = useAuth();
+  } = useAppContext();
 
   const currentAssignment = selectedSupervisorAssignment?.data;
 
@@ -250,10 +250,6 @@ export function WardElectionSupervisorPage() {
       </CarouselDotContent>
 
       <HomeBody>
-        {daysLeft !== 0 && <ApplicationsCard />}
-        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-        {daysLeft !== 0 && <PracticeTestCard />}
-
         {daysLeft === 0 && !currentAssignment?.arrived_at && (
           <SupervisorStartDutyCard
             onReadyClick={() => {
@@ -266,8 +262,9 @@ export function WardElectionSupervisorPage() {
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
-        {/* <UploadResultCard />
-        <RequestPayoutCard /> */}
+        {daysLeft !== 0 && <ApplicationsCard />}
+        <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
+        {daysLeft !== 0 && <PracticeTestCard />}
 
         <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

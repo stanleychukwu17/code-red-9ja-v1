@@ -21,7 +21,7 @@ import { TinyError } from "@repo/ui/components/custom/TinyError";
 export interface Ward {
   id: number;
   name: string;
-  abbreviation: string;
+  code: string;
   lga_id: number;
   lga_name: string;
   state_id: number;
@@ -47,7 +47,7 @@ export function WardFormDialog({
   const form = useForm({
     defaultValues: {
       name: "",
-      abbreviation: "",
+      code: "",
       stateId: undefined as number | undefined,
       lgaId: undefined as number | undefined,
     },
@@ -67,7 +67,7 @@ export function WardFormDialog({
     if (open) {
       if (mode === "update" && ward) {
         form.setFieldValue("name", ward.name || "");
-        form.setFieldValue("abbreviation", ward.abbreviation || "");
+        form.setFieldValue("code", ward.code || "");
         form.setFieldValue("stateId", ward.state_id);
         // We defer lgaId setup slightly so stateId change reset doesn't overwrite it
         setTimeout(() => {
@@ -75,7 +75,7 @@ export function WardFormDialog({
         }, 0);
       } else {
         form.setFieldValue("name", "");
-        form.setFieldValue("abbreviation", "");
+        form.setFieldValue("code", "");
         form.setFieldValue("stateId", undefined);
         form.setFieldValue("lgaId", undefined);
       }
@@ -86,7 +86,7 @@ export function WardFormDialog({
   const saveMutation = useMutation({
     mutationFn: async (values: {
       name: string;
-      abbreviation: string;
+      code: string;
       stateId: number | undefined;
       lgaId: number | undefined;
     }) => {
@@ -99,7 +99,7 @@ export function WardFormDialog({
 
       const payload = {
         name: values.name.trim(),
-        abbreviation: values.abbreviation.trim().toUpperCase(),
+        code: values.code.trim().toUpperCase(),
         state_id: values.stateId,
         lga_id: values.lgaId,
       };
@@ -138,7 +138,7 @@ export function WardFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl bg-white overflow-visible">
+      <DialogContent className="max-w-[580px] p-0 rounded-2xl border-none shadow-2xl   overflow-visible">
         <DialogHeader
           title={mode === "update" ? "Update Ward" : "Create Ward"}
         />
@@ -175,19 +175,19 @@ export function WardFormDialog({
               />
             </div>
 
-            {/* Abbreviation */}
+            {/* Code */}
             <div className="w-full">
               <form.Field
-                name="abbreviation"
+                name="code"
                 validators={{
                   onChange: ({ value }) =>
-                    !value ? "Abbreviation is required" : undefined,
+                    !value ? "Code is required" : undefined,
                 }}
                 children={(field) => (
                   <div className="w-full">
                     <FancyInput
                       type="text"
-                      placeholder="Abbreviation (e.g., WD01)"
+                      placeholder="Code (e.g., 01)"
                       errorMsg={field.state.meta.errors?.join(", ")}
                       value={field.state.value}
                       onChange={(e) => field.handleChange(e.target.value)}

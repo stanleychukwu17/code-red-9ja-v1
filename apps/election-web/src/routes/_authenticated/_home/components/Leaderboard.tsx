@@ -6,8 +6,9 @@ import {
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 
-import { useAuth } from "#/hooks/useAuth";
+import { useAppContext } from "#/hooks/useAppContext";
 import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
+import { formatVotes } from "@repo/ui/lib/number";
 import { Loader2 } from "lucide-react";
 
 export function CandidatesLeaderboard({
@@ -30,7 +31,7 @@ export function CandidatesLeaderboard({
     party,
     selectedSupervisorAssignment,
     isLock,
-  } = useAuth();
+  } = useAppContext();
 
   const interceptClick = (e: React.MouseEvent, action?: () => void) => {
     if (onPracticeClick) {
@@ -110,7 +111,7 @@ export function CandidatesLeaderboard({
                     partyShortName
               }
               regionsWinningCount={regionsWinningCountStr}
-              votesCount={`${votes.toLocaleString()} votes`}
+              votesCount={formatVotes(votes)}
             />
           );
         })
