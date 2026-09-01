@@ -13,6 +13,7 @@ import (
 	"free9ja/api/internal/db/queries"
 	inecgrabber "free9ja/api/internal/service/inec_grabber"
 	r2service "free9ja/api/internal/service/r2"
+	"free9ja/api/internal/service/realtime"
 )
 
 // Task names
@@ -25,6 +26,7 @@ type TaskProcessor interface {
 	Start() error
 	Shutdown()
 	ProcessTaskCalculateFinalResult(ctx context.Context, task *asynq.Task) error
+	ProcessTaskExtractPUResultAI(ctx context.Context, task *asynq.Task) error
 	ProcessTaskAggregateLiveVotes(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshPollingUnitStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskSeedElectionGroupStats(ctx context.Context, task *asynq.Task) error
@@ -33,6 +35,14 @@ type TaskProcessor interface {
 	ProcessTaskRefreshStateConstituencyStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshStateStats(ctx context.Context, task *asynq.Task) error
 	ProcessTaskRefreshGlobalStats(ctx context.Context, task *asynq.Task) error
+	// Scoped candidate rollup processors
+	ProcessTaskRollupSingleWard(ctx context.Context, task *asynq.Task) error
+	ProcessTaskRollupSingleStateConstituency(ctx context.Context, task *asynq.Task) error
+	ProcessTaskRollupSingleLGA(ctx context.Context, task *asynq.Task) error
+	ProcessTaskRollupSingleFederalConstituency(ctx context.Context, task *asynq.Task) error
+	ProcessTaskRollupSingleSenatorialDistrict(ctx context.Context, task *asynq.Task) error
+	ProcessTaskRollupSingleState(ctx context.Context, task *asynq.Task) error
+	ProcessTaskRollupSingleElection(ctx context.Context, task *asynq.Task) error
 	ProcessDailyMarketingCampaignDeductions()
 }
 
@@ -45,9 +55,14 @@ type RedisTaskProcessor struct {
 	taskDistributor TaskDistributor
 	cfg             *config.Config
 	r2Svc           *r2service.R2Service
+	broadcaster     realtime.Broadcaster
 }
 
-func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config, r2Svc *r2service.R2Service) TaskProcessor {
+func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, pool *pgxpool.Pool, rdb *redis.Client, distributor TaskDistributor, cfg *config.Config, r2Svc *r2service.R2Service, broadcaster realtime.Broadcaster) TaskProcessor {
+	if broadcaster == nil {
+		broadcaster = realtime.NewNoOpBroadcaster()
+	}
+
 	server := asynq.NewServer(
 		redisOpt,
 		asynq.Config{
@@ -67,12 +82,14 @@ func NewRedisTaskProcessor(redisOpt asynq.RedisClientOpt, q *queries.Queries, po
 		taskDistributor: distributor,
 		cfg:             cfg,
 		r2Svc:           r2Svc,
+		broadcaster:     broadcaster,
 	}
 }
 
 func (processor *RedisTaskProcessor) Start() error {
 	mux := asynq.NewServeMux()
 	mux.HandleFunc(TaskCalculateFinalResult, processor.ProcessTaskCalculateFinalResult)
+	mux.HandleFunc(TaskExtractPUResultAI, processor.ProcessTaskExtractPUResultAI)
 	mux.HandleFunc(TaskAggregateLiveVotes, processor.ProcessTaskAggregateLiveVotes)
 	mux.HandleFunc(TaskSeedElectionGroupStats, processor.ProcessTaskSeedElectionGroupStats)
 	mux.HandleFunc(TaskRefreshPollingUnitStats, processor.ProcessTaskRefreshPollingUnitStats)
@@ -84,24 +101,26 @@ func (processor *RedisTaskProcessor) Start() error {
 	mux.HandleFunc(TaskRefreshStateStats, processor.ProcessTaskRefreshStateStats)
 	mux.HandleFunc(TaskRefreshGlobalStats, processor.ProcessTaskRefreshGlobalStats)
 
-	// Register cron rollup jobs with staggered schedules to spread DB load.
-	// Each scope's zenith rollup also updates election_candidates.votes_count.
-	// In development, set STATS_REFRESH_ENABLED=false in your .env to skip these
-	// expensive full-table crons and rely only on event-driven updates.
+	// Scoped candidate rollup handlers (event-driven, bottom-up cascading).
+	mux.HandleFunc(TaskRollupSingleWard, processor.ProcessTaskRollupSingleWard)
+	mux.HandleFunc(TaskRollupSingleStateConstituency, processor.ProcessTaskRollupSingleStateConstituency)
+	mux.HandleFunc(TaskRollupSingleLGA, processor.ProcessTaskRollupSingleLGA)
+	mux.HandleFunc(TaskRollupSingleFederalConstituency, processor.ProcessTaskRollupSingleFederalConstituency)
+	mux.HandleFunc(TaskRollupSingleSenatorialDistrict, processor.ProcessTaskRollupSingleSenatorialDistrict)
+	mux.HandleFunc(TaskRollupSingleState, processor.ProcessTaskRollupSingleState)
+	mux.HandleFunc(TaskRollupSingleElection, processor.ProcessTaskRollupSingleElection)
+
+	// Register cron rollup safety-net jobs.
+	// Primary live updates happen via event-driven cascades; these crons act as safety-net reconciliation.
+	// In development, set STATS_REFRESH_ENABLED=false in your .env to skip scheduled safety-net crons.
 	statsEnabled := config.GetEnv("STATS_REFRESH_ENABLED", "true") == "true"
 	if !statsEnabled {
 		slog.Warn("STATS_REFRESH_ENABLED=false — skipping all stats cron registration (dev mode)")
 	} else {
-		processor.cron.AddFunc("*/15 * * * *", processor.ProcessRollupWard)                // ward (zenith for ward-scoped elections)
-		processor.cron.AddFunc("*/15 * * * *", processor.ProcessRollupStateConstituency)   // state-constituency zenith
-		processor.cron.AddFunc("*/15 * * * *", processor.ProcessRollupLGA)                 // lga (zenith for lga-scoped elections)
-		processor.cron.AddFunc("*/15 * * * *", processor.ProcessRollupSenatorialDistrict)  // senatorial-district zenith
-		processor.cron.AddFunc("*/15 * * * *", processor.ProcessRollupFederalConstituency) // federal-constituency zenith
-		processor.cron.AddFunc("*/15 * * * *", processor.ProcessRollupState)               // state (zenith for state-scoped elections)
-		processor.cron.AddFunc("*/15 * * * *", processor.ProcessRollupElection)            // nationwide (zenith for presidential)
+		// Single sequential rollup pipeline (runs every 15 minutes) bottom-up from Ward to Nationwide
+		// processor.cron.AddFunc("*/15 * * * *", processor.ProcessFullElectionRollup)
 
-		// Geographic Stats: event-driven cascade is the primary mechanism.
-		// This cron is a 30-minute safety-net fallback for any missed cascades.
+		// Geographic Stats safety-net fallback (runs every 10 minutes)
 		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRefreshAllElectionStats)
 	}
 

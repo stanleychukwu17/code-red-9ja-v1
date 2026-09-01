@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -21,20 +22,15 @@ func sqlVal(val interface{}) string {
 	}
 	switch v := val.(type) {
 	case string:
-		if v == "" {
-			return "NULL"
-		}
 		return fmt.Sprintf("'%s'", escapeSQL(v))
 	case []byte:
-		str := string(v)
-		if str == "" {
-			return "NULL"
-		}
-		return fmt.Sprintf("'%s'", escapeSQL(str))
+		return fmt.Sprintf("'%s'", escapeSQL(string(v)))
 	case int, int8, int16, int32, int64:
 		return fmt.Sprintf("%d", v)
-	case float32, float64:
-		return fmt.Sprintf("%f", v)
+	case float32:
+		return strconv.FormatFloat(float64(v), 'f', -1, 32)
+	case float64:
+		return strconv.FormatFloat(v, 'f', -1, 64)
 	case bool:
 		if v {
 			return "TRUE"
@@ -83,15 +79,24 @@ func updateMigrationFile(filePath, seedSQL string) error {
 		return fmt.Errorf("failed to read %s: %w", filePath, err)
 	}
 
-	strContent := string(content)
+	// Normalize CRLF to LF
+	strContent := strings.ReplaceAll(string(content), "\r\n", "\n")
 
 	// Clean up any previously generated seed section
-	startMarker := "\n-- SEED DATA START\n"
-	endMarker := "\n-- SEED DATA END\n\n"
+	startMarker := "-- SEED DATA START"
+	endMarker := "-- SEED DATA END"
 
 	if startIdx := strings.Index(strContent, startMarker); startIdx != -1 {
-		if endIdx := strings.Index(strContent, endMarker); endIdx != -1 {
-			strContent = strContent[:startIdx] + strContent[endIdx+len(endMarker):]
+		lineStart := strings.LastIndex(strContent[:startIdx], "\n")
+		if lineStart == -1 {
+			lineStart = 0
+		}
+		if endIdx := strings.Index(strContent[startIdx:], endMarker); endIdx != -1 {
+			actualEndIdx := startIdx + endIdx + len(endMarker)
+			for actualEndIdx < len(strContent) && (strContent[actualEndIdx] == '\n' || strContent[actualEndIdx] == '\r' || strContent[actualEndIdx] == ' ' || strContent[actualEndIdx] == ';') {
+				actualEndIdx++
+			}
+			strContent = strings.TrimRight(strContent[:lineStart], "\n") + "\n\n" + strings.TrimLeft(strContent[actualEndIdx:], "\n")
 		}
 	}
 
@@ -106,8 +111,8 @@ func updateMigrationFile(filePath, seedSQL string) error {
 		return nil
 	}
 
-	formattedSeed := fmt.Sprintf("%s%s%s", startMarker, seedSQL, endMarker)
-	newContent := strContent[:downIdx] + formattedSeed + strContent[downIdx:]
+	formattedSeed := fmt.Sprintf("\n\n-- SEED DATA START\n%s\n-- SEED DATA END\n\n", seedSQL)
+	newContent := strings.TrimRight(strContent[:downIdx], "\n") + formattedSeed + strContent[downIdx:]
 
 	if err := os.WriteFile(filePath, []byte(newContent), 0644); err != nil {
 		return fmt.Errorf("failed to write %s: %w", filePath, err)

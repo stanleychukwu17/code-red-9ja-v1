@@ -19,8 +19,6 @@ CREATE INDEX idx_senatorial_districts_name ON senatorial_districts (name);
 CREATE INDEX idx_senatorial_districts_code ON senatorial_districts (code);
 CREATE INDEX idx_senatorial_districts_state_id ON senatorial_districts (state_id);
 
-
-
 -- SEED DATA START
 INSERT INTO senatorial_districts (id, name, code, description, coalition_center, state_id, state_name, status) VALUES
 (1, 'NIGER EAST', 'SD/076/NG ', NULL, NULL, 27, 'NIGER', 'active'),

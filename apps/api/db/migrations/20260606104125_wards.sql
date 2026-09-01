@@ -26,8 +26,6 @@ CREATE INDEX idx_wards_federal_constituency_id ON wards (federal_constituency_id
 CREATE INDEX idx_wards_state_constituency_id ON wards (state_constituency_id);
 CREATE INDEX idx_wards_state_id ON wards (state_id);
 
-
-
 -- SEED DATA START
 INSERT INTO wards (id, name, code, lga_id, lga_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, state_constituency_id, state_constituency_name, state_id, state_name, status, mongo_id) VALUES
 (17526, 'EZIAMA', '01', 3103, 'ABA NORTH', 111, 'abia south', 2, 'aba north/aba south', 4, 'ABA NORTH', 1, 'ABIA', 'active', '5f0f3a368f77bb3acad08d99'),

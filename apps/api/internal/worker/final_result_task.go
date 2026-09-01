@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"free9ja/api/internal/db/queries"
+	"free9ja/api/internal/service/realtime"
 
 	"github.com/hibiken/asynq"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -85,6 +86,12 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 			if g.Count > maxCount {
 				winningGroup = g
 				maxCount = g.Count
+			} else if g.Count == maxCount && winningGroup != nil {
+				// Deterministic tie-breaking: prefer earlier submission ID or higher total votes
+				if g.BaseResult.VotesCast > winningGroup.BaseResult.VotesCast ||
+					(g.BaseResult.VotesCast == winningGroup.BaseResult.VotesCast && g.BaseResult.ID < winningGroup.BaseResult.ID) {
+					winningGroup = g
+				}
 			}
 		} else {
 			g := &groupData{
@@ -96,6 +103,12 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 			if maxCount == 0 {
 				winningGroup = g
 				maxCount = 1
+			} else if maxCount == 1 && winningGroup != nil {
+				// Tie at count = 1: break deterministically
+				if g.BaseResult.VotesCast > winningGroup.BaseResult.VotesCast ||
+					(g.BaseResult.VotesCast == winningGroup.BaseResult.VotesCast && g.BaseResult.ID < winningGroup.BaseResult.ID) {
+					winningGroup = g
+				}
 			}
 		}
 	}
@@ -121,7 +134,6 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		ValidVotes:               r.ValidVotes,
 		RejectedVotes:            r.RejectedVotes,
 		CandidateResults:         r.CandidateResults,
-		CandidateResultsLive:     r.CandidateResults, // mirrors final results until live tracking diverges
 		MatchingSubmissionsCount: int32(winningGroup.Count),
 		TotalSubmissionsCount:    int32(len(results)),
 	})
@@ -134,6 +146,46 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		"polling_unit_id", payload.PollingUnitID,
 		"matching", winningGroup.Count,
 		"total", len(results))
+
+	// Broadcast real-time PU result event
+	if processor.broadcaster != nil {
+		_ = processor.broadcaster.BroadcastPUResultUploaded(ctx, realtime.PUResultUploadedEvent{
+			ElectionID:    r.ElectionID,
+			PollingUnitID: r.PollingUnitID,
+			WardID:        r.WardID.Int32,
+			LGAID:         r.LgaID.Int32,
+			StateID:       r.StateID.Int16,
+			ValidVotes:    r.ValidVotes,
+			Timestamp:     time.Now().UTC(),
+		})
+	}
+
+	// Trigger the cascading stats & geo refresh chain starting from this Polling Unit
+	if processor.taskDistributor != nil {
+		_ = processor.taskDistributor.DistributeTaskRefreshPollingUnitStats(ctx, &RefreshPollingUnitStatsPayload{
+			Params: queries.RefreshSingleElectionGroupPollingUnitStatsParams{
+				ElectionGroupID: r.ElectionGroupID,
+				PollingUnitID:   r.PollingUnitID,
+			},
+		})
+
+		// Trigger the cascading candidate rollup chain starting from this Ward and State Constituency
+		_ = processor.taskDistributor.DistributeTaskRollupSingleWard(ctx, &RollupSingleWardPayload{
+			ElectionID:            r.ElectionID,
+			WardID:                r.WardID.Int32,
+			LGAID:                 r.LgaID.Int32,
+			StateID:               r.StateID.Int16,
+			StateConstituencyID:   r.StateConstituencyID.Int32,
+			FederalConstituencyID: r.FederalConstituencyID.Int32,
+			SenatorialDistrictID:  r.SenatorialDistrictID.Int32,
+		})
+		if r.StateConstituencyID.Valid && r.StateConstituencyID.Int32 > 0 {
+			_ = processor.taskDistributor.DistributeTaskRollupSingleStateConstituency(ctx, &RollupSingleStateConstituencyPayload{
+				ElectionID:          r.ElectionID,
+				StateConstituencyID: r.StateConstituencyID.Int32,
+			})
+		}
+	}
 
 	return nil
 }
@@ -150,6 +202,16 @@ type TaskDistributor interface {
 	DistributeTaskRefreshStateConstituencyStats(ctx context.Context, payload *RefreshStateConstituencyStatsPayload, opts ...asynq.Option) error
 	DistributeTaskRefreshStateStats(ctx context.Context, payload *RefreshStateStatsPayload, opts ...asynq.Option) error
 	DistributeTaskRefreshGlobalStats(ctx context.Context, payload *RefreshGlobalStatsPayload, opts ...asynq.Option) error
+	// PU result AI extraction
+	DistributeTaskExtractPUResultAI(ctx context.Context, payload *ExtractPUResultAIPayload, opts ...asynq.Option) error
+	// Scoped candidate rollup chain
+	DistributeTaskRollupSingleWard(ctx context.Context, payload *RollupSingleWardPayload, opts ...asynq.Option) error
+	DistributeTaskRollupSingleStateConstituency(ctx context.Context, payload *RollupSingleStateConstituencyPayload, opts ...asynq.Option) error
+	DistributeTaskRollupSingleLGA(ctx context.Context, payload *RollupSingleLGAPayload, opts ...asynq.Option) error
+	DistributeTaskRollupSingleFederalConstituency(ctx context.Context, payload *RollupSingleFederalConstituencyPayload, opts ...asynq.Option) error
+	DistributeTaskRollupSingleSenatorialDistrict(ctx context.Context, payload *RollupSingleSenatorialDistrictPayload, opts ...asynq.Option) error
+	DistributeTaskRollupSingleState(ctx context.Context, payload *RollupSingleStatePayload, opts ...asynq.Option) error
+	DistributeTaskRollupSingleElection(ctx context.Context, payload *RollupSingleElectionPayload, opts ...asynq.Option) error
 }
 
 type RedisTaskDistributor struct {

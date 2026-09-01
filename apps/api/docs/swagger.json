@@ -18,6 +18,29 @@
     "host": "localhost:4100",
     "basePath": "/api/v1",
     "paths": {
+        "/": {
+            "get": {
+                "description": "get the API root message",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "root"
+                ],
+                "summary": "API Root",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/admin/agent-marketing-campaigns": {
             "get": {
                 "security": [
@@ -423,7 +446,8 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/queries.InecResultGrabber"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -1291,6 +1315,435 @@
                 }
             }
         },
+        "/agent-earnings": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "List agent earnings",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by user ID",
+                        "name": "user_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by election group",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by party",
+                        "name": "party_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (pending|approved|paid|disputed)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 50)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor for pagination",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/allocations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get agent task percentage allocations and potential payouts in Kobo",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role Type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)",
+                        "name": "role_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/assignment/{assignment_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get earnings for a specific assignment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/calculate/{assignment_id}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Computes and upserts the earnings record for a given assignment. Can be called repeatedly to refresh.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Calculate agent earnings for an assignment",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/estimate-payout": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Estimate potential payout in Kobo for a given task type without requiring an assignment ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)",
+                        "name": "task_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)",
+                        "name": "role",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/potential-payout": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get potential payout in Kobo for a given task type",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Assignment ID",
+                        "name": "assignment_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)",
+                        "name": "task_type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Get a single agent earnings record",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Earnings ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/{id}/approve": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Approve earnings for payout (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Earnings ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/agent-earnings/{id}/mark-paid": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "AgentEarnings"
+                ],
+                "summary": "Mark approved earnings as paid (admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Earnings ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/agent-marketing-plans": {
             "get": {
                 "security": [
@@ -1321,6 +1774,51 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/supervisor-assignments": {
+            "get": {
+                "description": "Get supervisor assignments for a user for a specific election group",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "SupervisorAssignments"
+                ],
+                "summary": "Get Supervisor Assignments",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.SuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/utils.ErrorResponse"
                         }
                     }
                 }
@@ -2742,6 +3240,653 @@
                 }
             }
         },
+        "/election-groups/{id}/stats/federal-constituencies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the federal constituency level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List federal constituency stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID filter",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/federal-constituencies/{fc_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single federal constituency unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party federal constituency stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Federal Constituency ID",
+                        "name": "fc_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/lgas": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the LGA level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List LGA stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID filter",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single LGA unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party LGA stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID",
+                        "name": "lga_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for an election group and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get global party stats for a single election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/polling-units": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the polling unit level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List polling unit stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID filter",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID filter",
+                        "name": "ward_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/senatorial-districts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the senatorial district level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List senatorial district stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/senatorial-districts/{sd_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single senatorial district unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party senatorial district stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID",
+                        "name": "sd_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/state-constituencies": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the state constituency level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List state constituency stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/state-constituencies/{sc_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single state constituency unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party state constituency stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State Constituency ID",
+                        "name": "sc_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/states": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the state level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List state stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/states/{state_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single state unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party state stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "state_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/wards": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics at the ward level",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "List ward stats for an election group",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID filter",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID filter",
+                        "name": "lga_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches pre-aggregated election statistics for a single ward unit and party, extracting party stats from the parties JSONB array.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionStats"
+                ],
+                "summary": "Get party ward stats for a single geographic unit",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election Group ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID",
+                        "name": "ward_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Party ID",
+                        "name": "party_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/election-groups/{id}/vote-status": {
             "get": {
                 "description": "Returns the vote status (voted, did_not_vote, none) and associated data (votes or reason).",
@@ -3075,6 +4220,483 @@
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results": {
+            "get": {
+                "description": "Returns the specific final result for the provided scope parameters.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get scoped final result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID",
+                        "name": "ward_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State Constituency ID",
+                        "name": "state_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Federal Constituency ID",
+                        "name": "federal_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "state_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/federal-constituencies": {
+            "get": {
+                "description": "Returns federal constituencies for a senatorial district with their election_federal_constituency_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get federal constituencies with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Senatorial District ID",
+                        "name": "senatorial_district_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/lgas": {
+            "get": {
+                "description": "Returns LGAs for a federal constituency with their election_lga_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get LGAs with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Federal Constituency ID",
+                        "name": "federal_constituency_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/polling-units": {
+            "get": {
+                "description": "Returns polling units for a ward with their polling_unit_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get polling units with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Ward ID",
+                        "name": "ward_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/senatorial-districts": {
+            "get": {
+                "description": "Returns senatorial districts for a state with their election_senatorial_district_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get senatorial districts with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State ID",
+                        "name": "state_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/states": {
+            "get": {
+                "description": "Returns all Nigerian states with their election_state_final_result for the given election_id.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get states with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/elections/results/wards": {
+            "get": {
+                "description": "Returns wards for a given LGA or state_assembly_constituency with their election_ward_final_result.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ElectionResults"
+                ],
+                "summary": "Get wards with results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "State Assembly Constituency ID",
+                        "name": "state_assembly_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -4128,6 +5750,29 @@
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "get the status of the server",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -6556,6 +8201,592 @@
                 }
             }
         },
+        "/polling-unit-final-results": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches a cursor-paginated list of final polling unit results with details",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "List Polling Unit Final Results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by State ID",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Senatorial District ID",
+                        "name": "senatorial_district_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Federal Constituency ID",
+                        "name": "federal_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by State Constituency ID",
+                        "name": "state_constituency_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Ward ID",
+                        "name": "ward_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by presence of media",
+                        "name": "has_media",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor (ID to paginate from)",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetches a cursor-paginated list of polling unit results with filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "List Polling Unit Results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by Election ID",
+                        "name": "election_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Election Group ID",
+                        "name": "election_group_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Party ID",
+                        "name": "party_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Polling Unit ID",
+                        "name": "polling_unit_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Submitter User ID",
+                        "name": "submitted_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by State ID",
+                        "name": "state_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by LGA ID",
+                        "name": "lga_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Filter by Ward ID",
+                        "name": "ward_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (submitted|ai_verified|confirmed|disputed|nullified)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Filter by INEC upload flag",
+                        "name": "uploaded_by_inec",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Cursor (ID to paginate from)",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submit official election results for a polling unit. Assigned agents include assignment_id; general users leave it null.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Submit Polling Unit Result",
+                "parameters": [
+                    {
+                        "description": "Result Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/polling_unit_results.SubmitResultRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/batch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Submit multiple election results (e.g. Presidential, Senate, House of Reps) for a polling unit in a single request.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Submit Polling Unit Results in Batch",
+                "parameters": [
+                    {
+                        "description": "Batch Result Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/polling_unit_results.SubmitBatchResultRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/final": {
+            "get": {
+                "description": "Fetch the calculated final result for a given polling unit and election",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Get Polling Unit Final Result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "election_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Polling Unit ID",
+                        "name": "polling_unit_id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Fetch a single polling unit result by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Get Polling Unit Result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Result ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/{id}/review": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Platform admin manually confirms or nullifies a polling unit result",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Review a Polling Unit Result (Admin)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Result ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Review Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/polling_unit_results.ReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/polling-unit-results/{id}/vote": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cast an up or down vote on a result. Switches vote if already cast in opposite direction.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Results"
+                ],
+                "summary": "Vote on a Polling Unit Result",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Result ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Vote Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/polling_unit_results.VoteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/polling-unit-updates": {
             "get": {
                 "security": [
@@ -7259,6 +9490,162 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/seed/admins": {
+            "post": {
+                "description": "Batch registers roles for admins from formatted JSON data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seed"
+                ],
+                "summary": "Seed admins and party admins",
+                "parameters": [
+                    {
+                        "description": "List of admins to seed",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/seedservice.SeedAdminsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admins seeded successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to seed admins",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/seed/elections/{id}/simulate-results": {
+            "post": {
+                "description": "Populates mock consensus final results for all eligible polling units of an election and triggers rollups",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seed"
+                ],
+                "summary": "Simulate election polling unit results",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Election ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Simulation options",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/seedservice.SimulateElectionResultsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Results simulated successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to simulate election results",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/seed/users": {
+            "post": {
+                "description": "Batch registers testing users from formatted JSON data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Seed"
+                ],
+                "summary": "Seed testing users",
+                "parameters": [
+                    {
+                        "description": "List of users to seed",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/seedservice.SeedUserRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Users seeded successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to seed users",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -9039,6 +11426,37 @@
                     }
                 }
             }
+        },
+        "/webhooks/monnify": {
+            "post": {
+                "description": "Receives and processes Monnify payment notification events. Verifies the HMAC-SHA512 signature, then credits the appropriate party wallet for SUCCESSFUL_TRANSACTION events.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Webhooks"
+                ],
+                "summary": "Monnify payment webhook",
+                "responses": {
+                    "200": {
+                        "description": "Event processed",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid signature or payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -10623,56 +13041,93 @@
                 }
             }
         },
-        "pgtype.Date": {
+        "polling_unit_results.ReviewRequest": {
             "type": "object",
             "properties": {
-                "infinityModifier": {
-                    "$ref": "#/definitions/pgtype.InfinityModifier"
-                },
-                "time": {
+                "disputed_reason": {
                     "type": "string"
                 },
-                "valid": {
+                "status": {
+                    "description": "\"confirmed\" or \"nullified\"",
+                    "type": "string"
+                }
+            }
+        },
+        "polling_unit_results.SingleElectionSubmissionRequest": {
+            "type": "object",
+            "properties": {
+                "election_id": {
+                    "type": "integer"
+                },
+                "result_sheet_image_url": {
+                    "type": "string"
+                },
+                "result_sheet_video_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "polling_unit_results.SubmitBatchResultRequest": {
+            "type": "object",
+            "properties": {
+                "assignment_id": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "submissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/polling_unit_results.SingleElectionSubmissionRequest"
+                    }
+                },
+                "uploaded_by_inec": {
                     "type": "boolean"
                 }
             }
         },
-        "pgtype.InfinityModifier": {
-            "type": "integer",
-            "format": "int32",
-            "enum": [
-                1,
-                0,
-                -1
-            ],
-            "x-enum-varnames": [
-                "Infinity",
-                "Finite",
-                "NegativeInfinity"
-            ]
-        },
-        "pgtype.Text": {
+        "polling_unit_results.SubmitResultRequest": {
             "type": "object",
             "properties": {
-                "string": {
+                "assignment_id": {
+                    "type": "integer"
+                },
+                "election_group_id": {
+                    "type": "integer"
+                },
+                "election_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "result_sheet_image_url": {
                     "type": "string"
                 },
-                "valid": {
+                "result_sheet_video_url": {
+                    "type": "string"
+                },
+                "uploaded_by_inec": {
                     "type": "boolean"
                 }
             }
         },
-        "pgtype.Timestamptz": {
+        "polling_unit_results.VoteRequest": {
             "type": "object",
             "properties": {
-                "infinityModifier": {
-                    "$ref": "#/definitions/pgtype.InfinityModifier"
-                },
-                "time": {
+                "vote_type": {
+                    "description": "\"up\" or \"down\"",
                     "type": "string"
-                },
-                "valid": {
-                    "type": "boolean"
                 }
             }
         },
@@ -10995,50 +13450,6 @@
                 }
             }
         },
-        "queries.InecResultGrabber": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
-                },
-                "election_date": {
-                    "$ref": "#/definitions/pgtype.Date"
-                },
-                "election_group_id": {
-                    "type": "integer"
-                },
-                "election_id": {
-                    "type": "integer"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "lgas_with_complete_results_count": {
-                    "type": "integer"
-                },
-                "name": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "scope": {
-                    "type": "string"
-                },
-                "sync_error_message": {
-                    "$ref": "#/definitions/pgtype.Text"
-                },
-                "sync_status": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "$ref": "#/definitions/pgtype.Timestamptz"
-                },
-                "uploaded_results_count": {
-                    "type": "integer"
-                },
-                "wards_with_complete_results_count": {
-                    "type": "integer"
-                }
-            }
-        },
         "referrals.createReferralRequest": {
             "type": "object",
             "required": [
@@ -11079,6 +13490,155 @@
                 },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "seedservice.PartyAdminsData": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "partyID",
+                    "type": "integer"
+                },
+                "party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "super_party_admin": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                }
+            }
+        },
+        "seedservice.SeedAdminsRequest": {
+            "type": "object",
+            "properties": {
+                "admins": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "parties": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "$ref": "#/definitions/seedservice.PartyAdminsData"
+                        }
+                    }
+                }
+            }
+        },
+        "seedservice.SeedUserRequest": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "type": "string"
+                },
+                "avatar": {
+                    "type": "string"
+                },
+                "current_city": {
+                    "type": "integer"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "education_level": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "home_address": {
+                    "type": "string"
+                },
+                "is_politician": {
+                    "type": "boolean"
+                },
+                "is_verified": {
+                    "type": "boolean"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "marital_status": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "num": {
+                    "type": "integer"
+                },
+                "occupation_id": {
+                    "type": "integer"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "religion": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "type": "integer"
+                },
+                "username": {
+                    "type": "string"
+                },
+                "verification_type_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "seedservice.SimulateElectionResultsRequest": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "max PUs to populate (0 = all)",
+                    "type": "integer"
+                },
+                "max_votes_per_pu": {
+                    "description": "optional max votes (default 750)",
+                    "type": "integer"
+                },
+                "min_votes_per_pu": {
+                    "description": "optional min votes (default 100)",
+                    "type": "integer"
+                },
+                "run_full_rollup": {
+                    "description": "immediately run sequential rollup queries (default false)",
+                    "type": "boolean"
+                },
+                "trigger_realtime": {
+                    "description": "dispatch Asynq tasks (default true)",
+                    "type": "boolean"
                 }
             }
         },

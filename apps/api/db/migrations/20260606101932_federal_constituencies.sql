@@ -19,8 +19,6 @@ CREATE INDEX idx_federal_constituencies_code ON federal_constituencies (code);
 CREATE INDEX idx_federal_constituencies_state_id ON federal_constituencies (state_id);
 CREATE INDEX idx_federal_constituencies_senatorial_district_id ON federal_constituencies (senatorial_district_id);
 
-
-
 -- SEED DATA START
 INSERT INTO federal_constituencies (id, name, code, state_id, state_name, senatorial_district_id, senatorial_district_name, status) VALUES
 (1, 'Buruku', 'FC/057/BN', 7, 'BENUE', 21, 'benue north west', 'active'),

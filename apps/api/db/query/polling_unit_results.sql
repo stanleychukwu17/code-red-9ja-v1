@@ -153,3 +153,32 @@ SET
   results_submitted_count = results_submitted_count + 1,
   updated_at              = NOW()
 WHERE party_id = $1 AND election_group_id = $2;
+
+-- name: UpdatePollingUnitResultAIExtraction :one
+UPDATE polling_unit_results
+SET
+  accredited_voters      = $2,
+  votes_cast             = $3,
+  valid_votes            = $4,
+  rejected_votes         = $5,
+  candidate_results      = $6,
+  status                 = $7,
+  ai_extracted_data      = $8,
+  result_is_ai_generated = $9,
+  ai_confidence_score    = $10,
+  disputed_reason        = $11,
+  updated_at             = NOW()
+WHERE id = $1
+RETURNING *;
+
+-- name: GetUserPollingUnitResultInElectionGroup :one
+SELECT polling_unit_id
+FROM polling_unit_results
+WHERE submitted_by = $1 AND election_group_id = $2
+LIMIT 1;
+
+-- name: GetPollingUnitResultByUserAndElection :one
+SELECT *
+FROM polling_unit_results
+WHERE election_id = $1 AND polling_unit_id = $2 AND submitted_by = $3
+LIMIT 1;

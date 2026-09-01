@@ -124,6 +124,7 @@ type Querier interface {
 	GetElectionGroupByName(ctx context.Context, name string) (ElectionGroup, error)
 	GetElectionInstanceByID(ctx context.Context, id int64) (Election, error)
 	GetEligibleElectionsForPollingUnit(ctx context.Context, arg GetEligibleElectionsForPollingUnitParams) ([]Election, error)
+	GetEligiblePollingUnitsForElection(ctx context.Context, arg GetEligiblePollingUnitsForElectionParams) ([]GetEligiblePollingUnitsForElectionRow, error)
 	GetFakeIDByAdditionalPhone(ctx context.Context, phone string) (pgtype.Int8, error)
 	GetFakeIDByEmail(ctx context.Context, email pgtype.Text) (pgtype.Int8, error)
 	GetFakeIDByNIN(ctx context.Context, nin string) (pgtype.Int8, error)
@@ -168,6 +169,7 @@ type Querier interface {
 	GetPollingUnitByPUCode(ctx context.Context, puCode pgtype.Text) (PollingUnit, error)
 	GetPollingUnitFinalResult(ctx context.Context, arg GetPollingUnitFinalResultParams) (ElectionPollingUnitFinalResult, error)
 	GetPollingUnitResult(ctx context.Context, id int64) (PollingUnitResult, error)
+	GetPollingUnitResultByUserAndElection(ctx context.Context, arg GetPollingUnitResultByUserAndElectionParams) (PollingUnitResult, error)
 	GetPollingUnits(ctx context.Context, arg GetPollingUnitsParams) ([]PollingUnit, error)
 	GetPollingUnitsWithAgentCounts(ctx context.Context, arg GetPollingUnitsWithAgentCountsParams) ([]GetPollingUnitsWithAgentCountsRow, error)
 	GetPollingUnitsWithPartyCount(ctx context.Context, arg GetPollingUnitsWithPartyCountParams) ([]GetPollingUnitsWithPartyCountRow, error)
@@ -195,6 +197,7 @@ type Querier interface {
 	GetUserNINByUserID(ctx context.Context, userID int64) (UsersNin, error)
 	GetUserPasswordHashByFakeID(ctx context.Context, fakeID pgtype.Int8) (string, error)
 	GetUserPhoneNumbersByUserID(ctx context.Context, userID int64) ([]UsersPhoneNumber, error)
+	GetUserPollingUnitResultInElectionGroup(ctx context.Context, arg GetUserPollingUnitResultInElectionGroupParams) (int32, error)
 	GetUserPrimaryBankAccount(ctx context.Context, userID int64) (UserBankAccount, error)
 	GetUserReferralByID(ctx context.Context, id int64) (UserReferral, error)
 	GetUserReferralByUserAndElectionGroup(ctx context.Context, arg GetUserReferralByUserAndElectionGroupParams) (UserReferral, error)
@@ -297,6 +300,16 @@ type Querier interface {
 	RollupFederalConstituencyFinalResults(ctx context.Context) error
 	RollupLGAFinalResults(ctx context.Context) error
 	RollupSenatorialDistrictFinalResults(ctx context.Context) error
+	RollupSingleElectionFinalResults(ctx context.Context, electionID int64) error
+	RollupSingleFederalConstituencyFinalResults(ctx context.Context, arg RollupSingleFederalConstituencyFinalResultsParams) error
+	RollupSingleLGAFinalResults(ctx context.Context, arg RollupSingleLGAFinalResultsParams) error
+	RollupSingleSenatorialDistrictFinalResults(ctx context.Context, arg RollupSingleSenatorialDistrictFinalResultsParams) error
+	RollupSingleStateConstituencyFinalResults(ctx context.Context, arg RollupSingleStateConstituencyFinalResultsParams) error
+	RollupSingleStateFinalResults(ctx context.Context, arg RollupSingleStateFinalResultsParams) error
+	// =========================================================================
+	// SCOPED REAL-TIME SINGLE-ENTITY ROLLUPS (EVENT-DRIVEN CASCADE)
+	// =========================================================================
+	RollupSingleWardFinalResults(ctx context.Context, arg RollupSingleWardFinalResultsParams) error
 	RollupStateConstituencyFinalResults(ctx context.Context) error
 	RollupStateFinalResults(ctx context.Context) error
 	RollupWardFinalResults(ctx context.Context) error
@@ -312,6 +325,13 @@ type Querier interface {
 	UpdateCandidatesFromLGAElections(ctx context.Context) error
 	UpdateCandidatesFromNationwideElections(ctx context.Context) error
 	UpdateCandidatesFromSenatorialDistrictElections(ctx context.Context) error
+	UpdateCandidatesFromSingleFederalConstituencyElection(ctx context.Context, id int64) error
+	UpdateCandidatesFromSingleLGAElection(ctx context.Context, id int64) error
+	UpdateCandidatesFromSingleNationwideElection(ctx context.Context, id int64) error
+	UpdateCandidatesFromSingleSenatorialDistrictElection(ctx context.Context, id int64) error
+	UpdateCandidatesFromSingleStateConstituencyElection(ctx context.Context, id int64) error
+	UpdateCandidatesFromSingleStateElection(ctx context.Context, id int64) error
+	UpdateCandidatesFromSingleWardElection(ctx context.Context, id int64) error
 	UpdateCandidatesFromStateConstituencyElections(ctx context.Context) error
 	UpdateCandidatesFromStateElections(ctx context.Context) error
 	UpdateCandidatesFromWardElections(ctx context.Context) error
@@ -341,6 +361,7 @@ type Querier interface {
 	UpdatePollingUnit(ctx context.Context, arg UpdatePollingUnitParams) (PollingUnit, error)
 	UpdatePollingUnitAssignmentEarnedAmountKobo(ctx context.Context, arg UpdatePollingUnitAssignmentEarnedAmountKoboParams) (PollingUnitAssignment, error)
 	UpdatePollingUnitResult(ctx context.Context, arg UpdatePollingUnitResultParams) (PollingUnitResult, error)
+	UpdatePollingUnitResultAIExtraction(ctx context.Context, arg UpdatePollingUnitResultAIExtractionParams) (PollingUnitResult, error)
 	UpdateReferral(ctx context.Context, arg UpdateReferralParams) (Referral, error)
 	// Updates the referrals row when the referred user is accepted as an agent.
 	// Sets milestone, amount_to_pay, party_id, election_group_id.

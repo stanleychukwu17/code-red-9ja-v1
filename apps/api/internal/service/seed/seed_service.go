@@ -2,7 +2,9 @@ package seedservice
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -13,37 +15,45 @@ import (
 	partiesservice "free9ja/api/internal/service/parties"
 	usersservice "free9ja/api/internal/service/users"
 	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/sync/errgroup"
 )
 
 type SeedService struct {
-	queries        *queries.Queries
-	rdb            *redis.Client
-	authService    *authservice.AuthService
-	bodiesService  *bodiesservice.BodiesService
-	usersService   *usersservice.UsersService
-	partiesService *partiesservice.PartiesService
+	queries         *queries.Queries
+	pool            *pgxpool.Pool
+	rdb             *redis.Client
+	taskDistributor worker.TaskDistributor
+	authService     *authservice.AuthService
+	bodiesService   *bodiesservice.BodiesService
+	usersService    *usersservice.UsersService
+	partiesService  *partiesservice.PartiesService
 }
 
 func NewSeedService(
 	q *queries.Queries,
+	pool *pgxpool.Pool,
 	rdb *redis.Client,
+	taskDistributor worker.TaskDistributor,
 	authService *authservice.AuthService,
 	bodiesService *bodiesservice.BodiesService,
 	usersService *usersservice.UsersService,
 	partiesService *partiesservice.PartiesService,
 ) *SeedService {
 	return &SeedService{
-		queries:        q,
-		rdb:            rdb,
-		authService:    authService,
-		bodiesService:  bodiesService,
-		usersService:   usersService,
-		partiesService: partiesService,
+		queries:         q,
+		pool:            pool,
+		rdb:             rdb,
+		taskDistributor: taskDistributor,
+		authService:     authService,
+		bodiesService:   bodiesService,
+		usersService:    usersService,
+		partiesService:  partiesService,
 	}
 }
 
@@ -81,6 +91,7 @@ type SeedUserRequest struct {
 // and optionally appends user verification badges (e.g., for politicians).
 func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (string, error) {
 	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(25)
 
 	for _, u := range users {
 		eg.Go(func() error {
@@ -298,6 +309,7 @@ type SeedAdminsRequest struct {
 // All role assignments are processed concurrently.
 func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (string, error) {
 	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(25)
 
 	// system admin who assigns
 	systemAdminID := int64(1)
@@ -394,3 +406,188 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 
 	return "Admins seeded successfully", nil
 }
+
+type SimulateElectionResultsRequest struct {
+	Limit           int32 `json:"limit"`            // max PUs to populate (0 = all)
+	MinVotesPerPU   int32 `json:"min_votes_per_pu"`  // optional min votes (default 100)
+	MaxVotesPerPU   int32 `json:"max_votes_per_pu"`  // optional max votes (default 750)
+	TriggerRealtime *bool `json:"trigger_realtime"` // dispatch Asynq tasks (default true)
+	RunFullRollup   bool  `json:"run_full_rollup"`  // immediately run sequential rollup queries (default false)
+}
+
+type SimulateResultsResponse struct {
+	ElectionID            int64  `json:"election_id"`
+	ElectionName          string `json:"election_name"`
+	Scope                 string `json:"scope"`
+	SimulatedPollingUnits int    `json:"simulated_polling_units"`
+	PartiesCount          int    `json:"parties_count"`
+	Message               string `json:"message"`
+}
+
+type candidateResultItem struct {
+	PartyShortName string `json:"party_short_name"`
+	VoteCount      int32  `json:"vote_count"`
+}
+
+// SimulateElectionResults creates mock consensus final results for all eligible polling units
+// of an election using all active political parties and automatically triggers the cascading real-time rollups or full sequential reconciliation.
+func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID int64, req SimulateElectionResultsRequest) (*SimulateResultsResponse, error) {
+	election, err := s.queries.GetElectionInstanceByID(ctx, electionID)
+	if err != nil {
+		return nil, fmt.Errorf("election %d not found: %w", electionID, err)
+	}
+
+	activeParties, err := s.queries.ListParties(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch active parties: %w", err)
+	}
+	if len(activeParties) == 0 {
+		return nil, fmt.Errorf("no active political parties found in database")
+	}
+
+	var partyShortNames []string
+	for _, p := range activeParties {
+		if p.ShortName != "" {
+			partyShortNames = append(partyShortNames, p.ShortName)
+		}
+	}
+
+	limit := req.Limit
+	pus, err := s.queries.GetEligiblePollingUnitsForElection(ctx, queries.GetEligiblePollingUnitsForElectionParams{
+		ID:      electionID,
+		Column2: limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query eligible polling units: %w", err)
+	}
+	if len(pus) == 0 {
+		return nil, fmt.Errorf("no eligible polling units found for election scope '%s'", election.Scope)
+	}
+
+	minVotes := req.MinVotesPerPU
+	if minVotes <= 0 {
+		minVotes = 100
+	}
+	maxVotes := req.MaxVotesPerPU
+	if maxVotes < minVotes {
+		maxVotes = minVotes + 500
+	}
+
+	triggerRealtime := true
+	if req.TriggerRealtime != nil {
+		triggerRealtime = *req.TriggerRealtime
+	}
+
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	for _, pu := range pus {
+		votesCast := minVotes + r.Int31n(maxVotes-minVotes+1)
+		rejectedVotes := r.Int31n(votesCast/20 + 1)
+		validVotes := votesCast - rejectedVotes
+		accreditedVoters := votesCast + r.Int31n(40) + 10
+
+		// Distribute valid votes among active political parties
+		weights := make([]int32, len(partyShortNames))
+		var sumWeights int32
+		for i := range partyShortNames {
+			w := r.Int31n(100) + 5
+			weights[i] = w
+			sumWeights += w
+		}
+
+		candItems := make([]candidateResultItem, len(partyShortNames))
+		var allocatedVotes int32
+		for i, shortName := range partyShortNames {
+			v := int32((int64(weights[i]) * int64(validVotes)) / int64(sumWeights))
+			candItems[i] = candidateResultItem{
+				PartyShortName: shortName,
+				VoteCount:      v,
+			}
+			allocatedVotes += v
+		}
+		candItems[0].VoteCount += (validVotes - allocatedVotes)
+
+		candJSON, err := json.Marshal(candItems)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal candidate results: %w", err)
+		}
+
+		_, err = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
+			ElectionID:               election.ID,
+			ElectionGroupID:          election.ElectionGroupID,
+			PollingUnitID:            pu.ID,
+			StateID:                  pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+			SenatorialDistrictID:     pu.SenatorialDistrictID,
+			FederalConstituencyID:    pu.FederalConstituencyID,
+			StateConstituencyID:      pu.StateConstituencyID,
+			LgaID:                    pgtype.Int4{Int32: pu.LgaID, Valid: true},
+			WardID:                   pgtype.Int4{Int32: pu.WardID, Valid: true},
+			PollingUnitResultID:      pgtype.Int8{Valid: false},
+			AccreditedVoters:         accreditedVoters,
+			VotesCast:                votesCast,
+			ValidVotes:               validVotes,
+			RejectedVotes:            rejectedVotes,
+			CandidateResults:         candJSON,
+			MatchingSubmissionsCount: 1,
+			TotalSubmissionsCount:    1,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to upsert polling unit final result for PU %d: %w", pu.ID, err)
+		}
+
+		if triggerRealtime && s.taskDistributor != nil {
+			_ = s.taskDistributor.DistributeTaskRollupSingleWard(ctx, &worker.RollupSingleWardPayload{
+				ElectionID:            election.ID,
+				WardID:                pu.WardID,
+				LGAID:                 pu.LgaID,
+				StateID:               int16(pu.StateID),
+				StateConstituencyID:   pu.StateConstituencyID.Int32,
+				FederalConstituencyID: pu.FederalConstituencyID.Int32,
+				SenatorialDistrictID:  pu.SenatorialDistrictID.Int32,
+			})
+			if pu.StateConstituencyID.Valid && pu.StateConstituencyID.Int32 > 0 {
+				_ = s.taskDistributor.DistributeTaskRollupSingleStateConstituency(ctx, &worker.RollupSingleStateConstituencyPayload{
+					ElectionID:          election.ID,
+					StateConstituencyID: pu.StateConstituencyID.Int32,
+				})
+			}
+		}
+	}
+
+	if req.RunFullRollup {
+		_ = s.queries.RollupWardFinalResults(ctx)
+		_ = s.queries.RollupStateConstituencyFinalResults(ctx)
+		_ = s.queries.RollupLGAFinalResults(ctx)
+		_ = s.queries.RollupFederalConstituencyFinalResults(ctx)
+		_ = s.queries.RollupSenatorialDistrictFinalResults(ctx)
+		_ = s.queries.RollupStateFinalResults(ctx)
+		_ = s.queries.RollupElectionFinalResults(ctx)
+
+		switch election.Scope {
+		case "ward":
+			_ = s.queries.UpdateCandidatesFromSingleWardElection(ctx, election.ID)
+		case "state-constituency":
+			_ = s.queries.UpdateCandidatesFromSingleStateConstituencyElection(ctx, election.ID)
+		case "lga":
+			_ = s.queries.UpdateCandidatesFromSingleLGAElection(ctx, election.ID)
+		case "federal-constituency":
+			_ = s.queries.UpdateCandidatesFromSingleFederalConstituencyElection(ctx, election.ID)
+		case "senatorial-district":
+			_ = s.queries.UpdateCandidatesFromSingleSenatorialDistrictElection(ctx, election.ID)
+		case "state":
+			_ = s.queries.UpdateCandidatesFromSingleStateElection(ctx, election.ID)
+		case "nationwide":
+			_ = s.queries.UpdateCandidatesFromSingleNationwideElection(ctx, election.ID)
+		}
+	}
+
+	return &SimulateResultsResponse{
+		ElectionID:            election.ID,
+		ElectionName:          election.Name,
+		Scope:                 election.Scope,
+		SimulatedPollingUnits: len(pus),
+		PartiesCount:          len(partyShortNames),
+		Message:               fmt.Sprintf("Successfully simulated results for %d polling units across %d active parties in election '%s' (scope: %s)", len(pus), len(partyShortNames), election.Name, election.Scope),
+	}, nil
+}
+

@@ -8,6 +8,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { useAppContext } from "#/hooks/useAppContext";
 import { mergeElectionResults } from "@repo/ui/lib/merge-election-results";
+import { formatVotes } from "@repo/ui/lib/number";
 import { Loader2 } from "lucide-react";
 
 export function CandidatesLeaderboard({
@@ -110,7 +111,7 @@ export function CandidatesLeaderboard({
                     partyShortName
               }
               regionsWinningCount={regionsWinningCountStr}
-              votesCount={`${votes.toLocaleString()} votes`}
+              votesCount={formatVotes(votes)}
             />
           );
         })

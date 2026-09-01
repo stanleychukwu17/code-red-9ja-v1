@@ -1458,9 +1458,9 @@ func (q *Queries) ListCountries(ctx context.Context) ([]ListCountriesRow, error)
 const recalculateFederalConstituencyMetrics = `-- name: RecalculateFederalConstituencyMetrics :exec
 UPDATE federal_constituencies fc
 SET lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
-    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
-    wards_count = COALESCE((SELECT SUM(wards_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM lgas l WHERE l.federal_constituency_id = fc.id), 0)
+    state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.federal_constituency_id = fc.id), 0),
+    wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.federal_constituency_id = fc.id), 0),
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.federal_constituency_id = fc.id), 0)
 `
 
 func (q *Queries) RecalculateFederalConstituencyMetrics(ctx context.Context) error {
@@ -1472,7 +1472,7 @@ const recalculateLGAMetrics = `-- name: RecalculateLGAMetrics :exec
 UPDATE lgas l
 SET state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.lga_id = l.id), 0),
     wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.lga_id = l.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM wards w WHERE w.lga_id = l.id), 0)
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.lga_id = l.id), 0)
 `
 
 func (q *Queries) RecalculateLGAMetrics(ctx context.Context) error {
@@ -1501,10 +1501,10 @@ func (q *Queries) RecalculateNationalMetrics(ctx context.Context) error {
 const recalculateSenatorialDistrictMetrics = `-- name: RecalculateSenatorialDistrictMetrics :exec
 UPDATE senatorial_districts sd
 SET federal_constituencies_count = COALESCE((SELECT COUNT(*) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    lgas_count = COALESCE((SELECT SUM(lgas_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    wards_count = COALESCE((SELECT SUM(wards_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM federal_constituencies fc WHERE fc.senatorial_district_id = sd.id), 0)
+    lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.senatorial_district_id = sd.id), 0),
+    state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.senatorial_district_id = sd.id), 0),
+    wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.senatorial_district_id = sd.id), 0),
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.senatorial_district_id = sd.id), 0)
 `
 
 func (q *Queries) RecalculateSenatorialDistrictMetrics(ctx context.Context) error {
@@ -1515,7 +1515,7 @@ func (q *Queries) RecalculateSenatorialDistrictMetrics(ctx context.Context) erro
 const recalculateStateConstituencyMetrics = `-- name: RecalculateStateConstituencyMetrics :exec
 UPDATE state_constituencies sac
 SET wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.state_constituency_id = sac.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM wards w WHERE w.state_constituency_id = sac.id), 0)
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.state_constituency_id = sac.id), 0)
 `
 
 func (q *Queries) RecalculateStateConstituencyMetrics(ctx context.Context) error {
@@ -1526,11 +1526,11 @@ func (q *Queries) RecalculateStateConstituencyMetrics(ctx context.Context) error
 const recalculateStateMetrics = `-- name: RecalculateStateMetrics :exec
 UPDATE c_states s
 SET senatorial_districts_count = COALESCE((SELECT COUNT(*) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    federal_constituencies_count = COALESCE((SELECT SUM(federal_constituencies_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    lgas_count = COALESCE((SELECT SUM(lgas_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    state_constituencies_count = COALESCE((SELECT SUM(state_constituencies_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    wards_count = COALESCE((SELECT SUM(wards_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0),
-    polling_units_count = COALESCE((SELECT SUM(polling_units_count) FROM senatorial_districts sd WHERE sd.state_id = s.id), 0)
+    federal_constituencies_count = COALESCE((SELECT COUNT(*) FROM federal_constituencies fc WHERE fc.state_id = s.id), 0),
+    lgas_count = COALESCE((SELECT COUNT(*) FROM lgas l WHERE l.state_id = s.id), 0),
+    state_constituencies_count = COALESCE((SELECT COUNT(*) FROM state_constituencies sac WHERE sac.state_id = s.id), 0),
+    wards_count = COALESCE((SELECT COUNT(*) FROM wards w WHERE w.state_id = s.id), 0),
+    polling_units_count = COALESCE((SELECT COUNT(*) FROM polling_units pu WHERE pu.state_id = s.id), 0)
 `
 
 func (q *Queries) RecalculateStateMetrics(ctx context.Context) error {

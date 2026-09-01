@@ -113,7 +113,7 @@ func (h *INECGrabberHandler) SyncGrabber(w http.ResponseWriter, r *http.Request)
 // @Produce      json
 // @Security     BearerAuth
 // @Param        id path int true "INEC Result Grabber ID"
-// @Success      200 {object} queries.InecResultGrabber
+// @Success      200 {object} map[string]interface{}
 // @Router       /admin/inec-result-grabbers/{id}/toggle-pause [post]
 func (h *INECGrabberHandler) TogglePause(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")

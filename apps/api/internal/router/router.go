@@ -140,7 +140,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 	usersService := usersservice.NewUsersService(q, rdb, monnifyClient, bodiesService)
 	authService := authservice.NewAuthService(q, rdb, messagingService, usersService, partiesService, bodiesService, jwtSecret, accessExp, refreshExp)
-	seedService := seedservice.NewSeedService(q, rdb, authService, bodiesService, usersService, partiesService)
+	seedService := seedservice.NewSeedService(q, pool, rdb, distributor, authService, bodiesService, usersService, partiesService)
 	pageVerificationsService := pageverificationsservice.NewPageVerificationsService(q, rdb, usersService, partiesService, auditService)
 	filesService := filesservice.NewFilesService(q)
 
@@ -266,8 +266,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                  // Make superAdmin endpoint
 
 	// for seeds
-	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)   // Seed users endpoint
-	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins) // Seed admins endpoint
+	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)                                       // Seed users endpoint
+	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                     // Seed admins endpoint
+	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
+
 
 	// Banks
 	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)
@@ -582,6 +584,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 
 		// polling unit results routes
 		r.Post("/api/v1/polling-unit-results", pollingUnitResultsHandler.SubmitResult)
+		r.Post("/api/v1/polling-unit-results/batch", pollingUnitResultsHandler.SubmitBatchResults)
 		r.Get("/api/v1/polling-unit-results", pollingUnitResultsHandler.ListResults)
 		r.Get("/api/v1/polling-unit-final-results", pollingUnitResultsHandler.ListFinalResults)
 		r.Get("/api/v1/polling-unit-results/final", pollingUnitResultsHandler.GetFinalResult)

@@ -716,7 +716,6 @@ func (s *INECGrabberService) processWardPUs(
 			ValidVotes:               validVotes,
 			RejectedVotes:            rejectedVotes,
 			CandidateResults:         candidateResultsBytes,
-			CandidateResultsLive:     candidateResultsBytes,
 			MatchingSubmissionsCount: 1,
 			TotalSubmissionsCount:    1,
 		})
@@ -907,7 +906,6 @@ func (s *INECGrabberService) ResolveUnmatchedResult(
 					ValidVotes:               unmatched.ValidVotes,
 					RejectedVotes:            unmatched.RejectedVotes,
 					CandidateResults:         unmatched.CandidateResults,
-					CandidateResultsLive:     unmatched.CandidateResults,
 					MatchingSubmissionsCount: 1,
 					TotalSubmissionsCount:    1,
 				})

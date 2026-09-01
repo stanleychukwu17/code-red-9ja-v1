@@ -23,8 +23,6 @@ CREATE INDEX idx_state_constituencies_state_id ON state_constituencies (state_id
 CREATE INDEX idx_state_constituencies_senatorial_district_id ON state_constituencies (senatorial_district_id);
 CREATE INDEX idx_state_constituencies_federal_constituency_id ON state_constituencies (federal_constituency_id);
 
-
-
 -- SEED DATA START
 INSERT INTO state_constituencies (id, name, code, lga_id, lga_name, state_id, state_name, senatorial_district_id, senatorial_district_name, federal_constituency_id, federal_constituency_name, status) VALUES
 (3, 'ABA SOUTH', 'SC/02/AB', 3104, 'ABA SOUTH', 1, 'ABIA', 111, 'abia south', 2, 'aba north/aba south', 'active'),

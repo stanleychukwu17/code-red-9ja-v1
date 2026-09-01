@@ -1,6 +1,6 @@
 import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useAppContext, getAutoSelectedSession } from "#/hooks/useAppContext";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -62,13 +62,24 @@ import {
   getEstimatePayout,
   type PotentialPayoutResponse,
 } from "#/lib/server/practice_tests";
-import { getElectionGroups } from "#/lib/server/election_groups";
+import {
+  getElectionGroups,
+  getElectionGroupById,
+} from "#/lib/server/election_groups";
+import { getElectionsByGroup } from "#/lib/server/elections";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { party, user } = useAppContext();
+  const {
+    party,
+    user,
+    selectedElectionGroup,
+    selectedElection,
+    setSelectedElectionGroup,
+    setSelectedElection,
+  } = useAppContext();
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
@@ -118,6 +129,46 @@ export function PollingAgentPracticePage() {
   const [selectedElectionDate, setSelectedElectionDate] = useLocalStorage<
     string | null
   >("practice-selected-election-date", null);
+
+  // Sync selected election group and election to useAppContext if restored from localStorage
+  const { data: syncGroupData } = useQuery({
+    queryKey: ["electionGroupById", selectedElectionGroupId],
+    enabled:
+      !!selectedElectionGroupId &&
+      selectedElectionGroup?.id !== selectedElectionGroupId,
+    queryFn: async () => {
+      const res = await getElectionGroupById({
+        data: selectedElectionGroupId as number,
+      });
+      if (res?.success && res.data?.election_group) {
+        return res.data.election_group;
+      }
+      return null;
+    },
+  });
+
+  useEffect(() => {
+    if (syncGroupData && selectedElectionGroup?.id !== syncGroupData.id) {
+      setSelectedElectionGroup(syncGroupData);
+      getElectionsByGroup({ data: syncGroupData.id })
+        .then((res) => {
+          const elections = res?.data?.elections || res?.elections || [];
+          if (elections.length > 0) {
+            const { selectedElection: autoElection } = getAutoSelectedSession(
+              [syncGroupData],
+              elections,
+            );
+            setSelectedElection(autoElection || elections[0] || null);
+          }
+        })
+        .catch((e) => console.error("Failed to sync elections:", e));
+    }
+  }, [
+    syncGroupData,
+    selectedElectionGroup?.id,
+    setSelectedElectionGroup,
+    setSelectedElection,
+  ]);
 
   const [testStats, setTestStats] = useLocalStorage<
     {
@@ -295,9 +346,13 @@ export function PollingAgentPracticePage() {
       {currentPage === "select-election" && (
         <SelectElectionPage
           selectedElectionGroupId={selectedElectionGroupId}
-          onSelect={(id, electionDate) => {
-            setSelectedElectionGroupId(id);
-            setSelectedElectionDate(electionDate ?? null);
+          onSelect={(group: any, election?: any) => {
+            setSelectedElectionGroupId(group.id);
+            setSelectedElectionDate(group.election_date ?? null);
+            setSelectedElectionGroup(group);
+            if (election) {
+              setSelectedElection(election);
+            }
           }}
           onNextClick={() => {
             // Test submission is batched at the very end
@@ -508,10 +563,10 @@ export function SelectElectionPage({
   onNextClick,
 }: {
   selectedElectionGroupId: number | null;
-  onSelect: (id: number, electionDate?: string) => void;
+  onSelect: (group: any, election?: any) => void;
   onNextClick: () => void;
 }) {
-  const { data: elections = [], isLoading } = useQuery({
+  const { data: electionGroups = [], isLoading } = useQuery({
     queryKey: ["electionGroups", { upcoming: true }],
     queryFn: async () => {
       const res = await getElectionGroups({ data: { upcoming: true } });
@@ -520,23 +575,37 @@ export function SelectElectionPage({
         res.data?.election_groups &&
         res.data.election_groups.length > 0
       ) {
-        return res.data.election_groups.map((group: any) => ({
-          id: group.id,
-          name: group.name,
-          rawDate: group.election_date as string | undefined,
-          date: group.election_date
-            ? new Date(group.election_date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })
-            : "TBD",
-        }));
+        return res.data.election_groups;
       }
       return [];
     },
     initialData: [],
   });
+
+  const handleSelectGroup = async (group: any) => {
+    try {
+      const res = await getElectionsByGroup({ data: group.id });
+      const elections = res?.data?.elections || res?.elections || [];
+      const { selectedElection: autoElection } = getAutoSelectedSession(
+        [group],
+        elections,
+      );
+      onSelect(group, autoElection || elections[0] || null);
+    } catch (err) {
+      console.error("Failed to fetch elections for group:", err);
+      onSelect(group, null);
+    }
+  };
+
+  const handleContinue = async () => {
+    const currentSelectedGroup = electionGroups.find(
+      (g: any) => g.id === selectedElectionGroupId,
+    );
+    if (currentSelectedGroup) {
+      await handleSelectGroup(currentSelectedGroup);
+    }
+    onNextClick();
+  };
 
   return (
     <div className="w-full h-full">
@@ -561,20 +630,30 @@ export function SelectElectionPage({
               Loading elections...
             </p>
           )}
-          {!isLoading && elections.length === 0 && (
+          {!isLoading && electionGroups.length === 0 && (
             <p className="text-c-50 text-sm text-center py-4">
               No upcoming elections found.
             </p>
           )}
-          {elections.map((election: any) => (
-            <SelectableCard
-              key={election.id}
-              title={election.name}
-              subtitle={election.date}
-              isSelected={election.id === selectedElectionGroupId}
-              onClick={() => onSelect(election.id, election.rawDate)}
-            />
-          ))}
+          {electionGroups.map((group: any) => {
+            const formattedDate = group.election_date
+              ? new Date(group.election_date).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })
+              : "TBD";
+
+            return (
+              <SelectableCard
+                key={group.id}
+                title={group.name}
+                subtitle={formattedDate}
+                isSelected={group.id === selectedElectionGroupId}
+                onClick={() => handleSelectGroup(group)}
+              />
+            );
+          })}
         </div>
       </div>
 
@@ -585,7 +664,7 @@ export function SelectElectionPage({
           size="4xl"
           className="w-full rounded-full"
           disabled={selectedElectionGroupId === null}
-          onClick={onNextClick}
+          onClick={handleContinue}
         >
           Continue
         </Button>
@@ -699,7 +778,7 @@ export function ApplicationAcceptedPage({
           </span>
           <div className="space-y-2">
             <Todo
-              text={`Ensure you are at the above Polling unit before 7AM on Election day (${electionDateFormatted})`}
+              text={`Ensure you are at your polling unit before 7AM on Election day (${electionDateFormatted})`}
             />
             <Todo text="Complete all your election task and upload election results" />
             <Todo text="End election and request payment" />

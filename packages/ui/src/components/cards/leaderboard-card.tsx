@@ -81,7 +81,7 @@ export function LeaderboardCardRow({
 
       {/* Right: Votes & Rank */}
       <div className="flex items-center gap-6">
-        <span className="shrink-0 md:w-[100px] text-right text-white font-medium">
+        <span className="shrink-0 md:w-[120px] text-right text-white font-medium">
           {votesCount}
         </span>
         <span className="md:w-[100px] text-white text-right hidden md:block">
