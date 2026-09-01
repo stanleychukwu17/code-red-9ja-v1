@@ -134,10 +134,6 @@ function AuthenticatedRoutes() {
     dispatch(updateSiteState({ sideBarState }));
   };
 
-  const handleThemeChange = (theme: "light" | "dark" | "auto") => {
-    dispatch(updateSiteState({ theme }));
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -151,7 +147,6 @@ function AuthenticatedRoutes() {
         items={sidebarItems}
         onLogout={handleLogout}
         onSidebarStateChange={handleSidebarStateChange}
-        onThemeChange={handleThemeChange}
         homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
       />
       <Outlet />
