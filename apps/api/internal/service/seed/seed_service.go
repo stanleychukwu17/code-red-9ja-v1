@@ -289,8 +289,9 @@ type PartyAdminsData struct {
 }
 
 type SeedAdminsRequest struct {
-	Admins  []int64                      `json:"admins"`
-	Parties []map[string]PartyAdminsData `json:"parties"`
+	SuperAdmins []int64                      `json:"super_admins"`
+	Admins      []int64                      `json:"admins"`
+	Parties     []map[string]PartyAdminsData `json:"parties"`
 }
 
 // SeedAdmins assigns system-wide admin roles, as well as party admin and super party admin roles to existing users.
@@ -301,6 +302,26 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 
 	// system admin who assigns
 	systemAdminID := int64(1)
+
+	// Process super admins
+	for _, superAdminID := range req.SuperAdmins {
+		eg.Go(func() error {
+			// get the fake id for the user
+			fakeIDData, err := s.queries.GetFakeIDByUserID(ctx, superAdminID)
+			if err != nil {
+				return fmt.Errorf("failed to fetch fake ID for super admin %d: %w", superAdminID, err)
+			}
+			fakeID := fakeIDData.Int64
+
+			// assign super_admin role
+			err = s.usersService.AssignUserRole(ctx, superAdminID, fakeID, "super_admin", systemAdminID)
+			if err != nil {
+				return fmt.Errorf("failed to assign super_admin role to user %d: %w", superAdminID, err)
+			}
+			fmt.Println("assigned super_admin to id", superAdminID)
+			return nil
+		})
+	}
 
 	// Process system admins
 	for _, adminID := range req.Admins {
@@ -317,13 +338,7 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 			if err != nil {
 				return fmt.Errorf("failed to assign admin role to user %d: %w", adminID, err)
 			}
-
-			// assign super_admin role
-			// err = s.usersService.AssignUserRole(ctx, adminID, fakeID, "super_admin", systemAdminID)
-			// if err != nil {
-			// 	return fmt.Errorf("failed to assign super_admin role to user %d: %w", adminID, err)
-			// }
-			// fmt.Println("assigned super_admin to id", adminID)
+			fmt.Println("assigned admin to id", adminID)
 			return nil
 		})
 	}

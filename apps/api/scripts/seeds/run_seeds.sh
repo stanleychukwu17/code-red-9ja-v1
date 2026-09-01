@@ -13,6 +13,14 @@ curl -X POST ${BASE_URL}/api/v1/seed/users \
 
 sleep 1 # wait for 1 second
 
+# seed stanley as superadmin
+echo "Seeding superadmin role for stanley to ${BASE_URL}/api/v1/seed/admins..."
+curl -X POST ${BASE_URL}/api/v1/seed/admins \
+  -H "Content-Type: application/json" \
+  -d @"1-stanley-make-super-admin.json"
+
+sleep 1 # wait for 1 second
+
 # seed users
 echo "Seeding users to ${BASE_URL}/api/v1/seed/users..."
 curl -X POST ${BASE_URL}/api/v1/seed/users \
@@ -50,14 +58,6 @@ echo "Seeding admins and party roles to ${BASE_URL}/api/v1/seed/admins..."
 curl -X POST ${BASE_URL}/api/v1/seed/admins \
   -H "Content-Type: application/json" \
   -d @"1.5-admins.json"
-
-sleep 1 # wait for 1 second
-
-# seed superadmins
-echo "Seeding superadmins to ${BASE_URL}/api/v1/seed/users..."
-curl -X POST ${BASE_URL}/api/v1/seed/users \
-  -H "Content-Type: application/json" \
-  -d @"1.6-superadmins.json"
 
 echo ""
 echo "Done."

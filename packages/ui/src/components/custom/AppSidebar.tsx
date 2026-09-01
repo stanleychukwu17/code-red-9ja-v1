@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   PanelLeftClose,
@@ -173,10 +173,18 @@ export function AppSidebar({
 }: AppSidebarShellProps) {
   const { state: sideBarState } = useSidebar();
   const activeItemFromUrl = useActiveItem(items);
+  const isFirstMountRef = useRef(true);
+  const prevSidebarStateRef = useRef(sideBarState);
 
   useEffect(() => {
-    if (onSidebarStateChange) {
-      onSidebarStateChange(sideBarState);
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
+
+    if (prevSidebarStateRef.current !== sideBarState) {
+      prevSidebarStateRef.current = sideBarState;
+      onSidebarStateChange?.(sideBarState);
     }
   }, [sideBarState, onSidebarStateChange]);
 

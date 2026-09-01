@@ -127,9 +127,22 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Automatically persists updated site preferences to cookies/server ONLY when user action updateSiteState is dispatched
 export const sitePreferenceMiddleware: Middleware = store => next => action => {
+  const prevState = (store.getState() as { site: SiteState }).site;
   const result = next(action);
+  const nextState = (store.getState() as { site: SiteState }).site;
+
   // Only persist when explicit user interaction triggers updateSiteState (never on hydrateSiteState)
   if (updateSiteState.match(action)) {
+    // Check if persistAble fields actually changed
+    const hasChanged =
+      prevState.sideBarState !== nextState.sideBarState ||
+      prevState.theme !== nextState.theme ||
+      JSON.stringify(prevState.pinnedLinks) !== JSON.stringify(nextState.pinnedLinks);
+
+    if (!hasChanged) {
+      return result;
+    }
+
     if (debounceTimer) {
       clearTimeout(debounceTimer);
     }

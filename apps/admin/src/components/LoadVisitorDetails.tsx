@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
-import { updateSiteState } from "#/redux/slice/siteSlice";
+import { hydrateSiteState } from "#/redux/slice/siteSlice";
 import { fetchCountryDetailsFromLocalIPService } from "#/lib/client/ip";
 
 export default function LoadVisitorDetails() {
@@ -14,7 +14,7 @@ export default function LoadVisitorDetails() {
     const fetchIpDetails = async () => {
       const response = await fetchCountryDetailsFromLocalIPService();
       if (response && response.success && response.data) {
-        dispatch(updateSiteState({
+        dispatch(hydrateSiteState({
           visitorDetails: response.data,
         }));
 
@@ -22,7 +22,7 @@ export default function LoadVisitorDetails() {
         document.cookie = `client_ip=${encodeURIComponent(ip)}; path=/; max-age=2592000; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
       } else {
         // Fallback or error case
-        dispatch(updateSiteState({
+        dispatch(hydrateSiteState({
           visitorDetails: { ip: "unknown", location: { country: "Nigeria" } },
         }));
         document.cookie = `client_ip=unknown; path=/; max-age=2592000; SameSite=Lax${window.location.protocol === 'https:' ? '; Secure' : ''}`;
