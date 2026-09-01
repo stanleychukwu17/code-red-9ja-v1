@@ -1,9 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "#/hooks/useAuth";
 import { OnboardingFlow, ONBOARDING_STEPS, type OnboardingStep } from "./_components/-onboarding-flow";
 import { APP_URL } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
+import { checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 
 const STEP_TITLES: Record<OnboardingStep, string> = {
   username: "Onboarding: Choose your username",
@@ -16,13 +17,20 @@ const STEP_TITLES: Record<OnboardingStep, string> = {
 };
 
 export const Route = createFileRoute("/auth/onboarding")({
-  beforeLoad: async () => {
-    // If needed, check authentication status here
-    // Currently allowing access so users can complete onboarding after signup
+  beforeLoad: async ({ context }) => {
+    const res = await checkIfRefreshTokenInCookie();
+
+    if (!res.success) {
+      throw redirect({ to: APP_URL.auth.login });
+    }
+
+    if (context.userDetails?.username) {
+      throw redirect({ to: APP_URL.home });
+    }
   },
 
   // Validate search params
-  validateSearch: (search) => {
+  validateSearch: (search): { step: OnboardingStep } => {
     const step = typeof search.step === "string" ? search.step : "details";
 
     return {
@@ -33,7 +41,9 @@ export const Route = createFileRoute("/auth/onboarding")({
   },
 
   // Loader deps
-  loaderDeps: ({ search: { step } }) => ({ step }),
+  loaderDeps: ({ search }: { search: { step?: OnboardingStep } }) => ({
+    step: search?.step || "details",
+  }),
 
   // Loader
   loader: ({ deps: { step } }) => ({ step }),
@@ -50,7 +60,7 @@ export const Route = createFileRoute("/auth/onboarding")({
 });
 
 function RouteComponent() {
-  const { step } = Route.useSearch();
+  const { step } = Route.useSearch() as { step: OnboardingStep };
   const { user } = useAuth();
   const navigate = useNavigate();
 

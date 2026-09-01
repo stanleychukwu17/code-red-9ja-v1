@@ -102,8 +102,6 @@ CREATE TABLE users_phone_numbers (
 CREATE INDEX idx_users_phone_numbers_user_id ON users_phone_numbers(user_id);
 CREATE INDEX idx_users_phone_numbers_phone ON users_phone_numbers(phone);
 
-
-
 CREATE TABLE user_more_infos (
   user_id BIGINT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   occupation_id SMALLINT REFERENCES occupations(id) ON DELETE SET NULL,

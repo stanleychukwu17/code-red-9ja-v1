@@ -214,7 +214,10 @@ function RouteComponent() {
   }, [visitorCountry, countries, form]);
 
   return (
-    <AuthWrapper type={otpSent ? "verify-otp" : "signup"}>
+    <AuthWrapper
+      type={otpSent ? "verify-otp" : "signup"}
+      email={otpSent ? (pendingSignup?.email || form.getFieldValue("email")) : undefined}
+    >
       <FormError message={serverError} />
       <form
         className="flex flex-col gap-4"

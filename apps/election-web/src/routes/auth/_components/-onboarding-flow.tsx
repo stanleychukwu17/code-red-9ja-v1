@@ -87,8 +87,8 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
     dateOfBirth: undefined,
     referralCode: "",
     nin: "",
-    countryOfOrigin: "",
-    countryOfOriginId: undefined,
+    countryOfOrigin: "Nigeria",
+    countryOfOriginId: 161,
     stateOfOrigin: "",
     stateOfOriginId: undefined,
     country: "",
@@ -236,7 +236,7 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
   const onStepChange = useCallback((nextStep: OnboardingStep) => {
     navigate({
       to: APP_URL.auth.onboarding,
-      search: { step: nextStep },
+      search: { step: nextStep } as any,
       replace: true,
     });
   }, [navigate]);
@@ -311,9 +311,9 @@ export function OnboardingFlow({ step }: OnboardingFlowProps) {
           data.firstName && data.surname && data.gender && data.dateOfBirth && isNinAvailable === true,
         )
         : step === "origin"
-          ? Boolean(data.stateOfOriginId)
+          ? Boolean(data.countryOfOriginId && data.stateOfOriginId)
           : step === "location"
-            ? Boolean(data.stateId)
+            ? Boolean(data.countryId && data.stateId)
             : step === "referral"
               ? data.referralCode.trim()
                 ? isReferralCodeValid === true
@@ -602,6 +602,8 @@ function OriginStep({ data, setData, canContinue, onBack, onAction }: OriginStep
         update={(val) => {
           setData((c) => ({
             ...c,
+            countryOfOrigin: c.countryOfOrigin || "Nigeria",
+            countryOfOriginId: c.countryOfOriginId || 161,
             stateOfOrigin: val.name,
             stateOfOriginId: val.id,
           }));
@@ -630,17 +632,27 @@ function LocationStep({ data, setData, canContinue, onBack, onAction, visitorDet
     staleTime: Infinity,
   });
 
-  // Get the matched country id from the visitor details
-  const matchedCountryId = useMemo(() => {
+  // Get the matched country from the visitor details
+  const matchedCountry = useMemo(() => {
     if (countriesData?.data?.countries && visitorDetails?.location?.country) {
       const visitorCountry = visitorDetails.location.country.toLowerCase();
-      const matched = (countriesData.data.countries as Array<{ id: number, name: string }>).find(
+      return (countriesData.data.countries as Array<{ id: number, name: string }>).find(
         (c) => c.name.toLowerCase() === visitorCountry
       );
-      return matched?.id;
     }
     return undefined;
   }, [countriesData, visitorDetails]);
+
+  // Automatically sync matched country to form state when resolved if not yet set
+  useEffect(() => {
+    if (matchedCountry && !data.countryId) {
+      setData((c) => ({
+        ...c,
+        country: matchedCountry.name,
+        countryId: matchedCountry.id,
+      }));
+    }
+  }, [matchedCountry, data.countryId, setData]);
 
   return (
     <FlowScreen
@@ -654,7 +666,7 @@ function LocationStep({ data, setData, canContinue, onBack, onAction, visitorDet
     >
       <SelectCountry
         fetchCountries={() => getAllCountries()}
-        selectedId={data.countryId || matchedCountryId}
+        selectedId={data.countryId || matchedCountry?.id}
         update={(val) => {
           setData((c) => ({
             ...c,
@@ -669,9 +681,9 @@ function LocationStep({ data, setData, canContinue, onBack, onAction, visitorDet
       />
       <SelectState
         fetchStates={getStates}
-        countryOriginalId={data.countryId || matchedCountryId}
+        countryOriginalId={data.countryId || matchedCountry?.id}
         selectedId={data.stateId}
-        disabled={!(data.countryId || matchedCountryId)}
+        disabled={!(data.countryId || matchedCountry?.id)}
         update={(val) => {
           setData((c) => ({
             ...c,

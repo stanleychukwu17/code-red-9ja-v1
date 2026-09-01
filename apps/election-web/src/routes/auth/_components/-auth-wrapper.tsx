@@ -24,13 +24,18 @@ export function Free9jaLogo() {
  * Main wrapper layout for authentication pages (login, signup, forgot password, OTP).
  * Handles the dynamic rendering of titles, subtitles, and bottom navigation links.
  */
-export const AuthWrapper = ({ children, type }: {
+export const AuthWrapper = ({
+  children,
+  type,
+  email,
+}: {
   children: React.ReactNode;
   type: "login" | "signup" | "forgot-password" | "verify-otp";
+  email?: string;
 }) => {
   const flow = type === "login" ? "login" : "forgot-password";
   let title = "";
-  let subtitle = "";
+  let subtitle: React.ReactNode = "";
 
   switch (type) {
     case "login":
@@ -46,8 +51,16 @@ export const AuthWrapper = ({ children, type }: {
       subtitle = "Enter your email address to reset your password";
       break;
     case "verify-otp":
-      title = "Enter the code we sent to your email address";
-      subtitle = "Hurry up. The code expires in 10 minutes";
+      title = "Enter verification code";
+      subtitle = email ? (
+        <span>
+          We sent a 6-digit code to{" "}
+          <span className="font-semibold text-primary break-all">{email}</span>.
+          The code expires in 10 minutes.
+        </span>
+      ) : (
+        "Enter the code we sent to your email address. The code expires in 10 minutes."
+      );
       break;
   }
 
@@ -58,7 +71,7 @@ export const AuthWrapper = ({ children, type }: {
       <div className="mx-auto w-full max-w-100 flex flex-col justify-center gap-5 px-4 py-12">
         <div className="space-y-2 pt-7">
           <h1 className="text-primary text-2xl font-bold">{title}</h1>
-          <p className="text-c-60">{subtitle}</p>
+          <div className="text-c-60 text-sm leading-relaxed">{subtitle}</div>
         </div>
 
         <div className="h-full w-full pt-3">{children}</div>

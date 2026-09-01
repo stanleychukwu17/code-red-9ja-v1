@@ -22,7 +22,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/nyaruka/phonenumbers"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -714,7 +713,7 @@ func (s *AuthService) Signup(ctx context.Context, email, phone, password string,
 		return SignupResult{}, err
 	}
 
-	e164Phone, err := s.ValidatePhoneForCountry(phone, country_dts.Iso2)
+	e164Phone, err := utils.ValidatePhoneForCountry(phone, country_dts.Iso2)
 	if err != nil {
 		return SignupResult{}, err
 	}
@@ -858,33 +857,6 @@ func (s *AuthService) CompleteOnboarding(
 	}
 
 	return nil
-}
-
-// ValidatePhoneForCountry checks:
-// 1. valid phone number format
-// 2. matches the given ISO country code (e.g. "NG", "US")
-// 3. returns normalized E.164 format if valid
-func (s *AuthService) ValidatePhoneForCountry(phone, country_code string) (string, error) {
-	// Parse number (second arg can be empty if phone is already in E.164)
-	num, err := phonenumbers.Parse(phone, country_code)
-	if err != nil {
-		return "", fmt.Errorf("invalid phone format: %w", err)
-	}
-
-	// Check if it's a valid number globally
-	if !phonenumbers.IsValidNumber(num) {
-		return "", fmt.Errorf("invalid phone number")
-	}
-
-	// Ensure it matches the expected country_code
-	if !phonenumbers.IsValidNumberForRegion(num, country_code) {
-		return "", fmt.Errorf("phone number does not match country %s", country_code)
-	}
-
-	// Normalize to E.164 format
-	formatted := phonenumbers.Format(num, phonenumbers.E164)
-
-	return formatted, nil
 }
 
 // SaveSomeUserRegistrationDetails saves the user's registration details (username, email, nin) to Redis & DB

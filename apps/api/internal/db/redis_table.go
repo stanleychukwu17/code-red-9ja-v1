@@ -16,7 +16,6 @@ const (
 	RedisEmailFakeID              = "register:email_user_fake_id:"
 	RedisPhoneFakeID              = "register:phone_user_fake_id:"
 	RedisUserNINQuickSearch       = "register:user_nin_quick_search:"
-	RedisChangePassword           = "register:user_change_password:"
 	RedisRegisterEmailOtp         = "register:email_otp:"
 	RedisRegisterEmailOtpVerified = "register:email_otp_verified:"
 	//--END--
@@ -89,7 +88,6 @@ var AllRedisPrefixes = []string{
 	RedisEmailFakeID,
 	RedisPhoneFakeID,
 	RedisUserNINQuickSearch,
-	RedisChangePassword,
 	RedisRegisterEmailOtp,
 	RedisRegisterEmailOtpVerified,
 	RedisJwtRefreshToken,

@@ -1,5 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
-import { useTheme } from "../../hooks/use-theme";
+import { useTheme, type ThemeMode } from "../../hooks/use-theme";
 import { DropdownMenuItem } from "../dropdown-menu";
 import SettingsIcon from "../../icons/navbar/settings-icon";
 import { LogOut, Monitor, Moon, Sun } from "lucide-react";

@@ -41,13 +41,17 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: APP_URL.auth.login });
     }
 
+    if (!user?.username) {
+      throw new Error("Your account profile is incomplete. Please complete your registration on the main portal.");
+    }
+
     if (!user?.roles?.includes("super_party_admin") && !user?.roles?.includes("party_admin") && !user?.roles?.includes("super_admin")) {
       throw new Error("You do not have access to this platform.");
     }
   },
   component: AuthenticatedRoutes,
   errorComponent: ({ error }) => (
-    <div className="text-destructive">{error.message}</div>
+    <div className="p-8 text-center text-destructive">{error.message}</div>
   ),
 });
 
@@ -130,6 +134,10 @@ function AuthenticatedRoutes() {
     dispatch(updateSiteState({ sideBarState }));
   };
 
+  const handleThemeChange = (theme: "light" | "dark" | "auto") => {
+    dispatch(updateSiteState({ theme }));
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -143,6 +151,7 @@ function AuthenticatedRoutes() {
         items={sidebarItems}
         onLogout={handleLogout}
         onSidebarStateChange={handleSidebarStateChange}
+        onThemeChange={handleThemeChange}
         homePageUrl={APP_URL.partyRoutes.home(partyShortName)}
       />
       <Outlet />

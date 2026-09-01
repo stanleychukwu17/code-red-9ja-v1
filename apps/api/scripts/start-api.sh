@@ -19,6 +19,7 @@ fi
 # docker: start postgres & redis databases
 echo "Starting PostgreSQL and Redis instances.."
 source ./scripts/docker-up-postgres-redis.sh
+log_success "PostgreSQL and Redis instances started"
 
 # swag: generate swagger documentation, during dev: you can comment the below out, to speed up starting of the server
 # echo "Generating Swagger documentation..."

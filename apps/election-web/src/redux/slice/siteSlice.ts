@@ -2,7 +2,7 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction, Middleware } from "@reduxjs/toolkit";
 import { saveSitePreference } from "@/lib/server/sitePreference";
 
-export interface VisitorDetails {
+export type VisitorDetails = {
   ip: string;
   location?: {
     city?: string;
@@ -12,23 +12,23 @@ export interface VisitorDetails {
     longitude?: number;
     timezone?: string;
   };
-}
+};
 
-export interface SiteState {
+export type SiteState = {
   isHydrated?: boolean; // Indicates if initial preferences have been loaded into the client store
   sideBarState: "" | "collapsed" | "expanded"; // Determines if the sidebar is collapsed or expanded
   theme?: "light" | "dark" | "auto" | ""; // Current user interface theme preference
   version?: number | string; // bigint/fake_id tracking user preference revisions for multi-device sync
   visitorDetails?: VisitorDetails | null; // The details of the visitor detected via IP
   pinnedLinks?: Record<string, string[]>; // Map of app key (e.g. web, election, partyadmin) to array of pinned item ids
-}
+};
 
-export interface BackendUserSitePreferences {
+export type BackendUserSitePreferences = {
   sidebar_state?: "expanded" | "collapsed" | string;
   pinned_links?: Record<string, string[]>;
   theme?: "light" | "dark" | "auto" | "";
   preference_version?: number | string;
-}
+};
 
 // Normalizes backend API responses (snake_case) or partial cookie data into strongly-typed SiteState
 export function normalizeSitePreference(

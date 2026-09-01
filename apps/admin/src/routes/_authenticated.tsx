@@ -39,6 +39,10 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: APP_URL.auth.login });
     }
 
+    if (!user?.username) {
+      throw new Error("Your account profile is incomplete. Please complete your registration on the main portal.");
+    }
+
     if (
       !user?.roles?.includes("admin") &&
       !user?.roles?.includes("super_admin")
@@ -48,7 +52,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: AuthenticatedRoutes,
   errorComponent: ({ error }) => (
-    <div className="text-destructive">{error.message}</div>
+    <div className="p-8 text-center text-destructive">{error.message}</div>
   ),
 });
 
@@ -132,6 +136,10 @@ function AuthenticatedRoutes() {
     dispatch(updateSiteState({ sideBarState }));
   };
 
+  const handleThemeChange = (theme: "light" | "dark" | "auto") => {
+    dispatch(updateSiteState({ theme }));
+  };
+
   return (
     <div className="flex">
       <AppSidebarShell
@@ -140,6 +148,7 @@ function AuthenticatedRoutes() {
         items={APP_SIDEBAR_ITEMS}
         onLogout={handleLogout}
         onSidebarStateChange={handleSidebarStateChange}
+        onThemeChange={handleThemeChange}
         homePageUrl={APP_URL.homePage}
       />
 

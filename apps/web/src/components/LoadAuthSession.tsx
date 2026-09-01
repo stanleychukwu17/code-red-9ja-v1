@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { refreshUserToken } from "#/lib/server/auth/auth";
 import { updateAuthState } from "#/redux/slice/authSlice";
@@ -14,6 +14,8 @@ import { QUERY_KEYS } from "@/lib/config";
 export default function LoadAuthSession() {
   const dispatch = useAppDispatch();
   const siteState = useAppSelector((state) => state.site);
+  const siteStateRef = useRef(siteState);
+  siteStateRef.current = siteState;
 
   // Periodically refresh JWT tokens (every 14 mins) and fetch current user profile
   const { data: response, error } = useQuery({
@@ -28,6 +30,7 @@ export default function LoadAuthSession() {
     dispatch(updateAuthState({ userHydrated: true }));
     if (response?.success && response.user) {
       const user = response.user;
+      const currentSiteState = siteStateRef.current;
 
       // Update auth state with user data
       dispatch(updateAuthState({ user }));
@@ -36,10 +39,17 @@ export default function LoadAuthSession() {
       if (response.sitePreference) {
         const formattedPref = normalizeSitePreference(response.sitePreference);
 
-        // Apply theme immediately if updated remotely
-        if (formattedPref.theme) {
-          applyThemeMode(formattedPref.theme);
-          window.localStorage.setItem("theme", formattedPref.theme);
+        // Only overwrite client theme if siteState is not yet hydrated OR if remote version changed
+        const remoteVersion = formattedPref.version ?? user.preference_version;
+        const isVersionMismatch =
+          remoteVersion !== undefined &&
+          String(remoteVersion) !== String(currentSiteState?.version);
+
+        if (!currentSiteState?.isHydrated || isVersionMismatch) {
+          if (formattedPref.theme) {
+            applyThemeMode(formattedPref.theme);
+            window.localStorage.setItem("theme", formattedPref.theme);
+          }
         }
 
         // Hydrate state immediately since preferences are returned directly
@@ -47,30 +57,34 @@ export default function LoadAuthSession() {
       } else {
         // Multi-device sync: If user preferences were updated on another device/tab or uninitialized, pull latest version
         const remoteVersion = user.preference_version;
-        const isUninitialized = !siteState?.sideBarState;
-        const isVersionMismatch = remoteVersion !== undefined && String(remoteVersion) !== String(siteState?.version);
+        const isUninitialized = !currentSiteState?.sideBarState;
+        const isVersionMismatch =
+          remoteVersion !== undefined &&
+          String(remoteVersion) !== String(currentSiteState?.version);
 
         // Fetch remote preferences if uninitialized or version mismatch
         if (isUninitialized || isVersionMismatch) {
-          fetchRemoteUserPreferences().then((remotePref) => {
-            if (remotePref) {
-              // Apply new theme immediately if updated remotely
-              if (remotePref.theme) {
-                applyThemeMode(remotePref.theme);
-                window.localStorage.setItem("theme", remotePref.theme);
-              }
+          fetchRemoteUserPreferences()
+            .then((remotePref) => {
+              if (remotePref) {
+                // Apply new theme immediately if updated remotely
+                if (remotePref.theme) {
+                  applyThemeMode(remotePref.theme);
+                  window.localStorage.setItem("theme", remotePref.theme);
+                }
 
-              // Hydrate state with remote preferences
-              dispatch(hydrateSiteState(remotePref));
-            }
-          }).catch(console.error);
+                // Hydrate state with remote preferences
+                dispatch(hydrateSiteState(remotePref));
+              }
+            })
+            .catch(console.error);
         }
       }
     } else if (error || (response && !response.success)) {
       // Clear authenticated state on invalid session or token refresh error
       dispatch(updateAuthState({ user: null }));
     }
-  }, [response, error, dispatch, siteState?.version, siteState?.sideBarState]);
+  }, [response, error, dispatch]);
 
   return null;
 }

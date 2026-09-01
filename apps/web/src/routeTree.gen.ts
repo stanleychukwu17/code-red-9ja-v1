@@ -145,7 +145,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/candidates/': typeof AuthenticatedCandidatesIndexRoute
@@ -163,7 +166,10 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/parties': typeof PartiesRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/app-users': typeof AuthenticatedAppUsersIndexRoute
   '/candidates': typeof AuthenticatedCandidatesIndexRoute
@@ -183,7 +189,10 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/parties': typeof PartiesRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
+  '/auth/onboarding': typeof AuthOnboardingRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/_authenticated/polling-unit/$pollingUnitId': typeof AuthenticatedPollingUnitPollingUnitIdRoute
   '/_authenticated/app-users/': typeof AuthenticatedAppUsersIndexRoute
   '/_authenticated/candidates/': typeof AuthenticatedCandidatesIndexRoute
@@ -203,7 +212,10 @@ export interface FileRouteTypes {
     | '/'
     | '/parties'
     | '/home'
+    | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/signup'
     | '/polling-unit/$pollingUnitId'
     | '/app-users/'
     | '/candidates/'
@@ -221,7 +233,10 @@ export interface FileRouteTypes {
     | '/'
     | '/parties'
     | '/home'
+    | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/signup'
     | '/polling-unit/$pollingUnitId'
     | '/app-users'
     | '/candidates'
@@ -240,7 +255,10 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/parties'
     | '/_authenticated/home'
+    | '/auth/forgot-password'
     | '/auth/login'
+    | '/auth/onboarding'
+    | '/auth/signup'
     | '/_authenticated/polling-unit/$pollingUnitId'
     | '/_authenticated/app-users/'
     | '/_authenticated/candidates/'
@@ -259,10 +277,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   PartiesRoute: typeof PartiesRoute
-  AuthLoginRoute: typeof AuthLoginRoute
-  AuthSignupRoute: typeof AuthSignupRoute
-  AuthOnboardingRoute: typeof AuthOnboardingRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthOnboardingRoute: typeof AuthOnboardingRoute
+  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -288,13 +306,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/login': {
-      id: '/auth/login'
-      path: '/auth/login'
-      fullPath: '/auth/login'
-      preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth/signup': {
       id: '/auth/signup'
       path: '/auth/signup'
@@ -307,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/onboarding'
       fullPath: '/auth/onboarding'
       preLoaderRoute: typeof AuthOnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/forgot-password': {
@@ -452,10 +470,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   PartiesRoute: PartiesRoute,
-  AuthLoginRoute: AuthLoginRoute,
-  AuthSignupRoute: AuthSignupRoute,
-  AuthOnboardingRoute: AuthOnboardingRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthOnboardingRoute: AuthOnboardingRoute,
+  AuthSignupRoute: AuthSignupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

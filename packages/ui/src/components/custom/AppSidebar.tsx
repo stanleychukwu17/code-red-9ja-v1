@@ -13,7 +13,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { useTheme } from "../../hooks/use-theme";
+import { useTheme, type ThemeMode } from "../../hooks/use-theme";
 import {
   Sidebar,
   SidebarContent,
@@ -412,7 +412,10 @@ function ProfilePicture({
           align="end"
           className="w-[300px] p-2 ml-2 rounded-[20px]"
         >
-          <ProfileDropdown onLogout={onLogout} homePageUrl={homePageUrl} />
+          <ProfileDropdown
+            onLogout={onLogout}
+            homePageUrl={homePageUrl}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -449,7 +452,10 @@ function ProfilePicture({
         align="start"
         className="w-[300px] p-2 mb-2 rounded-[20px]"
       >
-        <ProfileDropdown onLogout={onLogout} homePageUrl={homePageUrl} />
+        <ProfileDropdown
+          onLogout={onLogout}
+          homePageUrl={homePageUrl}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -119,6 +119,7 @@
     "swaggo",
     "systemsettingshandler",
     "tfstate",
+    "Timestamptz",
     "trgm",
     "usehooks",
     "usershandler",

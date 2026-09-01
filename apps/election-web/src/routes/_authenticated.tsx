@@ -89,6 +89,10 @@ function AuthenticatedRoutes() {
     dispatch(updateSiteState({ sideBarState }));
   };
 
+  const handleThemeChange = (theme: "light" | "dark" | "auto") => {
+    dispatch(updateSiteState({ theme }));
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -102,6 +106,7 @@ function AuthenticatedRoutes() {
         items={APP_SIDEBAR_ITEMS}
         onLogout={handleLogout}
         onSidebarStateChange={handleSidebarStateChange}
+        onThemeChange={handleThemeChange}
         homePageUrl={APP_URL.home}
       />
       <div className="w-full min-h-svh">

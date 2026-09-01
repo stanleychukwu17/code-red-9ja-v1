@@ -77,6 +77,10 @@ function AuthenticatedRoutes() {
     dispatch(updateSiteState({ sideBarState }));
   };
 
+  const handleThemeChange = (theme: "light" | "dark" | "auto") => {
+    dispatch(updateSiteState({ theme }));
+  };
+
   return (
     <div className="flex">
       <AppSidebarShell
@@ -85,6 +89,7 @@ function AuthenticatedRoutes() {
         items={APP_SIDEBAR_ITEMS}
         onLogout={handleLogout}
         onSidebarStateChange={handleSidebarStateChange}
+        onThemeChange={handleThemeChange}
         homePageUrl={APP_URL.homePage}
         showSidebarFooter={false}
         logoIcon={<ArrowHandleIcon className="size-6 rotate-180" />}

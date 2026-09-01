@@ -275,8 +275,15 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// Clean and validate username format
+	cleanUsername, err := auth.CleanUsername(req.Username)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
 	// Check username availability
-	if exists, _ := h.usersService.CheckUsername(ctx, req.Username); exists {
+	if exists, _ := h.usersService.CheckUsername(ctx, cleanUsername); exists {
 		h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 		return
 	}
@@ -310,7 +317,7 @@ func (h *Handler) CompleteOnboarding(w http.ResponseWriter, r *http.Request) {
 
 	params := queries.UpdateOnboardingProfileParams{
 		ID:              user.ID,
-		Username:        pgtype.Text{String: req.Username, Valid: req.Username != ""},
+		Username:        pgtype.Text{String: cleanUsername, Valid: cleanUsername != ""},
 		FirstName:       pgtype.Text{String: req.FirstName, Valid: true},
 		LastName:        pgtype.Text{String: req.LastName, Valid: true},
 		MiddleName:      pgtype.Text{String: req.MiddleName, Valid: req.MiddleName != ""},

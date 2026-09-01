@@ -66,8 +66,14 @@ export function useTheme() {
   }, [theme]);
 
   useEffect(() => {
-    const handleThemeSync = () => {
-      setThemeState(getInitialMode());
+    const handleThemeSync = (event?: Event) => {
+      const customEvent = event as CustomEvent<{ theme?: ThemeMode }> | undefined;
+      const explicitTheme = customEvent?.detail?.theme
+      if (explicitTheme && ThemeModes.includes(explicitTheme)) {
+        setThemeState(explicitTheme);
+      } else {
+        setThemeState(getInitialMode());
+      }
     };
 
     window.addEventListener('theme-change', handleThemeSync);
@@ -80,7 +86,9 @@ export function useTheme() {
     setThemeState(newTheme);
     applyThemeMode(newTheme);
     window.localStorage.setItem('theme', newTheme);
-    window.dispatchEvent(new Event('theme-change'));
+    window.dispatchEvent(
+      new CustomEvent('theme-change', { detail: { theme: newTheme } })
+    );
   };
 
   return { theme, setTheme };

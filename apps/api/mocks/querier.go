@@ -3399,7 +3399,7 @@ func (_m *Querier) GetLgaSupervisorByElectionGroup(ctx context.Context, arg quer
 }
 
 // GetMarketingPlansByType provides a mock function with given fields: ctx, type_
-func (_m *Querier) GetMarketingPlansByType(ctx context.Context, type_ queries.MarketingCampaignType) ([]queries.Plan, error) {
+func (_m *Querier) GetMarketingPlansByType(ctx context.Context, type_ string) ([]queries.Plan, error) {
 	ret := _m.Called(ctx, type_)
 
 	if len(ret) == 0 {
@@ -3408,10 +3408,10 @@ func (_m *Querier) GetMarketingPlansByType(ctx context.Context, type_ queries.Ma
 
 	var r0 []queries.Plan
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, queries.MarketingCampaignType) ([]queries.Plan, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) ([]queries.Plan, error)); ok {
 		return rf(ctx, type_)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, queries.MarketingCampaignType) []queries.Plan); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string) []queries.Plan); ok {
 		r0 = rf(ctx, type_)
 	} else {
 		if ret.Get(0) != nil {
@@ -3419,7 +3419,7 @@ func (_m *Querier) GetMarketingPlansByType(ctx context.Context, type_ queries.Ma
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, queries.MarketingCampaignType) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
 		r1 = rf(ctx, type_)
 	} else {
 		r1 = ret.Error(1)

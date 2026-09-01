@@ -117,7 +117,7 @@ function RouteComponent() {
         : "forgot-password";
 
   return (
-    <AuthWrapper type={wrapperType}>
+    <AuthWrapper type={wrapperType} email={step === "otp" ? email : undefined}>
       <FormError message={serverError} />
 
       {/* ── Step 1: Email ── */}

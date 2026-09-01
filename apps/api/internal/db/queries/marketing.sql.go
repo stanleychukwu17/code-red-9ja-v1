@@ -33,17 +33,17 @@ RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, d
 `
 
 type CreatePartyMarketingCampaignParams struct {
-	PartyID         int32                   `json:"party_id"`
-	ElectionGroupID int32                   `json:"election_group_id"`
-	ElectionID      int32                   `json:"election_id"`
-	PlanID          int32                   `json:"plan_id"`
-	Type            MarketingCampaignType   `json:"type"`
-	States          []byte                  `json:"states"`
-	DurationInDays  int32                   `json:"duration_in_days"`
-	Budget          pgtype.Numeric          `json:"budget"`
-	ReferralAmount  pgtype.Numeric          `json:"referral_amount"`
-	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
-	Status          MarketingCampaignStatus `json:"status"`
+	PartyID         int32          `json:"party_id"`
+	ElectionGroupID int32          `json:"election_group_id"`
+	ElectionID      int32          `json:"election_id"`
+	PlanID          int32          `json:"plan_id"`
+	Type            string         `json:"type"`
+	States          []byte         `json:"states"`
+	DurationInDays  int32          `json:"duration_in_days"`
+	Budget          pgtype.Numeric `json:"budget"`
+	ReferralAmount  pgtype.Numeric `json:"referral_amount"`
+	AmountSpent     pgtype.Numeric `json:"amount_spent"`
+	Status          string         `json:"status"`
 }
 
 func (q *Queries) CreatePartyMarketingCampaign(ctx context.Context, arg CreatePartyMarketingCampaignParams) (PartyMarketingCampaign, error) {
@@ -89,13 +89,13 @@ RETURNING id, name, description, price, type, features, scopes_recommendation, c
 `
 
 type CreatePlanParams struct {
-	Name                 string                `json:"name"`
-	Description          string                `json:"description"`
-	Price                pgtype.Numeric        `json:"price"`
-	Type                 MarketingCampaignType `json:"type"`
-	Features             []byte                `json:"features"`
-	ScopesRecommendation []byte                `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text           `json:"color_hex"`
+	Name                 string         `json:"name"`
+	Description          string         `json:"description"`
+	Price                pgtype.Numeric `json:"price"`
+	Type                 string         `json:"type"`
+	Features             []byte         `json:"features"`
+	ScopesRecommendation []byte         `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text    `json:"color_hex"`
 }
 
 func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error) {
@@ -184,7 +184,7 @@ WHERE is_active = true AND type = $1
 ORDER BY display_order ASC, price ASC
 `
 
-func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ MarketingCampaignType) ([]Plan, error) {
+func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ string) ([]Plan, error) {
 	rows, err := q.db.Query(ctx, getMarketingPlansByType, type_)
 	if err != nil {
 		return nil, err
@@ -228,25 +228,25 @@ ORDER BY pmc.created_at DESC
 `
 
 type GetPartyMarketingCampaignsRow struct {
-	ID              int32                   `json:"id"`
-	PartyID         int32                   `json:"party_id"`
-	ElectionGroupID int32                   `json:"election_group_id"`
-	ElectionID      int32                   `json:"election_id"`
-	PlanID          int32                   `json:"plan_id"`
-	Type            MarketingCampaignType   `json:"type"`
-	States          []byte                  `json:"states"`
-	DurationInDays  int32                   `json:"duration_in_days"`
-	StartDate       pgtype.Timestamptz      `json:"start_date"`
-	EndDate         pgtype.Timestamptz      `json:"end_date"`
-	Status          MarketingCampaignStatus `json:"status"`
-	Budget          pgtype.Numeric          `json:"budget"`
-	ReferralAmount  pgtype.Numeric          `json:"referral_amount"`
-	AmountSpent     pgtype.Numeric          `json:"amount_spent"`
-	CreatedAt       pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt       pgtype.Timestamptz      `json:"updated_at"`
-	PlanName        string                  `json:"plan_name"`
-	PlanPrice       pgtype.Numeric          `json:"plan_price"`
-	PlanColor       pgtype.Text             `json:"plan_color"`
+	ID              int32              `json:"id"`
+	PartyID         int32              `json:"party_id"`
+	ElectionGroupID int32              `json:"election_group_id"`
+	ElectionID      int32              `json:"election_id"`
+	PlanID          int32              `json:"plan_id"`
+	Type            string             `json:"type"`
+	States          []byte             `json:"states"`
+	DurationInDays  int32              `json:"duration_in_days"`
+	StartDate       pgtype.Timestamptz `json:"start_date"`
+	EndDate         pgtype.Timestamptz `json:"end_date"`
+	Status          string             `json:"status"`
+	Budget          pgtype.Numeric     `json:"budget"`
+	ReferralAmount  pgtype.Numeric     `json:"referral_amount"`
+	AmountSpent     pgtype.Numeric     `json:"amount_spent"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
+	PlanName        string             `json:"plan_name"`
+	PlanPrice       pgtype.Numeric     `json:"plan_price"`
+	PlanColor       pgtype.Text        `json:"plan_color"`
 }
 
 func (q *Queries) GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]GetPartyMarketingCampaignsRow, error) {
@@ -382,15 +382,15 @@ RETURNING id, name, description, price, type, features, scopes_recommendation, c
 `
 
 type UpdatePlanParams struct {
-	ID                   int32                 `json:"id"`
-	Name                 string                `json:"name"`
-	Description          string                `json:"description"`
-	Price                pgtype.Numeric        `json:"price"`
-	Type                 MarketingCampaignType `json:"type"`
-	Features             []byte                `json:"features"`
-	ScopesRecommendation []byte                `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text           `json:"color_hex"`
-	IsActive             bool                  `json:"is_active"`
+	ID                   int32          `json:"id"`
+	Name                 string         `json:"name"`
+	Description          string         `json:"description"`
+	Price                pgtype.Numeric `json:"price"`
+	Type                 string         `json:"type"`
+	Features             []byte         `json:"features"`
+	ScopesRecommendation []byte         `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text    `json:"color_hex"`
+	IsActive             bool           `json:"is_active"`
 }
 
 func (q *Queries) UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error) {

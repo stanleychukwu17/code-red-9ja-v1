@@ -1034,7 +1034,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 }
 
 // GetMarketingPlansByType returns marketing plans of a specific type
-func (s *PartiesService) GetMarketingPlansByType(ctx context.Context, campaignType queries.MarketingCampaignType) ([]queries.Plan, error) {
+func (s *PartiesService) GetMarketingPlansByType(ctx context.Context, campaignType string) ([]queries.Plan, error) {
 	return s.queries.GetMarketingPlansByType(ctx, campaignType)
 }
 

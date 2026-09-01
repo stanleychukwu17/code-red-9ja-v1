@@ -172,7 +172,7 @@ type Querier interface {
 	GetLGASupervisorCount(ctx context.Context, arg GetLGASupervisorCountParams) (int32, error)
 	GetLGAs(ctx context.Context, stateID int32) ([]Lga, error)
 	GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLgaSupervisorByElectionGroupParams) (LgaElectionSupervisor, error)
-	GetMarketingPlansByType(ctx context.Context, type_ MarketingCampaignType) ([]Plan, error)
+	GetMarketingPlansByType(ctx context.Context, type_ string) ([]Plan, error)
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (UserMoreInfo, error)
 	GetNationalChapter(ctx context.Context, arg GetNationalChapterParams) (int32, error)
 	GetNationalMetrics(ctx context.Context) (NationalMetric, error)
