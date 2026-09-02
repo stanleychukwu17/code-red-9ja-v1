@@ -132,7 +132,6 @@ CREATE TABLE polling_unit_results (
 CREATE UNIQUE INDEX uq_result_submission ON polling_unit_results (election_id, polling_unit_id, submitted_by);
 
 -- Indexes for common query patterns
-CREATE INDEX idx_pu_results_election       ON polling_unit_results(election_id);
 CREATE INDEX idx_pu_results_election_group ON polling_unit_results(election_group_id);
 CREATE INDEX idx_pu_results_pu             ON polling_unit_results(polling_unit_id);
 CREATE INDEX idx_pu_results_party_group    ON polling_unit_results(party_id, election_group_id);
@@ -185,7 +184,6 @@ CREATE TABLE election_polling_unit_final_results (
 CREATE UNIQUE INDEX uq_pu_final_result
   ON election_polling_unit_final_results (election_id, polling_unit_id);
 
-CREATE INDEX idx_pu_final_results_election ON election_polling_unit_final_results(election_id);
 CREATE INDEX idx_pu_final_results_election_group ON election_polling_unit_final_results(election_group_id);
 CREATE INDEX idx_pu_final_results_pu ON election_polling_unit_final_results(polling_unit_id);
 CREATE INDEX idx_pu_final_results_location ON election_polling_unit_final_results(state_id, lga_id, ward_id);
@@ -226,7 +224,6 @@ CREATE TABLE election_ward_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_ward_final_result_election_ward ON election_ward_final_result (election_id, ward_id);
-CREATE INDEX idx_ward_final_result_election ON election_ward_final_result(election_id);
 CREATE INDEX idx_ward_final_result_ward ON election_ward_final_result(ward_id);
 CREATE INDEX idx_ward_final_result_location ON election_ward_final_result(state_id, lga_id);
 CREATE INDEX idx_ward_final_result_senatorial ON election_ward_final_result(senatorial_district_id);
@@ -263,7 +260,6 @@ CREATE TABLE election_state_constituency_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_sc_final_result_election_sc ON election_state_constituency_final_result (election_id, state_constituency_id);
-CREATE INDEX idx_sc_final_result_election ON election_state_constituency_final_result(election_id);
 CREATE INDEX idx_sc_final_result_sc ON election_state_constituency_final_result(state_constituency_id);
 CREATE INDEX idx_sc_final_result_location ON election_state_constituency_final_result(state_id, lga_id);
 CREATE INDEX idx_sc_final_result_senatorial ON election_state_constituency_final_result(senatorial_district_id);
@@ -298,7 +294,6 @@ CREATE TABLE election_lga_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_lga_final_result_election_lga ON election_lga_final_result (election_id, lga_id);
-CREATE INDEX idx_lga_final_result_election ON election_lga_final_result(election_id);
 CREATE INDEX idx_lga_final_result_lga ON election_lga_final_result(lga_id);
 CREATE INDEX idx_lga_final_result_state ON election_lga_final_result(state_id);
 CREATE INDEX idx_lga_final_result_senatorial ON election_lga_final_result(senatorial_district_id);
@@ -331,7 +326,6 @@ CREATE TABLE election_federal_constituency_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_fc_final_result_election_fc ON election_federal_constituency_final_result (election_id, federal_constituency_id);
-CREATE INDEX idx_fc_final_result_election ON election_federal_constituency_final_result(election_id);
 CREATE INDEX idx_fc_final_result_fc ON election_federal_constituency_final_result(federal_constituency_id);
 CREATE INDEX idx_fc_final_result_state ON election_federal_constituency_final_result(state_id);
 CREATE INDEX idx_fc_final_result_senatorial ON election_federal_constituency_final_result(senatorial_district_id);
@@ -361,7 +355,6 @@ CREATE TABLE election_senatorial_district_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_sd_final_result_election_sd ON election_senatorial_district_final_result (election_id, senatorial_district_id);
-CREATE INDEX idx_sd_final_result_election ON election_senatorial_district_final_result(election_id);
 CREATE INDEX idx_sd_final_result_sd ON election_senatorial_district_final_result(senatorial_district_id);
 CREATE INDEX idx_sd_final_result_state ON election_senatorial_district_final_result(state_id);
 
@@ -388,7 +381,6 @@ CREATE TABLE election_state_final_result (
   updated_at                  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX idx_state_final_result_election_state ON election_state_final_result (election_id, state_id);
-CREATE INDEX idx_state_final_result_election ON election_state_final_result(election_id);
 CREATE INDEX idx_state_final_result_state ON election_state_final_result(state_id);
 
 -- ============================================================

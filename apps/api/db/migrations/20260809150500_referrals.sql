@@ -21,8 +21,7 @@ CREATE TABLE IF NOT EXISTS user_referrals (
   UNIQUE(user_id, election_group_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_referrals_user ON user_referrals(user_id);
-CREATE INDEX IF NOT EXISTS idx_user_referrals_party ON user_referrals(party_id);
+CREATE INDEX IF NOT EXISTS idx_user_referrals_user_party ON user_referrals(user_id, party_id);
 
 
 CREATE TABLE IF NOT EXISTS referrals (
@@ -44,9 +43,7 @@ CREATE TABLE IF NOT EXISTS referrals (
   UNIQUE(referred_user_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON referrals(referrer_user_id);
-CREATE INDEX IF NOT EXISTS idx_referrals_party ON referrals(party_id);
-CREATE INDEX IF NOT EXISTS idx_referrals_user_referral ON referrals(user_referral_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_user_id, id DESC);
 
 -- +goose Down
 DROP TABLE IF EXISTS user_referrals;

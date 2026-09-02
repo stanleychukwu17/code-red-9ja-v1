@@ -27,12 +27,12 @@ WHERE referred_user_id = $1 LIMIT 1;
 -- name: ListReferralsByReferrer :many
 SELECT * FROM referrals
 WHERE referrer_user_id = $1
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $2 OFFSET $3;
 
 -- name: ListReferrals :many
 SELECT * FROM referrals
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $1 OFFSET $2;
 
 -- name: UpdateReferral :one

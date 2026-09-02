@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   CONSTRAINT uq_agent_per_election_day UNIQUE(user_id, election_group_id)
 );
 
-CREATE INDEX idx_pu_assignments_user ON polling_unit_assignments(user_id);
 CREATE INDEX idx_pu_assignments_party ON polling_unit_assignments(party_id);
 CREATE INDEX idx_pu_assignments_pu ON polling_unit_assignments(polling_unit_id);
 CREATE INDEX idx_pu_assignments_election_group ON polling_unit_assignments(election_group_id);
