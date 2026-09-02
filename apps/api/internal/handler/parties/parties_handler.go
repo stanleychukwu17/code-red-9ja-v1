@@ -59,7 +59,7 @@ type PartiesService interface {
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg queries.ListAllPartyMarketingCampaignsParams) ([]queries.ListAllPartyMarketingCampaignsRow, error)
-	UpdateMarketingCampaignStatus(ctx context.Context, id int32, status queries.MarketingCampaignStatus) (queries.PartyMarketingCampaign, error)
+	UpdateMarketingCampaignStatus(ctx context.Context, id int32, status string) (queries.PartyMarketingCampaign, error)
 	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	// Plan admin methods
 	GetPlans(ctx context.Context, typeFilter string, isActiveFilter string) ([]queries.Plan, error)
@@ -1725,7 +1725,7 @@ func (h *Handler) UpdatePartyMarketingCampaignStatus(w http.ResponseWriter, r *h
 		return
 	}
 
-	updated, err := h.partiesService.UpdateMarketingCampaignStatus(r.Context(), int32(campaignID), queries.MarketingCampaignStatus(req.Status))
+	updated, err := h.partiesService.UpdateMarketingCampaignStatus(r.Context(), int32(campaignID), req.Status)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update campaign status: "+err.Error())
 		return

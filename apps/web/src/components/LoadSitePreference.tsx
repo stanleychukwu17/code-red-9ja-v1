@@ -6,7 +6,6 @@ import { applyThemeMode, type ThemeMode, ThemeModes } from "@repo/ui/hooks/use-t
 
 export default function LoadSitePreference({ sitePreference }: { sitePreference?: Partial<SiteState> }) {
   const dispatch = useDispatch();
-  console.log(sitePreference)
 
   useEffect(() => {
     if (!sitePreference || Object.keys(sitePreference).length === 0) return;

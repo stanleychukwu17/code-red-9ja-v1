@@ -922,23 +922,23 @@ type PartyElectionGroup struct {
 }
 
 type PartyMarketingCampaign struct {
-	ID                 int32                   `json:"id"`
-	PartyID            int32                   `json:"party_id"`
-	ElectionGroupID    int32                   `json:"election_group_id"`
-	ElectionID         int32                   `json:"election_id"`
-	PlanID             int32                   `json:"plan_id"`
-	Type               MarketingCampaignType   `json:"type"`
-	States             []byte                  `json:"states"`
-	DurationInDays     int32                   `json:"duration_in_days"`
-	StartDate          pgtype.Timestamptz      `json:"start_date"`
-	EndDate            pgtype.Timestamptz      `json:"end_date"`
-	Status             MarketingCampaignStatus `json:"status"`
-	BudgetPerDayKobo   int64                   `json:"budget_per_day_kobo"`
-	BudgetKobo         int64                   `json:"budget_kobo"`
-	ReferralAmountKobo int64                   `json:"referral_amount_kobo"`
-	AmountSpentKobo    int64                   `json:"amount_spent_kobo"`
-	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
+	ID                 int32              `json:"id"`
+	PartyID            int32              `json:"party_id"`
+	ElectionGroupID    int32              `json:"election_group_id"`
+	ElectionID         int32              `json:"election_id"`
+	PlanID             int32              `json:"plan_id"`
+	Type               string             `json:"type"`
+	States             []byte             `json:"states"`
+	DurationInDays     int32              `json:"duration_in_days"`
+	StartDate          pgtype.Timestamptz `json:"start_date"`
+	EndDate            pgtype.Timestamptz `json:"end_date"`
+	Status             string             `json:"status"`
+	BudgetPerDayKobo   int64              `json:"budget_per_day_kobo"`
+	BudgetKobo         int64              `json:"budget_kobo"`
+	ReferralAmountKobo int64              `json:"referral_amount_kobo"`
+	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyMembership struct {
@@ -1003,20 +1003,20 @@ type PartyWalletTransaction struct {
 }
 
 type Plan struct {
-	ID                   int32                 `json:"id"`
-	Name                 string                `json:"name"`
-	Description          string                `json:"description"`
-	PriceKobo            int64                 `json:"price_kobo"`
-	Type                 MarketingCampaignType `json:"type"`
-	Features             []byte                `json:"features"`
-	ScopesRecommendation []byte                `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text           `json:"color_hex"`
-	DarkColorHex         pgtype.Text           `json:"dark_color_hex"`
-	ReferralAmountKobo   int64                 `json:"referral_amount_kobo"`
-	IsActive             bool                  `json:"is_active"`
-	DisplayOrder         int32                 `json:"display_order"`
-	CreatedAt            pgtype.Timestamptz    `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz    `json:"updated_at"`
+	ID                   int32              `json:"id"`
+	Name                 string             `json:"name"`
+	Description          string             `json:"description"`
+	PriceKobo            int64              `json:"price_kobo"`
+	Type                 string             `json:"type"`
+	Features             []byte             `json:"features"`
+	ScopesRecommendation []byte             `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text        `json:"color_hex"`
+	DarkColorHex         pgtype.Text        `json:"dark_color_hex"`
+	ReferralAmountKobo   int64              `json:"referral_amount_kobo"`
+	IsActive             bool               `json:"is_active"`
+	DisplayOrder         int32              `json:"display_order"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PollingUnit struct {

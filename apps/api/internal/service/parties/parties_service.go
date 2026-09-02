@@ -1133,7 +1133,7 @@ func (s *PartiesService) ListAllPartyMarketingCampaigns(ctx context.Context, arg
 }
 
 // UpdateMarketingCampaignStatus updates a campaign's status, setting start/end dates and deducting per-day budget when activating.
-func (s *PartiesService) UpdateMarketingCampaignStatus(ctx context.Context, id int32, status queries.MarketingCampaignStatus) (queries.PartyMarketingCampaign, error) {
+func (s *PartiesService) UpdateMarketingCampaignStatus(ctx context.Context, id int32, status string) (queries.PartyMarketingCampaign, error) {
 	return s.queries.UpdateMarketingCampaignStatus(ctx, queries.UpdateMarketingCampaignStatusParams{
 		ID:     id,
 		Status: status,

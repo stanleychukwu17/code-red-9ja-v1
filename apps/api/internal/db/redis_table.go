@@ -117,7 +117,7 @@ var AllRedisPrefixes = []string{
 	RedisPageVerifications,
 	RedisSenatorialDistrictsByState,
 	RedisFederalConstituenciesByState,
-	RedisStateAssemblyConstituenciesByState,
+	RedisStateConstituenciesByState,
 	RedisLGAsByState,
 	RedisWardsByLGA,
 	RedisPollingUnitsByWard,

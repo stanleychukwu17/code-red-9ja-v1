@@ -17,20 +17,20 @@ CREATE TABLE IF NOT EXISTS plans (
 );
 
 -- Seed basic plans based on UI
-INSERT INTO plans (name, description, price, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount, display_order)
-SELECT 'Starter', 'Ideal for: ward-level or small-parties', 220000, 'agent-campaign', '["Low-budget referral", "1 to 1,000 applications per month"]'::jsonb, '["ward"]'::jsonb, '#313131', '#D1D5DB', 200, 1
+INSERT INTO plans (name, description, price_kobo, type, features, scopes_recommendation, color_hex, dark_color_hex, referral_amount_kobo, display_order)
+SELECT 'Starter', 'Ideal for: ward-level or small-parties', 22000000, 'agent-campaign', '["Low-budget referral", "1 to 1,000 applications per month"]'::jsonb, '["ward"]'::jsonb, '#313131', '#D1D5DB', 20000, 1
 WHERE NOT EXISTS (SELECT 1 FROM plans WHERE name = 'Starter')
 UNION ALL
-SELECT 'Basic', 'Ideal for: LGA-level and mid-parties', 600000, 'agent-campaign', '["Everything in Starter", "Mid-budget referral", "Facebook & Instagram Advertising", "1 to 3,000 applications per month"]'::jsonb, '["lga"]'::jsonb, '#3742FA', '#5352ED', 300, 2
+SELECT 'Basic', 'Ideal for: LGA-level and mid-parties', 60000000, 'agent-campaign', '["Everything in Starter", "Mid-budget referral", "Facebook & Instagram Advertising", "1 to 3,000 applications per month"]'::jsonb, '["lga"]'::jsonb, '#3742FA', '#5352ED', 30000, 2
 WHERE NOT EXISTS (SELECT 1 FROM plans WHERE name = 'Basic')
 UNION ALL
-SELECT 'Pro', 'Ideal for: senatorial and house of rep', 1200000, 'agent-campaign', '["Everything in Basic", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 6,000 applications per month"]'::jsonb, '["senatorial-district", "federal-constituency"]'::jsonb, '#009A49', '#2ED573', 500, 3
+SELECT 'Pro', 'Ideal for: senatorial and house of rep', 120000000, 'agent-campaign', '["Everything in Basic", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 6,000 applications per month"]'::jsonb, '["senatorial-district", "federal-constituency"]'::jsonb, '#009A49', '#2ED573', 50000, 3
 WHERE NOT EXISTS (SELECT 1 FROM plans WHERE name = 'Pro')
 UNION ALL
-SELECT 'Premium', 'Ideal for: presidential and governorship', 5000000, 'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 applications per month", "5X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#FF8D28', '#FFA502', 1000, 4
+SELECT 'Premium', 'Ideal for: presidential and governorship', 500000000, 'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 applications per month", "5X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#FF8D28', '#FFA502', 100000, 4
 WHERE NOT EXISTS (SELECT 1 FROM plans WHERE name = 'Premium')
 UNION ALL
-SELECT 'Premium Plus', 'Ideal for: presidential and governorship', 10000000, 'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 application per month", "10X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#F44336', '#FF4757', 2000, 5
+SELECT 'Premium Plus', 'Ideal for: presidential and governorship', 1000000000, 'agent-campaign', '["Everything in Pro", "High-budget referral", "Multi-platform advertising (Facebook, Instagram, TikTok, X)", "High-end UGC Ad Video", "Geo-targeted Campaign", "24/7 campaign monitoring", "1 to 20,000 application per month", "10X more aggressive than Pro"]'::jsonb, '["nationwide", "state"]'::jsonb, '#F44336', '#FF4757', 200000, 5
 WHERE NOT EXISTS (SELECT 1 FROM plans WHERE name = 'Premium Plus');
 
 CREATE TABLE IF NOT EXISTS party_marketing_campaigns (
