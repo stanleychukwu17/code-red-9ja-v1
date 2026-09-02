@@ -26,13 +26,13 @@ export function ElectionGroupTableHeader() {
         <span className="text-c-90">Group</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[110px] hidden lg:block">
+        <span className="text-c-50 text-[14px] w-27.5 hidden lg:block">
           Elections
         </span>
-        <span className="text-c-50 text-[14px] w-[110px] hidden lg:block">
+        <span className="text-c-50 text-[14px] w-27.5 hidden lg:block">
           States
         </span>
-        <span className="text-c-50 text-[14px] w-[110px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
           Holds
         </span>
         <div className="ml-2 w-8 shrink-0" />
@@ -55,13 +55,13 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[110px] hidden lg:block">
+        <span className="text-[15px] text-c-70 w-27.5 hidden lg:block">
           {data.elections_count ?? 0}
         </span>
-        <span className="text-[15px] text-c-70 w-[110px] hidden lg:block">
+        <span className="text-[15px] text-c-70 w-27.5 hidden lg:block">
           {data.states_count ?? 0}
         </span>
-        <span className="text-[15px] text-c-70 w-[110px] hidden sm:block">
+        <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
           {dateLabel}
         </span>
         <ElectionGroupDropdown data={data} className="ml-2 hidden md:block" />

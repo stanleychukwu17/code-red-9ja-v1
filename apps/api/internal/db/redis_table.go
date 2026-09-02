@@ -3,22 +3,21 @@ package db
 import "time"
 
 const (
-	RedisFiveYearsTTL = 5 * 365 * 24 * time.Hour
-	RedisTwoYearsTTL  = 2 * 365 * 24 * time.Hour
-	RedisOneYearTTL   = 365 * 24 * time.Hour
+	RedisFiveYearsTTL      = 5 * 365 * 24 * time.Hour
+	RedisTwoYearsTTL       = 2 * 365 * 24 * time.Hour
+	RedisOneYearTTL        = 365 * 24 * time.Hour
+	RedisFifteenMinutesTTL = 15 * time.Minute
 	// RedisSixMonthsTTL = 6 * 30 * 24 * time.Hour
 	// RedisOneMonthTTL  = 30 * 24 * time.Hour
 
 	//--START-- for registration
-	// STRING: RedisRegisterOnboarding is the Redis key prefix used to store onboarding data.
-	RedisRegisterOnboarding = "register:onboarding:"
-
 	// STRING: Keys used to map registration details to user fake ID
-	RedisUsernameFakeID = "register:username_user_fake_id:"
-	RedisEmailFakeID    = "register:email_user_fake_id:"
-	RedisPhoneFakeID    = "register:phone_user_fake_id:"
-	RedisNINFakeID      = "register:nin_user_fake_id:"
-	RedisChangePassword = "register:user_change_password:"
+	RedisUsernameFakeID           = "register:username_user_fake_id:"
+	RedisEmailFakeID              = "register:email_user_fake_id:"
+	RedisPhoneFakeID              = "register:phone_user_fake_id:"
+	RedisUserNINQuickSearch       = "register:user_nin_quick_search:"
+	RedisRegisterEmailOtp         = "register:email_otp:"
+	RedisRegisterEmailOtpVerified = "register:email_otp_verified:"
 	//--END--
 
 	//--START-- for login, refreshing jwt token, logout,
@@ -41,6 +40,8 @@ const (
 	RedisUserMoreInfo     = "user:more_info:"     // STRING: user:more_info:<userID> used to store and retrieve user more_info.
 	RedisUserRoles        = "user:roles:"         // STRING: user:roles:<userFakeID> used to store and retrieve user roles.
 	RedisUserPhoneNumbers = "user:phone_numbers:" // STRING: user:phone_numbers:<userID> used to store and retrieve user phone numbers.
+	RedisUserPreferences  = "user:preferences:"   // STRING: user:preferences:<userID> used to store and retrieve user preferences.
+	RedisReferralCode     = "user:referral_code:" // STRING: user:referral_code:<code> used to store cached referrer info JSON (id, name).
 	//--END--
 
 	//--START-- for countries and states
@@ -80,3 +81,44 @@ const (
 	RedisPollingUnitsByWard                 = "bodies:polling_units:ward:"
 	//--END--
 )
+
+// AllRedisPrefixes is a list of all key prefixes and static keys used across the application.
+var AllRedisPrefixes = []string{
+	RedisUsernameFakeID,
+	RedisEmailFakeID,
+	RedisPhoneFakeID,
+	RedisUserNINQuickSearch,
+	RedisRegisterEmailOtp,
+	RedisRegisterEmailOtpVerified,
+	RedisJwtRefreshToken,
+	RedisSessionTokens,
+	RedisUserLoginSessions,
+	RedisJwtUserLoginLocked,
+	RedisUserInfo,
+	RedisUserMoreInfo,
+	RedisUserRoles,
+	RedisUserPhoneNumbers,
+	RedisUserPreferences,
+	RedisReferralCode,
+	RedisEachCountry,
+	RedisEachState,
+	RedisEachCity,
+	RedisCountriesAll,
+	RedisStatesByCountry,
+	RedisCitiesByState,
+	RedisPartiesList,
+	RedisPartyInfo,
+	RedisPartyBasicInfo,
+	RedisChapterMemberCount,
+	RedisNationalChapter,
+	RedisChapterSettings,
+	RedisPageVerificationTypesList,
+	RedisPageVerificationTypeInfo,
+	RedisPageVerifications,
+	RedisSenatorialDistrictsByState,
+	RedisFederalConstituenciesByState,
+	RedisStateConstituenciesByState,
+	RedisLGAsByState,
+	RedisWardsByLGA,
+	RedisPollingUnitsByWard,
+}

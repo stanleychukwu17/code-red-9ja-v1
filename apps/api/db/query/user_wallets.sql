@@ -45,7 +45,7 @@ SELECT * FROM user_wallet_transactions
 WHERE transaction_reference = $1;
 
 -- name: ListUsersWithoutWallet :many
-SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.referral_code, u.referred_by_id, u.account_status, u.created_at, u.updated_at FROM users u 
+SELECT u.id, u.fake_id, u.email, u.avatar, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.referral_code, u.account_status, u.created_at, u.updated_at FROM users u 
 LEFT JOIN user_wallets uw ON uw.user_id = u.id
 WHERE uw.id IS NULL
 ORDER BY u.id ASC;

@@ -100,13 +100,13 @@ export function ApplicationTableHeader() {
       </TileLeft>
 
       <TileRight>
-        <p className="text-c-50 text-[14px] w-[140px] hidden lg:block">
+        <p className="text-c-50 text-[14px] w-35 hidden lg:block">
           Election
         </p>
         <p className="text-c-50 text-[14px] w-[160px] hidden md:block">
           Polling Unit
         </p>
-        <p className="text-c-50 text-[14px] w-[100px] hidden xl:block">
+        <p className="text-c-50 text-[14px] w-25 hidden xl:block">
           Agents Count
         </p>
         <p className="text-c-50 text-[14px] w-[160px]">Make decision</p>
@@ -308,7 +308,7 @@ export function ApplicationTableTile({
       </TileLeft>
 
       <TileRight>
-        <p className="w-[140px] truncate hidden lg:block text-[#313131]">
+        <p className="w-35 truncate hidden lg:block text-[#313131]">
           {election}
         </p>
         <p
@@ -317,7 +317,7 @@ export function ApplicationTableTile({
         >
           {pollingUnitName}
         </p>
-        <p className="w-[100px] hidden xl:block text-[#313131]">
+        <p className="w-25 hidden xl:block text-[#313131]">
           {agentsCount}
         </p>
         <div
@@ -344,7 +344,7 @@ export function ApplicationTableTile({
           ) : (
             <DecisionPill
               variant={decisionVariant}
-              className="w-full max-w-[140px]"
+              className="w-full max-w-35"
               disabled={true}
             >
               {decisionLabel}

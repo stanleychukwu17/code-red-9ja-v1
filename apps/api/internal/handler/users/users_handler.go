@@ -53,12 +53,14 @@ type UsersService interface {
 	DeleteUserPhoneNumber(ctx context.Context, id int64, userID int64) error
 	GetUserPageVerifications(ctx context.Context, userID int64) ([]queries.GetPageVerificationsRow, error)
 	MakeUserSuperAdmin(ctx context.Context, username string) error
-	CheckUsername(ctx context.Context, username string) bool
+	CheckUsername(ctx context.Context, username string) (bool, int64)
 	InvalidateUsernameCache(ctx context.Context, username string)
 	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 	GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error)
+	GetUserPreferences(ctx context.Context, userID int64) (usersservice.UserPreferencesResponse, error)
+	UpdateUserPreferences(ctx context.Context, userID int64, params usersservice.UpdateUserPreferencesParams) (usersservice.UserPreferencesResponse, error)
 }
 
 // BodiesService interface defines the methods needed from the bodies service
@@ -662,7 +664,6 @@ func (h *Handler) GenerateReferralCode(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-
 type AdminUpdateUserRequest struct {
 	Avatar         string `json:"avatar" validate:"omitempty"`
 	AvatarFileId   *int64 `json:"avatar_file_id" validate:"omitempty"`
@@ -725,7 +726,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		if h.usersService.CheckUsername(r.Context(), cleanUsername) {
+		if exists, _ := h.usersService.CheckUsername(r.Context(), cleanUsername); exists {
 			h.utils.RespondError(w, http.StatusBadRequest, "Username is already taken")
 			return
 		}
@@ -750,7 +751,7 @@ func (h *Handler) AdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		
+
 		// If the party is changing (or being set for the first time), update it
 		if !targetUserDetails.PartyID.Valid || req.PartyID != int64(targetUserDetails.PartyID.Int16) {
 			pID := int16(req.PartyID)

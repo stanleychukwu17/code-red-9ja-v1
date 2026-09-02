@@ -27,11 +27,11 @@ export function LgaTableHeader() {
         <span className="font-semibold text-c-80">LGA</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[100px] text-center">PUs</span>
-        <span className="text-c-50 text-[14px] w-[100px] text-center">
+        <span className="text-c-50 text-[14px] w-25 text-center">PUs</span>
+        <span className="text-c-50 text-[14px] w-25 text-center">
           Wards
         </span>
-        <span className="text-c-50 text-[14px] w-[120px] text-center">
+        <span className="text-c-50 text-[14px] w-28.5 text-center">
           State
         </span>
         <div className="w-8 shrink-0 ml-2" />
@@ -49,13 +49,13 @@ export function LgaTableTile({ data }: { data: LgaType }) {
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[100px] text-center">
+        <span className="text-[15px] text-c-70 w-25 text-center">
           {data.polling_units_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[100px] text-center">
+        <span className="text-[15px] text-c-70 w-25 text-center">
           {data.wards_count ?? "-"}
         </span>
-        <span className="text-[15px] text-c-70 w-[120px] text-center">
+        <span className="text-[15px] text-c-70 w-28.5 text-center">
           {data.state_name}
         </span>
         <div className="ml-2 w-8 shrink-0" />

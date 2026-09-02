@@ -55,11 +55,11 @@ type PartiesService interface {
 	UpdateAgentPaymentAllocationKobo(ctx context.Context, partyID int16, allowancesJSON []byte) (queries.Party, error)
 	GetAgentPaymentAllocationKobo(ctx context.Context, partyID int16) (json.RawMessage, error)
 	// Marketing methods
-	GetMarketingPlansByType(ctx context.Context, campaignType queries.MarketingCampaignType) ([]queries.Plan, error)
+	GetMarketingPlansByType(ctx context.Context, campaignType string) ([]queries.Plan, error)
 	CreatePartyMarketingCampaign(ctx context.Context, arg queries.CreatePartyMarketingCampaignParams) (queries.PartyMarketingCampaign, error)
 	GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]queries.GetPartyMarketingCampaignsRow, error)
 	ListAllPartyMarketingCampaigns(ctx context.Context, arg queries.ListAllPartyMarketingCampaignsParams) ([]queries.ListAllPartyMarketingCampaignsRow, error)
-	UpdateMarketingCampaignStatus(ctx context.Context, id int32, status queries.MarketingCampaignStatus) (queries.PartyMarketingCampaign, error)
+	UpdateMarketingCampaignStatus(ctx context.Context, id int32, status string) (queries.PartyMarketingCampaign, error)
 	DeletePartyMarketingCampaign(ctx context.Context, id int32) error
 	// Plan admin methods
 	GetPlans(ctx context.Context, typeFilter string, isActiveFilter string) ([]queries.Plan, error)
@@ -1408,9 +1408,7 @@ func (h *Handler) GetMarketingPlansByType(w http.ResponseWriter, r *http.Request
 		campaignTypeStr = "agent-campaign"
 	}
 
-	campaignType := queries.MarketingCampaignType(campaignTypeStr)
-
-	plans, err := h.partiesService.GetMarketingPlansByType(r.Context(), campaignType)
+	plans, err := h.partiesService.GetMarketingPlansByType(r.Context(), campaignTypeStr)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to Get plans: "+err.Error())
 		return
@@ -1465,14 +1463,14 @@ func (h *Handler) CreatePartyMarketingCampaign(w http.ResponseWriter, r *http.Re
 		ElectionGroupID:    req.ElectionGroupID,
 		ElectionID:         req.ElectionID,
 		PlanID:             req.PlanID,
-		Type:               queries.MarketingCampaignType(req.Type),
+		Type:            req.Type,
 		States:             req.States,
 		DurationInDays:     req.DurationInDays,
 		BudgetPerDayKobo:   budgetPerDayKobo,
 		BudgetKobo:         budgetKobo,
 		ReferralAmountKobo: 0,
 		AmountSpentKobo:    0,
-		Status:             queries.MarketingCampaignStatusPending,
+		Status:          "pending",
 	}
 
 	campaign, err := h.partiesService.CreatePartyMarketingCampaign(r.Context(), arg)
@@ -1727,7 +1725,7 @@ func (h *Handler) UpdatePartyMarketingCampaignStatus(w http.ResponseWriter, r *h
 		return
 	}
 
-	updated, err := h.partiesService.UpdateMarketingCampaignStatus(r.Context(), int32(campaignID), queries.MarketingCampaignStatus(req.Status))
+	updated, err := h.partiesService.UpdateMarketingCampaignStatus(r.Context(), int32(campaignID), req.Status)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update campaign status: "+err.Error())
 		return
@@ -1817,7 +1815,7 @@ func (h *Handler) CreatePlan(w http.ResponseWriter, r *http.Request) {
 		Name:                 req.Name,
 		Description:          req.Description,
 		PriceKobo:            priceKobo,
-		Type:                 queries.MarketingCampaignType(req.Type),
+		Type:                 req.Type,
 		Features:             featuresJSON,
 		ScopesRecommendation: scopesJSON,
 		ColorHex:             colorHex,
@@ -1895,7 +1893,7 @@ func (h *Handler) UpdatePlan(w http.ResponseWriter, r *http.Request) {
 		Name:                 req.Name,
 		Description:          req.Description,
 		PriceKobo:            priceKobo,
-		Type:                 queries.MarketingCampaignType(req.Type),
+		Type:                 req.Type,
 		Features:             featuresJSON,
 		ScopesRecommendation: scopesJSON,
 		ColorHex:             colorHex,
@@ -1946,7 +1944,7 @@ type PlanResponse struct {
 	Price                float64                       `json:"price"`
 	ReferralAmountKobo   int64                         `json:"referral_amount_kobo"`
 	ReferralAmount       float64                       `json:"referral_amount"`
-	Type                 queries.MarketingCampaignType `json:"type"`
+	Type                 string                  `json:"type"`
 	Features             json.RawMessage               `json:"features"`
 	ScopesRecommendation json.RawMessage               `json:"scopes_recommendation"`
 	ColorHex             pgtype.Text                   `json:"color_hex"`

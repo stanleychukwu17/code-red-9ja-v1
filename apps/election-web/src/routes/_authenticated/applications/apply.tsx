@@ -409,7 +409,7 @@ function ApplyPage() {
       });
       console.log("RESPONSE:", response);
 
-      if (!response.success && response.status !== "success") {
+      if (!response.success) {
         throw new Error(
           response.message ||
             "Failed to submit application. Please check your inputs.",

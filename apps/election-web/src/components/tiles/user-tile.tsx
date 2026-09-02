@@ -62,7 +62,7 @@ export function UserTableHeader() {
         <span className="text-c-90">User</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[140px] hidden md:block">
+        <span className="text-c-50 text-[14px] w-35 hidden md:block">
           Role level
         </span>
         <span className="text-c-50 text-[14px] w-[150px]">Date added</span>
@@ -115,7 +115,7 @@ export function UserTableTile({
         <p className="truncate w-full text-[16px] text-c-90">{name}</p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-80 w-[140px]">
+        <span className="text-[15px] text-c-80 w-35">
           {formattedRoleLevel || "-"}
         </span>
         <span className="text-[15px] text-c-70 w-[150px]">{dateAdded}</span>

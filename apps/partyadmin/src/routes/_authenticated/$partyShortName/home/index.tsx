@@ -132,47 +132,47 @@ function ReadinessComponent() {
 
   const statesList = statesRes?.data?.states?.length
     ? statesRes.data.states
-        .map((s: any) => s.name)
-        .sort((a: string, b: string) => a.localeCompare(b))
+      .map((s: any) => s.name)
+      .sort((a: string, b: string) => a.localeCompare(b))
     : [
-        "Abia",
-        "Abuja FCT",
-        "Adamawa",
-        "Akwa Ibom",
-        "Anambra",
-        "Bauchi",
-        "Bayelsa",
-        "Benue",
-        "Borno",
-        "Cross River",
-        "Delta",
-        "Ebonyi",
-        "Edo",
-        "Ekiti",
-        "Enugu",
-        "Gombe",
-        "Imo",
-        "Jigawa",
-        "Kaduna",
-        "Kano",
-        "Katsina",
-        "Kebbi",
-        "Kogi",
-        "Kwara",
-        "Lagos",
-        "Nasarawa",
-        "Niger",
-        "Ogun",
-        "Ondo",
-        "Osun",
-        "Oyo",
-        "Plateau",
-        "Rivers",
-        "Sokoto",
-        "Taraba",
-        "Yobe",
-        "Zamfara",
-      ];
+      "Abia",
+      "Abuja FCT",
+      "Adamawa",
+      "Akwa Ibom",
+      "Anambra",
+      "Bauchi",
+      "Bayelsa",
+      "Benue",
+      "Borno",
+      "Cross River",
+      "Delta",
+      "Ebonyi",
+      "Edo",
+      "Ekiti",
+      "Enugu",
+      "Gombe",
+      "Imo",
+      "Jigawa",
+      "Kaduna",
+      "Kano",
+      "Katsina",
+      "Kebbi",
+      "Kogi",
+      "Kwara",
+      "Lagos",
+      "Nasarawa",
+      "Niger",
+      "Ogun",
+      "Ondo",
+      "Osun",
+      "Oyo",
+      "Plateau",
+      "Rivers",
+      "Sokoto",
+      "Taraba",
+      "Yobe",
+      "Zamfara",
+    ];
 
   const { data: electionStatsData, isLoading: isStatsLoading } = useQuery({
     queryKey: [
@@ -236,8 +236,8 @@ function ReadinessComponent() {
             hasPaymentAllocation={
               party?.agentPaymentAllocation
                 ? Object.values(party.agentPaymentAllocation).some(
-                    (role: any) => (role?.default ?? 0) > 0,
-                  )
+                  (role: any) => (role?.default ?? 0) > 0,
+                )
                 : false
             }
             hasMarketingSetup={hasMarketingSetup}

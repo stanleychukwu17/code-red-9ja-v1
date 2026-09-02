@@ -22,7 +22,7 @@ export function PartyTableHeader() {
         <span className="text-c-90">Name</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[140px] text-right hidden sm:block">
+        <span className="text-c-50 text-[14px] w-35 text-right hidden sm:block">
           PU agents
         </span>
         <div className="ml-2 w-8 shrink-0" />
@@ -49,7 +49,7 @@ export function PartyTableTile({ data }: { data: PartyType }) {
         <p className="truncate w-full text-c-90">{data.name}</p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[140px] text-right hidden sm:block">
+        <span className="text-[15px] text-c-70 w-35 text-right hidden sm:block">
           {data.puAgents || "0 (0%)"}
         </span>
         <div className="ml-2 w-8 shrink-0" />

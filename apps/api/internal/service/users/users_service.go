@@ -2,15 +2,18 @@ package usersservice
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"free9ja/api/internal/db"
 	"free9ja/api/internal/db/queries"
 	monnifyclient "free9ja/api/internal/service/monnify"
+	"math/big"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -42,6 +45,12 @@ type UsersService struct {
 	bodiesService            BodiesService
 	pageVerificationsService PageVerificationsService
 	partyService             PartyService
+}
+
+// CachedReferralCodeInfo represents the cached referrer details stored in Redis.
+type CachedReferralCodeInfo struct {
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 // NewUsersService initializes and returns a new UsersService.
@@ -559,12 +568,13 @@ func (s *UsersService) UpdateUserPhoneNumbers(ctx context.Context, userID int64,
 			defaultPhonesCount++
 		}
 		if p.ID == 0 {
-			// checks if the phone-number already exist
-			if s.CheckPhone(ctx, p.Phone) {
+			// checks if the phone-number already exists for another user
+			if exists, _ := s.CheckPhone(ctx, p.Phone, fakeID); exists {
 				return fmt.Errorf("phone number already exists")
 			}
 			newPhonesCount++
 		}
+
 	}
 
 	if defaultPhonesCount <= 0 {
@@ -809,23 +819,23 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 }
 
 // function: check if the username already exist in redis and in the postgres db
-func (s *UsersService) CheckUsername(ctx context.Context, username string) bool {
+func (s *UsersService) CheckUsername(ctx context.Context, username string) (bool, int64) {
 	cacheKey := db.RedisUsernameFakeID + username
 
 	// checks the cache first
-	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
-	if exists > 0 {
-		return true
+	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
+	if err == nil && cachedVal > 0 {
+		return true, cachedVal
 	}
 
 	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByUsername(ctx, pgtype.Text{String: username, Valid: true})
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		return true, fakeID.Int64
 	}
 
-	return false
+	return false, 0
 }
 
 // InvalidateUsernameCache deletes a specific username from Redis
@@ -835,55 +845,64 @@ func (s *UsersService) InvalidateUsernameCache(ctx context.Context, username str
 }
 
 // function: checks if the email already exists in redis and in the postgres db
-func (s *UsersService) CheckEmail(ctx context.Context, email string) bool {
+func (s *UsersService) CheckEmail(ctx context.Context, email string) (bool, int64) {
 	cacheKey := db.RedisEmailFakeID + email
 
 	// checks the cache first
-	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
-	if exists > 0 {
-		return true
+	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
+	if err == nil && cachedVal > 0 {
+		return true, cachedVal
 	}
 
 	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByEmail(ctx, pgtype.Text{String: email, Valid: true})
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		return true, fakeID.Int64
 	}
 
-	return false
+	return false, 0
 }
 
 // function: checks if the phone exists in redis and in the postgres db
-func (s *UsersService) CheckPhone(ctx context.Context, phone string) bool {
+func (s *UsersService) CheckPhone(ctx context.Context, phone string, userFakeID int64) (bool, int64) {
 	cacheKey := db.RedisPhoneFakeID + phone
 
 	// checks the cache first
-	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
-	if exists > 0 {
-		return true
+	cachedVal, err := s.rdb.Get(ctx, cacheKey).Int64()
+	if err == nil && cachedVal > 0 {
+		if userFakeID > 0 && cachedVal == userFakeID {
+			// cached phone belongs to the current user, not a collision
+		} else {
+			return true, cachedVal
+		}
 	}
 
 	// checks the users table
 	fakeID, err := s.queries.GetFakeIDByPhone(ctx, pgtype.Text{String: phone, Valid: true})
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		if userFakeID == 0 || fakeID.Int64 != userFakeID {
+			return true, fakeID.Int64
+		}
 	}
 
 	// fallback: check the users_phone_numbers table
 	fakeID, err = s.queries.GetFakeIDByAdditionalPhone(ctx, phone)
 	if err == nil && fakeID.Valid {
 		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
-		return true
+		if userFakeID == 0 || fakeID.Int64 != userFakeID {
+			return true, fakeID.Int64
+		}
 	}
 
-	return false
+	return false, 0
 }
+
 
 // CheckNIN function checks if the nin already exists in the database
 func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
-	cacheKey := db.RedisNINFakeID + nin
+	cacheKey := db.RedisUserNINQuickSearch + nin
 
 	// checks the cache first
 	exists, _ := s.rdb.Exists(ctx, cacheKey).Result()
@@ -892,14 +911,124 @@ func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {
 	}
 
 	// checks the users table
-	fakeID, err := s.queries.GetFakeIDByNIN(ctx, nin)
-	if err == nil && fakeID.Valid {
-		s.rdb.Set(ctx, cacheKey, fakeID.Int64, db.RedisFiveYearsTTL)
+	userID, err := s.queries.GetUserIDByNIN(ctx, nin)
+	if err == nil && userID > 0 {
+		s.rdb.Set(ctx, cacheKey, userID, db.RedisFifteenMinutesTTL)
 		return true
 	}
 
 	return false
 }
+
+// GetReferralCodeInfo retrieves referral code details from Redis or DB.
+func (s *UsersService) GetReferralCodeInfo(ctx context.Context, code string) (*CachedReferralCodeInfo, error) {
+	cacheKey := db.RedisReferralCode + code
+	var info CachedReferralCodeInfo
+
+	// Check Redis cache first
+	cachedData, err := s.rdb.Get(ctx, cacheKey).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return &CachedReferralCodeInfo{}, nil
+		}
+		return nil, err
+	}
+	if cachedData != "" {
+		err = json.Unmarshal([]byte(cachedData), &info)
+		if err != nil {
+			return nil, err
+		}
+		if info.ID > 0 {
+			return &info, nil
+		}
+	}
+
+	// Fetch from database if cache miss
+	user, err := s.queries.GetReferrerNameByCode(ctx, pgtype.Text{String: code, Valid: true})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &CachedReferralCodeInfo{}, nil // Not taken
+		}
+		return nil, err
+	}
+
+	// Caches the result and formats it
+	return s.cacheReferralCodeInfo(ctx, code, user.ID, user.FirstName.String, user.LastName.String), nil
+}
+
+// cacheReferralCodeInfo helper function to format and cache referral code details in Redis
+func (s *UsersService) cacheReferralCodeInfo(ctx context.Context, code string, userID int64, firstName, lastName string) *CachedReferralCodeInfo {
+	name := strings.TrimSpace(fmt.Sprintf("%s %s", firstName, lastName))
+	info := CachedReferralCodeInfo{
+		ID:   userID,
+		Name: name,
+	}
+
+	if data, err := json.Marshal(info); err == nil {
+		cacheKey := db.RedisReferralCode + code
+		s.rdb.Set(ctx, cacheKey, string(data), db.RedisFiveYearsTTL)
+	}
+	return &info
+}
+
+// IsReferralCodeTaken checks if a referral code already exists in the database, using Redis for caching.
+func (s *UsersService) IsReferralCodeTaken(ctx context.Context, code string) (bool, error) {
+	info, err := s.GetReferralCodeInfo(ctx, code)
+	if err != nil {
+		return false, err
+	}
+	return info != nil, nil
+}
+
+// GenerateUniqueReferralCode generates a unique referral code based on the user's first name.
+// Format: {FIRST_NAME}{3-digit random/sequential suffix} e.g. "DANIEL402"
+func (s *UsersService) GenerateUniqueReferralCode(ctx context.Context, firstName string) (string, error) {
+	firstName = strings.TrimSpace(firstName)
+
+	// Clean string to alphanumeric characters only
+	var clean strings.Builder
+	for _, r := range firstName {
+		// In Go, characters (runes) are represented by their Unicode/ASCII integer values.
+		// This means we can compare them directly using math operators like >= and <=.
+		// For example, 'a' is 97 and 'z' is 122. Checking (r >= 'a' && r <= 'z')
+		// efficiently verifies if the character is a lowercase letter.
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			clean.WriteRune(r)
+		}
+	}
+
+	// Convert the cleaned string to uppercase
+	base := strings.ToUpper(clean.String())
+
+	// If the cleaned string is empty (e.g., the original name was empty or contained only symbols),
+	// use "AGENT" as the base for the referral code.
+	if base == "" {
+		base = "AGENT"
+	}
+
+	// Generate a random 3-digit suffix (100-999) for the referral code.
+	n, _ := rand.Int(rand.Reader, big.NewInt(900))
+	startOffset := int(n.Int64()) + 100
+
+	// Try random 3-digit suffix first for entropy, fallback sequentially if collisions
+	for i := range 900 {
+		suffix := ((startOffset + i - 100) % 900) + 100
+		code := fmt.Sprintf("%s%d", base, suffix)
+		exists, err := s.IsReferralCodeTaken(ctx, code)
+		if err != nil {
+			return "", err
+		}
+		if !exists {
+			return code, nil
+		}
+	}
+
+	// Fallback to timestamp suffix if 3-digit combinations are exhausted
+	timeSuffix := time.Now().UnixNano() % 1000000
+	return fmt.Sprintf("%s%d", base, timeSuffix), nil
+}
+
+// GenerateAndAssignReferralCode generates and assigns a referral code to a user.
 func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error) {
 	user, err := s.queries.GetUserByFakeID(ctx, pgtype.Int8{Int64: fakeID, Valid: true})
 	if err != nil {
@@ -909,21 +1038,11 @@ func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID
 		return user.ReferralCode.String, nil
 	}
 
-	if firstName == "" {
-		firstName = "AGENT"
+	code, err := s.GenerateUniqueReferralCode(ctx, firstName)
+	if err != nil {
+		return "", err
 	}
-	base := strings.ToUpper(firstName)
-	var code string
-	for i := 10; i < 999; i++ {
-		code = fmt.Sprintf("%s%d", base, i)
-		exists, err := s.queries.CheckReferralCodeExists(ctx, pgtype.Text{String: code, Valid: true})
-		if err != nil {
-			return "", err
-		}
-		if !exists {
-			break
-		}
-	}
+
 	err = s.queries.UpdateUserReferralCode(ctx, queries.UpdateUserReferralCodeParams{
 		ID:           userID,
 		ReferralCode: pgtype.Text{String: code, Valid: true},
@@ -931,8 +1050,11 @@ func (s *UsersService) GenerateAndAssignReferralCode(ctx context.Context, userID
 	if err != nil {
 		return "", err
 	}
+
+	// Cache the newly assigned referral code with user info in Redis
+	s.cacheReferralCodeInfo(ctx, code, userID, user.FirstName.String, user.LastName.String)
+
 	// Invalidate the cache
-	userInfoKey := fmt.Sprintf("%s%d", db.RedisUserInfo, fakeID)
-	s.rdb.Del(ctx, userInfoKey)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
 	return code, nil
 }

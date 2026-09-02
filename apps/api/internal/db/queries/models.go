@@ -5,98 +5,10 @@
 package queries
 
 import (
-	"database/sql/driver"
-	"fmt"
 	"net/netip"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
-
-type MarketingCampaignStatus string
-
-const (
-	MarketingCampaignStatusPending   MarketingCampaignStatus = "pending"
-	MarketingCampaignStatusActive    MarketingCampaignStatus = "active"
-	MarketingCampaignStatusCompleted MarketingCampaignStatus = "completed"
-	MarketingCampaignStatusCancelled MarketingCampaignStatus = "cancelled"
-)
-
-func (e *MarketingCampaignStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = MarketingCampaignStatus(s)
-	case string:
-		*e = MarketingCampaignStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for MarketingCampaignStatus: %T", src)
-	}
-	return nil
-}
-
-type NullMarketingCampaignStatus struct {
-	MarketingCampaignStatus MarketingCampaignStatus `json:"marketing_campaign_status"`
-	Valid                   bool                    `json:"valid"` // Valid is true if MarketingCampaignStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullMarketingCampaignStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.MarketingCampaignStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.MarketingCampaignStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullMarketingCampaignStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.MarketingCampaignStatus), nil
-}
-
-type MarketingCampaignType string
-
-const (
-	MarketingCampaignTypeAgentCampaign MarketingCampaignType = "agent-campaign"
-	MarketingCampaignTypeVotesCampaign MarketingCampaignType = "votes-campaign"
-)
-
-func (e *MarketingCampaignType) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = MarketingCampaignType(s)
-	case string:
-		*e = MarketingCampaignType(s)
-	default:
-		return fmt.Errorf("unsupported scan type for MarketingCampaignType: %T", src)
-	}
-	return nil
-}
-
-type NullMarketingCampaignType struct {
-	MarketingCampaignType MarketingCampaignType `json:"marketing_campaign_type"`
-	Valid                 bool                  `json:"valid"` // Valid is true if MarketingCampaignType is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullMarketingCampaignType) Scan(value interface{}) error {
-	if value == nil {
-		ns.MarketingCampaignType, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.MarketingCampaignType.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullMarketingCampaignType) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.MarketingCampaignType), nil
-}
 
 type AgentEarning struct {
 	ID                      int64              `json:"id"`
@@ -1010,23 +922,23 @@ type PartyElectionGroup struct {
 }
 
 type PartyMarketingCampaign struct {
-	ID                 int32                   `json:"id"`
-	PartyID            int32                   `json:"party_id"`
-	ElectionGroupID    int32                   `json:"election_group_id"`
-	ElectionID         int32                   `json:"election_id"`
-	PlanID             int32                   `json:"plan_id"`
-	Type               MarketingCampaignType   `json:"type"`
-	States             []byte                  `json:"states"`
-	DurationInDays     int32                   `json:"duration_in_days"`
-	StartDate          pgtype.Timestamptz      `json:"start_date"`
-	EndDate            pgtype.Timestamptz      `json:"end_date"`
-	Status             MarketingCampaignStatus `json:"status"`
-	BudgetPerDayKobo   int64                   `json:"budget_per_day_kobo"`
-	BudgetKobo         int64                   `json:"budget_kobo"`
-	ReferralAmountKobo int64                   `json:"referral_amount_kobo"`
-	AmountSpentKobo    int64                   `json:"amount_spent_kobo"`
-	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
+	ID                 int32              `json:"id"`
+	PartyID            int32              `json:"party_id"`
+	ElectionGroupID    int32              `json:"election_group_id"`
+	ElectionID         int32              `json:"election_id"`
+	PlanID             int32              `json:"plan_id"`
+	Type               string             `json:"type"`
+	States             []byte             `json:"states"`
+	DurationInDays     int32              `json:"duration_in_days"`
+	StartDate          pgtype.Timestamptz `json:"start_date"`
+	EndDate            pgtype.Timestamptz `json:"end_date"`
+	Status             string             `json:"status"`
+	BudgetPerDayKobo   int64              `json:"budget_per_day_kobo"`
+	BudgetKobo         int64              `json:"budget_kobo"`
+	ReferralAmountKobo int64              `json:"referral_amount_kobo"`
+	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PartyMembership struct {
@@ -1091,20 +1003,20 @@ type PartyWalletTransaction struct {
 }
 
 type Plan struct {
-	ID                   int32                 `json:"id"`
-	Name                 string                `json:"name"`
-	Description          string                `json:"description"`
-	PriceKobo            int64                 `json:"price_kobo"`
-	Type                 MarketingCampaignType `json:"type"`
-	Features             []byte                `json:"features"`
-	ScopesRecommendation []byte                `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text           `json:"color_hex"`
-	DarkColorHex         pgtype.Text           `json:"dark_color_hex"`
-	ReferralAmountKobo   int64                 `json:"referral_amount_kobo"`
-	IsActive             bool                  `json:"is_active"`
-	DisplayOrder         int32                 `json:"display_order"`
-	CreatedAt            pgtype.Timestamptz    `json:"created_at"`
-	UpdatedAt            pgtype.Timestamptz    `json:"updated_at"`
+	ID                   int32              `json:"id"`
+	Name                 string             `json:"name"`
+	Description          string             `json:"description"`
+	PriceKobo            int64              `json:"price_kobo"`
+	Type                 string             `json:"type"`
+	Features             []byte             `json:"features"`
+	ScopesRecommendation []byte             `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text        `json:"color_hex"`
+	DarkColorHex         pgtype.Text        `json:"dark_color_hex"`
+	ReferralAmountKobo   int64              `json:"referral_amount_kobo"`
+	IsActive             bool               `json:"is_active"`
+	DisplayOrder         int32              `json:"display_order"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
 }
 
 type PollingUnit struct {
@@ -1345,33 +1257,31 @@ type User struct {
 	ID              int64              `json:"id"`
 	FakeID          pgtype.Int8        `json:"fake_id"`
 	Email           pgtype.Text        `json:"email"`
-	Avatar          pgtype.Text        `json:"avatar"`
-	AvatarFileID    pgtype.Int8        `json:"avatar_file_id"`
 	Phone           pgtype.Text        `json:"phone"`
 	Username        pgtype.Text        `json:"username"`
 	PasswordHash    string             `json:"password_hash"`
-	LastName        pgtype.Text        `json:"last_name"`
 	FirstName       pgtype.Text        `json:"first_name"`
+	LastName        pgtype.Text        `json:"last_name"`
 	MiddleName      pgtype.Text        `json:"middle_name"`
 	Gender          pgtype.Text        `json:"gender"`
 	DateOfBirth     pgtype.Date        `json:"date_of_birth"`
+	Avatar          pgtype.Text        `json:"avatar"`
+	AvatarFileID    pgtype.Int8        `json:"avatar_file_id"`
 	VotersCardImage pgtype.Text        `json:"voters_card_image"`
 	CurrentCountry  int16              `json:"current_country"`
 	CurrentState    int16              `json:"current_state"`
 	CurrentCity     pgtype.Int4        `json:"current_city"`
 	CurrentLga      pgtype.Int4        `json:"current_lga"`
 	CurrentWard     pgtype.Int4        `json:"current_ward"`
-	Address         pgtype.Text        `json:"address"`
+	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
 	CountryOfOrigin pgtype.Int2        `json:"country_of_origin"`
 	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
-	IsPolitician    pgtype.Bool        `json:"is_politician"`
-	IsVerified      pgtype.Bool        `json:"is_verified"`
 	HasRole         pgtype.Bool        `json:"has_role"`
+	IsVerified      pgtype.Bool        `json:"is_verified"`
+	IsPolitician    pgtype.Bool        `json:"is_politician"`
 	PartyID         pgtype.Int2        `json:"party_id"`
-	PollingUnitID   pgtype.Int4        `json:"polling_unit_id"`
 	AccountStatus   pgtype.Text        `json:"account_status"`
 	ReferralCode    pgtype.Text        `json:"referral_code"`
-	ReferredByID    pgtype.Int8        `json:"referred_by_id"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 }
@@ -1413,6 +1323,17 @@ type UserPracticeTest struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
+type UserPreference struct {
+	ID                int64              `json:"id"`
+	UserID            int64              `json:"user_id"`
+	SidebarState      pgtype.Text        `json:"sidebar_state"`
+	PinnedLinks       []byte             `json:"pinned_links"`
+	Theme             pgtype.Text        `json:"theme"`
+	PreferenceVersion int64              `json:"preference_version"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
+}
+
 type UserReferral struct {
 	ID                                int64              `json:"id"`
 	UserID                            int64              `json:"user_id"`
@@ -1435,16 +1356,6 @@ type UserRole struct {
 	RoleCode          string             `json:"role_code"`
 	DateAssigned      pgtype.Timestamptz `json:"date_assigned"`
 	WhoAssignedUserID int64              `json:"who_assigned_user_id"`
-}
-
-type UserSecurityQuestion struct {
-	ID        int64  `json:"id"`
-	UserFid   int64  `json:"user_fid"`
-	Nin       string `json:"nin"`
-	Question1 int16  `json:"question1"`
-	Answer1   string `json:"answer1"`
-	Question2 int16  `json:"question2"`
-	Answer2   string `json:"answer2"`
 }
 
 type UserVerification struct {

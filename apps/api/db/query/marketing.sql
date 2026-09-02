@@ -135,10 +135,10 @@ LIMIT 1;
 -- name: UpdateMarketingCampaignStatus :one
 UPDATE party_marketing_campaigns
 SET 
-    status = sqlc.arg('status')::marketing_campaign_status,
-    start_date = CASE WHEN sqlc.arg('status')::marketing_campaign_status = 'active'::marketing_campaign_status THEN NOW() ELSE start_date END,
-    end_date = CASE WHEN sqlc.arg('status')::marketing_campaign_status = 'active'::marketing_campaign_status THEN NOW() + (duration_in_days::text || ' days')::interval ELSE end_date END,
-    amount_spent_kobo = CASE WHEN sqlc.arg('status')::marketing_campaign_status = 'active'::marketing_campaign_status THEN amount_spent_kobo + budget_per_day_kobo ELSE amount_spent_kobo END,
+    status = sqlc.arg('status'),
+    start_date = CASE WHEN sqlc.arg('status')::text = 'active' THEN NOW() ELSE start_date END,
+    end_date = CASE WHEN sqlc.arg('status')::text = 'active' THEN NOW() + (duration_in_days::text || ' days')::interval ELSE end_date END,
+    amount_spent_kobo = CASE WHEN sqlc.arg('status')::text = 'active' THEN amount_spent_kobo + budget_per_day_kobo ELSE amount_spent_kobo END,
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -151,13 +151,13 @@ WHERE id = $1;
 -- Run once daily via cron to deduct budget_per_day_kobo, update amount_spent_kobo, and mark expired campaigns as completed.
 -- Skips deduction if the campaign was activated today (start_date::date = CURRENT_DATE) to prevent double deduction on activation day.
 UPDATE party_marketing_campaigns
-SET
+SET 
     amount_spent_kobo = CASE 
         WHEN status = 'active' AND NOW() < end_date AND (start_date IS NULL OR start_date::date < CURRENT_DATE) THEN amount_spent_kobo + budget_per_day_kobo 
         ELSE amount_spent_kobo 
     END,
     status = CASE 
-        WHEN status = 'active' AND NOW() >= end_date THEN 'completed'::marketing_campaign_status 
+        WHEN status = 'active' AND NOW() >= end_date THEN 'completed'
         ELSE status 
     END,
     updated_at = NOW()

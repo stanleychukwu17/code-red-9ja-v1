@@ -266,35 +266,6 @@ func (q *Queries) CreateUserNIN(ctx context.Context, arg CreateUserNINParams) (i
 	return id, err
 }
 
-const createUserSecurityQuestions = `-- name: CreateUserSecurityQuestions :one
-INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id
-`
-
-type CreateUserSecurityQuestionsParams struct {
-	UserFid   int64  `json:"user_fid"`
-	Nin       string `json:"nin"`
-	Question1 int16  `json:"question1"`
-	Answer1   string `json:"answer1"`
-	Question2 int16  `json:"question2"`
-	Answer2   string `json:"answer2"`
-}
-
-func (q *Queries) CreateUserSecurityQuestions(ctx context.Context, arg CreateUserSecurityQuestionsParams) (int64, error) {
-	row := q.db.QueryRow(ctx, createUserSecurityQuestions,
-		arg.UserFid,
-		arg.Nin,
-		arg.Question1,
-		arg.Answer1,
-		arg.Question2,
-		arg.Answer2,
-	)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
-}
-
 const createUserVerification = `-- name: CreateUserVerification :one
 INSERT INTO user_verifications (user_id, nin_verified, phone_verified, email_verified, voters_card_verified)
 VALUES ($1, $2, $3, $4, $5)
@@ -383,20 +354,6 @@ func (q *Queries) GetFakeIDByEmail(ctx context.Context, email pgtype.Text) (pgty
 	return fake_id, err
 }
 
-const getFakeIDByNIN = `-- name: GetFakeIDByNIN :one
-SELECT u.fake_id
-FROM users u
-JOIN users_nin un ON u.id = un.user_id
-WHERE un.nin = $1 LIMIT 1
-`
-
-func (q *Queries) GetFakeIDByNIN(ctx context.Context, nin string) (pgtype.Int8, error) {
-	row := q.db.QueryRow(ctx, getFakeIDByNIN, nin)
-	var fake_id pgtype.Int8
-	err := row.Scan(&fake_id)
-	return fake_id, err
-}
-
 const getFakeIDByPhone = `-- name: GetFakeIDByPhone :one
 SELECT fake_id FROM users
 WHERE phone = $1 LIMIT 1
@@ -478,8 +435,8 @@ func (q *Queries) GetReferrerNameByCode(ctx context.Context, referralCode pgtype
 }
 
 const getUserByFakeID = `-- name: GetUserByFakeID :one
-SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
-       u.referral_code, u.referred_by_id
+SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
+       u.referral_code
 FROM users u
 WHERE u.fake_id = $1 LIMIT 1
 `
@@ -504,7 +461,6 @@ type GetUserByFakeIDRow struct {
 	CurrentCity     pgtype.Int4        `json:"current_city"`
 	CurrentLga      pgtype.Int4        `json:"current_lga"`
 	CurrentWard     pgtype.Int4        `json:"current_ward"`
-	Address         pgtype.Text        `json:"address"`
 	CountryOfOrigin pgtype.Int2        `json:"country_of_origin"`
 	StateOfOrigin   pgtype.Int2        `json:"state_of_origin"`
 	IsPolitician    pgtype.Bool        `json:"is_politician"`
@@ -516,7 +472,6 @@ type GetUserByFakeIDRow struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	ReferralCode    pgtype.Text        `json:"referral_code"`
-	ReferredByID    pgtype.Int8        `json:"referred_by_id"`
 }
 
 func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetUserByFakeIDRow, error) {
@@ -542,7 +497,6 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetU
 		&i.CurrentCity,
 		&i.CurrentLga,
 		&i.CurrentWard,
-		&i.Address,
 		&i.CountryOfOrigin,
 		&i.StateOfOrigin,
 		&i.IsPolitician,
@@ -554,9 +508,21 @@ func (q *Queries) GetUserByFakeID(ctx context.Context, fakeID pgtype.Int8) (GetU
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.ReferralCode,
-		&i.ReferredByID,
 	)
 	return i, err
+}
+
+const getUserIDByNIN = `-- name: GetUserIDByNIN :one
+SELECT user_id
+FROM users_nin
+WHERE nin = $1 LIMIT 1
+`
+
+func (q *Queries) GetUserIDByNIN(ctx context.Context, nin string) (int64, error) {
+	row := q.db.QueryRow(ctx, getUserIDByNIN, nin)
+	var user_id int64
+	err := row.Scan(&user_id)
+	return user_id, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
@@ -710,26 +676,6 @@ func (q *Queries) GetUserPhoneNumbersByUserID(ctx context.Context, userID int64)
 		return nil, err
 	}
 	return items, nil
-}
-
-const getUserSecurityQuestionsByNIN = `-- name: GetUserSecurityQuestionsByNIN :one
-SELECT id, user_fid, nin, question1, answer1, question2, answer2 FROM user_security_questions
-WHERE nin = $1 LIMIT 1
-`
-
-func (q *Queries) GetUserSecurityQuestionsByNIN(ctx context.Context, nin string) (UserSecurityQuestion, error) {
-	row := q.db.QueryRow(ctx, getUserSecurityQuestionsByNIN, nin)
-	var i UserSecurityQuestion
-	err := row.Scan(
-		&i.ID,
-		&i.UserFid,
-		&i.Nin,
-		&i.Question1,
-		&i.Answer1,
-		&i.Question2,
-		&i.Answer2,
-	)
-	return i, err
 }
 
 const getUserVerification = `-- name: GetUserVerification :one
@@ -945,7 +891,7 @@ func (q *Queries) UpdateMoreInfoAboutThisUser(ctx context.Context, arg UpdateMor
 	return err
 }
 
-const updateOnboardingProfile = `-- name: UpdateOnboardingProfile :exec
+const updateOnboardingProfile = `-- name: UpdateOnboardingProfile :one
 UPDATE users
 SET username = $2,
     first_name = $3,
@@ -958,9 +904,11 @@ SET username = $2,
     current_city = $10,
     state_of_origin = $11,
     country_of_origin = $12,
+    referral_code = $13,
     account_status = 'active',
     updated_at = NOW()
 WHERE id = $1
+RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
 `
 
 type UpdateOnboardingProfileParams struct {
@@ -976,10 +924,11 @@ type UpdateOnboardingProfileParams struct {
 	CurrentCity     pgtype.Int4 `json:"current_city"`
 	StateOfOrigin   pgtype.Int2 `json:"state_of_origin"`
 	CountryOfOrigin pgtype.Int2 `json:"country_of_origin"`
+	ReferralCode    pgtype.Text `json:"referral_code"`
 }
 
-func (q *Queries) UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) error {
-	_, err := q.db.Exec(ctx, updateOnboardingProfile,
+func (q *Queries) UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboardingProfileParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateOnboardingProfile,
 		arg.ID,
 		arg.Username,
 		arg.FirstName,
@@ -992,8 +941,42 @@ func (q *Queries) UpdateOnboardingProfile(ctx context.Context, arg UpdateOnboard
 		arg.CurrentCity,
 		arg.StateOfOrigin,
 		arg.CountryOfOrigin,
+		arg.ReferralCode,
 	)
-	return err
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.FakeID,
+		&i.Email,
+		&i.Phone,
+		&i.Username,
+		&i.PasswordHash,
+		&i.FirstName,
+		&i.LastName,
+		&i.MiddleName,
+		&i.Gender,
+		&i.DateOfBirth,
+		&i.Avatar,
+		&i.AvatarFileID,
+		&i.VotersCardImage,
+		&i.CurrentCountry,
+		&i.CurrentState,
+		&i.CurrentCity,
+		&i.CurrentLga,
+		&i.CurrentWard,
+		&i.PollingUnitID,
+		&i.CountryOfOrigin,
+		&i.StateOfOrigin,
+		&i.HasRole,
+		&i.IsVerified,
+		&i.IsPolitician,
+		&i.PartyID,
+		&i.AccountStatus,
+		&i.ReferralCode,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updatePhoneNumber = `-- name: UpdatePhoneNumber :exec
@@ -1196,23 +1179,6 @@ type UpdateUserReferralCodeParams struct {
 
 func (q *Queries) UpdateUserReferralCode(ctx context.Context, arg UpdateUserReferralCodeParams) error {
 	_, err := q.db.Exec(ctx, updateUserReferralCode, arg.ID, arg.ReferralCode)
-	return err
-}
-
-const updateUserReferredBy = `-- name: UpdateUserReferredBy :exec
-UPDATE users
-SET referred_by_id = $2,
-    updated_at = NOW()
-WHERE id = $1
-`
-
-type UpdateUserReferredByParams struct {
-	ID           int64       `json:"id"`
-	ReferredByID pgtype.Int8 `json:"referred_by_id"`
-}
-
-func (q *Queries) UpdateUserReferredBy(ctx context.Context, arg UpdateUserReferredByParams) error {
-	_, err := q.db.Exec(ctx, updateUserReferredBy, arg.ID, arg.ReferredByID)
 	return err
 }
 

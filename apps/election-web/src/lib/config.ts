@@ -23,20 +23,18 @@ export const API_URL = {
   health: `${API_BASE}/health`,
 
   auth: {
-    registerPhaseSignUp: `${api}/auth/register_phase_signup`,
     sendSignupEmailOtp: `${api}/auth/signup/email-otp`,
     verifySignupEmailOtp: `${api}/auth/signup/email-otp/verify`,
     checkNin: `${api}/auth/check_nin`,
     checkUsername: `${api}/auth/check_username`,
     checkReferralCode: `${api}/auth/check_referral_code`,
     signup: `${api}/auth/signup`,
-    register: `${api}/auth/register`,
     completeOnboarding: `${api}/auth/onboarding`,
     login: `${api}/auth/login`,
     adminLogin: `${api}/auth/admin/login`,
     refresh: `${api}/auth/refresh`,
     logout: `${api}/auth/logout`,
-    verifySecurityQuestions: `${api}/auth/verify_security_questions`,
+
     forgotPassword: `${api}/auth/forgot_password`,
     sendForgotPasswordEmailOtp: `${api}/auth/forgot-password/email-otp`,
     changePasswordByEmail: `${api}/auth/change_password_by_email`,
@@ -366,4 +364,12 @@ export const API_URL = {
       return `${api}/referrals${qs ? `?${qs}` : ""}`;
     },
   },
+  userPreferences: `${api}/user_preferences`,
+};
+
+export const QUERY_KEYS = {
+  auth: {
+    session: ["authSession"],
+  },
+  countries: ["countries"],
 };

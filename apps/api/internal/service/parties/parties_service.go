@@ -1034,7 +1034,7 @@ func (s *PartiesService) JoinParty(ctx context.Context, partyID int16, chapterID
 }
 
 // GetMarketingPlansByType returns marketing plans of a specific type
-func (s *PartiesService) GetMarketingPlansByType(ctx context.Context, campaignType queries.MarketingCampaignType) ([]queries.Plan, error) {
+func (s *PartiesService) GetMarketingPlansByType(ctx context.Context, campaignType string) ([]queries.Plan, error) {
 	return s.queries.GetMarketingPlansByType(ctx, campaignType)
 }
 
@@ -1133,7 +1133,7 @@ func (s *PartiesService) ListAllPartyMarketingCampaigns(ctx context.Context, arg
 }
 
 // UpdateMarketingCampaignStatus updates a campaign's status, setting start/end dates and deducting per-day budget when activating.
-func (s *PartiesService) UpdateMarketingCampaignStatus(ctx context.Context, id int32, status queries.MarketingCampaignStatus) (queries.PartyMarketingCampaign, error) {
+func (s *PartiesService) UpdateMarketingCampaignStatus(ctx context.Context, id int32, status string) (queries.PartyMarketingCampaign, error) {
 	return s.queries.UpdateMarketingCampaignStatus(ctx, queries.UpdateMarketingCampaignStatusParams{
 		ID:     id,
 		Status: status,

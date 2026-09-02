@@ -24,16 +24,16 @@ export function ElectionGroupTableHeader() {
         <span className="text-c-90">Group</span>
       </TileLeft>
       <TileRight>
-        <span className="text-c-50 text-[14px] w-[140px] hidden xl:block">
+        <span className="text-c-50 text-[14px] w-35 hidden xl:block">
           Agents coverage
         </span>
-        <span className="text-c-50 text-[14px] w-[100px] hidden lg:block">
+        <span className="text-c-50 text-[14px] w-25 hidden lg:block">
           Elections
         </span>
-        <span className="text-c-50 text-[14px] w-[120px] hidden xl:block">
+        <span className="text-c-50 text-[14px] w-28.5 hidden xl:block">
           Contesting in
         </span>
-        <span className="text-c-50 text-[14px] w-[110px] hidden sm:block">
+        <span className="text-c-50 text-[14px] w-27.5 hidden sm:block">
           Date
         </span>
         <div className="ml-2 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer" />
@@ -54,16 +54,16 @@ export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
         </p>
       </TileLeft>
       <TileRight>
-        <span className="text-[15px] text-c-70 w-[140px] hidden xl:block">
+        <span className="text-[15px] text-c-70 w-35 hidden xl:block">
           {data.pollingAgentsCoverage}%
         </span>
-        <span className="text-[15px] text-c-70 w-[100px] hidden lg:block">
+        <span className="text-[15px] text-c-70 w-25 hidden lg:block">
           {data.instancesCount ?? 0}
         </span>
-        <span className="text-[15px] text-c-70 w-[120px] hidden xl:block">
+        <span className="text-[15px] text-c-70 w-28.5 hidden xl:block">
           {data.numberOfElectionsPartyIsContesting}
         </span>
-        <span className="text-[15px] text-c-70 w-[110px] hidden sm:block">
+        <span className="text-[15px] text-c-70 w-27.5 hidden sm:block">
           {dateLabel}
         </span>
         <div className="ml-2 shrink-0 size-7 flex items-center justify-center text-c-50 hover:text-c-80 cursor-pointer">

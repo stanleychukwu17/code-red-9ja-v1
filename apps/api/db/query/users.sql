@@ -53,19 +53,10 @@ FROM users u
 WHERE u.id = $1 LIMIT 1;
 
 -- name: GetUserByFakeID :one
-SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
-       u.referral_code, u.referred_by_id
+SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
+       u.referral_code
 FROM users u
 WHERE u.fake_id = $1 LIMIT 1;
-
--- name: CreateUserSecurityQuestions :one
-INSERT INTO user_security_questions (user_fid, nin, question1, answer1, question2, answer2)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id;
-
--- name: GetUserSecurityQuestionsByNIN :one
-SELECT * FROM user_security_questions
-WHERE nin = $1 LIMIT 1;
 
 -- name: UpdateUserStatus :exec
 UPDATE users
@@ -93,7 +84,7 @@ SET first_name = $2,
     updated_at = NOW()
 WHERE id = $1;
 
--- name: UpdateOnboardingProfile :exec
+-- name: UpdateOnboardingProfile :one
 UPDATE users
 SET username = $2,
     first_name = $3,
@@ -106,9 +97,11 @@ SET username = $2,
     current_city = $10,
     state_of_origin = $11,
     country_of_origin = $12,
+    referral_code = $13,
     account_status = 'active',
     updated_at = NOW()
-WHERE id = $1;
+WHERE id = $1
+RETURNING *;
 
 -- name: ListUsers :many
 -- ListUsers fetches a paginated list of users with optional filtering.
@@ -217,12 +210,6 @@ SET occupation_id = EXCLUDED.occupation_id,
 SELECT id FROM users
 WHERE referral_code = $1 LIMIT 1;
 
--- name: UpdateUserReferredBy :exec
-UPDATE users
-SET referred_by_id = $2,
-    updated_at = NOW()
-WHERE id = $1;
-
 -- name: CreateUserVerification :one
 INSERT INTO user_verifications (user_id, nin_verified, phone_verified, email_verified, voters_card_verified)
 VALUES ($1, $2, $3, $4, $5)
@@ -314,11 +301,10 @@ FROM users u
 JOIN users_phone_numbers upn ON u.id = upn.user_id
 WHERE upn.phone = $1 LIMIT 1;
 
--- name: GetFakeIDByNIN :one
-SELECT u.fake_id
-FROM users u
-JOIN users_nin un ON u.id = un.user_id
-WHERE un.nin = $1 LIMIT 1;
+-- name: GetUserIDByNIN :one
+SELECT user_id
+FROM users_nin
+WHERE nin = $1 LIMIT 1;
 
 -- name: GetFakeIDByUserID :one
 SELECT fake_id FROM users

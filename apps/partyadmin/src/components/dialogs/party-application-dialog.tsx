@@ -743,7 +743,7 @@ export function ChoosePollingUnitDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[620px] p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-155 p-0 rounded-2xl border-none shadow-2xl overflow-hidden">
         <DialogHeader title="Choose Polling Unit" />
 
         <DialogPadding className="relative space-y-4 pb-5 max-h-[75vh] overflow-y-auto">

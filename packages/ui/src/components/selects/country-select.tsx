@@ -25,22 +25,14 @@ interface CountriesResponse {
 }
 
 export const SelectCountry = ({
-  update,
-  errorMsg,
-  selectedId,
-  className,
-  disabled,
-  align = "start",
-  fetchCountries,
+  align = "start", update, errorMsg, selectedId, className, disabled, fetchCountries,
 }: SelectProps<Country, number | string> & {
   fetchCountries: () => Promise<any>;
 }) => {
   const [open, setOpen] = useState(false);
   const [desktopSearch, setDesktopSearch] = useState("");
   const [mobileSearch, setMobileSearch] = useState("");
-  const [selectedItem, setSelectedItem] = useState<Country | undefined>(
-    undefined,
-  );
+  const [selectedItem, setSelectedItem] = useState<Country | undefined>(undefined);
 
   const { data, isLoading } = useQuery<CountriesResponse>({
     queryKey: ["GetAllCountries"],
@@ -49,6 +41,7 @@ export const SelectCountry = ({
       if (res && res.success && res.data) return res;
       throw new Error(res?.message || "Failed to fetch countries");
     },
+    staleTime: Infinity,
   });
 
   const countries = data?.data?.countries || [];

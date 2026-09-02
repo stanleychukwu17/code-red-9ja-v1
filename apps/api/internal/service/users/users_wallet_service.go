@@ -23,6 +23,11 @@ func pgTextFromString(s string) pgtype.Text {
 // CreateUserWallet provisions a reserved virtual account via Monnify for the user
 // and creates the wallet entry in the database.
 func (s *UsersService) CreateUserWallet(ctx context.Context, user queries.User) (queries.UserWallet, error) {
+	// Check if wallet already exists
+	if existingWallet, err := s.queries.GetUserWalletByUserID(ctx, user.ID); err == nil && existingWallet.ID > 0 {
+		return existingWallet, nil
+	}
+
 	if s.monnify == nil {
 		return queries.UserWallet{}, fmt.Errorf("monnify client is not configured")
 	}

@@ -96,7 +96,7 @@ func (s *SeedService) SeedUsers(ctx context.Context, users []SeedUserRequest) (s
 	for _, u := range users {
 		eg.Go(func() error {
 			// check if email already exit, if yes, we can skip this user onto the next
-			if s.usersService.CheckEmail(ctx, u.Email) {
+			if exists, _ := s.usersService.CheckEmail(ctx, u.Email); exists {
 				return nil
 			}
 
@@ -300,8 +300,9 @@ type PartyAdminsData struct {
 }
 
 type SeedAdminsRequest struct {
-	Admins  []int64                      `json:"admins"`
-	Parties []map[string]PartyAdminsData `json:"parties"`
+	SuperAdmins []int64                      `json:"super_admins"`
+	Admins      []int64                      `json:"admins"`
+	Parties     []map[string]PartyAdminsData `json:"parties"`
 }
 
 // SeedAdmins assigns system-wide admin roles, as well as party admin and super party admin roles to existing users.
@@ -313,6 +314,26 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 
 	// system admin who assigns
 	systemAdminID := int64(1)
+
+	// Process super admins
+	for _, superAdminID := range req.SuperAdmins {
+		eg.Go(func() error {
+			// get the fake id for the user
+			fakeIDData, err := s.queries.GetFakeIDByUserID(ctx, superAdminID)
+			if err != nil {
+				return fmt.Errorf("failed to fetch fake ID for super admin %d: %w", superAdminID, err)
+			}
+			fakeID := fakeIDData.Int64
+
+			// assign super_admin role
+			err = s.usersService.AssignUserRole(ctx, superAdminID, fakeID, "super_admin", systemAdminID)
+			if err != nil {
+				return fmt.Errorf("failed to assign super_admin role to user %d: %w", superAdminID, err)
+			}
+			fmt.Println("assigned super_admin to id", superAdminID)
+			return nil
+		})
+	}
 
 	// Process system admins
 	for _, adminID := range req.Admins {
@@ -329,13 +350,7 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 			if err != nil {
 				return fmt.Errorf("failed to assign admin role to user %d: %w", adminID, err)
 			}
-
-			// assign super_admin role
-			// err = s.usersService.AssignUserRole(ctx, adminID, fakeID, "super_admin", systemAdminID)
-			// if err != nil {
-			// 	return fmt.Errorf("failed to assign super_admin role to user %d: %w", adminID, err)
-			// }
-			// fmt.Println("assigned super_admin to id", adminID)
+			fmt.Println("assigned admin to id", adminID)
 			return nil
 		})
 	}
@@ -589,5 +604,70 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 		PartiesCount:          len(partyShortNames),
 		Message:               fmt.Sprintf("Successfully simulated results for %d polling units across %d active parties in election '%s' (scope: %s)", len(pus), len(partyShortNames), election.Name, election.Scope),
 	}, nil
+}
+
+
+// FlushRedis removes all application cache keys matching the defined Redis prefixes in db.AllRedisPrefixes.
+// It safely scans keys in batches and deletes them using Redis pipelines for optimal performance without blocking the Redis server.
+func (s *SeedService) FlushRedis(ctx context.Context) (string, error) {
+	var totalDeleted int64
+
+	// 1. Loop through every key prefix defined in db.AllRedisPrefixes (e.g. "user:info:", "register:email_otp:", "countries:all")
+	for _, prefix := range db.AllRedisPrefixes {
+		// 2. Build the matching pattern for Redis:
+		// If the prefix ends with a colon (e.g. "user:info:"), add a wildcard "*" -> "user:info:*" to match all user keys.
+		// If it's an exact key name (e.g. "countries:all"), match that exact key.
+		pattern := prefix
+		if strings.HasSuffix(prefix, ":") {
+			pattern = prefix + "*"
+		}
+
+		var keys []string
+
+		// 3. Use SCAN instead of KEYS:
+		// Redis KEYS command blocks the entire Redis server until complete.
+		// SCAN uses a non-blocking cursor, retrieving keys in chunks of 500 without locking Redis.
+		iter := s.rdb.Scan(ctx, 0, pattern, 500).Iterator()
+
+		for iter.Next(ctx) {
+			keys = append(keys, iter.Val())
+
+			// 4. Batch Deletion with Pipeline:
+			// Once we accumulate 500 keys in memory, send a single batch (Pipeline) to Redis.
+			// Pipeline queues up all DEL commands and sends them in 1 network round-trip instead of 500 separate network requests.
+			if len(keys) >= 500 {
+				pipe := s.rdb.Pipeline()
+				for _, k := range keys {
+					pipe.Del(ctx, k)
+				}
+				cmds, err := pipe.Exec(ctx)
+				if err != nil && err != redis.Nil {
+					return "", fmt.Errorf("failed to delete keys for pattern %s: %w", pattern, err)
+				}
+				totalDeleted += int64(len(cmds))
+				keys = keys[:0] // reset slice for next batch while preserving allocated memory
+			}
+		}
+
+		// Check if there was an error during scanning
+		if err := iter.Err(); err != nil {
+			return "", fmt.Errorf("failed scanning pattern %s: %w", pattern, err)
+		}
+
+		// 5. Delete any remaining leftover keys in the current prefix batch (e.g., if there were 42 keys left)
+		if len(keys) > 0 {
+			pipe := s.rdb.Pipeline()
+			for _, k := range keys {
+				pipe.Del(ctx, k)
+			}
+			cmds, err := pipe.Exec(ctx)
+			if err != nil && err != redis.Nil {
+				return "", fmt.Errorf("failed to delete remaining keys for pattern %s: %w", pattern, err)
+			}
+			totalDeleted += int64(len(cmds))
+		}
+	}
+
+	return fmt.Sprintf("Redis cache cleared successfully (%d keys deleted)", totalDeleted), nil
 }
 

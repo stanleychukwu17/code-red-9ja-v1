@@ -47,7 +47,7 @@ export function ElectionResultTableHeader({
         <span className="w-[160px] text-c-50 text-[14px] hidden sm:block">
           Leading by
         </span>
-        <span className="w-[120px] text-c-50 text-[14px] hidden md:block">
+        <span className="w-28.5 text-c-50 text-[14px] hidden md:block">
           Total votes
         </span>
       </TileRight>
@@ -102,7 +102,7 @@ export function ElectionResultTableTile({
             <span className="text-[15px] text-c-40">0</span>
           )}
         </div>
-        <div className="w-[120px] hidden md:block">
+        <div className="w-28.5 hidden md:block">
           <span className="text-[15px] text-c-80">
             {formatNumber(data.totalVotes)}
           </span>

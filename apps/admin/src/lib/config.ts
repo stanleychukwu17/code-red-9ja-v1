@@ -261,6 +261,7 @@ export const API_URL = {
     get: (key: string) => `${api}/admin/settings/${key}`,
     update: (key: string) => `${api}/admin/settings/${key}`,
   },
+  userPreferences: `${api}/user_preferences`,
   inecResultGrabbers: (args?: { limit?: number; cursor?: string | number }) => {
     const params = new URLSearchParams();
     if (args?.limit) params.append("limit", String(args.limit));
@@ -295,4 +296,11 @@ export const API_URL = {
   toggleINECResultGrabberPause: (id: number | string) => {
     return `${api}/admin/inec-result-grabbers/${id}/toggle-pause`;
   },
+};
+
+export const QUERY_KEYS = {
+  auth: {
+    session: ["authSession"],
+  },
+  countries: ["countries"],
 };

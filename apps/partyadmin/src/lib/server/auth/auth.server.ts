@@ -1,6 +1,7 @@
 import { createServerOnlyFn } from "@tanstack/react-start";
 import { getCookie, setCookie } from "@tanstack/react-start/server";
 import { API_URL } from "../../config";
+import { setSitePreferenceCookie } from "../sitePreference.server";
 
 // Helper function to set user details cookie
 export const setUserDetailsCookie = (userDetails: any) => {
@@ -70,13 +71,16 @@ export const loginPartyAppImpl = createServerOnlyFn(async ({ data }) => {
       if (result.data.user) {
         setUserDetailsCookie(result.data.user);
       }
+      if (result.data.preferences) {
+        setSitePreferenceCookie(result.data.preferences);
+      }
       delete result.data.refreshToken;
       delete result.data.accessToken;
     }
     return result;
   } catch (error) {
     return {
-      status: "error",
+      success: false,
       message:
         "Connection error. Please try again later. " +
         (error as Error)?.message,
@@ -92,7 +96,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
     // If no refresh token is found, return an error
     if (!refreshToken) {
-      return { status: "error", message: "No refresh token found" };
+      return { success: false, message: "No refresh token found" };
     }
 
     // Calls the API to refresh the user token
@@ -106,7 +110,7 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 
     // If the refresh is successful, set the new access and refresh tokens in the cookies
     if (result.success && result.data) {
-      const { accessToken, refreshToken: newRefreshToken, user } = result.data;
+      const { accessToken, refreshToken: newRefreshToken, user, preferences: sitePreference } = result.data;
       if (newRefreshToken && accessToken) {
         setAuthCookies({ refreshToken: newRefreshToken, accessToken });
       }
@@ -115,7 +119,10 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       if (user) {
         setUserDetailsCookie(user);
       }
-      return { status: "success", user };
+      if (sitePreference) {
+        setSitePreferenceCookie(sitePreference);
+      }
+      return { success: true, user, sitePreference };
     } else {
       // If the result is an error, check if the error is an invalid or expired refresh token, and clear the cookies if it is
       const logOutConditions = [
@@ -131,13 +138,13 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
       }
 
       return {
-        status: "error",
+        success: false,
         message: result?.message || "Failed to refresh token",
       };
     }
   } catch (error) {
     return {
-      status: "error",
+      success: false,
       message:
         "Connection error. Please try again later. " +
         (error as Error)?.message,
@@ -148,7 +155,9 @@ export const refreshUserTokenImpl = createServerOnlyFn(async () => {
 // Checks if a refresh token exists in the cookies
 export const checkIfRefreshTokenInCookieImpl = createServerOnlyFn(async () => {
   const refreshToken = getCookie("refresh_token");
-  return { status: refreshToken ? "success" : "error" };
+  return {
+    success: !!refreshToken,
+  };
 });
 
 export const getUserDetailsCookieImpl = createServerOnlyFn(async () => {
@@ -167,7 +176,7 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
   try {
     const refreshToken = getCookie("refresh_token");
     if (!refreshToken) {
-      return { status: "error", message: "No refresh token found" };
+      return { success: false, message: "No refresh token found" };
     }
 
     const response = await fetch(API_URL.auth.logout, {
@@ -178,8 +187,12 @@ export const logoutUserImpl = createServerOnlyFn(async () => {
     const result = await response.json();
     return result;
   } catch (error) {
-    return { status: "error", message: error };
+    return {
+      success: false,
+      message: (error as Error)?.message || "Failed to log out",
+    };
   } finally {
     clearAuthCookies();
   }
 });
+

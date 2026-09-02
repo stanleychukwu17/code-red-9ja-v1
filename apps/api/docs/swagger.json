@@ -2047,55 +2047,6 @@
                 }
             }
         },
-        "/auth/forgot_password": {
-            "post": {
-                "description": "Handles resetting the user's password",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Forgot password",
-                "parameters": [
-                    {
-                        "description": "New password details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.ForgotPasswordRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/login": {
             "post": {
                 "description": "Authenticates a user and returns access and refresh tokens",
@@ -2284,55 +2235,6 @@
                 }
             }
         },
-        "/auth/register": {
-            "post": {
-                "description": "Creates a new user account with full details",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Register a new user",
-                "parameters": [
-                    {
-                        "description": "Registration details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/register_candidate": {
             "post": {
                 "description": "Creates a new candidate placeholder user account",
@@ -2487,48 +2389,6 @@
                 }
             }
         },
-        "/auth/signup/web": {
-            "post": {
-                "description": "Handles the first phase of user registration (country, phone, email, password)",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Initial sign-up phase",
-                "parameters": [
-                    {
-                        "description": "Initial sign-up details",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.RegisterPhaseSignUpRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
         "/auth/superadmin": {
             "post": {
                 "description": "Promotes a user to superadmin if their username is in the pre-approved list",
@@ -2570,55 +2430,6 @@
                     },
                     "500": {
                         "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/auth/verify_security_questions": {
-            "post": {
-                "description": "Checks the answers to security questions and returns a unique ID if successful",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Verify security questions",
-                "parameters": [
-                    {
-                        "description": "Security questions and answers",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/authhandler.VerifySecurityQuestionsRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -11554,7 +11365,7 @@
             "properties": {
                 "code": {
                     "type": "string",
-                    "minLength": 3
+                    "minLength": 5
                 }
             }
         },
@@ -11568,30 +11379,6 @@
                     "type": "string",
                     "maxLength": 30,
                     "minLength": 2
-                }
-            }
-        },
-        "authhandler.ForgotPasswordRequest": {
-            "type": "object",
-            "required": [
-                "change_password_id",
-                "confirmPassword",
-                "password",
-                "user_fid"
-            ],
-            "properties": {
-                "change_password_id": {
-                    "type": "string"
-                },
-                "confirmPassword": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "minLength": 5
-                },
-                "user_fid": {
-                    "type": "integer"
                 }
             }
         },
@@ -11797,144 +11584,6 @@
                 }
             }
         },
-        "authhandler.RegisterPhaseSignUpRequest": {
-            "type": "object",
-            "required": [
-                "confirmPassword",
-                "country",
-                "countryId",
-                "email",
-                "emailVerificationToken",
-                "password",
-                "phoneNumber"
-            ],
-            "properties": {
-                "confirmPassword": {
-                    "type": "string"
-                },
-                "country": {
-                    "type": "string"
-                },
-                "countryId": {
-                    "type": "integer"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "emailVerificationToken": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                },
-                "phoneNumber": {
-                    "type": "string"
-                }
-            }
-        },
-        "authhandler.RegisterRequest": {
-            "type": "object",
-            "required": [
-                "answer1",
-                "answer2",
-                "current_country",
-                "current_state",
-                "date_of_birth",
-                "first_name",
-                "gender",
-                "last_name",
-                "nin",
-                "onboarding_id",
-                "password",
-                "phone",
-                "question1",
-                "question2",
-                "username"
-            ],
-            "properties": {
-                "answer1": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "answer2": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "current_city": {
-                    "type": "integer"
-                },
-                "current_country": {
-                    "type": "integer"
-                },
-                "current_state": {
-                    "type": "integer"
-                },
-                "date_of_birth": {
-                    "description": "Expects YYYY-MM-DD",
-                    "type": "string"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "first_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "gender": {
-                    "type": "string",
-                    "enum": [
-                        "male",
-                        "female"
-                    ]
-                },
-                "last_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "middle_name": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                },
-                "nin": {
-                    "type": "string"
-                },
-                "onboarding_id": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "maxLength": 72,
-                    "minLength": 5
-                },
-                "phone": {
-                    "type": "string",
-                    "maxLength": 15,
-                    "minLength": 5
-                },
-                "question1": {
-                    "type": "integer"
-                },
-                "question2": {
-                    "type": "integer"
-                },
-                "referred_by_code": {
-                    "type": "string",
-                    "maxLength": 15
-                },
-                "username": {
-                    "type": "string",
-                    "maxLength": 30,
-                    "minLength": 2
-                }
-            }
-        },
         "authhandler.SignupRequest": {
             "type": "object",
             "required": [
@@ -11960,32 +11609,91 @@
                 }
             }
         },
-        "authhandler.VerifySecurityQuestionsRequest": {
+        "authservice.LoginUser": {
             "type": "object",
-            "required": [
-                "answer1",
-                "answer2",
-                "nin",
-                "question1",
-                "question2"
-            ],
             "properties": {
-                "answer1": {
+                "account_status": {
                     "type": "string"
                 },
-                "answer2": {
+                "avatar": {
                     "type": "string"
                 },
-                "nin": {
+                "bank_account_number": {
                     "type": "string"
                 },
-                "question1": {
+                "bank_code": {
+                    "type": "string"
+                },
+                "current_city": {
                     "type": "integer"
                 },
-                "question2": {
+                "current_country": {
                     "type": "integer"
+                },
+                "current_lga": {
+                    "type": "integer"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "current_ward": {
+                    "type": "integer"
+                },
+                "date_of_birth": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "fake_id": {
+                    "type": "integer"
+                },
+                "first_name": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "middle_name": {
+                    "type": "string"
+                },
+                "party": {
+                    "$ref": "#/definitions/queries.PartyBasicInfoWithVerifications"
+                },
+                "party_id": {
+                    "type": "integer"
+                },
+                "phone": {
+                    "type": "string"
+                },
+                "polling_unit_id": {
+                    "type": "integer"
+                },
+                "referral_code": {
+                    "type": "string"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "username": {
+                    "type": "string"
+                },
+                "voters_card_image": {
+                    "type": "string"
                 }
             }
+        },
+        "big.Int": {
+            "type": "object"
         },
         "bodieshandler.CityResponse": {
             "type": "object",
@@ -13447,6 +13155,288 @@
                 },
                 "election_started_video_url": {
                     "type": "string"
+                }
+            }
+        },
+        "queries.CachedUserRoles": {
+            "type": "object",
+            "properties": {
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetUserRolesRow"
+                    }
+                },
+                "roles_code": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "queries.GetPageVerificationsRow": {
+            "type": "object",
+            "properties": {
+                "for_who": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_admin_assignable": {
+                    "type": "boolean"
+                },
+                "page_id": {
+                    "type": "integer"
+                },
+                "page_type": {
+                    "type": "string"
+                },
+                "verification_description": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "verification_title": {
+                    "type": "string"
+                },
+                "verification_type": {
+                    "type": "string"
+                },
+                "verification_type_id": {
+                    "type": "integer"
+                },
+                "verified_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                }
+            }
+        },
+        "queries.GetUserRolesRow": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "date_assigned": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "role_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                },
+                "who_assigned": {
+                    "type": "integer"
+                }
+            }
+        },
+        "queries.PartyBasicInfoWithVerifications": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "is_verified": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
+                }
+            }
+        },
+        "queries.PartyWithVerifications": {
+            "type": "object",
+            "properties": {
+                "agent_acquisition_targets": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "agent_payment_allocation_kobo": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "agent_payment_balance_kobo": {
+                    "type": "integer"
+                },
+                "auto_accept_applications": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "discount_percentage": {
+                    "$ref": "#/definitions/pgtype.Numeric"
+                },
+                "display_order": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_verified": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "logo": {
+                    "type": "string"
+                },
+                "logo_file_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "short_name": {
+                    "type": "string"
+                },
+                "slots": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
+                }
+            }
+        },
+        "queries.UserWithPlaces": {
+            "type": "object",
+            "properties": {
+                "account_status": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "avatar": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "avatar_file_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
+                "city_name": {
+                    "type": "string"
+                },
+                "country_name": {
+                    "type": "string"
+                },
+                "country_of_origin": {
+                    "$ref": "#/definitions/pgtype.Int2"
+                },
+                "created_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "current_city": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "current_country": {
+                    "type": "integer"
+                },
+                "current_lga": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "current_state": {
+                    "type": "integer"
+                },
+                "current_ward": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "date_of_birth": {
+                    "$ref": "#/definitions/pgtype.Date"
+                },
+                "email": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "fake_id": {
+                    "$ref": "#/definitions/pgtype.Int8"
+                },
+                "first_name": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "gender": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "has_role": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_politician": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "is_verified": {
+                    "$ref": "#/definitions/pgtype.Bool"
+                },
+                "last_name": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "middle_name": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "party_basic_info": {
+                    "$ref": "#/definitions/queries.PartyBasicInfoWithVerifications"
+                },
+                "party_id": {
+                    "$ref": "#/definitions/pgtype.Int2"
+                },
+                "password_hash": {
+                    "type": "string"
+                },
+                "phone": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "polling_unit_id": {
+                    "$ref": "#/definitions/pgtype.Int4"
+                },
+                "referral_code": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "roles": {
+                    "$ref": "#/definitions/queries.CachedUserRoles"
+                },
+                "state_name": {
+                    "type": "string"
+                },
+                "state_of_origin": {
+                    "$ref": "#/definitions/pgtype.Int2"
+                },
+                "updated_at": {
+                    "$ref": "#/definitions/pgtype.Timestamptz"
+                },
+                "username": {
+                    "$ref": "#/definitions/pgtype.Text"
+                },
+                "verifications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/queries.GetPageVerificationsRow"
+                    }
+                },
+                "voters_card_image": {
+                    "$ref": "#/definitions/pgtype.Text"
                 }
             }
         },

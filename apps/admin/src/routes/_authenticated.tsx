@@ -37,8 +37,12 @@ export const Route = createFileRoute("/_authenticated")({
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
-    if (res.status != "success") {
+    if (!res.success) {
       throw redirect({ to: APP_URL.auth.login });
+    }
+
+    if (!user?.username) {
+      throw new Error("Your account profile is incomplete. Please complete your registration on the main portal.");
     }
 
     if (
@@ -50,7 +54,7 @@ export const Route = createFileRoute("/_authenticated")({
   },
   component: AuthenticatedRoutes,
   errorComponent: ({ error }) => (
-    <div className="text-destructive">{error.message}</div>
+    <div className="p-8 text-center text-destructive">{error.message}</div>
   ),
 });
 
@@ -142,6 +146,8 @@ function AuthenticatedRoutes() {
     dispatch(updateAuthState({ user: null }));
   };
 
+  // This logic persists the sidebar's expanded/collapsed state to Redux (and subsequently cookies)
+  // so that the user's preference is retained across page reloads.
   const handleSidebarStateChange = (sideBarState: "expanded" | "collapsed") => {
     dispatch(updateSiteState({ sideBarState }));
   };

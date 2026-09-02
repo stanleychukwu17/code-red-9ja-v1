@@ -20,6 +20,11 @@ import (
 	"free9ja/api/internal/config"
 	"free9ja/api/internal/db/queries"
 	"free9ja/api/internal/handler"
+	"free9ja/api/internal/logger"
+	"free9ja/api/internal/service/audit"
+	"free9ja/api/internal/utils"
+	"free9ja/api/internal/worker"
+
 	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
 	authhandler "free9ja/api/internal/handler/auth"
 	bodieshandler "free9ja/api/internal/handler/bodies"
@@ -49,9 +54,7 @@ import (
 	usershandler "free9ja/api/internal/handler/users"
 	wardshandler "free9ja/api/internal/handler/wards"
 	webhookshandler "free9ja/api/internal/handler/webhooks"
-	"free9ja/api/internal/logger"
 	apimiddleware "free9ja/api/internal/middleware"
-	"free9ja/api/internal/service/audit"
 	authservice "free9ja/api/internal/service/auth"
 	bodiesservice "free9ja/api/internal/service/bodies"
 	earningsservice "free9ja/api/internal/service/earnings"
@@ -81,8 +84,6 @@ import (
 	supervisorassignmentsservice "free9ja/api/internal/service/supervisor_assignments"
 	usersservice "free9ja/api/internal/service/users"
 	wardsservice "free9ja/api/internal/service/wards"
-	"free9ja/api/internal/utils"
-	"free9ja/api/internal/worker"
 )
 
 // New creates and returns a configured Chi router.
@@ -246,29 +247,26 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/metrics", promhttp.Handler().ServeHTTP) // Prometheus metrics
 
 	// for auths
-	mainRouter.Post(utils.ApiUrls.Auth.RegisterPhaseSignUp, authHandler.RegisterPhaseSignUp)         // Register first phase
-	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                       // Basic signup endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)           // Send email OTP
-	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)       // Verify email OTP
+	mainRouter.Post("/api/v1/auth/signup", authHandler.Signup)                                        // Basic signup endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SendSignupEmailOTP, authHandler.SendSignupEmailOTP)            // Send email OTP
+	mainRouter.Post(utils.ApiUrls.Auth.VerifySignupEmailOTP, authHandler.VerifySignupEmailOTP)        // Verify email OTP
 	mainRouter.Post("/api/v1/auth/forgot-password/email-otp", authHandler.SendForgotPasswordEmailOTP) // Send forgot-password OTP
-	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                               // Check NIN endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                     // Check Username endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)             // Check Referral Code endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Register, authHandler.Register)                               // Register endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                     // Login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                   // Logout endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                 // Refresh token endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.VerifySecurityQuestions, authHandler.VerifySecurityQuestions) // Verify security questions endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.ForgotPassword, authHandler.ForgotPassword)                   // Forgot password endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)     // Change password by email endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                           // Admin login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                           // Party login endpoint
-	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                  // Make superAdmin endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckNin, authHandler.CheckNin)                                // Check NIN endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckUsername, authHandler.CheckUsername)                      // Check Username endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.CheckReferralCode, authHandler.CheckReferralCode)              // Check Referral Code endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Login, authHandler.Login)                                      // Login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Logout, authHandler.Logout)                                    // Logout endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.Refresh, authHandler.Refresh)                                  // Refresh token endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.ChangePasswordByEmail, authHandler.ChangePasswordByEmail)      // Change password by email endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.AdminLogin, authHandler.AdminLogin)                            // Admin login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.PartyLogin, authHandler.PartyLogin)                            // Party login endpoint
+	mainRouter.Post(utils.ApiUrls.Auth.SuperAdmin, usersHandler.MakeUserSuperAdmin)                   // Make superAdmin endpoint
 
 	// for seeds
 	mainRouter.Post("/api/v1/seed/users", seedHandler.SeedUsers)                                       // Seed users endpoint
 	mainRouter.Post("/api/v1/seed/admins", seedHandler.SeedAdmins)                                     // Seed admins endpoint
 	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
+	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)     // Flush Redis cache endpoint
 
 
 	// Banks
@@ -495,6 +493,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		// users routes
 		r.Get(utils.ApiUrls.Users.GetMe, usersHandler.GetMe)
 		r.Put(utils.ApiUrls.Users.UpdateProfile, usersHandler.UpdateProfile)
+		r.Get("/api/v1/user_preferences", usersHandler.GetUserPreferences)
+		r.Put("/api/v1/user_preferences", usersHandler.UpdateUserPreferences)
 		r.Patch("/api/v1/auth/onboarding", authHandler.CompleteOnboarding) // Complete onboarding step
 		r.Get(utils.ApiUrls.Users.ListUsers, usersHandler.ListUsers)
 		r.Put("/api/v1/admin/users/{id}", usersHandler.AdminUpdateUser)
@@ -736,4 +736,3 @@ func requestLoggerMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(ww, r)
 	})
 }
-

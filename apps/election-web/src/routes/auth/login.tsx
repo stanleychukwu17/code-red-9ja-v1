@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { useMutation } from "@tanstack/react-query";
+import { useForm } from "@tanstack/react-form";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
-import LogoIcon from "@repo/ui/icons/logo-icon";
 import { Button } from "@repo/ui/components/button";
 import { FormInput, PasswordInput } from "@repo/ui/components/input";
 import { SelectCountry } from "@repo/ui/components/selects/country-select";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
-import store from "#/redux/store";
-import { updateCountryState } from "#/redux/slice/countrySlice";
 import { loginUser, checkIfRefreshTokenInCookie } from "#/lib/server/auth/auth";
 import { getPageHeader } from "@/lib/shared/meta";
 import { getAllCountries } from "#/lib/server/countries";
@@ -41,37 +38,18 @@ type payloadType = {
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie();
-    if (isAuthed.status === "success") {
+    if (isAuthed.success) {
       throw redirect({ to: APP_URL.home });
     }
   },
   head: () =>
     getPageHeader({
-      title: "Log in - Free9ja Elections",
+      title: "Log in",
       description: "Log in to your Free9ja Elections account",
     }),
-  loader: async () => {
-    if (typeof window !== "undefined") {
-      const state = store.getState();
-      if (state.country.countries && state.country.countries.length > 0) {
-        return { countries: state.country.countries };
-      }
-    }
 
-    const countries = (await getAllCountries()) as countriesType;
-    if (!countries.success) {
-      throw new Error(countries.message || "Failed to load countries");
-    }
-
-    if (typeof window !== "undefined") {
-      store.dispatch(
-        updateCountryState({ countries: countries.data.countries }),
-      );
-    }
-
-    return { countries: countries.data.countries };
-  },
   component: LoginComponent,
+
   errorComponent: ({ error }) => (
     <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
   ),
@@ -80,29 +58,21 @@ export const Route = createFileRoute("/auth/login")({
 function LoginComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries;
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
-  const {
-    control,
-    handleSubmit,
-    setValue,
-    formState: { errors, isValid, isSubmitting },
-  } = useForm({
-    mode: "onChange",
-    defaultValues: {
-      country: "",
-      identifier: "",
-      password: "",
-    },
+  const { data: countriesRes } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getAllCountries() as Promise<countriesType>,
+    staleTime: Infinity,
   });
+
+  const countries = (countriesRes?.success ? countriesRes.data.countries : []) as { id: number; name: string; iso2: string; phonecode: string }[];
 
   const loginMutation = useMutation({
     mutationFn: loginUser,
     onSuccess: (response) => {
-      console.log(response);
       if (response.success) {
         dispatch(updateAuthState({ user: response.data?.user }));
         navigate({ to: "/" });
@@ -115,78 +85,71 @@ function LoginComponent() {
     },
   });
 
-  const onSubmit = (value: any) => {
-    setErrorMsg(null);
+  const form = useForm({
+    defaultValues: {
+      country: "",
+      identifier: "",
+      password: "",
+    },
+    onSubmit: async ({ value }) => {
+      setErrorMsg(null);
 
-    const payload: payloadType = {
-      ...value,
-      identifier: value.identifier.trim().toLowerCase(),
-    };
+      const payload: payloadType = {
+        ...value,
+        identifier: value.identifier.trim().toLowerCase(),
+      };
 
-    // get the identifier type (email, username or phone number)
-    const emailRegex = /^[\w\d._%+-]+@[\w\d.-]+\.\w{2,}$/;
-    const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/; // username must start with a letter
-    let identifierType = "phone";
-    if (emailRegex.test(payload.identifier)) {
-      identifierType = "email";
-    } else if (usernameRegex.test(payload.identifier)) {
-      identifierType = "username";
-    }
-
-    const matchedCountry = countries.find(
-      (c) => c.name.toLowerCase() === value.country.toLowerCase(),
-    );
-    if (matchedCountry) {
-      payload.countryId = matchedCountry.id;
-      payload.iso2 = matchedCountry.iso2;
-    }
-
-    // if identifier looks like a phone number, format it with country code
-    const phoneRegex = /^[\d\s-]+$/;
-    if (identifierType === "phone" && phoneRegex.test(payload.identifier)) {
-      if (matchedCountry) {
-        payload.identifier = payload.identifier.startsWith("0")
-          ? `+${matchedCountry.phonecode}${payload.identifier.slice(1)}`
-          : `+${matchedCountry.phonecode}${payload.identifier}`;
+      // get the identifier type (email, username or phone number)
+      const emailRegex = /^[\w\d._%+-]+@[\w\d.-]+\.\w{2,}$/;
+      const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/; // username must start with a letter
+      let identifierType = "phone";
+      if (emailRegex.test(payload.identifier)) {
+        identifierType = "email";
+      } else if (usernameRegex.test(payload.identifier)) {
+        identifierType = "username";
       }
-    }
 
-    // add the identifier type to the payload
-    payload.identifierType = identifierType;
+      const matchedCountry = countries.find(
+        (c) => c.name.toLowerCase() === value.country.toLowerCase(),
+      );
+      if (matchedCountry) {
+        payload.countryId = matchedCountry.id;
+        payload.iso2 = matchedCountry.iso2;
+      }
 
-    console.log({ payload });
-    loginMutation.mutate({ data: payload });
-  };
+      // if identifier looks like a phone number, format it with country code
+      const phoneRegex = /^[\d\s-]+$/;
+      if (identifierType === "phone" && phoneRegex.test(payload.identifier)) {
+        if (matchedCountry) {
+          payload.identifier = payload.identifier.startsWith("0")
+            ? `+${matchedCountry.phonecode}${payload.identifier.slice(1)}`
+            : `+${matchedCountry.phonecode}${payload.identifier}`;
+        }
+      }
+
+      // add the identifier type to the payload
+      payload.identifierType = identifierType;
+
+      loginMutation.mutate({ data: payload });
+    },
+  });
 
   // auto-select the country where the user is browsing from once visitorCountry is available
   useEffect(() => {
     if (!visitorCountry) return;
 
     const timeoutId = setTimeout(() => {
-      // find the matched country
       const matchedCountry = countries.find(
         (c) => c.name.toLowerCase() === visitorCountry,
       );
 
-      // if no matched country, return
       if (!matchedCountry) return;
 
-      // set the country value in the form
-      setValue("country", matchedCountry.name.toLowerCase(), {
-        shouldValidate: true,
-        shouldDirty: true,
-      });
-
-      // find the select element for countries and set the value to the matched country
-      const selectEl = document.querySelector("div.selectElement select");
-      if (selectEl) {
-        (selectEl as HTMLSelectElement).value = visitorCountry;
-        selectEl.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+      form.setFieldValue("country", matchedCountry.name.toLowerCase());
     }, 250);
 
     return () => clearTimeout(timeoutId);
-  }, [visitorCountry, countries, setValue]);
+  }, [visitorCountry, countries, form]);
 
   return (
     <AuthWrapper type="login">
@@ -196,70 +159,86 @@ function LoginComponent() {
         </div>
       )}
 
-      <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-        <Controller
+      <form
+        className="flex flex-col gap-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+      >
+        <form.Field
           name="country"
-          control={control}
-          rules={{ required: "Country is required" }}
-          render={({ field }) => (
+          validators={{
+            onChange: ({ value }) =>
+              !value ? "Country is required" : undefined,
+          }}
+          children={(field) => (
             <SelectCountry
-              selectedId={field.value}
+              selectedId={field.state.value}
               update={(country) => {
-                field.onChange(country.name.toLowerCase());
+                field.handleChange(country.name.toLowerCase());
               }}
-              errorMsg={errors.country?.message as string | undefined}
+              errorMsg={field.state.meta.errors?.[0]}
               fetchCountries={async () => getAllCountries()}
             />
           )}
         />
 
-        <Controller
+        <form.Field
           name="identifier"
-          control={control}
-          rules={{ required: "Identifier is required" }}
-          render={({ field }) => (
+          validators={{
+            onChange: ({ value }) =>
+              !value ? "Identifier is required" : undefined,
+          }}
+          children={(field) => (
             <FormInput
               type="text"
               placeholder="Email or Username or Phone number"
-              value={field.value}
-              onBlur={field.onBlur}
-              onChange={(e) => field.onChange(e.target.value)}
-              errorMsg={errors.identifier?.message as string | undefined}
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+              errorMsg={field.state.meta.errors?.[0]}
             />
           )}
         />
 
-        <Controller
+        <form.Field
           name="password"
-          control={control}
-          rules={{
-            required: "Password is required",
-            minLength: {
-              value: 5,
-              message: "Password must be at least 5 characters",
+          validators={{
+            onChange: ({ value }) => {
+              if (!value) return "Password is required";
+              if (value.length < 5)
+                return "Password must be at least 5 characters";
+              return undefined;
             },
           }}
-          render={({ field }) => (
+          children={(field) => (
             <PasswordInput
               placeholder="Password"
-              value={field.value}
-              onBlur={field.onBlur}
-              onChange={(e) => field.onChange(e.target.value)}
-              errorMsg={errors.password?.message as string | undefined}
+              value={field.state.value}
+              onBlur={field.handleBlur}
+              onChange={(e) => field.handleChange(e.target.value)}
+              errorMsg={field.state.meta.errors?.[0]}
             />
           )}
         />
 
-        <Button
-          type="submit"
-          size="2xl"
-          variant="secondary"
-          disabled={!isValid}
-          loading={isSubmitting || loginMutation.isPending}
-          className="mt-2"
-        >
-          Log in
-        </Button>
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+          children={([canSubmit, isSubmitting]) => (
+            <Button
+              type="submit"
+              size="2xl"
+              variant="secondary"
+              disabled={!canSubmit || loginMutation.isPending}
+              loading={isSubmitting || loginMutation.isPending}
+              className="mt-2"
+            >
+              Log in
+            </Button>
+          )}
+        />
       </form>
     </AuthWrapper>
   );

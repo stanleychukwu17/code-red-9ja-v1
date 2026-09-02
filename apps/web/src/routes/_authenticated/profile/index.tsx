@@ -34,7 +34,7 @@ function RouteComponent() {
 
   return (
     <div className="flex-1 px-4 pb-10 pt-6 md:px-12 md:pt-7">
-      <div className="mx-auto flex w-full max-w-[620px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-155 flex-col gap-6">
         <h1 className="text-[34px] font-bold tracking-[-0.04em] text-[#232124]">
           My Profile
         </h1>
@@ -268,12 +268,12 @@ function RouteComponent() {
                   style={{
                     background:
                       plank.title ===
-                      "Restructuring Nigeria / True Federalism"
+                        "Restructuring Nigeria / True Federalism"
                         ? "#dfe9e2"
                         : plank.title === "Economic Growth"
                           ? "#f6e8c6"
                           : plank.title ===
-                              "Job Creation and Poverty Reduction"
+                            "Job Creation and Poverty Reduction"
                             ? "#ead8f7"
                             : "#f2c9c9",
                   }}

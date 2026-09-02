@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { STATES_PAGE_ROWS } from "../../../data/dashboard";
+import { AppPageHeader } from "#/components/AppPageHeader";
 
 export const Route = createFileRoute("/_authenticated/states/")({
   component: RouteComponent,

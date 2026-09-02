@@ -1,5 +1,6 @@
 import { Button } from "@repo/ui/components/button";
 import { createFileRoute } from "@tanstack/react-router";
+import { AppPageHeader } from "#/components/AppPageHeader";
 import {
   Flag,
   Heart,
@@ -39,10 +40,10 @@ function RouteComponent() {
   const feedPosts =
     feedFilter === "All"
       ? [
-          ...POLLING_UNIT_FEED_POSTS,
-          ...POLLING_UNIT_REPORT_POSTS,
-          ...POLLING_UNIT_SITUATION_POSTS,
-        ]
+        ...POLLING_UNIT_FEED_POSTS,
+        ...POLLING_UNIT_REPORT_POSTS,
+        ...POLLING_UNIT_SITUATION_POSTS,
+      ]
       : feedFilter === "Reports"
         ? POLLING_UNIT_REPORT_POSTS
         : POLLING_UNIT_SITUATION_POSTS;
@@ -343,11 +344,10 @@ function TopTabs({
             key={tab}
             type="button"
             onClick={() => onChange(tab)}
-            className={`flex-1 border-b-[3px] pb-4 pt-7 text-center text-[17px] font-bold transition ${
-              active
+            className={`flex-1 border-b-[3px] pb-4 pt-7 text-center text-[17px] font-bold transition ${active
                 ? "border-black text-[#171416]"
                 : "border-transparent text-[#b5b0b3]"
-            }`}
+              }`}
           >
             {tab}
           </button>
@@ -373,11 +373,10 @@ function PillTabs({
           key={tab.key}
           type="button"
           onClick={() => onChange(tab.key)}
-          className={`rounded-full px-5 py-4 text-[16px] font-bold transition ${
-            value === tab.key
+          className={`rounded-full px-5 py-4 text-[16px] font-bold transition ${value === tab.key
               ? "bg-[#e5e1e6] text-[#171416]"
               : "bg-transparent text-[#171416]"
-          }`}
+            }`}
         >
           {tab.label}
         </button>
@@ -409,7 +408,7 @@ function UploadCard({
       <img
         src={upload.image}
         alt={upload.author}
-        className="max-h-[900px] w-full max-w-[710px] rounded-[4px] object-cover"
+        className="max-h-[900px] w-full max-w-[710px] rounded-sm object-cover"
       />
     </article>
   );

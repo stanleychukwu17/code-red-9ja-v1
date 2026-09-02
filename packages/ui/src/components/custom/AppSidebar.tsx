@@ -1,4 +1,4 @@
-import { useEffect, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   PanelLeftClose,
@@ -13,7 +13,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { useTheme } from "../../hooks/use-theme";
+import { useTheme, type ThemeMode } from "../../hooks/use-theme";
 import {
   Sidebar,
   SidebarContent,
@@ -173,10 +173,18 @@ export function AppSidebar({
 }: AppSidebarShellProps) {
   const { state: sideBarState } = useSidebar();
   const activeItemFromUrl = useActiveItem(items);
+  const isFirstMountRef = useRef(true);
+  const prevSidebarStateRef = useRef(sideBarState);
 
   useEffect(() => {
-    if (onSidebarStateChange) {
-      onSidebarStateChange(sideBarState);
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
+
+    if (prevSidebarStateRef.current !== sideBarState) {
+      prevSidebarStateRef.current = sideBarState;
+      onSidebarStateChange?.(sideBarState);
     }
   }, [sideBarState, onSidebarStateChange]);
 
@@ -412,7 +420,10 @@ function ProfilePicture({
           align="end"
           className="w-[300px] p-2 ml-2 rounded-[20px]"
         >
-          <ProfileDropdown onLogout={onLogout} homePageUrl={homePageUrl} />
+          <ProfileDropdown
+            onLogout={onLogout}
+            homePageUrl={homePageUrl}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
     );
@@ -449,7 +460,10 @@ function ProfilePicture({
         align="start"
         className="w-[300px] p-2 mb-2 rounded-[20px]"
       >
-        <ProfileDropdown onLogout={onLogout} homePageUrl={homePageUrl} />
+        <ProfileDropdown
+          onLogout={onLogout}
+          homePageUrl={homePageUrl}
+        />
       </DropdownMenuContent>
     </DropdownMenu>
   );

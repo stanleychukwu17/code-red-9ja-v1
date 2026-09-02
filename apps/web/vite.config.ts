@@ -18,9 +18,12 @@ const config = defineConfig({
     // allow the below if you'd like to deploy to aws
     tanstackStart({
       server: {
-        preset: 'node-server',
+        preset: "node-server",
       },
-    }),
+      router: {
+        routeFileIgnorePattern: "(components|page-components)",
+      },
+    } as any),
 
     // tanstackStart(), // comment-out the if you'd like to deploy to aws
     viteReact(),

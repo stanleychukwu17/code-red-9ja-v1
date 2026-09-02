@@ -57,8 +57,8 @@ INSERT INTO user_referrals (
 ON CONFLICT (user_id, election_group_id) DO NOTHING;
 
 -- name: GetUserReferredByID :one
--- Returns the referred_by_id for a user given their internal user ID.
-SELECT referred_by_id FROM users WHERE id = $1 LIMIT 1;
+-- Returns the referrer_user_id for a user given their internal user ID.
+SELECT referrer_user_id FROM referrals WHERE referred_user_id = $1 LIMIT 1;
 
 -- name: GetApplicationElectionGroupsByUserAndParty :many
 -- Returns all distinct election_group_ids for a user's applications under a party.

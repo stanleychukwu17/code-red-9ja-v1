@@ -11,7 +11,6 @@ import { getPageHeader } from "@/lib/shared/meta";
 import {
   checkIfRefreshTokenInCookie,
   sendForgotPasswordEmailOtp,
-  verifySignupEmailOtp,
   changePasswordByEmail,
 } from "@/lib/server/auth/auth";
 import { APP_URL } from "@/lib/config";
@@ -21,7 +20,7 @@ type Step = "email" | "otp" | "password";
 export const Route = createFileRoute("/auth/forgot-password")({
   beforeLoad: async () => {
     const isLoggedIn = await checkIfRefreshTokenInCookie();
-    if (isLoggedIn.status === "success") {
+    if (isLoggedIn.success) {
       throw redirect({ to: APP_URL.home });
     }
   },
@@ -67,27 +66,10 @@ function RouteComponent() {
     onError: () => setServerError("Failed to send verification code."),
   });
 
-  // ── Step 2: verify OTP ──
-  const verifyOtpMutation = useMutation({
-    mutationFn: () =>
-      verifySignupEmailOtp({ data: { email, otp } } as any),
-    onSuccess: (result: any) => {
-      if (result.success) {
-        setStep("password");
-        setServerError(null);
-      } else {
-        setServerError(
-          result.error || result.message || "Invalid or expired code.",
-        );
-      }
-    },
-    onError: () => setServerError("Failed to verify code."),
-  });
-
-  // ── Step 3: change password ──
+  // ── Step 3: change password (atomic verify OTP + set password) ──
   const changePasswordMutation = useMutation({
-    mutationFn: () =>
-      changePasswordByEmail({ data: { email, password } }),
+    mutationFn: (data: { email: string; password: string; otp: string }) =>
+      changePasswordByEmail({ data }),
     onSuccess: (result: any) => {
       if (result.success) {
         navigate({ to: APP_URL.auth.login, replace: true });
@@ -114,7 +96,7 @@ function RouteComponent() {
   const handleVerifyOtp = () => {
     setServerError(null);
     if (otp.length < 6) return setServerError("Please enter the 6-digit code.");
-    verifyOtpMutation.mutate();
+    setStep("password");
   };
 
   const handleChangePassword = () => {
@@ -124,7 +106,7 @@ function RouteComponent() {
       return setServerError("Password must be at least 5 characters.");
     if (password !== confirmPassword)
       return setServerError("Passwords do not match.");
-    changePasswordMutation.mutate();
+    changePasswordMutation.mutate({ email, password, otp });
   };
 
   const wrapperType =
@@ -135,7 +117,7 @@ function RouteComponent() {
         : "forgot-password";
 
   return (
-    <AuthWrapper type={wrapperType}>
+    <AuthWrapper type={wrapperType} email={step === "otp" ? email : undefined}>
       <FormError message={serverError} />
 
       {/* ── Step 1: Email ── */}
@@ -179,6 +161,9 @@ function RouteComponent() {
               setServerError(null);
               setOtp(e.target.value.replace(/[^0-9]/g, "").slice(0, 6));
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && otp.length === 6) handleVerifyOtp();
+            }}
             maxLength={6}
             inputMode="numeric"
           />
@@ -189,12 +174,12 @@ function RouteComponent() {
             size="2xl"
             className="w-full"
             variant="secondary"
-            disabled={otp.length < 6 || verifyOtpMutation.isPending}
-            loading={verifyOtpMutation.isPending}
+            disabled={otp.length < 6}
             onClick={handleVerifyOtp}
           >
-            Verify code
+            Continue
           </Button>
+
 
           <div className="flex items-center justify-between text-sm">
             <button

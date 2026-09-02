@@ -7,33 +7,13 @@ import {
   loginAdminImpl,
   logoutUserImpl,
   refreshUserTokenImpl,
-  verifySecurityQuestionsImpl,
+
   resetPasswordImpl,
   signupUserImpl,
   changePasswordByEmailImpl,
 } from "#/lib/server/auth/auth.server";
 
-// Starts the registration process for a new user
-export const startUserRegistration = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
-  .handler(async ({ data }) => {
-    try {
-      const response = await fetch(API_URL.auth.registerPhaseSignUp, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      return {
-        status: "error",
-        message: "An unexpected error occurred during registration",
-      };
-    }
-  });
-
+// send signup email otp
 export const sendSignupEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string }) => data)
   .handler(async ({ data }) => {
@@ -44,10 +24,8 @@ export const sendSignupEmailOtp = createServerFn({ method: "POST" })
         body: JSON.stringify(data),
       });
       const result = await response.json();
-      console.log("OTP RESULT:", result);
       return result;
     } catch (error) {
-      console.error("Send signup OTP error:", error);
       return {
         success: false,
         message: "An unexpected error occurred while sending the OTP",
@@ -55,6 +33,7 @@ export const sendSignupEmailOtp = createServerFn({ method: "POST" })
     }
   });
 
+// send forgot password email otp
 export const sendForgotPasswordEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string }) => data)
   .handler(async ({ data }) => {
@@ -67,7 +46,6 @@ export const sendForgotPasswordEmailOtp = createServerFn({ method: "POST" })
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Send forgot password OTP error:", error);
       return {
         success: false,
         message: "An unexpected error occurred while sending the OTP",
@@ -75,6 +53,7 @@ export const sendForgotPasswordEmailOtp = createServerFn({ method: "POST" })
     }
   });
 
+// verify signup email otp
 export const verifySignupEmailOtp = createServerFn({ method: "POST" })
   .inputValidator((data: { email: string; otp: string }) => data)
   .handler(async ({ data }) => {
@@ -87,7 +66,6 @@ export const verifySignupEmailOtp = createServerFn({ method: "POST" })
 
       return await response.json();
     } catch (error) {
-      console.error("Verify signup OTP error:", error);
       return {
         success: false,
         message: "An unexpected error occurred while verifying the OTP",
@@ -95,6 +73,7 @@ export const verifySignupEmailOtp = createServerFn({ method: "POST" })
     }
   });
 
+// signup user
 export const signupUser = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
   .handler(async ({ data }) => {
@@ -143,9 +122,8 @@ export const checkNin = createServerFn({ method: "POST" })
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Check NIN error:", error);
       return {
-        status: "error",
+        success: false,
         message: "An unexpected error occurred during NIN check",
       };
     }
@@ -165,9 +143,8 @@ export const checkUsername = createServerFn({ method: "POST" })
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Check username error:", error);
       return {
-        status: "error",
+        success: false,
         message: "An unexpected error occurred during username check",
       };
     }
@@ -186,32 +163,9 @@ export const checkReferralCode = createServerFn({ method: "POST" })
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Check referral code error:", error);
       return {
-        status: "error",
+        success: false,
         message: "An unexpected error occurred during referral code check",
-      };
-    }
-  });
-
-// Completes the registration process by sending a POST request to the server with the user's data.
-export const completeRegistration = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
-  .handler(async ({ data }) => {
-    try {
-      const response = await fetch(API_URL.auth.register, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-      return result;
-    } catch (error) {
-      console.error("Complete registration error:", error);
-      return {
-        status: "error",
-        message: "An unexpected error occurred during final registration",
       };
     }
   });
@@ -245,7 +199,6 @@ export const loginAdmin = createServerFn({ method: "POST" })
 export const refreshUserToken = createServerFn({ method: "POST" }).handler(
   async () => {
     const result = await refreshUserTokenImpl(); // Refreshes the user's access token
-    // console.log("refreshUserToken result", result)
     return result;
   },
 );
@@ -274,22 +227,6 @@ export const logoutUser = createServerFn({ method: "POST" }).handler(
   },
 );
 
-// Verifies security questions for a user
-export const verifySecurityQuestions = createServerFn({ method: "POST" })
-  .inputValidator(
-    (data: {
-      nin: string;
-      question1: number;
-      answer1: string;
-      question2: number;
-      answer2: string;
-    }) => data,
-  )
-  .handler(async ({ data }) => {
-    const result = await verifySecurityQuestionsImpl({ data });
-    return result;
-  });
-
 // Resets user password
 export const resetPassword = createServerFn({ method: "POST" })
   .inputValidator((data: any) => data)
@@ -300,7 +237,7 @@ export const resetPassword = createServerFn({ method: "POST" })
 
 // Changes user password by email (used in forgot-password flow)
 export const changePasswordByEmail = createServerFn({ method: "POST" })
-  .inputValidator((data: { email: string; password: string }) => data)
+  .inputValidator((data: { email: string; otp: string; password: string }) => data)
   .handler(async ({ data }) => {
     const result = await changePasswordByEmailImpl({ data });
     return result;
@@ -323,9 +260,6 @@ export const registerCandidate = createServerFn({ method: "POST" })
           `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
       }
 
-      console.log("[DEBUG Admin] getCookie access_token:", accessToken);
-      console.log("[DEBUG Admin] getCookie refresh_token:", refreshToken);
-
       const response = await fetch(API_URL.auth.registerCandidate, {
         method: "POST",
         headers,
@@ -333,12 +267,6 @@ export const registerCandidate = createServerFn({ method: "POST" })
       });
 
       const text = await response.text();
-      console.log(
-        "[DEBUG Admin] response status:",
-        response.status,
-        "body:",
-        text,
-      );
 
       if (!response.ok) {
         return {
@@ -354,7 +282,6 @@ export const registerCandidate = createServerFn({ method: "POST" })
         return { success: true, data: text }; // Fallback if raw text success
       }
     } catch (error) {
-      console.error("Register candidate error:", error);
       return {
         success: false,
         message:
@@ -386,7 +313,6 @@ export const getAdminUsers = createServerFn({ method: "GET" }).handler(
       const result = await response.json();
       return result;
     } catch (error) {
-      console.error("Fetch admin users error:", error);
       return {
         success: false,
         message: "An unexpected error occurred during fetching admin users",

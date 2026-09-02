@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import {
   createFileRoute,
@@ -21,7 +22,7 @@ import {
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { updateAuthState } from "#/redux/slice/authSlice";
 import store from "#/redux/store";
-import { updateCountryState } from "#/redux/slice/countrySlice";
+
 import { APP_URL } from "#/lib/config";
 import {
   loginPartyApp,
@@ -55,7 +56,7 @@ type payloadType = {
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
     const isAuthed = await checkIfRefreshTokenInCookie();
-    if (isAuthed.status === "success") {
+    if (isAuthed.success) {
       const userDetails = await getUserDetailsCookie();
       const partyShortName = userDetails?.party?.short_name || "party";
       throw redirect({
@@ -64,31 +65,13 @@ export const Route = createFileRoute("/auth/login")({
       });
     }
   },
+
   head: () =>
     getPageHeader({
       title: "Log in",
       description: "Log in to your Party Admin account",
     }),
-  loader: async () => {
-    if (typeof window !== "undefined") {
-      const state = store.getState();
-      if (state.country.countries && state.country.countries.length > 0) {
-        return { countries: state.country.countries };
-      }
-    }
 
-    const countries = (await getAllCountries()) as countriesType;
-    if (!countries.success)
-      throw new Error(countries.message || "Failed to load countries");
-
-    if (typeof window !== "undefined") {
-      store.dispatch(
-        updateCountryState({ countries: countries.data.countries }),
-      );
-    }
-
-    return { countries: countries.data.countries };
-  },
   component: LoginComponent,
   errorComponent: ({ error }) => (
     <div className="p-4 text-destructive">{`${error?.message}, Also check if the backend server is up and running`}</div>
@@ -99,7 +82,14 @@ function LoginComponent() {
   const navigate = useNavigate();
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const countries = Route.useLoaderData().countries;
+  const { data: countriesRes } = useQuery({
+    queryKey: ["countries"],
+    queryFn: () => getAllCountries() as Promise<countriesType>,
+    staleTime: Infinity,
+  });
+  const countries = (
+    countriesRes?.success ? countriesRes.data.countries : []
+  ) as { id: number; name: string; iso2: string; phonecode: string }[];
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
@@ -201,7 +191,7 @@ function LoginComponent() {
       </div>
 
       {/* Center Form */}
-      <div className="mx-auto w-full max-w-[420px] flex flex-col justify-center py-12">
+      <div className="mx-auto w-full max-w-105 flex flex-col justify-center py-12">
         <h1 className="text-[28px] font-bold text-[#181818] mb-1">Log in</h1>
         <p className="text-[15px] text-[#767676] mb-6">
           Log in to Party Admin Dashboard
@@ -262,7 +252,7 @@ function LoginComponent() {
                   </SelectContent>
                 </Select>
                 {field.state.meta.isTouched &&
-                field.state.meta.errors.length ? (
+                  field.state.meta.errors.length ? (
                   <span className="text-xs text-destructive">
                     {field.state.meta.errors[0] as string}
                   </span>
@@ -280,7 +270,7 @@ function LoginComponent() {
             children={(field) => (
               <FormInput
                 type="text"
-                className="rounded-[4px]"
+                className="rounded-sm"
                 placeholder="Email or Username or Phone number"
                 value={field.state.value}
                 onBlur={field.handleBlur}
@@ -307,7 +297,7 @@ function LoginComponent() {
             children={(field) => (
               <PasswordInput
                 placeholder="Password"
-                className="rounded-[4px]"
+                className="rounded-sm"
                 value={field.state.value}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
@@ -328,7 +318,7 @@ function LoginComponent() {
                 variant="secondary"
                 disabled={!canSubmit}
                 loading={isSubmitting}
-                className="rounded-[4px] mt-2"
+                className="rounded-sm mt-2"
               >
                 Log in
               </Button>

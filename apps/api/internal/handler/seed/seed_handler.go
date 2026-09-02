@@ -148,3 +148,27 @@ func (h *Handler) SimulateElectionResults(w http.ResponseWriter, r *http.Request
 	})
 }
 
+
+// @Summary Flush Redis Cache
+// @Description Clears and flushes all application-managed keys from Redis cache using pipelines
+// @Tags Seed
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{} "Redis database cleared successfully"
+// @Failure 500 {object} map[string]interface{} "Failed to flush Redis"
+// @Router /seed/flush-redis [post]
+func (h *Handler) FlushRedis(w http.ResponseWriter, r *http.Request) {
+	if os.Getenv("ENV") == "production" {
+		h.utils.RespondError(w, http.StatusForbidden, "This endpoint is disabled in production")
+		return
+	}
+
+	msg, err := h.seedService.FlushRedis(r.Context())
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to flush Redis: "+err.Error())
+		return
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
+}
+

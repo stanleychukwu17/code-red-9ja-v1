@@ -1,42 +1,34 @@
+import { useAppSelector } from "#/redux/hooks";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useForm } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
-import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import {
-  setOnboardingData,
-  updateOnboardingData,
-} from "@/redux/slice/authSlice";
 import { AuthWrapper } from "./_components/-auth-wrapper";
-import { SignupError } from "./_components/-signup-error";
 import { FormError } from "./_components/-form-error";
+import { SignupError } from "./_components/-signup-error";
 
-import { Button } from "@repo/ui/components/button";
-import { FormInput, PasswordInput } from "@repo/ui/components/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectLabel,
-  SelectTrigger,
-  SelectValue,
-} from "@repo/ui/components/select";
-import { APP_URL, APP_NAME } from "@/lib/config";
-import { getPageHeader } from "@/lib/shared/meta";
-import { getAllCountries } from "@/lib/server/countries";
+import { APP_NAME, APP_URL } from "#/lib/config";
 import {
   checkIfRefreshTokenInCookie,
-  startUserRegistration,
-} from "@/lib/server/auth/auth";
+  sendSignupEmailOtp,
+  signupUser,
+  verifySignupEmailOtp,
+} from "#/lib/server/auth/auth";
+import { getAllCountries } from "#/lib/server/countries";
+import { getPageHeader } from "#/lib/shared/meta";
+import { Button } from "@repo/ui/components/button";
+import {
+  FormInput,
+  InputErrorText,
+  PasswordInput,
+} from "@repo/ui/components/input";
+import { SelectCountryCode } from "@repo/ui/components/selects/country-code-select";
 import type { countriesType } from "./login";
-
-import { PiWhatsappLogoDuotone } from "react-icons/pi";
 
 export const Route = createFileRoute("/auth/signup")({
   // Check if user is already authenticated, if so redirect to home page
   beforeLoad: async () => {
-    const isLoggedIn = await checkIfRefreshTokenInCookie({});
+    const isLoggedIn = await checkIfRefreshTokenInCookie();
     if (isLoggedIn.success) {
       throw redirect({ to: APP_URL.home });
     }
@@ -45,7 +37,7 @@ export const Route = createFileRoute("/auth/signup")({
   // Page metadata
   head: () =>
     getPageHeader({
-      title: "Sign up: Join the movement ",
+      title: "Sign up",
       description: `Create your account to start enjoying premium content on ${APP_NAME}`,
     }),
 
@@ -58,10 +50,10 @@ export const Route = createFileRoute("/auth/signup")({
 
 function RouteComponent() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
+  // Fetch countries list to populate the country code dropdown
   const { data: countriesRes } = useQuery({
     queryKey: ["countries"],
     queryFn: () => getAllCountries() as Promise<countriesType>,
@@ -71,10 +63,95 @@ function RouteComponent() {
     countriesRes?.success ? countriesRes.data.countries : []
   ) as { id: number; name: string; iso2: string; phonecode: string }[];
 
+  // Local state for handling form progression, OTP, and errors
   const [serverError, setServerError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [resendSeconds, setResendSeconds] = useState(0);
+  const [pendingSignup, setPendingSignup] = useState<{
+    countryId?: number;
+    phoneNumber: string;
+    email: string;
+    password: string;
+    countryName: string;
+  } | null>(null);
 
-  // tanstack useForm hook - set the default values of the form
-  // also handles the submission of the form
+  // Mutation to request an OTP code to be sent to the user's email
+  const sendOtpMutation = useMutation({
+    mutationFn: sendSignupEmailOtp,
+    onSuccess: (result) => {
+      if (result.success) {
+        setOtpSent(true);
+        setResendSeconds(60);
+      } else {
+        setServerError(
+          result.error ||
+            result.message ||
+            "An error occurred while sending the verification code",
+        );
+      }
+    },
+    onError: () => {
+      setServerError("An error occurred while sending the verification code");
+    },
+  });
+
+  // Mutation to verify the OTP code entered by the user
+  const verifyOtpMutation = useMutation({
+    mutationFn: verifySignupEmailOtp,
+    onSuccess: (result) => {
+      if (result.success) {
+        const token =
+          result.data?.emailVerificationToken ||
+          result.emailVerificationToken ||
+          "";
+
+        if (!pendingSignup) {
+          setServerError(
+            "Missing signup details. Please submit the form again.",
+          );
+          return;
+        }
+
+        signupMutation.mutate({
+          data: {
+            ...pendingSignup,
+            emailVerificationToken: token,
+          },
+        });
+      } else {
+        setServerError(
+          result.error ||
+            result.message ||
+            "An error occurred while verifying the code",
+        );
+      }
+    },
+    onError: () => {
+      setServerError("An error occurred while verifying the code");
+    },
+  });
+
+  // Mutation for the final signup step (after OTP verification)
+  const signupMutation = useMutation({
+    mutationFn: signupUser,
+    onSuccess: (result) => {
+      if (result.success) {
+        navigate({ to: APP_URL.auth.onboarding });
+      } else {
+        setServerError(
+          result.error ||
+            result.message ||
+            "An error occurred during registration",
+        );
+      }
+    },
+    onError: () => {
+      setServerError("An error occurred during registration");
+    },
+  });
+
+  // Initialize form using TanStack Form
   const form = useForm({
     defaultValues: {
       country: "",
@@ -84,79 +161,63 @@ function RouteComponent() {
       confirmPassword: "",
     },
     onSubmit: async ({ value }) => {
-      // clear any previous errors
       setServerError(null);
 
-      // find the matched country and add it to the payload
       const matchedCountry = countries.find(
         (c) => c.name.toLowerCase() === value.country.toLowerCase(),
       );
 
-      // create the payload for the server
       const payload = {
-        ...value,
         countryId: matchedCountry?.id,
-        iso2: matchedCountry?.iso2,
         phoneNumber: value.phoneNumber,
+        email: value.email,
+        password: value.password,
+        countryName: matchedCountry?.name ?? "",
       };
 
-      // update the onboarding data
-      dispatch(setOnboardingData(payload));
-
-      // send the data to the server
-      const result = await startUserRegistration({ data: payload });
-      console.log(result)
-
-      // if the request was successful
-      if (result.success) {
-        // update the onboarding data with the result returned from the register request
-        dispatch(updateOnboardingData({ id: result.data.id }));
-
-        // navigate to the verify otp page
-        navigate({
-          to: APP_URL.auth.securityQuestions,
-          search: { flow: "signup" },
-        });
-      } else {
-        // set error
-        setServerError(
-          result.error ||
-          result.message ||
-          "An error occurred during registration",
-        );
+      if (!otpSent) {
+        setPendingSignup(payload);
+        sendOtpMutation.mutate({ data: { email: value.email } });
+        return;
       }
+
+      verifyOtpMutation.mutate({ data: { email: value.email, otp } });
     },
   });
 
-  // auto-select the country where the user is browsing from once visitorCountry is available
+  // Timer effect to handle the OTP resend cool-down
+  useEffect(() => {
+    if (!otpSent || resendSeconds <= 0) return;
+
+    const interval = setInterval(() => {
+      setResendSeconds((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [otpSent, resendSeconds]);
+
+  // Auto-select the country where the user is browsing from
   useEffect(() => {
     if (!visitorCountry) return;
 
     const timeoutId = setTimeout(() => {
-      // find the matched country
       const matchedCountry = countries.find(
         (c) => c.name.toLowerCase() === visitorCountry,
       );
 
-      // if no matched country, return
       if (!matchedCountry) return;
 
-      // set the country value in the form
       form.setFieldValue("country", matchedCountry.name.toLowerCase());
-
-      // find the select element for countries and set the value to the matched country
-      const selectEl = document.querySelector("div.selectElement select");
-      if (selectEl) {
-        (selectEl as HTMLSelectElement).value = visitorCountry;
-        selectEl.dispatchEvent(new Event("change", { bubbles: true }));
-      }
     }, 250);
 
     return () => clearTimeout(timeoutId);
   }, [visitorCountry, countries, form]);
 
   return (
-    <AuthWrapper type="signup">
+    <AuthWrapper
+      type={otpSent ? "verify-otp" : "signup"}
+      email={otpSent ? (pendingSignup?.email || form.getFieldValue("email")) : undefined}
+    >
       <FormError message={serverError} />
       <form
         className="flex flex-col gap-4"
@@ -166,197 +227,226 @@ function RouteComponent() {
           form.handleSubmit();
         }}
       >
-        <form.Field
-          name="country"
-          validators={{
-            onChange: ({ value }) =>
-              !value ? "Country is required" : undefined,
-          }}
-          children={(field) => (
-            <div className="selectElement flex flex-col gap-1">
-              <Select
-                onValueChange={(val) => {
-                  field.handleChange(val);
-                }}
-                defaultValue={field.state.value}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select Country" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectLabel>Countries</SelectLabel>
-                    {countries.map((country) => (
-                      <SelectItem
-                        key={country.name}
-                        value={country.name.toLowerCase()}
-                      >
-                        <span className="flex items-center gap-2 capitalize py-1.5 cursor-pointer">
-                          <span className="country">
-                            <img
-                              src={`https://flagcdn.com/w40/${country.iso2.toLowerCase()}.png`}
-                              width="23"
-                            />
-                          </span>
-                          <span>{country.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-              {field.state.meta.isTouched && field.state.meta.errors.length ? (
-                <span className="text-xs text-destructive">
-                  {field.state.meta.errors[0] as string}
-                </span>
-              ) : null}
-            </div>
-          )}
-        />
-
-        <form.Field
-          name="phoneNumber"
-          validators={{
-            onChange: ({ value }) => {
-              if (!value) return "Phone number is required";
-
-              const phoneRegex = /^[\d\s-]{10,}$/;
-              if (!phoneRegex.test(value)) return "Enter a valid phone number";
-
-              return undefined;
-            },
-          }}
-          children={(field) => (
-            <div className="">
-              <div className="flex items-center gap-2">
-                {/* 
-                  Subscribe to the `country` field state. anytime the `countryValue` changes, we display it's phone-code
-                  close to the phoneNumber input
-                */}
-                <form.Subscribe selector={(state) => state.values.country}>
-                  {(countryValue) => {
-                    const country = countries.find(
-                      (c) => c.name.toLowerCase() === countryValue,
-                    );
-                    return (
-                      <div className="font-semibold tracking-[1px] text-lg">
-                        {country ? `+${country.phonecode}` : "+"}
-                      </div>
-                    );
-                  }}
-                </form.Subscribe>
-                <div className="w-full">
-                  <FormInput
-                    placeholder="Phone number (whatsapp)"
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    maxLength={12}
-                    errorMsg={
-                      field.state.meta.isTouched &&
-                        field.state.meta.errors.length
-                        ? (field.state.meta.errors[0] as string)
-                        : undefined
-                    }
+        {!otpSent ? (
+          <>
+            <form.Field
+              name="phoneNumber"
+              validators={{
+                onChange: ({ value }) => {
+                  if (!value) return "Phone number is required";
+                  const phoneRegex = /^[\d\s-]{10,}$/;
+                  if (!phoneRegex.test(value))
+                    return "Enter a valid phone number";
+                  return undefined;
+                },
+              }}
+              children={(field) => (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <form.Field
+                      name="country"
+                      validators={{
+                        onChange: ({ value }) =>
+                          !value ? "Country is required" : undefined,
+                      }}
+                      children={(countryField) => (
+                        <div className="w-30 shrink-0">
+                          <SelectCountryCode
+                            countries={countries}
+                            selectedId={countryField.state.value}
+                            update={(val) => countryField.handleChange(val)}
+                            errorMsg={
+                              countryField.state.meta.errors?.[0]
+                            }
+                          />
+                        </div>
+                      )}
+                    />
+                    <div className="w-full">
+                      <FormInput
+                        placeholder="Phone number (whatsapp)"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        maxLength={12}
+                      />
+                    </div>
+                  </div>
+                  <InputErrorText
+                    text={field.state.meta.errors?.[0]}
                   />
                 </div>
-              </div>
-              <div className="flex items-center gap-x-2 text-xs text-grey-500 ml-10 mt-2.5">
-                <PiWhatsappLogoDuotone className="size-6 text-green-600" />
-                We'll send you a code to verify your phone number.
-              </div>
-            </div>
-          )}
-        />
+              )}
+            />
 
-        <form.Field
-          name="email"
-          validators={{
-            onChange: ({ value }) => {
-              if (!value) return undefined; // Email is optional
-              const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-              if (!emailRegex.test(value)) {
-                return "Enter a valid email address";
-              }
-              return undefined;
-            },
-          }}
-          children={(field) => (
+            <form.Field
+              name="email"
+              validators={{
+                onChange: ({ value }) => {
+                  if (!value) return "Email is required";
+                  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                  if (!emailRegex.test(value)) {
+                    return "Enter a valid email address";
+                  }
+                  return undefined;
+                },
+              }}
+              children={(field) => (
+                <FormInput
+                  type="email"
+                  placeholder="Email"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  errorMsg={field.state.meta.errors?.[0]}
+                />
+              )}
+            />
+
+            <form.Field
+              name="password"
+              validators={{
+                onChange: ({ value }) => {
+                  if (!value) return "Password is required";
+                  if (value.length < 5)
+                    return "Password must be at least 5 characters";
+                  return undefined;
+                },
+              }}
+              children={(field) => (
+                <PasswordInput
+                  placeholder="Password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  errorMsg={field.state.meta.errors?.[0]}
+                />
+              )}
+            />
+
+            <form.Field
+              name="confirmPassword"
+              validators={{
+                onChangeListenTo: ["password"],
+                onChange: ({ value, fieldApi }) => {
+                  if (!value) return "Please confirm your password";
+                  if (value !== fieldApi.form.getFieldValue("password")) {
+                    return "Passwords do not match";
+                  }
+                  return undefined;
+                },
+              }}
+              children={(field) => (
+                <PasswordInput
+                  placeholder="Confirm Password"
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  errorMsg={field.state.meta.errors?.[0]}
+                />
+              )}
+            />
+
+            <form.Subscribe
+              selector={(state) => [state.canSubmit, state.isSubmitting]}
+              children={([canSubmit, isSubmitting]) => (
+                <Button
+                  type="submit"
+                  size="2xl"
+                  variant="secondary"
+                  disabled={!canSubmit || sendOtpMutation.isPending}
+                  loading={isSubmitting || sendOtpMutation.isPending}
+                >
+                  Sign up
+                </Button>
+              )}
+            />
+          </>
+        ) : (
+          <div className="space-y-5 pt-2">
+            {/* OTP Input field */}
             <FormInput
-              type="email"
-              placeholder="Email (Optional)"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-              errorMsg={
-                field.state.meta.isTouched && field.state.meta.errors.length
-                  ? (field.state.meta.errors[0] as string)
-                  : undefined
-              }
+              placeholder="Enter 6-digit code"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+              maxLength={6}
             />
-          )}
-        />
 
-        <form.Field
-          name="password"
-          validators={{
-            onChange: ({ value }) =>
-              !value ? "Password is required"
-                : value.length < 5 ? "Password must be at least 5 characters" : undefined,
-          }}
-          children={(field) => (
-            <PasswordInput
-              placeholder="Password"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-              errorMsg={
-                field.state.meta.isTouched && field.state.meta.errors.length
-                  ? (field.state.meta.errors[0] as string)
-                  : undefined
-              }
-            />
-          )}
-        />
-
-        <form.Field
-          name="confirmPassword"
-          validators={{
-            onChange: ({ value, fieldApi }) => {
-              if (!value) return "Please confirm your password";
-              if (value !== fieldApi.form.getFieldValue("password"))
-                return "Passwords do not match";
-              return undefined;
-            },
-          }}
-          children={(field) => (
-            <PasswordInput
-              placeholder="Confirm Password"
-              value={field.state.value}
-              onBlur={field.handleBlur}
-              onChange={(e) => field.handleChange(e.target.value)}
-              errorMsg={
-                field.state.meta.isTouched && field.state.meta.errors.length
-                  ? (field.state.meta.errors[0] as string)
-                  : undefined
-              }
-            />
-          )}
-        />
-
-        <form.Subscribe
-          selector={(state) => [state.canSubmit, state.isSubmitting]}
-          children={([canSubmit, isSubmitting]) => (
             <Button
-              type="submit"
+              type="button"
+              size="2xl"
+              className="w-full"
               variant="secondary"
-              disabled={!canSubmit}
-              loading={isSubmitting}
+              disabled={
+                otp.length < 6 ||
+                verifyOtpMutation.isPending ||
+                signupMutation.isPending
+              }
+              loading={verifyOtpMutation.isPending || signupMutation.isPending}
+              onClick={() => {
+                const email = form.getFieldValue("email").trim();
+                if (!email) {
+                  setServerError("Email is required");
+                  return;
+                }
+
+                if (!pendingSignup) {
+                  setServerError(
+                    "Missing signup details. Please go back and try again.",
+                  );
+                  return;
+                }
+
+                verifyOtpMutation.mutate({ data: { email, otp } });
+              }}
             >
-              Create account
+              Complete Sign up
             </Button>
-          )}
-        />
+
+            <div className="flex items-center justify-between text-sm">
+              {/* Resend OTP button */}
+              <button
+                type="button"
+                className="h-10 flex-items-center pr-5 font-medium text-c-80 hover:text-green cursor-pointer disabled:opacity-50 transition-all duration-300"
+                disabled={resendSeconds > 0 || sendOtpMutation.isPending}
+                onClick={() => {
+                  const email = form.getFieldValue("email").trim();
+                  if (!email) {
+                    setServerError("Email is required");
+                    return;
+                  }
+                  sendOtpMutation.mutate({ data: { email } });
+                }}
+              >
+                {resendSeconds > 0 ? (
+                  <>
+                    Resend in{" "}
+                    <span className="font-semibold text-green">
+                      {resendSeconds}s
+                    </span>
+                  </>
+                ) : (
+                  <span className="font-medium">Resend code</span>
+                )}
+              </button>
+
+              {/* Change email button */}
+              <button
+                type="button"
+                className="h-10 flex-items-center pl-5 text-c-80 hover:text-green cursor-pointer transition-all duration-300"
+                onClick={() => {
+                  setOtpSent(false);
+                  setOtp("");
+                  setResendSeconds(0);
+                  setPendingSignup(null);
+                  setServerError(null);
+                }}
+              >
+                Change email address
+              </button>
+            </div>
+          </div>
+        )}
       </form>
     </AuthWrapper>
   );

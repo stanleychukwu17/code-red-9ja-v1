@@ -2885,8 +2885,8 @@ referral_counts AS (
     rc.polling_unit_id,
     COUNT(DISTINCT ev.user_id) AS pu_live_voters_referred_by_agent_count
   FROM referral_codes rc
-  JOIN users voter ON voter.referred_by_id = ANY(rc.agent_ids)
-  JOIN election_votes ev ON ev.user_id = voter.id AND ev.election_group_id = rc.election_group_id
+  JOIN referrals voter ON voter.referrer_user_id = ANY(rc.agent_ids)
+  JOIN election_votes ev ON ev.user_id = voter.referred_user_id AND ev.election_group_id = rc.election_group_id
   GROUP BY rc.election_group_id, rc.polling_unit_id
 ),
 expected_counts AS (
@@ -2956,8 +2956,8 @@ party_referral_counts AS (
     a.election_group_id, a.polling_unit_id, a.party_id,
     COUNT(DISTINCT ev.user_id) AS pu_live_voters_referred_by_agent_count
   FROM assignments a
-  JOIN users voter ON voter.referred_by_id = a.user_id
-  JOIN election_votes ev ON ev.user_id = voter.id AND ev.election_group_id = a.election_group_id
+  JOIN referrals voter ON voter.referrer_user_id = a.user_id
+  JOIN election_votes ev ON ev.user_id = voter.referred_user_id AND ev.election_group_id = a.election_group_id
   WHERE a.user_id IS NOT NULL
   GROUP BY a.election_group_id, a.polling_unit_id, a.party_id
 ),

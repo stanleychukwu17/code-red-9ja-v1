@@ -34,18 +34,18 @@ RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, d
 `
 
 type CreatePartyMarketingCampaignParams struct {
-	PartyID            int32                   `json:"party_id"`
-	ElectionGroupID    int32                   `json:"election_group_id"`
-	ElectionID         int32                   `json:"election_id"`
-	PlanID             int32                   `json:"plan_id"`
-	Type               MarketingCampaignType   `json:"type"`
-	States             []byte                  `json:"states"`
-	DurationInDays     int32                   `json:"duration_in_days"`
-	BudgetPerDayKobo   int64                   `json:"budget_per_day_kobo"`
-	BudgetKobo         int64                   `json:"budget_kobo"`
-	ReferralAmountKobo int64                   `json:"referral_amount_kobo"`
-	AmountSpentKobo    int64                   `json:"amount_spent_kobo"`
-	Status             MarketingCampaignStatus `json:"status"`
+	PartyID            int32  `json:"party_id"`
+	ElectionGroupID    int32  `json:"election_group_id"`
+	ElectionID         int32  `json:"election_id"`
+	PlanID             int32  `json:"plan_id"`
+	Type               string `json:"type"`
+	States             []byte `json:"states"`
+	DurationInDays     int32  `json:"duration_in_days"`
+	BudgetPerDayKobo   int64  `json:"budget_per_day_kobo"`
+	BudgetKobo         int64  `json:"budget_kobo"`
+	ReferralAmountKobo int64  `json:"referral_amount_kobo"`
+	AmountSpentKobo    int64  `json:"amount_spent_kobo"`
+	Status             string `json:"status"`
 }
 
 func (q *Queries) CreatePartyMarketingCampaign(ctx context.Context, arg CreatePartyMarketingCampaignParams) (PartyMarketingCampaign, error) {
@@ -93,13 +93,13 @@ RETURNING id, name, description, price_kobo, type, features, scopes_recommendati
 `
 
 type CreatePlanParams struct {
-	Name                 string                `json:"name"`
-	Description          string                `json:"description"`
-	PriceKobo            int64                 `json:"price_kobo"`
-	Type                 MarketingCampaignType `json:"type"`
-	Features             []byte                `json:"features"`
-	ScopesRecommendation []byte                `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text           `json:"color_hex"`
+	Name                 string      `json:"name"`
+	Description          string      `json:"description"`
+	PriceKobo            int64       `json:"price_kobo"`
+	Type                 string      `json:"type"`
+	Features             []byte      `json:"features"`
+	ScopesRecommendation []byte      `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text `json:"color_hex"`
 }
 
 func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, error) {
@@ -199,7 +199,7 @@ WHERE is_active = true AND type = $1
 ORDER BY display_order ASC, price_kobo ASC
 `
 
-func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ MarketingCampaignType) ([]Plan, error) {
+func (q *Queries) GetMarketingPlansByType(ctx context.Context, type_ string) ([]Plan, error) {
 	rows, err := q.db.Query(ctx, getMarketingPlansByType, type_)
 	if err != nil {
 		return nil, err
@@ -251,21 +251,21 @@ ORDER BY pmc.created_at DESC
 `
 
 type GetPartyMarketingCampaignsRow struct {
-	ID                 int32                   `json:"id"`
-	PartyID            int32                   `json:"party_id"`
-	ElectionGroupID    int32                   `json:"election_group_id"`
-	ElectionID         int32                   `json:"election_id"`
-	PlanID             int32                   `json:"plan_id"`
-	Type               MarketingCampaignType   `json:"type"`
-	States             []byte                  `json:"states"`
-	DurationInDays     int32                   `json:"duration_in_days"`
-	StartDate          pgtype.Timestamptz      `json:"start_date"`
-	EndDate            pgtype.Timestamptz      `json:"end_date"`
-	Status             MarketingCampaignStatus `json:"status"`
-	BudgetPerDayKobo   int64                   `json:"budget_per_day_kobo"`
-	BudgetKobo         int64                   `json:"budget_kobo"`
-	ReferralAmountKobo int64                   `json:"referral_amount_kobo"`
-	AmountSpentKobo    int64                   `json:"amount_spent_kobo"`
+	ID                 int32              `json:"id"`
+	PartyID            int32              `json:"party_id"`
+	ElectionGroupID    int32              `json:"election_group_id"`
+	ElectionID         int32              `json:"election_id"`
+	PlanID             int32              `json:"plan_id"`
+	Type               string             `json:"type"`
+	States             []byte             `json:"states"`
+	DurationInDays     int32              `json:"duration_in_days"`
+	StartDate          pgtype.Timestamptz `json:"start_date"`
+	EndDate            pgtype.Timestamptz `json:"end_date"`
+	Status             string             `json:"status"`
+	BudgetPerDayKobo   int64              `json:"budget_per_day_kobo"`
+	BudgetKobo         int64              `json:"budget_kobo"`
+	ReferralAmountKobo int64              `json:"referral_amount_kobo"`
+	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
 	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
 	PlanName           string                  `json:"plan_name"`
@@ -444,21 +444,21 @@ type ListAllPartyMarketingCampaignsParams struct {
 }
 
 type ListAllPartyMarketingCampaignsRow struct {
-	ID                 int32                   `json:"id"`
-	PartyID            int32                   `json:"party_id"`
-	ElectionGroupID    int32                   `json:"election_group_id"`
-	ElectionID         int32                   `json:"election_id"`
-	PlanID             int32                   `json:"plan_id"`
-	Type               MarketingCampaignType   `json:"type"`
-	States             []byte                  `json:"states"`
-	DurationInDays     int32                   `json:"duration_in_days"`
-	StartDate          pgtype.Timestamptz      `json:"start_date"`
-	EndDate            pgtype.Timestamptz      `json:"end_date"`
-	Status             MarketingCampaignStatus `json:"status"`
-	BudgetPerDayKobo   int64                   `json:"budget_per_day_kobo"`
-	BudgetKobo         int64                   `json:"budget_kobo"`
-	ReferralAmountKobo int64                   `json:"referral_amount_kobo"`
-	AmountSpentKobo    int64                   `json:"amount_spent_kobo"`
+	ID                 int32              `json:"id"`
+	PartyID            int32              `json:"party_id"`
+	ElectionGroupID    int32              `json:"election_group_id"`
+	ElectionID         int32              `json:"election_id"`
+	PlanID             int32              `json:"plan_id"`
+	Type               string             `json:"type"`
+	States             []byte             `json:"states"`
+	DurationInDays     int32              `json:"duration_in_days"`
+	StartDate          pgtype.Timestamptz `json:"start_date"`
+	EndDate            pgtype.Timestamptz `json:"end_date"`
+	Status             string             `json:"status"`
+	BudgetPerDayKobo   int64              `json:"budget_per_day_kobo"`
+	BudgetKobo         int64              `json:"budget_kobo"`
+	ReferralAmountKobo int64              `json:"referral_amount_kobo"`
+	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
 	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
 	PartyName          string                  `json:"party_name"`
@@ -584,18 +584,18 @@ func (q *Queries) ProcessDailyMarketingCampaignDeductions(ctx context.Context) (
 const updateMarketingCampaignStatus = `-- name: UpdateMarketingCampaignStatus :one
 UPDATE party_marketing_campaigns
 SET 
-    status = $2::marketing_campaign_status,
-    start_date = CASE WHEN $2::marketing_campaign_status = 'active'::marketing_campaign_status THEN NOW() ELSE start_date END,
-    end_date = CASE WHEN $2::marketing_campaign_status = 'active'::marketing_campaign_status THEN NOW() + (duration_in_days::text || ' days')::interval ELSE end_date END,
-    amount_spent_kobo = CASE WHEN $2::marketing_campaign_status = 'active'::marketing_campaign_status THEN amount_spent_kobo + budget_per_day_kobo ELSE amount_spent_kobo END,
+    status = $2,
+    start_date = CASE WHEN $2::text = 'active' THEN NOW() ELSE start_date END,
+    end_date = CASE WHEN $2::text = 'active' THEN NOW() + (duration_in_days::text || ' days')::interval ELSE end_date END,
+    amount_spent_kobo = CASE WHEN $2::text = 'active' THEN amount_spent_kobo + budget_per_day_kobo ELSE amount_spent_kobo END,
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, party_id, election_group_id, election_id, plan_id, type, states, duration_in_days, start_date, end_date, status, budget_per_day_kobo, budget_kobo, referral_amount_kobo, amount_spent_kobo, created_at, updated_at
 `
 
 type UpdateMarketingCampaignStatusParams struct {
-	ID     int32                   `json:"id"`
-	Status MarketingCampaignStatus `json:"status"`
+	ID     int32  `json:"id"`
+	Status string `json:"status"`
 }
 
 func (q *Queries) UpdateMarketingCampaignStatus(ctx context.Context, arg UpdateMarketingCampaignStatusParams) (PartyMarketingCampaign, error) {
@@ -640,15 +640,15 @@ RETURNING id, name, description, price_kobo, type, features, scopes_recommendati
 `
 
 type UpdatePlanParams struct {
-	ID                   int32                 `json:"id"`
-	Name                 string                `json:"name"`
-	Description          string                `json:"description"`
-	PriceKobo            int64                 `json:"price_kobo"`
-	Type                 MarketingCampaignType `json:"type"`
-	Features             []byte                `json:"features"`
-	ScopesRecommendation []byte                `json:"scopes_recommendation"`
-	ColorHex             pgtype.Text           `json:"color_hex"`
-	IsActive             bool                  `json:"is_active"`
+	ID                   int32       `json:"id"`
+	Name                 string      `json:"name"`
+	Description          string      `json:"description"`
+	PriceKobo            int64       `json:"price_kobo"`
+	Type                 string      `json:"type"`
+	Features             []byte      `json:"features"`
+	ScopesRecommendation []byte      `json:"scopes_recommendation"`
+	ColorHex             pgtype.Text `json:"color_hex"`
+	IsActive             bool        `json:"is_active"`
 }
 
 func (q *Queries) UpdatePlan(ctx context.Context, arg UpdatePlanParams) (Plan, error) {
