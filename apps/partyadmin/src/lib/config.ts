@@ -17,6 +17,7 @@ export const APP_URL = {
     members: (party: string) => `/${party}/party-members`,
     wallet: (party: string) => `/${party}/wallet`,
     marketing: (party: string) => `/${party}/marketing`,
+    agents: (party: string) => `/${party}/agents`,
   },
 } as const;
 

@@ -266,13 +266,13 @@ type GetPartyMarketingCampaignsRow struct {
 	BudgetKobo         int64              `json:"budget_kobo"`
 	ReferralAmountKobo int64              `json:"referral_amount_kobo"`
 	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
-	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
-	PlanName           string                  `json:"plan_name"`
-	PlanPriceKobo      int64                   `json:"plan_price_kobo"`
-	PlanColor          pgtype.Text             `json:"plan_color"`
-	ElectionGroupName  string                  `json:"election_group_name"`
-	ElectionName       string                  `json:"election_name"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	PlanName           string             `json:"plan_name"`
+	PlanPriceKobo      int64              `json:"plan_price_kobo"`
+	PlanColor          pgtype.Text        `json:"plan_color"`
+	ElectionGroupName  string             `json:"election_group_name"`
+	ElectionName       string             `json:"election_name"`
 }
 
 func (q *Queries) GetPartyMarketingCampaigns(ctx context.Context, partyID int32) ([]GetPartyMarketingCampaignsRow, error) {
@@ -459,17 +459,17 @@ type ListAllPartyMarketingCampaignsRow struct {
 	BudgetKobo         int64              `json:"budget_kobo"`
 	ReferralAmountKobo int64              `json:"referral_amount_kobo"`
 	AmountSpentKobo    int64              `json:"amount_spent_kobo"`
-	CreatedAt          pgtype.Timestamptz      `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz      `json:"updated_at"`
-	PartyName          string                  `json:"party_name"`
-	PartyShortName     string                  `json:"party_short_name"`
-	PartyLogo          string                  `json:"party_logo"`
-	PlanName           string                  `json:"plan_name"`
-	PlanDescription    string                  `json:"plan_description"`
-	PlanPriceKobo      int64                   `json:"plan_price_kobo"`
-	PlanColorHex       pgtype.Text             `json:"plan_color_hex"`
-	ElectionGroupName  string                  `json:"election_group_name"`
-	ElectionName       string                  `json:"election_name"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	PartyName          string             `json:"party_name"`
+	PartyShortName     string             `json:"party_short_name"`
+	PartyLogo          string             `json:"party_logo"`
+	PlanName           string             `json:"plan_name"`
+	PlanDescription    string             `json:"plan_description"`
+	PlanPriceKobo      int64              `json:"plan_price_kobo"`
+	PlanColorHex       pgtype.Text        `json:"plan_color_hex"`
+	ElectionGroupName  string             `json:"election_group_name"`
+	ElectionName       string             `json:"election_name"`
 }
 
 func (q *Queries) ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAllPartyMarketingCampaignsParams) ([]ListAllPartyMarketingCampaignsRow, error) {
@@ -527,13 +527,13 @@ func (q *Queries) ListAllPartyMarketingCampaigns(ctx context.Context, arg ListAl
 
 const processDailyMarketingCampaignDeductions = `-- name: ProcessDailyMarketingCampaignDeductions :many
 UPDATE party_marketing_campaigns
-SET
+SET 
     amount_spent_kobo = CASE 
         WHEN status = 'active' AND NOW() < end_date AND (start_date IS NULL OR start_date::date < CURRENT_DATE) THEN amount_spent_kobo + budget_per_day_kobo 
         ELSE amount_spent_kobo 
     END,
     status = CASE 
-        WHEN status = 'active' AND NOW() >= end_date THEN 'completed'::marketing_campaign_status 
+        WHEN status = 'active' AND NOW() >= end_date THEN 'completed'
         ELSE status 
     END,
     updated_at = NOW()

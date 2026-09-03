@@ -417,7 +417,9 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	}
 
 	basePaymentKobo := resolveBasePaymentKobo(party.AgentPaymentAllocationKobo, roleType)
-	basePayment := basePaymentKobo / 100 // convert back to Naira for internal preview logic
+	if party.AgentPaymentBalanceKobo <= 0 {
+		basePaymentKobo = 0
+	}
 
 	// ── 3. Fetch earnings allocation for readiness % ──────────────────────────
 	allocationKey := "earnings_allocation_" + strings.ReplaceAll(roleType, " ", "_")
@@ -432,7 +434,7 @@ func (h *Handler) GetPayoutPreview(w http.ResponseWriter, r *http.Request) {
 	if jErr := json.Unmarshal(allocSetting.Value, &alloc); jErr != nil {
 		alloc.Readiness = 20 // safe default
 	}
-	readinessBudgetKobo := int64(float64(basePayment) * (alloc.Readiness / 100.0))
+	readinessBudgetKobo := int64(float64(basePaymentKobo) * (alloc.Readiness / 100.0))
 
 	// ── 4. Fetch test requirements (windows + total_required) ─────────────────
 	reqKey := "test_requirements_" + strings.ReplaceAll(roleType, " ", "_")

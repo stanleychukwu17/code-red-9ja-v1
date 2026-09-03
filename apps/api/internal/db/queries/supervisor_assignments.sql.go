@@ -11,6 +11,54 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkAndUpdateLGASupervisorCompletion = `-- name: CheckAndUpdateLGASupervisorCompletion :exec
+UPDATE lga_election_supervisors les
+SET completed_at = COALESCE(les.completed_at, NOW()),
+    updated_at   = NOW()
+FROM election_group_lgas egl
+WHERE les.election_group_id = egl.election_group_id
+  AND les.lga_id = egl.lga_id
+  AND les.completed_at IS NULL
+  AND COALESCE((egl.parties->(les.party_id::text)->>'unique_pu_final_results_uploaded_count')::int, 0) >= COALESCE((egl.parties->(les.party_id::text)->>'unique_final_results_expected')::int, 1)
+`
+
+func (q *Queries) CheckAndUpdateLGASupervisorCompletion(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, checkAndUpdateLGASupervisorCompletion)
+	return err
+}
+
+const checkAndUpdateStateSupervisorCompletion = `-- name: CheckAndUpdateStateSupervisorCompletion :exec
+UPDATE state_election_supervisors ses
+SET completed_at = COALESCE(ses.completed_at, NOW()),
+    updated_at   = NOW()
+FROM election_group_states egs
+WHERE ses.election_group_id = egs.election_group_id
+  AND ses.state_id = egs.state_id
+  AND ses.completed_at IS NULL
+  AND COALESCE((egs.parties->(ses.party_id::text)->>'unique_pu_final_results_uploaded_count')::int, 0) >= COALESCE((egs.parties->(ses.party_id::text)->>'unique_final_results_expected')::int, 1)
+`
+
+func (q *Queries) CheckAndUpdateStateSupervisorCompletion(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, checkAndUpdateStateSupervisorCompletion)
+	return err
+}
+
+const checkAndUpdateWardSupervisorCompletion = `-- name: CheckAndUpdateWardSupervisorCompletion :exec
+UPDATE ward_election_supervisors wes
+SET completed_at = COALESCE(wes.completed_at, NOW()),
+    updated_at   = NOW()
+FROM election_group_wards egw
+WHERE wes.election_group_id = egw.election_group_id
+  AND wes.ward_id = egw.ward_id
+  AND wes.completed_at IS NULL
+  AND COALESCE((egw.parties->(wes.party_id::text)->>'unique_pu_final_results_uploaded_count')::int, 0) >= COALESCE((egw.parties->(wes.party_id::text)->>'unique_final_results_expected')::int, 1)
+`
+
+func (q *Queries) CheckAndUpdateWardSupervisorCompletion(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, checkAndUpdateWardSupervisorCompletion)
+	return err
+}
+
 const createLgaSupervisor = `-- name: CreateLgaSupervisor :one
 INSERT INTO lga_election_supervisors (
   user_id,
@@ -24,7 +72,7 @@ INSERT INTO lga_election_supervisors (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8
 )
-RETURNING id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateLgaSupervisorParams struct {
@@ -61,6 +109,7 @@ func (q *Queries) CreateLgaSupervisor(ctx context.Context, arg CreateLgaSupervis
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -81,7 +130,7 @@ INSERT INTO state_election_supervisors (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7
 )
-RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateStateSupervisorParams struct {
@@ -115,6 +164,7 @@ func (q *Queries) CreateStateSupervisor(ctx context.Context, arg CreateStateSupe
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -137,7 +187,7 @@ INSERT INTO ward_election_supervisors (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9
 )
-RETURNING id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type CreateWardSupervisorParams struct {
@@ -177,6 +227,7 @@ func (q *Queries) CreateWardSupervisor(ctx context.Context, arg CreateWardSuperv
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -186,7 +237,7 @@ func (q *Queries) CreateWardSupervisor(ctx context.Context, arg CreateWardSuperv
 }
 
 const getLgaSupervisorByElectionGroup = `-- name: GetLgaSupervisorByElectionGroup :one
-SELECT id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM lga_election_supervisors 
+SELECT id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM lga_election_supervisors 
 WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 `
 
@@ -209,6 +260,7 @@ func (q *Queries) GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLg
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -218,7 +270,7 @@ func (q *Queries) GetLgaSupervisorByElectionGroup(ctx context.Context, arg GetLg
 }
 
 const getStateSupervisorByElectionGroup = `-- name: GetStateSupervisorByElectionGroup :one
-SELECT id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM state_election_supervisors 
+SELECT id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM state_election_supervisors 
 WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 `
 
@@ -240,6 +292,7 @@ func (q *Queries) GetStateSupervisorByElectionGroup(ctx context.Context, arg Get
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -249,7 +302,7 @@ func (q *Queries) GetStateSupervisorByElectionGroup(ctx context.Context, arg Get
 }
 
 const getWardSupervisorByElectionGroup = `-- name: GetWardSupervisorByElectionGroup :one
-SELECT id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM ward_election_supervisors 
+SELECT id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at FROM ward_election_supervisors 
 WHERE user_id = $1 AND election_group_id = $2 LIMIT 1
 `
 
@@ -273,6 +326,7 @@ func (q *Queries) GetWardSupervisorByElectionGroup(ctx context.Context, arg GetW
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -286,7 +340,7 @@ UPDATE lga_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, user_id, state_id, lga_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdateLgaSupervisorEarnedAmountKoboParams struct {
@@ -309,6 +363,7 @@ func (q *Queries) UpdateLgaSupervisorEarnedAmountKobo(ctx context.Context, arg U
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -322,7 +377,7 @@ UPDATE state_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, user_id, state_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdateStateSupervisorEarnedAmountKoboParams struct {
@@ -344,6 +399,7 @@ func (q *Queries) UpdateStateSupervisorEarnedAmountKobo(ctx context.Context, arg
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,
@@ -357,7 +413,7 @@ UPDATE ward_election_supervisors
 SET earned_amount_kobo = earned_amount_kobo + $1::bigint,
     updated_at = NOW()
 WHERE user_id = $2 AND election_group_id = $3
-RETURNING id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
+RETURNING id, user_id, state_id, lga_id, ward_id, election_group_id, party_id, role_type, assigned_by, arrived_at, arrival_video_url, completed_at, potential_payment_kobo, earned_amount_kobo, created_at, updated_at
 `
 
 type UpdateWardSupervisorEarnedAmountKoboParams struct {
@@ -381,6 +437,7 @@ func (q *Queries) UpdateWardSupervisorEarnedAmountKobo(ctx context.Context, arg 
 		&i.AssignedBy,
 		&i.ArrivedAt,
 		&i.ArrivalVideoUrl,
+		&i.CompletedAt,
 		&i.PotentialPaymentKobo,
 		&i.EarnedAmountKobo,
 		&i.CreatedAt,

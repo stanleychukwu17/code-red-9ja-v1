@@ -26,6 +26,7 @@ import (
 	"free9ja/api/internal/worker"
 
 	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
+	agentperformancehandler "free9ja/api/internal/handler/agent_performance"
 	authhandler "free9ja/api/internal/handler/auth"
 	bodieshandler "free9ja/api/internal/handler/bodies"
 	electiongroupshandler "free9ja/api/internal/handler/election_groups"
@@ -126,7 +127,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	officesService := officesservice.NewOfficesService(q, rdb)
 	permissionsService := permissionsservice.NewPermissionsService()
 	electionStatsService := electionstats.NewElectionStatsService(q)
-	partyApplicationsService := partyapplications.NewService(q, pool, rdb)
+	partyApplicationsService := partyapplications.NewService(q, pool, rdb, distributor)
 	pollingUnitResultsService := puresults.NewService(q, pool, distributor)
 	pollingUnitsService := pollingunitsservice.NewPollingUnitsService(q, rdb)
 	supervisorAssignmentsService := supervisorassignmentsservice.NewService(q)
@@ -203,6 +204,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	systemSettingsHandler := systemsettingshandler.NewHandler(q, utilsInstance)
 	practiceTestsHandler := practicetestshandler.NewHandler(q, utilsInstance, earningsSvc, partyApplicationsService)
 	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsSvc, utilsInstance)
+	agentPerformanceHandler := agentperformancehandler.NewHandler(q, pool, usersService, utilsInstance, distributor)
 	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
 
 	var filesHandler *fileshandler.Handler
@@ -620,7 +622,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Use(apimiddleware.AuthMiddleware(jwtSecret))
 
 		// Admins/party_admins: trigger calculation, list, approve, mark paid
+		r.Get("/api/v1/agent-performance", agentPerformanceHandler.GetAgentPerformance)
+		r.Post("/api/v1/agents/change-role", agentPerformanceHandler.ChangeAgentRole)
+		r.Delete("/api/v1/agents/{id}", agentPerformanceHandler.RevokeAgent)
 		r.Post("/api/v1/agent-earnings/calculate/{assignment_id}", agentEarningsHandler.CalculateEarnings)
+		r.Post("/api/v1/agent-earnings/request-payout", agentEarningsHandler.RequestPayout)
+		r.Post("/api/v1/agent-earnings/assignments/{id}/request-payout", agentEarningsHandler.RequestPayout)
 		r.Get("/api/v1/agent-earnings/potential-payout", agentEarningsHandler.GetPotentialPayout)
 		r.Get("/api/v1/agent-earnings/estimate-payout", agentEarningsHandler.EstimatePotentialPayout)
 		r.Get("/api/v1/agent-earnings/allocations", agentEarningsHandler.GetAllocations)

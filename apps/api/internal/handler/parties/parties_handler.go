@@ -326,38 +326,40 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 	var publicParties []PartyPublic
 	for _, p := range parties {
 		isAccepting := false
-		if len(p.AgentAcquisitionTargets) > 0 && string(p.AgentAcquisitionTargets) != "{}" && string(p.AgentAcquisitionTargets) != "null" {
-			if len(p.AgentPaymentAllocationKobo) > 0 && string(p.AgentPaymentAllocationKobo) != "{}" && string(p.AgentPaymentAllocationKobo) != "null" {
-				var alloc map[string]struct {
-					Default *int64 `json:"default"`
-				}
-				if err := json.Unmarshal(p.AgentPaymentAllocationKobo, &alloc); err == nil {
-					roles := []struct {
-						camel string
-						snake string
-					}{
-						{camel: "pollingAgent", snake: "polling_agent"},
-						{camel: "wardElectionSupervisor", snake: "ward_election_supervisor"},
-						{camel: "lgaElectionSupervisor", snake: "lga_election_supervisor"},
-						{camel: "stateElectionSupervisor", snake: "state_election_supervisor"},
+		if p.Status == "active" && p.IsVerified.Bool && p.Slots > 0 && p.AgentPaymentBalanceKobo > 0 {
+			if len(p.AgentAcquisitionTargets) > 0 && string(p.AgentAcquisitionTargets) != "{}" && string(p.AgentAcquisitionTargets) != "null" {
+				if len(p.AgentPaymentAllocationKobo) > 0 && string(p.AgentPaymentAllocationKobo) != "{}" && string(p.AgentPaymentAllocationKobo) != "null" {
+					var alloc map[string]struct {
+						Default *int64 `json:"default"`
 					}
-					var maxDefault int64 = -1
-					hasAllDefaults := true
-					for _, rolePair := range roles {
-						cfg, exists := alloc[rolePair.camel]
-						if !exists {
-							cfg, exists = alloc[rolePair.snake]
+					if err := json.Unmarshal(p.AgentPaymentAllocationKobo, &alloc); err == nil {
+						roles := []struct {
+							camel string
+							snake string
+						}{
+							{camel: "pollingAgent", snake: "polling_agent"},
+							{camel: "wardElectionSupervisor", snake: "ward_election_supervisor"},
+							{camel: "lgaElectionSupervisor", snake: "lga_election_supervisor"},
+							{camel: "stateElectionSupervisor", snake: "state_election_supervisor"},
 						}
-						if !exists || cfg.Default == nil {
-							hasAllDefaults = false
-							break
+						var maxDefault int64 = -1
+						hasAllDefaults := true
+						for _, rolePair := range roles {
+							cfg, exists := alloc[rolePair.camel]
+							if !exists {
+								cfg, exists = alloc[rolePair.snake]
+							}
+							if !exists || cfg.Default == nil || *cfg.Default <= 0 {
+								hasAllDefaults = false
+								break
+							}
+							if *cfg.Default > maxDefault {
+								maxDefault = *cfg.Default
+							}
 						}
-						if *cfg.Default > maxDefault {
-							maxDefault = *cfg.Default
+						if hasAllDefaults && maxDefault > 0 && p.AgentPaymentBalanceKobo >= maxDefault {
+							isAccepting = true
 						}
-					}
-					if hasAllDefaults && maxDefault >= 0 && p.AgentPaymentBalanceKobo >= maxDefault {
-						isAccepting = true
 					}
 				}
 			}

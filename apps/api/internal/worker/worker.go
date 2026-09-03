@@ -121,7 +121,7 @@ func (processor *RedisTaskProcessor) Start() error {
 		// processor.cron.AddFunc("*/15 * * * *", processor.ProcessFullElectionRollup)
 
 		// Geographic Stats safety-net fallback (runs every 10 minutes)
-		processor.cron.AddFunc("*/10 * * * *", processor.ProcessRefreshAllElectionStats)
+		// processor.cron.AddFunc("*/10 * * * *", processor.ProcessRefreshAllElectionStats)
 	}
 
 	// Daily Marketing Campaign Deductions & Auto-Completion Worker (runs every day at 00:05 AM)

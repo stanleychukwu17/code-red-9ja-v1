@@ -28,6 +28,23 @@ import {
   MarketingTableTile,
   type MarketingCampaignType,
 } from "./tiles/marketing-tile";
+import {
+  PollingAgentTableHeader,
+  PollingAgentTableTile,
+} from "./tiles/polling-agent-tile";
+import {
+  WardSupervisorTableHeader,
+  WardSupervisorTableTile,
+} from "./tiles/ward-supervisor-tile";
+import {
+  LGASupervisorTableHeader,
+  LGASupervisorTableTile,
+} from "./tiles/lga-supervisor-tile";
+import {
+  StateSupervisorTableHeader,
+  StateSupervisorTableTile,
+} from "./tiles/state-supervisor-tile";
+import type { AgentPerformanceItem } from "#/lib/server/agents";
 
 export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
   return (
@@ -138,6 +155,86 @@ export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
       <div>
         {campaignsList.map((data, index) => (
           <MarketingTableTile key={data.id || index} data={data} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function PollingAgentsTable({
+  items,
+  refetch,
+}: {
+  items: AgentPerformanceItem[];
+  refetch?: () => void;
+}) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto">
+      <PollingAgentTableHeader />
+      <div>
+        {list.map((data, index) => (
+          <PollingAgentTableTile key={data.id || index} data={data} refetch={refetch} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function WardSupervisorsTable({
+  items,
+  refetch,
+}: {
+  items: AgentPerformanceItem[];
+  refetch?: () => void;
+}) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto">
+      <WardSupervisorTableHeader />
+      <div>
+        {list.map((data, index) => (
+          <WardSupervisorTableTile key={data.id || index} data={data} refetch={refetch} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function LGASupervisorsTable({
+  items,
+  refetch,
+}: {
+  items: AgentPerformanceItem[];
+  refetch?: () => void;
+}) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto">
+      <LGASupervisorTableHeader />
+      <div>
+        {list.map((data, index) => (
+          <LGASupervisorTableTile key={data.id || index} data={data} refetch={refetch} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function StateSupervisorsTable({
+  items,
+  refetch,
+}: {
+  items: AgentPerformanceItem[];
+  refetch?: () => void;
+}) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto">
+      <StateSupervisorTableHeader />
+      <div>
+        {list.map((data, index) => (
+          <StateSupervisorTableTile key={data.id || index} data={data} refetch={refetch} />
         ))}
       </div>
     </div>

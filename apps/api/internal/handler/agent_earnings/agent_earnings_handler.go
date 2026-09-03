@@ -2,14 +2,16 @@ package agentearningshandler
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
 	"free9ja/api/internal/db/queries"
-	earningsservice "free9ja/api/internal/service/earnings"
 	apimiddleware "free9ja/api/internal/middleware"
+	earningsservice "free9ja/api/internal/service/earnings"
 	"free9ja/api/internal/utils"
 )
 
@@ -437,5 +439,194 @@ func TriggerCalculation(svc *earningsservice.Service, assignmentID int64) {
 	go func() {
 		_, _ = svc.Calculate(context.Background(), assignmentID)
 	}()
+}
+
+// RequestPayout godoc
+// @Summary      Request duty payout for an agent assignment / election group
+// @Tags         AgentEarnings
+// @Produce      json
+// @Param        request body struct{ ElectionGroupID int64 `json:"election_group_id"`; RoleType string `json:"role_type"` } true "Payout Request"
+// @Success      200 {object} utils.SuccessResponse
+// @Failure      400 {object} utils.ErrorResponse
+// @Failure      401 {object} utils.ErrorResponse
+// @Failure      500 {object} utils.ErrorResponse
+// @Security     BearerAuth
+// @Router       /agent-earnings/request-payout [post]
+func (h *Handler) RequestPayout(w http.ResponseWriter, r *http.Request) {
+	claims, ok := r.Context().Value(apimiddleware.ClaimsKey).(*utils.JWTClaims)
+	if !ok {
+		h.u.RespondError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	var req struct {
+		ElectionGroupID int64  `json:"election_group_id"`
+		RoleType        string `json:"role_type"`
+	}
+	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	if req.ElectionGroupID <= 0 {
+		idStr := chi.URLParam(r, "id")
+		if idStr != "" {
+			asgnID, err := strconv.ParseInt(idStr, 10, 64)
+			if err == nil && asgnID > 0 {
+				asgn, aErr := h.q.GetAssignmentForEarnings(r.Context(), asgnID)
+				if aErr == nil {
+					req.ElectionGroupID = asgn.ElectionGroupID
+					if asgn.RoleType.Valid {
+						req.RoleType = asgn.RoleType.String
+					}
+				}
+			}
+		}
+	}
+
+	if req.ElectionGroupID <= 0 {
+		h.u.RespondError(w, http.StatusBadRequest, "election_group_id or valid assignment_id is required")
+		return
+	}
+
+	row, err := h.service.RequestPayout(r.Context(), claims.UserID, req.ElectionGroupID, req.RoleType)
+	if err != nil {
+		h.u.RespondError(w, http.StatusInternalServerError, fmt.Sprintf("Failed to request payout: %v", err))
+		return
+	}
+
+	h.u.RespondSuccess(w, http.StatusOK, "Payout requested successfully", map[string]interface{}{
+		"earnings": row,
+	})
+}
+
+// ─── GET /api/v1/agent-performance ───────────────────────────────────────────
+
+// GetAgentPerformanceStats godoc
+// @Summary      Get agent and supervisor performance stats with cursor pagination
+// @Tags         AgentEarnings
+// @Produce      json
+// @Param        role_type         query string false "Role type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)"
+// @Param        party_id          query int    false "Filter by party ID"
+// @Param        election_group_id query int    false "Filter by election group ID"
+// @Param        state_id          query int    false "Filter by state ID"
+// @Param        lga_id            query int    false "Filter by LGA ID"
+// @Param        ward_id           query int    false "Filter by ward ID"
+// @Param        search            query string false "Search agent name or PU code"
+// @Param        cursor            query int    false "Cursor ID for keyset pagination"
+// @Param        limit             query int    false "Page limit (default 20, max 100)"
+// @Success      200 {object} utils.SuccessResponse
+// @Security     BearerAuth
+// @Router       /agent-performance [get]
+func (h *Handler) GetAgentPerformanceStats(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	roleType := q.Get("role_type")
+	if roleType == "" {
+		roleType = "polling_agent"
+	}
+
+	var partyID int16
+	var electionGroupID, cursor int64
+	var stateID int16
+	var lgaID, wardID int32
+	limit := int32(20)
+
+	if v := q.Get("party_id"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
+			partyID = int16(p)
+		}
+	}
+	if v := q.Get("election_group_id"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 64); err == nil {
+			electionGroupID = p
+		}
+	}
+	if v := q.Get("state_id"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 16); err == nil {
+			stateID = int16(p)
+		}
+	}
+	if v := q.Get("lga_id"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 32); err == nil {
+			lgaID = int32(p)
+		}
+	}
+	if v := q.Get("ward_id"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 32); err == nil {
+			wardID = int32(p)
+		}
+	}
+	if v := q.Get("cursor"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 64); err == nil {
+			cursor = p
+		}
+	}
+	if v := q.Get("limit"); v != "" {
+		if p, err := strconv.ParseInt(v, 10, 32); err == nil && p > 0 {
+			limit = int32(p)
+			if limit > 100 {
+				limit = 100
+			}
+		}
+	}
+	search := q.Get("search")
+
+	ctx := r.Context()
+	var items interface{}
+	var err error
+
+	switch roleType {
+	case "polling_agent":
+		items, err = h.q.ListPollingAgentPerformanceStats(ctx, queries.ListPollingAgentPerformanceStatsParams{
+			PartyID:         partyID,
+			ElectionGroupID: electionGroupID,
+			StateID:         stateID,
+			LgaID:           lgaID,
+			WardID:          wardID,
+			SearchQuery:     search,
+			CursorID:        cursor,
+			LimitVal:        limit,
+		})
+	case "ward_supervisor", "ward_election_supervisor":
+		items, err = h.q.ListWardSupervisorPerformanceStats(ctx, queries.ListWardSupervisorPerformanceStatsParams{
+			PartyID:         partyID,
+			ElectionGroupID: electionGroupID,
+			StateID:         stateID,
+			LgaID:           lgaID,
+			WardID:          wardID,
+			SearchQuery:     search,
+			CursorID:        cursor,
+			LimitVal:        limit,
+		})
+	case "lga_supervisor", "lga_election_supervisor":
+		items, err = h.q.ListLGASupervisorPerformanceStats(ctx, queries.ListLGASupervisorPerformanceStatsParams{
+			PartyID:         partyID,
+			ElectionGroupID: electionGroupID,
+			StateID:         stateID,
+			LgaID:           lgaID,
+			SearchQuery:     search,
+			CursorID:        cursor,
+			LimitVal:        limit,
+		})
+	case "state_supervisor", "state_election_supervisor":
+		items, err = h.q.ListStateSupervisorPerformanceStats(ctx, queries.ListStateSupervisorPerformanceStatsParams{
+			PartyID:         partyID,
+			ElectionGroupID: electionGroupID,
+			StateID:         stateID,
+			SearchQuery:     search,
+			CursorID:        cursor,
+			LimitVal:        limit,
+		})
+	default:
+		h.u.RespondError(w, http.StatusBadRequest, "Invalid role_type")
+		return
+	}
+
+	if err != nil {
+		h.u.RespondError(w, http.StatusInternalServerError, "Failed to retrieve performance stats: "+err.Error())
+		return
+	}
+
+	h.u.RespondSuccess(w, http.StatusOK, "Agent performance stats retrieved", map[string]interface{}{
+		"data":  items,
+		"limit": limit,
+	})
 }
 

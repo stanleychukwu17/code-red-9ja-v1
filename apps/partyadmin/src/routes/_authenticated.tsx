@@ -120,6 +120,13 @@ function AuthenticatedRoutes() {
       selectedIcon: <BalonSolidIcon className="shrink-0 size-6" />,
       href: APP_URL.partyRoutes.marketing(partyShortName),
     },
+    {
+      id: "agents",
+      label: "Election Agents",
+      icon: <UserIcon className="shrink-0 size-6" />,
+      selectedIcon: <UserSolidIcon className="shrink-0 size-6" />,
+      href: APP_URL.partyRoutes.agents(partyShortName),
+    },
   ];
 
   // handles the mounting of the component

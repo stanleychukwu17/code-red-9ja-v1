@@ -47,8 +47,8 @@ SET password_hash = $2
 WHERE fake_id = $1;
 
 -- name: GetUserByID :one
-SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.address, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
-       u.referral_code, u.referred_by_id
+SELECT u.id, u.fake_id, u.email, u.avatar, u.avatar_file_id, u.phone, u.username, u.password_hash, u.last_name, u.first_name, u.middle_name, u.gender, u.date_of_birth, u.voters_card_image, u.current_country, u.current_state, u.current_city, u.current_lga, u.current_ward, u.country_of_origin, u.state_of_origin, u.is_politician, u.is_verified, u.has_role, u.party_id, u.polling_unit_id, u.account_status, u.created_at, u.updated_at,
+       u.referral_code
 FROM users u
 WHERE u.id = $1 LIMIT 1;
 
@@ -252,13 +252,14 @@ WHERE id = $1 AND user_id = $2;
 
 -- name: UpdateUserAgentMoreInfo :exec
 INSERT INTO user_more_infos (
-  user_id, educational_status, highest_degree, graduation_year, school_name
-) VALUES ($1, $2, $3, $4, $5)
+  user_id, educational_status, highest_degree, graduation_year, school_name, address
+) VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (user_id) DO UPDATE
 SET educational_status = COALESCE(EXCLUDED.educational_status, user_more_infos.educational_status),
     highest_degree = COALESCE(EXCLUDED.highest_degree, user_more_infos.highest_degree),
     graduation_year = COALESCE(EXCLUDED.graduation_year, user_more_infos.graduation_year),
     school_name = COALESCE(EXCLUDED.school_name, user_more_infos.school_name),
+    address = COALESCE(NULLIF(EXCLUDED.address, ''), user_more_infos.address),
     updated_at = NOW();
 
 -- name: UpdateUserDegreeCertificateUrl :exec

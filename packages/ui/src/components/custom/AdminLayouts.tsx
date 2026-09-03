@@ -31,7 +31,7 @@ export type PageHeaderTabProps = {
 export function Layout({ children }: { children: ReactNode }) {
   return (
     <main
-      className="mx-auto flex w-full max-w-[1200px] flex-col gap-4 px-5"
+      className="mx-auto flex w-full px-5 md:px-20 flex-col gap-4"
       style={{ scrollbarGutter: "stable" }}
     >
       {children}
@@ -399,7 +399,7 @@ export function PageHeader({
   onBackClick?: () => void;
 }) {
   return (
-    <div className="h-16 pt-5 flex flex-wrap items-center justify-between gap-4">
+    <div className="h-16 pt-5 flex items-center justify-between gap-4">
       <div className="flex items-center gap-4">
         {onBackClick && (
           <button
