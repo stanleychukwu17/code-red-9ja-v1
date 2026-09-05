@@ -1772,45 +1772,46 @@ func (s *ElectionsService) SubmitElectionVotes(
 
 	// Check for live voter referral bonus
 	// Conditions:
-	// 1. Voter was referred by an agent (referred_by_id is set)
+	// 1. Voter was referred by an agent (referral record exists)
 	// 2. Voter created account within the last 6 months
 	// 3. Referrer has a polling_unit_assignments record for the exact same election_group_id
 	voterUser, uErr := qtx.GetUserByID(ctx, userID)
-	if uErr == nil && voterUser.ReferredByID.Valid && voterUser.ReferredByID.Int64 > 0 {
+	if uErr == nil {
 		sixMonthsAgo := time.Now().AddDate(0, -6, 0)
 		if voterUser.CreatedAt.Valid && voterUser.CreatedAt.Time.After(sixMonthsAgo) {
-			referrerID := voterUser.ReferredByID.Int64
+			referrerID, refErr := qtx.GetUserReferredByID(ctx, userID)
+			if refErr == nil && referrerID > 0 {
+				// Find referrer's assignment for this election group
+				refAssignments, asgnErr := qtx.ListAssignments(ctx, queries.ListAssignmentsParams{
+					ElectionGroupID: electionGroupID,
+					PartyID:         0,
+					PollingUnitID:   0,
+					UserID:          referrerID,
+					Limit:           1,
+					Offset:          0,
+				})
 
-			// Find referrer's assignment for this election group
-			refAssignments, asgnErr := qtx.ListAssignments(ctx, queries.ListAssignmentsParams{
-				ElectionGroupID: electionGroupID,
-				PartyID:         0,
-				PollingUnitID:   0,
-				UserID:          referrerID,
-				Limit:           1,
-				Offset:          0,
-			})
+				if asgnErr == nil && len(refAssignments) > 0 {
+					refAsgn := refAssignments[0]
 
-			if asgnErr == nil && len(refAssignments) > 0 {
-				refAsgn := refAssignments[0]
+					// Fetch target_live_voters_referred_count system setting (default 20)
+					var targetLiveVoters float64 = 20
+					if lvrSetting, settingErr := qtx.GetSystemSetting(ctx, "target_live_voters_referred_count"); settingErr == nil {
+						_ = json.Unmarshal(lvrSetting.Value, &targetLiveVoters)
+					}
+					if targetLiveVoters <= 0 {
+						targetLiveVoters = 20
+					}
 
-				// Fetch target_live_voters_referred_count system setting (default 20)
-				var targetLiveVoters float64 = 20
-				if lvrSetting, settingErr := qtx.GetSystemSetting(ctx, "target_live_voters_referred_count"); settingErr == nil {
-					_ = json.Unmarshal(lvrSetting.Value, &targetLiveVoters)
-				}
-				if targetLiveVoters <= 0 {
-					targetLiveVoters = 20
-				}
-
-				// Only increment and credit if target hasn't been reached yet
-				if float64(refAsgn.LiveVotersReferredCount) < targetLiveVoters {
-					updatedRefAsgn, incErr := qtx.IncrementAssignmentLiveVotersReferredCount(ctx, refAsgn.ID)
-					if incErr == nil && s.earningsSvc != nil {
-						// Process earnings asynchronously post-commit
-						defer func(asgnID int64) {
-							go s.earningsSvc.ProcessTaskEarnings(context.Background(), asgnID, "live_voters_referred", "Referred User: Voted")
-						}(updatedRefAsgn.ID)
+					// Only increment and credit if target hasn't been reached yet
+					if float64(refAsgn.LiveVotersReferredCount) < targetLiveVoters {
+						updatedRefAsgn, incErr := qtx.IncrementAssignmentLiveVotersReferredCount(ctx, refAsgn.ID)
+						if incErr == nil && s.earningsSvc != nil {
+							// Process earnings asynchronously post-commit
+							defer func(asgnID int64) {
+								go s.earningsSvc.ProcessTaskEarnings(context.Background(), asgnID, "live_voters_referred", "Referred User: Voted")
+							}(updatedRefAsgn.ID)
+						}
 					}
 				}
 			}
