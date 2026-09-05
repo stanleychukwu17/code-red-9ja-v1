@@ -28,11 +28,7 @@ CREATE TABLE IF NOT EXISTS inec_result_grabber (
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
--- Indexes for performance
-CREATE INDEX idx_inec_result_grabber_election_id ON inec_result_grabber(election_id);
-CREATE INDEX idx_inec_result_grabber_election_group_id ON inec_result_grabber(election_group_id);
-CREATE INDEX idx_inec_result_grabber_scope ON inec_result_grabber(scope);
-CREATE INDEX idx_inec_result_grabber_election_date ON inec_result_grabber(election_date);
+
 
 -- 2. Trigger Function to automatically create a 1-to-1 inec_result_grabber record upon election insertion
 -- +goose StatementBegin
@@ -47,11 +43,15 @@ END;
 $$ LANGUAGE plpgsql;
 -- +goose StatementEnd
 
+
+
 -- 3. Trigger on elections table
 CREATE TRIGGER trg_create_inec_result_grabber
 AFTER INSERT ON elections
 FOR EACH ROW
 EXECUTE FUNCTION create_inec_result_grabber_record();
+
+
 
 -- 4. Create log table for tracking individual grabber execution runs
 CREATE TABLE IF NOT EXISTS inec_result_grabber_logs (
@@ -72,8 +72,8 @@ CREATE TABLE IF NOT EXISTS inec_result_grabber_logs (
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL
 );
 
-CREATE INDEX idx_inec_result_grabber_logs_grabber_id ON inec_result_grabber_logs(inec_result_grabber_id);
-CREATE INDEX idx_inec_result_grabber_logs_election_id ON inec_result_grabber_logs(election_id);
+CREATE INDEX idx_inec_result_grabber_logs_grabber_id ON inec_result_grabber_logs(inec_result_grabber_id, id DESC);
+
 
 -- +goose Down
 DROP TRIGGER IF EXISTS trg_create_inec_result_grabber ON elections;

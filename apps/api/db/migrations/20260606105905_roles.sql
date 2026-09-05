@@ -27,9 +27,6 @@ CREATE TABLE user_roles (
   PRIMARY KEY (user_id, role_id)
 );
 
-CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
-CREATE INDEX idx_user_roles_role_id ON user_roles(role_id);
-
 -- Seed Default Permissions
 INSERT INTO role_permissions (code, description) VALUES 
 ('manage_users', 'Can create, update, and delete users'),

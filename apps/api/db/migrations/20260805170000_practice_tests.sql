@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS user_practice_tests (
   CONSTRAINT uq_user_practice_test UNIQUE(user_id, election_group_id, role)
 );
 
-CREATE INDEX IF NOT EXISTS idx_user_practice_tests_user_id ON user_practice_tests(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_practice_tests_election_group ON user_practice_tests(election_group_id);
 
 -- +goose Down

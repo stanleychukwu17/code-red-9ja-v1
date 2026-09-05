@@ -391,7 +391,7 @@ func (q *Queries) IncrementUserReferralUnpaidCountByID(ctx context.Context, id i
 
 const listReferrals = `-- name: ListReferrals :many
 SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at FROM referrals
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $1 OFFSET $2
 `
 
@@ -436,7 +436,7 @@ func (q *Queries) ListReferrals(ctx context.Context, arg ListReferralsParams) ([
 const listReferralsByReferrer = `-- name: ListReferralsByReferrer :many
 SELECT id, user_referral_id, party_id, election_group_id, referrer_user_id, referred_user_id, milestone, status, amount_to_pay, created_at, updated_at, paid_at FROM referrals
 WHERE referrer_user_id = $1
-ORDER BY created_at DESC
+ORDER BY id DESC
 LIMIT $2 OFFSET $3
 `
 

@@ -49,10 +49,9 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
   UNIQUE (user_id, election_group_id, role_type)
 );
 
-CREATE INDEX IF NOT EXISTS idx_agent_earnings_user       ON agent_earnings(user_id);
-CREATE INDEX IF NOT EXISTS idx_agent_earnings_party      ON agent_earnings(party_id);
-CREATE INDEX IF NOT EXISTS idx_agent_earnings_eg         ON agent_earnings(election_group_id);
-CREATE INDEX IF NOT EXISTS idx_agent_earnings_status     ON agent_earnings(status);
+CREATE INDEX IF NOT EXISTS idx_agent_earnings_party_eg_id ON agent_earnings(party_id, election_group_id, id DESC);
+CREATE INDEX IF NOT EXISTS idx_agent_earnings_eg ON agent_earnings(election_group_id);
+CREATE INDEX IF NOT EXISTS idx_agent_earnings_status ON agent_earnings(status);
 
 -- +goose Down
 DROP TABLE IF EXISTS agent_earnings;
