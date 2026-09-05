@@ -491,21 +491,8 @@ type Querier interface {
 	UpdateApplicationStatus(ctx context.Context, arg UpdateApplicationStatusParams) (PartyApplication, error)
 	UpdateAssignmentReadinessPercentage(ctx context.Context, arg UpdateAssignmentReadinessPercentageParams) (UpdateAssignmentReadinessPercentageRow, error)
 	UpdateAssignmentTracking(ctx context.Context, arg UpdateAssignmentTrackingParams) (UpdateAssignmentTrackingRow, error)
-	UpdateCandidatesFromFederalConstituencyElections(ctx context.Context) error
-	UpdateCandidatesFromLGAElections(ctx context.Context) error
-	UpdateCandidatesFromNationwideElections(ctx context.Context) error
-	UpdateCandidatesFromSenatorialDistrictElections(ctx context.Context) error
-	UpdateCandidatesFromSingleFederalConstituencyElection(ctx context.Context, id int64) error
-	UpdateCandidatesFromSingleLGAElection(ctx context.Context, id int64) error
-	UpdateCandidatesFromSingleNationwideElection(ctx context.Context, id int64) error
-	UpdateCandidatesFromSingleSenatorialDistrictElection(ctx context.Context, id int64) error
-	UpdateCandidatesFromSingleStateConstituencyElection(ctx context.Context, id int64) error
-	UpdateCandidatesFromSingleStateElection(ctx context.Context, id int64) error
-	UpdateCandidatesFromSingleWardElection(ctx context.Context, id int64) error
-	UpdateCandidatesFromStateConstituencyElections(ctx context.Context) error
-	UpdateCandidatesFromStateElections(ctx context.Context) error
-	UpdateCandidatesFromWardElections(ctx context.Context) error
 	UpdateElectionCandidatesCount(ctx context.Context, arg UpdateElectionCandidatesCountParams) error
+	UpdateElectionContestingParties(ctx context.Context, arg UpdateElectionContestingPartiesParams) (Election, error)
 	UpdateElectionDatesByGroup(ctx context.Context, arg UpdateElectionDatesByGroupParams) error
 	UpdateElectionGroup(ctx context.Context, arg UpdateElectionGroupParams) (ElectionGroup, error)
 	UpdateElectionInstance(ctx context.Context, arg UpdateElectionInstanceParams) (Election, error)

@@ -244,6 +244,7 @@ export const API_URL = {
   electionResultsStates: `${api}/elections/results/states`,
   electionResultsSenatorialDistricts: `${api}/elections/results/senatorial-districts`,
   electionResultsFederalConstituencies: `${api}/elections/results/federal-constituencies`,
+  electionResultsStateConstituencies: `${api}/elections/results/state-constituencies`,
   electionResultsLGAs: `${api}/elections/results/lgas`,
   electionResultsWards: `${api}/elections/results/wards`,
   electionResultsPollingUnits: `${api}/elections/results/polling-units`,

@@ -130,28 +130,30 @@ type DidNotVoteReason struct {
 }
 
 type Election struct {
-	ID                    int64              `json:"id"`
-	ElectionGroupID       int64              `json:"election_group_id"`
-	StateID               pgtype.Int2        `json:"state_id"`
-	SenatorialDistrictID  pgtype.Int4        `json:"senatorial_district_id"`
-	FederalConstituencyID pgtype.Int4        `json:"federal_constituency_id"`
-	StateConstituencyID   pgtype.Int4        `json:"state_constituency_id"`
-	LgaID                 pgtype.Int4        `json:"lga_id"`
-	WardID                pgtype.Int4        `json:"ward_id"`
-	OfficeID              int64              `json:"office_id"`
-	Name                  string             `json:"name"`
-	Rank                  int32              `json:"rank"`
-	ElectionDate          pgtype.Date        `json:"election_date"`
-	ElectionGroupName     string             `json:"election_group_name"`
-	OfficeName            string             `json:"office_name"`
-	Scope                 string             `json:"scope"`
-	Status                string             `json:"status"`
-	CandidatesCount       int32              `json:"candidates_count"`
-	ReportsCount          int32              `json:"reports_count"`
-	UpdatesCount          int32              `json:"updates_count"`
-	ResultsSubmittedCount int32              `json:"results_submitted_count"`
-	CreatedAt             pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt             pgtype.Timestamptz `json:"updated_at"`
+	ID                    int64       `json:"id"`
+	ElectionGroupID       int64       `json:"election_group_id"`
+	StateID               pgtype.Int2 `json:"state_id"`
+	SenatorialDistrictID  pgtype.Int4 `json:"senatorial_district_id"`
+	FederalConstituencyID pgtype.Int4 `json:"federal_constituency_id"`
+	StateConstituencyID   pgtype.Int4 `json:"state_constituency_id"`
+	LgaID                 pgtype.Int4 `json:"lga_id"`
+	WardID                pgtype.Int4 `json:"ward_id"`
+	OfficeID              int64       `json:"office_id"`
+	Name                  string      `json:"name"`
+	Rank                  int32       `json:"rank"`
+	ElectionDate          pgtype.Date `json:"election_date"`
+	ElectionGroupName     string      `json:"election_group_name"`
+	OfficeName            string      `json:"office_name"`
+	Scope                 string      `json:"scope"`
+	Status                string      `json:"status"`
+	CandidatesCount       int32       `json:"candidates_count"`
+	ReportsCount          int32       `json:"reports_count"`
+	UpdatesCount          int32       `json:"updates_count"`
+	ResultsSubmittedCount int32       `json:"results_submitted_count"`
+	// List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]
+	ContestingParties []byte             `json:"contesting_parties"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 type ElectionCandidate struct {
@@ -160,7 +162,6 @@ type ElectionCandidate struct {
 	CandidateID    int64              `json:"candidate_id"`
 	PartyID        int16              `json:"party_id"`
 	PartyShortName string             `json:"party_short_name"`
-	VotesCount     pgtype.Int4        `json:"votes_count"`
 	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
 	CreatedAt      pgtype.Timestamptz `json:"created_at"`
 }
@@ -867,6 +868,8 @@ type Party struct {
 	AgentPaymentAllocationKobo []byte             `json:"agent_payment_allocation_kobo"`
 	AgentAcquisitionTargets    []byte             `json:"agent_acquisition_targets"`
 	AutoAcceptApplications     []byte             `json:"auto_accept_applications"`
+	ColorHex                   pgtype.Text        `json:"color_hex"`
+	DarkColorHex               pgtype.Text        `json:"dark_color_hex"`
 	CreatedAt                  pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt                  pgtype.Timestamptz `json:"updated_at"`
 }

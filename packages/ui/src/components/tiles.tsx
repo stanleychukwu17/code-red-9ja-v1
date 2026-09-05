@@ -26,12 +26,12 @@ export function TileHeader({ children, className }: TileHeaderProps) {
   );
 }
 
-export type TileRowProps = {
+export type TileRowProps = React.HTMLAttributes<HTMLDivElement> & {
   children: React.ReactNode;
   className?: string;
   onClick?: () => void;
 };
-export function TileRow({ children, className, onClick }: TileRowProps) {
+export function TileRow({ children, className, onClick, ...props }: TileRowProps) {
   return (
     <div
       onClick={onClick}
@@ -39,6 +39,7 @@ export function TileRow({ children, className, onClick }: TileRowProps) {
         "h-14 flex items-center justify-between gap-5 md:gap-20 px-3 hover:bg-c-5 duration-200 cursor-pointer",
         className,
       )}
+      {...props}
     >
       {children}
     </div>

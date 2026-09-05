@@ -270,7 +270,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Post("/api/v1/seed/elections/{id}/simulate-results", seedHandler.SimulateElectionResults) // Simulate PU results & test rollups
 	mainRouter.Post("/api/v1/seed/flush-redis", seedHandler.FlushRedis)     // Flush Redis cache endpoint
 
-
 	// Banks
 	mainRouter.Get("/api/v1/banks", usersHandler.GetBanks)
 	mainRouter.Get("/api/v1/banks/validate", usersHandler.ValidateBankAccount)
@@ -291,9 +290,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/elections/results/states", electionResultsHandler.GetStatesWithResults)
 	mainRouter.Get("/api/v1/elections/results/senatorial-districts", electionResultsHandler.GetSenatorialDistrictsWithResults)
 	mainRouter.Get("/api/v1/elections/results/federal-constituencies", electionResultsHandler.GetFederalConstituenciesWithResults)
+	mainRouter.Get("/api/v1/elections/results/state-constituencies", electionResultsHandler.GetStateConstituenciesWithResults)
 	mainRouter.Get("/api/v1/elections/results/lgas", electionResultsHandler.GetLGAsWithResults)
 	mainRouter.Get("/api/v1/elections/results/wards", electionResultsHandler.GetWardsWithResults)
 	mainRouter.Get("/api/v1/elections/results/polling-units", electionResultsHandler.GetPollingUnitsWithResults)
+	mainRouter.Get("/api/v1/elections/results/breakdown", electionResultsHandler.GetElectoralUnitsBreakdown)
+	mainRouter.Get("/api/v1/elections/results/electoral-units", electionResultsHandler.GetElectoralUnitsBreakdown)
 	mainRouter.Get("/api/v1/elections/results", electionResultsHandler.GetElectionFinalResult)
 
 	// political parties public routes

@@ -56,17 +56,7 @@ function RouteComponent() {
       return res;
     },
   });
-  console.log("DATA:", {
-    roleType: "polling_agent",
-    partyId,
-    electionGroupId: selectedElectionGroup?.id,
-    electionId: selectedElection?.id,
-    stateId: selectedStateId,
-    lgaId: selectedLGAId,
-    wardId: selectedWardId,
-    search,
-  });
-  console.log("DATA:", data);
+  // console.log("DATA:", data);
 
   const items = Array.isArray(data?.data?.items)
     ? data.data.items

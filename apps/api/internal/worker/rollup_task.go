@@ -8,70 +8,42 @@ import (
 func (processor *RedisTaskProcessor) ProcessRollupWard() {
 	if err := processor.q.RollupWardFinalResults(context.Background()); err != nil {
 		slog.Error("failed to rollup ward final results", "error", err)
-	} else {
-		if err := processor.q.UpdateCandidatesFromWardElections(context.Background()); err != nil {
-			slog.Error("failed to update election_candidates from ward final results", "error", err)
-		}
 	}
 }
 
 func (processor *RedisTaskProcessor) ProcessRollupStateConstituency() {
 	if err := processor.q.RollupStateConstituencyFinalResults(context.Background()); err != nil {
 		slog.Error("failed to rollup state constituency final results", "error", err)
-	} else {
-		if err := processor.q.UpdateCandidatesFromStateConstituencyElections(context.Background()); err != nil {
-			slog.Error("failed to update election_candidates from state constituency final results", "error", err)
-		}
 	}
 }
 
 func (processor *RedisTaskProcessor) ProcessRollupLGA() {
 	if err := processor.q.RollupLGAFinalResults(context.Background()); err != nil {
 		slog.Error("failed to rollup lga final results", "error", err)
-	} else {
-		if err := processor.q.UpdateCandidatesFromLGAElections(context.Background()); err != nil {
-			slog.Error("failed to update election_candidates from lga final results", "error", err)
-		}
 	}
 }
 
 func (processor *RedisTaskProcessor) ProcessRollupSenatorialDistrict() {
 	if err := processor.q.RollupSenatorialDistrictFinalResults(context.Background()); err != nil {
 		slog.Error("failed to rollup senatorial district final results", "error", err)
-	} else {
-		if err := processor.q.UpdateCandidatesFromSenatorialDistrictElections(context.Background()); err != nil {
-			slog.Error("failed to update election_candidates from senatorial district final results", "error", err)
-		}
 	}
 }
 
 func (processor *RedisTaskProcessor) ProcessRollupFederalConstituency() {
 	if err := processor.q.RollupFederalConstituencyFinalResults(context.Background()); err != nil {
 		slog.Error("failed to rollup federal constituency final results", "error", err)
-	} else {
-		if err := processor.q.UpdateCandidatesFromFederalConstituencyElections(context.Background()); err != nil {
-			slog.Error("failed to update election_candidates from federal constituency final results", "error", err)
-		}
 	}
 }
 
 func (processor *RedisTaskProcessor) ProcessRollupState() {
 	if err := processor.q.RollupStateFinalResults(context.Background()); err != nil {
 		slog.Error("failed to rollup state final results", "error", err)
-	} else {
-		if err := processor.q.UpdateCandidatesFromStateElections(context.Background()); err != nil {
-			slog.Error("failed to update election_candidates from state final results", "error", err)
-		}
 	}
 }
 
 func (processor *RedisTaskProcessor) ProcessRollupElection() {
 	if err := processor.q.RollupElectionFinalResults(context.Background()); err != nil {
 		slog.Error("failed to rollup election final results", "error", err)
-	} else {
-		if err := processor.q.UpdateCandidatesFromNationwideElections(context.Background()); err != nil {
-			slog.Error("failed to update election_candidates from nationwide final results", "error", err)
-		}
 	}
 }
 
@@ -111,29 +83,6 @@ func (processor *RedisTaskProcessor) ProcessFullElectionRollup() {
 	// 5. Nationwide / Presidential Rollup (from States)
 	if err := processor.q.RollupElectionFinalResults(ctx); err != nil {
 		slog.Error("failed to rollup election final results", "error", err)
-	}
-
-	// 6. Update candidate total vote counts across all election scopes
-	if err := processor.q.UpdateCandidatesFromWardElections(ctx); err != nil {
-		slog.Error("failed to update election_candidates from ward final results", "error", err)
-	}
-	if err := processor.q.UpdateCandidatesFromStateConstituencyElections(ctx); err != nil {
-		slog.Error("failed to update election_candidates from state constituency final results", "error", err)
-	}
-	if err := processor.q.UpdateCandidatesFromLGAElections(ctx); err != nil {
-		slog.Error("failed to update election_candidates from lga final results", "error", err)
-	}
-	if err := processor.q.UpdateCandidatesFromFederalConstituencyElections(ctx); err != nil {
-		slog.Error("failed to update election_candidates from federal constituency final results", "error", err)
-	}
-	if err := processor.q.UpdateCandidatesFromSenatorialDistrictElections(ctx); err != nil {
-		slog.Error("failed to update election_candidates from senatorial district final results", "error", err)
-	}
-	if err := processor.q.UpdateCandidatesFromStateElections(ctx); err != nil {
-		slog.Error("failed to update election_candidates from state final results", "error", err)
-	}
-	if err := processor.q.UpdateCandidatesFromNationwideElections(ctx); err != nil {
-		slog.Error("failed to update election_candidates from nationwide final results", "error", err)
 	}
 
 	slog.Info("sequential full election rollup reconciliation completed")

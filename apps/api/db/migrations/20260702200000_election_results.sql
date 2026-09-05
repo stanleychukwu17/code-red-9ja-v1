@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS unmatched_polling_unit_results (
   lga_id                   INT      REFERENCES lgas(id) ON DELETE SET NULL,
   ward_id                  INT      REFERENCES wards(id) ON DELETE SET NULL,
 
-  -- Vote counts & candidate breakdown
+  -- Vote counts & candidate breakdown: [{party_short_name, vote_count, vote_share, agent_name, has_signature}]
   accredited_voters        INTEGER  NOT NULL DEFAULT 0 CHECK (accredited_voters >= 0),
   votes_cast               INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
   valid_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
@@ -87,7 +87,7 @@ CREATE TABLE polling_unit_results (
   valid_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes           INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Per-candidate breakdown: [{party_short_name, vote_count, agent_name, has_signature}]
+  -- Per-candidate breakdown: [{party_short_name, vote_count, vote_share, agent_name, has_signature}]
   candidate_results        JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
   -- Evidence (exactly two URL slots)
@@ -169,7 +169,7 @@ CREATE TABLE election_polling_unit_final_results (
   valid_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes           INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Final per-party breakdown: [{party_short_name, vote_count}]
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share}]
   candidate_results        JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live   JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
@@ -215,7 +215,7 @@ CREATE TABLE election_ward_final_result (
   valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Final per-party breakdown: [{party_short_name, vote_count, polling_units_winning_count}]
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share, polling_units_winning_count}]
   candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
@@ -252,7 +252,7 @@ CREATE TABLE election_state_constituency_final_result (
   valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Final per-party breakdown: [{party_short_name, vote_count, polling_units_winning_count, wards_winning_count}]
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share, polling_units_winning_count, wards_winning_count}]
   candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
@@ -287,7 +287,7 @@ CREATE TABLE election_lga_final_result (
   valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Final per-party breakdown: [{party_short_name, vote_count, polling_units_winning_count, wards_winning_count, state_constituency_winning_count}]
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share, polling_units_winning_count, wards_winning_count, state_constituency_winning_count}]
   candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
@@ -320,7 +320,7 @@ CREATE TABLE election_federal_constituency_final_result (
   valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Final per-party breakdown: [{party_short_name, vote_count, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count}]
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count}]
   candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
@@ -350,7 +350,7 @@ CREATE TABLE election_senatorial_district_final_result (
   valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Final per-party breakdown: [{party_short_name, vote_count, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count, federal_constituencies_winning_count}]
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count, federal_constituencies_winning_count}]
   candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
@@ -377,10 +377,10 @@ CREATE TABLE election_state_final_result (
   votes_cast                  INTEGER  NOT NULL DEFAULT 0 CHECK (votes_cast >= 0),
   valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count, federal_constituencies_winning_count, senatorial_districts_winning_count}]
   candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
 
-  -- Final per-party breakdown: [{party_short_name, vote_count, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count, federal_constituencies_winning_count, senatorial_districts_winning_count}]
   senatorial_districts_counted  INTEGER  NOT NULL DEFAULT 0,
   total_senatorial_districts    INTEGER  NOT NULL DEFAULT 0,
 
@@ -403,7 +403,7 @@ CREATE TABLE election_final_result (
   valid_votes                 INTEGER  NOT NULL DEFAULT 0 CHECK (valid_votes >= 0),
   rejected_votes              INTEGER  NOT NULL DEFAULT 0 CHECK (rejected_votes >= 0),
 
-  -- Final per-party breakdown: [{party_short_name, vote_count, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count, federal_constituencies_winning_count, senatorial_districts_winning_count, states_winning_count}]
+  -- Final per-party breakdown: [{party_short_name, vote_count, vote_share, polling_units_winning_count, wards_winning_count, state_constituency_winning_count, lgas_winning_count, federal_constituencies_winning_count, senatorial_districts_winning_count, states_winning_count}]
   candidate_results           JSONB    NOT NULL DEFAULT '[]'::jsonb,
   candidate_results_live      JSONB    NOT NULL DEFAULT '[]'::jsonb,
 

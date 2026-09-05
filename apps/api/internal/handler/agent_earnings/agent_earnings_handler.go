@@ -441,11 +441,16 @@ func TriggerCalculation(svc *earningsservice.Service, assignmentID int64) {
 	}()
 }
 
+type RequestPayoutRequest struct {
+	ElectionGroupID int64  `json:"election_group_id"`
+	RoleType        string `json:"role_type"`
+}
+
 // RequestPayout godoc
 // @Summary      Request duty payout for an agent assignment / election group
 // @Tags         AgentEarnings
 // @Produce      json
-// @Param        request body struct{ ElectionGroupID int64 `json:"election_group_id"`; RoleType string `json:"role_type"` } true "Payout Request"
+// @Param        request body RequestPayoutRequest true "Payout Request"
 // @Success      200 {object} utils.SuccessResponse
 // @Failure      400 {object} utils.ErrorResponse
 // @Failure      401 {object} utils.ErrorResponse

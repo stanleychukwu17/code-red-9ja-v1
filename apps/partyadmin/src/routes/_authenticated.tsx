@@ -16,6 +16,8 @@ import WalletIcon from "@repo/ui/icons/navbar/wallet-icon";
 import WalletSolidIcon from "@repo/ui/icons/navbar/wallet-solid-icon";
 import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
 import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
+import FeedIcon from "@repo/ui/icons/navbar/feed-icon";
+import FeedSolidIcon from "@repo/ui/icons/navbar/feed-solid-icon";
 import {
   createFileRoute,
   Outlet,
@@ -126,6 +128,13 @@ function AuthenticatedRoutes() {
       icon: <UserIcon className="shrink-0 size-6" />,
       selectedIcon: <UserSolidIcon className="shrink-0 size-6" />,
       href: APP_URL.partyRoutes.agents(partyShortName),
+    },
+    {
+      id: "election-race",
+      label: "Electoral Race",
+      icon: <FeedIcon className="shrink-0 size-6" />,
+      selectedIcon: <FeedSolidIcon className="shrink-0 size-6" />,
+      href: APP_URL.partyRoutes.electionRace(partyShortName),
     },
   ];
 

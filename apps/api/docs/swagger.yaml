@@ -44,12 +44,15 @@ definitions:
     properties:
       email:
         type: string
+      otp:
+        type: string
       password:
         maxLength: 72
         minLength: 5
         type: string
     required:
     - email
+    - otp
     - password
     type: object
   authhandler.CheckNINRequest:
@@ -237,63 +240,6 @@ definitions:
     - email
     - password
     - phoneNumber
-    type: object
-  authservice.LoginUser:
-    properties:
-      account_status:
-        type: string
-      avatar:
-        type: string
-      bank_account_number:
-        type: string
-      bank_code:
-        type: string
-      current_city:
-        type: integer
-      current_country:
-        type: integer
-      current_lga:
-        type: integer
-      current_state:
-        type: integer
-      current_ward:
-        type: integer
-      date_of_birth:
-        type: string
-      email:
-        type: string
-      fake_id:
-        type: integer
-      first_name:
-        type: string
-      gender:
-        type: string
-      id:
-        type: integer
-      last_name:
-        type: string
-      middle_name:
-        type: string
-      party:
-        $ref: '#/definitions/queries.PartyBasicInfoWithVerifications'
-      party_id:
-        type: integer
-      phone:
-        type: string
-      polling_unit_id:
-        type: integer
-      referral_code:
-        type: string
-      roles:
-        items:
-          type: string
-        type: array
-      username:
-        type: string
-      voters_card_image:
-        type: string
-    type: object
-  big.Int:
     type: object
   bodieshandler.CityResponse:
     properties:
@@ -767,6 +713,10 @@ definitions:
     type: object
   partieshandler.CreatePartyRequest:
     properties:
+      color_hex:
+        type: string
+      dark_color_hex:
+        type: string
       display_order:
         type: integer
       logo:
@@ -832,6 +782,10 @@ definitions:
     type: object
   partieshandler.UpdatePartyRequest:
     properties:
+      color_hex:
+        type: string
+      dark_color_hex:
+        type: string
       display_order:
         type: integer
       logo:
@@ -981,65 +935,6 @@ definitions:
         type: integer
       ward_id:
         type: integer
-    type: object
-  polling_unit_results.ReviewRequest:
-    properties:
-      disputed_reason:
-        type: string
-      status:
-        description: '"confirmed" or "nullified"'
-        type: string
-    type: object
-  polling_unit_results.SingleElectionSubmissionRequest:
-    properties:
-      election_id:
-        type: integer
-      result_sheet_image_url:
-        type: string
-      result_sheet_video_url:
-        type: string
-    type: object
-  polling_unit_results.SubmitBatchResultRequest:
-    properties:
-      assignment_id:
-        type: integer
-      election_group_id:
-        type: integer
-      party_id:
-        type: integer
-      polling_unit_id:
-        type: integer
-      submissions:
-        items:
-          $ref: '#/definitions/polling_unit_results.SingleElectionSubmissionRequest'
-        type: array
-      uploaded_by_inec:
-        type: boolean
-    type: object
-  polling_unit_results.SubmitResultRequest:
-    properties:
-      assignment_id:
-        type: integer
-      election_group_id:
-        type: integer
-      election_id:
-        type: integer
-      party_id:
-        type: integer
-      polling_unit_id:
-        type: integer
-      result_sheet_image_url:
-        type: string
-      result_sheet_video_url:
-        type: string
-      uploaded_by_inec:
-        type: boolean
-    type: object
-  polling_unit_results.VoteRequest:
-    properties:
-      vote_type:
-        description: '"up" or "down"'
-        type: string
     type: object
   polling_unit_updates.CreateUpdateRequest:
     properties:
@@ -1250,192 +1145,6 @@ definitions:
       election_started_video_url:
         type: string
     type: object
-  queries.CachedUserRoles:
-    properties:
-      roles:
-        items:
-          $ref: '#/definitions/queries.GetUserRolesRow'
-        type: array
-      roles_code:
-        items:
-          type: string
-        type: array
-    type: object
-  queries.GetPageVerificationsRow:
-    properties:
-      for_who:
-        type: string
-      id:
-        type: integer
-      is_admin_assignable:
-        type: boolean
-      page_id:
-        type: integer
-      page_type:
-        type: string
-      verification_description:
-        $ref: '#/definitions/pgtype.Text'
-      verification_title:
-        type: string
-      verification_type:
-        type: string
-      verification_type_id:
-        type: integer
-      verified_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-    type: object
-  queries.GetUserRolesRow:
-    properties:
-      code:
-        type: string
-      date_assigned:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      role_id:
-        type: integer
-      user_id:
-        type: integer
-      who_assigned:
-        type: integer
-    type: object
-  queries.PartyBasicInfoWithVerifications:
-    properties:
-      id:
-        type: integer
-      is_verified:
-        $ref: '#/definitions/pgtype.Bool'
-      logo:
-        type: string
-      name:
-        type: string
-      short_name:
-        type: string
-      verifications:
-        items:
-          $ref: '#/definitions/queries.GetPageVerificationsRow'
-        type: array
-    type: object
-  queries.PartyWithVerifications:
-    properties:
-      agent_acquisition_targets:
-        items:
-          type: integer
-        type: array
-      agent_payment_allocation_kobo:
-        items:
-          type: integer
-        type: array
-      agent_payment_balance_kobo:
-        type: integer
-      auto_accept_applications:
-        items:
-          type: integer
-        type: array
-      created_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      discount_percentage:
-        $ref: '#/definitions/pgtype.Numeric'
-      display_order:
-        type: integer
-      id:
-        type: integer
-      is_verified:
-        $ref: '#/definitions/pgtype.Bool'
-      logo:
-        type: string
-      logo_file_id:
-        $ref: '#/definitions/pgtype.Int8'
-      name:
-        type: string
-      short_name:
-        type: string
-      slots:
-        type: integer
-      status:
-        type: string
-      updated_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      verifications:
-        items:
-          $ref: '#/definitions/queries.GetPageVerificationsRow'
-        type: array
-    type: object
-  queries.UserWithPlaces:
-    properties:
-      account_status:
-        $ref: '#/definitions/pgtype.Text'
-      avatar:
-        $ref: '#/definitions/pgtype.Text'
-      avatar_file_id:
-        $ref: '#/definitions/pgtype.Int8'
-      city_name:
-        type: string
-      country_name:
-        type: string
-      country_of_origin:
-        $ref: '#/definitions/pgtype.Int2'
-      created_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      current_city:
-        $ref: '#/definitions/pgtype.Int4'
-      current_country:
-        type: integer
-      current_lga:
-        $ref: '#/definitions/pgtype.Int4'
-      current_state:
-        type: integer
-      current_ward:
-        $ref: '#/definitions/pgtype.Int4'
-      date_of_birth:
-        $ref: '#/definitions/pgtype.Date'
-      email:
-        $ref: '#/definitions/pgtype.Text'
-      fake_id:
-        $ref: '#/definitions/pgtype.Int8'
-      first_name:
-        $ref: '#/definitions/pgtype.Text'
-      gender:
-        $ref: '#/definitions/pgtype.Text'
-      has_role:
-        $ref: '#/definitions/pgtype.Bool'
-      id:
-        type: integer
-      is_politician:
-        $ref: '#/definitions/pgtype.Bool'
-      is_verified:
-        $ref: '#/definitions/pgtype.Bool'
-      last_name:
-        $ref: '#/definitions/pgtype.Text'
-      middle_name:
-        $ref: '#/definitions/pgtype.Text'
-      party_basic_info:
-        $ref: '#/definitions/queries.PartyBasicInfoWithVerifications'
-      party_id:
-        $ref: '#/definitions/pgtype.Int2'
-      password_hash:
-        type: string
-      phone:
-        $ref: '#/definitions/pgtype.Text'
-      polling_unit_id:
-        $ref: '#/definitions/pgtype.Int4'
-      referral_code:
-        $ref: '#/definitions/pgtype.Text'
-      roles:
-        $ref: '#/definitions/queries.CachedUserRoles'
-      state_name:
-        type: string
-      state_of_origin:
-        $ref: '#/definitions/pgtype.Int2'
-      updated_at:
-        $ref: '#/definitions/pgtype.Timestamptz'
-      username:
-        $ref: '#/definitions/pgtype.Text'
-      verifications:
-        items:
-          $ref: '#/definitions/queries.GetPageVerificationsRow'
-        type: array
-      voters_card_image:
-        $ref: '#/definitions/pgtype.Text'
-    type: object
   referrals.createReferralRequest:
     properties:
       milestone:
@@ -1465,6 +1174,35 @@ definitions:
       status:
         type: string
     type: object
+  seedhandler.SimulateElectionRequest:
+    properties:
+      limit:
+        example: 1000
+        type: integer
+      max_votes_per_pu:
+        example: 750
+        type: integer
+      min_votes_per_pu:
+        example: 100
+        type: integer
+      party_shares:
+        items:
+          $ref: '#/definitions/seedhandler.SimulatePartyShare'
+        type: array
+      run_full_rollup:
+        type: boolean
+      trigger_realtime:
+        type: boolean
+    type: object
+  seedhandler.SimulatePartyShare:
+    properties:
+      party_short_name:
+        example: APC
+        type: string
+      vote_share:
+        example: 35
+        type: number
+    type: object
   seedservice.PartyAdminsData:
     properties:
       id:
@@ -1490,6 +1228,10 @@ definitions:
           additionalProperties:
             $ref: '#/definitions/seedservice.PartyAdminsData'
           type: object
+        type: array
+      super_admins:
+        items:
+          type: integer
         type: array
     type: object
   seedservice.SeedUserRequest:
@@ -1546,24 +1288,6 @@ definitions:
         type: string
       verification_type_id:
         type: integer
-    type: object
-  seedservice.SimulateElectionResultsRequest:
-    properties:
-      limit:
-        description: max PUs to populate (0 = all)
-        type: integer
-      max_votes_per_pu:
-        description: optional max votes (default 750)
-        type: integer
-      min_votes_per_pu:
-        description: optional min votes (default 100)
-        type: integer
-      run_full_rollup:
-        description: immediately run sequential rollup queries (default false)
-        type: boolean
-      trigger_realtime:
-        description: dispatch Asynq tasks (default true)
-        type: boolean
     type: object
   senatorialdistrictshandler.CreateSenatorialDistrictRequest:
     properties:
@@ -1844,6 +1568,19 @@ definitions:
       raw_input:
         type: string
     type: object
+  usersservice.UpdateUserPreferencesParams:
+    properties:
+      pinned_links:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+      sidebar_state:
+        type: string
+      theme:
+        type: string
+    type: object
   utils.ErrorResponse:
     properties:
       data: {}
@@ -1944,21 +1681,6 @@ info:
   title: Free9ja API
   version: "1.0"
 paths:
-  /:
-    get:
-      description: get the API root message
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: API Root
-      tags:
-      - root
   /admin/agent-marketing-campaigns:
     get:
       description: Returns a paginated list of all party marketing campaigns with
@@ -2792,276 +2514,6 @@ paths:
       summary: Assign verifications to a page
       tags:
       - Page Verifications
-  /agent-earnings:
-    get:
-      parameters:
-      - description: Filter by user ID
-        in: query
-        name: user_id
-        type: integer
-      - description: Filter by election group
-        in: query
-        name: election_group_id
-        type: integer
-      - description: Filter by party
-        in: query
-        name: party_id
-        type: integer
-      - description: Filter by status (pending|approved|paid|disputed)
-        in: query
-        name: status
-        type: string
-      - description: Page size (default 50)
-        in: query
-        name: limit
-        type: integer
-      - description: Cursor for pagination
-        in: query
-        name: cursor
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-      security:
-      - BearerAuth: []
-      summary: List agent earnings
-      tags:
-      - AgentEarnings
-  /agent-earnings/{id}:
-    get:
-      parameters:
-      - description: Earnings ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-      security:
-      - BearerAuth: []
-      summary: Get a single agent earnings record
-      tags:
-      - AgentEarnings
-  /agent-earnings/{id}/approve:
-    patch:
-      parameters:
-      - description: Earnings ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-      security:
-      - BearerAuth: []
-      summary: Approve earnings for payout (admin)
-      tags:
-      - AgentEarnings
-  /agent-earnings/{id}/mark-paid:
-    patch:
-      parameters:
-      - description: Earnings ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-      security:
-      - BearerAuth: []
-      summary: Mark approved earnings as paid (admin)
-      tags:
-      - AgentEarnings
-  /agent-earnings/allocations:
-    get:
-      parameters:
-      - description: Election Group ID
-        in: query
-        name: election_group_id
-        type: integer
-      - description: Role Type (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)
-        in: query
-        name: role_type
-        type: string
-      - description: Assignment ID
-        in: query
-        name: assignment_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get agent task percentage allocations and potential payouts in Kobo
-      tags:
-      - AgentEarnings
-  /agent-earnings/assignment/{assignment_id}:
-    get:
-      parameters:
-      - description: Assignment ID
-        in: path
-        name: assignment_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-      security:
-      - BearerAuth: []
-      summary: Get earnings for a specific assignment
-      tags:
-      - AgentEarnings
-  /agent-earnings/calculate/{assignment_id}:
-    post:
-      description: Computes and upserts the earnings record for a given assignment.
-        Can be called repeatedly to refresh.
-      parameters:
-      - description: Assignment ID
-        in: path
-        name: assignment_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Calculate agent earnings for an assignment
-      tags:
-      - AgentEarnings
-  /agent-earnings/estimate-payout:
-    get:
-      parameters:
-      - description: Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)
-        in: query
-        name: task_type
-        required: true
-        type: string
-      - description: Role (polling_agent|ward_supervisor|lga_supervisor|state_supervisor)
-        in: query
-        name: role
-        type: string
-      - description: Election Group ID
-        in: query
-        name: election_group_id
-        type: integer
-      - description: Party ID
-        in: query
-        name: party_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Estimate potential payout in Kobo for a given task type without requiring
-        an assignment ID
-      tags:
-      - AgentEarnings
-  /agent-earnings/potential-payout:
-    get:
-      parameters:
-      - description: Assignment ID
-        in: query
-        name: assignment_id
-        required: true
-        type: integer
-      - description: Task Type (readiness|results|attendance|election_start|election_end|live_voters_referred|updates)
-        in: query
-        name: task_type
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Get potential payout in Kobo for a given task type
-      tags:
-      - AgentEarnings
   /agent-marketing-plans:
     get:
       description: Returns all active marketing plans of the specified type (e.g.
@@ -3085,36 +2537,6 @@ paths:
       summary: Get plans by type
       tags:
       - Marketing
-  /api/v1/supervisor-assignments:
-    get:
-      consumes:
-      - application/json
-      description: Get supervisor assignments for a user for a specific election group
-      parameters:
-      - description: User ID
-        in: query
-        name: user_id
-        required: true
-        type: integer
-      - description: Election Group ID
-        in: query
-        name: election_group_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/utils.SuccessResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/utils.ErrorResponse'
-      summary: Get Supervisor Assignments
-      tags:
-      - SupervisorAssignments
   /auth/admin/login:
     post:
       consumes:
@@ -3151,10 +2573,10 @@ paths:
     post:
       consumes:
       - application/json
-      description: Resets a user's password using their email address and a new password,
-        invalidating active sessions
+      description: Resets a user's password using their email address and OTP, invalidating
+        active sessions
       parameters:
-      - description: Email and new password details
+      - description: Email, OTP and new password details
         in: body
         name: request
         required: true
@@ -3952,435 +3374,6 @@ paths:
       summary: Upsert party election group stats
       tags:
       - ElectionGroups
-  /election-groups/{id}/stats/federal-constituencies:
-    get:
-      description: Fetches pre-aggregated election statistics at the federal constituency
-        level
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State ID filter
-        in: query
-        name: state_id
-        type: integer
-      - description: Senatorial District ID filter
-        in: query
-        name: senatorial_district_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List federal constituency stats for an election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/federal-constituencies/{fc_id}/parties/{party_id}:
-    get:
-      description: Fetches pre-aggregated election statistics for a single federal
-        constituency unit and party, extracting party stats from the parties JSONB
-        array.
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Federal Constituency ID
-        in: path
-        name: fc_id
-        required: true
-        type: integer
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get party federal constituency stats for a single geographic unit
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/lgas:
-    get:
-      description: Fetches pre-aggregated election statistics at the LGA level
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State ID filter
-        in: query
-        name: state_id
-        type: integer
-      - description: Senatorial District ID filter
-        in: query
-        name: senatorial_district_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List LGA stats for an election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/lgas/{lga_id}/parties/{party_id}:
-    get:
-      description: Fetches pre-aggregated election statistics for a single LGA unit
-        and party, extracting party stats from the parties JSONB array.
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: LGA ID
-        in: path
-        name: lga_id
-        required: true
-        type: integer
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get party LGA stats for a single geographic unit
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/parties/{party_id}:
-    get:
-      description: Fetches pre-aggregated election statistics for an election group
-        and party, extracting party stats from the parties JSONB array.
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get global party stats for a single election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/polling-units:
-    get:
-      description: Fetches pre-aggregated election statistics at the polling unit
-        level
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State ID filter
-        in: query
-        name: state_id
-        type: integer
-      - description: LGA ID filter
-        in: query
-        name: lga_id
-        type: integer
-      - description: Ward ID filter
-        in: query
-        name: ward_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List polling unit stats for an election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/senatorial-districts:
-    get:
-      description: Fetches pre-aggregated election statistics at the senatorial district
-        level
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State ID filter
-        in: query
-        name: state_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List senatorial district stats for an election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/senatorial-districts/{sd_id}/parties/{party_id}:
-    get:
-      description: Fetches pre-aggregated election statistics for a single senatorial
-        district unit and party, extracting party stats from the parties JSONB array.
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Senatorial District ID
-        in: path
-        name: sd_id
-        required: true
-        type: integer
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get party senatorial district stats for a single geographic unit
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/state-constituencies:
-    get:
-      description: Fetches pre-aggregated election statistics at the state constituency
-        level
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State ID filter
-        in: query
-        name: state_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List state constituency stats for an election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/state-constituencies/{sc_id}/parties/{party_id}:
-    get:
-      description: Fetches pre-aggregated election statistics for a single state constituency
-        unit and party, extracting party stats from the parties JSONB array.
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State Constituency ID
-        in: path
-        name: sc_id
-        required: true
-        type: integer
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get party state constituency stats for a single geographic unit
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/states:
-    get:
-      description: Fetches pre-aggregated election statistics at the state level
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List state stats for an election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/states/{state_id}/parties/{party_id}:
-    get:
-      description: Fetches pre-aggregated election statistics for a single state unit
-        and party, extracting party stats from the parties JSONB array.
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State ID
-        in: path
-        name: state_id
-        required: true
-        type: integer
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get party state stats for a single geographic unit
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/wards:
-    get:
-      description: Fetches pre-aggregated election statistics at the ward level
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: State ID filter
-        in: query
-        name: state_id
-        type: integer
-      - description: LGA ID filter
-        in: query
-        name: lga_id
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List ward stats for an election group
-      tags:
-      - ElectionStats
-  /election-groups/{id}/stats/wards/{ward_id}/parties/{party_id}:
-    get:
-      description: Fetches pre-aggregated election statistics for a single ward unit
-        and party, extracting party stats from the parties JSONB array.
-      parameters:
-      - description: Election Group ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Ward ID
-        in: path
-        name: ward_id
-        required: true
-        type: integer
-      - description: Party ID
-        in: path
-        name: party_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get party ward stats for a single geographic unit
-      tags:
-      - ElectionStats
   /election-groups/{id}/vote-status:
     get:
       description: Returns the vote status (voted, did_not_vote, none) and associated
@@ -4815,6 +3808,10 @@ paths:
         name: election_id
         required: true
         type: integer
+      - description: Polling Unit ID
+        in: query
+        name: polling_unit_id
+        type: integer
       - description: Ward ID
         in: query
         name: ward_id
@@ -4858,6 +3855,67 @@ paths:
             additionalProperties: true
             type: object
       summary: Get scoped final result
+      tags:
+      - ElectionResults
+  /elections/results/breakdown:
+    get:
+      consumes:
+      - application/json
+      description: Returns a collection of child electoral units (states, LGAs, wards,
+        polling units) joined with results for a given scope.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: State ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Senatorial District ID
+        in: query
+        name: senatorial_district_id
+        type: integer
+      - description: Federal Constituency ID
+        in: query
+        name: federal_constituency_id
+        type: integer
+      - description: State Constituency ID
+        in: query
+        name: state_constituency_id
+        type: integer
+      - description: LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Ward ID
+        in: query
+        name: ward_id
+        type: integer
+      - description: Override child unit type (e.g. 'lgas')
+        in: query
+        name: unit_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get electoral units results breakdown
       tags:
       - ElectionResults
   /elections/results/federal-constituencies:
@@ -5039,6 +4097,62 @@ paths:
             additionalProperties: true
             type: object
       summary: Get senatorial districts with results
+      tags:
+      - ElectionResults
+  /elections/results/state-constituencies:
+    get:
+      consumes:
+      - application/json
+      description: Returns state assembly constituencies with their election_state_constituency_final_result.
+      parameters:
+      - description: Election ID
+        in: query
+        name: election_id
+        required: true
+        type: integer
+      - description: State ID
+        in: query
+        name: state_id
+        type: integer
+      - description: Federal Constituency ID
+        in: query
+        name: federal_constituency_id
+        type: integer
+      - description: Senatorial District ID
+        in: query
+        name: senatorial_district_id
+        type: integer
+      - description: LGA ID
+        in: query
+        name: lga_id
+        type: integer
+      - description: Limit
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor
+        in: query
+        name: cursor
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Get state constituencies with results
       tags:
       - ElectionResults
   /elections/results/states:
@@ -5664,21 +4778,6 @@ paths:
       summary: Generate a presigned upload URL
       tags:
       - Files
-  /health:
-    get:
-      description: get the status of the server
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Health check
-      tags:
-      - health
   /lgas:
     get:
       consumes:
@@ -7325,399 +6424,6 @@ paths:
       summary: Update polling unit assignment tracking (arrival, phases)
       tags:
       - PollingUnitAssignments
-  /polling-unit-final-results:
-    get:
-      description: Fetches a cursor-paginated list of final polling unit results with
-        details
-      parameters:
-      - description: Filter by Election Group ID
-        in: query
-        name: election_group_id
-        type: integer
-      - description: Filter by State ID
-        in: query
-        name: state_id
-        type: integer
-      - description: Filter by Senatorial District ID
-        in: query
-        name: senatorial_district_id
-        type: integer
-      - description: Filter by Federal Constituency ID
-        in: query
-        name: federal_constituency_id
-        type: integer
-      - description: Filter by State Constituency ID
-        in: query
-        name: state_constituency_id
-        type: integer
-      - description: Filter by LGA ID
-        in: query
-        name: lga_id
-        type: integer
-      - description: Filter by Ward ID
-        in: query
-        name: ward_id
-        type: integer
-      - description: Filter by presence of media
-        in: query
-        name: has_media
-        type: boolean
-      - description: Cursor (ID to paginate from)
-        in: query
-        name: cursor
-        type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List Polling Unit Final Results
-      tags:
-      - Results
-  /polling-unit-results:
-    get:
-      description: Fetches a cursor-paginated list of polling unit results with filters
-      parameters:
-      - description: Filter by Election ID
-        in: query
-        name: election_id
-        type: integer
-      - description: Filter by Election Group ID
-        in: query
-        name: election_group_id
-        type: integer
-      - description: Filter by Party ID
-        in: query
-        name: party_id
-        type: integer
-      - description: Filter by Polling Unit ID
-        in: query
-        name: polling_unit_id
-        type: integer
-      - description: Filter by Submitter User ID
-        in: query
-        name: submitted_by
-        type: integer
-      - description: Filter by State ID
-        in: query
-        name: state_id
-        type: integer
-      - description: Filter by LGA ID
-        in: query
-        name: lga_id
-        type: integer
-      - description: Filter by Ward ID
-        in: query
-        name: ward_id
-        type: integer
-      - description: Filter by status (submitted|ai_verified|confirmed|disputed|nullified)
-        in: query
-        name: status
-        type: string
-      - description: Filter by INEC upload flag
-        in: query
-        name: uploaded_by_inec
-        type: boolean
-      - description: Cursor (ID to paginate from)
-        in: query
-        name: cursor
-        type: integer
-      - description: Limit (default 20, max 100)
-        in: query
-        name: limit
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: List Polling Unit Results
-      tags:
-      - Results
-    post:
-      consumes:
-      - application/json
-      description: Submit official election results for a polling unit. Assigned agents
-        include assignment_id; general users leave it null.
-      parameters:
-      - description: Result Details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/polling_unit_results.SubmitResultRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Submit Polling Unit Result
-      tags:
-      - Results
-  /polling-unit-results/{id}:
-    get:
-      description: Fetch a single polling unit result by ID
-      parameters:
-      - description: Result ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get Polling Unit Result
-      tags:
-      - Results
-  /polling-unit-results/{id}/review:
-    patch:
-      consumes:
-      - application/json
-      description: Platform admin manually confirms or nullifies a polling unit result
-      parameters:
-      - description: Result ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Review Details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/polling_unit_results.ReviewRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Review a Polling Unit Result (Admin)
-      tags:
-      - Results
-  /polling-unit-results/{id}/vote:
-    patch:
-      consumes:
-      - application/json
-      description: Cast an up or down vote on a result. Switches vote if already cast
-        in opposite direction.
-      parameters:
-      - description: Result ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Vote Details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/polling_unit_results.VoteRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Vote on a Polling Unit Result
-      tags:
-      - Results
-  /polling-unit-results/batch:
-    post:
-      consumes:
-      - application/json
-      description: Submit multiple election results (e.g. Presidential, Senate, House
-        of Reps) for a polling unit in a single request.
-      parameters:
-      - description: Batch Result Details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/polling_unit_results.SubmitBatchResultRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Submit Polling Unit Results in Batch
-      tags:
-      - Results
-  /polling-unit-results/final:
-    get:
-      description: Fetch the calculated final result for a given polling unit and
-        election
-      parameters:
-      - description: Election ID
-        in: query
-        name: election_id
-        required: true
-        type: integer
-      - description: Polling Unit ID
-        in: query
-        name: polling_unit_id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Get Polling Unit Final Result
-      tags:
-      - Results
   /polling-unit-updates:
     get:
       consumes:
@@ -8232,18 +6938,18 @@ paths:
       consumes:
       - application/json
       description: Populates mock consensus final results for all eligible polling
-        units of an election and triggers rollups
+        units of an election with optional party target vote shares and triggers rollups
       parameters:
       - description: Election ID
         in: path
         name: id
         required: true
         type: integer
-      - description: Simulation options
+      - description: Simulation options including optional party target vote shares
         in: body
         name: request
         schema:
-          $ref: '#/definitions/seedservice.SimulateElectionResultsRequest'
+          $ref: '#/definitions/seedhandler.SimulateElectionRequest'
       produces:
       - application/json
       responses:
@@ -8265,6 +6971,28 @@ paths:
       summary: Simulate election polling unit results
       tags:
       - Seed
+  /seed/flush-redis:
+    post:
+      consumes:
+      - application/json
+      description: Clears and flushes all application-managed keys from Redis cache
+        using pipelines
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Redis database cleared successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Failed to flush Redis
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Flush Redis Cache
+      tags:
+      - Seed
   /seed/users:
     post:
       consumes:
@@ -8276,9 +7004,7 @@ paths:
         name: request
         required: true
         schema:
-          items:
-            $ref: '#/definitions/seedservice.SeedUserRequest'
-          type: array
+          $ref: '#/definitions/seedservice.SeedUserRequest'
       produces:
       - application/json
       responses:
@@ -8936,6 +7662,75 @@ paths:
       summary: Get cities by state ID
       tags:
       - Bodies
+  /user_preferences:
+    get:
+      consumes:
+      - application/json
+      description: Fetches the sidebar state, pinned links, and theme for the authenticated
+        user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get user preferences
+      tags:
+      - User Preferences
+    put:
+      consumes:
+      - application/json
+      description: Updates the sidebar state, pinned links, or theme for the authenticated
+        user
+      parameters:
+      - description: Preferences Payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/usersservice.UpdateUserPreferencesParams'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update user preferences
+      tags:
+      - User Preferences
   /users:
     get:
       description: Fetches the list of all registered users with role filtering and
@@ -9514,29 +8309,6 @@ paths:
       summary: Update a ward
       tags:
       - Wards
-  /webhooks/monnify:
-    post:
-      consumes:
-      - application/json
-      description: Receives and processes Monnify payment notification events. Verifies
-        the HMAC-SHA512 signature, then credits the appropriate party wallet for SUCCESSFUL_TRANSACTION
-        events.
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Event processed
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Invalid signature or payload
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Monnify payment webhook
-      tags:
-      - Webhooks
 securityDefinitions:
   BearerAuth:
     description: Type "Bearer " followed by your access token.

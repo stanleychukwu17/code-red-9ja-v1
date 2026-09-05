@@ -25,12 +25,12 @@ import (
 )
 
 type PartiesService interface {
-	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error)
+	CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error)
 	GetPartyInfo(ctx context.Context, partyID int16) *queries.PartyWithVerifications
 	GetPartyBasicInfo(ctx context.Context, partyID int16) *queries.PartyBasicInfoWithVerifications
 	GetPartyByShortName(ctx context.Context, shortName string) (queries.Party, error)
 	ListParties(ctx context.Context) ([]queries.PartyWithVerifications, error)
-	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error)
+	UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error)
 	DeleteParty(ctx context.Context, id int64) error
 	UpdatePartyIsVerified(ctx context.Context, partyID int16, isVerified bool) error
 	// Wallet methods
@@ -130,6 +130,8 @@ type CreatePartyRequest struct {
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
 	DisplayOrder int32  `json:"display_order"`
+	ColorHex     string `json:"color_hex"`
+	DarkColorHex string `json:"dark_color_hex"`
 }
 
 type UpdatePartyRequest struct {
@@ -137,6 +139,8 @@ type UpdatePartyRequest struct {
 	Name         string `json:"name"`
 	Logo         string `json:"logo"`
 	DisplayOrder int32  `json:"display_order"`
+	ColorHex     string `json:"color_hex"`
+	DarkColorHex string `json:"dark_color_hex"`
 }
 
 // CreateParty godoc
@@ -175,7 +179,14 @@ func (h *Handler) CreateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 3. Create the party in the database and provision a wallet via Monnify
-	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder)
+	var colorHexPtr, darkColorHexPtr *string
+	if req.ColorHex != "" {
+		colorHexPtr = &req.ColorHex
+	}
+	if req.DarkColorHex != "" {
+		darkColorHexPtr = &req.DarkColorHex
+	}
+	party, err := h.partiesService.CreateParty(r.Context(), req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder, colorHexPtr, darkColorHexPtr)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to create party: "+err.Error())
 		return
@@ -321,6 +332,8 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 		Status                  string `json:"status"`
 		IsVerified              bool   `json:"is_verified"`
 		IsAcceptingApplications bool   `json:"is_accepting_applications"`
+		ColorHex                string `json:"color_hex,omitempty"`
+		DarkColorHex            string `json:"dark_color_hex,omitempty"`
 	}
 
 	var publicParties []PartyPublic
@@ -374,6 +387,8 @@ func (h *Handler) ListPartiesPublic(w http.ResponseWriter, r *http.Request) {
 			Status:                  p.Status,
 			IsVerified:              p.IsVerified.Bool,
 			IsAcceptingApplications: isAccepting,
+			ColorHex:                p.ColorHex.String,
+			DarkColorHex:            p.DarkColorHex.String,
 		})
 	}
 
@@ -532,7 +547,14 @@ func (h *Handler) UpdateParty(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// update the party info
-	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder)
+	var colorHexPtr, darkColorHexPtr *string
+	if req.ColorHex != "" {
+		colorHexPtr = &req.ColorHex
+	}
+	if req.DarkColorHex != "" {
+		darkColorHexPtr = &req.DarkColorHex
+	}
+	updatedParty, err := h.partiesService.UpdateParty(r.Context(), partyID, req.ShortName, req.Name, req.Logo, nil, req.DisplayOrder, colorHexPtr, darkColorHexPtr)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update party: "+err.Error())
 		return

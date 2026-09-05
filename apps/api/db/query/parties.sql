@@ -1,6 +1,6 @@
 -- name: CreateParty :one
-INSERT INTO parties (short_name, name, logo, logo_file_id, display_order)
-VALUES ($1, $2, $3, $4, $5)
+INSERT INTO parties (short_name, name, logo, logo_file_id, display_order, color_hex, dark_color_hex)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
 RETURNING *;
 
 -- name: GetPartyByID :one
@@ -10,7 +10,7 @@ SELECT * FROM parties WHERE id = $1;
 SELECT * FROM parties WHERE short_name = $1;
 
 -- name: GetPartyBasicInfo :one
-SELECT id, short_name, name, logo, is_verified FROM parties WHERE id = $1 LIMIT 1;
+SELECT id, short_name, name, logo, is_verified, color_hex, dark_color_hex FROM parties WHERE id = $1 LIMIT 1;
 
 -- name: ListParties :many
 SELECT * FROM parties
@@ -21,6 +21,7 @@ ORDER BY display_order ASC, name ASC;
 SELECT 
   id, short_name, name, logo, display_order, status, slots, is_verified,
   discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets,
+  color_hex, dark_color_hex,
   created_at, updated_at
 FROM parties
 WHERE 
@@ -45,8 +46,8 @@ ORDER BY display_order ASC, name ASC;
 
 -- name: UpdateParty :one
 UPDATE parties
-SET short_name = $1, name = $2, logo = $3, logo_file_id = $4, display_order = $5, updated_at = NOW()
-WHERE id = $6
+SET short_name = $1, name = $2, logo = $3, logo_file_id = $4, display_order = $5, color_hex = $6, dark_color_hex = $7, updated_at = NOW()
+WHERE id = $8
 RETURNING *;
 
 -- name: DeleteParty :exec

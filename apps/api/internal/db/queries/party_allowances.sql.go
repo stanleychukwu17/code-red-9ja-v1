@@ -14,7 +14,7 @@ UPDATE parties
 SET agent_payment_balance_kobo = agent_payment_balance_kobo + $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, created_at, updated_at
 `
 
 type DepositPartyAllowanceParams struct {
@@ -40,6 +40,8 @@ func (q *Queries) DepositPartyAllowance(ctx context.Context, arg DepositPartyAll
 		&i.AgentPaymentAllocationKobo,
 		&i.AgentAcquisitionTargets,
 		&i.AutoAcceptApplications,
+		&i.ColorHex,
+		&i.DarkColorHex,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -51,7 +53,7 @@ UPDATE parties
 SET agent_payment_allocation_kobo = $1,
     updated_at = NOW()
 WHERE id = $2
-RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, created_at, updated_at
+RETURNING id, short_name, name, logo, logo_file_id, display_order, status, slots, is_verified, discount_percentage, agent_payment_balance_kobo, agent_payment_allocation_kobo, agent_acquisition_targets, auto_accept_applications, color_hex, dark_color_hex, created_at, updated_at
 `
 
 type UpdatePartyAgentPaymentAllocationKoboParams struct {
@@ -77,6 +79,8 @@ func (q *Queries) UpdatePartyAgentPaymentAllocationKobo(ctx context.Context, arg
 		&i.AgentPaymentAllocationKobo,
 		&i.AgentAcquisitionTargets,
 		&i.AutoAcceptApplications,
+		&i.ColorHex,
+		&i.DarkColorHex,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
