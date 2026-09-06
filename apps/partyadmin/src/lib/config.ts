@@ -107,6 +107,8 @@ export const API_URL = {
   electionResultsPollingUnits: `${api}/elections/results/polling-units`,
   electionResultsScoped: `${api}/elections/results`,
   electionResultsBreakdown: `${api}/elections/results/breakdown`,
+  electionOperationsBreakdown: `${api}/elections/operations/breakdown`,
+  agentCoverageBreakdown: `${api}/elections/agent-coverage/breakdown`,
   electionStats: {
     singleGlobalStats: (id: number | string, partyId: number | string) => {
       return `${api}/election-groups/${id}/stats/parties/${partyId}`;

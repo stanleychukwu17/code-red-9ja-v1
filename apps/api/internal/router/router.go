@@ -25,6 +25,7 @@ import (
 	"free9ja/api/internal/utils"
 	"free9ja/api/internal/worker"
 
+	adminagentpaymentshandler "free9ja/api/internal/handler/admin_agent_payments"
 	agentearningshandler "free9ja/api/internal/handler/agent_earnings"
 	agentperformancehandler "free9ja/api/internal/handler/agent_performance"
 	authhandler "free9ja/api/internal/handler/auth"
@@ -188,7 +189,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	pollingUnitsHandler := pollingunitshandler.NewHandler(pollingUnitsService, q, utilsInstance)
 	officesHandler := officeshandler.NewHandler(officesService, utilsInstance)
 	electionGroupsHandler := electiongroupshandler.NewHandler(electionGroupsService, utilsInstance)
-	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, utilsInstance)
+	electionStatsHandler := electionstatshandler.NewHandler(electionStatsService, pool, utilsInstance)
 	electionsHandler := electionshandler.NewHandler(electionsService, usersService, utilsInstance)
 	usersHandler := usershandler.NewHandler(usersService, auditService, bodiesService, permissionsService, partiesService, utilsInstance)
 	pageVerificationsHandler := pageverificationshandler.NewHandler(pageVerificationsService, utilsInstance)
@@ -206,6 +207,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	agentEarningsHandler := agentearningshandler.NewHandler(q, earningsSvc, utilsInstance)
 	agentPerformanceHandler := agentperformancehandler.NewHandler(q, pool, usersService, utilsInstance, distributor)
 	referralsHandler := referralshandler.NewHandler(referralsService, utilsInstance)
+	adminAgentPaymentsHandler := adminagentpaymentshandler.NewHandler(pool, utilsInstance)
 
 	var filesHandler *fileshandler.Handler
 	if r2Svc != nil {
@@ -296,6 +298,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 	mainRouter.Get("/api/v1/elections/results/polling-units", electionResultsHandler.GetPollingUnitsWithResults)
 	mainRouter.Get("/api/v1/elections/results/breakdown", electionResultsHandler.GetElectoralUnitsBreakdown)
 	mainRouter.Get("/api/v1/elections/results/electoral-units", electionResultsHandler.GetElectoralUnitsBreakdown)
+	mainRouter.Get("/api/v1/elections/operations/breakdown", electionStatsHandler.GetOperationsBreakdown)
+	mainRouter.Get("/api/v1/elections/agent-coverage/breakdown", electionStatsHandler.GetAgentCoverageBreakdown)
 	mainRouter.Get("/api/v1/elections/results", electionResultsHandler.GetElectionFinalResult)
 
 	// political parties public routes
@@ -532,6 +536,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/election-groups/{id}/stats/federal-constituencies", electionStatsHandler.GetFederalConstituencyStats)
 		r.Get("/api/v1/election-groups/{id}/stats/senatorial-districts", electionStatsHandler.GetSenatorialDistrictStats)
 		r.Get("/api/v1/election-groups/{id}/stats/states", electionStatsHandler.GetStateStats)
+		r.Get("/api/v1/election-groups/{id}/stats/breakdown", electionStatsHandler.GetOperationsBreakdown)
 
 		// Single unit dedicated party stats endpoints
 		r.Get("/api/v1/election-groups/{id}/stats/parties/{party_id}", electionStatsHandler.GetSingleElectionGroupStats)
@@ -638,7 +643,23 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client, distributor 
 		r.Get("/api/v1/agent-earnings/assignment/{assignment_id}", agentEarningsHandler.GetEarningsByAssignment)
 		r.Patch("/api/v1/agent-earnings/{id}/approve", agentEarningsHandler.ApproveEarnings)
 		r.Patch("/api/v1/agent-earnings/{id}/mark-paid", agentEarningsHandler.MarkPaid)
+
+		// Admin Agent Payments routes
+		r.Get("/api/v1/admin/agent-payments/overview", adminAgentPaymentsHandler.GetOverview)
+		r.Get("/api/v1/admin/agent-payments/election-pay", adminAgentPaymentsHandler.ListElectionPay)
+		r.Post("/api/v1/admin/agent-payments/election-pay/{id}/pay", adminAgentPaymentsHandler.PayElectionEarnings)
+		r.Get("/api/v1/admin/agent-payments/referral-pay", adminAgentPaymentsHandler.ListReferralPay)
+		r.Post("/api/v1/admin/agent-payments/referral-pay/{id}/pay", adminAgentPaymentsHandler.PayReferralEarnings)
+		r.Post("/api/v1/admin/agent-payments/pay-all", adminAgentPaymentsHandler.PayAll)
 	})
+
+	// Also register on mainRouter for flexibility
+	mainRouter.Get("/api/v1/admin/agent-payments/overview", adminAgentPaymentsHandler.GetOverview)
+	mainRouter.Get("/api/v1/admin/agent-payments/election-pay", adminAgentPaymentsHandler.ListElectionPay)
+	mainRouter.Post("/api/v1/admin/agent-payments/election-pay/{id}/pay", adminAgentPaymentsHandler.PayElectionEarnings)
+	mainRouter.Get("/api/v1/admin/agent-payments/referral-pay", adminAgentPaymentsHandler.ListReferralPay)
+	mainRouter.Post("/api/v1/admin/agent-payments/referral-pay/{id}/pay", adminAgentPaymentsHandler.PayReferralEarnings)
+	mainRouter.Post("/api/v1/admin/agent-payments/pay-all", adminAgentPaymentsHandler.PayAll)
 
 	return mainRouter
 }

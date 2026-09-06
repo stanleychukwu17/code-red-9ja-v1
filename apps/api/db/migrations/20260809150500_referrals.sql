@@ -15,6 +15,13 @@ CREATE TABLE IF NOT EXISTS user_referrals (
   potential_earnings DECIMAL(15, 2) DEFAULT 0,
   earned_amount DECIMAL(15, 2) DEFAULT 0,
   
+  -- Admin payout workflow (mirroring agent_earnings)
+  status VARCHAR(20) NOT NULL DEFAULT 'pending'
+    CHECK (status IN ('pending', 'requested', 'approved', 'paid', 'disputed')),
+  requested_at TIMESTAMPTZ,
+  approved_at TIMESTAMPTZ,
+  paid_at TIMESTAMPTZ,
+  
   created_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   updated_at TIMESTAMPTZ DEFAULT NOW() NOT NULL,
   
@@ -22,6 +29,7 @@ CREATE TABLE IF NOT EXISTS user_referrals (
 );
 
 CREATE INDEX IF NOT EXISTS idx_user_referrals_user_party ON user_referrals(user_id, party_id);
+CREATE INDEX IF NOT EXISTS idx_user_referrals_status ON user_referrals(status);
 
 
 CREATE TABLE IF NOT EXISTS referrals (

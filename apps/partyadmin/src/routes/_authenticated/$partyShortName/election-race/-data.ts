@@ -19,4 +19,9 @@ export const getElectionRaceTabs = (
     label: "Electoral units",
     href: `${APP_URL.partyRoutes.electionRace(partyShortName)}/electoral-units`,
   },
+  {
+    id: "operations",
+    label: "Operations",
+    href: `${APP_URL.partyRoutes.electionRace(partyShortName)}/operations`,
+  },
 ];

@@ -21,6 +21,7 @@ import BrickIcon from "@repo/ui/icons/navbar/brick-icon";
 import BrickSolidIcon from "@repo/ui/icons/navbar/brick-solid-icon";
 import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
 import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
+import { Coins } from "lucide-react";
 
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -109,6 +110,13 @@ const APP_SIDEBAR_ITEMS: AppSidebarItem[] = [
     icon: <BalonIcon className={ICON_CLASS} />,
     selectedIcon: <BalonSolidIcon className={SELECTED_ICON_CLASS} />,
     href: APP_URL.marketing,
+  },
+  {
+    id: "agent-payments",
+    label: "Agent Payments",
+    icon: <Coins className={ICON_CLASS} />,
+    selectedIcon: <Coins className={SELECTED_ICON_CLASS} />,
+    href: APP_URL.agentPayments.root,
   },
   // {
   //   id: "notifications",

@@ -17,7 +17,7 @@ export function TileHeader({ children, className }: TileHeaderProps) {
   return (
     <div
       className={cn(
-        "h-10 border-y border-border flex items-center justify-between gap-5 md:gap-20 px-3 text-[15px] sticky top-0 bg-background/80 backdrop-blur-xl",
+        "min-w-max h-10 border-y border-border flex items-center justify-between gap-5 md:gap-20 px-3 text-[15px] sticky top-0 bg-background/80 backdrop-blur-xl",
         className,
       )}
     >
@@ -31,12 +31,17 @@ export type TileRowProps = React.HTMLAttributes<HTMLDivElement> & {
   className?: string;
   onClick?: () => void;
 };
-export function TileRow({ children, className, onClick, ...props }: TileRowProps) {
+export function TileRow({
+  children,
+  className,
+  onClick,
+  ...props
+}: TileRowProps) {
   return (
     <div
       onClick={onClick}
       className={cn(
-        "h-14 flex items-center justify-between gap-5 md:gap-20 px-3 hover:bg-c-5 duration-200 cursor-pointer",
+        "min-w-max h-14 flex items-center justify-between gap-5 md:gap-20 px-3 hover:bg-c-5 duration-200 cursor-pointer",
         className,
       )}
       {...props}
