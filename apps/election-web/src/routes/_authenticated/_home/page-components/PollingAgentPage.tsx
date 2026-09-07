@@ -16,6 +16,7 @@ import PlusIcon from "@repo/ui/icons/plus-icon";
 import ReportIcon from "@repo/ui/icons/report-icon";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { HomeTabs } from "../../../../components/Tabs";
 import { ApplicationsCard } from "../components/ApplicationsCard";
 import { ReferralCard } from "../components/ReferralCard";
@@ -48,6 +49,33 @@ export function PollingAgentPage() {
     selectedElection,
     selectedAssignment: currentPollingUnitAssignment,
   } = useAppContext();
+
+  const handleRequestPayout = async () => {
+    if (!currentPollingUnitAssignment?.election_group_id) {
+      toast.error("Election group assignment not found");
+      return;
+    }
+    try {
+      const response = await fetch("/api/v1/agent-earnings/request-payout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
+        },
+        body: JSON.stringify({
+          election_group_id: currentPollingUnitAssignment.election_group_id,
+          role_type: currentPollingUnitAssignment.role_type || "polling_agent",
+        }),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.message || "Failed to submit payout request");
+      }
+      toast.success("Payout request submitted successfully! Your party admin will review your duties.");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to request payout");
+    }
+  };
 
   const resultsUploaded = !!(
     currentPollingUnitAssignment?.results_submitted_count &&
@@ -337,8 +365,7 @@ export function PollingAgentPage() {
                 onClick={() => navigate({ to: "/upload-result" })}
               />
               <RequestPayoutCard
-                // onClick={() => navigate({ to: "/request-payout" })}
-                onClick={() => null}
+                onClick={handleRequestPayout}
               />
             </>
           )}

@@ -33,6 +33,7 @@ export async function apiFetch(
     headers,
   };
 
+  // sends the request to the backend api
   const response = await fetch(input, requestInit);
 
   // If 401 Unauthorized occurs and this isn't already a retry attempt

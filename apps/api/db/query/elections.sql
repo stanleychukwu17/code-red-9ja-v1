@@ -29,6 +29,12 @@ UPDATE elections
 SET election_date = $1, updated_at = NOW()
 WHERE election_group_id = $2;
 
+-- name: UpdateElectionContestingParties :one
+UPDATE elections
+SET contesting_parties = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING *;
+
 -- name: DeleteElectionInstance :exec
 DELETE FROM elections WHERE id = $1;
 
@@ -45,18 +51,19 @@ SELECT
     ec.id,
     ec.election_id,
     ec.candidate_id,
-    ec.votes_count,
     u.first_name,
     u.last_name,
     u.avatar,
     u.party_id,
     p.short_name AS party_short_name,
-    p.logo AS party_logo
+    p.logo AS party_logo,
+    p.color_hex AS party_color_hex,
+    p.dark_color_hex AS party_dark_color_hex
 FROM election_candidates ec
 JOIN users u ON ec.candidate_id = u.id
 LEFT JOIN parties p ON u.party_id = p.id
 WHERE ec.election_id = $1
-ORDER BY ec.votes_count DESC, ec.id DESC;
+ORDER BY ec.id ASC;
 
 -- name: DeleteElectionCandidatesForElection :exec
 DELETE FROM election_candidates WHERE election_id = $1;

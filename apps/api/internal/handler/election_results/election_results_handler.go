@@ -1,14 +1,19 @@
 package electionresultshandler
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"free9ja/api/internal/utils"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -50,6 +55,22 @@ func parseQueryInt64(r *http.Request, key string) (int64, bool) {
 	return v, err == nil
 }
 
+func parseAnyInt64(r *http.Request, keys ...string) (int64, bool) {
+	for _, key := range keys {
+		if val := r.URL.Query().Get(key); val != "" {
+			if v, err := strconv.ParseInt(val, 10, 64); err == nil && v > 0 {
+				return v, true
+			}
+		}
+		if val := chi.URLParam(r, key); val != "" {
+			if v, err := strconv.ParseInt(val, 10, 64); err == nil && v > 0 {
+				return v, true
+			}
+		}
+	}
+	return 0, false
+}
+
 // GetStatesWithResults returns all Nigerian states with their election_state_final_result for the given election_id.
 // @Summary Get states with results
 // @Description Returns all Nigerian states with their election_state_final_result for the given election_id.
@@ -83,8 +104,8 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 			fr.valid_votes,
 			fr.rejected_votes,
 			fr.candidate_results,
-			fr.lgas_counted,
-			fr.total_lgas,
+			fr.senatorial_districts_counted,
+			fr.total_senatorial_districts,
 			fr.created_at,
 			fr.updated_at
 		FROM c_states s
@@ -100,18 +121,18 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 	defer rows.Close()
 
 	type StateFR struct {
-		ID               int64            `json:"id"`
-		ElectionID       int64            `json:"election_id"`
-		StateID          int16            `json:"state_id"`
-		AccreditedVoters int32            `json:"accredited_voters"`
-		VotesCast        int32            `json:"votes_cast"`
-		ValidVotes       int32            `json:"valid_votes"`
-		RejectedVotes    int32            `json:"rejected_votes"`
-		CandidateResults json.RawMessage  `json:"candidate_results"`
-		LgasCounted      int32            `json:"lgas_counted"`
-		TotalLgas        int32            `json:"total_lgas"`
-		CreatedAt        *time.Time       `json:"created_at"`
-		UpdatedAt        *time.Time       `json:"updated_at"`
+		ID                         int64            `json:"id"`
+		ElectionID                 int64            `json:"election_id"`
+		StateID                    int16            `json:"state_id"`
+		AccreditedVoters           int32            `json:"accredited_voters"`
+		VotesCast                  int32            `json:"votes_cast"`
+		ValidVotes                 int32            `json:"valid_votes"`
+		RejectedVotes              int32            `json:"rejected_votes"`
+		CandidateResults           json.RawMessage  `json:"candidate_results"`
+		SenatorialDistrictsCounted int32            `json:"senatorial_districts_counted"`
+		TotalSenatorialDistricts   int32            `json:"total_senatorial_districts"`
+		CreatedAt                  *time.Time       `json:"created_at"`
+		UpdatedAt                  *time.Time       `json:"updated_at"`
 	}
 	type Row struct {
 		ID               int16    `json:"id"`
@@ -129,14 +150,14 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 			frStateID          *int16
 			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
 			frCandidateResults []byte
-			frLgasCounted, frTotalLgas *int32
+			frSDCounted, frTotalSD *int32
 			frCreatedAt, frUpdatedAt   *time.Time
 		)
 		if err := rows.Scan(
 			&sID, &sName,
 			&frID, &frElectionID, &frStateID,
 			&frAccredited, &frVotesCast, &frValidVotes, &frRejectedVotes,
-			&frCandidateResults, &frLgasCounted, &frTotalLgas,
+			&frCandidateResults, &frSDCounted, &frTotalSD,
 			&frCreatedAt, &frUpdatedAt,
 		); err != nil {
 			h.utils.RespondError(w, http.StatusInternalServerError, "scan error: "+err.Error())
@@ -154,7 +175,7 @@ func (h *Handler) GetStatesWithResults(w http.ResponseWriter, r *http.Request) {
 				AccreditedVoters: *frAccredited, VotesCast: *frVotesCast,
 				ValidVotes: *frValidVotes, RejectedVotes: *frRejectedVotes,
 				CandidateResults: cr,
-				LgasCounted: *frLgasCounted, TotalLgas: *frTotalLgas,
+				SenatorialDistrictsCounted: *frSDCounted, TotalSenatorialDistricts: *frTotalSD,
 				CreatedAt: frCreatedAt, UpdatedAt: frUpdatedAt,
 			}
 		}
@@ -428,6 +449,216 @@ func (h *Handler) GetFederalConstituenciesWithResults(w http.ResponseWriter, r *
 	h.utils.RespondSuccess(w, http.StatusOK, "Federal constituencies with results fetched successfully", map[string]interface{}{
 		"federal_constituencies": results,
 		"meta":                   map[string]interface{}{"has_more": hasMore, "next_cursor": nextCursor},
+	})
+}
+
+// GetStateConstituenciesWithResults returns state assembly constituencies with their election_state_constituency_final_result.
+// @Summary Get state constituencies with results
+// @Description Returns state assembly constituencies with their election_state_constituency_final_result.
+// @Tags ElectionResults
+// @Accept json
+// @Produce json
+// @Param election_id query int true "Election ID"
+// @Param state_id query int false "State ID"
+// @Param federal_constituency_id query int false "Federal Constituency ID"
+// @Param senatorial_district_id query int false "Senatorial District ID"
+// @Param lga_id query int false "LGA ID"
+// @Param limit query int false "Limit"
+// @Param cursor query int false "Cursor"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /elections/results/state-constituencies [get]
+func (h *Handler) GetStateConstituenciesWithResults(w http.ResponseWriter, r *http.Request) {
+	electionID, ok := parseQueryInt64(r, "election_id")
+	if !ok {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_id is required")
+		return
+	}
+
+	stateID, hasState := parseQueryInt64(r, "state_id")
+	fedConstID, hasFedConst := parseQueryInt64(r, "federal_constituency_id")
+	senatorialID, hasSenatorial := parseQueryInt64(r, "senatorial_district_id")
+	lgaID, hasLGA := parseQueryInt64(r, "lga_id")
+
+	if !hasState && !hasFedConst && !hasSenatorial && !hasLGA {
+		h.utils.RespondError(w, http.StatusBadRequest, "state_id, federal_constituency_id, senatorial_district_id, or lga_id is required")
+		return
+	}
+
+	limit, cursor := parsePaginationParams(r)
+
+	var filterClauses []string
+	var args []interface{}
+	args = append(args, electionID) // $1
+
+	if hasState {
+		args = append(args, stateID)
+		filterClauses = append(filterClauses, fmt.Sprintf("sc.state_id = $%d", len(args)))
+	}
+	if hasFedConst {
+		args = append(args, fedConstID)
+		filterClauses = append(filterClauses, fmt.Sprintf("sc.federal_constituency_id = $%d", len(args)))
+	}
+	if hasSenatorial {
+		args = append(args, senatorialID)
+		filterClauses = append(filterClauses, fmt.Sprintf("sc.senatorial_district_id = $%d", len(args)))
+	}
+	if hasLGA {
+		args = append(args, lgaID)
+		filterClauses = append(filterClauses, fmt.Sprintf("sc.lga_id = $%d", len(args)))
+	}
+
+	args = append(args, cursor)
+	cursorParam := len(args)
+	args = append(args, limit)
+	limitParam := len(args)
+
+	whereSQL := strings.Join(filterClauses, " AND ")
+
+	query := fmt.Sprintf(`
+		SELECT
+			sc.id, sc.name, sc.code, sc.lga_id, sc.lga_name, sc.state_id, sc.state_name,
+			sc.senatorial_district_id, sc.federal_constituency_id,
+			fr.id, fr.election_id, fr.state_constituency_id, fr.state_id,
+			fr.accredited_voters, fr.votes_cast, fr.valid_votes, fr.rejected_votes,
+			fr.candidate_results, fr.wards_counted, fr.total_wards, fr.created_at, fr.updated_at
+		FROM state_constituencies sc
+		LEFT JOIN election_state_constituency_final_result fr
+			ON fr.state_constituency_id = sc.id AND fr.election_id = $1
+		WHERE %s AND sc.id < $%d
+		ORDER BY sc.id DESC
+		LIMIT $%d
+	`, whereSQL, cursorParam, limitParam)
+
+	rows, err := h.pool.Query(r.Context(), query, args...)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to fetch state constituencies: "+err.Error())
+		return
+	}
+	defer rows.Close()
+
+	type SCFR struct {
+		ID                  int64           `json:"id"`
+		ElectionID          int64           `json:"election_id"`
+		StateConstituencyID int32           `json:"state_constituency_id"`
+		StateID             *int16          `json:"state_id"`
+		AccreditedVoters    int32           `json:"accredited_voters"`
+		VotesCast           int32           `json:"votes_cast"`
+		ValidVotes          int32           `json:"valid_votes"`
+		RejectedVotes       int32           `json:"rejected_votes"`
+		CandidateResults    json.RawMessage `json:"candidate_results"`
+		WardsCounted        int32           `json:"wards_counted"`
+		TotalWards          int32           `json:"total_wards"`
+		CreatedAt           *time.Time      `json:"created_at"`
+		UpdatedAt           *time.Time      `json:"updated_at"`
+	}
+	type Row struct {
+		ID                                   int32   `json:"id"`
+		Name                                 string  `json:"name"`
+		Code                                 string  `json:"code"`
+		LgaID                                int32   `json:"lga_id"`
+		LgaName                              string  `json:"lga_name"`
+		StateID                              int32   `json:"state_id"`
+		StateName                            string  `json:"state_name"`
+		SenatorialDistrictID                 *int32  `json:"senatorial_district_id,omitempty"`
+		FederalConstituencyID                *int32  `json:"federal_constituency_id,omitempty"`
+		ElectionStateConstituencyFinalResult *SCFR   `json:"election_state_constituency_final_result"`
+	}
+
+	var results []Row
+	var lastID int32
+	for rows.Next() {
+		var (
+			scID        int32
+			scName      string
+			scCode      *string
+			scLgaID     int32
+			scLgaName   string
+			scStateID   int32
+			scStateName string
+			scSDID      *int32
+			scFCID      *int32
+			frID, frElectionID *int64
+			frSCID             *int32
+			frStateID          *int16
+			frAccredited, frVotesCast, frValidVotes, frRejectedVotes *int32
+			frCandidateResults                                         []byte
+			frWardsCounted, frTotalWards                               *int32
+			frCreatedAt, frUpdatedAt                                   *time.Time
+		)
+		if err := rows.Scan(
+			&scID, &scName, &scCode, &scLgaID, &scLgaName, &scStateID, &scStateName,
+			&scSDID, &scFCID,
+			&frID, &frElectionID, &frSCID, &frStateID,
+			&frAccredited, &frVotesCast, &frValidVotes, &frRejectedVotes,
+			&frCandidateResults, &frWardsCounted, &frTotalWards, &frCreatedAt, &frUpdatedAt,
+		); err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "scan error: "+err.Error())
+			return
+		}
+		lastID = scID
+		codeStr := ""
+		if scCode != nil {
+			codeStr = *scCode
+		}
+		row := Row{
+			ID:                   scID,
+			Name:                 scName,
+			Code:                 codeStr,
+			LgaID:                scLgaID,
+			LgaName:              scLgaName,
+			StateID:              scStateID,
+			StateName:            scStateName,
+			SenatorialDistrictID: scSDID,
+			FederalConstituencyID: scFCID,
+		}
+		if frID != nil {
+			cr := json.RawMessage("[]")
+			if frCandidateResults != nil {
+				cr = json.RawMessage(frCandidateResults)
+			}
+			wc := int32(0)
+			if frWardsCounted != nil {
+				wc = *frWardsCounted
+			}
+			tw := int32(0)
+			if frTotalWards != nil {
+				tw = *frTotalWards
+			}
+			row.ElectionStateConstituencyFinalResult = &SCFR{
+				ID:                  *frID,
+				ElectionID:          *frElectionID,
+				StateConstituencyID: *frSCID,
+				StateID:             frStateID,
+				AccreditedVoters:    *frAccredited,
+				VotesCast:           *frVotesCast,
+				ValidVotes:          *frValidVotes,
+				RejectedVotes:       *frRejectedVotes,
+				CandidateResults:    cr,
+				WardsCounted:        wc,
+				TotalWards:          tw,
+				CreatedAt:           frCreatedAt,
+				UpdatedAt:           frUpdatedAt,
+			}
+		}
+		results = append(results, row)
+	}
+	if rows.Err() != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "rows error: "+rows.Err().Error())
+		return
+	}
+	if results == nil {
+		results = []Row{}
+	}
+	hasMore := len(results) == limit
+	nextCursor := ""
+	if hasMore {
+		nextCursor = strconv.FormatInt(int64(lastID), 10)
+	}
+	h.utils.RespondSuccess(w, http.StatusOK, "State constituencies with results fetched successfully", map[string]interface{}{
+		"state_constituencies": results,
+		"meta":                 map[string]interface{}{"has_more": hasMore, "next_cursor": nextCursor},
 	})
 }
 
@@ -834,6 +1065,270 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 // @Accept json
 // @Produce json
 // @Param election_id query int true "Election ID"
+type CandidateDetail struct {
+	ID     int64  `json:"id"`
+	Name   string `json:"name"`
+	Avatar string `json:"avatar"`
+}
+
+type PartyDetail struct {
+	ID           int16  `json:"id"`
+	ShortName    string `json:"short_name"`
+	Name         string `json:"name"`
+	Logo         string `json:"logo"`
+	ColorHex     string `json:"color_hex,omitempty"`
+	DarkColorHex string `json:"dark_color_hex,omitempty"`
+}
+
+func (h *Handler) loadPartyAndCandidateMetadata(ctx context.Context, electionID int64) (map[string]PartyDetail, []PartyDetail, map[string]CandidateDetail, []string) {
+	partiesMap := make(map[string]PartyDetail)
+	var allParties []PartyDetail
+
+	pRows, err := h.pool.Query(ctx, "SELECT id, short_name, name, COALESCE(logo, ''), COALESCE(color_hex, ''), COALESCE(dark_color_hex, '') FROM parties WHERE status = 'active' ORDER BY display_order ASC, id ASC")
+	if err == nil {
+		defer pRows.Close()
+		for pRows.Next() {
+			var p PartyDetail
+			if err := pRows.Scan(&p.ID, &p.ShortName, &p.Name, &p.Logo, &p.ColorHex, &p.DarkColorHex); err == nil {
+				partiesMap[strings.ToUpper(strings.TrimSpace(p.ShortName))] = p
+				allParties = append(allParties, p)
+			}
+		}
+	}
+
+	candidatesMap := make(map[string]CandidateDetail)
+	cRows, err := h.pool.Query(ctx, `
+		SELECT 
+			COALESCE(NULLIF(ec.party_short_name, 'N/A'), p.short_name, '') AS party_short_name,
+			u.id,
+			TRIM(CONCAT(COALESCE(u.first_name, ''), ' ', COALESCE(u.last_name, ''))) AS name,
+			COALESCE(u.avatar, '') AS avatar
+		FROM election_candidates ec
+		JOIN users u ON u.id = ec.candidate_id
+		LEFT JOIN parties p ON p.id = ec.party_id
+		WHERE ec.election_id = $1
+	`, electionID)
+	if err == nil {
+		defer cRows.Close()
+		for cRows.Next() {
+			var partyShort string
+			var c CandidateDetail
+			if err := cRows.Scan(&partyShort, &c.ID, &c.Name, &c.Avatar); err == nil {
+				candidatesMap[strings.ToUpper(strings.TrimSpace(partyShort))] = c
+			}
+		}
+	}
+
+	var contestingPartyShortNames []string
+	var contestingJSON []byte
+	if err := h.pool.QueryRow(ctx, "SELECT contesting_parties FROM elections WHERE id = $1", electionID).Scan(&contestingJSON); err == nil && len(contestingJSON) > 0 {
+		var rawList []map[string]interface{}
+		if err := json.Unmarshal(contestingJSON, &rawList); err == nil {
+			for _, p := range rawList {
+				sn, _ := p["party_short_name"].(string)
+				if sn == "" {
+					sn, _ = p["short_name"].(string)
+				}
+				cleanSN := strings.TrimSpace(sn)
+				if cleanSN != "" {
+					contestingPartyShortNames = append(contestingPartyShortNames, cleanSN)
+					pUpper := strings.ToUpper(cleanSN)
+					if existing, found := partiesMap[pUpper]; !found || existing.Name == "" || existing.Logo == "" {
+						var pID int16
+						if idVal, ok := p["party_id"].(float64); ok {
+							pID = int16(idVal)
+						} else if idVal, ok := p["id"].(float64); ok {
+							pID = int16(idVal)
+						} else if found {
+							pID = existing.ID
+						}
+						pName, _ := p["party_name"].(string)
+						if pName == "" {
+							pName, _ = p["name"].(string)
+						}
+						if pName == "" && found {
+							pName = existing.Name
+						}
+						pLogo, _ := p["party_logo"].(string)
+						if pLogo == "" {
+							pLogo, _ = p["logo"].(string)
+						}
+						if pLogo == "" && found {
+							pLogo = existing.Logo
+						}
+						pColor, _ := p["color_hex"].(string)
+						if pColor == "" && found {
+							pColor = existing.ColorHex
+						}
+						pDarkColor, _ := p["dark_color_hex"].(string)
+						if pDarkColor == "" && found {
+							pDarkColor = existing.DarkColorHex
+						}
+						partiesMap[pUpper] = PartyDetail{
+							ID:           pID,
+							ShortName:    cleanSN,
+							Name:         pName,
+							Logo:         pLogo,
+							ColorHex:     pColor,
+							DarkColorHex: pDarkColor,
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if len(contestingPartyShortNames) == 0 {
+		for _, p := range allParties {
+			contestingPartyShortNames = append(contestingPartyShortNames, p.ShortName)
+		}
+	}
+
+	return partiesMap, allParties, candidatesMap, contestingPartyShortNames
+}
+
+func buildDefaultCandidateResults(
+	contestingPartyShortNames []string,
+	partiesMap map[string]PartyDetail,
+	candidatesMap map[string]CandidateDetail,
+) []map[string]interface{} {
+	list := make([]map[string]interface{}, 0, len(contestingPartyShortNames))
+	seen := make(map[string]bool)
+
+	for _, pShort := range contestingPartyShortNames {
+		pUpper := strings.ToUpper(strings.TrimSpace(pShort))
+		if pUpper == "" || seen[pUpper] {
+			continue
+		}
+		seen[pUpper] = true
+
+		var candPtr *CandidateDetail
+		if cand, ok := candidatesMap[pUpper]; ok {
+			candCopy := cand
+			candPtr = &candCopy
+		}
+
+		var partyPtr *PartyDetail
+		var colorHex, darkColorHex string
+		if pDetail, ok := partiesMap[pUpper]; ok {
+			pCopy := pDetail
+			partyPtr = &pCopy
+			colorHex = pDetail.ColorHex
+			darkColorHex = pDetail.DarkColorHex
+		} else {
+			partyPtr = &PartyDetail{
+				ShortName: pShort,
+				Name:      pShort,
+			}
+		}
+
+		var candName, candAvatar string
+		if candPtr != nil && candPtr.Name != "" {
+			candName = candPtr.Name
+			candAvatar = candPtr.Avatar
+			if candAvatar == "" && partyPtr != nil {
+				candAvatar = partyPtr.Logo
+			}
+		} else if partyPtr != nil {
+			candName = partyPtr.Name
+			candAvatar = partyPtr.Logo
+		}
+
+		item := map[string]interface{}{
+			"party_short_name":                     pShort,
+			"party_name":                           partyPtr.Name,
+			"party_logo":                           partyPtr.Logo,
+			"candidate_name":                       candName,
+			"candidate_avatar":                     candAvatar,
+			"color_hex":                            colorHex,
+			"dark_color_hex":                       darkColorHex,
+			"vote_count":                           0,
+			"vote_share":                           0.0,
+			"polling_units_winning_count":          0,
+			"wards_winning_count":                  0,
+			"lgas_winning_count":                   0,
+			"state_constituency_winning_count":     0,
+			"federal_constituencies_winning_count": 0,
+			"senatorial_districts_winning_count":   0,
+			"states_winning_count":                 0,
+			"candidate":                            candPtr,
+			"party":                                partyPtr,
+		}
+		list = append(list, item)
+	}
+	return list
+}
+
+func enrichCandidateList(
+	raw []byte,
+	partiesMap map[string]PartyDetail,
+	candidatesMap map[string]CandidateDetail,
+) []map[string]interface{} {
+	if len(raw) == 0 {
+		return nil
+	}
+	var items []map[string]interface{}
+	if err := json.Unmarshal(raw, &items); err != nil {
+		return nil
+	}
+	if len(items) == 0 {
+		return nil
+	}
+
+	for _, item := range items {
+		partyShortName, _ := item["party_short_name"].(string)
+		pUpper := strings.ToUpper(strings.TrimSpace(partyShortName))
+
+		var candPtr *CandidateDetail
+		if cand, ok := candidatesMap[pUpper]; ok {
+			candCopy := cand
+			candPtr = &candCopy
+		}
+		item["candidate"] = candPtr
+
+		var partyPtr *PartyDetail
+		if pDetail, ok := partiesMap[pUpper]; ok {
+			pCopy := pDetail
+			partyPtr = &pCopy
+			item["color_hex"] = pDetail.ColorHex
+			item["dark_color_hex"] = pDetail.DarkColorHex
+		} else if partyShortName != "" {
+			partyPtr = &PartyDetail{
+				ShortName: partyShortName,
+				Name:      partyShortName,
+			}
+		}
+		item["party"] = partyPtr
+
+		var candName, candAvatar string
+		if candPtr != nil && candPtr.Name != "" {
+			candName = candPtr.Name
+			candAvatar = candPtr.Avatar
+			if candAvatar == "" && partyPtr != nil {
+				candAvatar = partyPtr.Logo
+			}
+		} else if partyPtr != nil {
+			candName = partyPtr.Name
+			candAvatar = partyPtr.Logo
+		}
+		item["candidate_name"] = candName
+		item["candidate_avatar"] = candAvatar
+		if partyPtr != nil {
+			item["party_name"] = partyPtr.Name
+			item["party_logo"] = partyPtr.Logo
+		}
+	}
+	return items
+}
+
+// GetElectionFinalResult returns the final result for a specific scope (Polling Unit, Ward, LGA, State, etc.).
+// @Summary Get scoped final result
+// @Description Returns the specific final result for the provided scope parameters.
+// @Tags ElectionResults
+// @Accept json
+// @Produce json
+// @Param election_id query int true "Election ID"
+// @Param polling_unit_id query int false "Polling Unit ID"
 // @Param ward_id query int false "Ward ID"
 // @Param state_constituency_id query int false "State Constituency ID"
 // @Param lga_id query int false "LGA ID"
@@ -845,23 +1340,27 @@ func (h *Handler) GetPollingUnitsWithResults(w http.ResponseWriter, r *http.Requ
 // @Failure 500 {object} map[string]interface{}
 // @Router /elections/results [get]
 func (h *Handler) GetElectionFinalResult(w http.ResponseWriter, r *http.Request) {
-	electionID, ok := parseQueryInt64(r, "election_id")
+	electionID, ok := parseAnyInt64(r, "election_id", "electionId", "election")
 	if !ok {
 		h.utils.RespondError(w, http.StatusBadRequest, "election_id is required")
 		return
 	}
 
-	wardID, _ := parseQueryInt64(r, "ward_id")
-	stateConstID, _ := parseQueryInt64(r, "state_constituency_id")
-	lgaID, _ := parseQueryInt64(r, "lga_id")
-	fedConstID, _ := parseQueryInt64(r, "federal_constituency_id")
-	senatorialID, _ := parseQueryInt64(r, "senatorial_district_id")
-	stateID, _ := parseQueryInt64(r, "state_id")
+	puID, _ := parseAnyInt64(r, "polling_unit_id", "polling_unit", "pollingUnitId", "pu_id", "pu")
+	wardID, _ := parseAnyInt64(r, "ward_id", "ward", "wardId")
+	stateConstID, _ := parseAnyInt64(r, "state_constituency_id", "state_constituency", "stateConstituencyId", "state_assembly_constituency_id")
+	lgaID, _ := parseAnyInt64(r, "lga_id", "lga", "lgaId")
+	fedConstID, _ := parseAnyInt64(r, "federal_constituency_id", "federal_constituency", "federalConstituencyId", "fed_const_id")
+	senatorialID, _ := parseAnyInt64(r, "senatorial_district_id", "senatorial_district", "senatorialDistrictId", "district_id", "district")
+	stateID, _ := parseAnyInt64(r, "state_id", "state", "stateId")
 
 	var query string
 	var args []interface{}
 
-	if wardID > 0 {
+	if puID > 0 {
+		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_polling_unit_final_results WHERE election_id = $1 AND polling_unit_id = $2 LIMIT 1"
+		args = []interface{}{electionID, puID}
+	} else if wardID > 0 {
 		query = "SELECT id, election_id, accredited_voters, votes_cast, valid_votes, rejected_votes, candidate_results, candidate_results_live FROM election_ward_final_result WHERE election_id = $1 AND ward_id = $2 LIMIT 1"
 		args = []interface{}{electionID, wardID}
 	} else if stateConstID > 0 {
@@ -884,41 +1383,460 @@ func (h *Handler) GetElectionFinalResult(w http.ResponseWriter, r *http.Request)
 		args = []interface{}{electionID}
 	}
 
-	row := h.pool.QueryRow(r.Context(), query, args...)
+	partiesMap, _, candidatesMap, contestingPartyShortNames := h.loadPartyAndCandidateMetadata(r.Context(), electionID)
 
-	type ScopedFR struct {
-		ID                   int64           `json:"id"`
-		ElectionID           int64           `json:"election_id"`
-		AccreditedVoters     int32           `json:"accredited_voters"`
-		VotesCast            int32           `json:"votes_cast"`
-		ValidVotes           int32           `json:"valid_votes"`
-		RejectedVotes        int32           `json:"rejected_votes"`
-		CandidateResults     json.RawMessage `json:"candidate_results"`
-		CandidateResultsLive json.RawMessage `json:"candidate_results_live"`
-	}
+	var (
+		frID, frElectionID                                       int64
+		frAccredited, frVotesCast, frValidVotes, frRejectedVotes int32
+		cr, crl                                                  []byte
+	)
 
-	var fr ScopedFR
-	var cr, crl []byte
-	err := row.Scan(&fr.ID, &fr.ElectionID, &fr.AccreditedVoters, &fr.VotesCast, &fr.ValidVotes, &fr.RejectedVotes, &cr, &crl)
+	err := h.pool.QueryRow(r.Context(), query, args...).Scan(
+		&frID, &frElectionID,
+		&frAccredited, &frVotesCast, &frValidVotes, &frRejectedVotes,
+		&cr, &crl,
+	)
+
 	if err != nil {
-		// return empty object if no result found
-		h.utils.RespondSuccess(w, http.StatusOK, "No final result found for scope", map[string]interface{}{
-			"final_result": nil,
+		// No result found in DB for this scope: populate 0-vote entries for all contesting parties
+		defaultList := buildDefaultCandidateResults(contestingPartyShortNames, partiesMap, candidatesMap)
+		h.utils.RespondSuccess(w, http.StatusOK, "Final result fetched successfully", map[string]interface{}{
+			"final_result": map[string]interface{}{
+				"id":                     0,
+				"election_id":            electionID,
+				"accredited_voters":      0,
+				"votes_cast":             0,
+				"valid_votes":            0,
+				"rejected_votes":         0,
+				"candidate_results":      defaultList,
+				"candidate_results_live": defaultList,
+			},
 		})
 		return
 	}
-	
-	fr.CandidateResults = json.RawMessage("[]")
-	if cr != nil {
-		fr.CandidateResults = json.RawMessage(cr)
+
+	enrichedCR := enrichCandidateList(cr, partiesMap, candidatesMap)
+	enrichedCRL := enrichCandidateList(crl, partiesMap, candidatesMap)
+
+	// Populate candidate_results with 0-vote contesting/active parties if empty
+	if len(enrichedCR) == 0 {
+		enrichedCR = buildDefaultCandidateResults(contestingPartyShortNames, partiesMap, candidatesMap)
 	}
-	fr.CandidateResultsLive = json.RawMessage("[]")
-	if crl != nil {
-		fr.CandidateResultsLive = json.RawMessage(crl)
+	// Populate candidate_results_live with 0-vote contesting/active parties if empty
+	if len(enrichedCRL) == 0 {
+		enrichedCRL = buildDefaultCandidateResults(contestingPartyShortNames, partiesMap, candidatesMap)
 	}
 
 	h.utils.RespondSuccess(w, http.StatusOK, "Final result fetched successfully", map[string]interface{}{
-		"final_result": fr,
+		"final_result": map[string]interface{}{
+			"id":                     frID,
+			"election_id":            frElectionID,
+			"accredited_voters":      frAccredited,
+			"votes_cast":             frVotesCast,
+			"valid_votes":            frValidVotes,
+			"rejected_votes":         frRejectedVotes,
+			"candidate_results":      enrichedCR,
+			"candidate_results_live": enrichedCRL,
+		},
+	})
+}
+
+func finalizeCandidateResults(
+	raw []byte,
+	validVotes int32,
+	partiesMap map[string]PartyDetail,
+	candidatesMap map[string]CandidateDetail,
+	contestingPartyShortNames []string,
+) []map[string]interface{} {
+	enriched := enrichCandidateList(raw, partiesMap, candidatesMap)
+	if len(enriched) == 0 {
+		enriched = buildDefaultCandidateResults(contestingPartyShortNames, partiesMap, candidatesMap)
+	}
+
+	totalVotes := float64(validVotes)
+	if totalVotes <= 0 {
+		for _, item := range enriched {
+			if v, ok := item["vote_count"].(float64); ok {
+				totalVotes += v
+			} else if v, ok := item["vote_count"].(int64); ok {
+				totalVotes += float64(v)
+			} else if v, ok := item["votes"].(float64); ok {
+				totalVotes += v
+			} else if v, ok := item["votes"].(int64); ok {
+				totalVotes += float64(v)
+			}
+		}
+	}
+
+	for _, item := range enriched {
+		var vc float64
+		if v, ok := item["vote_count"].(float64); ok {
+			vc = v
+		} else if v, ok := item["vote_count"].(int64); ok {
+			vc = float64(v)
+		} else if v, ok := item["votes"].(float64); ok {
+			vc = v
+		} else if v, ok := item["votes"].(int64); ok {
+			vc = float64(v)
+		}
+		item["vote_count"] = int64(vc)
+		item["votes"] = int64(vc)
+		if totalVotes > 0 {
+			item["percentage"] = math.Round((vc/totalVotes)*1000) / 10
+		} else {
+			item["percentage"] = 0.0
+		}
+	}
+
+	// Sort descending by vote_count
+	sort.SliceStable(enriched, func(i, j int) bool {
+		vI, _ := enriched[i]["vote_count"].(int64)
+		vJ, _ := enriched[j]["vote_count"].(int64)
+		return vI > vJ
+	})
+
+	return enriched
+}
+
+// GetElectoralUnitsBreakdown returns child electoral units with results based on scope.
+// @Summary Get electoral units results breakdown
+// @Description Returns a collection of child electoral units (states, LGAs, wards, polling units) joined with results for a given scope.
+// @Tags ElectionResults
+// @Accept json
+// @Produce json
+// @Param election_id query int true "Election ID"
+// @Param state_id query int false "State ID"
+// @Param senatorial_district_id query int false "Senatorial District ID"
+// @Param federal_constituency_id query int false "Federal Constituency ID"
+// @Param state_constituency_id query int false "State Constituency ID"
+// @Param lga_id query int false "LGA ID"
+// @Param ward_id query int false "Ward ID"
+// @Param unit_type query string false "Override child unit type (e.g. 'lgas')"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /elections/results/breakdown [get]
+func (h *Handler) GetElectoralUnitsBreakdown(w http.ResponseWriter, r *http.Request) {
+	electionID, ok := parseAnyInt64(r, "election_id", "electionId", "election")
+	if !ok {
+		h.utils.RespondError(w, http.StatusBadRequest, "election_id is required")
+		return
+	}
+
+	puID, _ := parseAnyInt64(r, "polling_unit_id", "polling_unit", "pollingUnitId", "pu_id", "pu")
+	wardID, _ := parseAnyInt64(r, "ward_id", "ward", "wardId")
+	stateConstID, _ := parseAnyInt64(r, "state_constituency_id", "state_constituency", "stateConstituencyId", "state_assembly_constituency_id")
+	lgaID, _ := parseAnyInt64(r, "lga_id", "lga", "lgaId")
+	fedConstID, _ := parseAnyInt64(r, "federal_constituency_id", "federal_constituency", "federalConstituencyId", "fed_const_id")
+	senatorialID, _ := parseAnyInt64(r, "senatorial_district_id", "senatorial_district", "senatorialDistrictId", "district_id", "district")
+	stateID, _ := parseAnyInt64(r, "state_id", "state", "stateId")
+	requestedUnitType := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("unit_type")))
+
+	var (
+		query     string
+		args      []interface{}
+		unitTitle string
+		unitType  string
+	)
+
+	if puID > 0 {
+		unitTitle = "Polling Units"
+		unitType = "polling_units"
+		query = `
+			SELECT
+				pu.id, pu.name, COALESCE(NULLIF(pu.pu_code, ''), pu.code, '') AS code,
+				COALESCE(fr.accredited_voters, 0),
+				COALESCE(fr.votes_cast, 0),
+				COALESCE(fr.valid_votes, 0),
+				COALESCE(fr.rejected_votes, 0),
+				0 AS sub_units_counted,
+				0 AS total_sub_units,
+				COALESCE(fr.candidate_results, '[]'::jsonb),
+				COALESCE(fr.candidate_results_live, '[]'::jsonb)
+			FROM polling_units pu
+			LEFT JOIN election_polling_unit_final_results fr
+				ON fr.polling_unit_id = pu.id AND fr.election_id = $1
+			WHERE pu.id = $2
+			ORDER BY pu.id ASC`
+		args = []interface{}{electionID, puID}
+	} else if wardID > 0 {
+		unitTitle = "Polling Units"
+		unitType = "polling_units"
+		query = `
+			SELECT
+				pu.id, pu.name, COALESCE(NULLIF(pu.pu_code, ''), pu.code, '') AS code,
+				COALESCE(fr.accredited_voters, 0),
+				COALESCE(fr.votes_cast, 0),
+				COALESCE(fr.valid_votes, 0),
+				COALESCE(fr.rejected_votes, 0),
+				0 AS sub_units_counted,
+				0 AS total_sub_units,
+				COALESCE(fr.candidate_results, '[]'::jsonb),
+				COALESCE(fr.candidate_results_live, '[]'::jsonb)
+			FROM polling_units pu
+			LEFT JOIN election_polling_unit_final_results fr
+				ON fr.polling_unit_id = pu.id AND fr.election_id = $1
+			WHERE pu.ward_id = $2
+			ORDER BY pu.id ASC`
+		args = []interface{}{electionID, wardID}
+	} else if stateConstID > 0 && lgaID == 0 {
+		unitTitle = "Wards"
+		unitType = "wards"
+		query = `
+			SELECT
+				w.id, w.name, '' AS code,
+				COALESCE(fr.accredited_voters, 0),
+				COALESCE(fr.votes_cast, 0),
+				COALESCE(fr.valid_votes, 0),
+				COALESCE(fr.rejected_votes, 0),
+				COALESCE(fr.polling_units_counted, 0) AS sub_units_counted,
+				COALESCE(fr.total_polling_units, 0) AS total_sub_units,
+				COALESCE(fr.candidate_results, '[]'::jsonb),
+				COALESCE(fr.candidate_results_live, '[]'::jsonb)
+			FROM wards w
+			LEFT JOIN election_ward_final_result fr
+				ON fr.ward_id = w.id AND fr.election_id = $1
+			WHERE w.state_constituency_id = $2
+			ORDER BY w.id ASC`
+		args = []interface{}{electionID, stateConstID}
+	} else if lgaID > 0 {
+		unitTitle = "Wards"
+		unitType = "wards"
+		query = `
+			SELECT
+				w.id, w.name, '' AS code,
+				COALESCE(fr.accredited_voters, 0),
+				COALESCE(fr.votes_cast, 0),
+				COALESCE(fr.valid_votes, 0),
+				COALESCE(fr.rejected_votes, 0),
+				COALESCE(fr.polling_units_counted, 0) AS sub_units_counted,
+				COALESCE(fr.total_polling_units, 0) AS total_sub_units,
+				COALESCE(fr.candidate_results, '[]'::jsonb),
+				COALESCE(fr.candidate_results_live, '[]'::jsonb)
+			FROM wards w
+			LEFT JOIN election_ward_final_result fr
+				ON fr.ward_id = w.id AND fr.election_id = $1
+			WHERE w.lga_id = $2
+			ORDER BY w.id ASC`
+		args = []interface{}{electionID, lgaID}
+	} else if fedConstID > 0 {
+		unitTitle = "LGAs"
+		unitType = "lgas"
+		query = `
+			SELECT
+				l.id, l.name, '' AS code,
+				COALESCE(fr.accredited_voters, 0),
+				COALESCE(fr.votes_cast, 0),
+				COALESCE(fr.valid_votes, 0),
+				COALESCE(fr.rejected_votes, 0),
+				COALESCE(fr.wards_counted, 0) AS sub_units_counted,
+				COALESCE(fr.total_wards, 0) AS total_sub_units,
+				COALESCE(fr.candidate_results, '[]'::jsonb),
+				COALESCE(fr.candidate_results_live, '[]'::jsonb)
+			FROM lgas l
+			LEFT JOIN election_lga_final_result fr
+				ON fr.lga_id = l.id AND fr.election_id = $1
+			WHERE l.federal_constituency_id = $2
+			ORDER BY l.id ASC`
+		args = []interface{}{electionID, fedConstID}
+	} else if senatorialID > 0 {
+		unitTitle = "Federal Constituencies"
+		unitType = "federal_constituencies"
+		query = `
+			SELECT
+				fc.id, fc.name, '' AS code,
+				COALESCE(fr.accredited_voters, 0),
+				COALESCE(fr.votes_cast, 0),
+				COALESCE(fr.valid_votes, 0),
+				COALESCE(fr.rejected_votes, 0),
+				COALESCE(fr.lgas_counted, 0) AS sub_units_counted,
+				COALESCE(fr.total_lgas, 0) AS total_sub_units,
+				COALESCE(fr.candidate_results, '[]'::jsonb),
+				COALESCE(fr.candidate_results_live, '[]'::jsonb)
+			FROM federal_constituencies fc
+			LEFT JOIN election_federal_constituency_final_result fr
+				ON fr.federal_constituency_id = fc.id AND fr.election_id = $1
+			WHERE fc.senatorial_district_id = $2
+			ORDER BY fc.id ASC`
+		args = []interface{}{electionID, senatorialID}
+	} else if stateID > 0 {
+		if requestedUnitType == "lgas" {
+			unitTitle = "LGAs"
+			unitType = "lgas"
+			query = `
+				SELECT
+					l.id, l.name, '' AS code,
+					COALESCE(fr.accredited_voters, 0),
+					COALESCE(fr.votes_cast, 0),
+					COALESCE(fr.valid_votes, 0),
+					COALESCE(fr.rejected_votes, 0),
+					COALESCE(fr.wards_counted, 0) AS sub_units_counted,
+					COALESCE(fr.total_wards, 0) AS total_sub_units,
+					COALESCE(fr.candidate_results, '[]'::jsonb),
+					COALESCE(fr.candidate_results_live, '[]'::jsonb)
+				FROM lgas l
+				LEFT JOIN election_lga_final_result fr
+					ON fr.lga_id = l.id AND fr.election_id = $1
+				WHERE l.state_id = $2
+				ORDER BY l.id ASC`
+			args = []interface{}{electionID, stateID}
+		} else {
+			unitTitle = "Senatorial Districts"
+			unitType = "senatorial_districts"
+			query = `
+				SELECT
+					sd.id, sd.name, '' AS code,
+					COALESCE(fr.accredited_voters, 0),
+					COALESCE(fr.votes_cast, 0),
+					COALESCE(fr.valid_votes, 0),
+					COALESCE(fr.rejected_votes, 0),
+					COALESCE(fr.lgas_counted, 0) AS sub_units_counted,
+					COALESCE(fr.total_lgas, 0) AS total_sub_units,
+					COALESCE(fr.candidate_results, '[]'::jsonb),
+					COALESCE(fr.candidate_results_live, '[]'::jsonb)
+				FROM senatorial_districts sd
+				LEFT JOIN election_senatorial_district_final_result fr
+					ON fr.senatorial_district_id = sd.id AND fr.election_id = $1
+				WHERE sd.state_id = $2
+				ORDER BY sd.id ASC`
+			args = []interface{}{electionID, stateID}
+		}
+	} else {
+		// Nationwide: return all 36 Nigerian states + FCT
+		unitTitle = "States"
+		unitType = "states"
+		query = `
+			SELECT
+				s.id, s.name, '' AS code,
+				COALESCE(fr.accredited_voters, 0),
+				COALESCE(fr.votes_cast, 0),
+				COALESCE(fr.valid_votes, 0),
+				COALESCE(fr.rejected_votes, 0),
+				COALESCE(fr.senatorial_districts_counted, 0) AS sub_units_counted,
+				COALESCE(NULLIF(fr.total_senatorial_districts, 0), (SELECT count(*)::int FROM senatorial_districts sd WHERE sd.state_id = s.id), 3) AS total_sub_units,
+				COALESCE(fr.candidate_results, '[]'::jsonb),
+				COALESCE(fr.candidate_results_live, '[]'::jsonb)
+			FROM c_states s
+			LEFT JOIN election_state_final_result fr
+				ON fr.state_id = s.id AND fr.election_id = $1
+			WHERE s.country_id = 161
+			ORDER BY s.name ASC`
+		args = []interface{}{electionID}
+	}
+
+	partiesMap, _, candidatesMap, contestingPartyShortNames := h.loadPartyAndCandidateMetadata(r.Context(), electionID)
+
+	rows, err := h.pool.Query(r.Context(), query, args...)
+	if err != nil {
+		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to query electoral units: "+err.Error())
+		return
+	}
+	defer rows.Close()
+
+	var units []map[string]interface{}
+	for rows.Next() {
+		var (
+			uID                                              int64
+			uName                                            string
+			uCode                                            string
+			accredited, votesCast, validVotes, rejectedVotes int32
+			subCounted, totalSub                             int32
+			crBytes, crlBytes                                []byte
+		)
+		if err := rows.Scan(
+			&uID, &uName, &uCode,
+			&accredited, &votesCast, &validVotes, &rejectedVotes,
+			&subCounted, &totalSub,
+			&crBytes, &crlBytes,
+		); err != nil {
+			h.utils.RespondError(w, http.StatusInternalServerError, "scan error: "+err.Error())
+			return
+		}
+
+		crEnriched := finalizeCandidateResults(crBytes, validVotes, partiesMap, candidatesMap, contestingPartyShortNames)
+		crlEnriched := finalizeCandidateResults(crlBytes, validVotes, partiesMap, candidatesMap, contestingPartyShortNames)
+
+		var leadingName, leadingAvatar, leadingParty, leadingPartyColor, leadingPartyDarkColor string
+		var leadingVotes int64
+		var leadingPercentage float64
+
+		if len(crEnriched) > 0 {
+			first := crEnriched[0]
+			leadingParty, _ = first["party_short_name"].(string)
+			leadingVotes, _ = first["vote_count"].(int64)
+			leadingPercentage, _ = first["percentage"].(float64)
+			leadingPartyColor, _ = first["color_hex"].(string)
+			leadingPartyDarkColor, _ = first["dark_color_hex"].(string)
+
+			if cand, ok := first["candidate"].(*CandidateDetail); ok && cand != nil && cand.Name != "" {
+				leadingName = cand.Name
+				leadingAvatar = cand.Avatar
+			} else if candMap, ok := first["candidate"].(map[string]interface{}); ok && candMap["name"] != nil && candMap["name"] != "" {
+				leadingName, _ = candMap["name"].(string)
+				leadingAvatar, _ = candMap["avatar"].(string)
+			}
+
+			if leadingName == "" {
+				if p, ok := first["party"].(*PartyDetail); ok && p != nil && p.Name != "" {
+					leadingName = p.Name
+					if leadingAvatar == "" {
+						leadingAvatar = p.Logo
+					}
+				} else if pMap, ok := first["party"].(map[string]interface{}); ok && pMap["name"] != nil && pMap["name"] != "" {
+					leadingName, _ = pMap["name"].(string)
+					if leadingAvatar == "" {
+						leadingAvatar, _ = pMap["logo"].(string)
+					}
+				} else if pName, ok := first["party_name"].(string); ok && pName != "" {
+					leadingName = pName
+				} else {
+					leadingName = leadingParty
+				}
+			}
+
+			if leadingAvatar == "" {
+				if p, ok := first["party"].(*PartyDetail); ok && p != nil && p.Logo != "" {
+					leadingAvatar = p.Logo
+				} else if pMap, ok := first["party"].(map[string]interface{}); ok && pMap["logo"] != nil {
+					leadingAvatar, _ = pMap["logo"].(string)
+				} else if pLogo, ok := first["party_logo"].(string); ok {
+					leadingAvatar = pLogo
+				}
+			}
+		}
+
+		unitItem := map[string]interface{}{
+			"id":                           uID,
+			"name":                         uName,
+			"code":                         uCode,
+			"accredited_voters":            accredited,
+			"votes_cast":                   votesCast,
+			"valid_votes":                  validVotes,
+			"rejected_votes":               rejectedVotes,
+			"sub_units_counted":            subCounted,
+			"total_sub_units":              totalSub,
+			"leading_candidate_name":       leadingName,
+			"leading_candidate_avatar":     leadingAvatar,
+			"leading_party_short_name":     leadingParty,
+			"leading_party_color_hex":      leadingPartyColor,
+			"leading_party_dark_color_hex": leadingPartyDarkColor,
+			"leading_votes":                leadingVotes,
+			"leading_percentage":           leadingPercentage,
+			"candidate_results":            crEnriched,
+			"candidate_results_live":       crlEnriched,
+		}
+		units = append(units, unitItem)
+	}
+
+	if units == nil {
+		units = []map[string]interface{}{}
+	}
+
+	h.utils.RespondSuccess(w, http.StatusOK, "Electoral units breakdown fetched successfully", map[string]interface{}{
+		"unit_title": unitTitle,
+		"unit_type":  unitType,
+		"units":      units,
+		"total":      len(units),
 	})
 }
 

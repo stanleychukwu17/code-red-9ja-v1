@@ -22,6 +22,12 @@ export const APP_URL = {
   },
   parties: "/parties",
   applications: "/applications",
+  agentPayments: {
+    root: "/agent-payments",
+    overview: "/agent-payments",
+    electionPay: "/agent-payments/election-pay",
+    referralPay: "/agent-payments/referral-pay",
+  },
   marketing: "/marketing",
   notifications: "/notifications",
   logs: "/logs",
@@ -295,6 +301,53 @@ export const API_URL = {
   },
   toggleINECResultGrabberPause: (id: number | string) => {
     return `${api}/admin/inec-result-grabbers/${id}/toggle-pause`;
+  },
+  adminAgentPayments: {
+    overview: (electionGroupId?: number | string) => {
+      const qs = electionGroupId ? `?election_group_id=${electionGroupId}` : "";
+      return `${api}/admin/agent-payments/overview${qs}`;
+    },
+    electionPay: (args?: {
+      electionGroupId?: number | string;
+      status?: string;
+      partyId?: number | string;
+      role?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    }) => {
+      const params = new URLSearchParams();
+      if (args?.electionGroupId) params.append("election_group_id", String(args.electionGroupId));
+      if (args?.status) params.append("status", args.status);
+      if (args?.partyId) params.append("party_id", String(args.partyId));
+      if (args?.role) params.append("role", args.role);
+      if (args?.search) params.append("search", args.search);
+      if (args?.limit) params.append("limit", String(args.limit));
+      if (args?.offset !== undefined) params.append("offset", String(args.offset));
+      const qs = params.toString();
+      return `${api}/admin/agent-payments/election-pay${qs ? `?${qs}` : ""}`;
+    },
+    payElection: (id: number | string) => `${api}/admin/agent-payments/election-pay/${id}/pay`,
+    referralPay: (args?: {
+      electionGroupId?: number | string;
+      status?: string;
+      partyId?: number | string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    }) => {
+      const params = new URLSearchParams();
+      if (args?.electionGroupId) params.append("election_group_id", String(args.electionGroupId));
+      if (args?.status) params.append("status", args.status);
+      if (args?.partyId) params.append("party_id", String(args.partyId));
+      if (args?.search) params.append("search", args.search);
+      if (args?.limit) params.append("limit", String(args.limit));
+      if (args?.offset !== undefined) params.append("offset", String(args.offset));
+      const qs = params.toString();
+      return `${api}/admin/agent-payments/referral-pay${qs ? `?${qs}` : ""}`;
+    },
+    payReferral: (id: number | string) => `${api}/admin/agent-payments/referral-pay/${id}/pay`,
+    payAll: `${api}/admin/agent-payments/pay-all`,
   },
 };
 

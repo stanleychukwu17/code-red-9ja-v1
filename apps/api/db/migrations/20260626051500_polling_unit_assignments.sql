@@ -15,13 +15,13 @@ CREATE TABLE IF NOT EXISTS polling_unit_assignments (
   election_started_video_url TEXT,
   election_ended_at TIMESTAMPTZ,
   election_ended_video_url TEXT,
+  completed_at TIMESTAMPTZ, -- Timestamp when agent completed election day duties (all expected PU results submitted)
   last_update_at TIMESTAMPTZ,
   reports_count INT NOT NULL DEFAULT 0,
   updates_count INT NOT NULL DEFAULT 0,
   
   -- Additional Results & Tracking Fields
   results_submitted_count INT NOT NULL DEFAULT 0,
-  results_expected_to_submit_count INT NOT NULL DEFAULT 0,
   live_voters_referred_count INT NOT NULL DEFAULT 0,
   -- {"07:00":2, "07:30": 3, "08:00": 1, ...}
   interval_updates JSONB DEFAULT '{}'::jsonb,

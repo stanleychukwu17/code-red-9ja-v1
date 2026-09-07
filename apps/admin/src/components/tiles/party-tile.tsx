@@ -19,6 +19,8 @@ export type PartyType = {
   puAgents?: string;
   is_verified?: boolean;
   verifications?: any[];
+  color_hex?: string;
+  dark_color_hex?: string;
 };
 
 export function PartyTableHeader() {
@@ -42,12 +44,19 @@ export function PartyTableTile({ data }: { data: PartyType }) {
     <TileRow>
       <TileLeft>
         <div className="flex items-center gap-10 w-45 shrink-0">
-          <Link to={partyLink} target="_blank" className="shrink-0">
+          <Link to={partyLink} target="_blank" className="shrink-0 relative">
             <img
               src={data.logo}
               alt={data.short_name}
               className="size-8 rounded-full object-cover shrink-0 bg-[#f2f2f2] border border-[#dfdfdf]"
             />
+            {data.color_hex && (
+              <span
+                className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full border-2 border-white shadow-sm"
+                style={{ backgroundColor: data.color_hex }}
+                title={`Color: ${data.color_hex}${data.dark_color_hex ? ` (Dark: ${data.dark_color_hex})` : ""}`}
+              />
+            )}
           </Link>
           <span className="text-c-90">
             <Link

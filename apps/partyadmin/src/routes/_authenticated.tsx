@@ -16,6 +16,9 @@ import WalletIcon from "@repo/ui/icons/navbar/wallet-icon";
 import WalletSolidIcon from "@repo/ui/icons/navbar/wallet-solid-icon";
 import BalonIcon from "@repo/ui/icons/navbar/balon-icon";
 import BalonSolidIcon from "@repo/ui/icons/navbar/balon-solid-icon";
+import FeedIcon from "@repo/ui/icons/navbar/feed-icon";
+import FeedSolidIcon from "@repo/ui/icons/navbar/feed-solid-icon";
+import { ShieldCheck } from "lucide-react";
 import {
   createFileRoute,
   Outlet,
@@ -119,6 +122,27 @@ function AuthenticatedRoutes() {
       icon: <BalonIcon className="shrink-0 size-6" />,
       selectedIcon: <BalonSolidIcon className="shrink-0 size-6" />,
       href: APP_URL.partyRoutes.marketing(partyShortName),
+    },
+    {
+      id: "agents",
+      label: "Election Agents",
+      icon: <UserIcon className="shrink-0 size-6" />,
+      selectedIcon: <UserSolidIcon className="shrink-0 size-6" />,
+      href: APP_URL.partyRoutes.agents(partyShortName),
+    },
+    {
+      id: "coverage",
+      label: "Agent Coverage",
+      icon: <ShieldCheck className="shrink-0 size-6" />,
+      selectedIcon: <ShieldCheck className="shrink-0 size-6 text-c-90" />,
+      href: APP_URL.partyRoutes.coverage(partyShortName),
+    },
+    {
+      id: "election-race",
+      label: "Electoral Race",
+      icon: <FeedIcon className="shrink-0 size-6" />,
+      selectedIcon: <FeedSolidIcon className="shrink-0 size-6" />,
+      href: APP_URL.partyRoutes.electionRace(partyShortName),
     },
   ];
 

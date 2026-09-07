@@ -437,6 +437,8 @@ function ApplyPage() {
       p.short_name?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
+  console.log("Parties:", filteredParties);
+
   const handleBackClick = () => {
     if (step === 1) {
       navigate({ to: "/" });

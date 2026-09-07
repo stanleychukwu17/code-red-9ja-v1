@@ -17,6 +17,8 @@ CREATE TABLE parties (
   agent_acquisition_targets JSONB NOT NULL DEFAULT '{"polling_agent": 1, "ward_election_supervisor": 1, "lga_election_supervisor": 1, "state_election_supervisor": 1}'::jsonb,
   -- {"polling_agent": true, "ward_election_supervisor": true, "lga_election_supervisor": true, "state_election_supervisor": true}
   auto_accept_applications JSONB NOT NULL DEFAULT '{"polling_agent": true, "ward_election_supervisor": true, "lga_election_supervisor": true, "state_election_supervisor": true}'::jsonb,
+  color_hex VARCHAR(50) DEFAULT NULL,
+  dark_color_hex VARCHAR(50) DEFAULT NULL,
 
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
@@ -26,29 +28,29 @@ CREATE INDEX idx_parties_status_display_order ON parties(status, display_order);
 CREATE INDEX parties_short_name_idx ON parties (short_name);
 -- Seed default political parties
 
-INSERT INTO parties (id, short_name, name, logo, display_order) VALUES
-    (1, 'APC', 'All Progressive Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APC-All-Progressive-Congres-5c5fbfef-21cb-4471-8d8b-23dc942acc4c.webp', 2),
-    (2, 'APGA', 'All Progressive Grand Alliance', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APGA-All-Progressive-Grand-Alliance-65dc2762-cd75-4ea2-b0a4-fe6c7c1dec7a.webp', 999),
-    (3, 'APM', 'Allied Peoples Movement', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APM-Allied-Peoples-Movement-55edb50c-f2f3-4514-af71-5c4bfcf843ac.webp', 999),
-    (4, 'APP', 'All Progressive Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APP-Action-Peoples-Party-de042398-6903-4036-91be-f4c214275c3d.webp', 999),
-    (5, 'BP', 'Bureau Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/BP-Boot-Party-404684cb-0204-429e-a00b-8cb2df4cf72d.webp', 999),
-    (6, 'LP', 'Labour Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/LP-Labour-Party-255f3685-9f90-4955-9ec5-892e49282c87.webp', 999),
-    (7, 'NDC', 'National Democratic Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/NDC-National-Democratic-Congress-6058d2bc-fabc-491d-8c4d-07a891134ef4.webp', 3),
-    (8, 'NNPP', 'New Nigeria Peoples Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/NNPP-New-Nigeria-Peoples-Party-41b4266d-5d53-4f25-8edc-befc2ebe3a9d.webp', 999),
-    (9, 'NRM', 'National Resistance Movement', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/NRM-National-Rescue-Movement-c3222f83-02fc-4cf6-be0b-fb27df17f1bc.webp', 999),
-    (10, 'PDP', 'People''s Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/PDP-People-s-Democratic-Party-9ec5e43c-60cc-40dd-9b63-a0dfb841cc22.webp', 4),
-    (11, 'PPN', 'Progressive Peoples'' National', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/PPN-Peoples-Party-of-Nigeria-eaf231a9-8806-4e58-b3ac-c796f0846a2b.webp', 999),
-    (12, 'PRP', 'People''s Redemption Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/PRP-Peoples-Redemption-Party-d9b27297-0777-43c8-ab35-5f27cefc6dce.webp', 999),
-    (13, 'SDP', 'Social Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/SDP-Social-Democratic-Party-16c8fe18-8fae-4793-9991-1583643edf71.webp', 999),
-    (14, 'YPP', 'Youth Party of Nigeria', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/YPP-Young-Progressive-Party-b4fe309e-a3dc-408c-94d6-9cda8ff6c0da.webp', 999),
-    (15, 'ZLP', 'Zenith Labour Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ZLP-Zenith-Labour-Party-0f1365cf-c4ca-4a06-8eb4-02f5d75ee109.webp', 999),
-    (16, 'AA', 'African Action', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/AA-Action-Alliance-ebccaca6-89f4-4a69-b747-8b0f581bbca0.webp', 999),
-    (17, 'ADC', 'African Democratic Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ADC-African-Democratic-Congress-f73b776b-56dd-4b78-a428-6088fb054c82.webp', 1),
-    (18, 'ADP', 'African Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ADP-Action-Democratic-Party-dc8cb363-85da-4a4b-8195-846c421e6ad7.webp', 999),
-    (19, 'DLA', 'Democratic Leadership Alliance', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/DLA-Democratic-Leadership-Alliance-83e923a8-ef45-492b-8f42-15bc906906a7.webp', 999),
-    (20, 'NDP', 'National Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/NDP-National-Democratic-Party-5c979c25-27ea-4344-860c-da2ba283f652.webp', 999),
-    (21, 'AAC', 'African Action Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/AAC-African-Action-Congress-750daa5b-b723-4e88-95e5-556cd3b2d8d0.webp', 999),
-    (22, 'A', 'Accord', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/A-Accord-c5c9260c-1402-4038-8212-3b2d7ffb107a.webp', 999);
+INSERT INTO parties (id, short_name, name, logo, display_order, color_hex, dark_color_hex) VALUES
+    (1, 'APC', 'All Progressive Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APC-All-Progressive-Congres-5c5fbfef-21cb-4471-8d8b-23dc942acc4c.webp', 2, '#66CEFF', '#66CEFF'),
+    (2, 'APGA', 'All Progressive Grand Alliance', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APGA-All-Progressive-Grand-Alliance-65dc2762-cd75-4ea2-b0a4-fe6c7c1dec7a.webp', 999, '#FFEF06', '#FFEF06'),
+    (3, 'APM', 'Allied Peoples Movement', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APM-Allied-Peoples-Movement-55edb50c-f2f3-4514-af71-5c4bfcf843ac.webp', 999, '#00ADF1', '#00ADF1'),
+    (4, 'APP', 'All Progressive Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/APP-Action-Peoples-Party-de042398-6903-4036-91be-f4c214275c3d.webp', 999, '#E31E24', '#E31E24'),
+    (5, 'BP', 'Bureau Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/BP-Boot-Party-404684cb-0204-429e-a00b-8cb2df4cf72d.webp', 999, '#019501', '#019501'),
+    (6, 'LP', 'Labour Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/LP-Labour-Party-255f3685-9f90-4955-9ec5-892e49282c87.webp', 999, '#DC2626', '#FB7185'),
+    (7, 'NDC', 'National Democratic Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/NDC-National-Democratic-Congress-6058d2bc-fabc-491d-8c4d-07a891134ef4.webp', 3, '#4B4E9B', '#6E72C5'),
+    (8, 'NNPP', 'New Nigeria Peoples Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/NNPP-New-Nigeria-Peoples-Party-41b4266d-5d53-4f25-8edc-befc2ebe3a9d.webp', 999, '#EC3237', '#EC3237'),
+    (9, 'NRM', 'National Resistance Movement', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/NRM-National-Rescue-Movement-c3222f83-02fc-4cf6-be0b-fb27df17f1bc.webp', 999, '#E8B706', '#E8B706'),
+    (10, 'PDP', 'People''s Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/PDP-People-s-Democratic-Party-9ec5e43c-60cc-40dd-9b63-a0dfb841cc22.webp', 4, '#ED3237', '#ED3237'),
+    (11, 'PPN', 'Progressive Peoples'' National', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/PPN-Peoples-Party-of-Nigeria-eaf231a9-8806-4e58-b3ac-c796f0846a2b.webp', 999, '#047857', '#10B981'),
+    (12, 'PRP', 'People''s Redemption Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/PRP-Peoples-Redemption-Party-d9b27297-0777-43c8-ab35-5f27cefc6dce.webp', 999, '#F80101', '#F80101'),
+    (13, 'SDP', 'Social Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/SDP-Social-Democratic-Party-16c8fe18-8fae-4793-9991-1583643edf71.webp', 999, '#004278', '#818CF8'),
+    (14, 'YPP', 'Youth Party of Nigeria', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/YPP-Young-Progressive-Party-b4fe309e-a3dc-408c-94d6-9cda8ff6c0da.webp', 999, '#02754A', '#2A9D72'),
+    (15, 'ZLP', 'Zenith Labour Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ZLP-Zenith-Labour-Party-0f1365cf-c4ca-4a06-8eb4-02f5d75ee109.webp', 999, '#F3C10E', '#F3C10E'),
+    (16, 'AA', 'African Action', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/AA-Action-Alliance-ebccaca6-89f4-4a69-b747-8b0f581bbca0.webp', 999, '#0891B2', '#22D3EE'),
+    (17, 'ADC', 'African Democratic Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ADC-African-Democratic-Congress-f73b776b-56dd-4b78-a428-6088fb054c82.webp', 1, '#D97706', '#FBBF24'),
+    (18, 'ADP', 'African Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-06-06/ADP-Action-Democratic-Party-dc8cb363-85da-4a4b-8195-846c421e6ad7.webp', 999, '#F62A21', '#F62A21'),
+    (19, 'DLA', 'Democratic Leadership Alliance', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/DLA-Democratic-Leadership-Alliance-83e923a8-ef45-492b-8f42-15bc906906a7.webp', 999, '#fccd05', '#fccd05'),
+    (20, 'NDP', 'National Democratic Party', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/NDP-National-Democratic-Party-5c979c25-27ea-4344-860c-da2ba283f652.webp', 999, '#1E40AF', '#3B82F6'),
+    (21, 'AAC', 'African Action Congress', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/AAC-African-Action-Congress-750daa5b-b723-4e88-95e5-556cd3b2d8d0.webp', 999, '#44281a', '#806456'),
+    (22, 'A', 'Accord', 'https://pub-632c6da9cf354d89aafad6f7291e8a29.r2.dev/parties/2026-07-13/A-Accord-c5c9260c-1402-4038-8212-3b2d7ffb107a.webp', 999, '#FFFF00', '#FFFF00');
 
 -- Sync the identity sequence with the max id to prevent duplicate key errors on new inserts
 SELECT setval(pg_get_serial_sequence('parties', 'id'), (SELECT MAX(id) FROM parties));

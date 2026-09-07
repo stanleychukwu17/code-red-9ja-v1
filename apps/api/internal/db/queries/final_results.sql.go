@@ -271,13 +271,21 @@ WITH live_counts AS (
   WHERE ev.election_id = $1 AND ev.polling_unit_id = $2
   GROUP BY p.short_name
 ),
+live_total AS (
+  SELECT COALESCE(SUM(vote_count), 0)::numeric AS total_votes FROM live_counts
+),
 live_json AS (
   SELECT COALESCE(
     jsonb_agg(
-      jsonb_build_object('party_short_name', party_short_name, 'vote_count', vote_count)
+      jsonb_build_object(
+        'party_short_name', lc.party_short_name, 
+        'vote_count', lc.vote_count,
+        'vote_share', CASE WHEN lt.total_votes > 0 THEN ROUND((lc.vote_count::numeric / lt.total_votes) * 100, 2) ELSE 0 END
+      )
     ), '[]'::jsonb
   ) as candidate_results_live
-  FROM live_counts
+  FROM live_counts lc
+  CROSS JOIN live_total lt
 )
 INSERT INTO election_polling_unit_final_results (
   election_id, election_group_id, polling_unit_id,
@@ -352,6 +360,7 @@ cand_agg AS (
         p.election_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -374,6 +383,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -384,6 +398,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id
     LEFT JOIN state_win_count w ON c.election_id = w.election_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id
 ),
@@ -392,6 +407,7 @@ cand_live_agg AS (
         p.election_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -414,6 +430,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -498,6 +518,7 @@ cand_agg AS (
         p.election_id, l.federal_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.federal_constituency_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -518,6 +539,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -525,6 +551,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.federal_constituency_id = a.federal_constituency_id
     LEFT JOIN lga_win_count w ON c.election_id = w.election_id AND c.federal_constituency_id = w.federal_constituency_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.federal_constituency_id
 ),
@@ -533,6 +560,7 @@ cand_live_agg AS (
         p.election_id, l.federal_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.federal_constituency_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -553,6 +581,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -643,6 +675,7 @@ cand_agg AS (
         p.election_id, p.lga_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.lga_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p, 
          jsonb_array_elements(p.candidate_results) as c(value)
@@ -665,12 +698,18 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0),
                 'state_constituency_winning_count', COALESCE(sc.sc_count, 0)
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.lga_id = a.lga_id
     LEFT JOIN ward_win_count w ON c.election_id = w.election_id AND c.lga_id = w.lga_id AND c.party_short_name = w.party_short_name
     LEFT JOIN sc_win_count sc ON c.election_id = sc.election_id AND c.lga_id = sc.lga_id AND c.party_short_name = sc.party_short_name
     GROUP BY c.election_id, c.lga_id
@@ -680,6 +719,7 @@ cand_live_agg AS (
         p.election_id, p.lga_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.lga_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
@@ -702,6 +742,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0),
                 'state_constituency_winning_count', COALESCE(sc.sc_count, 0)
@@ -793,6 +837,7 @@ cand_agg AS (
         p.election_id, l.senatorial_district_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.senatorial_district_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -818,6 +863,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -826,6 +876,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.senatorial_district_id = a.senatorial_district_id
     LEFT JOIN lga_win_count lga_win ON c.election_id = lga_win.election_id AND c.senatorial_district_id = lga_win.senatorial_district_id AND c.party_short_name = lga_win.party_short_name
     LEFT JOIN fc_win_count w ON c.election_id = w.election_id AND c.senatorial_district_id = w.senatorial_district_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.senatorial_district_id
@@ -835,6 +886,7 @@ cand_live_agg AS (
         p.election_id, l.senatorial_district_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.senatorial_district_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -860,6 +912,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -938,6 +994,7 @@ cand_agg AS (
         p.election_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -961,6 +1018,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -971,6 +1033,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id
     LEFT JOIN state_win_count w ON c.election_id = w.election_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id
 ),
@@ -979,6 +1042,7 @@ cand_live_agg AS (
         p.election_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -1002,6 +1066,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -1086,6 +1154,7 @@ cand_agg AS (
         p.election_id, l.federal_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.federal_constituency_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -1107,6 +1176,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -1114,6 +1188,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.federal_constituency_id = a.federal_constituency_id
     LEFT JOIN lga_win_count w ON c.election_id = w.election_id AND c.federal_constituency_id = w.federal_constituency_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.federal_constituency_id
 ),
@@ -1122,6 +1197,7 @@ cand_live_agg AS (
         p.election_id, l.federal_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.federal_constituency_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -1143,6 +1219,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -1171,6 +1251,8 @@ LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.federal_constitue
 LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.federal_constituency_id = clj.federal_constituency_id
 ON CONFLICT (election_id, federal_constituency_id)
 DO UPDATE SET
+    state_id = EXCLUDED.state_id,
+    senatorial_district_id = EXCLUDED.senatorial_district_id,
     accredited_voters = EXCLUDED.accredited_voters,
     votes_cast = EXCLUDED.votes_cast,
     valid_votes = EXCLUDED.valid_votes,
@@ -1239,6 +1321,7 @@ cand_agg AS (
         p.election_id, p.lga_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.lga_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p, 
          jsonb_array_elements(p.candidate_results) as c(value)
@@ -1262,12 +1345,18 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0),
                 'state_constituency_winning_count', COALESCE(sc.sc_count, 0)
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.lga_id = a.lga_id
     LEFT JOIN ward_win_count w ON c.election_id = w.election_id AND c.lga_id = w.lga_id AND c.party_short_name = w.party_short_name
     LEFT JOIN sc_win_count sc ON c.election_id = sc.election_id AND c.lga_id = sc.lga_id AND c.party_short_name = sc.party_short_name
     GROUP BY c.election_id, c.lga_id
@@ -1277,6 +1366,7 @@ cand_live_agg AS (
         p.election_id, p.lga_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.lga_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
@@ -1300,6 +1390,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0),
                 'state_constituency_winning_count', COALESCE(sc.sc_count, 0)
@@ -1328,6 +1422,9 @@ LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.lga_id = cj.lga_i
 LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.lga_id = clj.lga_id
 ON CONFLICT (election_id, lga_id)
 DO UPDATE SET
+    state_id = EXCLUDED.state_id,
+    senatorial_district_id = EXCLUDED.senatorial_district_id,
+    federal_constituency_id = EXCLUDED.federal_constituency_id,
     accredited_voters = EXCLUDED.accredited_voters,
     votes_cast = EXCLUDED.votes_cast,
     valid_votes = EXCLUDED.valid_votes,
@@ -1352,7 +1449,7 @@ func (q *Queries) RollupSingleLGAFinalResults(ctx context.Context, arg RollupSin
 const rollupSingleSenatorialDistrictFinalResults = `-- name: RollupSingleSenatorialDistrictFinalResults :exec
 WITH agg AS (
     SELECT 
-        r.election_id, l.senatorial_district_id, MIN(r.state_id) as state_id,
+        r.election_id, l.senatorial_district_id, MIN(l.state_id) as state_id,
         COALESCE(SUM(r.accredited_voters), 0) as accredited_voters,
         COALESCE(SUM(r.votes_cast), 0) as votes_cast,
         COALESCE(SUM(r.valid_votes), 0) as valid_votes,
@@ -1396,6 +1493,7 @@ cand_agg AS (
         p.election_id, l.senatorial_district_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.senatorial_district_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -1422,6 +1520,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -1430,6 +1533,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.senatorial_district_id = a.senatorial_district_id
     LEFT JOIN lga_win_count lga_win ON c.election_id = lga_win.election_id AND c.senatorial_district_id = lga_win.senatorial_district_id AND c.party_short_name = lga_win.party_short_name
     LEFT JOIN fc_win_count w ON c.election_id = w.election_id AND c.senatorial_district_id = w.senatorial_district_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.senatorial_district_id
@@ -1439,6 +1543,7 @@ cand_live_agg AS (
         p.election_id, l.senatorial_district_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, l.senatorial_district_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count
@@ -1465,6 +1570,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -1495,6 +1604,7 @@ LEFT JOIN cand_json cj ON a.election_id = cj.election_id AND a.senatorial_distri
 LEFT JOIN cand_live_json clj ON a.election_id = clj.election_id AND a.senatorial_district_id = clj.senatorial_district_id
 ON CONFLICT (election_id, senatorial_district_id)
 DO UPDATE SET
+    state_id = EXCLUDED.state_id,
     accredited_voters = EXCLUDED.accredited_voters,
     votes_cast = EXCLUDED.votes_cast,
     valid_votes = EXCLUDED.valid_votes,
@@ -1557,6 +1667,7 @@ cand_agg AS (
         p.election_id, s.id as state_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, s.id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p
     JOIN wards w ON p.ward_id = w.id
@@ -1577,11 +1688,17 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0)
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.state_constituency_id = a.state_constituency_id
     LEFT JOIN ward_win_count w ON c.election_id = w.election_id AND c.state_constituency_id = w.state_constituency_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.state_constituency_id
 ),
@@ -1590,6 +1707,7 @@ cand_live_agg AS (
         p.election_id, s.id as state_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, s.id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p
     JOIN wards w ON p.ward_id = w.id
@@ -1610,6 +1728,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0)
             )
@@ -1689,6 +1811,7 @@ cand_agg AS (
         p.election_id, p.state_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.state_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -1711,6 +1834,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -1720,6 +1848,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.state_id = a.state_id
     LEFT JOIN sd_win_count w ON c.election_id = w.election_id AND c.state_id = w.state_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.state_id
 ),
@@ -1728,6 +1857,7 @@ cand_live_agg AS (
         p.election_id, p.state_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.state_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -1750,6 +1880,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -1833,7 +1967,8 @@ cand_agg AS (
     SELECT 
         p.election_id, p.ward_id,
         (c.value->>'party_short_name')::text as party_short_name,
-        SUM((c.value->>'vote_count')::int) as vote_count
+        SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.ward_id) as total_cand_votes
     FROM election_polling_unit_final_results p, 
          jsonb_array_elements(p.candidate_results) as c(value)
     WHERE p.election_id = $1 AND p.ward_id = $2
@@ -1851,10 +1986,16 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', COALESCE(w.pu_count, 0)
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.ward_id = a.ward_id
     LEFT JOIN pu_win_count w ON c.election_id = w.election_id AND c.ward_id = w.ward_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.ward_id
 ),
@@ -1862,7 +2003,8 @@ cand_live_agg AS (
     SELECT 
         p.election_id, p.ward_id,
         (c.value->>'party_short_name')::text as party_short_name,
-        SUM((c.value->>'vote_count')::int) as vote_count
+        SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.ward_id) as total_live_votes
     FROM election_polling_unit_final_results p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     WHERE p.election_id = $1 AND p.ward_id = $2
@@ -1880,6 +2022,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', COALESCE(w.pu_count, 0)
             )
         ), '[]'::jsonb) as candidate_results_live
@@ -1969,6 +2115,7 @@ cand_agg AS (
         p.election_id, s.id as state_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, s.id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p
     JOIN wards w ON p.ward_id = w.id
@@ -1988,11 +2135,17 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0)
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.state_constituency_id = a.state_constituency_id
     LEFT JOIN ward_win_count w ON c.election_id = w.election_id AND c.state_constituency_id = w.state_constituency_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.state_constituency_id
 ),
@@ -2001,6 +2154,7 @@ cand_live_agg AS (
         p.election_id, s.id as state_constituency_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, s.id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count
     FROM election_ward_final_result p
     JOIN wards w ON p.ward_id = w.id
@@ -2020,6 +2174,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', COALESCE(w.ward_count, 0)
             )
@@ -2093,6 +2251,7 @@ cand_agg AS (
         p.election_id, p.state_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.state_id) as total_cand_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -2114,6 +2273,11 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -2123,6 +2287,7 @@ cand_json AS (
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.state_id = a.state_id
     LEFT JOIN sd_win_count w ON c.election_id = w.election_id AND c.state_id = w.state_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.state_id
 ),
@@ -2131,6 +2296,7 @@ cand_live_agg AS (
         p.election_id, p.state_id,
         (c.value->>'party_short_name')::text as party_short_name,
         SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.state_id) as total_live_votes,
         SUM((c.value->>'polling_units_winning_count')::int) as pu_count,
         SUM((c.value->>'wards_winning_count')::int) as ward_count,
         SUM((c.value->>'state_constituency_winning_count')::int) as sc_count,
@@ -2152,6 +2318,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', c.pu_count,
                 'wards_winning_count', c.ward_count,
                 'state_constituency_winning_count', c.sc_count,
@@ -2228,7 +2398,8 @@ cand_agg AS (
     SELECT 
         p.election_id, p.ward_id,
         (c.value->>'party_short_name')::text as party_short_name,
-        SUM((c.value->>'vote_count')::int) as vote_count
+        SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.ward_id) as total_cand_votes
     FROM election_polling_unit_final_results p, 
          jsonb_array_elements(p.candidate_results) as c(value)
     GROUP BY p.election_id, p.ward_id, c.value->>'party_short_name'
@@ -2245,10 +2416,16 @@ cand_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN a.valid_votes > 0 THEN ROUND((c.vote_count::numeric / a.valid_votes::numeric) * 100, 2) 
+                    WHEN c.total_cand_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_cand_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', COALESCE(w.pu_count, 0)
             )
         ), '[]'::jsonb) as candidate_results
     FROM cand_agg c
+    JOIN agg a ON c.election_id = a.election_id AND c.ward_id = a.ward_id
     LEFT JOIN pu_win_count w ON c.election_id = w.election_id AND c.ward_id = w.ward_id AND c.party_short_name = w.party_short_name
     GROUP BY c.election_id, c.ward_id
 ),
@@ -2256,7 +2433,8 @@ cand_live_agg AS (
     SELECT 
         p.election_id, p.ward_id,
         (c.value->>'party_short_name')::text as party_short_name,
-        SUM((c.value->>'vote_count')::int) as vote_count
+        SUM((c.value->>'vote_count')::int) as vote_count,
+        SUM(SUM((c.value->>'vote_count')::int)) OVER (PARTITION BY p.election_id, p.ward_id) as total_live_votes
     FROM election_polling_unit_final_results p, 
          jsonb_array_elements(p.candidate_results_live) as c(value)
     GROUP BY p.election_id, p.ward_id, c.value->>'party_short_name'
@@ -2273,6 +2451,10 @@ cand_live_json AS (
             jsonb_build_object(
                 'party_short_name', c.party_short_name, 
                 'vote_count', c.vote_count,
+                'vote_share', CASE 
+                    WHEN c.total_live_votes > 0 THEN ROUND((c.vote_count::numeric / c.total_live_votes::numeric) * 100, 2) 
+                    ELSE 0 
+                END,
                 'polling_units_winning_count', COALESCE(w.pu_count, 0)
             )
         ), '[]'::jsonb) as candidate_results_live
@@ -2311,328 +2493,6 @@ DO UPDATE SET
 
 func (q *Queries) RollupWardFinalResults(ctx context.Context) error {
 	_, err := q.db.Exec(ctx, rollupWardFinalResults)
-	return err
-}
-
-const updateCandidatesFromFederalConstituencyElections = `-- name: UpdateCandidatesFromFederalConstituencyElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_federal_constituency_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'federal-constituency'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromFederalConstituencyElections(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromFederalConstituencyElections)
-	return err
-}
-
-const updateCandidatesFromLGAElections = `-- name: UpdateCandidatesFromLGAElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_lga_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'lga'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromLGAElections(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromLGAElections)
-	return err
-}
-
-const updateCandidatesFromNationwideElections = `-- name: UpdateCandidatesFromNationwideElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'nationwide'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromNationwideElections(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromNationwideElections)
-	return err
-}
-
-const updateCandidatesFromSenatorialDistrictElections = `-- name: UpdateCandidatesFromSenatorialDistrictElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_senatorial_district_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'senatorial-district'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSenatorialDistrictElections(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSenatorialDistrictElections)
-	return err
-}
-
-const updateCandidatesFromSingleFederalConstituencyElection = `-- name: UpdateCandidatesFromSingleFederalConstituencyElection :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_federal_constituency_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.id = $1 AND e.scope = 'federal-constituency'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSingleFederalConstituencyElection(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSingleFederalConstituencyElection, id)
-	return err
-}
-
-const updateCandidatesFromSingleLGAElection = `-- name: UpdateCandidatesFromSingleLGAElection :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_lga_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.id = $1 AND e.scope = 'lga'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSingleLGAElection(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSingleLGAElection, id)
-	return err
-}
-
-const updateCandidatesFromSingleNationwideElection = `-- name: UpdateCandidatesFromSingleNationwideElection :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.id = $1 AND e.scope = 'nationwide'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSingleNationwideElection(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSingleNationwideElection, id)
-	return err
-}
-
-const updateCandidatesFromSingleSenatorialDistrictElection = `-- name: UpdateCandidatesFromSingleSenatorialDistrictElection :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_senatorial_district_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.id = $1 AND e.scope = 'senatorial-district'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSingleSenatorialDistrictElection(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSingleSenatorialDistrictElection, id)
-	return err
-}
-
-const updateCandidatesFromSingleStateConstituencyElection = `-- name: UpdateCandidatesFromSingleStateConstituencyElection :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_state_constituency_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.id = $1 AND e.scope = 'state-constituency'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSingleStateConstituencyElection(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSingleStateConstituencyElection, id)
-	return err
-}
-
-const updateCandidatesFromSingleStateElection = `-- name: UpdateCandidatesFromSingleStateElection :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_state_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.id = $1 AND e.scope = 'state'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSingleStateElection(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSingleStateElection, id)
-	return err
-}
-
-const updateCandidatesFromSingleWardElection = `-- name: UpdateCandidatesFromSingleWardElection :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_ward_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.id = $1 AND e.scope = 'ward'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromSingleWardElection(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromSingleWardElection, id)
-	return err
-}
-
-const updateCandidatesFromStateConstituencyElections = `-- name: UpdateCandidatesFromStateConstituencyElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_state_constituency_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'state-constituency'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromStateConstituencyElections(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromStateConstituencyElections)
-	return err
-}
-
-const updateCandidatesFromStateElections = `-- name: UpdateCandidatesFromStateElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_state_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'state'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromStateElections(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromStateElections)
-	return err
-}
-
-const updateCandidatesFromWardElections = `-- name: UpdateCandidatesFromWardElections :exec
-UPDATE election_candidates ec
-SET votes_count = v.votes, updated_at = NOW()
-FROM (
-  SELECT 
-    e.id as election_id,
-    (c.value->>'party_short_name')::text as party_short_name,
-    SUM((c.value->>'vote_count')::int) as votes
-  FROM elections e
-  JOIN election_ward_final_result fr ON e.id = fr.election_id
-  CROSS JOIN jsonb_array_elements(fr.candidate_results) as c(value)
-  WHERE e.scope = 'ward'
-  GROUP BY e.id, c.value->>'party_short_name'
-) v
-WHERE ec.election_id = v.election_id 
-  AND ec.party_short_name = v.party_short_name
-`
-
-func (q *Queries) UpdateCandidatesFromWardElections(ctx context.Context) error {
-	_, err := q.db.Exec(ctx, updateCandidatesFromWardElections)
 	return err
 }
 

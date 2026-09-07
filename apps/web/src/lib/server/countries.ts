@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { API_URL } from "../config";
-import { respondError, respondSuccess } from "@/lib/shared/response";
-import { apiFetch } from "./fetch";
+import { apiFetchJson } from "./fetch";
 
 
 /**
@@ -11,11 +10,9 @@ import { apiFetch } from "./fetch";
 */
 export const getAllCountries = createServerFn().handler(async () => {
   try {
-    const response = await apiFetch(API_URL.getAllCountries);
-    const data = await response.json();
-    return respondSuccess(data);
-  } catch (error) {
-    return respondError("Failed to fetch countries from API, Maybe the backend server is currently down");
+    return await apiFetchJson(API_URL.getAllCountries);
+  } catch (error: any) {
+    return { success: false, message: error?.message || "Failed to fetch countries from API, Maybe the backend server is currently down" };
   }
 });
 
@@ -23,11 +20,9 @@ export const getStates = createServerFn()
   .inputValidator((data: { countryId: number }) => data)
   .handler(async ({ data: { countryId } }) => {
     try {
-      const response = await apiFetch(API_URL.getStates(countryId));
-      const data = await response.json();
-      return respondSuccess(data);
-    } catch (error) {
-      return respondError("Failed to fetch states from API, Maybe the backend server is currently down");
+      return await apiFetchJson(API_URL.getStates(countryId));
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch states from API, Maybe the backend server is currently down" };
     }
   });
 
@@ -36,10 +31,8 @@ export const getCities = createServerFn()
   .handler(async ({ data: { stateId, limit, cursor } }) => {
     try {
       const url = `${API_URL.getCities(stateId)}?limit=${limit || 150}&cursor=${cursor || ""}`;
-      const response = await apiFetch(url);
-      const data = await response.json();
-      return respondSuccess(data);
-    } catch (error) {
-      return respondError("Failed to fetch cities from API, Maybe the backend server is currently down");
+      return await apiFetchJson(url);
+    } catch (error: any) {
+      return { success: false, message: error?.message || "Failed to fetch cities from API, Maybe the backend server is currently down" };
     }
   });

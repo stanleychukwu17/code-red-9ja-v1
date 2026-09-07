@@ -70,10 +70,20 @@ func (s *PartiesService) SetUsersService(us UsersService) {
 
 // CreateParty inserts a party into the database and, if a Monnify client is
 // configured, immediately provisions a reserved virtual account (wallet) for it.
-func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error) {
+func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error) {
 	var logoFileIDPg pgtype.Int8
 	if logoFileID != nil {
 		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
+	}
+
+	var colorHexPg pgtype.Text
+	if colorHex != nil && *colorHex != "" {
+		colorHexPg = pgtype.Text{String: *colorHex, Valid: true}
+	}
+
+	var darkColorHexPg pgtype.Text
+	if darkColorHex != nil && *darkColorHex != "" {
+		darkColorHexPg = pgtype.Text{String: *darkColorHex, Valid: true}
 	}
 
 	party, err := s.queries.CreateParty(ctx, queries.CreatePartyParams{
@@ -82,6 +92,8 @@ func (s *PartiesService) CreateParty(ctx context.Context, shortName, name, logo 
 		Logo:         logo,
 		LogoFileID:   logoFileIDPg,
 		DisplayOrder: displayOrder,
+		ColorHex:     colorHexPg,
+		DarkColorHex: darkColorHexPg,
 	})
 	if err != nil {
 		return queries.Party{}, err
@@ -266,11 +278,21 @@ func (s *PartiesService) ListParties(ctx context.Context) ([]queries.PartyWithVe
 }
 
 // UpdateParty modifies the short name, name, and logo of an existing party.
-func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32) (queries.Party, error) {
+func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, name, logo string, logoFileID *int64, displayOrder int32, colorHex, darkColorHex *string) (queries.Party, error) {
 	defer s.InvalidatePartyCache(ctx, int16(id))
 	var logoFileIDPg pgtype.Int8
 	if logoFileID != nil {
 		logoFileIDPg = pgtype.Int8{Int64: *logoFileID, Valid: true}
+	}
+
+	var colorHexPg pgtype.Text
+	if colorHex != nil && *colorHex != "" {
+		colorHexPg = pgtype.Text{String: *colorHex, Valid: true}
+	}
+
+	var darkColorHexPg pgtype.Text
+	if darkColorHex != nil && *darkColorHex != "" {
+		darkColorHexPg = pgtype.Text{String: *darkColorHex, Valid: true}
 	}
 
 	party, err := s.queries.UpdateParty(ctx, queries.UpdatePartyParams{
@@ -280,6 +302,8 @@ func (s *PartiesService) UpdateParty(ctx context.Context, id int64, shortName, n
 		Logo:         logo,
 		LogoFileID:   logoFileIDPg,
 		DisplayOrder: displayOrder,
+		ColorHex:     colorHexPg,
+		DarkColorHex: darkColorHexPg,
 	})
 
 	s.InvalidatePartyCache(ctx, int16(id))

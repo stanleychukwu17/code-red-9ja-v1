@@ -703,7 +703,22 @@ func (s *Service) EvaluatePracticeTestPayout(
 	}
 	basePaymentKobo := s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleKey, stateName)
 	if basePaymentKobo <= 0 {
-		basePaymentKobo = 2000000 // default 2,000,000 Kobo fallback
+		slog.Info("earnings: party has 0 payment allocation for role", "partyID", asgnInfo.PartyID, "roleType", roleKey)
+		return PracticeTestPayoutResult{
+			Eligible:         false,
+			EarnedAmountKobo: 0,
+			AssignmentID:     asgnInfo.ID,
+			PartyID:          asgnInfo.PartyID,
+		}, nil
+	}
+	if party.AgentPaymentBalanceKobo <= 0 {
+		slog.Info("earnings: party has 0 agent payment balance", "partyID", asgnInfo.PartyID)
+		return PracticeTestPayoutResult{
+			Eligible:         false,
+			EarnedAmountKobo: 0,
+			AssignmentID:     asgnInfo.ID,
+			PartyID:          asgnInfo.PartyID,
+		}, nil
 	}
 
 	// 6. Calculate days to election & cumulative quota from windows
@@ -830,7 +845,18 @@ func (s *Service) ProcessPracticeTestPayout(
 		})
 	}
 
-	// 2. Credit User Wallet
+	// 2. Debit Party Agent Payment Balance
+	asgnInfo, aErr := s.getAssignmentInfo(ctx, userID, electionGroupID, roleType)
+	if aErr == nil && asgnInfo.PartyID > 0 {
+		if _, dErr := qtx.DeductPartyAgentPaymentBalance(ctx, queries.DeductPartyAgentPaymentBalanceParams{
+			AgentPaymentBalanceKobo: earnedKobo,
+			ID:                      asgnInfo.PartyID,
+		}); dErr != nil {
+			return fmt.Errorf("deduct party agent payment balance: %w", dErr)
+		}
+	}
+
+	// 3. Credit User Wallet
 	wallet, wErr := qtx.GetUserWalletByUserID(ctx, userID)
 	if wErr != nil {
 		slog.Warn("earnings: user has no wallet for practice test payout", "userID", userID, "error", wErr)
@@ -931,11 +957,26 @@ func (s *Service) CalculatePotentialPayout(ctx context.Context, assignmentID int
 	if basePaymentKobo <= 0 {
 		party, err := s.q.GetPartyByID(ctx, asgn.PartyID)
 		if err == nil {
+			if party.AgentPaymentBalanceKobo <= 0 {
+				return PotentialPayoutResult{
+					AssignmentID:        assignmentID,
+					TaskType:            taskType,
+					PotentialPayoutKobo: 0,
+					IsEligible:          false,
+					Reason:              "Party has not funded agent payments",
+				}, nil
+			}
 			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, asgn.StateName)
 		}
 	}
 	if basePaymentKobo <= 0 {
-		basePaymentKobo = 2000000 // default 20,000 NGN (2,000,000 Kobo) fallback
+		return PotentialPayoutResult{
+			AssignmentID:        assignmentID,
+			TaskType:            taskType,
+			PotentialPayoutKobo: 0,
+			IsEligible:          false,
+			Reason:              "Party has not configured payment allocation for this role",
+		}, nil
 	}
 
 	// Election day check for non-readiness tasks
@@ -1210,11 +1251,26 @@ func (s *Service) EstimatePotentialPayout(
 	var basePaymentKobo int64
 	if partyID > 0 {
 		if party, err := s.q.GetPartyByID(ctx, partyID); err == nil {
+			if party.AgentPaymentBalanceKobo <= 0 {
+				return EstimatePayoutResult{
+					TaskType:            taskType,
+					Role:                roleType,
+					PotentialPayoutKobo: 0,
+					IsEligible:          false,
+					Reason:              "Party has not funded agent payments",
+				}, nil
+			}
 			basePaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, normRole, "")
 		}
 	}
 	if basePaymentKobo <= 0 {
-		basePaymentKobo = 2000000 // default 2,000,000 Kobo (20,000 NGN)
+		return EstimatePayoutResult{
+			TaskType:            taskType,
+			Role:                roleType,
+			PotentialPayoutKobo: 0,
+			IsEligible:          false,
+			Reason:              "Party has not configured payment allocation for this role",
+		}, nil
 	}
 
 	allocationKey := fmt.Sprintf("earnings_allocation_%s", strings.ReplaceAll(normRole, " ", "_"))
@@ -1403,8 +1459,8 @@ func (s *Service) GetAgentAllocations(
 			potentialPaymentKobo = s.resolveBasePayment(party.AgentPaymentAllocationKobo, roleType, stateName)
 		}
 	}
-	if potentialPaymentKobo <= 0 {
-		potentialPaymentKobo = 2000000 // default 2,000,000 Kobo (20,000 NGN)
+	if potentialPaymentKobo < 0 {
+		potentialPaymentKobo = 0
 	}
 
 	// Fetch earnings allocation for role
@@ -1473,6 +1529,30 @@ func (s *Service) GetAgentAllocations(
 		Allocations:          items,
 		TotalPercentage:      totalPct,
 	}, nil
+}
+
+// RequestPayout calculates/refreshes earnings and marks agent_earnings.status as 'requested'.
+func (s *Service) RequestPayout(ctx context.Context, userID, electionGroupID int64, roleType string) (queries.AgentEarning, error) {
+	if roleType == "" {
+		roleType = "polling_agent"
+	}
+	asgnID, err := s.q.GetAssignmentIDByUserAndElectionGroup(ctx, queries.GetAssignmentIDByUserAndElectionGroupParams{
+		UserID:          userID,
+		ElectionGroupID: electionGroupID,
+	})
+	if err == nil && asgnID > 0 {
+		_, _ = s.Calculate(ctx, asgnID)
+	}
+
+	res, err := s.q.RequestAgentEarningsPayout(ctx, queries.RequestAgentEarningsPayoutParams{
+		UserID:          userID,
+		ElectionGroupID: electionGroupID,
+		RoleType:        roleType,
+	})
+	if err != nil {
+		return queries.AgentEarning{}, fmt.Errorf("request payout: %w", err)
+	}
+	return res, nil
 }
 
 

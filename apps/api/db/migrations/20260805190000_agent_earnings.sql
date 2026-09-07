@@ -36,9 +36,10 @@ CREATE TABLE IF NOT EXISTS agent_earnings (
 
   -- Admin payout workflow
   status  VARCHAR(20) NOT NULL DEFAULT 'pending'
-            CHECK (status IN ('pending', 'approved', 'paid', 'disputed')),
+            CHECK (status IN ('pending', 'requested', 'approved', 'paid', 'disputed')),
 
   calculated_at  TIMESTAMPTZ DEFAULT NOW() NOT NULL,
+  requested_at   TIMESTAMPTZ,
   approved_at    TIMESTAMPTZ,
   paid_at        TIMESTAMPTZ,
   created_at     TIMESTAMPTZ DEFAULT NOW() NOT NULL,

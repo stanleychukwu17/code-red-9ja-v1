@@ -214,6 +214,10 @@ func (s *ElectionsService) CreateElection(
 		return queries.Election{}, err
 	}
 
+	if err := s.syncExpectedResultsForElection(ctx, txQueries, electionGroupID, et.Scope, stateID, senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID, false); err != nil {
+		return queries.Election{}, err
+	}
+
 	updatedElection, err := txQueries.GetElectionInstanceByID(ctx, election.ID)
 	if err != nil {
 		return queries.Election{}, err
@@ -343,6 +347,10 @@ func (s *ElectionsService) CreateNationwideElection(ctx context.Context, officeI
 		return queries.Election{}, err
 	}
 
+	if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "nationwide", nil, nil, nil, nil, nil, nil, false); err != nil {
+		return queries.Election{}, err
+	}
+
 	// Fetch updated election to get the synced group name
 	updatedElection, err := txQueries.GetElectionInstanceByID(ctx, election.ID)
 	if err != nil {
@@ -464,6 +472,13 @@ func (s *ElectionsService) CreateStateElection(ctx context.Context, officeID int
 			return nil, fmt.Errorf("failed to create election for state %d: %w", stateID, err)
 		}
 		createdElections = append(createdElections, election)
+	}
+
+	for _, stateID := range stateIDs {
+		sid := stateID
+		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "state", &sid, nil, nil, nil, nil, nil, false); err != nil {
+			return nil, err
+		}
 	}
 
 	// Sync group rank and name
@@ -607,6 +622,13 @@ func (s *ElectionsService) CreateSenatorialDistrictElection(ctx context.Context,
 			return nil, fmt.Errorf("failed to create election for district %d: %w", districtID, err)
 		}
 		createdElections = append(createdElections, election)
+	}
+
+	for _, sdid := range senatorialDistrictIDs {
+		dID := sdid
+		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "senatorial_district", nil, &dID, nil, nil, nil, nil, false); err != nil {
+			return nil, err
+		}
 	}
 
 	// Sync group rank and name
@@ -759,6 +781,13 @@ func (s *ElectionsService) CreateFederalConstituencyElection(ctx context.Context
 			return nil, fmt.Errorf("failed to create election for federal constituency %d: %w", constituencyID, err)
 		}
 		createdElections = append(createdElections, election)
+	}
+
+	for _, fcid := range federalConstituencyIDs {
+		cID := fcid
+		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "federal_constituency", nil, nil, &cID, nil, nil, nil, false); err != nil {
+			return nil, err
+		}
 	}
 
 	// Sync group rank and name
@@ -923,6 +952,13 @@ func (s *ElectionsService) CreateStateConstituencyElection(ctx context.Context, 
 		createdElections = append(createdElections, election)
 	}
 
+	for _, scid := range stateConstituencyIDs {
+		cID := scid
+		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "state_constituency", nil, nil, nil, &cID, nil, nil, false); err != nil {
+			return nil, err
+		}
+	}
+
 	// Sync group rank and name
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
@@ -1075,6 +1111,13 @@ func (s *ElectionsService) CreateLgaElection(ctx context.Context, officeID int64
 			return nil, fmt.Errorf("failed to create election for LGA %d: %w", lgaID, err)
 		}
 		createdElections = append(createdElections, election)
+	}
+
+	for _, lgaid := range lgaIDs {
+		lID := lgaid
+		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "lga", nil, nil, nil, nil, &lID, nil, false); err != nil {
+			return nil, err
+		}
 	}
 
 	// Sync group rank and name
@@ -1257,6 +1300,13 @@ func (s *ElectionsService) CreateWardElection(ctx context.Context, officeID int6
 		createdElections = append(createdElections, election)
 	}
 
+	for _, wardid := range wardIDs {
+		wID := wardid
+		if err := s.syncExpectedResultsForElection(ctx, txQueries, groupID, "ward", nil, nil, nil, nil, nil, &wID, false); err != nil {
+			return nil, err
+		}
+	}
+
 	// Sync group rank and name
 	if err := s.syncElectionGroupNameAndRank(ctx, txQueries, groupID, electionDate.Year()); err != nil {
 		return nil, err
@@ -1391,6 +1441,28 @@ func (s *ElectionsService) DeleteElection(ctx context.Context, id int64) error {
 	if err := txQueries.DeleteElectionInstance(ctx, id); err != nil {
 		return fmt.Errorf("failed to delete election instance: %w", err)
 	}
+
+	var stID *int16
+	if el.StateID.Valid {
+		stID = &el.StateID.Int16
+	}
+	var sdID, fcID, scID, lgID, wdID *int32
+	if el.SenatorialDistrictID.Valid {
+		sdID = &el.SenatorialDistrictID.Int32
+	}
+	if el.FederalConstituencyID.Valid {
+		fcID = &el.FederalConstituencyID.Int32
+	}
+	if el.StateConstituencyID.Valid {
+		scID = &el.StateConstituencyID.Int32
+	}
+	if el.LgaID.Valid {
+		lgID = &el.LgaID.Int32
+	}
+	if el.WardID.Valid {
+		wdID = &el.WardID.Int32
+	}
+	_ = s.syncExpectedResultsForElection(ctx, txQueries, el.ElectionGroupID, el.Scope, stID, sdID, fcID, scID, lgID, wdID, true)
 
 	// Check remaining elections in the parent group
 	remainingElections, err := txQueries.ListElectionsDetailedByGroupID(ctx, el.ElectionGroupID)
@@ -1776,20 +1848,10 @@ func (s *ElectionsService) SubmitElectionVotes(
 	// 2. Voter created account within the last 6 months
 	// 3. Referrer has a polling_unit_assignments record for the exact same election_group_id
 	voterUser, uErr := qtx.GetUserByID(ctx, userID)
-	if uErr == nil {
+	referrerID, refErr := qtx.GetUserReferredByID(ctx, userID)
+	if uErr == nil && refErr == nil && referrerID > 0 {
 		sixMonthsAgo := time.Now().AddDate(0, -6, 0)
 		if voterUser.CreatedAt.Valid && voterUser.CreatedAt.Time.After(sixMonthsAgo) {
-			referrerID, refErr := qtx.GetUserReferredByID(ctx, userID)
-			if refErr == nil && referrerID > 0 {
-				// Find referrer's assignment for this election group
-				refAssignments, asgnErr := qtx.ListAssignments(ctx, queries.ListAssignmentsParams{
-					ElectionGroupID: electionGroupID,
-					PartyID:         0,
-					PollingUnitID:   0,
-					UserID:          referrerID,
-					Limit:           1,
-					Offset:          0,
-				})
 
 				if asgnErr == nil && len(refAssignments) > 0 {
 					refAsgn := refAssignments[0]
@@ -2021,6 +2083,145 @@ func getSafeNationalMetrics(ctx context.Context, q *queries.Queries) queries.Nat
 		WardsCount:                 8809,
 		PollingUnitsCount:          176846,
 	}
+}
+
+func (s *ElectionsService) syncExpectedResultsForElection(
+	ctx context.Context,
+	txQueries *queries.Queries,
+	electionGroupID int64,
+	scope string,
+	stateID *int16,
+	senatorialDistrictID, federalConstituencyID, stateConstituencyID, lgaID, wardID *int32,
+	isDelete bool,
+) error {
+	if isDelete {
+		switch scope {
+		case "nationwide":
+			if err := txQueries.DecrementElectionGroupPollingUnitsForNationwideElection(ctx, electionGroupID); err != nil {
+				return fmt.Errorf("failed decrementing nationwide expected results: %w", err)
+			}
+		case "state":
+			if stateID != nil {
+				if err := txQueries.DecrementElectionGroupPollingUnitsForStateElection(ctx, queries.DecrementElectionGroupPollingUnitsForStateElectionParams{
+					ElectionGroupID: electionGroupID,
+					StateID:         pgtype.Int2{Int16: *stateID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed decrementing state expected results: %w", err)
+				}
+			}
+		case "senatorial_district":
+			if senatorialDistrictID != nil {
+				if err := txQueries.DecrementElectionGroupPollingUnitsForSenatorialDistrictElection(ctx, queries.DecrementElectionGroupPollingUnitsForSenatorialDistrictElectionParams{
+					ElectionGroupID:      electionGroupID,
+					SenatorialDistrictID: pgtype.Int4{Int32: *senatorialDistrictID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed decrementing senatorial district expected results: %w", err)
+				}
+			}
+		case "federal_constituency":
+			if federalConstituencyID != nil {
+				if err := txQueries.DecrementElectionGroupPollingUnitsForFederalConstituencyElection(ctx, queries.DecrementElectionGroupPollingUnitsForFederalConstituencyElectionParams{
+					ElectionGroupID:       electionGroupID,
+					FederalConstituencyID: pgtype.Int4{Int32: *federalConstituencyID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed decrementing federal constituency expected results: %w", err)
+				}
+			}
+		case "state_constituency":
+			if stateConstituencyID != nil {
+				if err := txQueries.DecrementElectionGroupPollingUnitsForStateConstituencyElection(ctx, queries.DecrementElectionGroupPollingUnitsForStateConstituencyElectionParams{
+					ElectionGroupID:     electionGroupID,
+					StateConstituencyID: pgtype.Int4{Int32: *stateConstituencyID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed decrementing state constituency expected results: %w", err)
+				}
+			}
+		case "lga":
+			if lgaID != nil {
+				if err := txQueries.DecrementElectionGroupPollingUnitsForLgaElection(ctx, queries.DecrementElectionGroupPollingUnitsForLgaElectionParams{
+					ElectionGroupID: electionGroupID,
+					LgaID:           pgtype.Int4{Int32: *lgaID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed decrementing LGA expected results: %w", err)
+				}
+			}
+		case "ward":
+			if wardID != nil {
+				if err := txQueries.DecrementElectionGroupPollingUnitsForWardElection(ctx, queries.DecrementElectionGroupPollingUnitsForWardElectionParams{
+					ElectionGroupID: electionGroupID,
+					WardID:          pgtype.Int4{Int32: *wardID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed decrementing ward expected results: %w", err)
+				}
+			}
+		}
+	} else {
+		switch scope {
+		case "nationwide":
+			if err := txQueries.UpsertElectionGroupPollingUnitsForNationwideElection(ctx, electionGroupID); err != nil {
+				return fmt.Errorf("failed upserting nationwide expected results: %w", err)
+			}
+		case "state":
+			if stateID != nil {
+				if err := txQueries.UpsertElectionGroupPollingUnitsForStateElection(ctx, queries.UpsertElectionGroupPollingUnitsForStateElectionParams{
+					ElectionGroupID: electionGroupID,
+					StateID:         int32(*stateID),
+				}); err != nil {
+					return fmt.Errorf("failed upserting state expected results: %w", err)
+				}
+			}
+		case "senatorial_district":
+			if senatorialDistrictID != nil {
+				if err := txQueries.UpsertElectionGroupPollingUnitsForSenatorialDistrictElection(ctx, queries.UpsertElectionGroupPollingUnitsForSenatorialDistrictElectionParams{
+					ElectionGroupID:      electionGroupID,
+					SenatorialDistrictID: pgtype.Int4{Int32: *senatorialDistrictID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed upserting senatorial district expected results: %w", err)
+				}
+			}
+		case "federal_constituency":
+			if federalConstituencyID != nil {
+				if err := txQueries.UpsertElectionGroupPollingUnitsForFederalConstituencyElection(ctx, queries.UpsertElectionGroupPollingUnitsForFederalConstituencyElectionParams{
+					ElectionGroupID:       electionGroupID,
+					FederalConstituencyID: pgtype.Int4{Int32: *federalConstituencyID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed upserting federal constituency expected results: %w", err)
+				}
+			}
+		case "state_constituency":
+			if stateConstituencyID != nil {
+				if err := txQueries.UpsertElectionGroupPollingUnitsForStateConstituencyElection(ctx, queries.UpsertElectionGroupPollingUnitsForStateConstituencyElectionParams{
+					ElectionGroupID:     electionGroupID,
+					StateConstituencyID: pgtype.Int4{Int32: *stateConstituencyID, Valid: true},
+				}); err != nil {
+					return fmt.Errorf("failed upserting state constituency expected results: %w", err)
+				}
+			}
+		case "lga":
+			if lgaID != nil {
+				if err := txQueries.UpsertElectionGroupPollingUnitsForLgaElection(ctx, queries.UpsertElectionGroupPollingUnitsForLgaElectionParams{
+					ElectionGroupID: electionGroupID,
+					LgaID:           *lgaID,
+				}); err != nil {
+					return fmt.Errorf("failed upserting LGA expected results: %w", err)
+				}
+			}
+		case "ward":
+			if wardID != nil {
+				if err := txQueries.UpsertElectionGroupPollingUnitsForWardElection(ctx, queries.UpsertElectionGroupPollingUnitsForWardElectionParams{
+					ElectionGroupID: electionGroupID,
+					WardID:          *wardID,
+				}); err != nil {
+					return fmt.Errorf("failed upserting ward expected results: %w", err)
+				}
+			}
+		}
+		if err := txQueries.EnsureElectionGroupParentSkeletons(ctx, electionGroupID); err != nil {
+			return fmt.Errorf("failed ensuring parent skeletons: %w", err)
+		}
+	}
+
+	return txQueries.RollupElectionGroupExpectedResults(ctx, electionGroupID)
 }
 
 

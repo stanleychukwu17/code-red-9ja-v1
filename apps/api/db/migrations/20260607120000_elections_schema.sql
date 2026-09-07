@@ -112,6 +112,17 @@ CREATE TABLE elections (
   updates_count INT NOT NULL DEFAULT 0,
   results_submitted_count INT NOT NULL DEFAULT 0,
 
+  -- Shape of contesting_parties:
+  -- [
+  --   {
+  --     "party_id": 1,
+  --     "party_short_name": "APC",
+  --     "party_name": "All Progressives Congress",
+  --     "party_logo": "https://..."
+  --   }
+  -- ]
+  contesting_parties JSONB NOT NULL DEFAULT '[]'::jsonb,
+
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -126,6 +137,9 @@ CREATE INDEX idx_elections_ward_id ON elections(ward_id);
 CREATE INDEX idx_elections_office_id ON elections(office_id);
 CREATE INDEX idx_elections_rank ON elections(rank);
 CREATE INDEX idx_elections_election_date ON elections(election_date);
+CREATE INDEX idx_elections_contesting_parties ON elections USING gin(contesting_parties);
+
+COMMENT ON COLUMN elections.contesting_parties IS 'List of political parties contesting this election. Shape: [{"party_id": 1, "party_short_name": "APC", "party_name": "All Progressives Congress", "party_logo": "https://..."}]';
 
 CREATE TABLE election_candidates (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -133,7 +147,6 @@ CREATE TABLE election_candidates (
   candidate_id BIGINT REFERENCES users(id) ON DELETE CASCADE NOT NULL,
   party_id SMALLINT NOT NULL DEFAULT 7 REFERENCES parties(id) ON DELETE RESTRICT,
   party_short_name VARCHAR(50) NOT NULL DEFAULT 'N/A',
-  votes_count INTEGER DEFAULT 0,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(election_id, candidate_id)

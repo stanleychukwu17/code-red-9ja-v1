@@ -252,13 +252,14 @@ WHERE id = $1 AND user_id = $2;
 
 -- name: UpdateUserAgentMoreInfo :exec
 INSERT INTO user_more_infos (
-  user_id, educational_status, highest_degree, graduation_year, school_name
-) VALUES ($1, $2, $3, $4, $5)
+  user_id, educational_status, highest_degree, graduation_year, school_name, address
+) VALUES ($1, $2, $3, $4, $5, $6)
 ON CONFLICT (user_id) DO UPDATE
 SET educational_status = COALESCE(EXCLUDED.educational_status, user_more_infos.educational_status),
     highest_degree = COALESCE(EXCLUDED.highest_degree, user_more_infos.highest_degree),
     graduation_year = COALESCE(EXCLUDED.graduation_year, user_more_infos.graduation_year),
     school_name = COALESCE(EXCLUDED.school_name, user_more_infos.school_name),
+    address = COALESCE(NULLIF(EXCLUDED.address, ''), user_more_infos.address),
     updated_at = NOW();
 
 -- name: UpdateUserDegreeCertificateUrl :exec

@@ -159,7 +159,7 @@ const Label = ({
   className?: string;
 }) => {
   if (!title) return <></>;
-  return <p className={cn("font-medium text-c-80", className)}>{title}</p>;
+  return <p className={cn("text-c-80", className)}>{title}</p>;
 };
 
 const textareaClassName =

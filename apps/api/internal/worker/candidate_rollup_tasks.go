@@ -59,6 +59,7 @@ type RollupSingleFederalConstituencyPayload struct {
 type RollupSingleSenatorialDistrictPayload struct {
 	ElectionID           int64 `json:"election_id"`
 	SenatorialDistrictID int32 `json:"senatorial_district_id"`
+	StateID              int16 `json:"state_id,omitempty"`
 }
 
 type RollupSingleStatePayload struct {
@@ -277,9 +278,6 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleWard(ctx context.Con
 		return fmt.Errorf("failed to rollup single ward results: %w", err)
 	}
 
-	// Update candidates table if this election is scoped to ward level
-	_ = processor.q.UpdateCandidatesFromSingleWardElection(ctx, payload.ElectionID)
-
 	slog.Info("rolled up single ward final result", "election_id", payload.ElectionID, "ward_id", payload.WardID)
 
 	// Broadcast real-time results-updated event
@@ -325,9 +323,6 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleStateConstituency(ct
 		return fmt.Errorf("failed to rollup single state constituency results: %w", err)
 	}
 
-	// Update candidates table if this election is scoped to state-constituency level
-	_ = processor.q.UpdateCandidatesFromSingleStateConstituencyElection(ctx, payload.ElectionID)
-
 	slog.Info("rolled up single state constituency final result", "election_id", payload.ElectionID, "state_constituency_id", payload.StateConstituencyID)
 
 	// Broadcast real-time results-updated event
@@ -357,9 +352,6 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Cont
 		return fmt.Errorf("failed to rollup single lga results: %w", err)
 	}
 
-	// Update candidates table if this election is scoped to lga level
-	_ = processor.q.UpdateCandidatesFromSingleLGAElection(ctx, payload.ElectionID)
-
 	slog.Info("rolled up single lga final result", "election_id", payload.ElectionID, "lga_id", payload.LGAID)
 
 	// Broadcast real-time results-updated event
@@ -384,16 +376,15 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleLGA(ctx context.Cont
 			})
 		}
 
-		// Cascade to Senatorial District if LGA belongs to one
+		// Cascade to Senatorial District if LGA belongs to one (which will then cascade to State)
 		if payload.SenatorialDistrictID > 0 {
 			_ = processor.taskDistributor.DistributeTaskRollupSingleSenatorialDistrict(ctx, &RollupSingleSenatorialDistrictPayload{
 				ElectionID:           payload.ElectionID,
 				SenatorialDistrictID: payload.SenatorialDistrictID,
+				StateID:              payload.StateID,
 			})
-		}
-
-		// Cascade to State
-		if payload.StateID > 0 {
+		} else if payload.StateID > 0 {
+			// Fallback cascade directly to State if LGA does not belong to a senatorial district
 			_ = processor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
 				ElectionID: payload.ElectionID,
 				StateID:    payload.StateID,
@@ -417,9 +408,6 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleFederalConstituency(
 	if err != nil {
 		return fmt.Errorf("failed to rollup single federal constituency results: %w", err)
 	}
-
-	// Update candidates table if this election is scoped to federal-constituency level
-	_ = processor.q.UpdateCandidatesFromSingleFederalConstituencyElection(ctx, payload.ElectionID)
 
 	slog.Info("rolled up single federal constituency final result", "election_id", payload.ElectionID, "federal_constituency_id", payload.FederalConstituencyID)
 
@@ -450,9 +438,6 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(c
 		return fmt.Errorf("failed to rollup single senatorial district results: %w", err)
 	}
 
-	// Update candidates table if this election is scoped to senatorial-district level
-	_ = processor.q.UpdateCandidatesFromSingleSenatorialDistrictElection(ctx, payload.ElectionID)
-
 	slog.Info("rolled up single senatorial district final result", "election_id", payload.ElectionID, "senatorial_district_id", payload.SenatorialDistrictID)
 
 	// Broadcast real-time results-updated event
@@ -462,6 +447,22 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleSenatorialDistrict(c
 			Scope:                "senatorial_district",
 			SenatorialDistrictID: &payload.SenatorialDistrictID,
 			Timestamp:            time.Now().UTC(),
+		})
+	}
+
+	// Cascade up to State
+	stateID := payload.StateID
+	if stateID == 0 {
+		sd, err := processor.q.GetSenatorialDistrictByID(ctx, payload.SenatorialDistrictID)
+		if err == nil {
+			stateID = int16(sd.StateID)
+		}
+	}
+
+	if processor.taskDistributor != nil && stateID > 0 {
+		_ = processor.taskDistributor.DistributeTaskRollupSingleState(ctx, &RollupSingleStatePayload{
+			ElectionID: payload.ElectionID,
+			StateID:    stateID,
 		})
 	}
 
@@ -481,9 +482,6 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleState(ctx context.Co
 	if err != nil {
 		return fmt.Errorf("failed to rollup single state results: %w", err)
 	}
-
-	// Update candidates table if this election is scoped to state level
-	_ = processor.q.UpdateCandidatesFromSingleStateElection(ctx, payload.ElectionID)
 
 	slog.Info("rolled up single state final result", "election_id", payload.ElectionID, "state_id", payload.StateID)
 
@@ -517,9 +515,6 @@ func (processor *RedisTaskProcessor) ProcessTaskRollupSingleElection(ctx context
 	if err != nil {
 		return fmt.Errorf("failed to rollup single election results: %w", err)
 	}
-
-	// Update candidates table if this election is scoped to nationwide level
-	_ = processor.q.UpdateCandidatesFromSingleNationwideElection(ctx, payload.ElectionID)
 
 	slog.Info("rolled up single nationwide election final result", "election_id", payload.ElectionID)
 

@@ -19,6 +19,7 @@ import { Route as AuthenticatedPartiesRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedMarketingRouteImport } from './routes/_authenticated/marketing'
 import { Route as AuthenticatedElectionsRouteImport } from './routes/_authenticated/elections'
 import { Route as AuthenticatedBodiesRouteImport } from './routes/_authenticated/bodies'
+import { Route as AuthenticatedAgentPaymentsRouteImport } from './routes/_authenticated/agent-payments'
 import { Route as SettingsPartyadminIndexRouteImport } from './routes/settings/partyadmin/index'
 import { Route as SettingsGeneralIndexRouteImport } from './routes/settings/_general/index'
 import { Route as AuthenticatedNotificationsIndexRouteImport } from './routes/_authenticated/notifications/index'
@@ -28,6 +29,7 @@ import { Route as AuthenticatedInecResultGrabberIndexRouteImport } from './route
 import { Route as AuthenticatedHomeIndexRouteImport } from './routes/_authenticated/home/index'
 import { Route as AuthenticatedElectionsIndexRouteImport } from './routes/_authenticated/elections/index'
 import { Route as AuthenticatedApplicationsIndexRouteImport } from './routes/_authenticated/applications/index'
+import { Route as AuthenticatedAgentPaymentsIndexRouteImport } from './routes/_authenticated/agent-payments/index'
 import { Route as AuthenticatedUsersUsersRouteImport } from './routes/_authenticated/users/users'
 import { Route as AuthenticatedUsersPartyAdminRouteImport } from './routes/_authenticated/users/party-admin'
 import { Route as AuthenticatedUsersAdminRouteImport } from './routes/_authenticated/users/admin'
@@ -41,6 +43,8 @@ import { Route as AuthenticatedBodiesSenatorialDistrictsRouteImport } from './ro
 import { Route as AuthenticatedBodiesPollingUnitsRouteImport } from './routes/_authenticated/bodies/polling-units'
 import { Route as AuthenticatedBodiesLgasRouteImport } from './routes/_authenticated/bodies/lgas'
 import { Route as AuthenticatedBodiesFederalConstituenciesRouteImport } from './routes/_authenticated/bodies/federal-constituencies'
+import { Route as AuthenticatedAgentPaymentsReferralPayRouteImport } from './routes/_authenticated/agent-payments/referral-pay'
+import { Route as AuthenticatedAgentPaymentsElectionPayRouteImport } from './routes/_authenticated/agent-payments/election-pay'
 
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
@@ -91,6 +95,12 @@ const AuthenticatedBodiesRoute = AuthenticatedBodiesRouteImport.update({
   path: '/bodies',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedAgentPaymentsRoute =
+  AuthenticatedAgentPaymentsRouteImport.update({
+    id: '/agent-payments',
+    path: '/agent-payments',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const SettingsPartyadminIndexRoute = SettingsPartyadminIndexRouteImport.update({
   id: '/partyadmin/',
   path: '/partyadmin/',
@@ -140,6 +150,12 @@ const AuthenticatedApplicationsIndexRoute =
     id: '/applications/',
     path: '/applications/',
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAgentPaymentsIndexRoute =
+  AuthenticatedAgentPaymentsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAgentPaymentsRoute,
   } as any)
 const AuthenticatedUsersUsersRoute = AuthenticatedUsersUsersRouteImport.update({
   id: '/users',
@@ -216,10 +232,23 @@ const AuthenticatedBodiesFederalConstituenciesRoute =
     path: '/federal-constituencies',
     getParentRoute: () => AuthenticatedBodiesRoute,
   } as any)
+const AuthenticatedAgentPaymentsReferralPayRoute =
+  AuthenticatedAgentPaymentsReferralPayRouteImport.update({
+    id: '/referral-pay',
+    path: '/referral-pay',
+    getParentRoute: () => AuthenticatedAgentPaymentsRoute,
+  } as any)
+const AuthenticatedAgentPaymentsElectionPayRoute =
+  AuthenticatedAgentPaymentsElectionPayRouteImport.update({
+    id: '/election-pay',
+    path: '/election-pay',
+    getParentRoute: () => AuthenticatedAgentPaymentsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRouteWithChildren
+  '/agent-payments': typeof AuthenticatedAgentPaymentsRouteWithChildren
   '/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/marketing': typeof AuthenticatedMarketingRouteWithChildren
@@ -227,6 +256,8 @@ export interface FileRoutesByFullPath {
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/superadmin': typeof AuthSuperadminRoute
+  '/agent-payments/election-pay': typeof AuthenticatedAgentPaymentsElectionPayRoute
+  '/agent-payments/referral-pay': typeof AuthenticatedAgentPaymentsReferralPayRoute
   '/bodies/federal-constituencies': typeof AuthenticatedBodiesFederalConstituenciesRoute
   '/bodies/lgas': typeof AuthenticatedBodiesLgasRoute
   '/bodies/polling-units': typeof AuthenticatedBodiesPollingUnitsRoute
@@ -240,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
+  '/agent-payments/': typeof AuthenticatedAgentPaymentsIndexRoute
   '/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/elections/': typeof AuthenticatedElectionsIndexRoute
   '/home/': typeof AuthenticatedHomeIndexRoute
@@ -257,6 +289,8 @@ export interface FileRoutesByTo {
   '/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/superadmin': typeof AuthSuperadminRoute
+  '/agent-payments/election-pay': typeof AuthenticatedAgentPaymentsElectionPayRoute
+  '/agent-payments/referral-pay': typeof AuthenticatedAgentPaymentsReferralPayRoute
   '/bodies/federal-constituencies': typeof AuthenticatedBodiesFederalConstituenciesRoute
   '/bodies/lgas': typeof AuthenticatedBodiesLgasRoute
   '/bodies/polling-units': typeof AuthenticatedBodiesPollingUnitsRoute
@@ -270,6 +304,7 @@ export interface FileRoutesByTo {
   '/users/admin': typeof AuthenticatedUsersAdminRoute
   '/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/users/users': typeof AuthenticatedUsersUsersRoute
+  '/agent-payments': typeof AuthenticatedAgentPaymentsIndexRoute
   '/applications': typeof AuthenticatedApplicationsIndexRoute
   '/elections': typeof AuthenticatedElectionsIndexRoute
   '/home': typeof AuthenticatedHomeIndexRoute
@@ -285,6 +320,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/settings': typeof SettingsRouteWithChildren
+  '/_authenticated/agent-payments': typeof AuthenticatedAgentPaymentsRouteWithChildren
   '/_authenticated/bodies': typeof AuthenticatedBodiesRouteWithChildren
   '/_authenticated/elections': typeof AuthenticatedElectionsRouteWithChildren
   '/_authenticated/marketing': typeof AuthenticatedMarketingRouteWithChildren
@@ -292,6 +328,8 @@ export interface FileRoutesById {
   '/_authenticated/users': typeof AuthenticatedUsersRouteWithChildren
   '/auth/login': typeof AuthLoginRoute
   '/auth/superadmin': typeof AuthSuperadminRoute
+  '/_authenticated/agent-payments/election-pay': typeof AuthenticatedAgentPaymentsElectionPayRoute
+  '/_authenticated/agent-payments/referral-pay': typeof AuthenticatedAgentPaymentsReferralPayRoute
   '/_authenticated/bodies/federal-constituencies': typeof AuthenticatedBodiesFederalConstituenciesRoute
   '/_authenticated/bodies/lgas': typeof AuthenticatedBodiesLgasRoute
   '/_authenticated/bodies/polling-units': typeof AuthenticatedBodiesPollingUnitsRoute
@@ -305,6 +343,7 @@ export interface FileRoutesById {
   '/_authenticated/users/admin': typeof AuthenticatedUsersAdminRoute
   '/_authenticated/users/party-admin': typeof AuthenticatedUsersPartyAdminRoute
   '/_authenticated/users/users': typeof AuthenticatedUsersUsersRoute
+  '/_authenticated/agent-payments/': typeof AuthenticatedAgentPaymentsIndexRoute
   '/_authenticated/applications/': typeof AuthenticatedApplicationsIndexRoute
   '/_authenticated/elections/': typeof AuthenticatedElectionsIndexRoute
   '/_authenticated/home/': typeof AuthenticatedHomeIndexRoute
@@ -320,6 +359,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/settings'
+    | '/agent-payments'
     | '/bodies'
     | '/elections'
     | '/marketing'
@@ -327,6 +367,8 @@ export interface FileRouteTypes {
     | '/users'
     | '/auth/login'
     | '/auth/superadmin'
+    | '/agent-payments/election-pay'
+    | '/agent-payments/referral-pay'
     | '/bodies/federal-constituencies'
     | '/bodies/lgas'
     | '/bodies/polling-units'
@@ -340,6 +382,7 @@ export interface FileRouteTypes {
     | '/users/admin'
     | '/users/party-admin'
     | '/users/users'
+    | '/agent-payments/'
     | '/applications/'
     | '/elections/'
     | '/home/'
@@ -357,6 +400,8 @@ export interface FileRouteTypes {
     | '/users'
     | '/auth/login'
     | '/auth/superadmin'
+    | '/agent-payments/election-pay'
+    | '/agent-payments/referral-pay'
     | '/bodies/federal-constituencies'
     | '/bodies/lgas'
     | '/bodies/polling-units'
@@ -370,6 +415,7 @@ export interface FileRouteTypes {
     | '/users/admin'
     | '/users/party-admin'
     | '/users/users'
+    | '/agent-payments'
     | '/applications'
     | '/elections'
     | '/home'
@@ -384,6 +430,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/settings'
+    | '/_authenticated/agent-payments'
     | '/_authenticated/bodies'
     | '/_authenticated/elections'
     | '/_authenticated/marketing'
@@ -391,6 +438,8 @@ export interface FileRouteTypes {
     | '/_authenticated/users'
     | '/auth/login'
     | '/auth/superadmin'
+    | '/_authenticated/agent-payments/election-pay'
+    | '/_authenticated/agent-payments/referral-pay'
     | '/_authenticated/bodies/federal-constituencies'
     | '/_authenticated/bodies/lgas'
     | '/_authenticated/bodies/polling-units'
@@ -404,6 +453,7 @@ export interface FileRouteTypes {
     | '/_authenticated/users/admin'
     | '/_authenticated/users/party-admin'
     | '/_authenticated/users/users'
+    | '/_authenticated/agent-payments/'
     | '/_authenticated/applications/'
     | '/_authenticated/elections/'
     | '/_authenticated/home/'
@@ -495,6 +545,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBodiesRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/agent-payments': {
+      id: '/_authenticated/agent-payments'
+      path: '/agent-payments'
+      fullPath: '/agent-payments'
+      preLoaderRoute: typeof AuthenticatedAgentPaymentsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/settings/partyadmin/': {
       id: '/settings/partyadmin/'
       path: '/partyadmin'
@@ -557,6 +614,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/applications/'
       preLoaderRoute: typeof AuthenticatedApplicationsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/agent-payments/': {
+      id: '/_authenticated/agent-payments/'
+      path: '/'
+      fullPath: '/agent-payments/'
+      preLoaderRoute: typeof AuthenticatedAgentPaymentsIndexRouteImport
+      parentRoute: typeof AuthenticatedAgentPaymentsRoute
     }
     '/_authenticated/users/users': {
       id: '/_authenticated/users/users'
@@ -649,8 +713,42 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedBodiesFederalConstituenciesRouteImport
       parentRoute: typeof AuthenticatedBodiesRoute
     }
+    '/_authenticated/agent-payments/referral-pay': {
+      id: '/_authenticated/agent-payments/referral-pay'
+      path: '/referral-pay'
+      fullPath: '/agent-payments/referral-pay'
+      preLoaderRoute: typeof AuthenticatedAgentPaymentsReferralPayRouteImport
+      parentRoute: typeof AuthenticatedAgentPaymentsRoute
+    }
+    '/_authenticated/agent-payments/election-pay': {
+      id: '/_authenticated/agent-payments/election-pay'
+      path: '/election-pay'
+      fullPath: '/agent-payments/election-pay'
+      preLoaderRoute: typeof AuthenticatedAgentPaymentsElectionPayRouteImport
+      parentRoute: typeof AuthenticatedAgentPaymentsRoute
+    }
   }
 }
+
+interface AuthenticatedAgentPaymentsRouteChildren {
+  AuthenticatedAgentPaymentsElectionPayRoute: typeof AuthenticatedAgentPaymentsElectionPayRoute
+  AuthenticatedAgentPaymentsReferralPayRoute: typeof AuthenticatedAgentPaymentsReferralPayRoute
+  AuthenticatedAgentPaymentsIndexRoute: typeof AuthenticatedAgentPaymentsIndexRoute
+}
+
+const AuthenticatedAgentPaymentsRouteChildren: AuthenticatedAgentPaymentsRouteChildren =
+  {
+    AuthenticatedAgentPaymentsElectionPayRoute:
+      AuthenticatedAgentPaymentsElectionPayRoute,
+    AuthenticatedAgentPaymentsReferralPayRoute:
+      AuthenticatedAgentPaymentsReferralPayRoute,
+    AuthenticatedAgentPaymentsIndexRoute: AuthenticatedAgentPaymentsIndexRoute,
+  }
+
+const AuthenticatedAgentPaymentsRouteWithChildren =
+  AuthenticatedAgentPaymentsRoute._addFileChildren(
+    AuthenticatedAgentPaymentsRouteChildren,
+  )
 
 interface AuthenticatedBodiesRouteChildren {
   AuthenticatedBodiesFederalConstituenciesRoute: typeof AuthenticatedBodiesFederalConstituenciesRoute
@@ -726,6 +824,7 @@ const AuthenticatedUsersRouteWithChildren =
   AuthenticatedUsersRoute._addFileChildren(AuthenticatedUsersRouteChildren)
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedAgentPaymentsRoute: typeof AuthenticatedAgentPaymentsRouteWithChildren
   AuthenticatedBodiesRoute: typeof AuthenticatedBodiesRouteWithChildren
   AuthenticatedElectionsRoute: typeof AuthenticatedElectionsRouteWithChildren
   AuthenticatedMarketingRoute: typeof AuthenticatedMarketingRouteWithChildren
@@ -740,6 +839,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAgentPaymentsRoute: AuthenticatedAgentPaymentsRouteWithChildren,
   AuthenticatedBodiesRoute: AuthenticatedBodiesRouteWithChildren,
   AuthenticatedElectionsRoute: AuthenticatedElectionsRouteWithChildren,
   AuthenticatedMarketingRoute: AuthenticatedMarketingRouteWithChildren,
