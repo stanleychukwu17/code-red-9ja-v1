@@ -12,6 +12,8 @@ CREATE TABLE IF NOT EXISTS state_election_supervisors (
   -- Agent Tracking & Verification
   arrived_at TIMESTAMPTZ,
   arrival_video_url TEXT,
+  -- Timestamp when state supervisor completed duties (all expected PU results in state submitted)
+  completed_at TIMESTAMPTZ,
 
   potential_payment_kobo BIGINT NOT NULL DEFAULT 0,
   earned_amount_kobo BIGINT NOT NULL DEFAULT 0,
@@ -37,6 +39,8 @@ CREATE TABLE IF NOT EXISTS lga_election_supervisors (
   -- Agent Tracking & Verification
   arrived_at TIMESTAMPTZ,
   arrival_video_url TEXT,
+  -- Timestamp when LGA supervisor completed duties (all expected PU results in LGA submitted)
+  completed_at TIMESTAMPTZ,
 
   potential_payment_kobo BIGINT NOT NULL DEFAULT 0,
   earned_amount_kobo BIGINT NOT NULL DEFAULT 0,
@@ -63,6 +67,8 @@ CREATE TABLE IF NOT EXISTS ward_election_supervisors (
   -- Agent Tracking & Verification
   arrived_at TIMESTAMPTZ,
   arrival_video_url TEXT,
+  -- Timestamp when ward supervisor completed duties (all expected PU results in ward submitted)
+  completed_at TIMESTAMPTZ,
 
   potential_payment_kobo BIGINT NOT NULL DEFAULT 0,
   earned_amount_kobo BIGINT NOT NULL DEFAULT 0,

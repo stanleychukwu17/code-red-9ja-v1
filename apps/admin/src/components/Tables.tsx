@@ -69,6 +69,16 @@ import {
   INECGrabberLogTableTile,
   type INECResultGrabberLogType,
 } from "./tiles/inec-grabber-log-tile";
+import {
+  ElectionPayTableHeader,
+  ElectionPayTableTile,
+  ReferralPayTableHeader,
+  ReferralPayTableTile,
+} from "./tiles/agent-payment-tiles";
+import type {
+  ElectionPayItem,
+  ReferralPayItem,
+} from "#/lib/server/agent-payments";
 
 export {
   type ElectionGroupType,
@@ -84,6 +94,8 @@ export {
   type UserType,
   type PartyType,
   type MarketingCampaignType,
+  type INECResultGrabberType,
+  type INECResultGrabberLogType,
 };
 
 export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
@@ -318,3 +330,64 @@ export function INECResultGrabberLogsTable({
     </div>
   );
 }
+
+export function ElectionPayTable({
+  items,
+  status = "unpaid",
+  onPay,
+  payingId,
+}: {
+  items: ElectionPayItem[];
+  status?: "unpaid" | "paid" | "ineligible";
+  onPay?: (item: ElectionPayItem) => void;
+  payingId?: number | null;
+}) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto relative">
+      <ElectionPayTableHeader status={status} />
+      <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+        {list.map((data, index) => (
+          <ElectionPayTableTile
+            key={`${data.id}-${index}`}
+            data={data}
+            status={status}
+            onPay={onPay}
+            isPaying={payingId === data.id}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function ReferralPayTable({
+  items,
+  status = "unpaid",
+  onPay,
+  payingId,
+}: {
+  items: ReferralPayItem[];
+  status?: "unpaid" | "paid";
+  onPay?: (item: ReferralPayItem) => void;
+  payingId?: number | null;
+}) {
+  const list = Array.isArray(items) ? items : [];
+  return (
+    <div className="w-full overflow-x-auto relative">
+      <ReferralPayTableHeader status={status} />
+      <div className="divide-y divide-neutral-100 dark:divide-neutral-800/60">
+        {list.map((data, index) => (
+          <ReferralPayTableTile
+            key={`${data.id}-${index}`}
+            data={data}
+            status={status}
+            onPay={onPay}
+            isPaying={payingId === data.id}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+

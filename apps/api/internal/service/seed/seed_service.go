@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"strings"
 	"time"
@@ -422,12 +423,18 @@ func (s *SeedService) SeedAdmins(ctx context.Context, req SeedAdminsRequest) (st
 	return "Admins seeded successfully", nil
 }
 
+type PartyVoteShare struct {
+	PartyShortName string  `json:"party_short_name"`
+	VoteShare      float64 `json:"vote_share"`
+}
+
 type SimulateElectionResultsRequest struct {
-	Limit           int32 `json:"limit"`            // max PUs to populate (0 = all)
-	MinVotesPerPU   int32 `json:"min_votes_per_pu"`  // optional min votes (default 100)
-	MaxVotesPerPU   int32 `json:"max_votes_per_pu"`  // optional max votes (default 750)
-	TriggerRealtime *bool `json:"trigger_realtime"` // dispatch Asynq tasks (default true)
-	RunFullRollup   bool  `json:"run_full_rollup"`  // immediately run sequential rollup queries (default false)
+	Limit           int32            `json:"limit"`            // max PUs to populate (0 = all)
+	MinVotesPerPU   int32            `json:"min_votes_per_pu"` // optional min votes (default 100)
+	MaxVotesPerPU   int32            `json:"max_votes_per_pu"` // optional max votes (default 750)
+	TriggerRealtime *bool            `json:"trigger_realtime"` // dispatch Asynq tasks (default true)
+	RunFullRollup   bool             `json:"run_full_rollup"`  // immediately run sequential rollup queries (default false)
+	PartyShares     []PartyVoteShare `json:"party_shares"`     // optional target national vote share per party
 }
 
 type SimulateResultsResponse struct {
@@ -468,6 +475,12 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 	}
 
 	limit := req.Limit
+	if limit == 0 {
+		limit = 1000 // Sensible default when omitted or 0 in Swagger UI JSON
+	} else if limit < 0 {
+		limit = 0 // 0 signals SQL query to query all eligible polling units
+	}
+
 	pus, err := s.queries.GetEligiblePollingUnitsForElection(ctx, queries.GetEligiblePollingUnitsForElectionParams{
 		ID:      electionID,
 		Column2: limit,
@@ -493,80 +506,241 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 		triggerRealtime = *req.TriggerRealtime
 	}
 
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	// ── Step 1: Resolve national target shares ──────────────────────────────
+	// Normalise the caller-supplied party_shares into fractions that sum to 1.0.
+	// Unspecified active parties share whatever fraction is left over equally.
+	nationalShares := make(map[string]float64) // upper(shortName) → [0,1]
+	if len(req.PartyShares) > 0 {
+		hasLargeVal := false
+		for _, s := range req.PartyShares {
+			if s.VoteShare > 1.0 {
+				hasLargeVal = true
+				break
+			}
+		}
+
+		specifiedMap := make(map[string]float64)
+		var totalSpecified float64
+		for _, s := range req.PartyShares {
+			name := strings.TrimSpace(s.PartyShortName)
+			if name == "" || s.VoteShare <= 0 {
+				continue
+			}
+			val := s.VoteShare
+			if hasLargeVal {
+				val /= 100.0
+			}
+			specifiedMap[strings.ToUpper(name)] = val
+			totalSpecified += val
+		}
+
+		var unspecified []string
+		for _, name := range partyShortNames {
+			if _, ok := specifiedMap[strings.ToUpper(name)]; !ok {
+				unspecified = append(unspecified, name)
+			}
+		}
+
+		remaining := 1.0 - totalSpecified
+		if remaining > 0 && len(unspecified) > 0 {
+			// Randomly distribute the remaining share among unspecified parties
+			// using exponential random weights (Dirichlet-like). This ensures
+			// some marginal parties get a bigger slice while others are tiny —
+			// just like real elections where not all minor parties are equal.
+			rAlloc := rand.New(rand.NewSource(electionID + 77777))
+			rawWeights := make([]float64, len(unspecified))
+			var totalRaw float64
+			for i := range unspecified {
+				// Exponential random variable: -ln(U) gives a distribution
+				// whose normalized values follow a Dirichlet(1,...,1).
+				u := rAlloc.Float64()
+				if u < 1e-10 {
+					u = 1e-10
+				}
+				rawWeights[i] = -math.Log(u)
+				totalRaw += rawWeights[i]
+			}
+			for i, name := range unspecified {
+				nationalShares[strings.ToUpper(name)] = remaining * (rawWeights[i] / totalRaw)
+			}
+			for name, val := range specifiedMap {
+				nationalShares[name] = val
+			}
+		} else {
+			// Specified shares exceed 100% — normalise proportionally
+			var sumAll float64
+			for _, val := range specifiedMap {
+				sumAll += val
+			}
+			if sumAll > 0 {
+				for name, val := range specifiedMap {
+					nationalShares[name] = val / sumAll
+				}
+			}
+			for _, name := range partyShortNames {
+				if _, ok := nationalShares[strings.ToUpper(name)]; !ok {
+					nationalShares[strings.ToUpper(name)] = 0.0
+				}
+			}
+		}
+	}
+	useTargetShares := len(nationalShares) > 0
+
+	// ── Step 2: Build state-level regional strength modifiers ────────────────
+	// For each (party, state) pair we draw a log-normal multiplier so that
+	// every party has clear stronghold states and weak states. A multiplier
+	// of 2.0 means the party gets roughly twice its national share in that
+	// state; 0.3 means it's crushed there. The modifiers are seeded
+	// deterministically per (party, state) so repeated runs are consistent.
+	//
+	// Log-normal parameters (μ=0, σ=0.8) produce a distribution whose
+	// median is 1.0, mean ≈ 1.38, and tail extends to ~4× — realistic for
+	// Nigerian electoral geography where one party can dominate a zone.
+	type statePartyKey struct {
+		stateID   int32
+		partyIdx int
+	}
+	regionalMod := make(map[statePartyKey]float64)
+	if useTargetShares {
+		const lnSigma = 0.85 // controls spread; higher = more extreme strongholds
+		for _, pu := range pus {
+			sid := pu.StateID
+			for i, name := range partyShortNames {
+				key := statePartyKey{stateID: sid, partyIdx: i}
+				if _, exists := regionalMod[key]; !exists {
+					// Deterministic seed: combine state and party index so every
+					// run with the same inputs yields the same regional pattern.
+					seed := int64(sid)*1000 + int64(i) + electionID*100000
+					rState := rand.New(rand.NewSource(seed))
+					// Box-Muller to get a standard normal, then scale
+					u1, u2 := rState.Float64(), rState.Float64()
+					if u1 < 1e-9 {
+						u1 = 1e-9
+					}
+					z := math.Sqrt(-2*math.Log(u1)) * math.Cos(2*math.Pi*u2)
+					mod := math.Exp(lnSigma * z) // log-normal, median=1
+					if mod < 0.10 {
+						mod = 0.10 // floor: party always gets at least a tiny slice
+					}
+					regionalMod[key] = mod
+					_ = name // used via partyShortNames index
+				}
+			}
+		}
+	}
+
+	eg, ctx := errgroup.WithContext(ctx)
+	eg.SetLimit(30)
 
 	for _, pu := range pus {
-		votesCast := minVotes + r.Int31n(maxVotes-minVotes+1)
-		rejectedVotes := r.Int31n(votesCast/20 + 1)
-		validVotes := votesCast - rejectedVotes
-		accreditedVoters := votesCast + r.Int31n(40) + 10
+		pu := pu
+		eg.Go(func() error {
+			r := rand.New(rand.NewSource(time.Now().UnixNano() + int64(pu.ID)))
+			votesCast := minVotes + r.Int31n(maxVotes-minVotes+1)
+			rejectedVotes := r.Int31n(votesCast/20 + 1)
+			validVotes := votesCast - rejectedVotes
+			accreditedVoters := votesCast + r.Int31n(40) + 10
 
-		// Distribute valid votes among active political parties
-		weights := make([]int32, len(partyShortNames))
-		var sumWeights int32
-		for i := range partyShortNames {
-			w := r.Int31n(100) + 5
-			weights[i] = w
-			sumWeights += w
-		}
+			// ── Step 3: Compute per-PU weights ──────────────────────────────
+			// weight = national_share × state_regional_mod × PU_jitter
+			// PU jitter is ±12% so local variation exists within a state but
+			// the state-level modifier is what drives macro-geography.
+			weights := make([]float64, len(partyShortNames))
+			var sumWeights float64
 
-		candItems := make([]candidateResultItem, len(partyShortNames))
-		var allocatedVotes int32
-		for i, shortName := range partyShortNames {
-			v := int32((int64(weights[i]) * int64(validVotes)) / int64(sumWeights))
-			candItems[i] = candidateResultItem{
-				PartyShortName: shortName,
-				VoteCount:      v,
+			for i, shortName := range partyShortNames {
+				if useTargetShares {
+					nShare := nationalShares[strings.ToUpper(shortName)]
+					if nShare > 0 {
+						regKey := statePartyKey{stateID: pu.StateID, partyIdx: i}
+						stateMod := regionalMod[regKey] // geographic stronghold factor
+						puJitter := 0.88 + (r.Float64() * 0.24) // ±12% local noise
+						weights[i] = nShare * stateMod * puJitter * 1000.0
+					} else {
+						weights[i] = 0.0
+					}
+				} else {
+					// No target shares — pure random baseline
+					weights[i] = float64(r.Int31n(100) + 5)
+				}
+				sumWeights += weights[i]
 			}
-			allocatedVotes += v
-		}
-		candItems[0].VoteCount += (validVotes - allocatedVotes)
 
-		candJSON, err := json.Marshal(candItems)
-		if err != nil {
-			return nil, fmt.Errorf("failed to marshal candidate results: %w", err)
-		}
+			candItems := make([]candidateResultItem, len(partyShortNames))
+			var allocatedVotes int32
+			maxPartyIdx := 0
+			var maxPartyVotes int32 = -1
 
-		_, err = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
-			ElectionID:               election.ID,
-			ElectionGroupID:          election.ElectionGroupID,
-			PollingUnitID:            pu.ID,
-			StateID:                  pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
-			SenatorialDistrictID:     pu.SenatorialDistrictID,
-			FederalConstituencyID:    pu.FederalConstituencyID,
-			StateConstituencyID:      pu.StateConstituencyID,
-			LgaID:                    pgtype.Int4{Int32: pu.LgaID, Valid: true},
-			WardID:                   pgtype.Int4{Int32: pu.WardID, Valid: true},
-			PollingUnitResultID:      pgtype.Int8{Valid: false},
-			AccreditedVoters:         accreditedVoters,
-			VotesCast:                votesCast,
-			ValidVotes:               validVotes,
-			RejectedVotes:            rejectedVotes,
-			CandidateResults:         candJSON,
-			MatchingSubmissionsCount: 1,
-			TotalSubmissionsCount:    1,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to upsert polling unit final result for PU %d: %w", pu.ID, err)
-		}
+			for i, shortName := range partyShortNames {
+				var v int32
+				if sumWeights > 0 {
+					v = int32(float64(validVotes) * weights[i] / sumWeights)
+				}
+				candItems[i] = candidateResultItem{
+					PartyShortName: shortName,
+					VoteCount:      v,
+				}
+				allocatedVotes += v
+				if v > maxPartyVotes {
+					maxPartyVotes = v
+					maxPartyIdx = i
+				}
+			}
+			if len(candItems) > 0 {
+				candItems[maxPartyIdx].VoteCount += (validVotes - allocatedVotes)
+			}
 
-		if triggerRealtime && s.taskDistributor != nil {
-			_ = s.taskDistributor.DistributeTaskRollupSingleWard(ctx, &worker.RollupSingleWardPayload{
-				ElectionID:            election.ID,
-				WardID:                pu.WardID,
-				LGAID:                 pu.LgaID,
-				StateID:               int16(pu.StateID),
-				StateConstituencyID:   pu.StateConstituencyID.Int32,
-				FederalConstituencyID: pu.FederalConstituencyID.Int32,
-				SenatorialDistrictID:  pu.SenatorialDistrictID.Int32,
+			candJSON, err := json.Marshal(candItems)
+			if err != nil {
+				return fmt.Errorf("failed to marshal candidate results: %w", err)
+			}
+
+			_, err = s.queries.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
+				ElectionID:               election.ID,
+				ElectionGroupID:          election.ElectionGroupID,
+				PollingUnitID:            pu.ID,
+				StateID:                  pgtype.Int2{Int16: int16(pu.StateID), Valid: true},
+				SenatorialDistrictID:     pu.SenatorialDistrictID,
+				FederalConstituencyID:    pu.FederalConstituencyID,
+				StateConstituencyID:      pu.StateConstituencyID,
+				LgaID:                    pgtype.Int4{Int32: pu.LgaID, Valid: true},
+				WardID:                   pgtype.Int4{Int32: pu.WardID, Valid: true},
+				PollingUnitResultID:      pgtype.Int8{Valid: false},
+				AccreditedVoters:         accreditedVoters,
+				VotesCast:                votesCast,
+				ValidVotes:               validVotes,
+				RejectedVotes:            rejectedVotes,
+				CandidateResults:         candJSON,
+				MatchingSubmissionsCount: 1,
+				TotalSubmissionsCount:    1,
 			})
-			if pu.StateConstituencyID.Valid && pu.StateConstituencyID.Int32 > 0 {
-				_ = s.taskDistributor.DistributeTaskRollupSingleStateConstituency(ctx, &worker.RollupSingleStateConstituencyPayload{
-					ElectionID:          election.ID,
-					StateConstituencyID: pu.StateConstituencyID.Int32,
-				})
+			if err != nil {
+				return fmt.Errorf("failed to upsert polling unit final result for PU %d: %w", pu.ID, err)
 			}
-		}
+
+			if triggerRealtime && s.taskDistributor != nil {
+				_ = s.taskDistributor.DistributeTaskRollupSingleWard(ctx, &worker.RollupSingleWardPayload{
+					ElectionID:            election.ID,
+					WardID:                pu.WardID,
+					LGAID:                 pu.LgaID,
+					StateID:               int16(pu.StateID),
+					StateConstituencyID:   pu.StateConstituencyID.Int32,
+					FederalConstituencyID: pu.FederalConstituencyID.Int32,
+					SenatorialDistrictID:  pu.SenatorialDistrictID.Int32,
+				})
+				if pu.StateConstituencyID.Valid && pu.StateConstituencyID.Int32 > 0 {
+					_ = s.taskDistributor.DistributeTaskRollupSingleStateConstituency(ctx, &worker.RollupSingleStateConstituencyPayload{
+						ElectionID:          election.ID,
+						StateConstituencyID: pu.StateConstituencyID.Int32,
+					})
+				}
+			}
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
 	}
 
 	if req.RunFullRollup {
@@ -577,23 +751,6 @@ func (s *SeedService) SimulateElectionResults(ctx context.Context, electionID in
 		_ = s.queries.RollupSenatorialDistrictFinalResults(ctx)
 		_ = s.queries.RollupStateFinalResults(ctx)
 		_ = s.queries.RollupElectionFinalResults(ctx)
-
-		switch election.Scope {
-		case "ward":
-			_ = s.queries.UpdateCandidatesFromSingleWardElection(ctx, election.ID)
-		case "state-constituency":
-			_ = s.queries.UpdateCandidatesFromSingleStateConstituencyElection(ctx, election.ID)
-		case "lga":
-			_ = s.queries.UpdateCandidatesFromSingleLGAElection(ctx, election.ID)
-		case "federal-constituency":
-			_ = s.queries.UpdateCandidatesFromSingleFederalConstituencyElection(ctx, election.ID)
-		case "senatorial-district":
-			_ = s.queries.UpdateCandidatesFromSingleSenatorialDistrictElection(ctx, election.ID)
-		case "state":
-			_ = s.queries.UpdateCandidatesFromSingleStateElection(ctx, election.ID)
-		case "nationwide":
-			_ = s.queries.UpdateCandidatesFromSingleNationwideElection(ctx, election.ID)
-		}
 	}
 
 	return &SimulateResultsResponse{

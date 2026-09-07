@@ -73,13 +73,31 @@ WHERE
 ORDER BY ae.id DESC
 LIMIT $6::int;
 
+-- name: RequestAgentEarningsPayout :one
+UPDATE agent_earnings
+SET
+  status       = 'requested',
+  requested_at = NOW(),
+  updated_at   = NOW()
+WHERE user_id = $1 AND election_group_id = $2 AND role_type = $3 AND status IN ('pending', 'requested')
+RETURNING *;
+
+-- name: RequestAgentEarningsPayoutByID :one
+UPDATE agent_earnings
+SET
+  status       = 'requested',
+  requested_at = NOW(),
+  updated_at   = NOW()
+WHERE id = $1 AND status IN ('pending', 'requested')
+RETURNING *;
+
 -- name: ApproveAgentEarnings :one
 UPDATE agent_earnings
 SET
   status      = 'approved',
   approved_at = NOW(),
   updated_at  = NOW()
-WHERE id = $1 AND status = 'pending'
+WHERE id = $1 AND status IN ('pending', 'requested')
 RETURNING *;
 
 -- name: MarkAgentEarningsPaid :one
@@ -103,7 +121,7 @@ SELECT
   a.election_ended_at,
   a.updates_count,
   a.results_submitted_count,
-  a.results_expected_to_submit_count,
+  COALESCE(egpu.unique_final_results_expected, 0)::int AS results_expected_to_submit_count,
   a.live_voters_referred_count,
   a.election_practice_test_readiness_percentage,
   a.potential_payment_kobo,
@@ -114,6 +132,9 @@ FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
 JOIN c_states cs ON pu.state_id = cs.id
+LEFT JOIN election_group_polling_units egpu 
+  ON egpu.election_group_id = a.election_group_id 
+ AND egpu.polling_unit_id = a.polling_unit_id
 WHERE a.id = $1
 LIMIT 1;
 

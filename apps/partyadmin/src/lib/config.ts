@@ -17,6 +17,10 @@ export const APP_URL = {
     members: (party: string) => `/${party}/party-members`,
     wallet: (party: string) => `/${party}/wallet`,
     marketing: (party: string) => `/${party}/marketing`,
+    agents: (party: string) => `/${party}/agents`,
+    coverage: (party: string) => `/${party}/coverage`,
+    candidateResults: (party: string) => `/${party}/candidate-results`,
+    electionRace: (party: string) => `/${party}/election-race`,
   },
 } as const;
 
@@ -98,10 +102,14 @@ export const API_URL = {
   electionResultsStates: `${api}/elections/results/states`,
   electionResultsSenatorialDistricts: `${api}/elections/results/senatorial-districts`,
   electionResultsFederalConstituencies: `${api}/elections/results/federal-constituencies`,
+  electionResultsStateConstituencies: `${api}/elections/results/state-constituencies`,
   electionResultsLGAs: `${api}/elections/results/lgas`,
   electionResultsWards: `${api}/elections/results/wards`,
   electionResultsPollingUnits: `${api}/elections/results/polling-units`,
   electionResultsScoped: `${api}/elections/results`,
+  electionResultsBreakdown: `${api}/elections/results/breakdown`,
+  electionOperationsBreakdown: `${api}/elections/operations/breakdown`,
+  agentCoverageBreakdown: `${api}/elections/agent-coverage/breakdown`,
   electionStats: {
     singleGlobalStats: (id: number | string, partyId: number | string) => {
       return `${api}/election-groups/${id}/stats/parties/${partyId}`;

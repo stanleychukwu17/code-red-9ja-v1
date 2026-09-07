@@ -444,7 +444,7 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := false
 	isPartyAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 		}
 		if rCode == "party_admin" || rCode == "super_party_admin" {
@@ -452,7 +452,13 @@ func (h *Handler) GetApplication(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !isPlatformAdmin {
-		if !isPartyAdmin || !requester.PartyID.Valid || app.PartyID != requester.PartyID.Int16 {
+		requesterPartyID := int16(0)
+		if requester.PartyID.Valid {
+			requesterPartyID = requester.PartyID.Int16
+		} else if claims.PartyID > 0 {
+			requesterPartyID = claims.PartyID
+		}
+		if !isPartyAdmin || requesterPartyID == 0 || app.PartyID != requesterPartyID {
 			h.utils.RespondError(w, http.StatusForbidden, "Permission denied")
 			return
 		}
@@ -521,10 +527,10 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := false
 	isPartyAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 		}
-		if rCode == "party_admin" {
+		if rCode == "party_admin" || rCode == "super_party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -533,7 +539,13 @@ func (h *Handler) ApproveApplication(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can approve applications")
 			return
 		}
-		if !requester.PartyID.Valid || app.PartyID != requester.PartyID.Int16 {
+		requesterPartyID := int16(0)
+		if requester.PartyID.Valid {
+			requesterPartyID = requester.PartyID.Int16
+		} else if claims.PartyID > 0 {
+			requesterPartyID = claims.PartyID
+		}
+		if requesterPartyID == 0 || app.PartyID != requesterPartyID {
 			h.utils.RespondError(w, http.StatusForbidden, "Cannot approve applications of a different party")
 			return
 		}
@@ -645,10 +657,10 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := false
 	isPartyAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 		}
-		if rCode == "party_admin" {
+		if rCode == "party_admin" || rCode == "super_party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -657,7 +669,13 @@ func (h *Handler) RejectApplication(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can reject applications")
 			return
 		}
-		if !requester.PartyID.Valid || app.PartyID != requester.PartyID.Int16 {
+		requesterPartyID := int16(0)
+		if requester.PartyID.Valid {
+			requesterPartyID = requester.PartyID.Int16
+		} else if claims.PartyID > 0 {
+			requesterPartyID = claims.PartyID
+		}
+		if requesterPartyID == 0 || app.PartyID != requesterPartyID {
 			h.utils.RespondError(w, http.StatusForbidden, "Cannot reject applications of a different party")
 			return
 		}
@@ -716,9 +734,30 @@ func (h *Handler) CancelApplication(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Enforce visibility restriction: Only the applicant can cancel their own application
-	if app.UserID != requester.ID {
-		h.utils.RespondError(w, http.StatusForbidden, "Only the applicant can cancel this application")
+	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
+	isPlatformAdmin := false
+	isPartyAdmin := false
+	for _, rCode := range rolesData.RolesCode {
+		if rCode == "admin" || rCode == "super_admin" {
+			isPlatformAdmin = true
+		}
+		if rCode == "party_admin" || rCode == "super_party_admin" {
+			isPartyAdmin = true
+		}
+	}
+
+	requesterPartyID := int16(0)
+	if requester.PartyID.Valid {
+		requesterPartyID = requester.PartyID.Int16
+	} else if claims.PartyID > 0 {
+		requesterPartyID = claims.PartyID
+	}
+
+	isApplicant := app.UserID == requester.ID
+	isPartyAdminOfApp := isPartyAdmin && requesterPartyID > 0 && app.PartyID == requesterPartyID
+
+	if !isApplicant && !isPartyAdminOfApp && !isPlatformAdmin {
+		h.utils.RespondError(w, http.StatusForbidden, "Only the applicant or authorized party administrators can cancel this application")
 		return
 	}
 

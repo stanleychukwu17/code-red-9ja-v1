@@ -44,6 +44,7 @@ function RouteComponent() {
       return meta?.has_more ? meta.next_cursor : undefined;
     },
   });
+  console.log({ acceptedPages });
 
   // Count queries for tab badges
   const { data: pendingRes, refetch: refetchPending } = useQuery({

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"math"
 	"sort"
 	"strings"
 	"time"
@@ -118,6 +119,28 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 	}
 
 	r := winningGroup.BaseResult
+	candResults := r.CandidateResults
+	if len(r.CandidateResults) > 0 {
+		var candList []map[string]interface{}
+		if err := json.Unmarshal(r.CandidateResults, &candList); err == nil {
+			validVotes := float64(r.ValidVotes)
+			for _, cand := range candList {
+				voteCount := 0.0
+				if vc, ok := cand["vote_count"].(float64); ok {
+					voteCount = vc
+				}
+				if validVotes > 0 {
+					cand["vote_share"] = math.Round((voteCount/validVotes)*10000) / 100
+				} else {
+					cand["vote_share"] = 0.0
+				}
+			}
+			if updatedJSON, err := json.Marshal(candList); err == nil {
+				candResults = updatedJSON
+			}
+		}
+	}
+
 	_, err = processor.q.UpsertPollingUnitFinalResult(ctx, queries.UpsertPollingUnitFinalResultParams{
 		ElectionID:               r.ElectionID,
 		ElectionGroupID:          r.ElectionGroupID,
@@ -133,7 +156,7 @@ func (processor *RedisTaskProcessor) ProcessTaskCalculateFinalResult(ctx context
 		VotesCast:                r.VotesCast,
 		ValidVotes:               r.ValidVotes,
 		RejectedVotes:            r.RejectedVotes,
-		CandidateResults:         r.CandidateResults,
+		CandidateResults:         candResults,
 		MatchingSubmissionsCount: int32(winningGroup.Count),
 		TotalSubmissionsCount:    int32(len(results)),
 	})

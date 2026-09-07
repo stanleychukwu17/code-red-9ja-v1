@@ -349,6 +349,10 @@ SELECT
   pa.party_id,
   pa.election_group_id,
   pa.polling_unit_id,
+  pa.role,
+  pa.state_id AS app_state_id,
+  pa.lga_id AS app_lga_id,
+  pa.ward_id AS app_ward_id,
   pa.status,
   pa.rejected_reason,
   pa.created_at,
@@ -361,8 +365,8 @@ SELECT
   u.avatar,
   u.voters_card_image,
   u.current_country,
-  u.current_state,
-  u.current_lga,
+  COALESCE(pa.state_id, pu.state_id, u.current_state)::smallint AS current_state,
+  COALESCE(pa.lga_id, pu.lga_id, u.current_lga)::integer AS current_lga,
   u.current_city,
   uba.account_number AS bank_account_number,
   uba.bank_code AS bank_code,
@@ -372,15 +376,18 @@ SELECT
   up.school_name,
   up.religion,
   up.marital_status,
-  u.current_ward,
+  up.address,
+  up.degree_certificate_url,
+  COALESCE(pa.ward_id, pu.ward_id, u.current_ward)::integer AS current_ward,
   eg.name AS election_group_name,
   eg.election_date,
   p.name AS party_name,
   p.short_name AS party_short_name,
   p.logo AS party_logo,
-  st.name AS state_name,
-  lg.name AS lga_name,
+  COALESCE(st.name, pu.state_name, '')::varchar AS state_name,
+  COALESCE(lg.name, pu.lga_name, '')::varchar AS lga_name,
   ct.name AS city_name,
+  COALESCE(w.name, pu.ward_name, '')::varchar AS ward_name,
   pu.name AS polling_unit_name,
   pu.pu_code AS polling_unit_code,
   COALESCE(
@@ -398,10 +405,11 @@ JOIN users u ON pa.user_id = u.id
 LEFT JOIN user_more_infos up ON u.id = up.user_id
 JOIN election_groups eg ON pa.election_group_id = eg.id
 JOIN parties p ON pa.party_id = p.id
-LEFT JOIN c_states st ON u.current_state = st.id
-LEFT JOIN lgas lg ON u.current_lga = lg.id
-LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
+LEFT JOIN c_states st ON COALESCE(pa.state_id, pu.state_id, u.current_state) = st.id
+LEFT JOIN lgas lg ON COALESCE(pa.lga_id, pu.lga_id, u.current_lga) = lg.id
+LEFT JOIN wards w ON COALESCE(pa.ward_id, pu.ward_id, u.current_ward) = w.id
+LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
   ($1::bigint = 0 OR pa.user_id = $1) AND
@@ -429,46 +437,53 @@ type ListApplicationsParams struct {
 }
 
 type ListApplicationsRow struct {
-	ID                int64              `json:"id"`
-	UserID            int64              `json:"user_id"`
-	PartyID           int16              `json:"party_id"`
-	ElectionGroupID   int64              `json:"election_group_id"`
-	PollingUnitID     pgtype.Int4        `json:"polling_unit_id"`
-	Status            string             `json:"status"`
-	RejectedReason    pgtype.Text        `json:"rejected_reason"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
-	FirstName         pgtype.Text        `json:"first_name"`
-	LastName          pgtype.Text        `json:"last_name"`
-	Email             pgtype.Text        `json:"email"`
-	Phone             pgtype.Text        `json:"phone"`
-	Username          pgtype.Text        `json:"username"`
-	Avatar            pgtype.Text        `json:"avatar"`
-	VotersCardImage   pgtype.Text        `json:"voters_card_image"`
-	CurrentCountry    int16              `json:"current_country"`
-	CurrentState      int16              `json:"current_state"`
-	CurrentLga        pgtype.Int4        `json:"current_lga"`
-	CurrentCity       pgtype.Int4        `json:"current_city"`
-	BankAccountNumber pgtype.Text        `json:"bank_account_number"`
-	BankCode          pgtype.Text        `json:"bank_code"`
-	EducationalStatus pgtype.Text        `json:"educational_status"`
-	HighestDegree     pgtype.Text        `json:"highest_degree"`
-	GraduationYear    pgtype.Text        `json:"graduation_year"`
-	SchoolName        pgtype.Text        `json:"school_name"`
-	Religion          pgtype.Text        `json:"religion"`
-	MaritalStatus     pgtype.Text        `json:"marital_status"`
-	CurrentWard       pgtype.Int4        `json:"current_ward"`
-	ElectionGroupName string             `json:"election_group_name"`
-	ElectionDate      pgtype.Date        `json:"election_date"`
-	PartyName         string             `json:"party_name"`
-	PartyShortName    string             `json:"party_short_name"`
-	PartyLogo         string             `json:"party_logo"`
-	StateName         pgtype.Text        `json:"state_name"`
-	LgaName           pgtype.Text        `json:"lga_name"`
-	CityName          pgtype.Text        `json:"city_name"`
-	PollingUnitName   pgtype.Text        `json:"polling_unit_name"`
-	PollingUnitCode   pgtype.Text        `json:"polling_unit_code"`
-	AgentsCount       int32              `json:"agents_count"`
+	ID                   int64              `json:"id"`
+	UserID               int64              `json:"user_id"`
+	PartyID              int16              `json:"party_id"`
+	ElectionGroupID      int64              `json:"election_group_id"`
+	PollingUnitID        pgtype.Int4        `json:"polling_unit_id"`
+	Role                 string             `json:"role"`
+	AppStateID           pgtype.Int2        `json:"app_state_id"`
+	AppLgaID             pgtype.Int4        `json:"app_lga_id"`
+	AppWardID            pgtype.Int4        `json:"app_ward_id"`
+	Status               string             `json:"status"`
+	RejectedReason       pgtype.Text        `json:"rejected_reason"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+	FirstName            pgtype.Text        `json:"first_name"`
+	LastName             pgtype.Text        `json:"last_name"`
+	Email                pgtype.Text        `json:"email"`
+	Phone                pgtype.Text        `json:"phone"`
+	Username             pgtype.Text        `json:"username"`
+	Avatar               pgtype.Text        `json:"avatar"`
+	VotersCardImage      pgtype.Text        `json:"voters_card_image"`
+	CurrentCountry       int16              `json:"current_country"`
+	CurrentState         int16              `json:"current_state"`
+	CurrentLga           int32              `json:"current_lga"`
+	CurrentCity          pgtype.Int4        `json:"current_city"`
+	BankAccountNumber    pgtype.Text        `json:"bank_account_number"`
+	BankCode             pgtype.Text        `json:"bank_code"`
+	EducationalStatus    pgtype.Text        `json:"educational_status"`
+	HighestDegree        pgtype.Text        `json:"highest_degree"`
+	GraduationYear       pgtype.Text        `json:"graduation_year"`
+	SchoolName           pgtype.Text        `json:"school_name"`
+	Religion             pgtype.Text        `json:"religion"`
+	MaritalStatus        pgtype.Text        `json:"marital_status"`
+	Address              pgtype.Text        `json:"address"`
+	DegreeCertificateUrl pgtype.Text        `json:"degree_certificate_url"`
+	CurrentWard          int32              `json:"current_ward"`
+	ElectionGroupName    string             `json:"election_group_name"`
+	ElectionDate         pgtype.Date        `json:"election_date"`
+	PartyName            string             `json:"party_name"`
+	PartyShortName       string             `json:"party_short_name"`
+	PartyLogo            string             `json:"party_logo"`
+	StateName            string             `json:"state_name"`
+	LgaName              string             `json:"lga_name"`
+	CityName             pgtype.Text        `json:"city_name"`
+	WardName             string             `json:"ward_name"`
+	PollingUnitName      pgtype.Text        `json:"polling_unit_name"`
+	PollingUnitCode      pgtype.Text        `json:"polling_unit_code"`
+	AgentsCount          int32              `json:"agents_count"`
 }
 
 func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsParams) ([]ListApplicationsRow, error) {
@@ -496,6 +511,10 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.PartyID,
 			&i.ElectionGroupID,
 			&i.PollingUnitID,
+			&i.Role,
+			&i.AppStateID,
+			&i.AppLgaID,
+			&i.AppWardID,
 			&i.Status,
 			&i.RejectedReason,
 			&i.CreatedAt,
@@ -519,6 +538,8 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.SchoolName,
 			&i.Religion,
 			&i.MaritalStatus,
+			&i.Address,
+			&i.DegreeCertificateUrl,
 			&i.CurrentWard,
 			&i.ElectionGroupName,
 			&i.ElectionDate,
@@ -528,6 +549,7 @@ func (q *Queries) ListApplications(ctx context.Context, arg ListApplicationsPara
 			&i.StateName,
 			&i.LgaName,
 			&i.CityName,
+			&i.WardName,
 			&i.PollingUnitName,
 			&i.PollingUnitCode,
 			&i.AgentsCount,
@@ -643,7 +665,6 @@ SET
   current_ward = $9,
   phone = COALESCE(NULLIF($10::varchar, ''), phone),
   polling_unit_id = $11,
-  address = COALESCE(NULLIF($12::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
 RETURNING id, fake_id, email, phone, username, password_hash, first_name, last_name, middle_name, gender, date_of_birth, avatar, avatar_file_id, voters_card_image, current_country, current_state, current_city, current_lga, current_ward, polling_unit_id, country_of_origin, state_of_origin, has_role, is_verified, is_politician, party_id, account_status, referral_code, created_at, updated_at
@@ -661,7 +682,6 @@ type UpdateUserAgentDetailsParams struct {
 	CurrentWard     pgtype.Int4 `json:"current_ward"`
 	Phone           string      `json:"phone"`
 	PollingUnitID   pgtype.Int4 `json:"polling_unit_id"`
-	Address         string      `json:"address"`
 }
 
 func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgentDetailsParams) (User, error) {
@@ -677,7 +697,6 @@ func (q *Queries) UpdateUserAgentDetails(ctx context.Context, arg UpdateUserAgen
 		arg.CurrentWard,
 		arg.Phone,
 		arg.PollingUnitID,
-		arg.Address,
 	)
 	var i User
 	err := row.Scan(

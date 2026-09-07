@@ -14,6 +14,7 @@ export const getElectionScopedFinalResult = createServerFn({ method: "GET" })
   .inputValidator(
     (data: {
       electionId: number;
+      pollingUnitId?: number;
       wardId?: number;
       stateConstituencyId?: number;
       lgaId?: number;
@@ -28,6 +29,9 @@ export const getElectionScopedFinalResult = createServerFn({ method: "GET" })
       params.append("election_id", String(data.electionId));
       params.append("limit", "1");
 
+      if (data.pollingUnitId) {
+        params.append("polling_unit_id", String(data.pollingUnitId));
+      }
       if (data.wardId) {
         params.append("ward_id", String(data.wardId));
       }

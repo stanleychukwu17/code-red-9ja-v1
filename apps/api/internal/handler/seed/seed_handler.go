@@ -31,7 +31,7 @@ func NewHandler(seedService *seedservice.SeedService, utils *utils.Utils) *Handl
 // @Tags Seed
 // @Accept json
 // @Produce json
-// @Param request body []seedservice.SeedUserRequest true "List of users to seed"
+// @Param request body seedservice.SeedUserRequest true "List of users to seed"
 // @Success 200 {object} map[string]interface{} "Users seeded successfully"
 // @Failure 400 {object} map[string]interface{} "Invalid request body"
 // @Failure 500 {object} map[string]interface{} "Failed to seed users"
@@ -101,13 +101,29 @@ func (h *Handler) SeedAdmins(w http.ResponseWriter, r *http.Request) {
 	h.utils.RespondSuccess(w, http.StatusOK, msg, nil)
 }
 
+// SimulatePartyShare specifies a target vote share for one party.
+type SimulatePartyShare struct {
+	PartyShortName string  `json:"party_short_name" example:"APC"`
+	VoteShare      float64 `json:"vote_share"       example:"35"`
+}
+
+// SimulateElectionRequest is the request body for SimulateElectionResults.
+type SimulateElectionRequest struct {
+	Limit           int32                `json:"limit"            example:"1000"`
+	MinVotesPerPU   int32                `json:"min_votes_per_pu" example:"100"`
+	MaxVotesPerPU   int32                `json:"max_votes_per_pu" example:"750"`
+	TriggerRealtime *bool                `json:"trigger_realtime"`
+	RunFullRollup   bool                 `json:"run_full_rollup"`
+	PartyShares     []SimulatePartyShare `json:"party_shares"`
+}
+
 // @Summary Simulate election polling unit results
-// @Description Populates mock consensus final results for all eligible polling units of an election and triggers rollups
+// @Description Populates mock consensus final results for all eligible polling units of an election with optional party target vote shares and triggers rollups
 // @Tags Seed
 // @Accept json
 // @Produce json
-// @Param id path int true "Election ID"
-// @Param request body seedservice.SimulateElectionResultsRequest false "Simulation options"
+// @Param id path integer true "Election ID"
+// @Param request body SimulateElectionRequest false "Simulation options including optional party target vote shares"
 // @Success 200 {object} map[string]interface{} "Results simulated successfully"
 // @Failure 400 {object} map[string]interface{} "Invalid request body"
 // @Failure 500 {object} map[string]interface{} "Failed to simulate election results"
@@ -126,8 +142,8 @@ func (h *Handler) SimulateElectionResults(w http.ResponseWriter, r *http.Request
 	}
 
 	var req seedservice.SimulateElectionResultsRequest
-	if r.Body != nil && r.ContentLength > 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if r.Body != nil {
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && err != io.EOF {
 			h.utils.RespondError(w, http.StatusBadRequest, "Invalid request body: "+err.Error())
 			return
 		}

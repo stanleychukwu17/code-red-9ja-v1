@@ -56,6 +56,11 @@ export type ApplicationType = {
   school_name?: any;
   ward_name?: any;
   address?: any;
+  role?: string;
+  app_state_id?: number;
+  app_lga_id?: number;
+  app_ward_id?: number;
+  degree_certificate_url?: any;
 
   // Mock data fields
   name?: string;
@@ -103,8 +108,11 @@ export function ApplicationTableHeader() {
         <p className="text-c-50 text-[14px] w-35 hidden lg:block">
           Election
         </p>
+        <p className="text-c-50 text-[14px] w-[130px] hidden md:block">
+          Role
+        </p>
         <p className="text-c-50 text-[14px] w-[160px] hidden md:block">
-          Polling Unit
+          Assignment / PU
         </p>
         <p className="text-c-50 text-[14px] w-25 hidden xl:block">
           Agents Count
@@ -214,8 +222,55 @@ export function ApplicationTableTile({
         ? "accept"
         : "reject");
 
+  const roleType = data.role || "polling_agent";
+  const isSupervisor = roleType !== "polling_agent";
+  const wardName = getPgString(data.ward_name);
+
+  let assignmentLocation = pollingUnitName;
+  if (isSupervisor) {
+    if (roleType === "ward_election_supervisor" || roleType === "ward_supervisor") {
+      assignmentLocation = wardName ? `${wardName} Ward` : lgaName ? `${lgaName} LGA` : stateName || "Ward Supervisor";
+    } else if (roleType === "lga_election_supervisor" || roleType === "lga_supervisor") {
+      assignmentLocation = lgaName ? `${lgaName} LGA` : stateName || "LGA Supervisor";
+    } else if (roleType === "state_election_supervisor" || roleType === "state_supervisor") {
+      assignmentLocation = stateName ? `${stateName} State` : "State Supervisor";
+    }
+  }
+
+  const getRoleBadge = (r: string) => {
+    switch (r) {
+      case "state_election_supervisor":
+      case "state_supervisor":
+        return {
+          label: "State Supervisor",
+          className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800",
+        };
+      case "lga_election_supervisor":
+      case "lga_supervisor":
+        return {
+          label: "LGA Supervisor",
+          className: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800",
+        };
+      case "ward_election_supervisor":
+      case "ward_supervisor":
+        return {
+          label: "Ward Supervisor",
+          className: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800",
+        };
+      default:
+        return {
+          label: "Polling Agent",
+          className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800",
+        };
+    }
+  };
+  const roleBadge = getRoleBadge(roleType);
+
   const applicationDetails = {
     id: data.id,
+    userId: data.user_id,
+    status: data.status,
+    role: roleType,
     name,
     avatar,
     location: residence,
@@ -230,14 +285,18 @@ export function ApplicationTableTile({
     graduationYear: getPgString(data.graduation_year) || undefined,
     educationalStatus: getPgString(data.educational_status) || undefined,
     address: getPgString(data.address) || undefined,
-    wardName: getPgString(data.ward_name) || undefined,
-    wardId: data.current_ward?.Int32 || data.current_ward || undefined,
+    stateName: stateName || undefined,
+    lgaName: lgaName || undefined,
+    wardName: wardName || undefined,
+    pollingUnitName: pollingUnitName || undefined,
+    degreeCertificateUrl: getPgString(data.degree_certificate_url) || undefined,
+    wardId: data.app_ward_id || data.current_ward?.Int32 || data.current_ward || undefined,
     pollingUnitId:
       data.polling_unit_id?.Int32 || data.polling_unit_id || undefined,
     electionGroupId: data.election_group_id || undefined,
     partyId: data.party_id || undefined,
-    stateId: data.current_state || data.stateId,
-    lgaId: Number(lgaVal) || data.lgaId || undefined,
+    stateId: data.app_state_id || data.current_state || data.stateId,
+    lgaId: data.app_lga_id || Number(lgaVal) || data.lgaId || undefined,
     partyLogo: partyLogo,
     partyShortName: partyShortName,
   };
@@ -311,14 +370,24 @@ export function ApplicationTableTile({
         <p className="w-35 truncate hidden lg:block text-[#313131]">
           {election}
         </p>
+        <div className="w-[130px] hidden md:flex items-center">
+          <span
+            className={cn(
+              "px-2.5 py-0.5 text-xs font-semibold rounded-full border",
+              roleBadge.className,
+            )}
+          >
+            {roleBadge.label}
+          </span>
+        </div>
         <p
           className="w-[160px] truncate hidden md:block text-[#313131]"
-          title={pollingUnitName}
+          title={assignmentLocation}
         >
-          {pollingUnitName}
+          {assignmentLocation}
         </p>
         <p className="w-25 hidden xl:block text-[#313131]">
-          {agentsCount}
+          {isSupervisor ? "—" : agentsCount}
         </p>
         <div
           className="w-[160px] flex gap-2 justify-center"

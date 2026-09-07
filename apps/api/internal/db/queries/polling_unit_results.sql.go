@@ -198,8 +198,17 @@ const incrementAssignmentResultCount = `-- name: IncrementAssignmentResultCount 
 UPDATE polling_unit_assignments
 SET
   results_submitted_count = results_submitted_count + 1,
+  completed_at            = CASE
+                              WHEN (results_submitted_count + 1) >= COALESCE((
+                                SELECT egpu.unique_final_results_expected
+                                FROM election_group_polling_units egpu
+                                WHERE egpu.election_group_id = polling_unit_assignments.election_group_id
+                                  AND egpu.polling_unit_id = polling_unit_assignments.polling_unit_id
+                              ), 1) THEN COALESCE(completed_at, NOW())
+                              ELSE completed_at
+                            END,
   updated_at              = NOW()
-WHERE id = $1
+WHERE polling_unit_assignments.id = $1
 `
 
 func (q *Queries) IncrementAssignmentResultCount(ctx context.Context, id int64) error {

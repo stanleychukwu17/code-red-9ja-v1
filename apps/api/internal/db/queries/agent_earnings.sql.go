@@ -17,8 +17,8 @@ SET
   status      = 'approved',
   approved_at = NOW(),
   updated_at  = NOW()
-WHERE id = $1 AND status = 'pending'
-RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, approved_at, paid_at, created_at, updated_at
+WHERE id = $1 AND status IN ('pending', 'requested')
+RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, requested_at, approved_at, paid_at, created_at, updated_at
 `
 
 func (q *Queries) ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarning, error) {
@@ -49,6 +49,7 @@ func (q *Queries) ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarn
 		&i.TotalEarnedKobo,
 		&i.Status,
 		&i.CalculatedAt,
+		&i.RequestedAt,
 		&i.ApprovedAt,
 		&i.PaidAt,
 		&i.CreatedAt,
@@ -58,7 +59,7 @@ func (q *Queries) ApproveAgentEarnings(ctx context.Context, id int64) (AgentEarn
 }
 
 const getAgentEarningsByID = `-- name: GetAgentEarningsByID :one
-SELECT id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, approved_at, paid_at, created_at, updated_at FROM agent_earnings
+SELECT id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, requested_at, approved_at, paid_at, created_at, updated_at FROM agent_earnings
 WHERE id = $1
 LIMIT 1
 `
@@ -91,6 +92,7 @@ func (q *Queries) GetAgentEarningsByID(ctx context.Context, id int64) (AgentEarn
 		&i.TotalEarnedKobo,
 		&i.Status,
 		&i.CalculatedAt,
+		&i.RequestedAt,
 		&i.ApprovedAt,
 		&i.PaidAt,
 		&i.CreatedAt,
@@ -100,7 +102,7 @@ func (q *Queries) GetAgentEarningsByID(ctx context.Context, id int64) (AgentEarn
 }
 
 const getAgentEarningsByUserAndElectionGroupAndRole = `-- name: GetAgentEarningsByUserAndElectionGroupAndRole :one
-SELECT id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, approved_at, paid_at, created_at, updated_at FROM agent_earnings
+SELECT id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, requested_at, approved_at, paid_at, created_at, updated_at FROM agent_earnings
 WHERE user_id = $1 AND election_group_id = $2 AND role_type = $3
 LIMIT 1
 `
@@ -139,6 +141,7 @@ func (q *Queries) GetAgentEarningsByUserAndElectionGroupAndRole(ctx context.Cont
 		&i.TotalEarnedKobo,
 		&i.Status,
 		&i.CalculatedAt,
+		&i.RequestedAt,
 		&i.ApprovedAt,
 		&i.PaidAt,
 		&i.CreatedAt,
@@ -159,7 +162,7 @@ SELECT
   a.election_ended_at,
   a.updates_count,
   a.results_submitted_count,
-  a.results_expected_to_submit_count,
+  COALESCE(egpu.unique_final_results_expected, 0)::int AS results_expected_to_submit_count,
   a.live_voters_referred_count,
   a.election_practice_test_readiness_percentage,
   a.potential_payment_kobo,
@@ -170,6 +173,9 @@ FROM polling_unit_assignments a
 JOIN election_groups eg ON a.election_group_id = eg.id
 JOIN polling_units pu ON a.polling_unit_id = pu.id
 JOIN c_states cs ON pu.state_id = cs.id
+LEFT JOIN election_group_polling_units egpu 
+  ON egpu.election_group_id = a.election_group_id 
+ AND egpu.polling_unit_id = a.polling_unit_id
 WHERE a.id = $1
 LIMIT 1
 `
@@ -238,7 +244,7 @@ func (q *Queries) GetAssignmentIDByUserAndElectionGroup(ctx context.Context, arg
 }
 
 const listAgentEarnings = `-- name: ListAgentEarnings :many
-SELECT ae.id, ae.user_id, ae.party_id, ae.election_group_id, ae.role_type, ae.base_payment_kobo, ae.earnings_allocation, ae.readiness_score, ae.results_score, ae.updates_score, ae.attendance_score, ae.election_start_score, ae.election_end_score, ae.live_voters_score, ae.readiness_earned_kobo, ae.results_earned_kobo, ae.updates_earned_kobo, ae.attendance_earned_kobo, ae.election_start_earned_kobo, ae.election_end_earned_kobo, ae.live_voters_earned_kobo, ae.total_earned_kobo, ae.status, ae.calculated_at, ae.approved_at, ae.paid_at, ae.created_at, ae.updated_at, u.first_name, u.last_name, u.username
+SELECT ae.id, ae.user_id, ae.party_id, ae.election_group_id, ae.role_type, ae.base_payment_kobo, ae.earnings_allocation, ae.readiness_score, ae.results_score, ae.updates_score, ae.attendance_score, ae.election_start_score, ae.election_end_score, ae.live_voters_score, ae.readiness_earned_kobo, ae.results_earned_kobo, ae.updates_earned_kobo, ae.attendance_earned_kobo, ae.election_start_earned_kobo, ae.election_end_earned_kobo, ae.live_voters_earned_kobo, ae.total_earned_kobo, ae.status, ae.calculated_at, ae.requested_at, ae.approved_at, ae.paid_at, ae.created_at, ae.updated_at, u.first_name, u.last_name, u.username
 FROM agent_earnings ae
 JOIN users u ON ae.user_id = u.id
 WHERE
@@ -285,6 +291,7 @@ type ListAgentEarningsRow struct {
 	TotalEarnedKobo         int64              `json:"total_earned_kobo"`
 	Status                  string             `json:"status"`
 	CalculatedAt            pgtype.Timestamptz `json:"calculated_at"`
+	RequestedAt             pgtype.Timestamptz `json:"requested_at"`
 	ApprovedAt              pgtype.Timestamptz `json:"approved_at"`
 	PaidAt                  pgtype.Timestamptz `json:"paid_at"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
@@ -335,6 +342,7 @@ func (q *Queries) ListAgentEarnings(ctx context.Context, arg ListAgentEarningsPa
 			&i.TotalEarnedKobo,
 			&i.Status,
 			&i.CalculatedAt,
+			&i.RequestedAt,
 			&i.ApprovedAt,
 			&i.PaidAt,
 			&i.CreatedAt,
@@ -360,7 +368,7 @@ SET
   paid_at    = NOW(),
   updated_at = NOW()
 WHERE id = $1 AND status = 'approved'
-RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, approved_at, paid_at, created_at, updated_at
+RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, requested_at, approved_at, paid_at, created_at, updated_at
 `
 
 func (q *Queries) MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEarning, error) {
@@ -391,6 +399,107 @@ func (q *Queries) MarkAgentEarningsPaid(ctx context.Context, id int64) (AgentEar
 		&i.TotalEarnedKobo,
 		&i.Status,
 		&i.CalculatedAt,
+		&i.RequestedAt,
+		&i.ApprovedAt,
+		&i.PaidAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const requestAgentEarningsPayout = `-- name: RequestAgentEarningsPayout :one
+UPDATE agent_earnings
+SET
+  status       = 'requested',
+  requested_at = NOW(),
+  updated_at   = NOW()
+WHERE user_id = $1 AND election_group_id = $2 AND role_type = $3 AND status IN ('pending', 'requested')
+RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, requested_at, approved_at, paid_at, created_at, updated_at
+`
+
+type RequestAgentEarningsPayoutParams struct {
+	UserID          int64  `json:"user_id"`
+	ElectionGroupID int64  `json:"election_group_id"`
+	RoleType        string `json:"role_type"`
+}
+
+func (q *Queries) RequestAgentEarningsPayout(ctx context.Context, arg RequestAgentEarningsPayoutParams) (AgentEarning, error) {
+	row := q.db.QueryRow(ctx, requestAgentEarningsPayout, arg.UserID, arg.ElectionGroupID, arg.RoleType)
+	var i AgentEarning
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PartyID,
+		&i.ElectionGroupID,
+		&i.RoleType,
+		&i.BasePaymentKobo,
+		&i.EarningsAllocation,
+		&i.ReadinessScore,
+		&i.ResultsScore,
+		&i.UpdatesScore,
+		&i.AttendanceScore,
+		&i.ElectionStartScore,
+		&i.ElectionEndScore,
+		&i.LiveVotersScore,
+		&i.ReadinessEarnedKobo,
+		&i.ResultsEarnedKobo,
+		&i.UpdatesEarnedKobo,
+		&i.AttendanceEarnedKobo,
+		&i.ElectionStartEarnedKobo,
+		&i.ElectionEndEarnedKobo,
+		&i.LiveVotersEarnedKobo,
+		&i.TotalEarnedKobo,
+		&i.Status,
+		&i.CalculatedAt,
+		&i.RequestedAt,
+		&i.ApprovedAt,
+		&i.PaidAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const requestAgentEarningsPayoutByID = `-- name: RequestAgentEarningsPayoutByID :one
+UPDATE agent_earnings
+SET
+  status       = 'requested',
+  requested_at = NOW(),
+  updated_at   = NOW()
+WHERE id = $1 AND status IN ('pending', 'requested')
+RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, requested_at, approved_at, paid_at, created_at, updated_at
+`
+
+func (q *Queries) RequestAgentEarningsPayoutByID(ctx context.Context, id int64) (AgentEarning, error) {
+	row := q.db.QueryRow(ctx, requestAgentEarningsPayoutByID, id)
+	var i AgentEarning
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PartyID,
+		&i.ElectionGroupID,
+		&i.RoleType,
+		&i.BasePaymentKobo,
+		&i.EarningsAllocation,
+		&i.ReadinessScore,
+		&i.ResultsScore,
+		&i.UpdatesScore,
+		&i.AttendanceScore,
+		&i.ElectionStartScore,
+		&i.ElectionEndScore,
+		&i.LiveVotersScore,
+		&i.ReadinessEarnedKobo,
+		&i.ResultsEarnedKobo,
+		&i.UpdatesEarnedKobo,
+		&i.AttendanceEarnedKobo,
+		&i.ElectionStartEarnedKobo,
+		&i.ElectionEndEarnedKobo,
+		&i.LiveVotersEarnedKobo,
+		&i.TotalEarnedKobo,
+		&i.Status,
+		&i.CalculatedAt,
+		&i.RequestedAt,
 		&i.ApprovedAt,
 		&i.PaidAt,
 		&i.CreatedAt,
@@ -449,7 +558,7 @@ ON CONFLICT (user_id, election_group_id, role_type) DO UPDATE SET
   total_earned_kobo          = EXCLUDED.total_earned_kobo,
   calculated_at              = NOW(),
   updated_at                 = NOW()
-RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, approved_at, paid_at, created_at, updated_at
+RETURNING id, user_id, party_id, election_group_id, role_type, base_payment_kobo, earnings_allocation, readiness_score, results_score, updates_score, attendance_score, election_start_score, election_end_score, live_voters_score, readiness_earned_kobo, results_earned_kobo, updates_earned_kobo, attendance_earned_kobo, election_start_earned_kobo, election_end_earned_kobo, live_voters_earned_kobo, total_earned_kobo, status, calculated_at, requested_at, approved_at, paid_at, created_at, updated_at
 `
 
 type UpsertAgentEarningsParams struct {
@@ -526,6 +635,7 @@ func (q *Queries) UpsertAgentEarnings(ctx context.Context, arg UpsertAgentEarnin
 		&i.TotalEarnedKobo,
 		&i.Status,
 		&i.CalculatedAt,
+		&i.RequestedAt,
 		&i.ApprovedAt,
 		&i.PaidAt,
 		&i.CreatedAt,

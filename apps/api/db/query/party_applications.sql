@@ -25,7 +25,6 @@ SET
   current_ward = $9,
   phone = COALESCE(NULLIF(sqlc.arg(phone)::varchar, ''), phone),
   polling_unit_id = sqlc.arg(polling_unit_id),
-  address = COALESCE(NULLIF(sqlc.arg(address)::varchar, ''), address),
   updated_at = NOW()
 WHERE id = $1
 RETURNING *;
@@ -41,6 +40,10 @@ SELECT
   pa.party_id,
   pa.election_group_id,
   pa.polling_unit_id,
+  pa.role,
+  pa.state_id AS app_state_id,
+  pa.lga_id AS app_lga_id,
+  pa.ward_id AS app_ward_id,
   pa.status,
   pa.rejected_reason,
   pa.created_at,
@@ -53,8 +56,8 @@ SELECT
   u.avatar,
   u.voters_card_image,
   u.current_country,
-  u.current_state,
-  u.current_lga,
+  COALESCE(pa.state_id, pu.state_id, u.current_state)::smallint AS current_state,
+  COALESCE(pa.lga_id, pu.lga_id, u.current_lga)::integer AS current_lga,
   u.current_city,
   uba.account_number AS bank_account_number,
   uba.bank_code AS bank_code,
@@ -64,15 +67,18 @@ SELECT
   up.school_name,
   up.religion,
   up.marital_status,
-  u.current_ward,
+  up.address,
+  up.degree_certificate_url,
+  COALESCE(pa.ward_id, pu.ward_id, u.current_ward)::integer AS current_ward,
   eg.name AS election_group_name,
   eg.election_date,
   p.name AS party_name,
   p.short_name AS party_short_name,
   p.logo AS party_logo,
-  st.name AS state_name,
-  lg.name AS lga_name,
+  COALESCE(st.name, pu.state_name, '')::varchar AS state_name,
+  COALESCE(lg.name, pu.lga_name, '')::varchar AS lga_name,
   ct.name AS city_name,
+  COALESCE(w.name, pu.ward_name, '')::varchar AS ward_name,
   pu.name AS polling_unit_name,
   pu.pu_code AS polling_unit_code,
   COALESCE(
@@ -90,10 +96,11 @@ JOIN users u ON pa.user_id = u.id
 LEFT JOIN user_more_infos up ON u.id = up.user_id
 JOIN election_groups eg ON pa.election_group_id = eg.id
 JOIN parties p ON pa.party_id = p.id
-LEFT JOIN c_states st ON u.current_state = st.id
-LEFT JOIN lgas lg ON u.current_lga = lg.id
-LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN polling_units pu ON pa.polling_unit_id = pu.id
+LEFT JOIN c_states st ON COALESCE(pa.state_id, pu.state_id, u.current_state) = st.id
+LEFT JOIN lgas lg ON COALESCE(pa.lga_id, pu.lga_id, u.current_lga) = lg.id
+LEFT JOIN wards w ON COALESCE(pa.ward_id, pu.ward_id, u.current_ward) = w.id
+LEFT JOIN c_cities ct ON u.current_city = ct.id
 LEFT JOIN user_bank_accounts uba ON uba.user_id = u.id AND uba.is_primary = true
 WHERE 
   (sqlc.arg(user_id)::bigint = 0 OR pa.user_id = sqlc.arg(user_id)) AND

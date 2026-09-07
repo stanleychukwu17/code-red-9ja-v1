@@ -102,10 +102,10 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := false
 	isPartyAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 		}
-		if rCode == "party_admin" {
+		if rCode == "party_admin" || rCode == "super_party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -121,11 +121,17 @@ func (h *Handler) CreateAssignment(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can make assignments")
 			return
 		}
-		if !requester.PartyID.Valid {
+		requesterPartyID := int16(0)
+		if requester.PartyID.Valid {
+			requesterPartyID = requester.PartyID.Int16
+		} else if claims.PartyID > 0 {
+			requesterPartyID = claims.PartyID
+		}
+		if requesterPartyID == 0 {
 			h.utils.RespondError(w, http.StatusForbidden, "Admin is not associated with a party")
 			return
 		}
-		finalPartyID = int64(requester.PartyID.Int16)
+		finalPartyID = int64(requesterPartyID)
 	}
 
 	// Verify target agent exists and belongs to the correct party if it is a party admin assignment
@@ -228,18 +234,24 @@ func (h *Handler) ListAssignments(w http.ResponseWriter, r *http.Request) {
 	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 			break
 		}
 	}
 	if !isPlatformAdmin {
-		if !requester.PartyID.Valid {
+		requesterPartyID := int16(0)
+		if requester.PartyID.Valid {
+			requesterPartyID = requester.PartyID.Int16
+		} else if claims.PartyID > 0 {
+			requesterPartyID = claims.PartyID
+		}
+		if requesterPartyID == 0 {
 			h.utils.RespondError(w, http.StatusForbidden, "User is not associated with a party")
 			return
 		}
 		// Force the filter to only their own party
-		partyID = int64(requester.PartyID.Int16)
+		partyID = int64(requesterPartyID)
 	}
 
 	assignments, err := h.service.ListAssignments(r.Context(), electionGroupID, int16(partyID), userID, pollingUnitID, limit, offset)
@@ -294,13 +306,19 @@ func (h *Handler) GetAssignment(w http.ResponseWriter, r *http.Request) {
 	rolesData, _ := h.usersService.GetUserRoles(r.Context(), requester.ID)
 	isPlatformAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 			break
 		}
 	}
 	if !isPlatformAdmin {
-		if !requester.PartyID.Valid || assignment.PartyID != requester.PartyID.Int16 {
+		requesterPartyID := int16(0)
+		if requester.PartyID.Valid {
+			requesterPartyID = requester.PartyID.Int16
+		} else if claims.PartyID > 0 {
+			requesterPartyID = claims.PartyID
+		}
+		if requesterPartyID == 0 || assignment.PartyID != requesterPartyID {
 			h.utils.RespondError(w, http.StatusForbidden, "Permission denied")
 			return
 		}
@@ -352,10 +370,10 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 	isPlatformAdmin := false
 	isPartyAdmin := false
 	for _, rCode := range rolesData.RolesCode {
-		if rCode == "admin" {
+		if rCode == "admin" || rCode == "super_admin" {
 			isPlatformAdmin = true
 		}
-		if rCode == "party_admin" {
+		if rCode == "party_admin" || rCode == "super_party_admin" {
 			isPartyAdmin = true
 		}
 	}
@@ -364,7 +382,13 @@ func (h *Handler) DeleteAssignment(w http.ResponseWriter, r *http.Request) {
 			h.utils.RespondError(w, http.StatusForbidden, "Only administrators can delete assignments")
 			return
 		}
-		if !requester.PartyID.Valid || assignment.PartyID != requester.PartyID.Int16 {
+		requesterPartyID := int16(0)
+		if requester.PartyID.Valid {
+			requesterPartyID = requester.PartyID.Int16
+		} else if claims.PartyID > 0 {
+			requesterPartyID = claims.PartyID
+		}
+		if requesterPartyID == 0 || assignment.PartyID != requesterPartyID {
 			h.utils.RespondError(w, http.StatusForbidden, "Cannot delete assignment of a different party")
 			return
 		}
