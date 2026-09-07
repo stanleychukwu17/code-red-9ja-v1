@@ -1,5 +1,4 @@
 import { createClientOnlyFn } from "@tanstack/react-start";
-import { respondError, respondSuccess } from "@/lib/shared/response";
 import { IP_SERVICE_URL } from "@/lib/config";
 
 /**
@@ -11,14 +10,17 @@ export const fetchCountryDetailsFromLocalIPService = createClientOnlyFn(async ()
   try {
     const response = await fetch(IP_SERVICE_URL);
     if (!response.ok) {
-      return respondError("Failed to fetch country from local IP service");
+      return { success: false, message: "Failed to fetch country from local IP service" };
     }
 
     const data = await response.json();
     // The local service returns { ip: "...", location: { country: "..." } }
     // We return the entire payload wrapped in a data key to match the VisitorDetails interface structure
-    return respondSuccess({ data });
-  } catch (error) {
-    return respondError("Failed to fetch country from local IP service, check if the server is up and running");
+    return { success: true, data };
+  } catch (error: any) {
+    return {
+      success: false,
+      message: error?.message || "Failed to fetch country from local IP service, check if the server is up and running",
+    };
   }
-})
+});
