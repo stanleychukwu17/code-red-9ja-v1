@@ -1,0 +1,8 @@
+TODO's
+
+Sept 7th
+- Agent application based on party ad they clicked on
+- if it's a month to a new election group holding in your state: auto select that election group
+- Application Flow: One can only apply to an election holding in their state
+- Upon landing in homepage: See popup saying "Make 40k as a polling unit agent come eleciton day"
+- Finalize Supervisor POV and functionalities and payment

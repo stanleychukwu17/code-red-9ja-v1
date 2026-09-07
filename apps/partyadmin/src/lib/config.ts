@@ -18,6 +18,7 @@ export const APP_URL = {
     wallet: (party: string) => `/${party}/wallet`,
     marketing: (party: string) => `/${party}/marketing`,
     agents: (party: string) => `/${party}/agents`,
+    coverage: (party: string) => `/${party}/coverage`,
     candidateResults: (party: string) => `/${party}/candidate-results`,
     electionRace: (party: string) => `/${party}/election-race`,
   },

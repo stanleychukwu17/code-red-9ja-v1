@@ -9,14 +9,13 @@ import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { getAgentCoverageBreakdown } from "#/lib/server/agent-coverage";
 import { useAppContext } from "#/hooks/useAppContext";
 import { getPageHeader } from "#/lib/shared/meta";
-import { AgentsHeaderRight } from "./-components";
-import { getAgentsTabs } from "./-data";
+import { CoverageHeaderRight } from "./-components";
 import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
 
 export const Route = createFileRoute(
-  "/_authenticated/$partyShortName/agents/coverage",
+  "/_authenticated/$partyShortName/coverage/",
 )({
-  head: () => getPageHeader({ title: "Election Agents - Agent Coverage" }),
+  head: () => getPageHeader({ title: "Agent Coverage" }),
   component: AgentCoveragePage,
 });
 
@@ -187,9 +186,8 @@ function AgentCoveragePage() {
     <Layout>
       <PageHeader
         title="Agent Coverage"
-        activeTab="coverage"
-        tabs={getAgentsTabs(partyShortName)}
-        rightComponent={<AgentsHeaderRight />}
+        activeTab=""
+        rightComponent={<CoverageHeaderRight />}
       />
 
       <div className="flex items-center justify-between gap-4 flex-wrap py-2">
