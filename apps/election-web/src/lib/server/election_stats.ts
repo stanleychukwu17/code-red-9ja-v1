@@ -1,21 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getCookie } from "@tanstack/react-start/server";
 import { API_URL } from "#/lib/config";
-
-function getAuthHeaders() {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  const accessToken = getCookie("access_token");
-  const refreshToken = getCookie("refresh_token");
-
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-    headers["Cookie"] = `accessToken=${accessToken}; refreshToken=${refreshToken || ""}`;
-  }
-
-  return headers;
-}
+import { apiFetchJson } from "./fetch";
 
 export const getSingleStateStats = createServerFn({ method: "GET" })
   .inputValidator(
@@ -28,12 +13,11 @@ export const getSingleStateStats = createServerFn({ method: "GET" })
         data.state_id,
         data.party_id
       );
-      const response = await fetch(url, { headers: getAuthHeaders() });
-      return await response.json();
-    } catch (error) {
+      return await apiFetchJson(url);
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to fetch state stats: " + (error as Error).message,
+        message: error?.message || "Failed to fetch state stats",
       };
     }
   });
@@ -49,12 +33,11 @@ export const getSingleLgaStats = createServerFn({ method: "GET" })
         data.lga_id,
         data.party_id
       );
-      const response = await fetch(url, { headers: getAuthHeaders() });
-      return await response.json();
-    } catch (error) {
+      return await apiFetchJson(url);
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to fetch LGA stats: " + (error as Error).message,
+        message: error?.message || "Failed to fetch LGA stats",
       };
     }
   });
@@ -70,12 +53,11 @@ export const getSingleWardStats = createServerFn({ method: "GET" })
         data.ward_id,
         data.party_id
       );
-      const response = await fetch(url, { headers: getAuthHeaders() });
-      return await response.json();
-    } catch (error) {
+      return await apiFetchJson(url);
+    } catch (error: any) {
       return {
         success: false,
-        message: "Failed to fetch Ward stats: " + (error as Error).message,
+        message: error?.message || "Failed to fetch Ward stats",
       };
     }
   });

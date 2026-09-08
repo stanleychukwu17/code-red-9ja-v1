@@ -168,7 +168,7 @@ func (q *Queries) GetReferralByReferredUserID(ctx context.Context, referredUserI
 }
 
 const getReferrerUserReferralsForParty = `-- name: GetReferrerUserReferralsForParty :many
-SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE user_id = $1 AND party_id = $2
 `
 
@@ -199,6 +199,10 @@ func (q *Queries) GetReferrerUserReferralsForParty(ctx context.Context, arg GetR
 			&i.DutiesCompletedAndUnpaidReferrals,
 			&i.PotentialEarnings,
 			&i.EarnedAmount,
+			&i.Status,
+			&i.RequestedAt,
+			&i.ApprovedAt,
+			&i.PaidAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -213,7 +217,7 @@ func (q *Queries) GetReferrerUserReferralsForParty(ctx context.Context, arg GetR
 }
 
 const getUserReferralByID = `-- name: GetUserReferralByID :one
-SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE id = $1 LIMIT 1
 `
 
@@ -232,6 +236,10 @@ func (q *Queries) GetUserReferralByID(ctx context.Context, id int64) (UserReferr
 		&i.DutiesCompletedAndUnpaidReferrals,
 		&i.PotentialEarnings,
 		&i.EarnedAmount,
+		&i.Status,
+		&i.RequestedAt,
+		&i.ApprovedAt,
+		&i.PaidAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -239,7 +247,7 @@ func (q *Queries) GetUserReferralByID(ctx context.Context, id int64) (UserReferr
 }
 
 const getUserReferralByUserAndElectionGroup = `-- name: GetUserReferralByUserAndElectionGroup :one
-SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, created_at, updated_at FROM user_referrals
+SELECT id, user_id, party_id, election_group_id, total_referrals, agent_referrals, unpaid_referrals, duties_completed_referrals, duties_completed_and_unpaid_referrals, potential_earnings, earned_amount, status, requested_at, approved_at, paid_at, created_at, updated_at FROM user_referrals
 WHERE user_id = $1 AND election_group_id = $2
 LIMIT 1
 `
@@ -264,6 +272,10 @@ func (q *Queries) GetUserReferralByUserAndElectionGroup(ctx context.Context, arg
 		&i.DutiesCompletedAndUnpaidReferrals,
 		&i.PotentialEarnings,
 		&i.EarnedAmount,
+		&i.Status,
+		&i.RequestedAt,
+		&i.ApprovedAt,
+		&i.PaidAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
