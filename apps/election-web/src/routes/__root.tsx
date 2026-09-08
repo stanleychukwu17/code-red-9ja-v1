@@ -15,7 +15,6 @@ import { OutletWrapper } from "#/components/OutletWrapper";
 import LoadSitePreference from "#/components/LoadSitePreference";
 import LoadAuthSession from "#/components/LoadAuthSession";
 import LoadVisitorDetails from "#/components/LoadVisitorDetails";
-import LoadElectionSession from "#/components/LoadElectionSession";
 import { getUserDetailsCookie } from "@/lib/server/auth/auth";
 import { getSitePreference } from "@/lib/server/sitePreference";
 
@@ -75,7 +74,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               <LoadSitePreference sitePreference={sitePreference} />
               <LoadAuthSession />
               <LoadVisitorDetails />
-              <LoadElectionSession />
             </ClientOnly>
             {children}
           </QueryClientProvider>

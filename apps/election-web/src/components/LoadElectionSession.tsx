@@ -23,6 +23,8 @@ export default function LoadElectionSession() {
   const { data: groupsData } = useQuery({
     queryKey: ["election-groups"],
     queryFn: () => fetchGroups({ data: { limit: 50 } }),
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
   });
   const groups = groupsData?.data?.election_groups || [];
 
@@ -46,6 +48,8 @@ export default function LoadElectionSession() {
     queryKey: ["elections", selectedElectionGroup?.id],
     queryFn: () => fetchElections({ data: selectedElectionGroup?.id }),
     enabled: !!selectedElectionGroup?.id,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+    refetchOnWindowFocus: false,
   });
   const elections = electionsData?.data?.elections || [];
 
