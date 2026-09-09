@@ -5,7 +5,9 @@ import { Link2 } from "lucide-react";
 import { useCopyToClipboard, useIntersectionObserver } from "usehooks-ts";
 import { toast } from "sonner";
 
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
 import { getReferralStats, getReferredUsers } from "#/lib/server/referrals";
 import {
@@ -80,7 +82,9 @@ function SummaryItem({
 
 function ReferralsPage() {
   const navigate = useNavigate();
-  const { party, selectedElectionGroup, user } = useAppContext();
+  const user = useUser();
+  const { party } = useUserParty();
+  const { selectedElectionGroup } = useElection();
   const [_, copy] = useCopyToClipboard();
 
   const { ref: loadMoreRef, isIntersecting } = useIntersectionObserver({

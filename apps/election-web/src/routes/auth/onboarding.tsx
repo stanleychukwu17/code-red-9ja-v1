@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
 import { OnboardingFlow, ONBOARDING_STEPS, type OnboardingStep } from "./_components/-onboarding-flow";
 import { APP_URL } from "#/lib/config";
 import { getPageHeader } from "#/lib/shared/meta";
@@ -61,7 +61,7 @@ export const Route = createFileRoute("/auth/onboarding")({
 
 function RouteComponent() {
   const { step } = Route.useSearch() as { step: OnboardingStep };
-  const { user } = useAppContext();
+  const user = useUser();
   const navigate = useNavigate();
 
   useEffect(() => {

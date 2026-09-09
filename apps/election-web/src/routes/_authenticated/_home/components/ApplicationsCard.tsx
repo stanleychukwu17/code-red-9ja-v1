@@ -5,11 +5,19 @@ import { GreyCardTitle, GreyCardTopRow, GreyCardWrapper } from "./Shared";
 
 import { useQuery } from "@tanstack/react-query";
 import { getApplications } from "#/lib/server/applications";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useAssignments } from "#/hooks/useAssignments";
 import MapPinIcon from "@repo/ui/icons/map-pin-icon";
 import { TitleText } from "@repo/ui/components/custom/Texts";
 import { Target } from "lucide-react";
 
+/**
+ * Checks whether an election date is strictly in the past (before today at 00:00:00).
+ * Supports ISO string dates and SQL timestamp objects (`{ Time: string }`).
+ *
+ * @param val - Raw date string or timestamp object
+ * @returns True if the election date occurred before today, false otherwise
+ */
 const isElectionInPast = (val: any) => {
   const dateStr = val?.Time || val;
   if (!dateStr) return false;
@@ -29,10 +37,21 @@ const isElectionInPast = (val: any) => {
   }
 };
 
+/**
+ * Dashboard card displaying polling unit agent application status.
+ *
+ * Renders in two distinct states:
+ * 1. Active Applications State: If the user has one or more pending/approved applications
+ *    for upcoming elections, displays the count, assigned location, and a preview button.
+ * 2. Recruitment Pitch State: If the user has no active applications, displays an earnings
+ *    incentive ("Earn ₦20k to ₦150k") and prompts them to apply for an agent role.
+ */
 export function ApplicationsCard() {
   const navigate = useNavigate();
-  const { user, selectedAssignment } = useAppContext();
+  const user = useUser();
+  const { selectedAssignment } = useAssignments();
 
+  // Query polling agent applications submitted by the current user
   const { data: applicationsData } = useQuery({
     queryKey: ["pollingAgentApplications", user?.id],
     enabled: !!user?.id,
@@ -45,6 +64,7 @@ export function ApplicationsCard() {
     },
   });
 
+  // Filter applications that are currently active (not rejected/cancelled) and for future elections
   const activeApps = (applicationsData || []).filter((app: any) => {
     const isActiveStatus =
       app.status === "pending" ||
@@ -56,6 +76,7 @@ export function ApplicationsCard() {
 
   const appCount = activeApps.length;
 
+  // Location hierarchy labels from active assignment
   const pollingUnit =
     selectedAssignment?.polling_unit_name ||
     selectedAssignment?.polling_unit?.name ||
@@ -65,6 +86,7 @@ export function ApplicationsCard() {
   const lga = selectedAssignment?.lga_name || "LGA";
   const ward = selectedAssignment?.ward_name || "Ward";
 
+  // STATE 1: User has existing active applications -> Show summary and preview CTA
   if (appCount > 0) {
     return (
       <GreyCardWrapper>
@@ -88,6 +110,7 @@ export function ApplicationsCard() {
     );
   }
 
+  // STATE 2: User has no active applications -> Show recruitment invitation CTA
   return (
     <GreyCardWrapper>
       <div className="space-y-2">

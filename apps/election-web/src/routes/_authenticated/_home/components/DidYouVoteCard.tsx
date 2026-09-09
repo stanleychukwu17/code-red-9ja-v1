@@ -1,4 +1,6 @@
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
+import { useUserParty } from "#/hooks/useUserParty";
 import { getUserVoteStatus } from "#/lib/server/elections";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -23,7 +25,9 @@ interface DidYouVoteCardProps {
 }
 
 export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
-  const { selectedAssignment, selectedElectionGroup, party } = useAppContext();
+  const { selectedElectionGroup } = useElection();
+  const { selectedAssignment } = useAssignments();
+  const { party } = useUserParty();
   const navigate = useNavigate();
   const [isNotVotingDrawerOpen, setIsNotVotingDrawerOpen] = useState(false);
   const assignmentId = selectedAssignment?.id;

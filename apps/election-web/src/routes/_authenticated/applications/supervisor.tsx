@@ -1,6 +1,7 @@
 import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
 import {
   getApplications,
   getLGAs,
@@ -37,7 +38,8 @@ export type SupervisorRoleType =
 
 function SupervisorPage() {
   const navigate = useNavigate();
-  const { user, party } = useAppContext();
+  const user = useUser();
+  const { party } = useUserParty();
 
   const [step, setStep] = useQueryState(
     "step",
@@ -571,7 +573,7 @@ function SupervisorCertificateUploadStep({
   certificateUrl: string;
   isUploading: boolean;
   submitError: string | null;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSubmit: () => void;
   isSubmitting: boolean;

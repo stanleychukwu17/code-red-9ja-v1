@@ -1,6 +1,6 @@
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
 import {
   getApplications,
   submitPollingAgentApplication,
@@ -44,7 +44,7 @@ export const Route = createFileRoute("/_authenticated/applications/apply")({
 
 function ApplyPage() {
   const navigate = useNavigate();
-  const { user } = useAppContext();
+  const user = useUser();
 
   // Form states
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(

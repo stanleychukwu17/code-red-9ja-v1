@@ -1,7 +1,7 @@
 import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
 import { PageWrapper } from "#/components/Wrappers";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
 import { getLGAs } from "#/lib/server/countries";
 import { getPollingUnits } from "#/lib/server/polling_units";
 import { getStates } from "#/lib/server/states";
@@ -188,7 +188,7 @@ const mockSubmitPollingUnit = async (payload: any) => {
 };
 
 export const UpdatePollingUnitFlow = () => {
-  const { user } = useAppContext();
+  const user = useUser();
   const navigate = useNavigate();
   const scrollRef = useRef<HTMLDivElement>(null);
 

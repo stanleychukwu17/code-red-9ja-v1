@@ -1,4 +1,5 @@
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import { useQuery } from "@tanstack/react-query";
 import { getSingleWardStats } from "#/lib/server/election_stats";
 import { Button } from "@repo/ui/components/button";
@@ -36,11 +37,8 @@ export function WardElectionSupervisorPage() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
 
-  const {
-    selectedElectionGroup,
-    selectedElection,
-    selectedSupervisorAssignment,
-  } = useAppContext();
+  const { selectedElectionGroup, selectedElection } = useElection();
+  const { selectedSupervisorAssignment } = useAssignments();
 
   const currentAssignment = selectedSupervisorAssignment?.data;
 

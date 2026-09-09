@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TriangleAlert, Plus } from "lucide-react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
 import { useState, useRef } from "react";
@@ -26,7 +27,8 @@ function ElectionEnd() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
-  const { selectedElectionGroup, selectedAssignment } = useAppContext();
+  const { selectedElectionGroup } = useElection();
+  const { selectedAssignment } = useAssignments();
   const effectiveAssignmentId = assignmentId || selectedAssignment?.id;
 
   const { data: payoutRes } = useQuery({

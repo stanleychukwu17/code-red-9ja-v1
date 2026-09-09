@@ -1248,8 +1248,7 @@ func (s *AuthService) RegisterCandidatePlaceholder(
 		return RegisterResult{}, err
 	}
 
-	err = s.CheckAndAssignRole(ctx, user.ID, fakeID, "super_admin", 0)
-	return RegisterResult{UserID: user.ID, FakeID: user.FakeID.Int64, User: &user}, err
+	return RegisterResult{UserID: user.ID, FakeID: user.FakeID.Int64, User: &user}, nil
 }
 
 // CheckAndAssignRole checks if a user already has a specific role, and if not, assigns it.

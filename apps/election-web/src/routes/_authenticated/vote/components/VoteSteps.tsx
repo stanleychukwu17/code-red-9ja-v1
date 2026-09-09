@@ -1,5 +1,6 @@
 import { StickyFooter } from "#/components/Footers";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useElection } from "#/hooks/useElection";
 import { getLGAs } from "#/lib/server/countries";
 import { getPollingUnits } from "#/lib/server/polling_units";
 import { getStates } from "#/lib/server/states";
@@ -383,7 +384,8 @@ const Step4 = ({ votersCardImage, setVotersCardImage, isPractice }: any) => {
 export function VoteFlow() {
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as any;
-  const { user, selectedElectionGroup } = useAppContext();
+  const user = useUser();
+  const { selectedElectionGroup } = useElection();
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState(1);

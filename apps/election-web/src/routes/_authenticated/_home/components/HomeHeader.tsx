@@ -1,7 +1,8 @@
 import NotificationSolidIcon from "@repo/ui/icons/navbar/notification-solid-icon";
 import { AppAvatar } from "@repo/ui/components/avatar";
 
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useElection } from "#/hooks/useElection";
 import {
   SelectElectionGroupAndElection,
   type Election,
@@ -28,13 +29,13 @@ export function HomeHeader({
   containerClassName,
   onPracticeClick,
 }: HomeHeaderProps) {
+  const user = useUser();
   const {
-    user,
     selectedElectionGroup,
     selectedElection,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const fetchGroups = useServerFn(getElectionGroups);
   const fetchElectionsByGroup = useServerFn(getElectionsByGroup);
 

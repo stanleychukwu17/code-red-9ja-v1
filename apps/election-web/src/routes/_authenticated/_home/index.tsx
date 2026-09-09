@@ -1,4 +1,5 @@
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import { useElectionRealtime } from "@repo/ui/hooks/useElectionRealtime";
 import { createFileRoute } from "@tanstack/react-router";
 import { GeneralPage } from "./page-components/GeneralPage";
@@ -12,11 +13,8 @@ export const Route = createFileRoute("/_authenticated/_home/")({
 });
 
 function RouteComponent() {
-  const {
-    selectedElection,
-    selectedSupervisorAssignment,
-    selectedAssignment,
-  } = useAppContext();
+  const { selectedElection } = useElection();
+  const { selectedSupervisorAssignment, selectedAssignment } = useAssignments();
 
   // Connect real-time WebSocket updates for election supervisor & voter dashboard
   useElectionRealtime({

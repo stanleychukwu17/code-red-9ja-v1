@@ -11,7 +11,9 @@ import { toast } from "sonner";
 import { PostFooter } from "#/components/PostFooter";
 import { PostHeader } from "#/components/PostHeader";
 import { PostInputArea } from "#/components/PostInputArea";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import { confirmFileUpload, getPresignedUploadURL } from "#/lib/server/parties";
 import { createPollingUnitUpdate } from "#/lib/server/polling_unit_updates";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -25,11 +27,9 @@ export const Route = createFileRoute("/_authenticated/give-update/")({
 function GiveUpdate() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
-  const {
-    user,
-    selectedElectionGroup,
-    selectedAssignment: currentAssignment,
-  } = useAppContext();
+  const user = useUser();
+  const { selectedElectionGroup } = useElection();
+  const { selectedAssignment: currentAssignment } = useAssignments();
 
   const assignmentId = currentAssignment?.id;
 

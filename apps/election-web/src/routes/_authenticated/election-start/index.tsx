@@ -14,7 +14,8 @@ import { getLocalTime } from "@repo/ui/lib/date";
 import { getPresignedUploadURL, confirmFileUpload } from "#/lib/server/parties";
 import { updateAssignmentTracking } from "#/lib/server/polling_unit_assignments";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
 import { getPotentialPayout } from "#/lib/server/practice_tests";
@@ -27,7 +28,8 @@ function ElectionStart() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
-  const { selectedElectionGroup, selectedAssignment } = useAppContext();
+  const { selectedElectionGroup } = useElection();
+  const { selectedAssignment } = useAssignments();
   const effectiveAssignmentId = assignmentId || selectedAssignment?.id;
 
   const { data: payoutRes } = useQuery({

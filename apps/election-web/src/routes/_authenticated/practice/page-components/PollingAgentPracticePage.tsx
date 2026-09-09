@@ -1,6 +1,8 @@
 import { StickyFooter } from "#/components/Footers";
 import { PageHeader } from "#/components/Headers";
-import { useAppContext, getAutoSelectedSession } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection, getAutoSelectedSession } from "#/hooks/useElection";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -72,14 +74,14 @@ import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const user = useUser();
+  const { party } = useUserParty();
   const {
-    party,
-    user,
     selectedElectionGroup,
     selectedElection,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
@@ -130,7 +132,7 @@ export function PollingAgentPracticePage() {
     string | null
   >("practice-selected-election-date", null);
 
-  // Sync selected election group and election to useAppContext if restored from localStorage
+  // Sync selected election group and election to Redux if restored from localStorage
   const { data: syncGroupData } = useQuery({
     queryKey: ["electionGroupById", selectedElectionGroupId],
     enabled:
@@ -506,7 +508,7 @@ export function WelcomePage({
   practiceTestNumber: number;
   onNextClick: () => void;
 }) {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const navigate = useNavigate();
 
   return (
@@ -682,7 +684,8 @@ export function ApplicationAcceptedPage({
   onGoToHome: () => void;
   electionGroupId: number | null;
 }) {
-  const { party, user } = useAppContext();
+  const user = useUser();
+  const { party } = useUserParty();
 
   const { data: assignments = [] } = useQuery({
     queryKey: ["pollingAgentAssignments", user?.id, electionGroupId],
@@ -1284,7 +1287,7 @@ export function DashboardPage({
   failedAttemptCount: number;
 }) {
   const navigate = useNavigate();
-  const { selectedElectionGroup } = useAppContext();
+  const { selectedElectionGroup } = useElection();
 
   const [activeTab, setActiveTab] = useState<
     "Earnings" | "Contact" | "Uploads"

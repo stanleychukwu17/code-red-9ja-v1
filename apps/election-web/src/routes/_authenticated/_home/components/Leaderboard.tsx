@@ -8,7 +8,9 @@ import { formatVotes } from "@repo/ui/lib/number";
 import { useNavigate } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { useMemo } from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
+import { useElectionResults } from "#/hooks/useElectionResults";
 
 export function CandidatesLeaderboard({
 	onPracticeClick,
@@ -20,15 +22,9 @@ export function CandidatesLeaderboard({
 	hideReportButton?: boolean;
 }) {
 	const navigate = useNavigate();
-	const {
-		selectedElection,
-		electionCandidates,
-		finalResultObj,
-		isLive,
-		isResultLoading,
-		selectedSupervisorAssignment,
-		isLock,
-	} = useAppContext();
+	const { selectedElection, isLive, isLock } = useElection();
+	const { selectedSupervisorAssignment } = useAssignments();
+	const { electionCandidates, finalResultObj, isResultLoading } = useElectionResults();
 
 	const interceptClick = (e: React.MouseEvent, action?: () => void) => {
 		if (onPracticeClick) {

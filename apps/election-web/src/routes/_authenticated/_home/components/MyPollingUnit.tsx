@@ -2,7 +2,8 @@ import { Button } from "@repo/ui/components/button";
 import PollingUnitIcon from "@repo/ui/icons/polling-unit-icon";
 import PlusIcon from "@repo/ui/icons/plus-icon";
 import { useNavigate } from "@tanstack/react-router";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import LockedIcon from "@repo/ui/icons/locked-icon";
 import UnLockedIcon from "@repo/ui/icons/unlocked-icon";
 import { cn } from "@repo/ui/lib/utils";
@@ -24,8 +25,8 @@ export function MyPollingUnit({
   onPracticeClick?: () => void;
 }) {
   const navigate = useNavigate();
-  const { selectedAssignment, isLive, setIsLive, isLock, setIsLocked } =
-    useAppContext();
+  const { isLive, setIsLive, isLock, setIsLocked } = useElection();
+  const { selectedAssignment } = useAssignments();
 
   const interceptClick = (e: React.MouseEvent, action: () => void) => {
     if (onPracticeClick) {

@@ -7,10 +7,11 @@ import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
   selectSelectedElection,
   selectSelectedElectionGroup,
+  setIsLive,
   setSelectedElection,
   setSelectedElectionGroup,
 } from "#/redux/slice/electionSlice";
-import { getAutoSelectedSession } from "#/hooks/useAppContext";
+import { getAutoSelectedSession, isElectionDay } from "#/hooks/useElection";
 
 export default function LoadElectionSession() {
   const dispatch = useAppDispatch();
@@ -74,6 +75,24 @@ export default function LoadElectionSession() {
       }
     }
   }, [elections, selectedElectionGroup, selectedElection, dispatch]);
+
+  // Auto-switch isLive to false after 4pm on election day (check on mount and whenever tab gains focus)
+  const electionDay = isElectionDay(selectedElectionGroup?.election_date);
+
+  useEffect(() => {
+    if (!electionDay) return;
+    const isBeforeEndOfDay = (): boolean => new Date().getHours() < 16;
+    const checkTime = () => {
+      if (!isBeforeEndOfDay()) dispatch(setIsLive(false));
+    };
+    checkTime();
+    window.addEventListener("focus", checkTime);
+    const interval = setInterval(checkTime, 60_000); // re-check every minute
+    return () => {
+      window.removeEventListener("focus", checkTime);
+      clearInterval(interval);
+    };
+  }, [electionDay, dispatch]);
 
   return null;
 }

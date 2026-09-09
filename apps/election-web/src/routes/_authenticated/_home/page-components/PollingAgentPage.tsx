@@ -1,4 +1,5 @@
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
 import { Button } from "@repo/ui/components/button";
 import {
   LeaderboardCardWrapper,
@@ -44,11 +45,8 @@ export function PollingAgentPage() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
 
-  const {
-    selectedElectionGroup,
-    selectedElection,
-    selectedAssignment: currentPollingUnitAssignment,
-  } = useAppContext();
+  const { selectedElectionGroup, selectedElection } = useElection();
+  const { selectedAssignment: currentPollingUnitAssignment } = useAssignments();
 
   const handleRequestPayout = async () => {
     if (!currentPollingUnitAssignment?.election_group_id) {

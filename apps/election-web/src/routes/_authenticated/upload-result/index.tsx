@@ -4,7 +4,10 @@ import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useElection } from "#/hooks/useElection";
+import { useAssignments } from "#/hooks/useAssignments";
+import { useUserParty } from "#/hooks/useUserParty";
 import { PageHeader } from "#/components/Headers";
 import { Button } from "@repo/ui/components/button";
 import { StickyFooter } from "#/components/Footers";
@@ -53,13 +56,10 @@ function BackgroundDesign() {
 function UploadResultFlow() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
-  const {
-    user,
-    selectedElectionGroup,
-    pollingUnitId,
-    party,
-    selectedAssignment,
-  } = useAppContext();
+  const user = useUser();
+  const { selectedElectionGroup } = useElection();
+  const { selectedAssignment, pollingUnitId } = useAssignments();
+  const { party } = useUserParty();
 
   const assignmentId = selectedAssignment?.id;
 

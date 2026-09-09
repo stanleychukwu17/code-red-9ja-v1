@@ -1,4 +1,4 @@
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getNationalMetrics } from "#/lib/server/national_metrics";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -33,7 +33,7 @@ export function GeneralPage() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
 
-  const { selectedElectionGroup, selectedElection } = useAppContext();
+  const { selectedElectionGroup, selectedElection } = useElection();
 
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
