@@ -40,6 +40,8 @@ These are the positions that Nigerian citizens directly vote for on ballot paper
 | 🏘️ **Local** | **LGA Chairman** & **Vice Chairman** | Local Government Area | All registered voters in the LGA | **774** | **SIEC** *(INEC for FCT)* |
 | 🏘️ **Local** | **Councillor** | Electoral Ward | Registered voters in the ward | **~8,812** | **SIEC** *(INEC for FCT)* |
 
+> ℹ️ **Result & Collation Forms**: For the specific INEC result sheets and collation form codes (EC8A, EC8B, EC8C, EC8D, EC8E series) used for each of these elective offices, see the [Form Types Matrix by Elective Position in the Collation Guide](./ELECTION_DAY_AND_COLLATION.md#-form-types-matrix-by-elective-position).
+
 ---
 
 ## 👤 Who Represents You? (Your Representation Chain)

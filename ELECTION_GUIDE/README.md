@@ -7,11 +7,12 @@ Welcome to the **Free9ja Election Guide**. This directory contains operational d
 ## 📑 Contents
 
 1. **[Guide to Elective Positions in Nigeria](./ELECTIVE_POSITIONS.md)** — Breakdown of all elected offices, seat counts, presiding officers vs. public votes, and electoral commissions (INEC vs. SIEC).
-2. **[Electoral Structure & Hierarchy](#electoral-structure--hierarchy)**
-3. **[Agent Roles & Responsibilities](#agent-roles--responsibilities)**
-4. **[Agent Readiness & Practice Tests](#agent-readiness--practice-tests)**
-5. **[Polling Unit Reporting & Result Verification](#polling-unit-reporting--result-verification)**
-6. **[Relevant Applications & Services](#relevant-applications--services)**
+2. **[Election Day Operations & Collation Guide](./ELECTION_DAY_AND_COLLATION.md)** — Polling unit hours, EC8 forms waterfall, party agent deployment, parallel dataset verification, form matrix, and INEC rules.
+3. **[Electoral Structure & Hierarchy](#electoral-structure--hierarchy)**
+4. **[Agent Roles & Responsibilities](#agent-roles--responsibilities)**
+5. **[Agent Readiness & Practice Tests](#agent-readiness--practice-tests)**
+6. **[Polling Unit Reporting & Result Verification](#polling-unit-reporting--result-verification)**
+7. **[Relevant Applications & Services](#relevant-applications--services)**
 
 ---
 
@@ -35,6 +36,8 @@ National (Presidency / Senate / House of Reps)
 - **LGA**: Local government collation center consolidating ward results (EC8C form).
 - **State & National**: State-level and national tally collation centers (EC8D / EC8E forms).
 
+> 💡 For detailed step-by-step collation waterfall, legal paper fallbacks, and the full EC8 series breakdown, refer to the **[Election Day Operations & Collation Guide](./ELECTION_DAY_AND_COLLATION.md)**.
+
 ---
 
 ## 👥 Agent Roles & Responsibilities
@@ -48,6 +51,8 @@ The platform accommodates distinct tiers of election monitoring agents represent
 | **LGA Election Supervisor** | Local Government Area | Oversee all ward supervisors in the LGA, reconcile ward tallies, monitor LGA collation (EC8C). |
 | **State Election Supervisor** | Entire State | Coordinate statewide party monitoring operations, verify state collation (EC8D). |
 | **Platform Administrator** | Nationwide / System | Supervise platform-wide telemetry, verify submitted incident reports, audit election results. |
+
+> ℹ️ For the agent reporting tree, collation agent deployment requirements, and parallel dataset tracking, see the **[Party Agent Deployment Section in the Collation Guide](./ELECTION_DAY_AND_COLLATION.md#-party-agent-deployment--hierarchy)**.
 
 ---
 

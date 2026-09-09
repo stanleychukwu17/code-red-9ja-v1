@@ -2126,7 +2126,6 @@ func (_m *Querier) DeleteUserPhoneNumber(ctx context.Context, arg queries.Delete
 	return r0
 }
 
-
 // DeleteUserVotesByElectionGroup provides a mock function with given fields: ctx, arg
 func (_m *Querier) DeleteUserVotesByElectionGroup(ctx context.Context, arg queries.DeleteUserVotesByElectionGroupParams) error {
 	ret := _m.Called(ctx, arg)
