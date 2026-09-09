@@ -20,18 +20,41 @@ import { toast } from "sonner";
 import { showFeedbackToast } from "../practice/page-components/utils";
 import { getPotentialPayout } from "#/lib/server/practice_tests";
 
+/**
+ * Route definition for the election start verification page.
+ * Accessible under `/_authenticated/election-start/`.
+ */
 export const Route = createFileRoute("/_authenticated/election-start/")({
   component: ElectionStart,
 });
 
+/**
+ * Election Commencement Verification Page.
+ *
+ * A multi-step flow for polling unit agents:
+ * - Step 1: Log the exact time voting commenced at their polling unit.
+ * - Step 2: Record a 10-60 second proof video capturing officials setting up and queue formation.
+ *
+ * Workflow:
+ * 1. Checks potential monetary payout reward for the "election_start" milestone.
+ * 2. Parses selected time into an ISO 8601 timestamp.
+ * 3. Streams recorded video directly to Cloudflare R2 / S3 via presigned upload URL.
+ * 4. Updates assignment tracking with start timestamp and video URL.
+ * 5. Supports interactive practice/simulation mode during agent onboarding.
+ */
 function ElectionStart() {
   const navigate = useNavigate();
+
+  // Search parameters from URL (e.g., assignmentId, isPractice)
   const search = Route.useSearch() as any;
   const assignmentId = search.assignmentId;
+
+  // Retrieve current active election group and agent assignment
   const { selectedElectionGroup } = useElection();
   const { selectedAssignment } = useAssignments();
   const effectiveAssignmentId = assignmentId || selectedAssignment?.id;
 
+  // Query potential monetary payout reward for completing the "election_start" task
   const { data: payoutRes } = useQuery({
     queryKey: ["potentialPayout", effectiveAssignmentId, "election_start"],
     queryFn: async () => {
@@ -46,15 +69,22 @@ function ElectionStart() {
     enabled: !!effectiveAssignmentId,
   });
 
+  // Extract payout data if successful
   const payoutData = payoutRes?.success ? payoutRes?.data?.payout : undefined;
+
+  // Demonstration video link for guidance or practice simulation
   const tutorialVideo =
     "https://res.cloudinary.com/dhtcwqsx4/video/upload/v1782937548/Free9ja/videos/I_like_this_but_he_shouldn_t_b_wsibes.mp4";
 
+  // Step 1: Time Selection | Step 2: Video Evidence
   const [step, setStep] = useState(1);
+
+  // Default start time set to the current local hour
   const [startTime, setStartTime] = useState(() =>
     getLocalTime(Date.now(), { hour: "numeric" }),
   );
 
+  // Local state tracking recorded video file, preview URL, and upload progress
   const [videoFile, setVideoFile] = useState<{
     url: string;
     file: File;
@@ -62,6 +92,7 @@ function ElectionStart() {
   const [isUploading, setIsUploading] = useState(false);
   const cameraVideoRef = useRef<HTMLInputElement>(null);
 
+  // Mutation to persist election start time and proof video link to the database
   const trackingMutation = useMutation({
     mutationFn: async (payload: any) => {
       const res = await updateAssignmentTracking({ data: payload });
@@ -77,7 +108,18 @@ function ElectionStart() {
     },
   });
 
+  /**
+   * Orchestrates the complete start-of-election submission:
+   * 1. Handles practice mode simulation.
+   * 2. Checks scheduled election date.
+   * 3. Parses local AM/PM start time to an ISO 8601 string.
+   * 4. Requests a presigned upload URL from storage.
+   * 5. Uploads raw video directly to Cloudflare R2 / S3 via HTTP PUT.
+   * 6. Confirms upload status with backend.
+   * 7. Dispatches tracking mutation with start time and video URL.
+   */
   const handleSubmit = async () => {
+    // 1. Intercept practice mode attempts
     if (search.isPractice) {
       const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
       showFeedbackToast(true, failedAttempts);
@@ -94,6 +136,7 @@ function ElectionStart() {
 
     if (!assignmentId || !videoFile) return;
 
+    // 2. Validate submission occurs on the scheduled election day
     if (selectedElectionGroup?.election_date) {
       const today = new Date().toISOString().split("T")[0];
       const electionDate = new Date(selectedElectionGroup.election_date)
@@ -105,6 +148,7 @@ function ElectionStart() {
       }
     }
 
+    // 3. Parse 12-hour AM/PM string into an ISO date string
     let parsedTime = new Date().toISOString();
     try {
       if (startTime) {
@@ -124,6 +168,7 @@ function ElectionStart() {
 
     setIsUploading(true);
     try {
+      // 4. Request presigned upload URL for election start video
       const res = await getPresignedUploadURL({
         data: {
           original_name: videoFile.file.name,
@@ -140,6 +185,7 @@ function ElectionStart() {
 
       const { upload_url, public_url, file_id } = res.data;
 
+      // 5. Upload video directly to object storage
       const putRes = await fetch(upload_url, {
         method: "PUT",
         headers: { "Content-Type": videoFile.file.type },
@@ -151,8 +197,10 @@ function ElectionStart() {
         throw new Error("Failed to upload video file to storage");
       }
 
+      // 6. Confirm upload completion with the backend
       await confirmFileUpload({ data: { id: file_id, success: true } });
 
+      // 7. Update polling unit assignment with start timestamp and video URL
       trackingMutation.mutate({
         id: assignmentId,
         election_started_at: parsedTime,
@@ -166,6 +214,9 @@ function ElectionStart() {
     }
   };
 
+  /**
+   * Handles user recording or selecting a video file via native input.
+   */
   const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -179,6 +230,9 @@ function ElectionStart() {
     }
   };
 
+  /**
+   * Cleans up allocated object URL and removes selected video.
+   */
   const removeVideo = () => {
     if (videoFile) {
       URL.revokeObjectURL(videoFile.url);
@@ -192,9 +246,10 @@ function ElectionStart() {
 
   return (
     <PageWrapper>
-      {/* Header */}
+      {/* Header with back navigation */}
       <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
+      {/* Step 1: Record Poll Opening Time */}
       {step === 1 ? (
         <>
           <div className="px-4">
@@ -215,7 +270,8 @@ function ElectionStart() {
             </div>
             <div className="flex-1" /> {/* Spacer */}
           </div>
-          {/* Bottom Action Bar */}
+
+          {/* Bottom Action Bar for Step 1 */}
           <StickyFooter>
             <Button
               type="button"
@@ -236,8 +292,10 @@ function ElectionStart() {
           </StickyFooter>
         </>
       ) : (
+        /* Step 2: Record Proof Video of Election Start */
         <div className="flex flex-col relative w-full h-full">
           <div className="px-4 pb-20 space-y-6">
+            {/* Dynamic header prompt based on video capture state and practice mode */}
             <TitleText
               text={
                 !videoFile
@@ -251,6 +309,7 @@ function ElectionStart() {
               <DescriptiveText text="Please show the officials setting up and voters in line." />
             )}
 
+            {/* Live election guidance and payout summary */}
             {search.isPractice !== true && (
               <div className="flex flex-col gap-3 mt-6">
                 {!videoFile && (
@@ -263,6 +322,7 @@ function ElectionStart() {
                   </>
                 )}
 
+                {/* Milestone payout reward card */}
                 <RewardSumCard
                   label="Reward for this"
                   subtext="Potential pay so far"
@@ -277,7 +337,7 @@ function ElectionStart() {
               </div>
             )}
 
-            {/* Media Preview / Placeholder */}
+            {/* Video preview / tutorial playback card */}
             <VideoPreview
               videoFile={videoFile}
               removeVideo={removeVideo}
@@ -285,9 +345,11 @@ function ElectionStart() {
             />
           </div>
 
+          {/* Sticky footer action bar for Step 2 */}
           <StickyFooter>
             {!videoFile ? (
               <>
+                {/* Action: Trigger camera capture (or simulate during practice onboarding) */}
                 <Button
                   type="button"
                   variant="secondary"
@@ -309,6 +371,7 @@ function ElectionStart() {
                   <Plus className="w-[20px] h-[20px]" strokeWidth={2.5} />{" "}
                   {search.isPractice ? "Take video (simulate)" : "Take video"}
                 </Button>
+                {/* Action: Return to Step 1 */}
                 <Button
                   type="button"
                   variant="outline"
@@ -321,6 +384,7 @@ function ElectionStart() {
               </>
             ) : (
               <>
+                {/* Action: Upload and submit election start report */}
                 <Button
                   type="button"
                   variant="secondary"
@@ -333,6 +397,7 @@ function ElectionStart() {
                     ? "Uploading video..."
                     : "Submit"}
                 </Button>
+                {/* Action: Retake video */}
                 <Button
                   type="button"
                   variant="outline"
@@ -363,7 +428,7 @@ function ElectionStart() {
             )}
           </StickyFooter>
 
-          {/* Hidden File Input */}
+          {/* Hidden native video camera input for mobile browsers */}
           <input
             type="file"
             accept="video/*"

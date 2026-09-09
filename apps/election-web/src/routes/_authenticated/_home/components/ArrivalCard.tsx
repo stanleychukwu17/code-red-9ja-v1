@@ -76,7 +76,7 @@ export function ArrivalCard({ onArrivedClick }: ArrivalCardProps) {
   const lga = selectedAssignment?.lga_name || "LGA";
   const ward = selectedAssignment?.ward_name || "Ward";
 
-  // Format payout as currency (defaulting to ₦1,200 placeholder if unconfigured)
+  // Format payout as currency (defaulting to ₦1,200 placeholder if un-configured)
   const formattedPayout =
     potentialPayout !== undefined
       ? `₦${potentialPayout.toLocaleString()}`

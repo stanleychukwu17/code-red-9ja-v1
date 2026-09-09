@@ -79,7 +79,7 @@ export function ElectionStatusCard({
     },
   });
 
-  // Format payout as currency (defaulting to ₦1,200 placeholder if unconfigured)
+  // Format payout as currency (defaulting to ₦1,200 placeholder if un-configured)
   const formattedPayout =
     potentialPayout !== undefined
       ? `₦${potentialPayout.toLocaleString()}`

@@ -71,22 +71,43 @@ import {
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { getPollingUnitAssignments } from "#/lib/server/polling_unit_assignments";
 
+/**
+ * Main orchestrator component for the Polling Unit Agent Interactive Practice Test.
+ *
+ * Provides an end-to-end sandbox simulation preparing newly recruited polling agents:
+ * 1. "welcome": Onboarding intro and milestone payout overview.
+ * 2. "select-election": Choice of upcoming election to simulate.
+ * 3. "tutorial": Video walkthrough explaining the assigned task.
+ * 4. "quiz": Knowledge validation question testing the tutorial concepts.
+ * 5. "practical": Real-world prompt introducing the dashboard drill.
+ * 6. "dashboard": High-fidelity sandbox where agents must identify and execute the correct duty card.
+ * 7. "completed": Scoring and feedback for the current task.
+ * 8. "final": Aggregated performance results and potential earnings calculation.
+ * 9. "accepted": Official assignment confirmation after completing the test.
+ */
 export function PollingAgentPracticePage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Retrieve current user and political party affiliation
   const user = useUser();
   const { party } = useUserParty();
+
+  // Redux election session state
   const {
     selectedElectionGroup,
     selectedElection,
     setSelectedElectionGroup,
     setSelectedElection,
   } = useElection();
+
+  // Active task ID in the practice test syllabus (defaults to task 1)
   const [taskId, setTaskId] = useQueryState(
     "taskId",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
   );
 
+  // Active phase within the practice test state machine
   const [currentPage, setCurrentPage] = useQueryState(
     "page",
     parseAsStringLiteral([
@@ -104,6 +125,7 @@ export function PollingAgentPracticePage() {
       .withOptions({ clearOnDefault: false }),
   );
 
+  // Enforce `isPractice=true` in query parameters
   const [, setIsPractice] = useQueryState(
     "isPractice",
     parseAsStringLiteral(["true"] as const)
@@ -115,6 +137,7 @@ export function PollingAgentPracticePage() {
     setIsPractice("true");
   }, [setIsPractice]);
 
+  // Persist wrong attempt counters across task phases
   const [currentFailedAttempts, setCurrentFailedAttempts] = useLocalStorage(
     "practice-current-failed-attempts",
     0,
@@ -123,7 +146,7 @@ export function PollingAgentPracticePage() {
     number | null
   >(null);
 
-  // Election group selected for this practice test
+  // Election group selected specifically for this practice test session
   const [selectedElectionGroupId, setSelectedElectionGroupId] = useLocalStorage<
     number | null
   >("practice-selected-election-group-id", null);
@@ -149,6 +172,7 @@ export function PollingAgentPracticePage() {
     },
   });
 
+  // Automatically select an active election session when election group is loaded
   useEffect(() => {
     if (syncGroupData && selectedElectionGroup?.id !== syncGroupData.id) {
       setSelectedElectionGroup(syncGroupData);
@@ -172,6 +196,7 @@ export function PollingAgentPracticePage() {
     setSelectedElection,
   ]);
 
+  // Aggregated performance statistics across all test tasks
   const [testStats, setTestStats] = useLocalStorage<
     {
       taskId: number;
@@ -181,10 +206,12 @@ export function PollingAgentPracticePage() {
     }[]
   >("practice-test-stats", []);
 
+  // Look up active task from task definitions
   const currentTaskIndex = pollingAgentTest.findIndex((t) => t.id === taskId);
   const validTaskIndex = currentTaskIndex === -1 ? 0 : currentTaskIndex;
   const currentTask = pollingAgentTest[validTaskIndex];
 
+  // Mutation submitting the complete aggregated practice test score to the backend
   const { mutate: submitTest } = useMutation({
     mutationFn: submitPracticeTest,
     onSuccess: (data) => {
@@ -194,17 +221,20 @@ export function PollingAgentPracticePage() {
     },
     onError: (error) => {
       console.error("Failed to submit test:", error);
-      setCurrentPage("final"); // Still move forward so they aren't stuck
+      setCurrentPage("final"); // Still move forward so the user is not blocked
     },
   });
 
+  /**
+   * Advances to the next task in the syllabus, or submits the entire test if completed.
+   */
   const handleNextTask = () => {
     const nextTask = pollingAgentTest[validTaskIndex + 1];
     if (nextTask) {
       setTaskId(nextTask.id);
       setCurrentPage("tutorial");
     } else {
-      // All tasks done — submit the entire test at once
+      // All tasks completed — aggregate scores and submit once
       const finalScoreVal =
         testStats.length > 0
           ? testStats.reduce((acc, s) => acc + s.score, 0) / testStats.length
@@ -229,12 +259,13 @@ export function PollingAgentPracticePage() {
     }
   };
 
+  // Record task score upon landing on the "completed" screen
   useEffect(() => {
     if (currentPage === "completed" && currentTask) {
       setTestStats((prev) => {
         if (prev.some((s) => s.taskId === currentTask.id)) return prev;
         // Percentage-based: 1 success out of (failedAttempts + 1) total attempts
-        // Stored as 0-100; divided by 10 only at the display layer
+        // Stored as 0-100; divided by 10 at the display layer
         const taskScore = Math.round((1 / (currentFailedAttempts + 1)) * 100);
         return [
           ...prev,
@@ -249,6 +280,9 @@ export function PollingAgentPracticePage() {
     }
   }, [currentPage, currentTask, currentFailedAttempts, setTestStats]);
 
+  /**
+   * Validates the quiz selection against the correct option ID and shows immediate feedback.
+   */
   const handleQuizNext = () => {
     if (!currentTask) return;
 
@@ -262,11 +296,13 @@ export function PollingAgentPracticePage() {
     }
   };
 
+  // Called when agent performs the correct drill in the simulated dashboard
   const handleDashboardCorrect = () => {
     if (!currentTask) return;
     setCurrentPage("completed");
   };
 
+  // Called when agent clicks the wrong card in the simulated dashboard
   const handleDashboardWrong = () => {
     setCurrentFailedAttempts((prev) => prev + 1);
   };
@@ -330,6 +366,7 @@ export function PollingAgentPracticePage() {
     ? (payoutData.potential_payout_kobo ?? 0) / 100
     : 0;
 
+  // Score aggregations
   const currentScore = testStats.reduce((acc, stat) => acc + stat.score, 0);
   const finalScore = testStats.length > 0 ? currentScore / testStats.length : 0;
   // Live preview: percentage-based score (0-100); divided by 10 for display only
@@ -499,6 +536,10 @@ export function PollingAgentPracticePage() {
   );
 }
 
+/**
+ * Introductory landing page for a practice test run.
+ * Displays potential test payouts and performance expectations.
+ */
 export function WelcomePage({
   potentialPayout,
   practiceTestNumber,
@@ -559,6 +600,10 @@ export function WelcomePage({
   );
 }
 
+/**
+ * Election selection step in the training flow.
+ * Allows the agent to choose which upcoming election they are preparing for.
+ */
 export function SelectElectionPage({
   selectedElectionGroupId,
   onSelect,
@@ -675,6 +720,10 @@ export function SelectElectionPage({
   );
 }
 
+/**
+ * Confirmation screen presented when an agent successfully passes the practice test
+ * and has their assignment officially accepted.
+ */
 export function ApplicationAcceptedPage({
   onTakeAnotherTest,
   onGoToHome,
@@ -813,6 +862,9 @@ export function ApplicationAcceptedPage({
   );
 }
 
+/**
+ * Task instruction screen playing a video walkthrough of the required polling duty.
+ */
 export function TutorialPage({
   title,
   subtitle,
@@ -868,6 +920,10 @@ export function TutorialPage({
   );
 }
 
+/**
+ * Feedback screen displayed when a task is completed.
+ * Shows task score, number of failed attempts, and educational key takeaways.
+ */
 export function TaskCompletedPage({
   score,
   maxScore,
@@ -948,6 +1004,10 @@ export function TaskCompletedPage({
   );
 }
 
+/**
+ * Final test summary screen displaying aggregated score,
+ * final payout projection, and performance history across prior attempts.
+ */
 export function FinalScorePage({
   score,
   maxScore,
@@ -1112,6 +1172,9 @@ export function FinalScorePage({
   );
 }
 
+/**
+ * Reusable visual score display (e.g. "8.5/10").
+ */
 export function TaskScore({
   score,
   maxScore,
@@ -1134,6 +1197,9 @@ export function TaskScore({
   );
 }
 
+/**
+ * Practical challenge briefing screen introducing the upcoming sandbox dashboard drill.
+ */
 export function PracticalQuestionPage({
   title1,
   title2,
@@ -1189,6 +1255,9 @@ export function PracticalQuestionPage({
   );
 }
 
+/**
+ * Multiple-choice comprehension test validating knowledge learned in the tutorial video.
+ */
 export function QuizPage({
   title,
   options,
@@ -1244,6 +1313,9 @@ export function QuizPage({
   );
 }
 
+/**
+ * Decorative background layer displaying styled Nigerian star motifs.
+ */
 export function BackgroundDesign() {
   return (
     <div className="absolute top-0 left-0 bg-c-primary inset-0 -z-10">
@@ -1263,6 +1335,10 @@ export function BackgroundDesign() {
   );
 }
 
+/**
+ * High-fidelity interactive sandbox replicating the real home dashboard.
+ * Agents are prompted to locate and trigger the duty card corresponding to their assigned practical task.
+ */
 export function DashboardPage({
   tasks,
   taskType,
@@ -1297,6 +1373,7 @@ export function DashboardPage({
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
+  // Synchronize active carousel slide index
   useEffect(() => {
     if (!carouselApi) return;
     setCarouselIndex(carouselApi.selectedScrollSnap());
@@ -1305,6 +1382,7 @@ export function DashboardPage({
     });
   }, [carouselApi]);
 
+  // Compute remaining days until election date
   let daysLeft: number | undefined = undefined;
   let diffDays: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
@@ -1319,6 +1397,7 @@ export function DashboardPage({
     }
   }
 
+  // Display checklist objectives on or leading up to election day
   const showObjectives = diffDays === undefined || diffDays <= 0;
 
   const objectives = [
@@ -1375,29 +1454,27 @@ export function DashboardPage({
     headerRightText = carouselItems[carouselIndex].rightText;
   }
 
-  // toast.custom((id) => <FeedbackToast type="correct" />, {
-  //               position: "top-center",
-  //             });
-
+  // Validates if the clicked card or button matches the assigned practical task
   const isThisCorrect = (type: TaskType) => {
     return taskType === type;
   };
 
+  // Active task condition flags
   const hasNotArrived = taskType === "arriveAtPollingUnit";
   const hasNotStartedElection = taskType === "startElection";
   const hasNotEndedElection = taskType === "endElection";
   const haveNotToldUsIfTheyVoted = taskType === "mayHaveVoted";
-  // const giveUpdate = taskType === "giveUpdate";
-  // const giveReport = taskType === "giveReport";
   const hasNotUploadedResult = taskType === "uploadResult";
   const hasNotRequestedPayout = taskType === "requestPayout";
   const noVotersReffered = taskType === "referVoters";
 
+  // Trigger feedback toast and increment failure counter on incorrect click
   const handlePracticeWrong = () => {
     showFeedbackToast(false, failedAttemptCount + 1);
     onWrong?.();
   };
 
+  // Evaluates whether reporting an incident is the current test objective
   const handleReportClick = () => {
     const isCorrect = isThisCorrect("giveReport");
     if (!isCorrect) {
@@ -1466,6 +1543,7 @@ export function DashboardPage({
       </CarouselDotContent>
 
       <HomeBody>
+        {/* Task Drill: Arrive at Polling Unit */}
         {hasNotArrived && (
           <ArrivalCard
             onArrivedClick={() => {
@@ -1486,6 +1564,7 @@ export function DashboardPage({
           />
         )}
 
+        {/* Task Drill: Record Election Start */}
         {hasNotStartedElection && (
           <ElectionStatusCard
             hasStarted={false}
@@ -1506,6 +1585,7 @@ export function DashboardPage({
           />
         )}
 
+        {/* Task Drill: Record Election End */}
         {hasNotEndedElection && (
           <ElectionStatusCard
             hasStarted={true}
@@ -1526,6 +1606,7 @@ export function DashboardPage({
           />
         )}
 
+        {/* Task Drill: Voter Voting Confirmation */}
         <DidYouVoteCard
           onYesClick={() => {
             const isCorrect = isThisCorrect("mayHaveVoted");
@@ -1557,6 +1638,7 @@ export function DashboardPage({
           }}
         />
 
+        {/* Task Drill: Upload EC8A Result Sheet */}
         {hasNotUploadedResult && (
           <UploadResultCard
             onClick={() => {
@@ -1576,6 +1658,7 @@ export function DashboardPage({
           />
         )}
 
+        {/* Task Drill: Request Payout */}
         {hasNotRequestedPayout && (
           <RequestPayoutCard
             onClick={() => {
@@ -1590,6 +1673,7 @@ export function DashboardPage({
           />
         )}
 
+        {/* Task Drill: Refer Voters */}
         {noVotersReffered && (
           <ReferralCard
             onClick={handlePracticeWrong}
@@ -1605,10 +1689,10 @@ export function DashboardPage({
           />
         )}
 
+        {/* Informational home tabs (Earnings, Contact, Uploads) */}
         <HomeTabs
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          // isMock={true}
         />
 
         {activeTab === "Earnings" && <EarningsTab />}
@@ -1616,6 +1700,7 @@ export function DashboardPage({
         {activeTab === "Uploads" && <UploadsTab />}
       </HomeBody>
 
+      {/* Arrival confirmation drawer */}
       <ArrivalDrawer
         isOpen={isArrivalDrawerOpen}
         onOpenChange={setIsArrivalDrawerOpen}
@@ -1633,6 +1718,7 @@ export function DashboardPage({
         electionDate={selectedElectionGroup?.election_date}
       />
 
+      {/* Floating Action Button: Incident/Progress Update Drill */}
       <GiveUpdateFloatingButton
         onClick={() => {
           const isCorrect = isThisCorrect("giveUpdate");

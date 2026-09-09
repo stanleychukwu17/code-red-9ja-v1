@@ -26,16 +26,23 @@ import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 
 import { getPotentialPayout } from "#/lib/server/practice_tests";
 
+/**
+ * Route definition for EC8A polling unit result sheet photo upload.
+ */
 export const Route = createFileRoute("/_authenticated/upload-result/")({
   component: UploadResultFlow,
 });
 
+/** Represents a captured result sheet image and its preview blob URL */
 type MediaFile = {
   url: string;
   type: "image";
   file: File;
 };
 
+/**
+ * Decorative background with Nigerian flag blur motifs and star icons.
+ */
 function BackgroundDesign() {
   return (
     <div className="absolute top-0 left-0 bg-c-primary inset-0 -z-10 overflow-hidden">
@@ -53,6 +60,17 @@ function BackgroundDesign() {
   );
 }
 
+/**
+ * Sequential Result Sheet Upload Flow for Polling Agents.
+ *
+ * Iterates through each election in the active election group (Presidential, Senatorial, etc.)
+ * requiring a clear, verified photo upload of INEC Form EC8A for each ballot.
+ *
+ * Sub-steps per election:
+ * 1. Overview & Payout Incentive Card
+ * 2. Visual Reference Example & Camera Trigger
+ * 3. Photo Preview, Retake, and Submission Confirmation
+ */
 function UploadResultFlow() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
@@ -63,6 +81,7 @@ function UploadResultFlow() {
 
   const assignmentId = selectedAssignment?.id;
 
+  // Query potential compensation for result upload task
   const { data: payoutRes } = useQuery({
     queryKey: ["potentialPayout", assignmentId, "results"],
     queryFn: async () => {
@@ -80,14 +99,17 @@ function UploadResultFlow() {
   const payoutData = payoutRes?.success ? payoutRes?.data?.payout : undefined;
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Sequential multi-election tracking
   const [currentElectionIndex, setCurrentElectionIndex] = useState(0);
   const [subStep, setSubStep] = useState(1);
 
+  // Captured result sheet image
   const [resultSheetImage, setResultSheetImage] = useState<MediaFile | null>(
     null,
   );
   const sheetImageRef = useRef<HTMLInputElement>(null);
 
+  // Query all elections under the active election group, ordered by hierarchy rank
   const { data: elections, isLoading: electionsLoading } = useQuery({
     queryKey: ["groupElections", selectedElectionGroup?.id],
     enabled: !!selectedElectionGroup?.id,
@@ -102,12 +124,14 @@ function UploadResultFlow() {
     },
   });
 
+  // Reset scroll position on substep or election ballot changes
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
     }
   }, [currentElectionIndex, subStep]);
 
+  // Handles camera/photo capture, releases old blob URLs, and transitions to preview
   const handleSheetImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -121,6 +145,7 @@ function UploadResultFlow() {
     e.target.value = "";
   };
 
+  // Discards current photo and safely revokes blob URL to avoid memory leaks
   const removeSheetImage = () => {
     if (resultSheetImage) URL.revokeObjectURL(resultSheetImage.url);
     setResultSheetImage(null);
@@ -128,6 +153,7 @@ function UploadResultFlow() {
     setSubStep(2);
   };
 
+  // Handles contextual back navigation across substeps and election ballots
   const handleBack = () => {
     if (subStep === 3) {
       removeSheetImage();
@@ -143,6 +169,7 @@ function UploadResultFlow() {
     }
   };
 
+  // Presigned S3/R2 storage upload pipeline
   const uploadFile = async (mediaFile: MediaFile): Promise<string> => {
     const res = await getPresignedUploadURL({
       data: {
@@ -173,6 +200,7 @@ function UploadResultFlow() {
     return public_url;
   };
 
+  // Mutation uploading image to storage and recording result submission in backend
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!selectedElectionGroup?.id)
@@ -204,6 +232,7 @@ function UploadResultFlow() {
     },
     onSuccess: () => {
       toast.success("Result submitted successfully!");
+      // Advance to the next election ballot in the sequence, or complete if finished
       if (elections && currentElectionIndex < elections.length - 1) {
         setResultSheetImage(null);
         setCurrentElectionIndex((prev) => prev + 1);
@@ -218,6 +247,7 @@ function UploadResultFlow() {
     },
   });
 
+  // Guard: No active election group selected
   if (!selectedElectionGroup) {
     return (
       <div className="p-8 text-center text-neutral-500">
@@ -225,6 +255,7 @@ function UploadResultFlow() {
       </div>
     );
   }
+  // Guard: Loading election group elections
   if (electionsLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -232,6 +263,7 @@ function UploadResultFlow() {
       </div>
     );
   }
+  // Guard: No elections found for this group
   if (!elections || elections.length === 0) {
     return (
       <PageWrapper>
@@ -248,22 +280,24 @@ function UploadResultFlow() {
 
   return (
     <PageWrapper>
-      {/* Premium Styled PageHeader */}
+      {/* Top Header with step-aware back navigation */}
       <PageHeader
         onBackClick={handleBack}
-        // title={subStep > 1 ? currentElection.name : ""}
+      // title={subStep > 1 ? currentElection.name : ""}
       />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto pb-32">
-        {/* SUBSTEP 1: Welcome Page / Intro */}
+        {/* SUBSTEP 1: Welcome Page & Payout Overview */}
         {subStep === 1 && (
           <div className="relative flex flex-col items-center gap-4 h-full px-4 pt-8 max-w-[430px] mx-auto">
+            {/* Political Party Brand Avatar */}
             <AppAvatar
               src={party?.logo}
               alt="Party Logo"
               className="size-14 mt-4"
             />
 
+            {/* Current Election Ballot Title */}
             <TitleText
               text={currentElection.name}
               size="xl"
@@ -276,6 +310,7 @@ function UploadResultFlow() {
               className="text-center text-c-70 max-w-[320px]"
             />
 
+            {/* Compensation card & quality guidelines alert */}
             <div className="pt-6 w-full space-y-4">
               <RewardSumCard
                 label="Reward for this upload"
@@ -300,7 +335,7 @@ function UploadResultFlow() {
           </div>
         )}
 
-        {/* SUBSTEP 2: Instructions and Camera Trigger */}
+        {/* SUBSTEP 2: Visual Guidance & Reference Example */}
         {subStep === 2 && (
           <div className="px-4 flex flex-col gap-6 max-w-[430px] mx-auto">
             <div className="space-y-2 mt-2">
@@ -315,6 +350,7 @@ function UploadResultFlow() {
               />
             </div>
 
+            {/* Visual reference showing an ideal INEC Form EC8A capture */}
             <div className="space-y-3">
               <p className="text-[15px] font-bold text-c-80">
                 Perfect Example:
@@ -330,7 +366,7 @@ function UploadResultFlow() {
           </div>
         )}
 
-        {/* SUBSTEP 3: Preview taken picture */}
+        {/* SUBSTEP 3: Captured Photo Preview & Retake Option */}
         {subStep === 3 && resultSheetImage && (
           <div className="px-4 flex flex-col gap-6 max-w-[430px] mx-auto">
             <div className="space-y-2 mt-2">
@@ -345,6 +381,7 @@ function UploadResultFlow() {
               />
             </div>
 
+            {/* Photo preview with delete/discard overlay button */}
             <div className="relative rounded-2xl overflow-hidden border-[1.5px] border-c-90  bg-neutral-100">
               <img
                 src={resultSheetImage.url}
@@ -360,6 +397,7 @@ function UploadResultFlow() {
               </button>
             </div>
 
+            {/* Retake picture button (uses mock file in practice mode) */}
             <Button
               type="button"
               variant="outline"
@@ -389,7 +427,7 @@ function UploadResultFlow() {
         )}
       </div>
 
-      {/* Hidden file input */}
+      {/* Hidden file input configured for mobile rear camera capture */}
       <input
         type="file"
         accept="image/*"
@@ -399,8 +437,9 @@ function UploadResultFlow() {
         onChange={handleSheetImageChange}
       />
 
-      {/* Sticky Footer for step logic */}
+      {/* Sticky Bottom Action Footer */}
       {subStep === 1 ? (
+        // Substep 1: Continue to instructions
         <StickyFooter className="pb-14">
           <Button
             type="button"
@@ -413,6 +452,7 @@ function UploadResultFlow() {
           </Button>
         </StickyFooter>
       ) : (
+        // Substep 2 & 3: Election indicator badge + camera/upload action
         <div>
           <div className="bg-purple/20 w-full h-10 px-4 flex items-center">
             <p>{currentElection.name}</p>
@@ -425,6 +465,7 @@ function UploadResultFlow() {
               className="w-full rounded-full h-14 text-[16px]"
               onClick={() => {
                 if (subStep === 2) {
+                  // Substep 2: Open camera (or simulate in practice mode)
                   if (search.isPractice) {
                     const dummyFile = new File(["dummy"], "practice.jpg", {
                       type: "image/jpeg",
@@ -439,6 +480,7 @@ function UploadResultFlow() {
                     sheetImageRef.current?.click();
                   }
                 } else if (subStep === 3) {
+                  // Substep 3: Submit result or finish practice task
                   if (search.isPractice) {
                     const failedAttempts = parseInt(
                       search.failedAttemptCount || "0",

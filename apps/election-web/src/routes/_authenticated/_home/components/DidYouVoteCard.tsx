@@ -20,10 +20,20 @@ import {
 } from "#/lib/server/practice_tests";
 
 interface DidYouVoteCardProps {
+  /** Callback fired when user clicks 'Yes' to record or review their vote */
   onYesClick?: () => void;
+  /** Callback fired when user clicks 'No' to indicate they did not vote */
   onNoClick?: () => void;
 }
 
+/**
+ * Dashboard Card for checking and displaying the user's voting status.
+ *
+ * Renders one of three distinct UI states based on backend records:
+ * 1. Default Prompt: "Did you vote?" with Yes (triggers vote flow) and No (opens reason drawer).
+ * 2. `UserVotedCard`: Displays candidates and parties the user selected with an Edit option.
+ * 3. `UserDidNotVoteCard`: Displays recorded explanation/reason for abstaining with an Edit option.
+ */
 export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
   const { selectedElectionGroup } = useElection();
   const { selectedAssignment } = useAssignments();
@@ -32,6 +42,7 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
   const [isNotVotingDrawerOpen, setIsNotVotingDrawerOpen] = useState(false);
   const assignmentId = selectedAssignment?.id;
 
+  // Query potential payout reward for voting participation or voter mobilization
   const { data: potentialPayout } = useQuery({
     queryKey: [
       "taskPayout",
@@ -41,6 +52,7 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
       party?.id,
     ],
     queryFn: async () => {
+      // 1. Fetch exact assignment payout if assigned
       if (assignmentId) {
         const res = await getPotentialPayout({
           data: { assignmentId, taskType: "live_voters_referred" },
@@ -49,6 +61,7 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
           return (res.data.payout.potential_payout_kobo ?? 0) / 100;
         }
       }
+      // 2. Fall back to estimated payout for role/election group
       const estRes = await getEstimatePayout({
         data: {
           taskType: "live_voters_referred",
@@ -64,6 +77,7 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
     },
   });
 
+  // Query current user's recorded vote status for the active election group
   const { data: voteStatusData, isLoading } = useQuery({
     queryKey: ["user-vote-status", selectedElectionGroup?.id],
     queryFn: () =>
@@ -73,28 +87,34 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
     enabled: !!selectedElectionGroup?.id,
   });
 
+  // Guard: Return nothing until active election group is loaded and query completes
   if (!selectedElectionGroup || isLoading) {
     return null;
   }
 
   const statusInfo = voteStatusData?.data?.status;
 
+  // State 1: User has already cast their vote
   if (statusInfo?.status === "voted") {
     return <UserVotedCard statusInfo={statusInfo} />;
   }
 
+  // State 2: User recorded that they did not vote
   if (statusInfo?.status === "did_not_vote") {
     return <UserDidNotVoteCard statusInfo={statusInfo} onNoClick={onNoClick} />;
   }
 
+  // Format payout as currency (defaulting to ₦1,200 if unconfigured)
   const formattedPayout =
     potentialPayout !== undefined
       ? `₦${potentialPayout.toLocaleString()}`
       : "₦1,200";
 
+  // State 3: Unanswered prompt — asks user if they voted
   return (
     <>
       <GreyCardWrapper>
+        {/* Optional top row displaying task potential payout */}
         {selectedAssignment && (
           <GreyCardTopRow
             title={"Potential payout"}
@@ -104,6 +124,7 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
         )}
         <GreyCardTitle label="Did you vote?" />
 
+        {/* Voting response action buttons */}
         <div className="flex items-center gap-3 mt-1">
           <Button
             type="button"
@@ -129,6 +150,7 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
         </div>
       </GreyCardWrapper>
 
+      {/* Drawer modal for selecting reason and submitting explanation */}
       <NotVotingDrawer
         isOpen={isNotVotingDrawerOpen}
         onOpenChange={setIsNotVotingDrawerOpen}
@@ -138,9 +160,13 @@ export function DidYouVoteCard({ onYesClick, onNoClick }: DidYouVoteCardProps) {
 }
 
 interface UserVotedCardProps {
+  /** Vote status payload containing the list of chosen candidates */
   statusInfo: any;
 }
 
+/**
+ * Card displayed after user has voted, summarizing each ballot selection.
+ */
 function UserVotedCard({ statusInfo }: UserVotedCardProps) {
   const navigate = useNavigate();
 
@@ -149,12 +175,14 @@ function UserVotedCard({ statusInfo }: UserVotedCardProps) {
       <div className="flex flex-col w-full">
         <GreyCardTitle label="Candidates you voted for" />
         <div className="mt-4 flex flex-col gap-4">
+          {/* List of candidates voted for across each election ballot */}
           {statusInfo.votes.map((vote: any) => (
             <div
               key={vote.vote_id}
               className="flex items-center justify-between w-full"
             >
               <div className="flex items-center gap-3">
+                {/* Candidate avatar overlayed with party logo badge */}
                 <DoubleAvatar
                   image={vote.candidate_avatar || vote.party_logo}
                   image2={vote.party_logo}
@@ -174,6 +202,8 @@ function UserVotedCard({ statusInfo }: UserVotedCardProps) {
             </div>
           ))}
         </div>
+
+        {/* Navigation button to reopen voting wizard and edit choices */}
         <Button
           type="button"
           variant="black"
@@ -189,10 +219,15 @@ function UserVotedCard({ statusInfo }: UserVotedCardProps) {
 }
 
 interface UserDidNotVoteCardProps {
+  /** Status payload containing recorded abstention reason and explanation */
   statusInfo: any;
+  /** Optional callback to run before opening the reason drawer */
   onNoClick?: () => void;
 }
 
+/**
+ * Card displayed when user has declared they did not vote, showing their reason.
+ */
 function UserDidNotVoteCard({
   statusInfo,
   onNoClick,
@@ -204,14 +239,18 @@ function UserDidNotVoteCard({
       <div className="flex flex-col w-full">
         <GreyCardTitle label="You did not vote this election" />
         <div className="mt-4 flex flex-col gap-4">
+          {/* User's custom written explanation */}
           <span className="text-c-80 leading-6 bg-white py-2 px-3 rounded-12">
             "{statusInfo.did_not_vote_explanation || "No comment."}"
           </span>
+          {/* Categorized reason badge */}
           <div className="bg-yellow/20 py-2 px-3 rounded-xl font-medium text-c-90 leading-6">
             <span className="text-c-50">Reason: </span>
             {statusInfo.did_not_vote_reason}
           </div>
         </div>
+
+        {/* Button to reopen reason drawer and modify abstention details */}
         <Button
           type="button"
           variant="black"
@@ -225,6 +264,8 @@ function UserDidNotVoteCard({
           Edit
         </Button>
       </div>
+
+      {/* Drawer for updating non-voting reason */}
       <NotVotingDrawer
         isOpen={isNotVotingDrawerOpen}
         onOpenChange={setIsNotVotingDrawerOpen}

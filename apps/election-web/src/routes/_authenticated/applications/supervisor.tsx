@@ -21,9 +21,12 @@ import { cn } from "@repo/ui/lib/utils";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Upload } from "lucide-react";
-import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { useEffect, useRef, useState } from "react";
+import { parseAsInteger, useQueryState } from "nuqs";
+import { useRef, useState } from "react";
 
+/**
+ * Route definition for party election supervisor application wizard.
+ */
 export const Route = createFileRoute("/_authenticated/applications/supervisor")(
   {
     head: () => getPageHeader({ title: "Apply as Supervisor" }),
@@ -31,21 +34,35 @@ export const Route = createFileRoute("/_authenticated/applications/supervisor")(
   },
 );
 
+/** Supported supervisory administrative tiers */
 export type SupervisorRoleType =
   | "state_election_supervisor"
   | "lga_election_supervisor"
   | "ward_election_supervisor";
 
+/**
+ * Multi-step wizard allowing accepted polling agents to upgrade their assignment
+ * to a State, LGA, or Ward Election Supervisor.
+ *
+ * Steps:
+ * 1. Eligibility Announcement & Confirmation
+ * 2. Role Selection (State / LGA / Ward)
+ * 3. Region Picker (Select assigned LGA or Ward, skipped for State)
+ * 4. School / Degree Certificate Upload (R2 presigned upload)
+ * 5. Application Accepted & Duty Checklist
+ */
 function SupervisorPage() {
   const navigate = useNavigate();
   const user = useUser();
   const { party } = useUserParty();
 
+  // Wizard active step stored in URL query params (?step=1..5)
   const [step, setStep] = useQueryState(
     "step",
     parseAsInteger.withDefault(1).withOptions({ clearOnDefault: false }),
   );
 
+  // Form selection state
   const [selectedRole, setSelectedRole] = useState<SupervisorRoleType | null>(
     null,
   );
@@ -59,8 +76,8 @@ function SupervisorPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch accepted polling agent applications to find active election group
-  const { data: applications = [], isLoading: isAppsLoading } = useQuery({
+  // Fetch accepted polling agent application to inherit the active election group
+  const { data: applications = [] } = useQuery({
     queryKey: ["applications"],
     queryFn: async () => {
       const res = await getApplications();
@@ -77,7 +94,7 @@ function SupervisorPage() {
   const activeElectionGroupId =
     acceptedApp?.election_group_id || acceptedApp?.election_group?.id || null;
 
-  // Fetch election group details
+  // Fetch upcoming election group metadata for display headers
   const { data: electionGroups = [] } = useQuery({
     queryKey: ["electionGroups", { upcoming: true }],
     queryFn: async () => {
@@ -94,7 +111,7 @@ function SupervisorPage() {
   );
   const electionName = currentElectionGroup?.name || "2026 Election";
 
-  // Mutation for supervisor application submit
+  // Mutation submitting supervisor upgrade application to backend
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!activeElectionGroupId || !selectedRole) {
@@ -128,7 +145,7 @@ function SupervisorPage() {
     },
   });
 
-  // Handle R2 file upload
+  // Direct upload pipeline: presigned URL -> Cloudflare R2 PUT -> confirmation
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFile = e.target.files?.[0];
     if (!rawFile) return;
@@ -179,6 +196,7 @@ function SupervisorPage() {
     }
   };
 
+  // State supervisor applies to entire state; LGA/Ward supervisors pick their district
   const handleNextFromRoleSelect = () => {
     if (selectedRole === "state_election_supervisor") {
       setStep(4); // Skip LGA/Ward selection for state supervisor
@@ -189,6 +207,7 @@ function SupervisorPage() {
 
   return (
     <div className="w-full h-full min-h-screen bg-background">
+      {/* Step 1: Promotion eligibility invitation */}
       {step === 1 && (
         <SupervisorEligibilityStep
           partyLogo={party?.logo}
@@ -199,6 +218,7 @@ function SupervisorPage() {
         />
       )}
 
+      {/* Step 2: Supervisory tier selection */}
       {step === 2 && (
         <SupervisorRoleSelectStep
           partyLogo={party?.logo}
@@ -210,6 +230,7 @@ function SupervisorPage() {
         />
       )}
 
+      {/* Step 3 (LGA): Local Government Area selection */}
       {step === 3 && selectedRole === "lga_election_supervisor" && (
         <SupervisorRegionSelectStep
           roleName="LGA Supervisor"
@@ -227,6 +248,7 @@ function SupervisorPage() {
         />
       )}
 
+      {/* Step 3 (Ward): Electoral ward selection */}
       {step === 3 && selectedRole === "ward_election_supervisor" && (
         <SupervisorRegionSelectStep
           roleName="Ward Supervisor"
@@ -245,6 +267,7 @@ function SupervisorPage() {
         />
       )}
 
+      {/* Step 4: Degree / Educational certificate upload */}
       {step === 4 && (
         <SupervisorCertificateUploadStep
           roleName={
@@ -271,6 +294,7 @@ function SupervisorPage() {
         />
       )}
 
+      {/* Step 5: Application accepted & election day duties */}
       {step === 5 && (
         <SupervisorSuccessStep
           roleName={
@@ -297,6 +321,10 @@ function SupervisorPage() {
 }
 
 // ------------------- STEP 1: ELIGIBILITY ANNOUNCEMENT -------------------
+/**
+ * Step 1: Informs the polling agent of their eligibility to become a party supervisor
+ * and asks if they wish to accept the upgrade.
+ */
 function SupervisorEligibilityStep({
   partyLogo,
   partyName,
@@ -317,6 +345,7 @@ function SupervisorEligibilityStep({
       <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
       <div className="flex flex-col items-start px-5 pt-4 max-w-[430px] mx-auto w-full flex-1">
+        {/* Party branding banner */}
         <div className="flex items-center gap-2 mb-4">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
           <span className="text-c-60 font-semibold text-sm">{partyName}</span>
@@ -331,6 +360,7 @@ function SupervisorEligibilityStep({
 
         <p className="text-c-50 text-sm mt-3 font-medium">{electionName}</p>
 
+        {/* Promotional graphic illustration */}
         <div className="w-full mt-6 flex justify-center">
           <img
             src="https://res.cloudinary.com/dhtcwqsx4/image/upload/v1785351028/Free9ja/QmRzN4MTmLCH5RZgH6TaYgP1w5hA4GUBft2AxUhkuatMDk-Photoroom_pmhczu.webp"
@@ -365,6 +395,9 @@ function SupervisorEligibilityStep({
 }
 
 // ------------------- STEP 2: PICK A ROLE -------------------
+/**
+ * Step 2: Allows the applicant to choose their supervisory tier (State, LGA, or Ward).
+ */
 function SupervisorRoleSelectStep({
   partyLogo,
   partyName,
@@ -385,6 +418,7 @@ function SupervisorRoleSelectStep({
       <PageHeader onBackClick={onBack} />
 
       <div className="flex flex-col items-start px-5 pt-2 max-w-[430px] mx-auto w-full flex-1">
+        {/* Party branding banner */}
         <div className="flex items-center gap-2 mb-3">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
           <span className="text-c-60 font-semibold text-sm">{partyName}</span>
@@ -397,6 +431,7 @@ function SupervisorRoleSelectStep({
           className="mt-1"
         />
 
+        {/* Role selection card list */}
         <div className="w-full space-y-3 mt-6">
           <SelectableCard
             title="State Supervisors"
@@ -448,6 +483,10 @@ function SupervisorRoleSelectStep({
 }
 
 // ------------------- STEP 3: SELECT REGION (LGA or WARD) -------------------
+/**
+ * Step 3: Geographical boundary picker.
+ * Dynamically queries and lists either LGAs or Wards depending on the `type` parameter.
+ */
 function SupervisorRegionSelectStep({
   roleName,
   partyLogo,
@@ -471,6 +510,7 @@ function SupervisorRegionSelectStep({
   onBack: () => void;
   type: "lga" | "ward";
 }) {
+  // Query either all LGAs in state, or all Wards in LGA
   const { data: regions = [], isLoading } = useQuery({
     queryKey: [type === "lga" ? "lgas" : "wards", stateId, lgaId],
     queryFn: async () => {
@@ -491,6 +531,7 @@ function SupervisorRegionSelectStep({
       <PageHeader onBackClick={onBack} />
 
       <div className="flex flex-col items-start px-5 pt-2 max-w-[430px] mx-auto w-full flex-1">
+        {/* Party and role header badge */}
         <div className="flex items-center gap-2 mb-3">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
           <span className="text-c-60 font-semibold text-sm">{roleName}</span>
@@ -507,6 +548,7 @@ function SupervisorRegionSelectStep({
           className="mt-1"
         />
 
+        {/* Region selectable cards */}
         <div className="w-full space-y-3 mt-6">
           {isLoading && (
             <p className="text-c-50 text-sm text-center py-4">
@@ -554,6 +596,10 @@ function SupervisorRegionSelectStep({
 }
 
 // ------------------- STEP 4: CERTIFICATE UPLOAD -------------------
+/**
+ * Step 4: Verification credential upload.
+ * Applicants upload a photo or scan of their educational degree / school certificate.
+ */
 function SupervisorCertificateUploadStep({
   roleName,
   partyLogo,
@@ -584,6 +630,7 @@ function SupervisorCertificateUploadStep({
       <PageHeader onBackClick={onBack} />
 
       <div className="flex flex-col items-start px-5 pt-2 max-w-[430px] mx-auto w-full flex-1">
+        {/* Party and role header badge */}
         <div className="flex items-center gap-2 mb-3">
           <AppAvatar src={partyLogo} alt={partyName} className="size-7" />
           <span className="text-c-60 font-semibold text-sm">{roleName}</span>
@@ -600,6 +647,7 @@ function SupervisorCertificateUploadStep({
           className="mt-1"
         />
 
+        {/* Hidden file input for camera/gallery upload */}
         <input
           ref={fileInputRef}
           type="file"
@@ -608,6 +656,7 @@ function SupervisorCertificateUploadStep({
           onChange={onFileChange}
         />
 
+        {/* Certificate preview or upload prompt card */}
         <div className="w-full mt-6">
           <button
             type="button"
@@ -666,6 +715,10 @@ function SupervisorCertificateUploadStep({
 }
 
 // ------------------- STEP 5: APPLICATION ACCEPTED -------------------
+/**
+ * Step 5: Congratulations screen confirming the supervisor role assignment.
+ * Displays the assigned region and the primary election day supervisory responsibilities.
+ */
 function SupervisorSuccessStep({
   roleName,
   partyLogo,
@@ -679,6 +732,7 @@ function SupervisorSuccessStep({
   stateName: string;
   onGoHome: () => void;
 }) {
+  // Checklist duty bullet item
   const Todo = ({ text }: { text: string }) => (
     <div className="flex gap-4 py-2.5 items-start">
       <div className="size-6 rounded-full bg-c-20 shrink-0 mt-1" />
@@ -715,7 +769,7 @@ function SupervisorSuccessStep({
           <span className="font-bold text-c-90 text-lg">{roleName}</span>
         </div>
 
-        {/* Region Box */}
+        {/* Region / Jurisdiction Card */}
         <div className="w-full space-y-2">
           <span className="text-base font-bold text-c-80 block">
             Your LGA / Region
@@ -733,7 +787,7 @@ function SupervisorSuccessStep({
           </div>
         </div>
 
-        {/* Duties List */}
+        {/* Supervisory Election Day Duties List */}
         <div className="space-y-2 w-full">
           <span className="text-base font-bold text-c-80 block">
             Your Election Day Duties

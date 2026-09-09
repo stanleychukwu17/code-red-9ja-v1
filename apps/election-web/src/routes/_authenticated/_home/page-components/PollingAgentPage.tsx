@@ -38,9 +38,27 @@ import { HomeBody } from "../components/Shared";
 import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Route } from "..";
 
-// Set this to true to bypass time restrictions for testing (defaults to true in dev)
+// Development bypass flag: ignores 2PM/4PM constraints for local UI testing
 const BYPASS_TIME_CONSTRAINTS = process.env.NODE_ENV === "development";
 
+/**
+ * Polling Unit Agent Dashboard.
+ *
+ * The primary operational view for accredited party polling agents on election day
+ * and in pre-election preparation:
+ *
+ * 1. Preparation Phase (days before election):
+ *    - Displays readiness checkpoints (practice tests, training drills).
+ *    - Offers referral links, supervisor applications, and party contacts.
+ *
+ * 2. Election Day Phase (sequential workflow state machine):
+ *    - Arrival: Agent confirms arrival at polling unit (`ArrivalCard` / `ArrivalDrawer`).
+ *    - Accreditation/Start: Records official poll opening time (`ElectionStatusCard(false)`).
+ *    - Live Monitoring: Submits 30-minute situation updates (`GiveUpdateFloatingButton`).
+ *    - Result Upload: After 2:00 PM, captures verified INEC Form EC8A (`UploadResultCard`).
+ *    - Poll Close: After 4:00 PM and result submission, confirms end of voting (`ElectionStatusCard(true)`).
+ *    - Payout Request: Agent submits duties for party admin review (`RequestPayoutCard`).
+ */
 export function PollingAgentPage() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
@@ -48,6 +66,7 @@ export function PollingAgentPage() {
   const { selectedElectionGroup, selectedElection } = useElection();
   const { selectedAssignment: currentPollingUnitAssignment } = useAssignments();
 
+  // Submits duty compensation request to party administration upon task completion
   const handleRequestPayout = async () => {
     if (!currentPollingUnitAssignment?.election_group_id) {
       toast.error("Election group assignment not found");
@@ -75,15 +94,18 @@ export function PollingAgentPage() {
     }
   };
 
+  // Check if agent has successfully submitted election results
   const resultsUploaded = !!(
     currentPollingUnitAssignment?.results_submitted_count &&
     currentPollingUnitAssignment.results_submitted_count > 0
   );
 
+  // Time-gated constraints: Result uploads unlock at 2PM, election end unlocks at 4PM
   const currentHour = new Date().getHours();
   const isAfter2PM = currentHour >= 14 || BYPASS_TIME_CONSTRAINTS;
   const isAfter4PM = currentHour >= 16 || BYPASS_TIME_CONSTRAINTS;
 
+  // Active dashboard bottom tab
   const [activeTab, setActiveTab] = useState<
     "Earnings" | "Contact" | "Uploads"
   >("Earnings");
@@ -92,6 +114,7 @@ export function PollingAgentPage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
+  // Synchronize carousel slide index with active dot and title
   useEffect(() => {
     if (!carouselApi) return;
     setCarouselIndex(carouselApi.selectedScrollSnap());
@@ -100,6 +123,7 @@ export function PollingAgentPage() {
     });
   }, [carouselApi]);
 
+  // Calculate days remaining until scheduled election date
   let daysLeft: number | undefined = undefined;
   let diffDays: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
@@ -114,9 +138,11 @@ export function PollingAgentPage() {
     }
   }
 
+  // Determine carousel view visibility (Objectives vs Readiness drills)
   const showObjectives = diffDays === undefined || diffDays <= 0;
   const showReadiness = diffDays === undefined || diffDays !== 0;
 
+  // Checklist of core polling agent duties on election day
   const objectives = [
     {
       title: "Go to your polling unit & click I've arrived",
@@ -163,6 +189,7 @@ export function PollingAgentPage() {
     },
   ];
 
+  // Pre-election readiness milestone training modules
   const readiness = [
     {
       title: "Take election day practice test 1",
@@ -181,6 +208,7 @@ export function PollingAgentPage() {
     },
   ];
 
+  // Derive carousel title and completion percentage
   let headerTitle = "";
   let headerRightText = "";
   const carouselItems: { title: string; rightText: string }[] = [];
@@ -211,9 +239,12 @@ export function PollingAgentPage() {
 
   return (
     <div className="w-full min-h-screen">
+      {/* Top dashboard header with countdown and polling unit banner */}
       <HomeHeader daysLeft={daysLeft} />
       {!search.isPractice && <MyPollingUnit />}
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+
+      {/* Primary Carousel: Objectives, Readiness Drills, and Candidate Leaderboard */}
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           {showObjectives && (
@@ -278,6 +309,8 @@ export function PollingAgentPage() {
           </CarouselItem>
         </CarouselContent>
       </Carousel>
+
+      {/* Pagination indicators for carousel slides */}
       <CarouselDotContent>
         {Array.from({
           length: (showObjectives ? 1 : 0) + (showReadiness ? 1 : 0) + 1,
@@ -286,7 +319,9 @@ export function PollingAgentPage() {
         ))}
       </CarouselDotContent>
 
+      {/* Main Action Flow Body */}
       <HomeBody>
+        {/* Stage 1: Arrival Check-in (Prompted on election day if not yet confirmed) */}
         {daysLeft === 0 &&
           currentPollingUnitAssignment &&
           !currentPollingUnitAssignment.arrived_at && (
@@ -298,6 +333,7 @@ export function PollingAgentPage() {
             />
           )}
 
+        {/* Stage 2-4: Start Election, Upload Results, and End Election Workflow */}
         {currentPollingUnitAssignment &&
           currentPollingUnitAssignment.arrived_at &&
           !currentPollingUnitAssignment.election_ended_at && (
@@ -352,10 +388,13 @@ export function PollingAgentPage() {
                 )}
             </>
           )}
+
+        {/* Voter Participation prompt on election day */}
         {daysLeft === 0 && (
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
+        {/* Post-Election Stage: Final result verification and duty payout request */}
         {currentPollingUnitAssignment &&
           currentPollingUnitAssignment.election_ended_at && (
             <>
@@ -368,17 +407,21 @@ export function PollingAgentPage() {
             </>
           )}
 
+        {/* Pre-election cards: Supervisor application, referral bonuses, practice test */}
         {daysLeft !== undefined && daysLeft !== 0 && <ApplicationsCard />}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== undefined && daysLeft !== 0 && <PracticeTestCard />}
 
+        {/* Bottom tab switcher */}
         <HomeTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
+        {/* Tab panels */}
         {activeTab === "Earnings" && <EarningsTab />}
         {activeTab === "Contact" && <ContactPartyTab />}
         {activeTab === "Uploads" && <UploadsTab />}
       </HomeBody>
 
+      {/* Arrival check-in drawer */}
       <ArrivalDrawer
         isOpen={isArrivalDrawerOpen}
         onOpenChange={setIsArrivalDrawerOpen}
@@ -398,6 +441,7 @@ export function PollingAgentPage() {
         electionDate={selectedElectionGroup?.election_date}
       />
 
+      {/* Quick situation reporting FAB on election day */}
       {diffDays === 0 && (
         <GiveUpdateFloatingButton
           onClick={() => navigate({ to: "/give-update" })}

@@ -28,13 +28,18 @@ import {
 } from "#/lib/server/elections";
 import { getParties as getPartiesServer } from "#/lib/server/parties";
 
-// Models
+// --- Models & Payloads ---
+/** Vote record pairing an individual election instance with the chosen political party */
 type VoteInput = {
   election_id: number;
   party_id: number;
 };
 
-// API Fetchers
+// --- API Fetchers ---
+/**
+ * Retrieves the specific election ballots applicable to the given polling unit
+ * (e.g. Gubernatorial, State Assembly, Senatorial, etc.).
+ */
 const fetchEligibleElections = async (
   electionGroupId: number,
   pollingUnitId: number,
@@ -45,17 +50,29 @@ const fetchEligibleElections = async (
   return res?.data?.elections || [];
 };
 
+/**
+ * Submits the completed voter verification payload to the backend.
+ */
 const submitVotes = async (payload: any) => {
   const res = await submitVotesServer({ data: payload });
   return res;
 };
 
+/**
+ * Fetches the global list of political parties participating in the election.
+ */
 const getParties = async () => {
   const res = await getPartiesServer();
   return res?.data?.parties || [];
 };
 
-// Steps
+// --- Step Components ---
+
+/**
+ * Step 1: Geographic Hierarchy Selection.
+ * Cascading dropdowns selecting the State, LGA, and Ward where the citizen voted.
+ * Selecting a parent jurisdiction automatically resets downstream selections.
+ */
 const Step1 = ({
   selectedStateId,
   setSelectedStateId,
@@ -70,6 +87,7 @@ const Step1 = ({
       subtitle="This ensures your vote indeed counts."
     />
     <div className="space-y-4">
+      {/* State Selection */}
       <div className="flex flex-col gap-2">
         <Label title="Which state are you currently in?" />
         <SelectState
@@ -83,6 +101,7 @@ const Step1 = ({
         />
       </div>
 
+      {/* Local Government Area Selection */}
       <div className="flex flex-col gap-2">
         <Label title="Which LGA do you stay in?" />
         <SelectLga
@@ -97,6 +116,7 @@ const Step1 = ({
         />
       </div>
 
+      {/* Electoral Ward Selection */}
       <div className="flex flex-col gap-2">
         <Label title="Which ward do you stay in?" />
         <SelectWard
@@ -112,6 +132,11 @@ const Step1 = ({
   </div>
 );
 
+/**
+ * Step 2: Polling Unit Picker.
+ * Infinite paginated list of polling units in the selected ward.
+ * Uses an intersection observer sentinel to fetch subsequent pages as the user scrolls.
+ */
 const Step2 = ({
   selectedStateId,
   selectedLgaId,
@@ -120,6 +145,7 @@ const Step2 = ({
   selectedPollingUnitId,
   setSelectedPollingUnitId,
 }: any) => {
+  // Cursor-paginated infinite query for polling units in the ward
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ["polling-units", selectedWardId],
@@ -216,6 +242,11 @@ const Step2 = ({
   );
 };
 
+/**
+ * Step 3: Multi-Ballot Candidate & Party Selection.
+ * Iterates through all eligible elections at the chosen polling unit (e.g. Presidential, Senate).
+ * When the user selects a candidate, it records their vote and auto-advances to the next election.
+ */
 const Step3 = ({
   elections,
   electionsLoading,
@@ -224,6 +255,7 @@ const Step3 = ({
   votes,
   setVotes,
 }: any) => {
+  // Query full list of political parties participating in this election
   const { data: parties } = useQuery({
     queryKey: ["parties"],
     queryFn: getParties,
@@ -247,7 +279,7 @@ const Step3 = ({
 
   const currentElection = elections[currentElectionIndex];
 
-  // Build a map of party_id -> candidate from the election's candidates list
+  // Map party IDs to candidate profiles registered for this election
   const candidateByPartyId: Record<number, any> = {};
   for (const c of currentElection.candidates || []) {
     const pid = c.party_id?.Int64 ?? c.party_id;
@@ -276,15 +308,15 @@ const Step3 = ({
               key={party.id}
               name={displayName}
               image={displayImage}
-              // image2={candidate ? party.logo : undefined}
               image2={party.logo}
               isSelected={isSelected}
               onClick={() => {
+                // Record the selected party for this specific election
                 setVotes((prev: any) => ({
                   ...prev,
                   [currentElection.id]: party.id,
                 }));
-                // Auto advance if not the last
+                // Auto-advance to the next election in the sequence if not at the final ballot
                 if (currentElectionIndex < elections.length - 1) {
                   setTimeout(() => {
                     setCurrentElectionIndex((i: number) => i + 1);
@@ -299,24 +331,27 @@ const Step3 = ({
   );
 };
 
+/**
+ * Step 4: Permanent Voter's Card (PVC) Verification Upload.
+ * Verifies that the reporter is an authentic registered voter.
+ * In practice mode, allows one-tap mock card selection for training drills.
+ */
 const Step4 = ({ votersCardImage, setVotersCardImage, isPractice }: any) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Creates local blob preview of the selected voter's card photo
   const handleFileUpload = async (file: File) => {
-    // Basic file upload dummy function for now
-    // Actually we should use the existing file upload flow.
-    // To keep it simple, let's just pretend we uploaded it.
-    // In production, we'd use the presigned URL flow.
     const formData = new FormData();
     formData.append("file", file);
     try {
       toast.success("Image selected");
-      setVotersCardImage(URL.createObjectURL(file)); // Fake URL for demo
+      setVotersCardImage(URL.createObjectURL(file));
     } catch (e) {
       toast.error("Upload failed");
     }
   };
 
+  // Upload area prompting the user to take/upload a photo of their PVC
   const uploadVotersCardPlaceholder = (
     <div
       className="min-h-48 border border-c-20 border-dashed rounded-2xl flex flex-col items-center justify-center p-8 cursor-pointer bg-c-10/50 hover:bg-c-10 transition-colors"
@@ -381,6 +416,15 @@ const Step4 = ({ votersCardImage, setVotersCardImage, isPractice }: any) => {
   );
 };
 
+/**
+ * Multi-step voting declaration and PVC verification workflow.
+ *
+ * Flow Steps:
+ *  1. Where did you vote? (State -> LGA -> Ward cascade)
+ *  2. Which polling unit? (Infinite cursor-paginated unit selector)
+ *  3. Who did you vote for? (Sequential candidate/party selection per eligible election)
+ *  4. PVC Verification (Photo upload or practice mode confirmation)
+ */
 export function VoteFlow() {
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as any;
@@ -388,8 +432,13 @@ export function VoteFlow() {
   const { selectedElectionGroup } = useElection();
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Active step in the main wizard (1 to 4)
   const [step, setStep] = useState(1);
+
+  // Active sub-index when multiple ballots exist (Presidential, Senatorial, etc.) in Step 3
   const [currentElectionIndex, setCurrentElectionIndex] = useState(0);
+
+  // Geographic territory state
   const [selectedStateId, setSelectedStateId] = useState<number | null>(
     user?.current_state ?? null,
   );
@@ -403,12 +452,15 @@ export function VoteFlow() {
     number | null
   >(user?.polling_unit_id ?? null);
 
-  // votes: Record<electionId, partyId>
+  // Map of votes recorded per election instance: Record<electionId, partyId>
   const [votes, setVotes] = useState<Record<number, number>>({});
+
+  // Permanent Voter's Card (PVC) preview URL
   const [votersCardImage, setVotersCardImage] = useState(
     user?.voters_card_image || "",
   );
 
+  // Query elections eligible for this specific polling unit
   const { data: elections, isLoading: electionsLoading } = useQuery({
     queryKey: [
       "eligible-elections",
@@ -420,6 +472,7 @@ export function VoteFlow() {
     enabled: !!selectedElectionGroup && !!selectedPollingUnitId,
   });
 
+  // Mutation submitting the complete voting report
   const submitMutation = useMutation({
     mutationFn: submitVotes,
     onSuccess: () => {
@@ -431,6 +484,7 @@ export function VoteFlow() {
     },
   });
 
+  // Validates step completeness before allowing user to advance
   const isNextDisabled = (() => {
     if (submitMutation.isPending) return true;
     if (step === 1) return !selectedWardId;
@@ -444,6 +498,7 @@ export function VoteFlow() {
     return false;
   })();
 
+  // Reset scroll position to top whenever step or ballot index changes
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
@@ -454,6 +509,7 @@ export function VoteFlow() {
     return <div className="p-8 text-center">No election group selected.</div>;
   }
 
+  // Next step transition handler
   const handleNext = () => {
     if (step === 1) {
       if (!selectedWardId) return toast.error("Please select a ward");
@@ -466,12 +522,14 @@ export function VoteFlow() {
       if (Object.keys(votes).length === 0)
         return toast.error("Please select at least one party");
 
+      // Advance to the next ballot in the polling unit, or advance to step 4 if completed
       if (elections && currentElectionIndex < elections.length - 1) {
         setCurrentElectionIndex(currentElectionIndex + 1);
       } else {
         setStep(4);
       }
     } else if (step === 4) {
+      // Practice test mode: navigate back to practice dashboard with completion flag
       if (search.isPractice) {
         const failedAttempts = parseInt(search.failedAttemptCount || "0", 10);
         showFeedbackToast(true, failedAttempts);
@@ -488,6 +546,7 @@ export function VoteFlow() {
 
       if (!votersCardImage) return toast.error("Please provide PVC image");
 
+      // Compile vote payload across all voted ballots
       const votePayload = Object.entries(votes).map(
         ([electionId, partyId]) => ({
           election_id: Number(electionId),
@@ -506,6 +565,7 @@ export function VoteFlow() {
 
   return (
     <PageWrapper>
+      {/* Back button steps back through ballots first, then wizard steps, then home */}
       <PageHeader
         onBackClick={() => {
           if (step > 1) {
@@ -521,6 +581,7 @@ export function VoteFlow() {
       />
 
       <div ref={scrollRef} className="flex-1 overflow-y-auto pb-24">
+        {/* Step 1: Territory & Ward Selection */}
         {step === 1 && (
           <Step1
             selectedStateId={selectedStateId}
@@ -531,6 +592,8 @@ export function VoteFlow() {
             setSelectedWardId={setSelectedWardId}
           />
         )}
+
+        {/* Step 2: Polling Unit Picker */}
         {step === 2 && (
           <Step2
             selectedStateId={selectedStateId}
@@ -541,6 +604,8 @@ export function VoteFlow() {
             setSelectedPollingUnitId={setSelectedPollingUnitId}
           />
         )}
+
+        {/* Step 3: Candidate & Party Selection */}
         {step === 3 && (
           <Step3
             elections={elections}
@@ -551,6 +616,8 @@ export function VoteFlow() {
             setVotes={setVotes}
           />
         )}
+
+        {/* Step 4: PVC Card Photo Verification */}
         {step === 4 && (
           <Step4
             votersCardImage={votersCardImage}
@@ -560,6 +627,7 @@ export function VoteFlow() {
         )}
       </div>
 
+      {/* Sticky footer with dynamic Continue / Submit action */}
       <StickyFooter className="pb-10">
         <Button
           type="button"

@@ -37,21 +37,49 @@ import {
 } from "./components/-ApplySteps";
 import { ApplySuccess } from "./components/-ApplySuccess";
 
+/**
+ * Route definition for polling unit agent registration wizard.
+ */
 export const Route = createFileRoute("/_authenticated/applications/apply")({
   head: () => getPageHeader({ title: "Apply as Polling Unit Agent" }),
   component: ApplyPage,
 });
 
+/**
+ * 14-Step comprehensive application wizard for prospective Polling Unit Agents.
+ *
+ * Progression:
+ *  1. Orientation & Role Intro
+ *  2. Political Party Selection (with active party locking)
+ *  3. Election Group Selection (filtered to upcoming elections)
+ *  4. Portrait / Selfie Upload (Cloudflare R2 presigned storage)
+ *  5. Contact Information (Phone, WhatsApp, Data numbers)
+ *  6. Educational Status (Primary, Secondary, Tertiary, None)
+ *  7. Educational Details (Degree, School, Year - skipped if status is "none")
+ *  8. Residential Address & Geographic Territory (State, LGA, Ward)
+ *  9. Polling Unit Selection (Paginated search filtered to ward & party)
+ * 10. Role Obligations & Readiness
+ * 11. Code of Conduct
+ * 12. Neutrality & Integrity Affirmation
+ * 13. Payout Terms & Performance Incentives
+ * 14. Bank Account Verification & Submission
+ */
 function ApplyPage() {
   const navigate = useNavigate();
   const user = useUser();
 
-  // Form states
+  // --- Political Affiliation & Election Selection ---
   const [selectedPartyId, setSelectedPartyId] = useState<number | null>(
     user?.party_id || null,
   );
   const [selectedElectionIds, setSelectedElectionIds] = useState<number[]>([]);
+
+  // --- Identity & Photo Verification ---
   const [avatarUrl, setAvatarUrl] = useState<string>(user?.avatar || "");
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Residential & Territorial Location ---
   const [selectedStateId, setSelectedStateId] = useState<number | null>(
     user?.current_state || null,
   );
@@ -67,32 +95,34 @@ function ApplyPage() {
   const [selectedPollingUnitId, setSelectedPollingUnitId] = useState<
     number | null
   >(user?.polling_unit_id || null);
-  const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
-  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(null);
-  const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
+
+  // --- Contact Phone Numbers ---
   const [phone, setPhone] = useState<string>(user?.phone || "");
   const [whatsappPhone, setWhatsappPhone] = useState<string>(
     user?.whatsapp_phone || "",
   );
   const [dataPhone, setDataPhone] = useState<string>(user?.data_phone || "");
+
+  // --- Educational Background ---
   const [educationalStatus, setEducationalStatus] = useState<string>("");
   const [highestDegree, setHighestDegree] = useState<string>("");
   const [graduationYear, setGraduationYear] = useState<string>("");
   const [schoolName, setSchoolName] = useState<string>("");
 
+  // --- Bank Account & Verification ---
+  const [bankAccountNumber, setBankAccountNumber] = useState<string>("");
+  const [selectedBankCode, setSelectedBankCode] = useState<string | null>(null);
+  const [bankDropdownOpen, setBankDropdownOpen] = useState<boolean>(false);
   const [isValidatingAccount, setIsValidatingAccount] = useState(false);
   const [isAccountValid, setIsAccountValid] = useState(false);
 
-  // UI state
+  // --- Wizard Navigation & Submission Status ---
   const [step, setStep] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isUploading, setIsUploading] = useState<boolean>(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // React Query calls
+  // Pre-fill profile, education, and banking data from existing user record
   const { data: userMeDetails } = useQuery({
     queryKey: ["userMeDetails"],
     queryFn: async () => {
@@ -123,6 +153,7 @@ function ApplyPage() {
     }
   }, [userMeDetails]);
 
+  // Query list of registered political parties
   const { data: parties = [], isLoading: partiesLoading } = useQuery({
     queryKey: ["parties"],
     queryFn: async () => {
@@ -134,6 +165,7 @@ function ApplyPage() {
     initialData: [],
   });
 
+  // Query upcoming election groups open for agent recruitment
   const { data: elections = [] } = useQuery({
     queryKey: ["electionGroups", { upcoming: true }],
     queryFn: async () => {
@@ -160,6 +192,7 @@ function ApplyPage() {
     initialData: [],
   });
 
+  // Query user's existing applications to avoid duplicate submissions
   const { data: applications = [] } = useQuery({
     queryKey: ["applications"],
     queryFn: async () => {
@@ -171,6 +204,7 @@ function ApplyPage() {
     },
   });
 
+  // Election group IDs where the agent already has an active application
   const appliedElectionGroupIds = applications
     .filter((app: any) =>
       ["pending", "approved", "success", "accepted"].includes(app.status),
@@ -178,8 +212,9 @@ function ApplyPage() {
     .map((app: any) => app.election_group_id || app.election_group?.id)
     .filter(Boolean);
 
+  // If the agent has an active application for an upcoming or present election,
+  // lock their party affiliation so they represent the same party
   const lockedPartyId = (() => {
-    // Check if the user has an active application to a particular party for an election group that is today or in the future
     const activeApp = applications.find((app: any) => {
       const isActive = ["pending", "approved", "success", "accepted"].includes(
         app.status,
@@ -191,18 +226,17 @@ function ApplyPage() {
         if (app.election_date.Valid) {
           electionDateStr = app.election_date.Time;
         } else {
-          electionDateStr = "2099-12-31T00:00:00Z"; // Assume future if not set
+          electionDateStr = "2099-12-31T00:00:00Z";
         }
       } else {
         electionDateStr = app.election_date;
       }
 
       if (!electionDateStr) {
-        electionDateStr = "2099-12-31T00:00:00Z"; // Assume future if not set
+        electionDateStr = "2099-12-31T00:00:00Z";
       }
 
       const electionDate = new Date(electionDateStr);
-      // Remove time part of today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       return electionDate >= today;
@@ -210,13 +244,14 @@ function ApplyPage() {
     return activeApp ? activeApp.party_id || activeApp.party?.id : null;
   })();
 
-  // Automatically select the locked party if it exists and hasn't been selected yet
+  // Synchronize locked party selection to form state
   useEffect(() => {
     if (lockedPartyId && !selectedPartyId) {
       setSelectedPartyId(lockedPartyId);
     }
   }, [lockedPartyId, selectedPartyId, setSelectedPartyId]);
 
+  // Paginated infinite query for polling units within the agent's chosen jurisdiction
   const {
     data: pollingUnitsData,
     fetchNextPage: fetchNextUnits,
@@ -258,6 +293,7 @@ function ApplyPage() {
     enabled: !!selectedStateId || !!selectedLgaId || !!selectedWardId,
   });
 
+  // Flattened array of polling units across all fetched pages
   const pollingUnits = useMemo(() => {
     return pollingUnitsData
       ? pollingUnitsData.pages.flatMap(
@@ -266,12 +302,12 @@ function ApplyPage() {
       : [];
   }, [pollingUnitsData]);
 
-  // Reset LGA selection when state changes
+  // Reset LGA selection whenever state changes
   useEffect(() => {
     setSelectedLgaId(null);
   }, [selectedStateId]);
 
-  // Select first polling unit only if the currently selected one is not in the list
+  // Fallback: select the first polling unit if the current selection is absent from new results
   useEffect(() => {
     if (pollingUnits && pollingUnits.length > 0) {
       setSelectedPollingUnitId((current) => {
@@ -283,6 +319,7 @@ function ApplyPage() {
     }
   }, [pollingUnits]);
 
+  // Normalizes ward name extraction from nested or polymorphic unit response
   const getWardName = (unit: any) => {
     if (unit.ward_name) return unit.ward_name;
     if (unit.ward?.name) return unit.ward.name;
@@ -290,11 +327,12 @@ function ApplyPage() {
     return "Unknown Ward";
   };
 
-  // File Upload logic
+  // Triggers the hidden file input element for portrait upload
   const handleUploadClick = () => {
     fileInputRef.current?.click();
   };
 
+  // Direct portrait image upload via presigned S3/R2 storage pipeline
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawFile = e.target.files?.[0];
     if (!rawFile) return;
@@ -345,9 +383,10 @@ function ApplyPage() {
     }
   };
 
-  // Submit flow using useMutation
+  // Mutation submitting the full polling agent application
   const submitMutation = useMutation({
     mutationFn: async () => {
+      // Validate that all compulsory agent registration details are filled
       if (
         !selectedPartyId ||
         selectedElectionIds.length === 0 ||
@@ -377,7 +416,6 @@ function ApplyPage() {
           bank_account_number: bankAccountNumber,
           bank_code: selectedBankCode,
           whatsapp_phone: whatsappPhone,
-          // data_phone: dataPhone,
           educational_status: educationalStatus,
           highest_degree: highestDegree,
           graduation_year: graduationYear,
@@ -386,28 +424,6 @@ function ApplyPage() {
           address: streetAddress,
         },
       });
-      console.log("MY DATA:", {
-        party_id: selectedPartyId,
-        election_group_ids: selectedElectionIds,
-        polling_unit_id: Number(selectedPollingUnitId),
-        avatar: user?.avatar || avatarUrl,
-        current_country: 1,
-        current_state: selectedStateId!,
-        current_lga: selectedLgaId!,
-        current_ward: selectedWardId || undefined,
-        current_city: 0,
-        bank_account_number: bankAccountNumber,
-        bank_code: selectedBankCode,
-        whatsapp_phone: whatsappPhone,
-        // data_phone: dataPhone,
-        educational_status: educationalStatus,
-        highest_degree: highestDegree,
-        graduation_year: graduationYear,
-        school_name: schoolName,
-        phone: phone,
-        address: streetAddress,
-      });
-      console.log("RESPONSE:", response);
 
       if (!response.success) {
         throw new Error(
@@ -430,15 +446,14 @@ function ApplyPage() {
   const isSubmitting = submitMutation.isPending;
   const handleSubmit = () => submitMutation.mutate();
 
-  // Filter parties based on search query
+  // Filter parties based on search query in Step 2
   const filteredParties = parties.filter(
     (p: any) =>
       p.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.short_name?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
-  console.log("Parties:", filteredParties);
-
+  // Navigate backward through the wizard, skipping Step 7 if no formal education was chosen
   const handleBackClick = () => {
     if (step === 1) {
       navigate({ to: "/" });
@@ -449,6 +464,7 @@ function ApplyPage() {
     }
   };
 
+  // Render success congratulations screen upon successful submission
   if (success) {
     return <ApplySuccess />;
   }
@@ -458,6 +474,7 @@ function ApplyPage() {
       <div className="flex flex-col flex-1 pb-24">
         <PageHeader onBackClick={handleBackClick} />
 
+        {/* Form validation or server error alert banner */}
         {submitError && (
           <div className="p-4 mx-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm flex gap-3 items-center mb-4">
             <AlertCircle className="w-5 h-5 shrink-0" />
@@ -465,7 +482,10 @@ function ApplyPage() {
           </div>
         )}
 
+        {/* Step 1: Orientation & Welcome */}
         {step === 1 && <Step1 />}
+
+        {/* Step 2: Political Party Selection */}
         {step === 2 && (
           <Step2
             searchQuery={searchQuery}
@@ -477,6 +497,8 @@ function ApplyPage() {
             lockedPartyId={lockedPartyId}
           />
         )}
+
+        {/* Step 3: Election Group Selection */}
         {step === 3 && (
           <Step3
             elections={elections}
@@ -485,6 +507,8 @@ function ApplyPage() {
             appliedElectionGroupIds={appliedElectionGroupIds}
           />
         )}
+
+        {/* Step 4: Agent Portrait / Photo Upload */}
         {step === 4 && (
           <Step4
             avatarUrl={avatarUrl || user?.avatar}
@@ -494,6 +518,8 @@ function ApplyPage() {
             handleFileChange={handleFileChange}
           />
         )}
+
+        {/* Step 5: Contact Numbers (Phone, WhatsApp, Data) */}
         {step === 5 && (
           <ContactDetailsStep
             phone={phone}
@@ -505,12 +531,16 @@ function ApplyPage() {
             setDataPhone={setDataPhone}
           />
         )}
+
+        {/* Step 6: Educational Level Status */}
         {step === 6 && (
           <EducationalStatusStep
             educationalStatus={educationalStatus}
             setEducationalStatus={setEducationalStatus}
           />
         )}
+
+        {/* Step 7: Educational Institution & Degree Details */}
         {step === 7 && educationalStatus !== "none" && (
           <EducationalDetailsStep
             educationalStatus={educationalStatus}
@@ -522,6 +552,8 @@ function ApplyPage() {
             setSchoolName={setSchoolName}
           />
         )}
+
+        {/* Step 8: Residential Address & Ward */}
         {step === 8 && (
           <Step5
             selectedStateId={selectedStateId}
@@ -534,6 +566,8 @@ function ApplyPage() {
             setStreetAddress={setStreetAddress}
           />
         )}
+
+        {/* Step 9: Polling Unit Search & Assignment */}
         {step === 9 && (
           <Step6
             pollingUnits={pollingUnits}
@@ -549,10 +583,20 @@ function ApplyPage() {
             setSelectedWardId={setSelectedWardId}
           />
         )}
+
+        {/* Step 10: Polling Agent Responsibilities */}
         {step === 10 && <Step7 />}
+
+        {/* Step 11: Code of Conduct & Punctuality */}
         {step === 11 && <Step8 />}
+
+        {/* Step 12: Neutrality & Integrity Commitment */}
         {step === 12 && <Step9 />}
+
+        {/* Step 13: Compensation & Potential Payout Details */}
         {step === 13 && <Step10 />}
+
+        {/* Step 14: Bank Account & Payout Verification */}
         {step === 14 && (
           <Step11
             bankAccountNumber={bankAccountNumber}
@@ -568,6 +612,7 @@ function ApplyPage() {
         )}
       </div>
 
+      {/* Sticky footer handling validation and step progression */}
       <ApplyFooter
         step={step}
         setStep={setStep}

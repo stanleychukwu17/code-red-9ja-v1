@@ -20,19 +20,42 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { showFeedbackToast } from "../practice/page-components/utils";
 import { getPotentialPayout } from "#/lib/server/practice_tests";
 
+/**
+ * Route definition for the polling unit situation update and incident reporting screen.
+ * Accessible under `/_authenticated/give-update/`.
+ */
 export const Route = createFileRoute("/_authenticated/give-update/")({
   component: GiveUpdate,
 });
 
+/**
+ * Polling Unit Situation Update & Incident Reporting Page.
+ *
+ * Supports two primary modes for polling unit agents:
+ * 1. Situation Update: Real-time status report with optional photo/video evidence,
+ *    earning bounties for quality documentation.
+ * 2. Incident Report: Triggered directly via `search.isReport` or violation tagging,
+ *    allowing agents to flag electoral offenses (fraud, misconduct, violence).
+ *
+ * Multi-Step Workflow:
+ * - Step 1: Payout bounties breakdown and quick-capture media prompt.
+ * - Step 2: Interactive composer with tag selector drawer, text input, media carousel,
+ *   and direct R2/S3 asset upload.
+ */
 function GiveUpdate() {
   const navigate = useNavigate();
+
+  // Search parameters from URL (e.g. isReport, isPractice, taskId)
   const search = Route.useSearch() as any;
+
+  // Retrieve user, active election, and assigned polling unit
   const user = useUser();
   const { selectedElectionGroup } = useElection();
   const { selectedAssignment: currentAssignment } = useAssignments();
 
   const assignmentId = currentAssignment?.id;
 
+  // Query potential monetary payout reward for providing situation updates
   const { data: payoutRes } = useQuery({
     queryKey: ["potentialPayout", assignmentId, "updates"],
     queryFn: async () => {
@@ -47,10 +70,13 @@ function GiveUpdate() {
     enabled: !!assignmentId,
   });
 
+  // Extract payout details if available
   const payoutData = payoutRes?.success ? payoutRes?.data?.payout : undefined;
 
+  // Start directly at Step 2 if user navigated specifically to report an incident
   const [step, setStep] = useState(search.isReport ? 2 : 1);
 
+  // Form submission and composition state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reportText, setReportText] = useState(
     search.isPractice && !search.isReport
@@ -63,20 +89,26 @@ function GiveUpdate() {
   >([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
+  // DOM references to hidden native file and camera inputs
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraImageRef = useRef<HTMLInputElement>(null);
   const cameraVideoRef = useRef<HTMLInputElement>(null);
 
+  // Toggle tag selection for incident categorization
   const toggleTag = (tag: string) => {
     setSelectedTags((prev) =>
       prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
+  // Remove a specific violation tag
   const removeTag = (tag: string) => {
     setSelectedTags((prev) => prev.filter((t) => t !== tag));
   };
 
+  /**
+   * Appends newly captured or selected media files with preview object URLs.
+   */
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const newMedia = files.map((file) => ({
@@ -93,6 +125,9 @@ function GiveUpdate() {
     }
   };
 
+  /**
+   * Cleans up allocated object URL and removes selected media file from preview list.
+   */
   const removeMedia = (index: number) => {
     setMediaFiles((prev) => {
       const newFiles = [...prev];
@@ -104,6 +139,7 @@ function GiveUpdate() {
     });
   };
 
+  // Standardized categorization taxonomy for election infractions and misconduct
   const REPORT_CATEGORIES = [
     {
       title: "Manipulation & Fraud",
@@ -126,12 +162,21 @@ function GiveUpdate() {
     },
   ];
 
+  /**
+   * Handles media upload and submission of either a status update or incident report:
+   * 1. Validates election schedule and required report message.
+   * 2. Iterates through media files, requests presigned URLs, and PUTs to Cloudflare R2 / S3.
+   * 3. Confirms successful upload per file.
+   * 4. Determines whether this is a formal report (`is_report` flag based on query or tags).
+   * 5. Calls `createPollingUnitUpdate` to save the post to the election feed.
+   */
   const submitMutation = useMutation({
     mutationFn: async () => {
       if (!currentAssignment || !selectedElectionGroup) {
         throw new Error("No active assignment or election group found.");
       }
 
+      // Enforce election day date check
       if (selectedElectionGroup.election_date) {
         const today = new Date().toISOString().split("T")[0];
         const electionDate = new Date(selectedElectionGroup.election_date)
@@ -150,6 +195,7 @@ function GiveUpdate() {
 
       const uploadedUrls: string[] = [];
 
+      // Sequentially upload each attached photo/video directly to R2 / S3
       for (const m of mediaFiles) {
         const res = await getPresignedUploadURL({
           data: {
@@ -181,8 +227,10 @@ function GiveUpdate() {
         uploadedUrls.push(public_url);
       }
 
+      // Mark as report if navigated via report intent or if specific tags were selected
       const isReport = Boolean(search.isReport) || selectedTags.length > 0;
 
+      // Submit update entry to server
       const res = await createPollingUnitUpdate({
         data: {
           polling_unit_id: currentAssignment.polling_unit_id,
@@ -214,8 +262,10 @@ function GiveUpdate() {
 
   return (
     <PageWrapper>
+      {/* Step 1: Situation Update Bounty Overview & Media Prompt */}
       {step === 1 ? (
         <>
+          {/* Header with back navigation */}
           <PageHeader onBackClick={() => navigate({ to: "/" })} />
 
           <div className="px-4 space-y-8">
@@ -224,6 +274,7 @@ function GiveUpdate() {
               size="lg"
             />
 
+            {/* Reward breakdown for evidence types and total payout potential */}
             <div className="flex flex-col gap-4">
               {[
                 {
@@ -263,6 +314,7 @@ function GiveUpdate() {
               />
             </div>
 
+            {/* Quality & verification advisory */}
             <DescriptiveText
               text="Please take quality video or picture to ensure you qualify for the
             maximum payment. Falsified video or picture uploads will disqualify you
@@ -270,8 +322,10 @@ function GiveUpdate() {
             />
           </div>
 
+          {/* Quick-capture action footer for Step 1 */}
           <StickyFooter>
             <div className="flex items-center gap-4">
+              {/* Trigger camera photo capture */}
               <Button
                 type="button"
                 variant="deepGrey"
@@ -286,6 +340,7 @@ function GiveUpdate() {
               >
                 Take Picture
               </Button>
+              {/* Trigger camera video capture */}
               <Button
                 type="button"
                 variant="deepGrey"
@@ -301,6 +356,7 @@ function GiveUpdate() {
                 Take Video
               </Button>
             </div>
+            {/* Skip straight to text editor */}
             <Button
               type="button"
               variant="outline"
@@ -313,7 +369,9 @@ function GiveUpdate() {
           </StickyFooter>
         </>
       ) : (
+        /* Step 2: Feed Post Composer & Incident Report Editor */
         <>
+          {/* Post Header with close navigation and submit action */}
           <PostHeader
             onClose={() => {
               if (search.isReport) {
@@ -350,6 +408,7 @@ function GiveUpdate() {
             isReport={search.isReport}
           />
 
+          {/* Text editor area, selected violation tags, and media attachment carousel */}
           <PostInputArea
             reportText={reportText}
             setReportText={setReportText}
@@ -361,6 +420,7 @@ function GiveUpdate() {
             isReport={search.isReport}
           />
 
+          {/* Action bar and incident violation categories drawer */}
           <PostFooter
             isDrawerOpen={isDrawerOpen}
             setIsDrawerOpen={setIsDrawerOpen}
@@ -373,7 +433,8 @@ function GiveUpdate() {
           />
         </>
       )}
-      {/* Hidden File Inputs */}
+
+      {/* Hidden File Inputs for native gallery and camera pickers */}
       <input
         type="file"
         accept="image/*,video/*"
