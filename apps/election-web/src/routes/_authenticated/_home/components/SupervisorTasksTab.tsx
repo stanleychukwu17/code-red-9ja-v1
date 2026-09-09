@@ -1,12 +1,16 @@
 import AlertIcon from "@repo/ui/icons/alert-icon";
 import { useNavigate } from "@tanstack/react-router";
 
+/** Actionable supervisor intervention task linking to filtered phone contact directory */
 interface TaskItem {
   label: string;
   count: number | string;
   to?: string;
 }
 
+/**
+ * Reusable supervisor task card row displaying task description, count badge, and navigation arrow.
+ */
 function TaskCard({
   label,
   count,
@@ -47,14 +51,23 @@ function TaskCard({
 }
 
 interface SupervisorTasksTabProps {
+  /** True when current day matches the active election date */
   isElectionDay: boolean;
 }
 
+/**
+ * Ward Supervisor Tasks Tab.
+ *
+ * Displays direct call-to-action tasks for Ward Supervisors to mobilize their polling unit agents:
+ * - Election Day: Call agents not yet arrived, agents inactive > 1hr, or pending EC8A uploads.
+ * - Pre-Election: Call agents to ensure practice test completion.
+ */
 export function WardSupervisorTasksTab({
   isElectionDay,
 }: SupervisorTasksTabProps) {
   const navigate = useNavigate();
 
+  // Tasks requiring phone intervention on election day
   const electionDayTasks: TaskItem[] = [
     {
       label: "Call Polling Agents that have not arrived at their polling unit.",
@@ -73,6 +86,7 @@ export function WardSupervisorTasksTab({
     },
   ];
 
+  // Pre-election readiness preparation tasks
   const preElectionTasks: TaskItem[] = [
     {
       label:
@@ -86,6 +100,7 @@ export function WardSupervisorTasksTab({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Earnings incentive callout banner */}
       {isElectionDay && (
         <section className="bg-yellow/20 rounded-[16px] px-4 py-3.5 flex items-start gap-3">
           <AlertIcon className="size-5 text-yellow-600 shrink-0 mt-0.5" />
@@ -96,6 +111,7 @@ export function WardSupervisorTasksTab({
         </section>
       )}
 
+      {/* Task checklist rows */}
       <div className="flex flex-col">
         {tasks.map((task) => (
           <TaskCard
@@ -112,6 +128,12 @@ export function WardSupervisorTasksTab({
   );
 }
 
+/**
+ * LGA Supervisor Tasks Tab.
+ *
+ * Actionable tasks for LGA Supervisors to follow up with Ward Supervisors:
+ * - Mobilize unstarted wards, escalate silent polling units, and expedite result uploads.
+ */
 export function LgaSupervisorTasksTab({
   isElectionDay,
 }: SupervisorTasksTabProps) {
@@ -151,6 +173,7 @@ export function LgaSupervisorTasksTab({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Earnings incentive banner */}
       {isElectionDay && (
         <section className="bg-yellow/20 rounded-[16px] px-4 py-3.5 flex items-start gap-3">
           <AlertIcon className="size-5 text-yellow-600 shrink-0 mt-0.5" />
@@ -161,6 +184,7 @@ export function LgaSupervisorTasksTab({
         </section>
       )}
 
+      {/* Actionable task list */}
       <div className="flex flex-col">
         {tasks.map((task) => (
           <TaskCard
@@ -177,6 +201,11 @@ export function LgaSupervisorTasksTab({
   );
 }
 
+/**
+ * State Supervisor Tasks Tab.
+ *
+ * Actionable coordination tasks for State Supervisors to track LGA Supervisors across the state.
+ */
 export function StateSupervisorTasksTab({
   isElectionDay,
 }: SupervisorTasksTabProps) {
@@ -216,6 +245,7 @@ export function StateSupervisorTasksTab({
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Incentive banner */}
       {isElectionDay && (
         <section className="bg-yellow/20 rounded-[16px] px-4 py-3.5 flex items-start gap-3">
           <AlertIcon className="size-5 text-yellow-600 shrink-0 mt-0.5" />
@@ -226,6 +256,7 @@ export function StateSupervisorTasksTab({
         </section>
       )}
 
+      {/* Task list */}
       <div className="flex flex-col">
         {tasks.map((task) => (
           <TaskCard

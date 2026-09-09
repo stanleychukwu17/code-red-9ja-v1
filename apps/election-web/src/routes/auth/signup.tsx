@@ -48,6 +48,13 @@ export const Route = createFileRoute("/auth/signup")({
   errorComponent: SignupError,
 });
 
+/**
+ * RouteComponent
+ * Multi-stage user registration workflow:
+ * Stage 1: Captures country dial code, phone number, email, and password.
+ * Stage 2: Dispatches and verifies a 6-digit email OTP token before executing
+ * the final account creation mutation and redirecting to the onboarding flow.
+ */
 function RouteComponent() {
   const navigate = useNavigate();
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);

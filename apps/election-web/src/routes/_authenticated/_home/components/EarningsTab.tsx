@@ -5,6 +5,7 @@ import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 import { cn } from "@repo/ui/lib/utils";
 import { getLocalDate } from "@repo/ui/lib/date";
 
+/** Wallet transaction item representing credit earnings or payout withdrawals */
 export interface UserWalletTransaction {
   id: number;
   wallet_id: number;
@@ -16,6 +17,14 @@ export interface UserWalletTransaction {
   created_at: string;
 }
 
+/**
+ * Transaction History Card.
+ *
+ * Renders an individual wallet transaction row:
+ * - Directional arrow badge (green credit deposit vs dark debit withdrawal).
+ * - Formatted Naira amount derived from kobo (`amount_kobo / 100`).
+ * - Localized creation date and execution status.
+ */
 export function TransactionCard({
   transaction,
 }: {
@@ -45,6 +54,7 @@ export function TransactionCard({
 
   return (
     <div className="h-16 flex items-center md:px-2 hover:bg-c-5 rounded-2xl transition-colors gap-3">
+      {/* Transaction type direction icon */}
       <div
         className={cn(
           "size-11 rounded-full flex items-center justify-center shrink-0",
@@ -57,6 +67,8 @@ export function TransactionCard({
           <ArrowHandleIcon className="size-4 -rotate-90" />
         )}
       </div>
+
+      {/* Transaction details & formatted value */}
       <div className="space-y-1 w-full text-sm md:text-base">
         <div className="flex items-center gap-2 w-full">
           <p className="w-full text-c-90 line-clamp-1 font-medium">{title}</p>
@@ -78,17 +90,27 @@ export function TransactionCard({
   );
 }
 
+/**
+ * Agent & Supervisor Earnings Tab.
+ *
+ * Displays wallet balance accumulated from election duties (attendance check-ins,
+ * hourly updates, result sheet uploads, and voter recruitment bounties).
+ * Also renders a real-time list of all wallet credit/debit transactions.
+ */
 export function EarningsTab() {
+  // Query user wallet balance
   const { data: walletRes } = useQuery({
     queryKey: ["myWallet"],
     queryFn: () => getMyWallet(),
   });
 
+  // Query recent wallet ledger transactions
   const { data: txRes, isLoading: isTxLoading } = useQuery({
     queryKey: ["myWalletTransactions"],
     queryFn: () => getMyWalletTransactions({ data: { limit: 50, offset: 0 } }),
   });
 
+  // Derive balance from kobo
   const balanceKobo = walletRes?.success
     ? (walletRes?.data?.wallet?.balance_kobo ?? 0)
     : 0;
@@ -105,6 +127,7 @@ export function EarningsTab() {
 
   return (
     <div className="flex flex-col gap-4">
+      {/* Wallet balance highlight card */}
       <div className="bg-yellow/20 rounded-[16px] pl-3 pr-5 py-3 flex items-center gap-2">
         <FancyMoneyBagIcon className="shrink-0 size-7" />
         <div className="space-y-1 w-full">
@@ -122,6 +145,7 @@ export function EarningsTab() {
         </div>
       </div>
 
+      {/* Transactions list */}
       <div className="space-y-2 mt-2">
         <h4 className="font-semibold text-c-80 text-base">Transactions</h4>
         {isTxLoading ? (

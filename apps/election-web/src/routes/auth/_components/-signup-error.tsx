@@ -2,7 +2,13 @@ import type { ErrorComponentProps } from "@tanstack/react-router";
 import { AuthWrapper } from "./-auth-wrapper";
 import { PiWarningCircleDuotone } from "react-icons/pi";
 
+/**
+ * SignupError
+ * Fallback error boundary component rendered by TanStack Router
+ * if route loader or critical network dependencies fail on /auth/signup.
+ */
 export function SignupError({ error }: ErrorComponentProps) {
+
   return (
     <AuthWrapper type="signup">
       <div className="flex flex-col items-center justify-center gap-6 py-12 text-center backdrop-blur-sm rounded-2xl">

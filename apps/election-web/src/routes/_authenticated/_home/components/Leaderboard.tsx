@@ -12,20 +12,35 @@ import { useElection } from "#/hooks/useElection";
 import { useAssignments } from "#/hooks/useAssignments";
 import { useElectionResults } from "#/hooks/useElectionResults";
 
+interface CandidatesLeaderboardProps {
+	/** Optional interceptor for practice training mode */
+	onPracticeClick?: () => void;
+	/** Optional handler for incident reporting action */
+	onReportClick?: () => void;
+	/** When true, hides the incident report action button */
+	hideReportButton?: boolean;
+}
+
+/**
+ * Candidates Election Leaderboard.
+ *
+ * Carousel card displaying current vote standings for the selected election ballot:
+ * - Switches between real-time unverified votes (`isLive = true`) and official certified returns.
+ * - Sorts candidates descending by vote tally, displaying the top 3 with candidate avatar + party badge.
+ * - Contextual win count: Adapts to supervisor geographic scope (States &rarr; LGAs &rarr; Wards &rarr; PUs).
+ * - "Show all" and "Report" incident action buttons.
+ */
 export function CandidatesLeaderboard({
 	onPracticeClick,
 	onReportClick,
 	hideReportButton,
-}: {
-	onPracticeClick?: () => void;
-	onReportClick?: () => void;
-	hideReportButton?: boolean;
-}) {
+}: CandidatesLeaderboardProps) {
 	const navigate = useNavigate();
 	const { selectedElection, isLive, isLock } = useElection();
 	const { selectedSupervisorAssignment } = useAssignments();
 	const { electionCandidates, finalResultObj, isResultLoading } = useElectionResults();
 
+	// Intercepts click during training/practice simulator
 	const interceptClick = (e: React.MouseEvent, action?: () => void) => {
 		if (onPracticeClick) {
 			e.preventDefault();
@@ -36,10 +51,12 @@ export function CandidatesLeaderboard({
 		if (action) action();
 	};
 
+	// Use live incoming reports or certified final returns depending on isLive toggle
 	const rawList = isLive
 		? finalResultObj?.candidate_results_live || finalResultObj?.candidate_results
 		: finalResultObj?.candidate_results;
 
+	// Sort candidates by vote count descending
 	const sortedResults = useMemo(() => {
 		if (Array.isArray(rawList) && rawList.length > 0) {
 			return [...rawList].sort(
@@ -86,6 +103,7 @@ export function CandidatesLeaderboard({
 					No candidates found
 				</div>
 			) : (
+				// Render top 3 contenders in the election
 				sortedResults.slice(0, 3).map((item: any, index: number) => {
 					const partyShortName: string =
 						item.party_short_name || item.party?.short_name || item.short_name || "";
@@ -100,6 +118,7 @@ export function CandidatesLeaderboard({
 					const partyLogo: string | undefined = item.party?.logo || item.party_logo || item.logo;
 					const votes: number = Number(item.vote_count ?? item.votes ?? 0);
 
+					// Contextual geographic win counter based on supervisor assignment level
 					let regionsWinningCountStr = `${item.states_winning_count || 0} states`;
 					if (isLock) {
 						if (selectedSupervisorAssignment?.type === "state") {
@@ -128,7 +147,7 @@ export function CandidatesLeaderboard({
 				})
 			)}
 
-			{/* Buttons */}
+			{/* Leaderboard Action Controls */}
 			<div className="flex items-center gap-4 mb-2 mt-2 px-4">
 				<Button
 					type="button"

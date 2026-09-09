@@ -32,6 +32,16 @@ import { StateSupervisorTasksTab } from "../components/SupervisorTasksTab";
 import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Route } from "..";
+/**
+ * State Election Supervisor Dashboard.
+ *
+ * Top-tier regional operational view for State Supervisors overseeing election
+ * deployment and results collation across an entire Nigerian state:
+ * - Monitors LGA supervisor, Ward supervisor, and Polling Agent deployment coverage.
+ * - Tracks state-wide training completion rate (`pu_election_practice_test_readiness_percentage`).
+ * - Real-time election day operational monitoring (state-wide attendance, starts, reports, EC8A uploads).
+ * - Manages LGA collation progression via `StateSupervisorTasksTab`.
+ */
 export function StateElectionSupervisorPage() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
@@ -41,12 +51,14 @@ export function StateElectionSupervisorPage() {
 
   const currentAssignment = selectedSupervisorAssignment?.data;
 
+  // Active supervisor tab (Earnings vs State-level LGA task progress)
   const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
+  // Synchronize carousel slide index with active dot and title
   useEffect(() => {
     if (!carouselApi) return;
     setCarouselIndex(carouselApi.selectedScrollSnap());
@@ -55,6 +67,7 @@ export function StateElectionSupervisorPage() {
     });
   }, [carouselApi]);
 
+  // Compute countdown to election day
   let daysLeft: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
     const d = new Date(selectedElectionGroup.election_date);
@@ -68,6 +81,7 @@ export function StateElectionSupervisorPage() {
     }
   }
 
+  // Query statewide aggregated statistics across all LGAs, Wards, and Polling Units
   const { data: statsRes } = useQuery({
     queryKey: [
       "stateStats",
@@ -92,6 +106,7 @@ export function StateElectionSupervisorPage() {
   const partyStats = statsRes?.data?.party_stats || {};
   const targets = statsRes?.data?.targets || {};
 
+  // Statewide pre-election readiness metrics (LGA/Ward supervisors & polling agent coverage)
   const readiness = [
     {
       title: "LGA supervisor coverage",
@@ -126,6 +141,7 @@ export function StateElectionSupervisorPage() {
     },
   ];
 
+  // Statewide election-day operational objectives
   const objectives = [
     {
       title: "Agents that are at their PU",
@@ -161,6 +177,7 @@ export function StateElectionSupervisorPage() {
     },
   ];
 
+  // Derive carousel slide title and percentage
   let headerTitle = "Readiness";
   let headerRightText = "";
   if (carouselIndex === 0) {
@@ -178,10 +195,13 @@ export function StateElectionSupervisorPage() {
 
   return (
     <div className="w-full min-h-screen">
+      {/* Top dashboard header with election countdown and user polling unit summary */}
       <HomeHeader daysLeft={daysLeft} />
       {!search.isPractice && <MyPollingUnit />}
 
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+
+      {/* Primary Carousel: Readiness, Objectives, and Candidate Leaderboard */}
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
@@ -256,17 +276,21 @@ export function StateElectionSupervisorPage() {
           </CarouselItem>
         </CarouselContent>
       </Carousel>
+
+      {/* Pagination indicators */}
       <CarouselDotContent>
         <CarouselDot active={carouselIndex === 0} />
         <CarouselDot active={carouselIndex === 1} />
         <CarouselDot active={carouselIndex === 2} />
       </CarouselDotContent>
 
+      {/* Supervisor Action Body */}
       <HomeBody>
         {daysLeft !== 0 && <ApplicationsCard />}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== 0 && <PracticeTestCard />}
 
+        {/* On election day: prompt supervisor to start official monitoring duty */}
         {daysLeft === 0 && !currentAssignment?.arrived_at && (
           <SupervisorStartDutyCard
             onReadyClick={() => {
@@ -275,19 +299,21 @@ export function StateElectionSupervisorPage() {
             }}
           />
         )}
+
+        {/* Voting check on election day */}
         {daysLeft === 0 && (
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
-        {/* <UploadResultCard />
-        <RequestPayoutCard /> */}
-
+        {/* Supervisor Tabs: Earnings vs State-level LGA task progress */}
         <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === "Earnings" && <EarningsTab />}
         {activeTab === "Tasks" && (
           <StateSupervisorTasksTab isElectionDay={daysLeft === 0} />
         )}
+
+        {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
           <GiveUpdateFloatingButton
             onClick={() => navigate({ to: "/give-update" })}

@@ -33,6 +33,16 @@ import { DidYouVoteCard } from "../components/DidYouVoteCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Route } from "..";
 
+/**
+ * Ward Election Supervisor Dashboard.
+ *
+ * Operational dashboard for Ward Supervisors responsible for coordinating
+ * all polling unit agents within their ward:
+ * - Monitors polling agent recruitment and training coverage.
+ * - Tracks agent attendance, poll opening statuses, interval updates, and result uploads.
+ * - Confirms duty readiness via `SupervisorStartDutyCard`.
+ * - Provides granular sub-unit tracking via `WardSupervisorTasksTab`.
+ */
 export function WardElectionSupervisorPage() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
@@ -42,12 +52,14 @@ export function WardElectionSupervisorPage() {
 
   const currentAssignment = selectedSupervisorAssignment?.data;
 
+  // Active supervisor tab (Earnings vs Sub-unit agent tasks)
   const [activeTab, setActiveTab] = useState<"Earnings" | "Tasks">("Earnings");
   const [isArrivalDrawerOpen, setIsArrivalDrawerOpen] = useState(false);
   const [showNoInfo, setShowNoInfo] = useState(false);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
+  // Synchronize carousel slide index with active dot and title
   useEffect(() => {
     if (!carouselApi) return;
     setCarouselIndex(carouselApi.selectedScrollSnap());
@@ -56,6 +68,7 @@ export function WardElectionSupervisorPage() {
     });
   }, [carouselApi]);
 
+  // Compute countdown to election day
   let daysLeft: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
     const d = new Date(selectedElectionGroup.election_date);
@@ -69,6 +82,7 @@ export function WardElectionSupervisorPage() {
     }
   }
 
+  // Query aggregated ward statistics (polling unit coverage, agent check-ins, result uploads)
   const { data: statsRes } = useQuery({
     queryKey: [
       "wardStats",
@@ -93,6 +107,7 @@ export function WardElectionSupervisorPage() {
   const partyStats = statsRes?.data?.party_stats || {};
   const targets = statsRes?.data?.targets || {};
 
+  // Ward pre-election readiness metrics (agent deployment & training test passage)
   const readiness = [
     {
       title: "Polling agents coverage",
@@ -111,6 +126,7 @@ export function WardElectionSupervisorPage() {
     },
   ];
 
+  // Ward election-day operations metrics (attendance, starts, updates, results)
   const objectives = [
     {
       title: "Agents that are at their PU",
@@ -146,6 +162,7 @@ export function WardElectionSupervisorPage() {
     },
   ];
 
+  // Derive carousel slide title and percentage
   let headerTitle = "Readiness";
   let headerRightText = "";
   if (carouselIndex === 0) {
@@ -163,9 +180,12 @@ export function WardElectionSupervisorPage() {
 
   return (
     <div className="w-full min-h-screen">
+      {/* Top dashboard header with election countdown and user polling unit summary */}
       <HomeHeader daysLeft={daysLeft} />
       {!search.isPractice && <MyPollingUnit />}
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+
+      {/* Primary Carousel: Readiness, Objectives, and Candidate Leaderboard */}
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
@@ -241,13 +261,17 @@ export function WardElectionSupervisorPage() {
           </CarouselItem>
         </CarouselContent>
       </Carousel>
+
+      {/* Pagination indicators */}
       <CarouselDotContent>
         <CarouselDot active={carouselIndex === 0} />
         <CarouselDot active={carouselIndex === 1} />
         <CarouselDot active={carouselIndex === 2} />
       </CarouselDotContent>
 
+      {/* Supervisor Action Body */}
       <HomeBody>
+        {/* On election day: prompt supervisor to start official monitoring duty */}
         {daysLeft === 0 && !currentAssignment?.arrived_at && (
           <SupervisorStartDutyCard
             onReadyClick={() => {
@@ -256,20 +280,26 @@ export function WardElectionSupervisorPage() {
             }}
           />
         )}
+
+        {/* Voting check on election day */}
         {daysLeft === 0 && (
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
 
+        {/* Applications, referrals, and practice tests */}
         {daysLeft !== 0 && <ApplicationsCard />}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
         {daysLeft !== 0 && <PracticeTestCard />}
 
+        {/* Supervisor Tabs: Earnings vs Sub-unit agent task list */}
         <SupervisorTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === "Earnings" && <EarningsTab />}
         {activeTab === "Tasks" && (
           <WardSupervisorTasksTab isElectionDay={daysLeft === 0} />
         )}
+
+        {/* Emergency incident report FAB */}
         {daysLeft === 0 && (
           <GiveUpdateFloatingButton
             onClick={() => navigate({ to: "/give-update" })}

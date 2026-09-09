@@ -29,6 +29,18 @@ import { UploadResultCard } from "../components/UploadResultCard";
 import { MyPollingUnit } from "../components/MyPollingUnit";
 import { Route } from "..";
 
+/**
+ * General Citizen / Unassigned Voter Dashboard.
+ *
+ * Rendered for users who do not have an active polling agent or supervisor assignment.
+ * Provides citizen engagement features:
+ * - Election countdown and polling unit setup.
+ * - Training practice tests and educational milestones.
+ * - Live candidate leaderboard and election updates.
+ * - Election day participation prompt (`DidYouVoteCard`) and citizen result upload (`UploadResultCard`).
+ * - Application call-to-action for becoming an accredited agent or supervisor.
+ * - Viral voter referral link and reward tracking.
+ */
 export function GeneralPage() {
   const navigate = useNavigate();
   const search = Route.useSearch() as any;
@@ -38,6 +50,7 @@ export function GeneralPage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [carouselApi, setCarouselApi] = useState<CarouselApi>();
 
+  // Query nationwide aggregation metrics (total voters, turnouts, registered agents)
   const { data: metricsResponse } = useQuery({
     queryKey: ["national-metrics"],
     queryFn: async () => {
@@ -48,6 +61,7 @@ export function GeneralPage() {
   });
   const metrics = metricsResponse || null;
 
+  // Track carousel slide changes to update header title and progress stats
   useEffect(() => {
     if (!carouselApi) return;
     setCarouselIndex(carouselApi.selectedScrollSnap());
@@ -56,6 +70,7 @@ export function GeneralPage() {
     });
   }, [carouselApi]);
 
+  // Calculate days remaining until scheduled election
   let daysLeft: number | undefined = undefined;
   if (selectedElectionGroup?.election_date) {
     const d = new Date(selectedElectionGroup.election_date);
@@ -69,6 +84,7 @@ export function GeneralPage() {
     }
   }
 
+  // Voter civic readiness & practice training milestones
   const objectives = [
     {
       title: "Take election day practice test 1",
@@ -87,6 +103,7 @@ export function GeneralPage() {
     },
   ];
 
+  // Dynamic header based on active slide
   let headerTitle = "Objectives";
   let headerRightText = "";
   if (carouselIndex === 0) {
@@ -100,9 +117,12 @@ export function GeneralPage() {
 
   return (
     <div className="w-full min-h-screen">
+      {/* Top dashboard header with countdown and user polling unit summary */}
       <HomeHeader daysLeft={daysLeft} />
       {!search.isPractice && <MyPollingUnit />}
       <HomeHeader2 title={headerTitle} rightText={headerRightText} />
+
+      {/* Main carousel: Voter objectives & live candidate leaderboard */}
       <Carousel setApi={setCarouselApi} className="w-full">
         <CarouselContent>
           <CarouselItem>
@@ -144,24 +164,37 @@ export function GeneralPage() {
           </CarouselItem>
         </CarouselContent>
       </Carousel>
+
+      {/* Slide pagination dots */}
       <CarouselDotContent>
         <CarouselDot active={carouselIndex === 1} />
         <CarouselDot active={carouselIndex === 0} />
       </CarouselDotContent>
 
+      {/* Action Cards Body */}
       <HomeBody>
+        {/* On election day: prompt voter if they voted */}
         {daysLeft === 0 && (
           <DidYouVoteCard onYesClick={() => navigate({ to: "/vote" })} />
         )}
+
+        {/* On election day: permit citizens to crowdsource EC8A result sheets */}
         {daysLeft === 0 && (
           <UploadResultCard
             onClick={() => navigate({ to: "/upload-result" })}
           />
         )}
+
+        {/* Opportunity to apply as an accredited party supervisor or agent */}
         <ApplicationsCard />
+
+        {/* Citizen referral recruitment card */}
         <ReferralCard onClick={() => navigate({ to: "/referrals" })} />
-        {/* {daysLeft !== 0 && <PracticeTestCard />} */}
+
+        {/* Practice voting test */}
         <PracticeTestCard />
+
+        {/* Quick incident report FAB on election day */}
         {daysLeft === 0 && (
           <GiveUpdateFloatingButton
             onClick={() => navigate({ to: "/give-update" })}

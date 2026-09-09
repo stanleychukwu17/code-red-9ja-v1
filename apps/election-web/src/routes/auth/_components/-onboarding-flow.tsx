@@ -72,8 +72,17 @@ type OnboardingFlowProps = {
   step: OnboardingStep;
 };
 
-// Main component that orchestrates the multi‑step onboarding flow
+/**
+ * OnboardingFlow
+ * Master state machine managing user profile onboarding across 5 sequential steps:
+ * 1. details: Government name, 11-digit NIN verification, gender, date of birth.
+ * 2. username: Unique handle check with dynamic suggestions based on full name.
+ * 3. origin: Country and state of origin (defaults to Nigeria).
+ * 4. location: Current residence (country, state, city) with geo-IP preselection.
+ * 5. referral: Optional referrer code lookup and final onboarding submission.
+ */
 export function OnboardingFlow({ step }: OnboardingFlowProps) {
+
   const navigate = useNavigate();
   const { visitorDetails } = useAppSelector((state) => state.site);
   const [submitError, setSubmitError] = useState<string | null>(null);

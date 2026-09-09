@@ -5,7 +5,14 @@ interface FormErrorProps {
   message: string | null;
 }
 
+/**
+ * FormError
+ * Smoothly animated error alert banner powered by framer-motion.
+ * Mounts and unmounts with height and opacity transitions whenever
+ * server/validation error messages change.
+ */
 export const FormError = ({ message }: FormErrorProps) => {
+
   return (
     <AnimatePresence mode="wait">
       {message && (

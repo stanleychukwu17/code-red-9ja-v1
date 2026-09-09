@@ -12,24 +12,42 @@ import { useQuery } from "@tanstack/react-query";
 import { getNonVotingReasons } from "#/lib/server/elections";
 import { StickyFooter } from "#/components/Footers";
 
+/**
+ * Reason category option for why a citizen did not or cannot vote.
+ */
 export interface NonVotingReason {
   id: number;
   reason: string;
 }
 
 interface NotVotingDrawerProps {
+  /** Controls visibility of the bottom drawer */
   isOpen: boolean;
+  /** Callback fired when drawer visibility changes */
   onOpenChange: (open: boolean) => void;
 }
 
+/**
+ * Non-Voting Reason Questionnaire Drawer.
+ *
+ * Appears when a citizen indicates they did not vote:
+ * - Step 1: Inquires whether they still intend to vote later today
+ *   ("Yes" routes to `/vote`, "No" advances to Step 2).
+ * - Step 2: Fetches and displays standardized non-voting reasons (e.g. security,
+ *   PVC issues, distance, logistics), navigating to `/_authenticated/_home/not-voting-reason`
+ *   to collect user commentary.
+ */
 export function NotVotingDrawer({
   isOpen,
   onOpenChange,
 }: NotVotingDrawerProps) {
   const navigate = useNavigate();
+
+  // Multi-step modal navigation (1: Intent check, 2: Reason selection)
   const [step, setStep] = useState<1 | 2>(1);
   const [selectedReasonId, setSelectedReasonId] = useState<number | null>(null);
 
+  // Fetch predefined reasons from backend when user reaches step 2
   const { data } = useQuery<{ reasons: NonVotingReason[] }>({
     queryKey: ["non-voting-reasons"],
     queryFn: async () => {
@@ -39,10 +57,12 @@ export function NotVotingDrawer({
     enabled: step === 2,
   });
 
+  // User confirmed they do not intend to vote today
   const handleNoClick = () => {
     setStep(2);
   };
 
+  // Navigates to the explanation submission route with the selected reason ID
   const handleContinue = () => {
     if (selectedReasonId !== null) {
       navigate({
@@ -53,7 +73,7 @@ export function NotVotingDrawer({
     }
   };
 
-  // Reset step when drawer closes
+  // Reset step to 1 when drawer closes
   const handleOpenChange = (open: boolean) => {
     if (!open) {
       setTimeout(() => setStep(1), 300);
@@ -75,6 +95,7 @@ export function NotVotingDrawer({
           />
         </DrawerHeader>
 
+        {/* STEP 1: Intent check (Will you vote later?) */}
         {step === 1 ? (
           <div className="flex flex-col gap-4 mt-2 px-4">
             <Button
@@ -100,6 +121,7 @@ export function NotVotingDrawer({
               No
             </Button>
 
+            {/* Reminder note */}
             <div className="bg-[#FDF2D4] rounded-[16px] p-4 flex items-start gap-3 mt-4">
               <TriangleAlert
                 className="w-5 h-5 text-[#916719] shrink-0 mt-0.5"
@@ -112,6 +134,7 @@ export function NotVotingDrawer({
             </div>
           </div>
         ) : (
+          /* STEP 2: Standardized reason selection list */
           <div className="flex flex-col flex-1 overflow-y-auto min-h-0">
             <div className="flex flex-col gap-4 mt-2 px-4">
               {data?.reasons?.map((r) => {
@@ -131,6 +154,8 @@ export function NotVotingDrawer({
                 );
               })}
             </div>
+
+            {/* Sticky continue action button */}
             <StickyFooter className="pb-0">
               <Button
                 type="button"

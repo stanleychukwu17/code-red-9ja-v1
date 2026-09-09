@@ -2,6 +2,13 @@ import { StickyFooter } from "#/components/Footers";
 import { Button } from "@repo/ui/components/button";
 import { Loader2 } from "lucide-react";
 
+/**
+ * ApplyFooter
+ * Persistent sticky bottom action bar for the agent application wizard.
+ * Enforces per-step validation gates before advancing to the next step,
+ * handles branching logic (e.g., skipping educational details), and
+ * triggers final application submission on step 14.
+ */
 export function ApplyFooter({
   step,
   setStep,
@@ -28,6 +35,7 @@ export function ApplyFooter({
 }: any) {
   return (
     <StickyFooter className="pb-20">
+      {/* Step 1: Introduction / Welcome */}
       {step === 1 && (
         <Button
           type="button"
@@ -40,6 +48,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 2: Party Affiliation Selection */}
       {step === 2 && (
         <Button
           type="button"
@@ -53,6 +62,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 3: Election / Ballot Selection */}
       {step === 3 && (
         <Button
           type="button"
@@ -66,6 +76,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 4: Headshot / Passport Photo Upload */}
       {step === 4 && (
         <Button
           type="button"
@@ -79,6 +90,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 5: WhatsApp & Phone Contact Info */}
       {step === 5 && (
         <Button
           type="button"
@@ -92,6 +104,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 6: Education Status (Branches: skips details to Step 8 if 'none') */}
       {step === 6 && (
         <Button
           type="button"
@@ -111,6 +124,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 7: Academic Degree & Institution Details */}
       {step === 7 && (
         <Button
           type="button"
@@ -124,6 +138,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 8: Residential Location (State, LGA, Address) */}
       {step === 8 && (
         <Button
           type="button"
@@ -137,6 +152,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 9: Desired Polling Unit Assignment */}
       {step === 9 && (
         <Button
           type="button"
@@ -150,6 +166,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 10: Punctuality Commitment Attestation */}
       {step === 10 && (
         <Button
           type="button"
@@ -162,6 +179,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 11: Vigilance & Result Transmission Attestation */}
       {step === 11 && (
         <Button
           type="button"
@@ -174,6 +192,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 12: Neutrality & Integrity Attestation */}
       {step === 12 && (
         <Button
           type="button"
@@ -186,6 +205,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 13: Non-violence & Legal Compliance Attestation */}
       {step === 13 && (
         <Button
           type="button"
@@ -198,6 +218,7 @@ export function ApplyFooter({
         </Button>
       )}
 
+      {/* Step 14: Bank Account Details & Final Application Submission */}
       {step === 14 && (
         <Button
           type="button"
@@ -220,3 +241,4 @@ export function ApplyFooter({
     </StickyFooter>
   );
 }
+

@@ -11,15 +11,34 @@ import { Button } from "@repo/ui/components/button";
 import { TitleText } from "@repo/ui/components/custom/Texts";
 
 interface ArrivalDrawerProps {
+  /** Controls visibility of the bottom drawer */
   isOpen: boolean;
+  /** Callback fired when drawer open state toggles */
   onOpenChange: (open: boolean) => void;
+  /** When true, displays warning alert reminding user they must be at the PU */
   showNoInfo: boolean;
+  /** Triggered when user indicates they have not arrived yet */
   onNoClick: () => void;
+  /** Triggered when user confirms physical arrival */
   onYesClick?: () => void;
+  /** Callback to close drawer from dismissal prompt */
   onDismiss: () => void;
+  /** Election date string used to compute arrival timeliness relative to 7:00 AM */
   electionDate?: string;
 }
 
+/**
+ * Arrival Verification Bottom Drawer.
+ *
+ * Prompts the agent on election morning to confirm their physical arrival at
+ * their assigned polling unit.
+ *
+ * Features:
+ * - Computes live punctuality relative to standard 7:00 AM reporting time
+ *   (e.g. "15 min early", "25 min late").
+ * - If user confirms arrival ("Yes"), advances to geofence photo verification (`/arrival`).
+ * - If user indicates they are not there ("No"), displays a presence advisory.
+ */
 export function ArrivalDrawer({
   isOpen,
   onOpenChange,
@@ -31,6 +50,7 @@ export function ArrivalDrawer({
 }: ArrivalDrawerProps) {
   const navigate = useNavigate();
 
+  // Current clock time state updated every minute while drawer is open
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -44,13 +64,15 @@ export function ArrivalDrawer({
   let latenessText = "You're on time";
   let isLate = false;
 
+  // Calculate arrival punctuality compared against 7:00 AM cutoff
   if (electionDate) {
     const targetTime = new Date(electionDate);
-    targetTime.setHours(7, 0, 0, 0); // 7:00 AM on the election date
+    targetTime.setHours(7, 0, 0, 0); // 7:00 AM target time
 
     const diffMs = now.getTime() - targetTime.getTime();
 
     if (diffMs > 0) {
+      // Arrived after 7:00 AM
       isLate = true;
       const diffMins = Math.floor(diffMs / (1000 * 60));
       if (diffMins < 60) {
@@ -61,6 +83,7 @@ export function ArrivalDrawer({
         latenessText = `You're ${diffHours} hr ${remainingMins} min late`;
       }
     } else {
+      // Arrived before 7:00 AM
       const diffMins = Math.floor(Math.abs(diffMs) / (1000 * 60));
       if (diffMins < 60) {
         latenessText = `You're ${diffMins} min early`;
@@ -84,6 +107,7 @@ export function ArrivalDrawer({
 
         {!showNoInfo ? (
           <>
+            {/* Punctuality indicator header */}
             <div className="flex items-center justify-between text-[17px]">
               <span className="text-c-50">We need you there 7AM</span>
               {electionDate && (
@@ -95,6 +119,7 @@ export function ArrivalDrawer({
               )}
             </div>
 
+            {/* Arrival response options */}
             <div className="flex flex-col gap-3 mt-6">
               <Button
                 type="button"
@@ -116,6 +141,7 @@ export function ArrivalDrawer({
             </div>
           </>
         ) : (
+          /* Advisory warning displayed when user clicks 'No' */
           <div className="mt-4 px-1 flex flex-col gap-4">
             <div className="bg-[#FDF2D4] rounded-[16px] p-4 flex items-start gap-3">
               <TriangleAlert

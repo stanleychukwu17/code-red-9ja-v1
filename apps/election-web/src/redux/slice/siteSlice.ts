@@ -2,6 +2,9 @@ import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction, Middleware } from "@reduxjs/toolkit";
 import { saveSitePreference } from "@/lib/server/sitePreference";
 
+/**
+ * Geo-IP visitor geolocation and network details captured during server rendering.
+ */
 export type VisitorDetails = {
   ip: string;
   location?: {
@@ -14,15 +17,27 @@ export type VisitorDetails = {
   };
 };
 
+/**
+ * Client-side site configuration, layout, and appearance preferences.
+ */
 export type SiteState = {
-  isHydrated?: boolean; // Indicates if initial preferences have been loaded into the client store
-  sideBarState: "" | "collapsed" | "expanded"; // Determines if the sidebar is collapsed or expanded
-  theme?: "light" | "dark" | "auto" | ""; // Current user interface theme preference
-  version?: number | string; // bigint/fake_id tracking user preference revisions for multi-device sync
-  visitorDetails?: VisitorDetails | null; // The details of the visitor detected via IP
-  pinnedLinks?: Record<string, string[]>; // Map of app key (e.g. web, election, partyadmin) to array of pinned item ids
+  /** Indicates if initial preferences have been loaded into the client store */
+  isHydrated?: boolean;
+  /** Sidebar collapse/expansion state across viewport sizes */
+  sideBarState: "" | "collapsed" | "expanded";
+  /** Current user interface theme preference (light, dark, or system auto) */
+  theme?: "light" | "dark" | "auto" | "";
+  /** Revision counter for optimistic concurrency and multi-device preference synchronization */
+  version?: number | string;
+  /** Geolocation context of the client session detected via IP */
+  visitorDetails?: VisitorDetails | null;
+  /** Map of application domains to bookmarked navigation routes */
+  pinnedLinks?: Record<string, string[]>;
 };
 
+/**
+ * Serialized representation of user site preferences sent to/from the backend API.
+ */
 export type BackendUserSitePreferences = {
   sidebar_state?: "expanded" | "collapsed" | string;
   pinned_links?: Record<string, string[]>;
@@ -30,10 +45,13 @@ export type BackendUserSitePreferences = {
   preference_version?: number | string;
 };
 
-// Normalizes backend API responses (snake_case) or partial cookie data into strongly-typed SiteState
+/**
+ * Normalizes backend API responses (snake_case) or partial cookie data into strongly-typed SiteState.
+ */
 export function normalizeSitePreference(
   pref?: BackendUserSitePreferences | Partial<SiteState> | Record<string, any> | null
 ): Partial<SiteState> {
+
   if (!pref || typeof pref !== "object") return {};
 
   const p = pref as Record<string, any>;

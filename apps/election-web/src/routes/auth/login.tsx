@@ -35,8 +35,13 @@ type payloadType = {
   iso2?: string;
 };
 
+/**
+ * Login Route Definition
+ * Enforces guest-only access via beforeLoad redirect if refresh cookie exists.
+ */
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
+    // Redirect already authenticated users away from the login screen
     const isAuthed = await checkIfRefreshTokenInCookie();
     if (isAuthed.success) {
       throw redirect({ to: APP_URL.home });
@@ -55,13 +60,22 @@ export const Route = createFileRoute("/auth/login")({
   ),
 });
 
+/**
+ * LoginComponent
+ * Handles user authentication with support for three identifier formats:
+ * email, username, or internationalized phone number. Preselects country
+ * via geo-IP visitor details.
+ */
 function LoginComponent() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Geo-location context from visitor session
   const visitorDetails = useAppSelector((state) => state.site.visitorDetails);
   const visitorCountry = visitorDetails?.location?.country?.toLowerCase();
 
+  // Load supported countries and dial codes
   const { data: countriesRes } = useQuery({
     queryKey: ["countries"],
     queryFn: () => getAllCountries() as Promise<countriesType>,
@@ -70,10 +84,12 @@ function LoginComponent() {
 
   const countries = (countriesRes?.success ? countriesRes.data.countries : []) as { id: number; name: string; iso2: string; phonecode: string }[];
 
+  // User authentication mutation
   const loginMutation = useMutation({
     mutationFn: loginUser,
     onSuccess: (response) => {
       if (response.success) {
+        // Cache user info in Redux and redirect to dashboard
         dispatch(updateAuthState({ user: response.data?.user }));
         navigate({ to: "/" });
       } else {
@@ -85,6 +101,7 @@ function LoginComponent() {
     },
   });
 
+  // Login form handler with multi-identifier parsing
   const form = useForm({
     defaultValues: {
       country: "",
@@ -99,7 +116,7 @@ function LoginComponent() {
         identifier: value.identifier.trim().toLowerCase(),
       };
 
-      // get the identifier type (email, username or phone number)
+      // Determine identifier type: email, username, or phone
       const emailRegex = /^[\w\d._%+-]+@[\w\d.-]+\.\w{2,}$/;
       const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_]{1,28}[a-zA-Z0-9]$/; // username must start with a letter
       let identifierType = "phone";
@@ -109,6 +126,7 @@ function LoginComponent() {
         identifierType = "username";
       }
 
+      // Attach matched country metadata
       const matchedCountry = countries.find(
         (c) => c.name.toLowerCase() === value.country.toLowerCase(),
       );
@@ -117,7 +135,7 @@ function LoginComponent() {
         payload.iso2 = matchedCountry.iso2;
       }
 
-      // if identifier looks like a phone number, format it with country code
+      // If phone number, format with international calling code
       const phoneRegex = /^[\d\s-]+$/;
       if (identifierType === "phone" && phoneRegex.test(payload.identifier)) {
         if (matchedCountry) {
@@ -127,14 +145,12 @@ function LoginComponent() {
         }
       }
 
-      // add the identifier type to the payload
       payload.identifierType = identifierType;
-
       loginMutation.mutate({ data: payload });
     },
   });
 
-  // auto-select the country where the user is browsing from once visitorCountry is available
+  // Auto-select visitor's country once detected via IP
   useEffect(() => {
     if (!visitorCountry) return;
 
@@ -150,6 +166,7 @@ function LoginComponent() {
 
     return () => clearTimeout(timeoutId);
   }, [visitorCountry, countries, form]);
+
 
   return (
     <AuthWrapper type="login">
