@@ -265,6 +265,54 @@ func (s *UsersService) InvalidateCachedUserRoles(ctx context.Context, userID int
 	return s.rdb.Del(ctx, userRolesKey).Err()
 }
 
+// RevokeAllUserSessions revokes all active refresh tokens and sessions for a user across all devices.
+//
+// Redis Key Hierarchy:
+//  1. User-to-Sessions Set   (`db.RedisUserLoginSessions` + fakeID):
+//     Stores the set of all active session IDs belonging to this user.
+//  2. Session-to-Tokens Set  (`db.RedisSessionTokens` + sessionID):
+//     Stores the set of active refresh token identifiers associated with each session.
+//  3. Refresh Token Payload  (`db.RedisJwtRefreshToken` + token):
+//     Stores the actual refresh token record used during token renewals.
+func (s *UsersService) RevokeAllUserSessions(ctx context.Context, fakeID int64) error {
+	userSessionsRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
+	sessions, err := s.rdb.SMembers(ctx, userSessionsRedisKey).Result()
+	if err != nil {
+		if errors.Is(err, redis.Nil) {
+			return nil
+		}
+		return err
+	}
+	if len(sessions) == 0 {
+		return nil
+	}
+
+	// Use a transactional pipeline to execute all deletion commands in a single round-trip
+	pipe := s.rdb.TxPipeline()
+
+	// loop through all the session ids and delete the tokens
+	for _, sessionID := range sessions {
+		sessionTokensRedisKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
+		tokens, _ := s.rdb.SMembers(ctx, sessionTokensRedisKey).Result()
+
+		// a) Revoke every refresh token under this session
+		for _, token := range tokens {
+			refreshTokenRedisKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, token)
+			pipe.Del(ctx, refreshTokenRedisKey)
+		}
+
+		// b) Delete the session's token set
+		pipe.Del(ctx, sessionTokensRedisKey)
+	}
+
+	// c) Delete the user's overall active session tracking set
+	pipe.Del(ctx, userSessionsRedisKey)
+
+	// Execute all queued Redis deletion commands atomically
+	_, err = pipe.Exec(ctx)
+	return err
+}
+
 // GetUserRoles fetches the roles assigned to a specific user, utilizing Redis caching.
 func (s *UsersService) GetUserRoles(ctx context.Context, userID int64) (queries.CachedUserRoles, error) {
 	userRolesKey := fmt.Sprintf("%s%d", db.RedisUserRoles, userID)
@@ -327,6 +375,7 @@ func (s *UsersService) AssignUserRole(ctx context.Context, userID int64, fakeID 
 
 	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the user-roles cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
+	_ = s.RevokeAllUserSessions(ctx, fakeID)     // Invalidate all active user sessions across all devices
 
 	return nil
 }
@@ -353,6 +402,7 @@ func (s *UsersService) RemoveUserRole(ctx context.Context, userID int64, fakeID 
 
 	_ = s.InvalidateCachedUserRoles(ctx, userID) // Invalidate the roles cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)  // Invalidate user info cache
+	_ = s.RevokeAllUserSessions(ctx, fakeID)     // Invalidate all active user sessions across all devices
 
 	return nil
 }
@@ -713,8 +763,38 @@ func (s *UsersService) UpdateUserParty(ctx context.Context, userID int64, partyI
 		return fmt.Errorf("failed to update user party: %w", err)
 	}
 
+	// Any party change (cleared or changed to another party) must revoke party-scoped admin roles
+	_ = s.StripPartyAdminRoles(ctx, userID, fakeID)
+
 	// invalidate the user cache
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+
+	return nil
+}
+
+// StripPartyAdminRoles removes any party-scoped administrative roles (party_admin, super_party_admin)
+// from a user, updates has_role, invalidates caches, and revokes all active sessions across devices.
+func (s *UsersService) StripPartyAdminRoles(ctx context.Context, userID int64, fakeID int64) error {
+	partyRoles := []string{"party_admin", "super_party_admin"}
+	for _, roleCode := range partyRoles {
+		_ = s.queries.RemoveUserRole(ctx, queries.RemoveUserRoleParams{
+			UserID:   userID,
+			RoleCode: roleCode,
+		})
+	}
+
+	// Check if user has any roles left
+	hasRole, err := s.queries.CheckUserHasAnyRole(ctx, userID)
+	if err == nil {
+		_ = s.queries.UpdateUserHasRole(ctx, queries.UpdateUserHasRoleParams{
+			ID:      userID,
+			HasRole: pgtype.Bool{Bool: hasRole, Valid: true},
+		})
+	}
+
+	_ = s.InvalidateCachedUserRoles(ctx, userID)
+	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	_ = s.RevokeAllUserSessions(ctx, fakeID)
 
 	return nil
 }
@@ -772,8 +852,8 @@ func (s *UsersService) MakeUserSuperAdmin(ctx context.Context, username string) 
 	return nil
 }
 
-// UpdateUserRoles replaces a user's roles and optionally sets their party ID.
-func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error {
+// UpdateUserRoles replaces a user's roles.
+func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, whoAssigned int64) error {
 	// Get existing roles
 	currentRolesData, err := s.GetUserRoles(ctx, userID)
 	if err != nil {
@@ -814,6 +894,7 @@ func (s *UsersService) UpdateUserRoles(ctx context.Context, userID int64, fakeID
 
 	// invalidate the user cache here
 	_ = s.InvalidateCachedUserInfo(ctx, fakeID)
+	_ = s.RevokeAllUserSessions(ctx, fakeID)
 
 	return nil
 }
@@ -898,7 +979,6 @@ func (s *UsersService) CheckPhone(ctx context.Context, phone string, userFakeID 
 
 	return false, 0
 }
-
 
 // CheckNIN function checks if the nin already exists in the database
 func (s *UsersService) CheckNIN(ctx context.Context, nin string) bool {

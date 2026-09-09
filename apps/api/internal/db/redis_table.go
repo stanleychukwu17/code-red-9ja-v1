@@ -21,18 +21,10 @@ const (
 	//--END--
 
 	//--START-- for login, refreshing jwt token, logout,
-	// STRING: "jwt:refresh_token:<hash>" used to store and retrieve a hashed jwt refresh token.
-	// The key is a string, and the value is a JWT refresh token.
-	RedisJwtRefreshToken = "jwt:refresh_token:"
-
-	// SET: "jwt:session_tokens:<sessionID>" used to store refresh tokens that belong to a session.
-	RedisSessionTokens = "jwt:session_tokens:"
-
-	// SET: "jwt:user_login_sessions:<userFakeID>" used to store and check for existing user login sessions.
-	RedisUserLoginSessions = "jwt:user_login_sessions:"
-
-	// STRING: "jwt:user_login_locked:<userFakeID>" key used to lock token generation.
-	RedisJwtUserLoginLocked = "jwt:user_login_locked:"
+	RedisJwtRefreshToken    = "jwt:refresh_token:"       // STRING: "jwt:refresh_token:<hash>" used to store and retrieve a hashed jwt refresh token. The key is a string, and the value is a JWT refresh token.
+	RedisSessionTokens      = "jwt:session_tokens:"      // SET: "jwt:session_tokens:<sessionID>" used to store refresh tokens that belong to a session.
+	RedisUserLoginSessions  = "jwt:user_login_sessions:" // SET: "jwt:user_login_sessions:<userFakeID>" used to store and check for existing user login sessions.
+	RedisJwtUserLoginLocked = "jwt:user_login_locked:"   // STRING: "jwt:user_login_locked:<userFakeID>" key used to lock token generation.
 	//--END--
 
 	//--START-- for user
@@ -73,12 +65,12 @@ const (
 	//--END--
 
 	//--START-- for political and administrative bodies
-	RedisSenatorialDistrictsByState         = "bodies:senatorial_districts:state:"
-	RedisFederalConstituenciesByState       = "bodies:federal_constituencies:state:"
-	RedisStateConstituenciesByState = "bodies:state_constituencies:state:"
-	RedisLGAsByState                        = "bodies:lgas:state:"
-	RedisWardsByLGA                         = "bodies:wards:lga:"
-	RedisPollingUnitsByWard                 = "bodies:polling_units:ward:"
+	RedisSenatorialDistrictsByState   = "bodies:senatorial_districts:state:"
+	RedisFederalConstituenciesByState = "bodies:federal_constituencies:state:"
+	RedisStateConstituenciesByState   = "bodies:state_constituencies:state:"
+	RedisLGAsByState                  = "bodies:lgas:state:"
+	RedisWardsByLGA                   = "bodies:wards:lga:"
+	RedisPollingUnitsByWard           = "bodies:polling_units:ward:"
 	//--END--
 )
 

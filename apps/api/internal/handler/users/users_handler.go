@@ -55,7 +55,7 @@ type UsersService interface {
 	MakeUserSuperAdmin(ctx context.Context, username string) error
 	CheckUsername(ctx context.Context, username string) (bool, int64)
 	InvalidateUsernameCache(ctx context.Context, username string)
-	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error
+	UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, whoAssigned int64) error
 	UpdateUserParty(ctx context.Context, userID int64, partyID *int16, fakeID int64) error
 	ListVerificationTypes(ctx context.Context) ([]queries.PageVerificationType, error)
 	GenerateAndAssignReferralCode(ctx context.Context, userID int64, fakeID int64, firstName string) (string, error)
@@ -1455,7 +1455,7 @@ func (h *Handler) UpdateUserRoles(w http.ResponseWriter, r *http.Request) {
 	//--end-- Check if they are trying to delete the super_party_admin role
 
 	// Call UpdateUserRoles
-	err = h.usersService.UpdateUserRoles(r.Context(), userID, *req.UserFakeID, req.Roles, req.PartyID, claims.UserID)
+	err = h.usersService.UpdateUserRoles(r.Context(), userID, *req.UserFakeID, req.Roles, claims.UserID)
 	if err != nil {
 		h.utils.RespondError(w, http.StatusInternalServerError, "Failed to update roles: "+err.Error())
 		return

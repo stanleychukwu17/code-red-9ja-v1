@@ -56,9 +56,27 @@ export const logoutUser = createServerFn({ method: "POST" }).handler(
   },
 );
 
+export interface RegisterCandidatePayload {
+  email?: string;
+  password: string;
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+  username?: string;
+  gender: "male" | "female";
+  date_of_birth: string; // YYYY-MM-DD
+  current_country: number;
+  current_state: number;
+  current_city?: number;
+  state_of_origin?: number;
+  party_id?: number;
+  avatar?: string;
+  avatar_file_id?: number;
+}
+
 // Registers a candidate placeholder user account
 export const registerCandidate = createServerFn({ method: "POST" })
-  .inputValidator((data: any) => data)
+  .inputValidator((data: RegisterCandidatePayload) => data)
   .handler(async ({ data }) => {
     try {
       return await apiFetchJson(API_URL.auth.registerCandidate, {

@@ -26,7 +26,7 @@ export const getElectionGroups = createServerFn({ method: "GET" })
       if (data?.partyId) {
         url += `&party_id=${data.partyId}`;
       }
-      const response = await fetch(url);
+      const response = await apiFetch(url);
       const resData = await response.json();
       return resData;
     } catch (error) {

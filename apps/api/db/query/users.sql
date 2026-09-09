@@ -169,9 +169,6 @@ SET first_name = $2,
     updated_at = NOW()
 WHERE id = $1;
 
--- name: DeleteUserRoles :exec
-DELETE FROM user_roles WHERE user_id = $1;
-
 -- name: GetUserNINByUserID :one
 SELECT * FROM users_nin
 WHERE user_id = $1 LIMIT 1;

@@ -2126,23 +2126,6 @@ func (_m *Querier) DeleteUserPhoneNumber(ctx context.Context, arg queries.Delete
 	return r0
 }
 
-// DeleteUserRoles provides a mock function with given fields: ctx, userID
-func (_m *Querier) DeleteUserRoles(ctx context.Context, userID int64) error {
-	ret := _m.Called(ctx, userID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DeleteUserRoles")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = rf(ctx, userID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
 
 // DeleteUserVotesByElectionGroup provides a mock function with given fields: ctx, arg
 func (_m *Querier) DeleteUserVotesByElectionGroup(ctx context.Context, arg queries.DeleteUserVotesByElectionGroupParams) error {

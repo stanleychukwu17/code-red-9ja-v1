@@ -37,6 +37,7 @@ type UsersService interface {
 	AssignUserRole(ctx context.Context, userID int64, fakeID int64, code string, whoAssigned int64) error
 	GetMoreInfoAboutThisUser(ctx context.Context, userID int64) (queries.UserMoreInfo, error)
 	InvalidateCachedUserInfo(ctx context.Context, fakeID int64) error
+	RevokeAllUserSessions(ctx context.Context, fakeID int64) error
 	UpdateUserPhoneNumbers(ctx context.Context, userID int64, fakeID int64, phones []usersservice.PhonePayload) error
 	CheckUsername(ctx context.Context, username string) (bool, int64)
 	CheckEmail(ctx context.Context, email string) (bool, int64)
@@ -111,27 +112,27 @@ type LoginUser struct {
 	ID                int64                                    `json:"id"`
 	FakeID            int64                                    `json:"fake_id"`
 	PreferenceVersion int64                                    `json:"preference_version"`
-	Email             string                                 `json:"email"`
-	Username          string                                 `json:"username"`
-	ReferralCode      string                                 `json:"referral_code"`
-	FirstName         string                                 `json:"first_name"`
-	LastName          string                                 `json:"last_name"`
-	MiddleName        string                                 `json:"middle_name"`
-	Gender            string                                 `json:"gender"`
-	Avatar            string                                 `json:"avatar"`
-	Phone             string                                 `json:"phone"`
-	Roles             []string                               `json:"roles"`
-	AccountStatus     string                                 `json:"account_status"`
-	PartyID           int16                                  `json:"party_id"`
-	CurrentCountry    int16                                  `json:"current_country"`
-	CurrentState      int16                                  `json:"current_state"`
-	CurrentLga        int32                                  `json:"current_lga"`
-	CurrentWard       int32                                  `json:"current_ward"`
-	CurrentCity       int32                                  `json:"current_city"`
-	PollingUnitID     int32                                  `json:"polling_unit_id"`
-	BankAccountNumber string                                 `json:"bank_account_number"`
-	BankCode          string                                 `json:"bank_code"`
-	VotersCardImage   string                                 `json:"voters_card_image"`
+	Email             string                                   `json:"email"`
+	Username          string                                   `json:"username"`
+	ReferralCode      string                                   `json:"referral_code"`
+	FirstName         string                                   `json:"first_name"`
+	LastName          string                                   `json:"last_name"`
+	MiddleName        string                                   `json:"middle_name"`
+	Gender            string                                   `json:"gender"`
+	Avatar            string                                   `json:"avatar"`
+	Phone             string                                   `json:"phone"`
+	Roles             []string                                 `json:"roles"`
+	AccountStatus     string                                   `json:"account_status"`
+	PartyID           int16                                    `json:"party_id"`
+	CurrentCountry    int16                                    `json:"current_country"`
+	CurrentState      int16                                    `json:"current_state"`
+	CurrentLga        int32                                    `json:"current_lga"`
+	CurrentWard       int32                                    `json:"current_ward"`
+	CurrentCity       int32                                    `json:"current_city"`
+	PollingUnitID     int32                                    `json:"polling_unit_id"`
+	BankAccountNumber string                                   `json:"bank_account_number"`
+	BankCode          string                                   `json:"bank_code"`
+	VotersCardImage   string                                   `json:"voters_card_image"`
 	Party             *queries.PartyBasicInfoWithVerifications `json:"party"`
 }
 
@@ -447,25 +448,25 @@ func (s *AuthService) Refresh(ctx context.Context, refreshToken string) (Refresh
 		FakeID:            user.FakeID.Int64,
 		PreferenceVersion: pref.PreferenceVersion,
 		Email:             user.Email.String,
-		Username:        user.Username.String,
-		ReferralCode:    user.ReferralCode.String,
-		FirstName:       user.FirstName.String,
-		LastName:        user.LastName.String,
-		MiddleName:      user.MiddleName.String,
-		Gender:          user.Gender.String,
-		Avatar:          user.Avatar.String,
-		Phone:           user.Phone.String,
-		Roles:           user.Roles.RolesCode,
-		AccountStatus:   user.AccountStatus.String,
-		PartyID:         userPartyID,
-		PollingUnitID:   user.PollingUnitID.Int32,
-		CurrentCountry:  user.CurrentCountry,
-		CurrentState:    user.CurrentState,
-		CurrentLga:      user.CurrentLga.Int32,
-		CurrentWard:     user.CurrentWard.Int32,
-		CurrentCity:     user.CurrentCity.Int32,
-		VotersCardImage: user.VotersCardImage.String,
-		Party:           user.PartyBasicInfo,
+		Username:          user.Username.String,
+		ReferralCode:      user.ReferralCode.String,
+		FirstName:         user.FirstName.String,
+		LastName:          user.LastName.String,
+		MiddleName:        user.MiddleName.String,
+		Gender:            user.Gender.String,
+		Avatar:            user.Avatar.String,
+		Phone:             user.Phone.String,
+		Roles:             user.Roles.RolesCode,
+		AccountStatus:     user.AccountStatus.String,
+		PartyID:           userPartyID,
+		PollingUnitID:     user.PollingUnitID.Int32,
+		CurrentCountry:    user.CurrentCountry,
+		CurrentState:      user.CurrentState,
+		CurrentLga:        user.CurrentLga.Int32,
+		CurrentWard:       user.CurrentWard.Int32,
+		CurrentCity:       user.CurrentCity.Int32,
+		VotersCardImage:   user.VotersCardImage.String,
+		Party:             user.PartyBasicInfo,
 	}
 
 	// Verify account status
@@ -547,7 +548,7 @@ func (s *AuthService) Logout(ctx context.Context, refreshToken string) error {
 	hashed := utils.HashToken(refreshToken)
 	// return errors.New("testing error")
 
-	// use token to fetch jwt session details from redis
+	// use the refreshToken to fetch jwt session details from redis
 	tokenRedisKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, hashed)
 	sessionDts, err := s.rdb.Get(ctx, tokenRedisKey).Result()
 	if errors.Is(err, redis.Nil) {
@@ -1147,50 +1148,17 @@ func (s *AuthService) ChangePasswordByEmail(ctx context.Context, email, otp, new
 	}
 
 	// 4. Invalidate all active sessions across all devices
-	// Security requirement: Changing/resetting a password must immediately revoke all existing
-	// authentication tokens and sessions across all devices (desktops, mobile apps, browsers).
-	//
-	// Redis Key Hierarchy:
-	//   1. User-to-Sessions Set   (`db.RedisUserLoginSessions` + fakeID):
-	//      Stores the set of all active session IDs belonging to this user.
-	//   2. Session-to-Tokens Set  (`db.RedisSessionTokens` + sessionID):
-	//      Stores the set of active refresh token identifiers associated with each session.
-	//   3. Refresh Token Payload  (`db.RedisJwtRefreshToken` + token):
-	//      Stores the actual refresh token record used during token renewals.
-	// first gets all the session ids, then loop through it to get all the refresh tokens
-	// then delete the tokens and the session id
-	userSessionsRedisKey := fmt.Sprintf("%s%d", db.RedisUserLoginSessions, fakeID)
-	sessions, err := s.rdb.SMembers(ctx, userSessionsRedisKey).Result()
-	if err == nil && len(sessions) > 0 {
-		// Use a transactional pipeline to execute all deletion commands in a single round-trip
-		pipe := s.rdb.TxPipeline()
-
-		// loop through all the session ids and delete the tokens
-		for _, sessionID := range sessions {
-			sessionTokensRedisKey := fmt.Sprintf("%s%s", db.RedisSessionTokens, sessionID)
-			tokens, _ := s.rdb.SMembers(ctx, sessionTokensRedisKey).Result()
-
-			// a) Revoke every refresh token under this session
-			for _, token := range tokens {
-				refreshTokenRedisKey := fmt.Sprintf("%s%s", db.RedisJwtRefreshToken, token)
-				pipe.Del(ctx, refreshTokenRedisKey)
-			}
-
-			// b) Delete the session's token set
-			pipe.Del(ctx, sessionTokensRedisKey)
-		}
-
-		// c) Delete the user's overall active session tracking set
-		pipe.Del(ctx, userSessionsRedisKey)
-
-		// Execute all queued Redis deletion commands atomically
-		_, _ = pipe.Exec(ctx)
-	}
+	_ = s.RevokeAllUserSessions(ctx, fakeID)
 
 	// 5. Update cached user info
 	_ = s.usersService.InvalidateCachedUserInfo(ctx, fakeID)
 
 	return nil
+}
+
+// RevokeAllUserSessions revokes all active refresh tokens and sessions for a user across all devices.
+func (s *AuthService) RevokeAllUserSessions(ctx context.Context, fakeID int64) error {
+	return s.usersService.RevokeAllUserSessions(ctx, fakeID)
 }
 
 type RegisterResult struct {
@@ -1304,36 +1272,6 @@ func (s *AuthService) CheckAndAssignRole(ctx context.Context, userID int64, fake
 	err = s.usersService.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
 	if err != nil {
 		return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
-	}
-
-	return nil
-}
-
-// UpdateUserRoles replaces a user's roles and optionally sets their party ID.
-func (s *AuthService) UpdateUserRoles(ctx context.Context, userID int64, fakeID int64, roles []string, partyID *int64, whoAssigned int64) error {
-	// 1. Delete all existing roles
-	err := s.queries.DeleteUserRoles(ctx, userID)
-	if err != nil {
-		return fmt.Errorf("failed to delete existing roles: %w", err)
-	}
-
-	// 2. Assign the new roles
-	for _, roleCode := range roles {
-		err = s.usersService.AssignUserRole(ctx, userID, fakeID, roleCode, whoAssigned)
-		if err != nil {
-			return fmt.Errorf("failed to assign role %s: %w", roleCode, err)
-		}
-	}
-
-	// 3. Update party if provided
-	if partyID != nil {
-		err = s.queries.UpdateUserParty(ctx, queries.UpdateUserPartyParams{
-			ID:      userID,
-			PartyID: pgtype.Int2{Int16: int16(*partyID), Valid: true},
-		})
-		if err != nil {
-			return fmt.Errorf("failed to update user party: %w", err)
-		}
 	}
 
 	return nil

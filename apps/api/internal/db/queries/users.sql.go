@@ -319,15 +319,6 @@ func (q *Queries) DeleteUserPhoneNumber(ctx context.Context, arg DeleteUserPhone
 	return err
 }
 
-const deleteUserRoles = `-- name: DeleteUserRoles :exec
-DELETE FROM user_roles WHERE user_id = $1
-`
-
-func (q *Queries) DeleteUserRoles(ctx context.Context, userID int64) error {
-	_, err := q.db.Exec(ctx, deleteUserRoles, userID)
-	return err
-}
-
 const getFakeIDByAdditionalPhone = `-- name: GetFakeIDByAdditionalPhone :one
 SELECT u.fake_id
 FROM users u
