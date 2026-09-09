@@ -4,7 +4,8 @@ import {
 	SelectElectionGroupAndElection,
 } from "@repo/ui/components/selects/election-group-and-election-select";
 import { useServerFn } from "@tanstack/react-start";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
@@ -12,15 +13,15 @@ import { ResultModeToggle } from "../home/components/-result-mode-toggle";
 
 // ─── Electoral Race Custom Header (Design from mockup) ──────────────────────
 export function ElectionRaceHeader() {
+	const { party } = useUserParty();
 	const {
-		party,
 		selectedElectionGroup,
 		setSelectedElectionGroup,
 		selectedElection,
 		setSelectedElection,
 		isLive,
 		setIsLive,
-	} = useAppContext();
+	} = useElection();
 	const partyId = party?.id;
 
 	const fetchGroups = useServerFn(getElectionGroups);
@@ -81,8 +82,9 @@ export function ElectionRaceHeaderRight({
 	isLive: boolean;
 	setIsLive: (val: boolean) => void;
 }) {
-	const { party, selectedElectionGroup, setSelectedElectionGroup, setSelectedElection } =
-		useAppContext();
+	const { party } = useUserParty();
+	const { selectedElectionGroup, setSelectedElectionGroup, setSelectedElection } =
+		useElection();
 	const partyId = party?.id;
 
 	const fetchGroups = useServerFn(getElectionGroups);

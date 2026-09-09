@@ -2,7 +2,8 @@ import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useElectionCandidates } from "#/hooks/useElectionResults";
 import { getPollingUnitFinalResults } from "#/lib/server/elections";
 import {
   GalleryItem,
@@ -29,8 +30,8 @@ function ResultsMediaOnlyComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-    electionCandidates,
-  } = useAppContext();
+  } = useElection();
+  const electionCandidates = useElectionCandidates();
 
   const [selectedResultIndex, setSelectedResultIndex] = React.useState<
     number | null

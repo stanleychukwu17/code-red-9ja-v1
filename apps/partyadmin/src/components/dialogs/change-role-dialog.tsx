@@ -20,7 +20,8 @@ import {
   changeAgentRole,
   type AgentPerformanceItem,
 } from "#/lib/server/agents";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { MapPin, Shield, Loader2 } from "lucide-react";
 import { Label } from "@repo/ui/components/input";
 
@@ -70,7 +71,8 @@ export function ChangeRoleDialog({
   data,
   refetch,
 }: ChangeRoleDialogProps) {
-  const { party, selectedElectionGroup } = useAppContext();
+  const { party } = useUserParty();
+  const { selectedElectionGroup } = useElection();
   const queryClient = useQueryClient();
 
   const partyId = data.party_id || party?.id || 0;

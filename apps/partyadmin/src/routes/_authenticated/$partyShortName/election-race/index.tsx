@@ -8,7 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useState } from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getScopedElectionResult } from "#/lib/server/election-results";
 import { getPageHeader } from "#/lib/shared/meta";
 import {
@@ -370,7 +370,7 @@ function CandidateLeaderboard({
 
 function OverviewPage() {
   const { partyShortName } = Route.useParams();
-  const { selectedElection, isLive, setIsLive } = useAppContext();
+  const { selectedElection, isLive, setIsLive } = useElection();
   const [activeTab, setActiveTab] = useState<TabType>("general");
 
   const fetchScopedResult = useServerFn(getScopedElectionResult);

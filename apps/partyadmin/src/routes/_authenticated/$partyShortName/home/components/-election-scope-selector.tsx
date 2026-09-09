@@ -6,7 +6,7 @@ import {
   getFederalConstituencies,
   getStateConstituencies,
 } from "#/lib/server/countries";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { SelectCountry } from "@repo/ui/components/selects/country-select";
 import { SelectFederalConstituency } from "@repo/ui/components/selects/federal-constituency-select";
 import { SelectStateConstituency } from "@repo/ui/components/selects/state-constituency-select";
@@ -36,7 +36,7 @@ export const ElectionScopeSelector = () => {
     setSelectedLGAId,
     selectedWardId,
     setSelectedWardId,
-  } = useAppContext();
+  } = useElection();
 
   // Synchronize Redux selection states with the selected election's fixed scope boundaries
   useEffect(() => {

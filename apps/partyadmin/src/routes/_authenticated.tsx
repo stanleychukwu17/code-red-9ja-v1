@@ -32,7 +32,7 @@ import {
   checkIfRefreshTokenInCookie,
   getUserDetailsCookie,
 } from "#/lib/server/auth/auth";
-import { useAuth } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { updateAuthState } from "@/redux/slice/authSlice";
 import { updateSiteState } from "@/redux/slice/siteSlice";
@@ -75,7 +75,7 @@ function AuthenticatedRoutes() {
 
   //party shortname
   const params = useParams({ strict: false });
-  const { party } = useAuth();
+  const { party } = useUserParty();
   const partyShortName =
     party?.shortName || (params as any).partyShortName || "party";
 

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { ElectoralUnitsTable } from "#/components/Tables";
 import type { ElectoralUnitItem } from "#/components/tiles/candidate-result-tile";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getElectoralUnitsBreakdown } from "#/lib/server/election-results";
 import { getPageHeader } from "#/lib/shared/meta";
 import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
@@ -35,7 +35,7 @@ function ElectoralUnitsPage() {
     setSelectedWardId,
     isLive,
     setIsLive,
-  } = useAppContext();
+  } = useElection();
 
   const fetchBreakdown = useServerFn(getElectoralUnitsBreakdown);
 

@@ -4,7 +4,8 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
+import { useElectionCandidates } from "#/hooks/useElectionResults";
 import {
   getStatesWithResults,
   getSenatorialDistrictsWithResults,
@@ -63,8 +64,8 @@ function ResultsIndexComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-    electionCandidates,
-  } = useAppContext();
+  } = useElection();
+  const electionCandidates = useElectionCandidates();
 
   // Server functions — new combined geo+result endpoints
   const fetchStatesWithResults = useServerFn(getStatesWithResults);

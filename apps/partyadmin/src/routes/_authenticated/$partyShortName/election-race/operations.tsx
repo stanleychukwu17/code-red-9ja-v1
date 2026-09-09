@@ -5,7 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { OperationsTable } from "#/components/Tables";
 import type { OperationsUnitItem } from "#/lib/server/election-operations";
 import { getOperationsBreakdown } from "#/lib/server/election-operations";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
 import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
 import { getElectionRaceTabs } from "./-data";
@@ -19,8 +20,8 @@ export const Route = createFileRoute(
 
 function OperationsPage() {
   const { partyShortName } = Route.useParams();
+  const { party } = useUserParty();
   const {
-    party,
     selectedElection,
     selectedElectionGroup,
     selectedStateId,
@@ -37,7 +38,7 @@ function OperationsPage() {
     setSelectedWardId,
     isLive,
     setIsLive,
-  } = useAppContext();
+  } = useElection();
 
   const fetchBreakdown = useServerFn(getOperationsBreakdown);
 

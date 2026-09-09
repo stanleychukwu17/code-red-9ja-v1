@@ -18,7 +18,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
 import {
   getPartyWallet,
   getPartyWalletTransactions,
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/wallet/")(
 );
 
 function RouteComponent() {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -82,7 +82,7 @@ function RouteComponent() {
 }
 
 function WalletHeader() {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   return (
     <section className="h-16 flex items-center justify-between gap-4 pt-5">
       <h1 className="flex items-center gap-4">
@@ -154,7 +154,7 @@ function WalletBillboard({
 }) {
   const [isWalletDialogOpen, setIsWalletDialogOpen] = React.useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = React.useState(false);
-  const { party } = useAppContext();
+  const { party } = useUserParty();
 
   const balanceKobo = wallet?.balance_kobo ?? 0;
   const balanceNaira = balanceKobo / 100;
@@ -320,7 +320,7 @@ function WalletSlotsAllowanceSection({
   wallet: PartyWallet | undefined;
   onSuccess: () => void;
 }) {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const [isSlotsDialogOpen, setIsSlotsDialogOpen] = React.useState(false);
   const [isAllowanceDialogOpen, setIsAllowanceDialogOpen] =
     React.useState(false);

@@ -7,9 +7,11 @@ import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import {
   selectSelectedElection,
   selectSelectedElectionGroup,
+  setIsLive,
   setSelectedElection,
   setSelectedElectionGroup,
 } from "#/redux/slice/electionSlice";
+import { isBeforeEndOfDay, isElectionDay } from "#/hooks/useElection";
 
 export default function LoadElectionSession() {
   const dispatch = useAppDispatch();
@@ -74,6 +76,23 @@ export default function LoadElectionSession() {
       }
     }
   }, [elections, selectedElectionGroup, selectedElection, dispatch]);
+
+  const electionDay = isElectionDay(selectedElectionGroup?.election_date);
+
+  // Auto-switch isLive to false after 4pm on election day (runs once globally)
+  useEffect(() => {
+    if (!electionDay) return;
+    const checkTime = () => {
+      if (!isBeforeEndOfDay()) dispatch(setIsLive(false));
+    };
+    checkTime();
+    window.addEventListener("focus", checkTime);
+    const interval = setInterval(checkTime, 60_000);
+    return () => {
+      window.removeEventListener("focus", checkTime);
+      clearInterval(interval);
+    };
+  }, [electionDay, dispatch]);
 
   return null;
 }

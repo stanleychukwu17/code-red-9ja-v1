@@ -7,7 +7,8 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import { AgentCoverageTable } from "#/components/Tables";
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { getAgentCoverageBreakdown } from "#/lib/server/agent-coverage";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getPageHeader } from "#/lib/shared/meta";
 import { CoverageHeaderRight } from "./-components";
 import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
@@ -25,8 +26,8 @@ function AgentCoveragePage() {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
+  const { party } = useUserParty();
   const {
-    party,
     selectedElection,
     selectedElectionGroup,
     selectedStateId,
@@ -41,7 +42,7 @@ function AgentCoveragePage() {
     setSelectedLGAId,
     selectedWardId,
     setSelectedWardId,
-  } = useAppContext();
+  } = useElection();
 
   const fetchBreakdown = useServerFn(getAgentCoverageBreakdown);
 

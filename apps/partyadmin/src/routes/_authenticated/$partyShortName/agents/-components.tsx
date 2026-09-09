@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import {
   SelectElectionGroupAndElection,
   type Election,
@@ -13,12 +14,12 @@ import { IconInput } from "@repo/ui/components/input";
 
 // ─── Header Right Component (Select Election Group & Election) ───────────────
 export function AgentsHeaderRight() {
+  const { party } = useUserParty();
   const {
-    party,
     selectedElectionGroup,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const partyId = party?.id;
 
   const fetchGroups = useServerFn(getElectionGroups);

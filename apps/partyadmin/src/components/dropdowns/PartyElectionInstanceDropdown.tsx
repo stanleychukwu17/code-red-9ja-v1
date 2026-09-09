@@ -7,7 +7,7 @@ import type { TDropdownGroup } from "@repo/ui/lib/types";
 import { Trash2, UsersIcon } from "lucide-react";
 import { DropdownGroupList } from "@repo/ui/components/custom/AppDropdown";
 import { UserFinderCommand } from "@repo/ui/components/custom/UserFinderCommand";
-import { useAuth } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
 import type { ElectionInstanceType } from "../tiles/election-instance-tile";
 
 interface PartyElectionInstanceDropdownProps {
@@ -22,7 +22,7 @@ export const PartyElectionInstanceDropdown = ({
   const [openMenu, setOpenMenu] = useState(false);
   const [openFinderDialog, setOpenFinderDialog] = useState(false);
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const user = useUser();
   const userPartyId = user?.party?.id ?? (user as any)?.party_id;
 
   const mutation = useMutation({

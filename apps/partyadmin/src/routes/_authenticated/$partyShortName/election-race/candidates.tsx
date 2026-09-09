@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CandidateResultsTable } from "#/components/Tables";
 import type { CandidateResultItem } from "#/components/tiles/candidate-result-tile";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getScopedElectionResult } from "#/lib/server/election-results";
 import { getPageHeader } from "#/lib/shared/meta";
 import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
@@ -29,7 +29,7 @@ function CandidatesPage() {
     selectedWardId,
     isLive,
     setIsLive,
-  } = useAppContext();
+  } = useElection();
 
   const fetchScopedResult = useServerFn(getScopedElectionResult);
 

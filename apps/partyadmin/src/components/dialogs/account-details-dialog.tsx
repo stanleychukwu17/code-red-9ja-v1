@@ -8,7 +8,7 @@ import {
 } from "@repo/ui/components/dialog";
 import { Package, Loader2, Coins } from "lucide-react";
 import * as React from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
 import { fundPartyWalletTest } from "#/lib/server/parties";
 import { toast } from "sonner";
 import { useMutation } from "@tanstack/react-query";
@@ -56,7 +56,7 @@ export function AccountDetailsDialog({
     },
   });
   const [fundAmount, setFundAmount] = React.useState(50000);
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const partyId = party?.id;
 
   const handleCopy = (num: string, index: number) => {

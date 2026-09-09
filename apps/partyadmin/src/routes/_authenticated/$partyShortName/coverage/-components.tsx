@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import {
   SelectElectionGroupAndElection,
   type Election,
@@ -10,12 +11,12 @@ import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
 
 export function CoverageHeaderRight() {
+  const { party } = useUserParty();
   const {
-    party,
     selectedElectionGroup,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const partyId = party?.id;
 
   const fetchGroups = useServerFn(getElectionGroups);

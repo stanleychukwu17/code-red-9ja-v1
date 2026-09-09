@@ -14,7 +14,8 @@ import { UserFormDialog } from "@repo/ui/components/custom/UserFormDialog";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAuth } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
+import { useUserParty } from "#/hooks/useUserParty";
 
 // Server Functions
 import { getAllCountries, getStates, getCities } from "#/lib/server/countries";
@@ -36,7 +37,8 @@ export const Route = createFileRoute(
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const { user, party } = useAuth();
+  const user = useUser();
+  const { party } = useUserParty();
   const partyId = party?.id ?? user?.party?.id ?? (user as any)?.party_id;
 
   const {

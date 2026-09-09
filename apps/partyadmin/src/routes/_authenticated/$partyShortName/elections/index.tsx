@@ -13,7 +13,7 @@ import { getElectionGroups } from "#/lib/server/election_groups";
 import { useIntersectionObserver } from "usehooks-ts";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { ElectionGroupType } from "#/components/tiles/election-group-tile";
-import { useAuth } from "#/hooks/useAppContext";
+import { useUser } from "#/hooks/useUser";
 
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/elections/",
@@ -24,7 +24,7 @@ export const Route = createFileRoute(
 
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
-  const { user } = useAuth();
+  const user = useUser();
   const partyId = user?.party?.id;
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =

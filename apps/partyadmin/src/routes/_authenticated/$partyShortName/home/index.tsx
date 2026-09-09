@@ -8,7 +8,9 @@ import {
 } from "@repo/ui/components/custom/AdminLayouts";
 import { HomePageHeader } from "./-header";
 import { ElectionScopeSelector } from "./components/-election-scope-selector";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
+import { useMarketingCampaigns } from "#/hooks/useMarketingCampaigns";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   getPartyWallet,
@@ -54,8 +56,8 @@ export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
 });
 
 function ReadinessComponent() {
+  const { party } = useUserParty();
   const {
-    party,
     selectedElectionGroup,
     selectedElection,
     selectedStateId,
@@ -64,8 +66,8 @@ function ReadinessComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-    activeMarketingCampaigns,
-  } = useAppContext();
+  } = useElection();
+  const { activeMarketingCampaigns } = useMarketingCampaigns(party?.id);
   const partyId = party?.id;
   const queryClient = useQueryClient();
 
@@ -424,7 +426,7 @@ function ReadinessProgressCard({
     selectedDistrictId,
     selectedStateConstituencyId,
     selectedFederalConstituencyId,
-  } = useAppContext();
+  } = useElection();
 
   const ReadinessText = ({
     label,
@@ -924,7 +926,7 @@ function RoleStatCard({
 }
 
 function TransactionsSubTabContent() {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const partyId = party?.id;
   const getPartyWalletTransactionsFn = useServerFn(getPartyWalletTransactions);
 
@@ -1040,7 +1042,7 @@ function FinancialRow({
 }
 
 function TargetCard() {
-  const { party } = useAppContext();
+  const { party } = useUserParty();
   const partyId = party?.id;
 
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);

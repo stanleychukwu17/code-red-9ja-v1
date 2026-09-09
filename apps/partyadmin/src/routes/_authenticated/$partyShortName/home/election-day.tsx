@@ -16,7 +16,10 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import * as React from "react";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
+import { useElectionResults, useElectionCandidates } from "#/hooks/useElectionResults";
+import { useActiveParties } from "#/hooks/useActiveParties";
 import {
 	getElectionStats,
 	getPollingUnitFinalResults,
@@ -43,13 +46,11 @@ function ElectionDayComponent() {
 		selectedStateConstituencyId,
 		selectedLGAId,
 		selectedWardId,
-		party,
-		electionCandidates,
-		activeParties,
-		finalResultObj,
-		isResultLoading,
 		isLive,
-	} = useAppContext();
+	} = useElection();
+	const { party } = useUserParty();
+	const { electionCandidates, finalResultObj, isResultLoading } = useElectionResults();
+	const { activeParties } = useActiveParties();
 	const navigate = useNavigate();
 
 	// Connect real-time WebSocket updates for election day
@@ -454,7 +455,7 @@ function UpdatesGallery({ isReport }: { isReport: boolean }) {
 		selectedStateConstituencyId,
 		selectedLGAId,
 		selectedWardId,
-	} = useAppContext();
+	} = useElection();
 	const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
 
 	const {
@@ -561,8 +562,8 @@ function FinalResultsGallery({ activeParties }: { activeParties?: any[] }) {
 		selectedStateConstituencyId,
 		selectedLGAId,
 		selectedWardId,
-		electionCandidates,
-	} = useAppContext();
+	} = useElection();
+	const electionCandidates = useElectionCandidates();
 	const fetchPollingUnitFinalResultsFn = useServerFn(getPollingUnitFinalResults);
 
 	const {

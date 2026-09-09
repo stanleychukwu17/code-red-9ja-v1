@@ -4,7 +4,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Loader2, AlertTriangle, AlertCircle } from "lucide-react";
 import { useIntersectionObserver } from "usehooks-ts";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useElection } from "#/hooks/useElection";
 import { getPollingUnitUpdates } from "#/lib/server/polling-unit-updates";
 import { AppAvatar, Avatar, AvatarImage } from "@repo/ui/components/avatar";
 
@@ -24,7 +24,7 @@ function UpdatesFeedComponent() {
     selectedStateConstituencyId,
     selectedLGAId,
     selectedWardId,
-  } = useAppContext();
+  } = useElection();
 
   const fetchPollingUnitUpdatesFn = useServerFn(getPollingUnitUpdates);
 

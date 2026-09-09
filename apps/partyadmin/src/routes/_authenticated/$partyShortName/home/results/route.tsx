@@ -6,7 +6,8 @@ import {
   useLocation,
   Link,
 } from "@tanstack/react-router";
-import { useAppContext } from "#/hooks/useAppContext";
+import { useUserParty } from "#/hooks/useUserParty";
+import { useElection } from "#/hooks/useElection";
 import { getElectionGroups } from "#/lib/server/election_groups";
 import { getElectionsByGroup } from "#/lib/server/elections";
 import { useServerFn } from "@tanstack/react-start";
@@ -33,12 +34,12 @@ export const Route = createFileRoute(
 
 function ResultsLayoutComponent() {
   const { partyShortName } = useParams({ strict: false });
+  const { party } = useUserParty();
   const {
-    party,
     selectedElectionGroup,
     setSelectedElectionGroup,
     setSelectedElection,
-  } = useAppContext();
+  } = useElection();
   const partyId = party?.id;
 
   const fetchGroups = useServerFn(getElectionGroups);
