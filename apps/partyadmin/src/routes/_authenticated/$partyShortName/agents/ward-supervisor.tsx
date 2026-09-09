@@ -10,6 +10,13 @@ import { getAgentPerformanceStats } from "#/lib/server/agents";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useElection } from "#/hooks/useElection";
 
+/**
+ * Ward Collation Supervisors Performance Roster
+ *
+ * Displays party supervisors coordinating polling units across Registration Areas (Wards):
+ * - Scoped by state, LGA, and ward hierarchy.
+ * - Tracks ward coverage completeness, agent attendance readiness, and collation progress.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/agents/ward-supervisor",
 )({
@@ -17,6 +24,11 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * RouteComponent (Ward Supervisors View)
+ *
+ * Queries ward supervisor rosters and renders the WardSupervisorsTable.
+ */
 function RouteComponent() {
   const { party } = useUserParty();
   const {

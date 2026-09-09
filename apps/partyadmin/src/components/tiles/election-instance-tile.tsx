@@ -1,3 +1,10 @@
+/**
+ * @file Election Instance Table Header & Tile Components
+ * @description Renders row tiles for specific contested race ballots (e.g. Senatorial, Gubernatorial, House of Reps).
+ * Displays race hierarchy rank, ballot name, candidate profile chip (or add candidate prompt),
+ * polling date, and candidate assignment dropdown menu.
+ */
+
 import { cn } from "@repo/ui/lib/utils";
 import {
   TileHeader,
@@ -35,6 +42,10 @@ const getPartyAdminRankColor = (rank: number) => {
   }
 };
 
+/**
+ * ElectionInstanceTableHeader Component
+ * Renders table column labels for election race instances: Rank, Election, Candidates, Date.
+ */
 export function ElectionInstanceTableHeader() {
   return (
     <TileHeader>
@@ -55,11 +66,18 @@ export function ElectionInstanceTableHeader() {
   );
 }
 
+/**
+ * ElectionInstanceTableTile Component
+ * Renders an individual election race instance row displaying hierarchy ranking,
+ * election title, candidate badge (or "Add candidate" placeholder), formatted date,
+ * and contextual party election instance dropdown actions.
+ */
 export function ElectionInstanceTableTile({
   data,
 }: {
   data: ElectionInstanceType;
 }) {
+  // Format the ISO election date string or fallback to em-dash
   const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
 
   return (

@@ -3,7 +3,23 @@ import ArrowDownIcon from "@repo/ui/icons/arrow-down-icon";
 import { useEffect } from "react";
 import { X } from "lucide-react";
 
-/** Simple icon + label button used throughout the reels UI */
+/**
+ * Shared Reel Components & Utilities
+ *
+ * Provides reusable UI primitives, keyboard event listeners, and layout shells
+ * for media reels across the partyadmin dashboard:
+ * 1. `ReelShell`: Fullscreen blurred backdrop wrapper with sidebar slot and close triggers.
+ * 2. `useReelKeyboard`: Up/Down arrow keyboard navigation and Escape listener.
+ * 3. `ReelNavButtons`: Circular floating next/previous controls.
+ * 4. `PostActionButton`: Sidebar action toggles (photo count, show votes, toggle sidebar).
+ * 5. `UploaderRow` & `LocationBlock`: Accredited agent identity badges and location paths.
+ */
+
+/**
+ * PostActionButton Component
+ *
+ * Vertical action button (icon + tiny caption) positioned along the right rail of reel viewers.
+ */
 export function PostActionButton({
   icon,
   label,

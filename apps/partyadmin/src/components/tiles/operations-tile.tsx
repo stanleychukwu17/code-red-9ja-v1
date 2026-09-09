@@ -1,3 +1,11 @@
+/**
+ * @file Operations Table Header & Tile Components
+ * @description Renders real-time operational telemetry across hierarchical election tiers
+ * (States -> LGAs -> Wards -> Polling Units).
+ * Tracks agent presence at post, arrival times, voting start/finish timelines, update frequencies,
+ * incident reports, voter turnout referral counters, and results upload completion.
+ */
+
 import {
   AppAvatar,
   AvatarGroup,
@@ -14,7 +22,10 @@ import { CheckCircle2, ChevronRight, MoreHorizontal } from "lucide-react";
 import type * as React from "react";
 import type { OperationsUnitItem } from "#/lib/server/election-operations";
 
-// ─── Higher Level Operations Table Header (States -> Wards) ───────────────────
+/**
+ * OperationsTableHeader Component
+ * Renders table headers for higher-level geopolitical units (States, LGAs, Wards).
+ */
 export function OperationsTableHeader({
   unitTitle = "States",
   supervisorTitle = "State Supervisors",
@@ -58,7 +69,11 @@ export function OperationsTableHeader({
   );
 }
 
-// ─── Higher Level Operations Table Tile (States -> Wards) ─────────────────────
+/**
+ * OperationsTableTile Component
+ * Renders an aggregate operations row for a State, LGA, or Ward unit.
+ * Clicking the row drills down into the subordinate subdivision tier.
+ */
 export function OperationsTableTile({
   data,
   onClick,
@@ -67,6 +82,7 @@ export function OperationsTableTile({
   onClick?: () => void;
 }) {
   const isDrillable = !!onClick;
+  // Parse supervisor avatars list (sliced to first 3 with a remaining badge count)
   const supervisors = Array.isArray(data.supervisors) ? data.supervisors : [];
   const displaySupervisors = supervisors.slice(0, 3);
   const remainingCount = supervisors.length - 3;
@@ -210,7 +226,10 @@ export function OperationsTableTile({
   );
 }
 
-// ─── Polling Unit Operations Table Header ─────────────────────────────────────
+/**
+ * PollingUnitOperationsTableHeader Component
+ * Renders table headers for the leaf Polling Unit level operations table.
+ */
 export function PollingUnitOperationsTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -238,7 +257,12 @@ export function PollingUnitOperationsTableHeader() {
   );
 }
 
-// ─── Polling Unit Operations Table Tile ───────────────────────────────────────
+/**
+ * PollingUnitOperationsTableTile Component
+ * Renders an operational row for a specific Polling Unit, showing agents on site,
+ * start/end times, incident and status updates, and a green checkmark indicating
+ * complete result upload.
+ */
 export function PollingUnitOperationsTableTile({
   data,
 }: {

@@ -10,6 +10,15 @@ import { getAgentPerformanceStats } from "#/lib/server/agents";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useElection } from "#/hooks/useElection";
 
+/**
+ * Polling Unit Agents Performance Roster
+ *
+ * Displays a searchable, filterable table of party polling unit agents on the ground:
+ * - Scoped dynamically by the active election, state, LGA, and ward.
+ * - Tracks key performance metrics: PU assignment, arrival punctuality, accreditation confirmation,
+ *   and EC8A result sheet upload status.
+ * - Provides quick actions to call the agent, reassign roles, or deactivate assignments.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/agents/polling-agent",
 )({
@@ -17,6 +26,11 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * RouteComponent (Polling Agents View)
+ *
+ * Manages search filter state, queries agent performance records, and renders the PollingAgentsTable.
+ */
 function RouteComponent() {
   const { party } = useUserParty();
   const {

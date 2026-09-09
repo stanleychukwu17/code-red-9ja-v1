@@ -1,9 +1,20 @@
+/**
+ * @file LGA Supervisor Table Header & Tile Components
+ * @description Renders supervisory data tiles for Local Government Area (LGA) coordinators.
+ * Displays operational readiness, subordinate agents at post, PU coverage metrics,
+ * aggregation of arrival times, ward reports, earnings summary, and payout states.
+ */
+
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { StatusCheckIcon } from "./polling-agent-tile";
 import { AgentDropdown } from "../dropdowns/AgentDropdown";
 
+/**
+ * LGASupervisorTableHeader Component
+ * Renders table column headers for LGA level supervisor monitoring across all operational metrics.
+ */
 export function LGASupervisorTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -73,6 +84,11 @@ export function LGASupervisorTableHeader() {
   );
 }
 
+/**
+ * LGASupervisorTableTile Component
+ * Renders an LGA coordinator's row showing subordinate coverage progress, reporting counts,
+ * and supervisory control actions.
+ */
 export function LGASupervisorTableTile({
   data,
   refetch,

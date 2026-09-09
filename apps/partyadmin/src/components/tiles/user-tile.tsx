@@ -1,3 +1,10 @@
+/**
+ * @file User Management Table Header & Tile Components
+ * @description Renders system user account tiles in party administration.
+ * Normalizes PostgreSQL nullable string records (sql.NullString), formats registration dates,
+ * displays user avatar, resolved full name, capitalized role level, and user management dropdown.
+ */
+
 import {
   TileHeader,
   TileLeft,
@@ -33,6 +40,9 @@ export type UserType = {
   dateAdded?: string;
 };
 
+/**
+ * Extracts a primitive string value from raw or sql.NullString objects
+ */
 const getPgString = (val: any) => {
   if (val && typeof val === "object" && "String" in val) {
     return val.String || "";
@@ -40,6 +50,9 @@ const getPgString = (val: any) => {
   return val || "";
 };
 
+/**
+ * Formats date string into localized medium representation (e.g. Oct 12, 25)
+ */
 const formatDate = (dateString?: string) => {
   if (!dateString) return "N/A";
   try {
@@ -55,6 +68,10 @@ const formatDate = (dateString?: string) => {
   }
 };
 
+/**
+ * UserTableHeader Component
+ * Renders table column headers for user accounts: User, Role level, and Date added.
+ */
 export function UserTableHeader() {
   return (
     <TileHeader>
@@ -72,6 +89,11 @@ export function UserTableHeader() {
   );
 }
 
+/**
+ * UserTableTile Component
+ * Displays an individual user row including profile avatar, resolved name fallback,
+ * capitalized authorization role level, join date, and action dropdown.
+ */
 export function UserTableTile({
   data,
   refetch,
@@ -79,11 +101,13 @@ export function UserTableTile({
   data: UserType;
   refetch?: () => void;
 }) {
+  // Extract nullable postgres string fields safely
   const firstName = getPgString(data.first_name);
   const lastName = getPgString(data.last_name);
   const username = getPgString(data.username);
   const email = getPgString(data.email);
 
+  // Derive preferred display name
   const name =
     data.name ||
     [firstName, lastName].filter(Boolean).join(" ") ||

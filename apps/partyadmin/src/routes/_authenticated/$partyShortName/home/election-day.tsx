@@ -31,11 +31,29 @@ import { ElectionScopeSelector } from "./components/-election-scope-selector";
 import { FinalResultReel } from "./components/-final-result-reel";
 import { UpdateReel } from "./components/-update-reel";
 
+/**
+ * Election Day War Room Dashboard
+ *
+ * Real-time command center for party administrators on election day:
+ * 1. Live Pusher WebSocket Feeds: Subscribes to geographic broadcast channels for instant vote count and incident updates.
+ * 2. Scoped Candidate Leaderboard: Displays leading candidates, vote counts, and winning region counts (States, LGAs, or Wards).
+ * 3. Accreditation & Quota Metrics: Right sidebar displaying party accreditation quotas and supervisor coverage goals.
+ * 4. Ground Intel Galleries:
+ *    - Final Results: Scanned Form EC8A sheets submitted by polling agents.
+ *    - Agent Updates: Routine field reports and turn-out observations.
+ *    - Incident Reports: Emergency escalations (BVAS glitches, delayed voting materials, security issues).
+ */
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/election-day")({
 	head: () => getPageHeader({ title: "Election Day Dashboard" }),
 	component: ElectionDayComponent,
 });
 
+/**
+ * ElectionDayComponent
+ *
+ * Situation room orchestrator coordinating WebSocket connections, leaderboard rankings,
+ * activities stream, and modal media reels.
+ */
 function ElectionDayComponent() {
 	const {
 		selectedElectionGroup,
@@ -240,6 +258,13 @@ function ElectionDayComponent() {
 	);
 }
 
+/**
+ * ResultTypeCardInfo Component
+ *
+ * Explanatory alert banner communicating the data provenance:
+ * - Live Results: Informal voter reports and early polling unit trends prior to polls closing.
+ * - Final Results: Legally binding Form EC8A returns starting at the 4:00 PM cutoff.
+ */
 function ResultTypeCardInfo({ isLive }: { isLive: boolean }) {
 	const LabelDetails = ({
 		title,
@@ -296,6 +321,12 @@ function ResultTypeCardInfo({ isLive }: { isLive: boolean }) {
 	);
 }
 
+/**
+ * GalleryItem Component
+ *
+ * Visual thumbnail card representing an uploaded media evidence item (photo or video)
+ * with reporting agent avatar, polling unit title, and timestamp.
+ */
 export function GalleryItem({
 	imageSrc,
 	avatarSrc,
@@ -379,6 +410,12 @@ export type UpdateItem = {
 	[key: string]: any;
 };
 
+/**
+ * GalleryRow Component
+ *
+ * Horizontal preview carousel row rendering up to 6 media items with a section title,
+ * item count badge, and "See all" deep-link.
+ */
 function GalleryRow({
 	title,
 	count,
@@ -443,6 +480,12 @@ function GalleryRow({
 	);
 }
 
+/**
+ * UpdatesGallery Component
+ *
+ * Fetches recent polling unit updates or incident reports with media attachments
+ * and provides click-to-open `UpdateReel` modal inspection.
+ */
 function UpdatesGallery({ isReport }: { isReport: boolean }) {
 	const { partyShortName } = useParams({ strict: false });
 	const [selectedIndex, setSelectedIndex] = React.useState<number | null>(null);
@@ -541,14 +584,22 @@ function UpdatesGallery({ isReport }: { isReport: boolean }) {
 	);
 }
 
+/** Gallery preview row for routine field agent activity updates */
 function AgentUpdatesGallery() {
 	return <UpdatesGallery isReport={false} />;
 }
 
+/** Gallery preview row specifically for flagged incident reports */
 function ReportsGallery() {
 	return <UpdatesGallery isReport={true} />;
 }
 
+/**
+ * FinalResultsGallery Component
+ *
+ * Carousel row presenting uploaded Form EC8A result sheets with candidate vote tallies
+ * and full-screen `FinalResultReel` modal inspection.
+ */
 function FinalResultsGallery({ activeParties }: { activeParties?: any[] }) {
 	const { partyShortName } = useParams({ strict: false });
 	const [selectedResultIndex, setSelectedResultIndex] = React.useState<number | null>(null);

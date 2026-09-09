@@ -1,3 +1,9 @@
+/**
+ * @file Party Members Agent Roster Page
+ * @description Filtered sub-roster displaying party members who also serve as active agents.
+ * Lists political office, party office, and registration timestamps with creation dialog support.
+ */
+
 import * as React from "react";
 import {
   Layout,
@@ -29,6 +35,10 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * Agent Party Members Component
+ * Renders members holding agent credentials along with election context filters.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
   const [isFormOpen, setIsFormOpen] = React.useState(false);

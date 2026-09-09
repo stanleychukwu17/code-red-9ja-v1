@@ -1,3 +1,9 @@
+/**
+ * Mock Fixtures: Recent Agent Applications
+ *
+ * Provides static fallback agent profiles for testing and dashboard preview cards
+ * when backend application records are loading or unpopulated.
+ */
 export const RECENT_APPLICATIONS = [
   {
     name: "Lottanna Chukwuka",

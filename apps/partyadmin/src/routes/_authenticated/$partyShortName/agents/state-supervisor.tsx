@@ -10,6 +10,13 @@ import { getAgentPerformanceStats } from "#/lib/server/agents";
 import { useUserParty } from "#/hooks/useUserParty";
 import { useElection } from "#/hooks/useElection";
 
+/**
+ * State Collation Supervisors Performance Roster
+ *
+ * Displays executive supervisors overseeing statewide party operations across Nigeria's 36 States + FCT:
+ * - Coordinates LGA directors and liaises directly with the State INEC Collation Center.
+ * - Tracks statewide agent mobilization, accreditation rates, and overall collation progress.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/agents/state-supervisor",
 )({
@@ -17,6 +24,11 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * RouteComponent (State Supervisors View)
+ *
+ * Queries state supervisor records and renders the StateSupervisorsTable.
+ */
 function RouteComponent() {
   const { party } = useUserParty();
   const { selectedElectionGroup, selectedElection, selectedStateId } = useElection();

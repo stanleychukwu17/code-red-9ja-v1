@@ -1,3 +1,11 @@
+/**
+ * @file Election Session Loader Component
+ * @description Headless lifecycle synchronization component that loads available election groups
+ * and contested election ballots on app mount. Automatically selects the optimal election group
+ * (closest upcoming date, highest hierarchy rank) and cascades to the highest-ranking contested race.
+ * Monitors election-day hours to automatically toggle live update streams.
+ */
+
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -13,6 +21,10 @@ import {
 } from "#/redux/slice/electionSlice";
 import { isBeforeEndOfDay, isElectionDay } from "#/hooks/useElection";
 
+/**
+ * LoadElectionSession Component
+ * Headless helper that orchestrates election group and race defaults into Redux.
+ */
 export default function LoadElectionSession() {
   const dispatch = useAppDispatch();
   const selectedElectionGroup = useAppSelector(selectSelectedElectionGroup);

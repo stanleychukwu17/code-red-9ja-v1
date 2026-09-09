@@ -1,3 +1,10 @@
+/**
+ * @file Party Wallet Account Details & Funding Dialog
+ * @description Displays assigned virtual bank accounts (account number, bank name, beneficiary name)
+ * for receiving bank transfers that automatically fund the party treasury.
+ * Also includes sandbox development mode testing tools for direct balance credit simulation.
+ */
+
 import { Button } from "@repo/ui/components/button";
 import {
   Dialog,
@@ -20,6 +27,11 @@ interface AccountNumber {
   bankCode: string;
 }
 
+/**
+ * AccountDetailsDialog Component
+ * Renders dedicated virtual account cards with clipboard copying,
+ * and sandbox funding simulation for local development.
+ */
 export function AccountDetailsDialog({
   open,
   setOpen,

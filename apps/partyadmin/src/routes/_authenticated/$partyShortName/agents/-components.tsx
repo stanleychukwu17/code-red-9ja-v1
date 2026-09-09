@@ -12,7 +12,20 @@ import { useServerFn } from "@tanstack/react-start";
 import { ElectionScopeSelector } from "../home/components/-election-scope-selector";
 import { IconInput } from "@repo/ui/components/input";
 
-// ─── Header Right Component (Select Election Group & Election) ───────────────
+/**
+ * Shared Agent Roster Header Controls
+ *
+ * Provides reusable header tools and search filtering for all agent roster tabs
+ * (Polling Agents, Ward Supervisors, LGA Supervisors, State Supervisors):
+ * - `AgentsHeaderRight`: Dropdown switcher for election group & contest.
+ * - `AgentsFilterBar`: Mounts `ElectionScopeSelector` alongside live text search input.
+ */
+
+/**
+ * AgentsHeaderRight Component
+ *
+ * Mounts the election group & instance selector in the header toolbar of the agent directory.
+ */
 export function AgentsHeaderRight() {
   const { party } = useUserParty();
   const {
@@ -41,7 +54,12 @@ export function AgentsHeaderRight() {
   );
 }
 
-// ─── Filter Bar ──────────────────────────────────────────────────────────────
+/**
+ * AgentsFilterBar Component
+ *
+ * Filter toolbar mounting the geographic cascade `ElectionScopeSelector` alongside
+ * a real-time text search input for filtering agents by name, username, or phone.
+ */
 export function AgentsFilterBar({
   search,
   setSearch,

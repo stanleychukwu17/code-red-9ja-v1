@@ -13,9 +13,19 @@ import { HeaderTabs } from "@repo/ui/components/custom/AdminLayouts";
 import { APP_URL } from "#/lib/config";
 import { ResultModeToggle } from "./components/-result-mode-toggle";
 
+/**
+ * HomePageHeader Component
+ *
+ * Sticky header toolbar displayed across party dashboard routes:
+ * 1. Mode Tabs: Switches between the primary readiness dashboard ("Main") and the real-time "Election day" war room.
+ * 2. Election Contest Selector: Two-tier dropdown to switch between election cycles (e.g. 2027 General Elections)
+ *    and specific contests (Presidential, Governorship, etc.).
+ * 3. Live/Final Result Toggle: Appears conditionally during active election day to toggle live agent tallies vs certified collation.
+ */
 export function HomePageHeader({
   activeTab,
 }: {
+  /** The currently active dashboard tab identifier */
   activeTab: "main" | "readiness" | "election-day";
 }) {
   const { partyShortName } = useParams({ strict: false });

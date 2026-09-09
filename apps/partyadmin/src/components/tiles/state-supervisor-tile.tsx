@@ -1,3 +1,10 @@
+/**
+ * @file State Supervisor Table Header & Tile Components
+ * @description Displays state-wide executive supervisory performance data.
+ * Aggregates state-level readiness, subordinate agent deployment ratios, PU coverage,
+ * average check-in timelines, state incident/update feeds, earnings, and payout states.
+ */
+
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import {
@@ -9,6 +16,10 @@ import {
 import { StatusCheckIcon } from "./polling-agent-tile";
 import { AgentDropdown } from "../dropdowns/AgentDropdown";
 
+/**
+ * StateSupervisorTableHeader Component
+ * Renders column headers for state-wide supervisor table monitoring.
+ */
 export function StateSupervisorTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -55,6 +66,11 @@ export function StateSupervisorTableHeader() {
   );
 }
 
+/**
+ * StateSupervisorTableTile Component
+ * Renders an individual row showing state supervisor operational telemetry,
+ * coverage progress, and administrative action dropdown.
+ */
 export function StateSupervisorTableTile({
   data,
   refetch,

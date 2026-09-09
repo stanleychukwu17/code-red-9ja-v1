@@ -15,6 +15,15 @@ import {
 import { Button } from "@repo/ui/components/button";
 import { Loader2 } from "lucide-react";
 
+/**
+ * Visual Results Media Gallery
+ *
+ * Renders a responsive visual thumbnail grid of Form EC8A election result sheets
+ * uploaded by accredited polling agents across Nigeria:
+ * - Filtered automatically by the active election and geographical scope.
+ * - Clicking any tile launches the immersive full-screen `FinalResultReel` viewer.
+ * - Supports pagination with automated prefetching as administrators browse through results.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/results/media-only",
 )({

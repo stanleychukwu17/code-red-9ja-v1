@@ -1,6 +1,13 @@
 import type { PageHeaderTabProps } from "@repo/ui/components/custom/AdminLayouts";
 import { APP_URL } from "#/lib/config";
 
+/**
+ * Generates navigation tabs for the tiered agent supervisor hierarchy:
+ * - Polling Unit Agents
+ * - Ward Collation Supervisors
+ * - LGA Collation Supervisors
+ * - State Collation Supervisors
+ */
 export const getAgentsTabs = (partyShortName: string): PageHeaderTabProps[] => [
   { id: "polling-agent", label: "Polling agent", href: `${APP_URL.partyRoutes.agents(partyShortName)}/polling-agent` },
   { id: "ward-supervisor", label: "Ward supervisor", href: `${APP_URL.partyRoutes.agents(partyShortName)}/ward-supervisor` },

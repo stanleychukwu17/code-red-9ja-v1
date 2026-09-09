@@ -1,3 +1,10 @@
+/**
+ * @file Agent Role Change & Reassignment Dialog
+ * @description Modal allowing party administrators to promote, demote, or laterally reassign
+ * active field agents (e.g. promoting a Polling Unit Agent to a Ward, LGA, or State Election Supervisor).
+ * Dynamically adjusts required geographic boundaries according to the newly selected election role.
+ */
+
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -65,6 +72,11 @@ const fetchWardsAdapter = async (args: {
   });
 };
 
+/**
+ * ChangeRoleDialog Component
+ * Manages role transition state, validates required geopolitical parent units
+ * (e.g. State for State Supervisor, LGA for LGA Supervisor), and commits role alterations.
+ */
 export function ChangeRoleDialog({
   open,
   onClose,

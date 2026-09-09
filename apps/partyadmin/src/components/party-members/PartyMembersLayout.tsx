@@ -1,3 +1,9 @@
+/**
+ * @file Party Members Presentational Layout & Table Components
+ * @description Layout wrapper and presentation table for party members and leadership administrators.
+ * Provides role sub-navigation tabs (All, Admin, Agent), search bar, export triggers, and election scope filters.
+ */
+
 import { Link } from "@tanstack/react-router";
 import { cn } from "@repo/ui/lib/utils";
 import { ChevronDown, Search, Share2, Upload } from "lucide-react";
@@ -18,6 +24,10 @@ const TABS: Array<{ id: PartyAdminsTabId; label: string; href: string }> = [
   { id: "agent", label: "Agent", href: "/party-members/agent" },
 ];
 
+/**
+ * PartyAdminsLayout Component
+ * Wraps party member management subpages with segmented role tabs and search controls.
+ */
 export function PartyAdminsLayout({
   activeTab,
   children,
@@ -93,6 +103,11 @@ type PartyAdminsTableProps = {
   }>;
 };
 
+/**
+ * PartyAdminsTable Component
+ * Multi-column presentational grid displaying party member profile, political office,
+ * party leadership office, appointment date, and row actions.
+ */
 export function PartyAdminsTable({ columns, rows }: PartyAdminsTableProps) {
   return (
     <div className="w-full">

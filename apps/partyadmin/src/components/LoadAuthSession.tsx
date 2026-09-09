@@ -1,3 +1,10 @@
+/**
+ * @file Authentication Session Loader Component
+ * @description Headless lifecycle synchronization component that restores and maintains the user's
+ * authenticated session. Periodically refreshes access tokens (every 14 minutes before 15-minute expiry),
+ * updates user profile in Redux, and synchronizes cross-device site preference version changes.
+ */
+
 import { useEffect, useRef } from "react";
 import { useAppDispatch, useAppSelector } from "#/redux/hooks";
 import { refreshUserToken } from "#/lib/server/auth/auth";
@@ -8,9 +15,10 @@ import { applyThemeMode } from "@repo/ui/hooks/use-theme";
 import { useQuery } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/config";
 
-// This component is used to restore the auth session on page refresh,
-// It will automatically refresh the accessToken and refreshToken every 14 minutes
-// and clear the auth data if the refreshToken is invalid or missing
+/**
+ * LoadAuthSession Component
+ * Automatically keeps JWT session valid and handles user preference hydration.
+ */
 export default function LoadAuthSession() {
   const dispatch = useAppDispatch();
   const siteState = useAppSelector((state) => state.site);

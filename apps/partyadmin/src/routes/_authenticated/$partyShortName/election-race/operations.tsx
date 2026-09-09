@@ -11,6 +11,16 @@ import { getPageHeader } from "#/lib/shared/meta";
 import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
 import { getElectionRaceTabs } from "./-data";
 
+/**
+ * Election Operations Breakdown View
+ *
+ * Operational drill-down table tracking party readiness across geographical units:
+ * - Dynamic Geographic Zoom: Automatically presents States, Senatorial Districts,
+ *   Federal Constituencies, LGAs, or Wards based on the active scope.
+ * - Interactive Drill-down: Clicking any unit row (`onSelectUnit`) focuses the dashboard
+ *   downwards to inspect its constituent subunits.
+ * - Live Polling: Auto-refreshes every 15s during active election day (`isLive`).
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/election-race/operations",
 )({
@@ -18,6 +28,11 @@ export const Route = createFileRoute(
   component: OperationsPage,
 });
 
+/**
+ * OperationsPage Component
+ *
+ * Coordinates operational statistics queries, scope drill-down handlers, and table presentation.
+ */
 function OperationsPage() {
   const { partyShortName } = Route.useParams();
   const { party } = useUserParty();

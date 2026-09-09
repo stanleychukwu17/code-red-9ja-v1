@@ -1,3 +1,11 @@
+/**
+ * @file Authenticated Layout Route Shell
+ * @description Root layout shell for all authenticated party administrator routes.
+ * Enforces security gates (refresh token validation and party admin role checks in `beforeLoad`),
+ * renders the persistent `AppSidebarShell` with 9 primary application navigation links,
+ * and maintains sidebar layout preference persistence in Redux.
+ */
+
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import {
@@ -39,6 +47,7 @@ import { updateSiteState } from "@/redux/slice/siteSlice";
 
 export const Route = createFileRoute("/_authenticated")({
   beforeLoad: async () => {
+    // 1. Verify existence of valid authentication refresh token
     const res = await checkIfRefreshTokenInCookie();
     const user = await getUserDetailsCookie();
 
@@ -46,6 +55,7 @@ export const Route = createFileRoute("/_authenticated")({
       throw redirect({ to: APP_URL.auth.login });
     }
 
+    // 2. Enforce strict party administrator role permission
     if (
       !user?.roles?.includes("super_party_admin") &&
       !user?.roles?.includes("party_admin") &&
@@ -60,6 +70,11 @@ export const Route = createFileRoute("/_authenticated")({
   ),
 });
 
+/**
+ * AuthenticatedRoutes Layout Component
+ * Manages responsive sidebar state, mounts sidebar items with party short-names,
+ * handles logout dispatch, and renders child routes inside the main outlet.
+ */
 function AuthenticatedRoutes() {
   const [mounted, setMounted] = useState(false);
   const { userDetails, sitePreference: initialSitePreference } =

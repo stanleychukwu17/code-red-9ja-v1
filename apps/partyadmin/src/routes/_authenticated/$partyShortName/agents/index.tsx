@@ -1,6 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+/**
+ * Election Agents Root Route
+ *
+ * Serves as the landing entrypoint for the agent directory, immediately redirecting
+ * party administrators to the default Polling Unit Agents performance roster (`/agents/polling-agent`).
+ */
 export const Route = createFileRoute("/_authenticated/$partyShortName/agents/")(
   {
     component: RouteComponent,

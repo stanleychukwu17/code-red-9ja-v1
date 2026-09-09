@@ -1,3 +1,12 @@
+/**
+ * @file Candidate Result & Electoral Unit Tile Components
+ * @description Provides presentation components for election race standings and geographic results:
+ * 1. `CandidateResultTableTile`: Displays candidate rankings, vote totals, won subunits across all 7 Nigerian tiers, and vote share bar.
+ * 2. `ElectoralUnitTableTile`: Displays geopolitical unit standings (leading candidate, vote count, drilldown actions).
+ * 3. `CandidateLeaderboardTile`: Overview leaderboard tile with background fill bar and margin lead metric.
+ * 4. Helper utilities for official party branding colors, dark mode variants, and candidate display normalization.
+ */
+
 import { AppAvatar } from "@repo/ui/components/avatar";
 import {
   TileHeader,
@@ -314,6 +323,11 @@ export function getCandidateDisplayInfo(
   };
 }
 
+/**
+ * CandidateResultTableTile Component
+ * Renders candidate ranking row with avatar, party name/code, subunit victory counts,
+ * overall vote tally, and a proportional vote share bar.
+ */
 export function CandidateResultTableTile({
   data,
   index,
@@ -417,6 +431,11 @@ export function ElectoralUnitTableHeader({
   );
 }
 
+/**
+ * ElectoralUnitTableTile Component
+ * Renders a geographic unit (e.g. State or LGA) showing the currently leading candidate,
+ * total votes tallied, and vote share bar, with hover tooltip support and drilldown click triggers.
+ */
 export function ElectoralUnitTableTile({
   data,
   index,
@@ -586,7 +605,11 @@ export function ElectoralUnitTableTile({
   );
 }
 
-// ─── Candidate Leaderboard Tile (Overview Page) ───────────────────────────────
+/**
+ * CandidateLeaderboardTile Component
+ * High-level leaderboard entry featuring a proportional translucent party color background fill,
+ * solid vertical party stripe, candidate avatar, vote share percentage, and margin lead metric.
+ */
 export function CandidateLeaderboardTile({
   data,
   index,

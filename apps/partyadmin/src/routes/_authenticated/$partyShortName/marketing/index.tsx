@@ -1,3 +1,10 @@
+/**
+ * @file Agent Marketing Campaigns Page
+ * @description Manages promotional agent recruitment campaigns for the party.
+ * Provides views of active and past marketing campaigns, budget utilization, referral rewards,
+ * and allows creating new campaigns via the AgentMarketingSetupDialog.
+ */
+
 import * as React from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { getPageHeader } from "#/lib/shared/meta";
@@ -36,6 +43,11 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * Marketing Campaigns Page Component
+ * Loads campaigns associated with the current party, coordinates election group/plan/state loaders,
+ * and handles new campaign submission.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
   const [isFormOpen, setIsFormOpen] = React.useState(false);

@@ -1,9 +1,21 @@
+/**
+ * @file Ward Supervisor Table Header & Tile Components
+ * @description Displays supervisory performance metrics for Ward-level coordinators.
+ * Includes subordinate agent readiness, agents at post, PU agent coverage, aggregated arrival time,
+ * ward-wide updates/reports, PU reporting ratios, earnings, and payout states.
+ */
+
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { TileHeader, TileLeft, TileRight, TileRow } from "@repo/ui/components/tiles";
 import { StatusCheckIcon } from "./polling-agent-tile";
 import { AgentDropdown } from "../dropdowns/AgentDropdown";
 
+/**
+ * WardSupervisorTableHeader Component
+ * Renders table headers for Ward Supervisor monitoring: User, Readiness, Agents at post,
+ * PU coverage, Arrival/Start/End times, Reports, Earnings, and Geographic Ward hierarchy.
+ */
 export function WardSupervisorTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -73,6 +85,11 @@ export function WardSupervisorTableHeader() {
   );
 }
 
+/**
+ * WardSupervisorTableTile Component
+ * Renders a data row displaying Ward Supervisor operational metrics, coverage statistics,
+ * and supervisor management actions.
+ */
 export function WardSupervisorTableTile({
   data,
   refetch,

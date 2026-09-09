@@ -11,25 +11,47 @@ import {
   useReelKeyboard,
 } from "./-reel-shared";
 
+/**
+ * UpdateReel Modal Component
+ *
+ * An immersive, full-screen vertical media reel (TikTok/Reels-style) for party administrators
+ * to inspect real-time situational updates, incident reports, and photo/video evidence submitted
+ * by accredited polling agents in the field.
+ *
+ * Capabilities:
+ * - High-Resolution Media Viewer: Auto-detects photos and videos (.mp4, .mov, .webm) with multi-asset dot navigation.
+ * - Field Metadata Sidebar: Displays agent message notes, PU name, Ward, LGA, State, uploader identity, and timestamp.
+ * - Keyboard Shortcuts: Left/Right arrow keys for navigation and Escape key to dismiss.
+ */
+
 export type UpdateReelItem = {
+  /** Unique update identifier */
   id?: number | string;
+  /** Name or code of the reporting polling unit */
   polling_unit_name?: string;
+  /** Internal ID of the polling unit */
   polling_unit_id?: number | string;
+  /** Local Government Area name */
   lga_name?: string;
+  /** State name */
   state_name?: string;
+  /** Ward name */
   ward_name?: string;
+  /** Agent avatar image URL */
   user_avatar?: string;
+  /** Full name of the reporting agent */
   uploader_name?: string;
-  /** Array of image or video URLs */
+  /** Array of uploaded image or video URLs */
   media_urls?: string[];
+  /** Timestamp when the report was captured */
   created_at?: string;
-  /** Optional free-text message from the agent */
+  /** Free-text message or incident observation from the field agent */
   message?: string;
   [key: string]: any;
 };
 
 // ---------------------------------------------------------------------------
-// Sidebar
+// Sidebar Component: Details, Incident Message, and Agent Metadata
 // ---------------------------------------------------------------------------
 
 function UpdateReelSidebar({
@@ -81,13 +103,15 @@ function UpdateReelSidebar({
 }
 
 // ---------------------------------------------------------------------------
-// Media carousel item
+// Media Carousel Renderer
 // ---------------------------------------------------------------------------
 
+/** Checks whether a media URL corresponds to a video file format */
 function isVideo(url: string) {
   return /\.(mp4|webm|ogg|mov|mkv)(\?.*)?$/i.test(url);
 }
 
+/** Renders a single slide in the media carousel (video player or high-res image) */
 function MediaSlide({
   url,
   index,
@@ -118,7 +142,7 @@ function MediaSlide({
 }
 
 // ---------------------------------------------------------------------------
-// Main reel
+// Main UpdateReel Modal Orchestrator
 // ---------------------------------------------------------------------------
 
 export function UpdateReel({

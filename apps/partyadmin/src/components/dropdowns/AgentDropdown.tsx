@@ -1,3 +1,11 @@
+/**
+ * @file Agent Action Menu Dropdown
+ * @description Contextual ellipsis action menu attached to agent cards and roster rows.
+ * Provides triggers for:
+ * 1. Role reassignment or geographic relocation (`ChangeRoleDialog`).
+ * 2. Unassigning / revoking the agent's active deployment credentials (`DeleteAlertDialog` + `revokeAgentAssignment`).
+ */
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { TileOptions } from "@repo/ui/components/tiles";
@@ -15,6 +23,10 @@ interface AgentDropdownProps {
   refetch?: () => void;
 }
 
+/**
+ * AgentDropdown Component
+ * Renders the popover menu of administrative actions for a selected party agent.
+ */
 export const AgentDropdown = ({ data, className, refetch }: AgentDropdownProps) => {
   const [openMenu, setOpenMenu] = useState(false);
   const [openChangeRoleDialog, setOpenChangeRoleDialog] = useState(false);

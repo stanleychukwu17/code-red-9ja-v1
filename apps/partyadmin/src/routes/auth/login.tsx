@@ -1,3 +1,10 @@
+/**
+ * @file Party Admin Authentication Login Page
+ * @description Secure login portal for political party administrators.
+ * Supports multi-identifier credentials (email, username, or phone number with country code formatting),
+ * auto-detects visitor country via IP geolocation, and persists credentials in session cookies / Redux store.
+ */
+
 import { useState, useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
@@ -55,6 +62,7 @@ type payloadType = {
 
 export const Route = createFileRoute("/auth/login")({
   beforeLoad: async () => {
+    // If already authenticated with active refresh token, redirect straight to party dashboard
     const isAuthed = await checkIfRefreshTokenInCookie();
     if (isAuthed.success) {
       const userDetails = await getUserDetailsCookie();
@@ -78,6 +86,11 @@ export const Route = createFileRoute("/auth/login")({
   ),
 });
 
+/**
+ * LoginComponent
+ * Handles form state, identifier parsing, country dial-code formatting,
+ * and auth dispatch upon successful authentication.
+ */
 function LoginComponent() {
   const navigate = useNavigate();
   const router = useRouter();

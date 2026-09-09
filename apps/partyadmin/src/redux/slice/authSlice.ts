@@ -1,3 +1,9 @@
+/**
+ * @file Authentication Redux Slice
+ * @description Manages global authentication state, authenticated user profile details,
+ * associated political party metadata, and hydration lifecycle status.
+ */
+
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 
@@ -34,11 +40,12 @@ export const authSlice = createSlice({
   name: "auth",
   initialState,
   reducers: {
-
+    /**
+     * Partially updates auth state fields (user profile, hydration flag)
+     */
     updateAuthState: (state, action: PayloadAction<Partial<AuthState>>) => {
       Object.assign(state, action.payload); // merges the current state with the received action.payload
     },
-
   },
 });
 

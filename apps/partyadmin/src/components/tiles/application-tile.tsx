@@ -1,3 +1,10 @@
+/**
+ * @file Application Row Tile & Table Header Components
+ * @description Provides list row items for reviewing agent applications.
+ * Displays applicant avatar, full name, target election, role badge (Polling Agent, Ward Supervisor, etc.),
+ * assigned station, and direct decision action buttons (inline quick accept/reject or full modal review).
+ */
+
 import * as React from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Ellipsis, Check, X } from "lucide-react";
@@ -97,6 +104,10 @@ const formatDate = (dateString?: string) => {
   }
 };
 
+/**
+ * ApplicationTableHeader Component
+ * Renders the table column labels for applications: User, Election, Role, Assignment/PU, Agents Count, Make Decision.
+ */
 export function ApplicationTableHeader() {
   return (
     <TileHeader>
@@ -123,6 +134,11 @@ export function ApplicationTableHeader() {
   );
 }
 
+/**
+ * ApplicationTableTile Component
+ * List row component representing an individual application.
+ * Supports quick-action inline buttons (Accept/Reject) as well as clicking to open the detailed review modal.
+ */
 export function ApplicationTableTile({
   data,
   refetch,

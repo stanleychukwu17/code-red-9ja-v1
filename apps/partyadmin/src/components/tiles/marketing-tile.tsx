@@ -1,3 +1,10 @@
+/**
+ * @file Marketing Campaign Table Header & Tile Components
+ * @description Renders wide horizontal table rows representing digital voter outreach and marketing campaigns.
+ * Tracks campaign schedule (start, end, days left), marketing plan tier, state targeting scopes,
+ * budget allocations (total and per-day), actual expenditure, and burn percentage.
+ */
+
 import * as React from "react";
 import {
   TileHeader,
@@ -40,6 +47,11 @@ export type MarketingCampaignType = {
   budget_per_day?: number | string;
 };
 
+/**
+ * MarketingTableHeader Component
+ * Renders column headers for campaign tracking: Status, Election, Days Left, Dates,
+ * Target Group, Plan, Target States, Budgeting, and Expenditure.
+ */
 export function MarketingTableHeader() {
   return (
     <TileHeader className="w-fit">
@@ -88,6 +100,9 @@ export function MarketingTableHeader() {
   );
 }
 
+/**
+ * Formats monetary amounts in Nigerian Naira currency string (₦)
+ */
 function formatNaira(amount: number | string): string {
   const num = typeof amount === "string" ? parseFloat(amount) : amount;
   if (isNaN(num)) return "₦0.00";
@@ -103,6 +118,11 @@ function formatNaira(amount: number | string): string {
 
 import { MarketingStatusBadge } from "@repo/ui/components/custom/marketing-status-badge";
 
+/**
+ * MarketingTableTile Component
+ * Renders a data row for a marketing campaign with real-time budget utilization progress,
+ * remaining duration indicators, and target audience geo scopes.
+ */
 export function MarketingTableTile({ data }: { data: MarketingCampaignType }) {
   const budgetNum =
     typeof data.budget === "string"

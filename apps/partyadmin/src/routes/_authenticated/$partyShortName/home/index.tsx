@@ -50,11 +50,31 @@ import { SelectDateRange } from "@repo/ui/components/selects/date-range-select";
 import ArrowHandleIcon from "@repo/ui/icons/arrow-handle-icon";
 import { TransactionCard, type WalletTransaction } from "../wallet/index";
 
+/**
+ * Party Readiness Command Dashboard
+ *
+ * Primary administrative situation room for political parties preparing for an upcoming election:
+ * 1. Recruitment & Readiness Progress: Tracks real-time staffing quotas across all 4 operational tiers
+ *    (Polling Unit Agents, Ward Supervisors, LGA Supervisors, and State Supervisors).
+ * 2. Onboarding Action Checklist: Prompts party administrators to complete prerequisites before election day:
+ *    - Purchasing agent quota slots
+ *    - Depositing agent stipend escrow balances
+ *    - Configuring state-by-state payment allocations
+ *    - Setting up voter and agent mobilization campaigns
+ * 3. Treasury & Financial Overview: Displays live wallet balances, stipend deposits, and transaction ledgers.
+ * 4. Operational Targets & Applications Triage: Manages agent density goals and reviews incoming applications.
+ */
 export const Route = createFileRoute("/_authenticated/$partyShortName/home/")({
   head: () => getPageHeader({ title: "Readiness Dashboard" }),
   component: ReadinessComponent,
 });
 
+/**
+ * ReadinessComponent
+ *
+ * Master orchestrator rendering readiness statistics, action banners, financial cards,
+ * and managing interactive modals for slot purchases, budget allocations, and marketing setups.
+ */
 function ReadinessComponent() {
   const { party } = useUserParty();
   const {
@@ -410,6 +430,13 @@ function ReadinessComponent() {
   );
 }
 
+/**
+ * ReadinessProgressCard Component
+ *
+ * Progress meter breakdown displaying the staffing completeness percentage for each
+ * operational agent tier (Polling Unit Agent, Ward Supervisor, LGA Supervisor, State Supervisor).
+ * Dynamically adjusts its scope denominators based on geographic filters.
+ */
 function ReadinessProgressCard({
   partyStats,
   targets,
@@ -549,6 +576,16 @@ function ReadinessProgressCard({
   );
 }
 
+/**
+ * RequiredActionsSection Component
+ *
+ * Urgent operational checklist showing pending onboarding tasks for the party:
+ * - Buy Slots: Licenses needed to accept agent application requests.
+ * - Deposit Payment: Escrow account funding for agent stipends.
+ * - Set Payment Allocation: Specifying NGN stipend amounts per state and role.
+ * - Setup Marketing: Outbound SMS/Email recruitment campaigns.
+ * Disappears automatically once all 4 requirements are fulfilled.
+ */
 function RequiredActionsSection({
   hasSlots,
   hasAgentPaymentBalance,
@@ -623,6 +660,11 @@ function RequiredActionsSection({
   );
 }
 
+/**
+ * ActionBanner Component
+ *
+ * Colored call-to-action banner card displaying an onboarding task with an actionable trigger button.
+ */
 function ActionBanner({
   title,
   description,
@@ -655,6 +697,13 @@ function ActionBanner({
   );
 }
 
+/**
+ * SubTabsSection Component
+ *
+ * Tabbed panel toggling between:
+ * - "Main": Recent agent applications triage and acceptance rate statistics.
+ * - "Transactions": Ledger history of deposits, slot purchases, and stipend disbursements.
+ */
 function SubTabsSection({
   partyStats,
   electionGroupId,
@@ -735,6 +784,12 @@ function SubTab({
   );
 }
 
+/**
+ * MainSubTabContent Component
+ *
+ * Displays top summary cards (total, accepted, rejected applications) and the most recent
+ * agent applicant submissions filtered by the active geographic scope.
+ */
 function MainSubTabContent({
   partyStats,
   electionGroupId,
@@ -901,6 +956,11 @@ function MainSubTabContent({
   );
 }
 
+/**
+ * RoleStatCard Component
+ *
+ * Micro-card displaying application triage metrics (total, accepted, or rejected).
+ */
 function RoleStatCard({
   role,
   count,
@@ -925,6 +985,11 @@ function RoleStatCard({
   );
 }
 
+/**
+ * TransactionsSubTabContent Component
+ *
+ * Paginated ledger list showing the most recent wallet funding events and disbursements.
+ */
 function TransactionsSubTabContent() {
   const { party } = useUserParty();
   const partyId = party?.id;
@@ -960,6 +1025,15 @@ function TransactionsSubTabContent() {
   );
 }
 
+/**
+ * FinancialOverallCard Component
+ *
+ * Summary card grouping the party's main financial positions:
+ * - Party treasury balance
+ * - Purchased agent slots
+ * - Deposited stipend escrow
+ * - Active mobilization campaigns
+ */
 function FinancialOverallCard({
   walletBalance,
   slots,
@@ -1015,6 +1089,7 @@ function FinancialOverallCard({
   );
 }
 
+/** Clickable single row inside the financial overview card */
 function FinancialRow({
   label,
   value,
@@ -1041,6 +1116,12 @@ function FinancialRow({
   );
 }
 
+/**
+ * TargetCard Component
+ *
+ * Configures the party's desired agent density targets across administrative tiers:
+ * (e.g., target agents per Polling Unit, Ward, LGA, and State).
+ */
 function TargetCard() {
   const { party } = useUserParty();
   const partyId = party?.id;
@@ -1141,6 +1222,7 @@ function TargetCard() {
   );
 }
 
+/** Simple key-value stat row with icon */
 function SimpleStatTile({
   icon,
   label,
@@ -1159,6 +1241,15 @@ function SimpleStatTile({
   );
 }
 
+/**
+ * AgentPaymentCard Component
+ *
+ * Displays base stipend disbursements configured per agent role:
+ * - Polling Agent
+ * - Ward Supervisor
+ * - LGA Supervisor
+ * - State Supervisor
+ */
 function AgentPaymentCard({
   onEdit,
   party,

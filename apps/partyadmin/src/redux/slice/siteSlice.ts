@@ -1,3 +1,10 @@
+/**
+ * @file Site Preference Redux Slice & Sync Middleware
+ * @description Manages UI display preferences (sidebar state, theme mode, pinned navigation links,
+ * and visitor geo-IP details). Provides automatic debounced persistence middleware to save user
+ * preferences across devices via cookies and server API without triggering redundant sync loops.
+ */
+
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction, Middleware } from "@reduxjs/toolkit";
 import { saveSitePreference } from "@/lib/server/sitePreference";

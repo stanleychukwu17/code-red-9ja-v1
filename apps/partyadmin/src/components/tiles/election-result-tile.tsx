@@ -1,3 +1,10 @@
+/**
+ * @file Election Result Table Header & Tile Components
+ * @description Displays breakdown results by geographic location (State, LGA, District, or Ward).
+ * Shows leading candidate with avatar and political party affiliation, vote lead margin,
+ * lead percentage, and total aggregated votes.
+ */
+
 import {
   TileHeader,
   TileLeft,
@@ -19,11 +26,17 @@ export type ElectionResultType = {
   totalVotes?: number;
 };
 
+/**
+ * Formats numbers into localized comma-separated strings (e.g. 1,000,000)
+ */
 function formatNumber(n?: number) {
   if (n === undefined || n === null) return "0";
   return n.toLocaleString();
 }
 
+/**
+ * Formats decimal percentages to two decimal places with trailing '%'
+ */
 function formatPct(n?: number) {
   if (n === undefined || n === null) return "";
   return `${n.toFixed(2)}%`;
@@ -34,6 +47,11 @@ export type ElectionResultTableHeaderProps = {
   locationLabel?: string;
 };
 
+/**
+ * ElectionResultTableHeader Component
+ * Renders table headers for election results: Location/Subdivision, Leading Candidate,
+ * Vote Margin Lead, and Total Votes Cast.
+ */
 export function ElectionResultTableHeader({
   locationLabel = "Location",
 }: ElectionResultTableHeaderProps) {
@@ -55,6 +73,11 @@ export function ElectionResultTableHeader({
   );
 }
 
+/**
+ * ElectionResultTableTile Component
+ * Displays a single geographical unit's results row including leading candidate chip,
+ * margin metrics, and total vote count.
+ */
 export function ElectionResultTableTile({
   data,
 }: {

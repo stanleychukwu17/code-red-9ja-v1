@@ -1,3 +1,10 @@
+/**
+ * @file Party Member & Administrator Table Header & Tile Components
+ * @description Renders table rows for registered party officials and administrators.
+ * Displays member avatar, name, assigned organizational role, office/jurisdiction,
+ * registration or election date, and row context actions.
+ */
+
 import { Ellipsis } from "lucide-react";
 import {
   TileHeader,
@@ -15,6 +22,10 @@ export type PartyAdminType = {
   office?: string;
 };
 
+/**
+ * PartyAdminTableHeader Component
+ * Renders configurable table header columns based on provided string array.
+ */
 export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
   const [memberCol, roleCol, officeCol, dateCol] = columns;
 
@@ -40,6 +51,10 @@ export function PartyAdminTableHeader({ columns }: { columns: string[] }) {
   );
 }
 
+/**
+ * PartyAdminTableTile Component
+ * Renders an individual party administrator or executive officer row.
+ */
 export function PartyAdminTableTile({ data }: { data: PartyAdminType }) {
   return (
     <TileRow>

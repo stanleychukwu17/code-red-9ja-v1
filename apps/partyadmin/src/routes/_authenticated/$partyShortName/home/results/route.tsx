@@ -25,6 +25,15 @@ import {
 import { getPageHeader } from "#/lib/shared/meta";
 import { APP_URL } from "#/lib/config";
 
+/**
+ * Election Results Route Layout
+ *
+ * Master layout wrapper for election result returns in partyadmin:
+ * - Header Bar: Title with election group & contest dropdown selector.
+ * - Geographic Scope Filter: Mounts `ElectionScopeSelector` to filter results by State/LGA/Ward.
+ * - Sub-view Tabs: Switches between comprehensive tabular results (`/results`) and
+ *   Form EC8A result sheet photo reels (`/results/media-only`).
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/home/results",
 )({
@@ -32,6 +41,11 @@ export const Route = createFileRoute(
   component: ResultsLayoutComponent,
 });
 
+/**
+ * ResultsLayoutComponent
+ *
+ * Orchestrates election selection, geographic scoping, and media tab routing for child results views.
+ */
 function ResultsLayoutComponent() {
   const { partyShortName } = useParams({ strict: false });
   const { party } = useUserParty();

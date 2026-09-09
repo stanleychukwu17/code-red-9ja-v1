@@ -1,3 +1,10 @@
+/**
+ * @file Election Group Table Header & Tile Components
+ * @description Provides row tile components and column headers for major election event groups
+ * (e.g. "2023 General Elections", "2024 Edo Gubernatorial"). Displays party agent coverage percentages,
+ * count of contained race ballots, party participation stats, and scheduled polling dates.
+ */
+
 import { Ellipsis } from "lucide-react";
 import {
   TileHeader,
@@ -17,6 +24,10 @@ export type ElectionGroupType = {
   electionDate: string;
 };
 
+/**
+ * ElectionGroupTableHeader Component
+ * Renders the table column labels for election groups.
+ */
 export function ElectionGroupTableHeader() {
   return (
     <TileHeader>
@@ -42,6 +53,10 @@ export function ElectionGroupTableHeader() {
   );
 }
 
+/**
+ * ElectionGroupTableTile Component
+ * List row component rendering an individual election event group.
+ */
 export function ElectionGroupTableTile({ data }: { data: ElectionGroupType }) {
   const dateLabel = data.electionDate ? formatISODate(data.electionDate) : "—";
 

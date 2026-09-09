@@ -1,8 +1,18 @@
 import { cn } from "@repo/ui/lib/utils";
 
+/**
+ * ResultModeToggle Component
+ *
+ * Interactive pill-toggle that switches the situation room and dashboard between:
+ * - "Live Result": Real-time voting tallies submitted by ground agents during ongoing voting.
+ * - "Final Result": Official declared returns from Form EC8A collation sheets.
+ */
 interface ResultModeToggleProps {
+  /** Whether live results mode is currently active */
   isLive: boolean;
+  /** Callback to toggle between live and final results modes */
   setIsLive: (isLive: boolean) => void;
+  /** Optional container style overrides */
   className?: string;
 }
 

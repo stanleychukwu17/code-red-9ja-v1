@@ -1,3 +1,10 @@
+/**
+ * @file Election Instance Candidate Assignment Dropdown
+ * @description Contextual action menu for contested election race instances.
+ * Enables party admins to field a registered party member as the party's official candidate,
+ * replace an existing candidate via the `UserFinderCommand` modal, or withdraw the candidate.
+ */
+
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { fieldPartyCandidate } from "#/lib/server/elections";
@@ -15,6 +22,10 @@ interface PartyElectionInstanceDropdownProps {
   className?: string;
 }
 
+/**
+ * PartyElectionInstanceDropdown Component
+ * Popover menu providing candidate selection and revocation controls for a race instance.
+ */
 export const PartyElectionInstanceDropdown = ({
   data,
   className,

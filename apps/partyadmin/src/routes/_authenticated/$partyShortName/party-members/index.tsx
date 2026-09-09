@@ -1,3 +1,10 @@
+/**
+ * @file Party Members Directory Page
+ * @description Master roster of all registered members belonging to the current political party.
+ * Provides infinite scroll member listing, membership creation modal (`UserFormDialog`),
+ * and server actions for candidate registration, profile updates, and role assignments.
+ */
+
 import * as React from "react";
 import {
   Layout,
@@ -34,6 +41,11 @@ export const Route = createFileRoute(
   component: RouteComponent,
 });
 
+/**
+ * Party Members Page Component
+ * Handles infinite pagination of party members, observer sentinel triggers,
+ * and user creation dialog lifecycle.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
   const [isFormOpen, setIsFormOpen] = React.useState(false);

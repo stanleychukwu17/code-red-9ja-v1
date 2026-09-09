@@ -1,3 +1,10 @@
+/**
+ * @file Polling Agent Table Header & Tile Components
+ * @description Renders granular telemetry and performance audit rows for Polling Unit Agents.
+ * Details readiness rating, check-in timestamps, feed counts (updates, incidents, voter turnout),
+ * uploaded results, accrued payout earnings, payout approval statuses, and PU location.
+ */
+
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import { AppAvatar } from "@repo/ui/components/avatar";
 import { AgentDropdown } from "../dropdowns/AgentDropdown";
@@ -8,6 +15,10 @@ import {
   TileRow,
 } from "@repo/ui/components/tiles";
 
+/**
+ * StatusCheckIcon Component
+ * Renders a green circular checkmark badge if active/true, or a neutral muted circle if false.
+ */
 export function StatusCheckIcon({ active }: { active?: boolean }) {
   if (active) {
     return (
@@ -31,6 +42,11 @@ export function StatusCheckIcon({ active }: { active?: boolean }) {
   return <div className="w-5 h-5 rounded-full bg-c-20 dark:bg-c-80 shrink-0" />;
 }
 
+/**
+ * PollingAgentTableHeader Component
+ * Renders column headers for wide horizontal scrolling table: User, Readiness, Arrived at,
+ * Election Times, Feed Counts, Earnings, Completion Status, Payout, and Location hierarchy.
+ */
 export function PollingAgentTableHeader() {
   return (
     <TileHeader className="min-w-max">
@@ -70,6 +86,11 @@ export function PollingAgentTableHeader() {
   );
 }
 
+/**
+ * PollingAgentTableTile Component
+ * Renders an individual polling unit agent performance row with full telemetry metrics
+ * and administrative action dropdown.
+ */
 export function PollingAgentTableTile({
   data,
   refetch,

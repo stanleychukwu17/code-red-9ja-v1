@@ -1,3 +1,11 @@
+/**
+ * @file Master Table Layout Containers
+ * @description Central collection of table wrapper components used throughout the Party Admin app.
+ * Encapsulates table header rows, tile rows, sorting, mouse interactions, and drill-down navigation
+ * for all primary domain entities (Elections, Applications, Party Members, Users, Marketing,
+ * Agents, Supervisors, Race Results, Operations, and Agent Coverage).
+ */
+
 import * as React from "react";
 import type { AgentPerformanceItem } from "#/lib/server/agents";
 import {
@@ -70,6 +78,10 @@ import {
 import type { AgentCoverageUnitItem } from "#/lib/server/agent-coverage";
 import { ElectoralUnitCursorTooltip } from "./tooltips/electoral-unit-tooltip";
 
+/**
+ * ElectionGroupsTable Component
+ * Renders table container for high-level election categories (e.g. General Elections 2023).
+ */
 export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
   return (
     <div className="w-full">
@@ -84,6 +96,10 @@ export function ElectionGroupsTable({ items }: { items: ElectionGroupType[] }) {
   );
 }
 
+/**
+ * ElectionInstancesTable Component
+ * Renders table container for specific contested election ballots (e.g. Senatorial, Gubernatorial).
+ */
 export function ElectionInstancesTable({
   items,
 }: {
@@ -102,6 +118,10 @@ export function ElectionInstancesTable({
   );
 }
 
+/**
+ * ApplicationsTable Component
+ * Renders table container for incoming, accepted, or rejected membership applications.
+ */
 export function ApplicationsTable({
   items,
   refetch,
@@ -128,6 +148,10 @@ export function ApplicationsTable({
 
 export type { UserType, MarketingCampaignType };
 
+/**
+ * PartyAdminsTable Component
+ * Renders table container for party officials with dynamic column label support.
+ */
 export function PartyAdminsTable({
   columns,
   items,
@@ -148,6 +172,10 @@ export function PartyAdminsTable({
   );
 }
 
+/**
+ * UsersTable Component
+ * Renders table container for party user accounts with refetch capability on updates.
+ */
 export function UsersTable({
   items,
   refetch,
@@ -171,6 +199,10 @@ export function UsersTable({
   );
 }
 
+/**
+ * MarketingTable Component
+ * Renders horizontally scrollable table container for marketing campaigns.
+ */
 export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
   const campaignsList = Array.isArray(items) ? items : [];
   return (
@@ -185,6 +217,10 @@ export function MarketingTable({ items }: { items: MarketingCampaignType[] }) {
   );
 }
 
+/**
+ * PollingAgentsTable Component
+ * Renders horizontally scrollable table container for polling unit agents.
+ */
 export function PollingAgentsTable({
   items,
   refetch,
@@ -209,6 +245,10 @@ export function PollingAgentsTable({
   );
 }
 
+/**
+ * WardSupervisorsTable Component
+ * Renders horizontally scrollable table container for Ward-level coordinators.
+ */
 export function WardSupervisorsTable({
   items,
   refetch,
@@ -233,6 +273,10 @@ export function WardSupervisorsTable({
   );
 }
 
+/**
+ * LGASupervisorsTable Component
+ * Renders horizontally scrollable table container for LGA-level supervisors.
+ */
 export function LGASupervisorsTable({
   items,
   refetch,
@@ -257,6 +301,10 @@ export function LGASupervisorsTable({
   );
 }
 
+/**
+ * StateSupervisorsTable Component
+ * Renders horizontally scrollable table container for State-level directors.
+ */
 export function StateSupervisorsTable({
   items,
   refetch,
@@ -281,12 +329,17 @@ export function StateSupervisorsTable({
   );
 }
 
+/**
+ * CandidateResultsTable Component
+ * Renders sorted election race results container (ordered descending by vote count).
+ */
 export function CandidateResultsTable({
   items,
 }: {
   items: CandidateResultItem[];
 }) {
   const list = Array.isArray(items) ? items : [];
+  // Sort candidates by vote count descending
   const sortedList = React.useMemo(() => {
     return [...list].sort(
       (a, b) =>
@@ -316,6 +369,10 @@ export function CandidateResultsTable({
   );
 }
 
+/**
+ * ElectoralUnitsTable Component
+ * Renders electoral breakdown table with mouse hover tooltip and hierarchical drill-down navigation.
+ */
 export function ElectoralUnitsTable({
   items,
   unitTitle = "States",
@@ -380,6 +437,11 @@ export function ElectoralUnitsTable({
   );
 }
 
+/**
+ * OperationsTable Component
+ * Renders operational telemetry table with automatic switching between higher-level units
+ * and granular leaf Polling Units.
+ */
 export function OperationsTable({
   items,
   unitTitle = "States",
@@ -428,6 +490,10 @@ export function OperationsTable({
   );
 }
 
+/**
+ * AgentCoverageTable Component
+ * Renders agent deployment coverage table across administrative levels with agent assignment triggers.
+ */
 export function AgentCoverageTable({
   items,
   unitTitle = "States",

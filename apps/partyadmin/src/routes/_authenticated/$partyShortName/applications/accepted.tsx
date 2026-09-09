@@ -1,3 +1,10 @@
+/**
+ * @file Accepted Party Applications Page
+ * @description Displays the roster of approved party agent applications.
+ * Allows administrators to review confirmed appointments, filter by name/location,
+ * and paginate through accepted applicants.
+ */
+
 import {
   Layout,
   PageHeader,
@@ -21,6 +28,10 @@ export const Route = createFileRoute(
 
 const PAGE_LIMIT = 50;
 
+/**
+ * Accepted Applications Page Component
+ * Loads accepted applications via cursor pagination and displays count metrics in header tabs.
+ */
 function RouteComponent() {
   const { partyShortName } = Route.useParams();
 

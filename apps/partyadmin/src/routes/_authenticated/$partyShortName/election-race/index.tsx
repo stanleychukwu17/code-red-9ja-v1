@@ -1,3 +1,12 @@
+/**
+ * @file Election Race Overview Page
+ * @description High-level electoral race dashboard for Nigeria. Displays:
+ * 1. Head-to-head visual comparison between the top 2 candidates (segmented dual progress bar & vote margin).
+ * 2. Multi-tier scope leaderboard breakdown (total votes, states won, senatorial districts, federal constituencies,
+ *    LGAs, state constituencies, wards, and polling units).
+ * 3. Live tally switching with auto-polling support.
+ */
+
 import { AppAvatar } from "@repo/ui/components/avatar";
 import {
   HeaderTabs,
@@ -27,6 +36,7 @@ export const Route = createFileRoute(
   component: OverviewPage,
 });
 
+/** Scope tab identifiers for sorting candidate rankings by geopolitical levels */
 type TabType =
   | "general"
   | "states"
@@ -42,6 +52,7 @@ interface TabDefinition {
   label: string;
 }
 
+/** Geopolitical hierarchy tabs available for sorting race standings */
 const SCOPE_TABS: TabDefinition[] = [
   { id: "general", label: "General" },
   { id: "states", label: "States" },
@@ -53,6 +64,9 @@ const SCOPE_TABS: TabDefinition[] = [
   { id: "pollingUnits", label: "Polling units" },
 ];
 
+/**
+ * Formats vote differential numbers into readable suffixes (e.g. 1.2m, 45.3k)
+ */
 function formatDiff(num: number): string {
   const abs = Math.abs(num);
   if (abs >= 1_000_000) {
@@ -137,6 +151,12 @@ interface HeadToHeadHeroProps {
   partyShortName: string;
 }
 
+/**
+ * HeadToHeadHero Component
+ * Visually showcases a head-to-head comparison of the 1st and 2nd place candidates.
+ * Features profile avatars, party color tags, dual percentage bars with center difference badge,
+ * and total vote tallies.
+ */
 function HeadToHeadHero({
   cand1,
   cand2,
@@ -263,6 +283,11 @@ interface CandidateLeaderboardProps {
   setActiveTab: (tab: TabType) => void;
 }
 
+/**
+ * CandidateLeaderboard Component
+ * Renders the full candidate leaderboard table ordered by the selected scope metric (e.g. states won or overall votes).
+ * Displays candidate party avatar/badge, vote/unit share percentage, and margin lead ahead of the next competitor.
+ */
 function CandidateLeaderboard({
   candidates,
   activeTab,
@@ -368,6 +393,11 @@ function CandidateLeaderboard({
   );
 }
 
+/**
+ * OverviewPage Component
+ * Main page container managing server query state for election results,
+ * live-refresh interval polling, and top-level head-to-head calculations.
+ */
 function OverviewPage() {
   const { partyShortName } = Route.useParams();
   const { selectedElection, isLive, setIsLive } = useElection();

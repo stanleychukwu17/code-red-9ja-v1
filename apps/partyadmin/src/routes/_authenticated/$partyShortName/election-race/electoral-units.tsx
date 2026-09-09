@@ -10,6 +10,14 @@ import { getPageHeader } from "#/lib/shared/meta";
 import { ElectionRaceFilterBar, ElectionRaceHeaderRight } from "./-components";
 import { getElectionRaceTabs } from "./-data";
 
+/**
+ * Electoral Units Results Hierarchy Breakdown
+ *
+ * Displays results aggregated across geographic electoral boundaries:
+ * - Dynamically presents States, Senatorial Districts, Federal Constituencies, LGAs, Wards, or PUs.
+ * - Interactive Drill-down: Clicking any unit row drills down into its constituent subunits.
+ * - Periodic Polling: Refreshes every 15s when `isLive` mode is active.
+ */
 export const Route = createFileRoute(
   "/_authenticated/$partyShortName/election-race/electoral-units",
 )({
@@ -17,6 +25,11 @@ export const Route = createFileRoute(
   component: ElectoralUnitsPage,
 });
 
+/**
+ * ElectoralUnitsPage Component
+ *
+ * Queries geographic unit returns and renders the ElectoralUnitsTable.
+ */
 function ElectoralUnitsPage() {
   const { partyShortName } = Route.useParams();
   const {
